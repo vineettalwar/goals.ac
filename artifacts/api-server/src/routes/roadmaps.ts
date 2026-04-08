@@ -6,6 +6,7 @@ import {
   GenerateRoadmapBody,
   CaptureLeadForRoadmapBody,
 } from "@workspace/api-zod";
+import { generateRoadmapContent, generateSlug } from "../services/roadmapGenerator";
 
 const router: IRouter = Router();
 
@@ -61,7 +62,7 @@ router.post("/roadmaps/generate", async (req, res) => {
   const { industry, location, stage } = parsed.data;
 
   try {
-    const slug = `${slugify(industry)}-${slugify(location)}${stage !== "seed" ? `-${stage}` : ""}`;
+    const slug = generateSlug(industry, location, stage);
 
     const existing = await db
       .select()
@@ -70,13 +71,30 @@ router.post("/roadmaps/generate", async (req, res) => {
       .limit(1);
 
     if (existing.length > 0) {
+      req.log.info({ slug }, "Returning cached roadmap");
       res.json(existing[0]);
       return;
     }
 
-    res.status(503).json({
-      error: "Roadmap generation not yet configured. Add GEMINI_API_KEY to enable AI generation.",
-    });
+    req.log.info({ industry, location, stage }, "Generating new roadmap with Gemini");
+
+    let content;
+    try {
+      content = await generateRoadmapContent(industry, location, stage);
+    } catch (err) {
+      req.log.error(err, "Gemini generation failed");
+      res.status(503).json({
+        error: "Roadmap generation temporarily unavailable. Please try again shortly.",
+      });
+      return;
+    }
+
+    const [roadmap] = await db
+      .insert(roadmapsTable)
+      .values({ slug, industry, location, stage, content })
+      .returning();
+
+    res.json(roadmap);
   } catch (err) {
     req.log.error(err, "Failed to generate roadmap");
     res.status(500).json({ error: "Internal server error" });
@@ -160,14 +178,5 @@ router.post("/roadmaps/:slug/leads", async (req, res) => {
     res.status(500).json({ error: "Internal server error" });
   }
 });
-
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
-}
 
 export default router;
