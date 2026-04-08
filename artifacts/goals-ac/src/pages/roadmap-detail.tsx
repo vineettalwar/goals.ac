@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText } from "lucide-react";
+import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText, Zap } from "lucide-react";
 import { LeadCaptureModal } from "@/components/lead-capture-modal";
 import { format } from "date-fns";
 
@@ -278,7 +278,7 @@ export default function RoadmapDetail() {
               <h4 className="font-semibold text-foreground">Need help executing this?</h4>
               <p className="text-sm text-muted-foreground">Our team at Lead.sh can automate this entire outbound strategy.</p>
             </div>
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap">
               {!showSeoForm && (
                 <Button variant="outline" size="sm" onClick={() => setShowSeoForm(true)}>
                   <FileText className="w-4 h-4 mr-2" />
@@ -302,6 +302,15 @@ export default function RoadmapDetail() {
                   : existingStrategy
                   ? "View Content Strategy"
                   : "Generate Content Strategy"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigate(`/geo-audit?roadmap_id=${roadmap.id}`)}
+                className="gap-2"
+              >
+                <Zap className="w-4 h-4" />
+                Run GEO Audit
               </Button>
               <LeadCaptureModal roadmapSlug={roadmap.slug} />
             </div>

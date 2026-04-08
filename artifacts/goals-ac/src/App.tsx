@@ -10,6 +10,8 @@ import RoadmapDirectory from "@/pages/roadmap-directory";
 import ContentStrategy from "@/pages/content-strategy";
 import AdminContentStrategies from "@/pages/admin/content-strategies";
 import SeoArticle from "@/pages/seo-article";
+import GeoAuditForm from "@/pages/geo-audit-form";
+import GeoAuditDetail from "@/pages/geo-audit";
 import NotFound from "@/pages/not-found";
 
 // The generated hooks already include /api in their paths (from OpenAPI servers config)
@@ -37,6 +39,8 @@ function App() {
             <Route path="/content-strategy/:id" element={<ContentStrategy />} />
             <Route path="/admin/content-strategies" element={<AdminContentStrategies />} />
             <Route path="/seo-article/:id" element={<SeoArticle />} />
+            <Route path="/geo-audit" element={<GeoAuditForm />} />
+            <Route path="/geo-audit/:id" element={<GeoAuditDetail />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
