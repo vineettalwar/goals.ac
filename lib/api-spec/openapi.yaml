@@ -3,13 +3,21 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: goals.ac API — Programmatic SEO Growth Roadmap Platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: roadmaps
+    description: Roadmap generation and retrieval
+  - name: leads
+    description: Lead capture operations
+  - name: industries
+    description: Industry reference data
+  - name: locations
+    description: Location reference data
 paths:
   /healthz:
     get:
@@ -24,6 +32,167 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /roadmaps:
+    get:
+      operationId: listRoadmaps
+      tags: [roadmaps]
+      summary: List all roadmaps
+      description: Returns all generated roadmaps for browsing and SEO directory
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: industry
+          in: query
+          schema:
+            type: string
+        - name: location
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of roadmaps
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapListResponse"
+
+  /roadmaps/generate:
+    post:
+      operationId: generateRoadmap
+      tags: [roadmaps]
+      summary: Generate or retrieve a roadmap
+      description: Generates a new roadmap using AI for the given parameters, or returns cached if exists
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateRoadmapRequest"
+      responses:
+        "200":
+          description: Roadmap generated or retrieved from cache
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Roadmap"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: AI generation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /roadmaps/{slug}:
+    get:
+      operationId: getRoadmap
+      tags: [roadmaps]
+      summary: Get a roadmap by slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Roadmap found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Roadmap"
+        "404":
+          description: Roadmap not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /roadmaps/{slug}/leads:
+    post:
+      operationId: captureLeadForRoadmap
+      tags: [leads]
+      summary: Capture a lead for a roadmap
+      description: Records a lead's contact details tied to a specific roadmap
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CaptureLeadRequest"
+      responses:
+        "201":
+          description: Lead captured successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CaptureLeadResponse"
+        "400":
+          description: Invalid input or duplicate submission
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Roadmap not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /industries:
+    get:
+      operationId: listIndustries
+      tags: [industries]
+      summary: List all industries
+      description: Returns all available industries for the roadmap generator form
+      responses:
+        "200":
+          description: List of industries
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Industry"
+
+  /locations:
+    get:
+      operationId: listLocations
+      tags: [locations]
+      summary: List all locations
+      description: Returns all available locations for the roadmap generator form
+      responses:
+        "200":
+          description: List of locations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Location"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +203,195 @@ components:
       required:
         - status
 
+    Industry:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+      required:
+        - id
+        - name
+        - slug
+
+    Location:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        slug:
+          type: string
+        country:
+          type: string
+      required:
+        - id
+        - name
+        - slug
+        - country
+
+    RoadmapPhase:
+      type: object
+      properties:
+        title:
+          type: string
+        timeframe:
+          type: string
+        objectives:
+          type: array
+          items:
+            type: string
+        tactics:
+          type: array
+          items:
+            type: string
+        kpis:
+          type: array
+          items:
+            type: string
+      required:
+        - title
+        - timeframe
+        - objectives
+        - tactics
+        - kpis
+
+    RoadmapContent:
+      type: object
+      properties:
+        executiveSummary:
+          type: string
+        phases:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoadmapPhase"
+      required:
+        - executiveSummary
+        - phases
+
+    Roadmap:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        stage:
+          type: string
+        content:
+          $ref: "#/components/schemas/RoadmapContent"
+        viewCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slug
+        - industry
+        - location
+        - stage
+        - content
+        - viewCount
+        - createdAt
+        - updatedAt
+
+    RoadmapListResponse:
+      type: object
+      properties:
+        roadmaps:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoadmapSummary"
+        total:
+          type: integer
+      required:
+        - roadmaps
+        - total
+
+    RoadmapSummary:
+      type: object
+      properties:
+        id:
+          type: integer
+        slug:
+          type: string
+        industry:
+          type: string
+        location:
+          type: string
+        stage:
+          type: string
+        viewCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - slug
+        - industry
+        - location
+        - stage
+        - viewCount
+        - createdAt
+
+    GenerateRoadmapRequest:
+      type: object
+      properties:
+        industry:
+          type: string
+        location:
+          type: string
+        stage:
+          type: string
+          enum: [pre-seed, seed, series-a, series-b, growth]
+      required:
+        - industry
+        - location
+        - stage
+
+    CaptureLeadRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        companyUrl:
+          type: string
+      required:
+        - name
+        - email
+        - companyUrl
+
+    CaptureLeadResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        message:
+          type: string
+      required:
+        - id
+        - message
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error

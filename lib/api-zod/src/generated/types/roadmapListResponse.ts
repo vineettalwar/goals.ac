@@ -5,7 +5,9 @@
  * goals.ac API — Programmatic SEO Growth Roadmap Platform
  * OpenAPI spec version: 0.1.0
  */
+import type { RoadmapSummary } from "./roadmapSummary";
 
-export interface HealthStatus {
-  status: string;
+export interface RoadmapListResponse {
+  roadmaps: RoadmapSummary[];
+  total: number;
 }

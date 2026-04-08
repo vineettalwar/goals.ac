@@ -6,6 +6,12 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface RoadmapSummary {
+  id: number;
+  slug: string;
+  industry: string;
+  location: string;
+  stage: string;
+  viewCount: number;
+  createdAt: Date;
 }

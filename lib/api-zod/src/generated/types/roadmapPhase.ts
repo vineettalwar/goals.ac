@@ -6,6 +6,10 @@
  * OpenAPI spec version: 0.1.0
  */
 
-export interface HealthStatus {
-  status: string;
+export interface RoadmapPhase {
+  title: string;
+  timeframe: string;
+  objectives: string[];
+  tactics: string[];
+  kpis: string[];
 }
