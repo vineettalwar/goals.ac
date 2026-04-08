@@ -11,15 +11,22 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText } from "lucide-react";
 import { LeadCaptureModal } from "@/components/lead-capture-modal";
 import { format } from "date-fns";
 
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
 export default function RoadmapDetail() {
   const { slug = "" } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const [generatingStrategy, setGeneratingStrategy] = useState(false);
+  const [showSeoForm, setShowSeoForm] = useState(false);
+  const [seoLoading, setSeoLoading] = useState(false);
+  const [brandName, setBrandName] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
 
   const { data: roadmap, isLoading, isError } = useGetRoadmap(slug, {
     query: {
@@ -92,6 +99,30 @@ export default function RoadmapDetail() {
       </Layout>
     );
   }
+
+  const handleGenerateSeo = async () => {
+    if (!roadmap || !brandName || !websiteUrl) return;
+    setSeoLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/seo-articles/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          brand_name: brandName,
+          website_url: websiteUrl,
+          industry: roadmap.industry,
+          location: roadmap.location,
+          stage: roadmap.stage,
+          roadmap_id: roadmap.id,
+        }),
+      });
+      if (!res.ok) throw new Error("Generation failed");
+      const article = await res.json() as { id: number };
+      navigate(`/seo-article/${article.id}`);
+    } catch {
+      setSeoLoading(false);
+    }
+  };
 
   const formatStage = (stage: string) => {
     return stage.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
@@ -219,30 +250,61 @@ export default function RoadmapDetail() {
 
       {/* Sticky CTA Bar */}
       <div className="sticky bottom-0 z-40 border-t border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 shadow-lg shadow-black/5">
-        <div className="container mx-auto px-4 md:px-8 max-w-4xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div>
-            <h4 className="font-semibold text-foreground">Need help executing this?</h4>
-            <p className="text-sm text-muted-foreground">Our team at Lead.sh can automate this entire outbound strategy.</p>
-          </div>
-          <div className="flex items-center gap-3 shrink-0">
-            <Button
-              variant="outline"
-              onClick={handleViewContentStrategy}
-              disabled={generatingStrategy}
-              className="gap-2"
-            >
-              {generatingStrategy ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <FileText className="w-4 h-4" />
+        <div className="container mx-auto px-4 md:px-8 max-w-4xl space-y-3">
+          {showSeoForm && (
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pb-3 border-b border-border/40">
+              <Input
+                placeholder="Brand name"
+                value={brandName}
+                onChange={(e) => setBrandName(e.target.value)}
+                className="flex-1"
+                disabled={seoLoading}
+              />
+              <Input
+                placeholder="Website URL"
+                value={websiteUrl}
+                onChange={(e) => setWebsiteUrl(e.target.value)}
+                className="flex-1"
+                disabled={seoLoading}
+              />
+              <Button onClick={handleGenerateSeo} disabled={seoLoading || !brandName || !websiteUrl}>
+                {seoLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating…</> : "Generate"}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setShowSeoForm(false)} disabled={seoLoading}>Cancel</Button>
+            </div>
+          )}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+            <div>
+              <h4 className="font-semibold text-foreground">Need help executing this?</h4>
+              <p className="text-sm text-muted-foreground">Our team at Lead.sh can automate this entire outbound strategy.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {!showSeoForm && (
+                <Button variant="outline" size="sm" onClick={() => setShowSeoForm(true)}>
+                  <FileText className="w-4 h-4 mr-2" />
+                  Generate SEO Article
+                </Button>
               )}
-              {generatingStrategy
-                ? "Generating…"
-                : existingStrategy
-                ? "View Content Strategy"
-                : "Generate Content Strategy"}
-            </Button>
-            <LeadCaptureModal roadmapSlug={roadmap.slug} />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleViewContentStrategy}
+                disabled={generatingStrategy}
+                className="gap-2"
+              >
+                {generatingStrategy ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <FileText className="w-4 h-4" />
+                )}
+                {generatingStrategy
+                  ? "Generating…"
+                  : existingStrategy
+                  ? "View Content Strategy"
+                  : "Generate Content Strategy"}
+              </Button>
+              <LeadCaptureModal roadmapSlug={roadmap.slug} />
+            </div>
           </div>
         </div>
       </div>

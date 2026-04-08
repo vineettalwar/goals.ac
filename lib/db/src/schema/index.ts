@@ -5,3 +5,4 @@ export * from "./locations";
 export * from "./conversations";
 export * from "./messages";
 export * from "./content_strategies";
+export * from "./seo_articles";
