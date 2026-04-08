@@ -94,6 +94,61 @@ export interface ErrorResponse {
   error: string;
 }
 
+export interface GenerateContentStrategyRequest {
+  roadmap_id: number;
+  industry: string;
+  location: string;
+  stage: string;
+}
+
+export type UpdateContentItemRequestStatus =
+  (typeof UpdateContentItemRequestStatus)[keyof typeof UpdateContentItemRequestStatus];
+
+export const UpdateContentItemRequestStatus = {
+  draft: "draft",
+  prepared: "prepared",
+  published: "published",
+} as const;
+
+export interface UpdateContentItemRequest {
+  status: UpdateContentItemRequestStatus;
+}
+
+export interface ContentItem {
+  id: number;
+  strategyId: number;
+  day: number;
+  title: string;
+  format: string;
+  topicAngle: string;
+  primaryKeyword: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface ContentStrategy {
+  id: number;
+  roadmapId: number;
+  industry: string;
+  location: string;
+  stage: string;
+  month: number;
+  year: number;
+  createdAt: string;
+}
+
+export interface ContentStrategyWithItems {
+  id: number;
+  roadmapId: number;
+  industry: string;
+  location: string;
+  stage: string;
+  month: number;
+  year: number;
+  createdAt: string;
+  items: ContentItem[];
+}
+
 export type ListRoadmapsParams = {
   limit?: number;
   offset?: number;

@@ -143,3 +143,111 @@ export const ListLocationsResponseItem = zod.object({
   country: zod.string(),
 });
 export const ListLocationsResponse = zod.array(ListLocationsResponseItem);
+
+/**
+ * Generates a new 30-day content strategy using AI for the given roadmap parameters
+ * @summary Generate a 30-day content strategy
+ */
+export const GenerateContentStrategyBody = zod.object({
+  roadmap_id: zod.number(),
+  industry: zod.string(),
+  location: zod.string(),
+  stage: zod.string(),
+});
+
+export const GenerateContentStrategyResponse = zod.object({
+  id: zod.number(),
+  roadmapId: zod.number(),
+  industry: zod.string(),
+  location: zod.string(),
+  stage: zod.string(),
+  month: zod.number(),
+  year: zod.number(),
+  createdAt: zod.coerce.date(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      strategyId: zod.number(),
+      day: zod.number(),
+      title: zod.string(),
+      format: zod.string(),
+      topicAngle: zod.string(),
+      primaryKeyword: zod.string(),
+      status: zod.string(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * Returns all generated content strategies (admin use)
+ * @summary List all content strategies
+ */
+export const ListContentStrategiesResponseItem = zod.object({
+  id: zod.number(),
+  roadmapId: zod.number(),
+  industry: zod.string(),
+  location: zod.string(),
+  stage: zod.string(),
+  month: zod.number(),
+  year: zod.number(),
+  createdAt: zod.coerce.date(),
+});
+export const ListContentStrategiesResponse = zod.array(
+  ListContentStrategiesResponseItem,
+);
+
+/**
+ * @summary Get a content strategy with all items
+ */
+export const GetContentStrategyParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetContentStrategyResponse = zod.object({
+  id: zod.number(),
+  roadmapId: zod.number(),
+  industry: zod.string(),
+  location: zod.string(),
+  stage: zod.string(),
+  month: zod.number(),
+  year: zod.number(),
+  createdAt: zod.coerce.date(),
+  items: zod.array(
+    zod.object({
+      id: zod.number(),
+      strategyId: zod.number(),
+      day: zod.number(),
+      title: zod.string(),
+      format: zod.string(),
+      topicAngle: zod.string(),
+      primaryKeyword: zod.string(),
+      status: zod.string(),
+      createdAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Update a content item status
+ */
+export const UpdateContentItemParams = zod.object({
+  id: zod.coerce.number(),
+  itemId: zod.coerce.number(),
+});
+
+export const UpdateContentItemBody = zod.object({
+  status: zod.enum(["draft", "prepared", "published"]),
+});
+
+export const UpdateContentItemResponse = zod.object({
+  id: zod.number(),
+  strategyId: zod.number(),
+  day: zod.number(),
+  title: zod.string(),
+  format: zod.string(),
+  topicAngle: zod.string(),
+  primaryKeyword: zod.string(),
+  status: zod.string(),
+  createdAt: zod.coerce.date(),
+});

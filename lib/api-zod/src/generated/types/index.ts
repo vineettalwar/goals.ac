@@ -8,7 +8,11 @@
 
 export * from "./captureLeadRequest";
 export * from "./captureLeadResponse";
+export * from "./contentItem";
+export * from "./contentStrategy";
+export * from "./contentStrategyWithItems";
 export * from "./errorResponse";
+export * from "./generateContentStrategyRequest";
 export * from "./generateRoadmapRequest";
 export * from "./generateRoadmapRequestStage";
 export * from "./healthStatus";
@@ -20,3 +24,5 @@ export * from "./roadmapContent";
 export * from "./roadmapListResponse";
 export * from "./roadmapPhase";
 export * from "./roadmapSummary";
+export * from "./updateContentItemRequest";
+export * from "./updateContentItemRequestStatus";

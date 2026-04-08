@@ -1,16 +1,25 @@
-import { useParams } from "react-router-dom";
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { SEO } from "@/components/seo";
 import { Layout } from "@/components/layout";
-import { useGetRoadmap, getGetRoadmapQueryKey } from "@workspace/api-client-react";
+import {
+  useGetRoadmap,
+  getGetRoadmapQueryKey,
+  useListContentStrategies,
+  useGenerateContentStrategy,
+} from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart } from "lucide-react";
+import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText } from "lucide-react";
 import { LeadCaptureModal } from "@/components/lead-capture-modal";
 import { format } from "date-fns";
 
 export default function RoadmapDetail() {
   const { slug = "" } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+  const [generatingStrategy, setGeneratingStrategy] = useState(false);
 
   const { data: roadmap, isLoading, isError } = useGetRoadmap(slug, {
     query: {
@@ -18,6 +27,40 @@ export default function RoadmapDetail() {
       queryKey: getGetRoadmapQueryKey(slug),
     },
   });
+
+  const { data: allStrategies } = useListContentStrategies({
+    query: { enabled: !!roadmap?.id },
+  });
+
+  const existingStrategy = allStrategies?.find(
+    (s) => s.roadmapId === roadmap?.id
+  );
+
+  const generateStrategy = useGenerateContentStrategy();
+
+  const handleViewContentStrategy = async () => {
+    if (!roadmap) return;
+
+    if (existingStrategy) {
+      navigate(`/content-strategy/${existingStrategy.id}`);
+      return;
+    }
+
+    setGeneratingStrategy(true);
+    try {
+      const result = await generateStrategy.mutateAsync({
+        data: {
+          roadmap_id: roadmap.id,
+          industry: roadmap.industry,
+          location: roadmap.location,
+          stage: roadmap.stage,
+        },
+      });
+      navigate(`/content-strategy/${result.id}`);
+    } finally {
+      setGeneratingStrategy(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -181,7 +224,26 @@ export default function RoadmapDetail() {
             <h4 className="font-semibold text-foreground">Need help executing this?</h4>
             <p className="text-sm text-muted-foreground">Our team at Lead.sh can automate this entire outbound strategy.</p>
           </div>
-          <LeadCaptureModal roadmapSlug={roadmap.slug} />
+          <div className="flex items-center gap-3 shrink-0">
+            <Button
+              variant="outline"
+              onClick={handleViewContentStrategy}
+              disabled={generatingStrategy}
+              className="gap-2"
+            >
+              {generatingStrategy ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FileText className="w-4 h-4" />
+              )}
+              {generatingStrategy
+                ? "Generating…"
+                : existingStrategy
+                ? "View Content Strategy"
+                : "Generate Content Strategy"}
+            </Button>
+            <LeadCaptureModal roadmapSlug={roadmap.slug} />
+          </div>
         </div>
       </div>
     </Layout>

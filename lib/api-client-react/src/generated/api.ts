@@ -19,7 +19,11 @@ import type {
 import type {
   CaptureLeadRequest,
   CaptureLeadResponse,
+  ContentItem,
+  ContentStrategy,
+  ContentStrategyWithItems,
   ErrorResponse,
+  GenerateContentStrategyRequest,
   GenerateRoadmapRequest,
   HealthStatus,
   Industry,
@@ -27,6 +31,7 @@ import type {
   Location,
   Roadmap,
   RoadmapListResponse,
+  UpdateContentItemRequest,
 } from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
@@ -622,3 +627,345 @@ export function useListLocations<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Generates a new 30-day content strategy using AI for the given roadmap parameters
+ * @summary Generate a 30-day content strategy
+ */
+export const getGenerateContentStrategyUrl = () => {
+  return `/api/content-strategies/generate`;
+};
+
+export const generateContentStrategy = async (
+  generateContentStrategyRequest: GenerateContentStrategyRequest,
+  options?: RequestInit,
+): Promise<ContentStrategyWithItems> => {
+  return customFetch<ContentStrategyWithItems>(
+    getGenerateContentStrategyUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(generateContentStrategyRequest),
+    },
+  );
+};
+
+export const getGenerateContentStrategyMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateContentStrategy>>,
+    TError,
+    { data: BodyType<GenerateContentStrategyRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateContentStrategy>>,
+  TError,
+  { data: BodyType<GenerateContentStrategyRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateContentStrategy"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateContentStrategy>>,
+    { data: BodyType<GenerateContentStrategyRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateContentStrategy(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateContentStrategyMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateContentStrategy>>
+>;
+export type GenerateContentStrategyMutationBody =
+  BodyType<GenerateContentStrategyRequest>;
+export type GenerateContentStrategyMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate a 30-day content strategy
+ */
+export const useGenerateContentStrategy = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateContentStrategy>>,
+    TError,
+    { data: BodyType<GenerateContentStrategyRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateContentStrategy>>,
+  TError,
+  { data: BodyType<GenerateContentStrategyRequest> },
+  TContext
+> => {
+  return useMutation(getGenerateContentStrategyMutationOptions(options));
+};
+
+/**
+ * Returns all generated content strategies (admin use)
+ * @summary List all content strategies
+ */
+export const getListContentStrategiesUrl = () => {
+  return `/api/content-strategies`;
+};
+
+export const listContentStrategies = async (
+  options?: RequestInit,
+): Promise<ContentStrategy[]> => {
+  return customFetch<ContentStrategy[]>(getListContentStrategiesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListContentStrategiesQueryKey = () => {
+  return [`/api/content-strategies`] as const;
+};
+
+export const getListContentStrategiesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listContentStrategies>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listContentStrategies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListContentStrategiesQueryKey();
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listContentStrategies>>
+  > = ({ signal }) => listContentStrategies({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listContentStrategies>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListContentStrategiesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listContentStrategies>>
+>;
+export type ListContentStrategiesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List all content strategies
+ */
+
+export function useListContentStrategies<
+  TData = Awaited<ReturnType<typeof listContentStrategies>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<
+    Awaited<ReturnType<typeof listContentStrategies>>,
+    TError,
+    TData
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListContentStrategiesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Get a content strategy with all items
+ */
+export const getGetContentStrategyUrl = (id: number) => {
+  return `/api/content-strategies/${id}`;
+};
+
+export const getContentStrategy = async (
+  id: number,
+  options?: RequestInit,
+): Promise<ContentStrategyWithItems> => {
+  return customFetch<ContentStrategyWithItems>(getGetContentStrategyUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetContentStrategyQueryKey = (id: number) => {
+  return [`/api/content-strategies/${id}`] as const;
+};
+
+export const getGetContentStrategyQueryOptions = <
+  TData = Awaited<ReturnType<typeof getContentStrategy>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getContentStrategy>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetContentStrategyQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getContentStrategy>>
+  > = ({ signal }) => getContentStrategy(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getContentStrategy>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetContentStrategyQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getContentStrategy>>
+>;
+export type GetContentStrategyQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a content strategy with all items
+ */
+
+export function useGetContentStrategy<
+  TData = Awaited<ReturnType<typeof getContentStrategy>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getContentStrategy>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetContentStrategyQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Update a content item status
+ */
+export const getUpdateContentItemUrl = (id: number, itemId: number) => {
+  return `/api/content-strategies/${id}/items/${itemId}`;
+};
+
+export const updateContentItem = async (
+  id: number,
+  itemId: number,
+  updateContentItemRequest: UpdateContentItemRequest,
+  options?: RequestInit,
+): Promise<ContentItem> => {
+  return customFetch<ContentItem>(getUpdateContentItemUrl(id, itemId), {
+    ...options,
+    method: "PATCH",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(updateContentItemRequest),
+  });
+};
+
+export const getUpdateContentItemMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateContentItem>>,
+    TError,
+    { id: number; itemId: number; data: BodyType<UpdateContentItemRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateContentItem>>,
+  TError,
+  { id: number; itemId: number; data: BodyType<UpdateContentItemRequest> },
+  TContext
+> => {
+  const mutationKey = ["updateContentItem"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateContentItem>>,
+    { id: number; itemId: number; data: BodyType<UpdateContentItemRequest> }
+  > = (props) => {
+    const { id, itemId, data } = props ?? {};
+
+    return updateContentItem(id, itemId, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateContentItemMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateContentItem>>
+>;
+export type UpdateContentItemMutationBody = BodyType<UpdateContentItemRequest>;
+export type UpdateContentItemMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Update a content item status
+ */
+export const useUpdateContentItem = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateContentItem>>,
+    TError,
+    { id: number; itemId: number; data: BodyType<UpdateContentItemRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateContentItem>>,
+  TError,
+  { id: number; itemId: number; data: BodyType<UpdateContentItemRequest> },
+  TContext
+> => {
+  return useMutation(getUpdateContentItemMutationOptions(options));
+};

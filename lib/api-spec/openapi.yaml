@@ -18,6 +18,8 @@ tags:
     description: Industry reference data
   - name: locations
     description: Location reference data
+  - name: content-strategies
+    description: 30-day content strategy generation and management
 paths:
   /healthz:
     get:
@@ -192,6 +194,127 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Location"
+
+  /content-strategies/generate:
+    post:
+      operationId: generateContentStrategy
+      tags: [content-strategies]
+      summary: Generate a 30-day content strategy
+      description: Generates a new 30-day content strategy using AI for the given roadmap parameters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateContentStrategyRequest"
+      responses:
+        "200":
+          description: Content strategy generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentStrategyWithItems"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Roadmap not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: AI generation failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /content-strategies:
+    get:
+      operationId: listContentStrategies
+      tags: [content-strategies]
+      summary: List all content strategies
+      description: Returns all generated content strategies (admin use)
+      responses:
+        "200":
+          description: List of content strategies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ContentStrategy"
+
+  /content-strategies/{id}:
+    get:
+      operationId: getContentStrategy
+      tags: [content-strategies]
+      summary: Get a content strategy with all items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Content strategy with items
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentStrategyWithItems"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /content-strategies/{id}/items/{itemId}:
+    patch:
+      operationId: updateContentItem
+      tags: [content-strategies]
+      summary: Update a content item status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateContentItemRequest"
+      responses:
+        "200":
+          description: Content item updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ContentItem"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   schemas:
@@ -395,3 +518,127 @@ components:
           type: string
       required:
         - error
+
+    GenerateContentStrategyRequest:
+      type: object
+      properties:
+        roadmap_id:
+          type: integer
+        industry:
+          type: string
+        location:
+          type: string
+        stage:
+          type: string
+      required:
+        - roadmap_id
+        - industry
+        - location
+        - stage
+
+    UpdateContentItemRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [draft, prepared, published]
+      required:
+        - status
+
+    ContentItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        strategyId:
+          type: integer
+        day:
+          type: integer
+        title:
+          type: string
+        format:
+          type: string
+        topicAngle:
+          type: string
+        primaryKeyword:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - strategyId
+        - day
+        - title
+        - format
+        - topicAngle
+        - primaryKeyword
+        - status
+        - createdAt
+
+    ContentStrategy:
+      type: object
+      properties:
+        id:
+          type: integer
+        roadmapId:
+          type: integer
+        industry:
+          type: string
+        location:
+          type: string
+        stage:
+          type: string
+        month:
+          type: integer
+        year:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - roadmapId
+        - industry
+        - location
+        - stage
+        - month
+        - year
+        - createdAt
+
+    ContentStrategyWithItems:
+      type: object
+      properties:
+        id:
+          type: integer
+        roadmapId:
+          type: integer
+        industry:
+          type: string
+        location:
+          type: string
+        stage:
+          type: string
+        month:
+          type: integer
+        year:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContentItem"
+      required:
+        - id
+        - roadmapId
+        - industry
+        - location
+        - stage
+        - month
+        - year
+        - createdAt
+        - items
