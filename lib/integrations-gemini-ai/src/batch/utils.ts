@@ -1,32 +1,6 @@
 import pLimit from "p-limit";
 import pRetry, { AbortError } from "p-retry";
 
-/**
- * Batch Processing Utilities
- *
- * Generic batch processing with built-in rate limiting and automatic retries.
- * Use for any task that requires processing multiple items through an LLM or external API.
- *
- * USAGE:
- * ```typescript
- * import { batchProcess } from "@workspace/integrations-gemini-ai/batch";
- * import { ai } from "@workspace/integrations-gemini-ai";
- *
- * const results = await batchProcess(
- *   artworks,
- *   async (artwork) => {
- *     const response = await ai.models.generateContent({
- *       model: "gemini-2.5-flash",
- *       contents: [{ role: "user", parts: [{ text: `Categorize: ${artwork.name}` }] }],
- *       config: { responseMimeType: "application/json" },
- *     });
- *     return JSON.parse(response.text ?? "{}");
- *   },
- *   { concurrency: 2, retries: 5 }
- * );
- * ```
- */
-
 export interface BatchOptions {
   concurrency?: number;
   retries?: number;
