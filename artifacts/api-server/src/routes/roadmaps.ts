@@ -89,12 +89,24 @@ router.post("/roadmaps/generate", async (req, res) => {
       return;
     }
 
-    const [roadmap] = await db
+    const [inserted] = await db
       .insert(roadmapsTable)
       .values({ slug, industry, location, stage, content })
+      .onConflictDoNothing({ target: roadmapsTable.slug })
       .returning();
 
-    res.json(roadmap);
+    if (inserted) {
+      res.json(inserted);
+      return;
+    }
+
+    const [race] = await db
+      .select()
+      .from(roadmapsTable)
+      .where(eq(roadmapsTable.slug, slug))
+      .limit(1);
+
+    res.json(race);
   } catch (err) {
     req.log.error(err, "Failed to generate roadmap");
     res.status(500).json({ error: "Internal server error" });
