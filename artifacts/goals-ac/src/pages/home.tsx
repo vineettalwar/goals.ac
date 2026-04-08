@@ -98,7 +98,7 @@ export default function Home() {
           <div className="container mx-auto px-4 md:px-8 max-w-3xl">
             <Card className="shadow-2xl border-border/50 bg-card/50 backdrop-blur-xl">
               <CardContent className="p-8 md:p-12">
-                <h2 className="text-2xl font-semibold tracking-tight mb-8">Configure Your Roadmap</h2>
+                <h2 className="text-2xl font-semibold tracking-tight mb-8">Generate your 2026 Growth Roadmap</h2>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                     <div className="grid gap-8 md:grid-cols-2">
