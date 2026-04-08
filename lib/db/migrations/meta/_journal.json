@@ -29,6 +29,13 @@
       "when": 1775688142054,
       "tag": "0003_simple_shinko_yamashiro",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1775689718342,
+      "tag": "0004_slow_kingpin",
+      "breakpoints": true
     }
   ]
 }

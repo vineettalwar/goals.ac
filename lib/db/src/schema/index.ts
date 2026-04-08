@@ -6,3 +6,4 @@ export * from "./conversations";
 export * from "./messages";
 export * from "./content_strategies";
 export * from "./seo_articles";
+export * from "./geo_audits";
