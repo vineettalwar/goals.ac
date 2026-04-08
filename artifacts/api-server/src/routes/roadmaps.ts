@@ -193,7 +193,13 @@ router.post("/roadmaps/:slug/leads", async (req, res) => {
         stage: roadmap[0].stage,
         lead: { name, email, companyUrl },
       },
-      req.log
+      req.log,
+      async () => {
+        await db
+          .update(leadCapturesTable)
+          .set({ webhookSent: true })
+          .where(eq(leadCapturesTable.id, lead.id));
+      }
     );
 
     res.status(201).json({ id: lead.id, message: "Lead captured successfully" });

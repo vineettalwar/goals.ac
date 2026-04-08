@@ -16,13 +16,20 @@ interface LeadshPayload {
   capturedAt: string;
 }
 
+type Logger = {
+  info: (...args: unknown[]) => void;
+  warn: (...args: unknown[]) => void;
+  error: (...args: unknown[]) => void;
+};
+
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function deliverWithRetry(
   payload: LeadshPayload,
-  logger: { info: (...args: unknown[]) => void; warn: (...args: unknown[]) => void; error: (...args: unknown[]) => void }
+  logger: Logger,
+  onSuccess?: () => Promise<void>
 ): Promise<void> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
@@ -38,6 +45,11 @@ async function deliverWithRetry(
 
       if (res.ok) {
         logger.info({ attempt, roadmapSlug: payload.roadmapSlug }, "Lead.sh webhook delivered");
+        if (onSuccess) {
+          await onSuccess().catch((err) => {
+            logger.error({ err }, "Failed to mark webhook_sent after successful delivery");
+          });
+        }
         return;
       }
 
@@ -60,7 +72,8 @@ async function deliverWithRetry(
 
 export function fireLeadshWebhook(
   payload: Omit<LeadshPayload, "event" | "capturedAt">,
-  logger: { info: (...args: unknown[]) => void; warn: (...args: unknown[]) => void; error: (...args: unknown[]) => void }
+  logger: Logger,
+  onSuccess?: () => Promise<void>
 ): void {
   if (!WEBHOOK_URL) {
     logger.info("LEADSH_WEBHOOK_URL not configured — skipping webhook");
@@ -73,7 +86,7 @@ export function fireLeadshWebhook(
     ...payload,
   };
 
-  deliverWithRetry(fullPayload, logger).catch((err) => {
+  deliverWithRetry(fullPayload, logger, onSuccess).catch((err) => {
     logger.error({ err }, "Unexpected error in Lead.sh webhook delivery");
   });
 }
