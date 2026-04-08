@@ -1,4 +1,4 @@
-import { useRoute } from "wouter";
+import { useParams } from "react-router-dom";
 import { SEO } from "@/components/seo";
 import { Layout } from "@/components/layout";
 import { useGetRoadmap, getGetRoadmapQueryKey } from "@workspace/api-client-react";
@@ -10,14 +10,13 @@ import { LeadCaptureModal } from "@/components/lead-capture-modal";
 import { format } from "date-fns";
 
 export default function RoadmapDetail() {
-  const [, params] = useRoute("/roadmap/:slug");
-  const slug = params?.slug || "";
+  const { slug = "" } = useParams<{ slug: string }>();
 
   const { data: roadmap, isLoading, isError } = useGetRoadmap(slug, {
     query: {
       enabled: !!slug,
       queryKey: getGetRoadmapQueryKey(slug),
-    }
+    },
   });
 
   if (isLoading) {
@@ -52,16 +51,16 @@ export default function RoadmapDetail() {
   }
 
   const formatStage = (stage: string) => {
-    return stage.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return stage.split("-").map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
   };
 
   return (
     <Layout>
-      <SEO 
-        title={`${roadmap.industry} Growth Roadmap for ${roadmap.location} Startups | goals.ac`} 
+      <SEO
+        title={`${roadmap.industry} Growth Roadmap for ${roadmap.location} Startups | goals.ac`}
         description={roadmap.content.executiveSummary.substring(0, 155) + "..."}
       />
-      
+
       {/* Header */}
       <div className="bg-zinc-950 text-zinc-50 py-16 md:py-24 border-b border-border">
         <div className="container mx-auto px-4 md:px-8 max-w-4xl">
@@ -78,11 +77,11 @@ export default function RoadmapDetail() {
               {formatStage(roadmap.stage)} Stage
             </Badge>
           </div>
-          
+
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight">
             12-Month Growth Strategy
           </h1>
-          
+
           <div className="flex items-center gap-6 text-sm text-zinc-400">
             <div className="flex items-center gap-2">
               <Eye className="w-4 h-4" />
@@ -106,7 +105,7 @@ export default function RoadmapDetail() {
           {roadmap.content.phases.map((phase, index) => (
             <section key={index} className="relative">
               <div className="absolute left-0 top-0 bottom-0 w-px bg-border/60 hidden md:block" />
-              
+
               <div className="md:pl-10">
                 <div className="flex items-baseline gap-4 mb-6">
                   <Badge className="bg-primary text-primary-foreground font-mono text-xs px-2 py-1 rounded-md">

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -12,10 +12,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useListIndustries, useListLocations, useGenerateRoadmap, GenerateRoadmapRequestStage } from "@workspace/api-client-react";
 import { Loader2, TrendingUp, Target, BarChart3 } from "lucide-react";
 
+const stageValues = Object.values(GenerateRoadmapRequestStage) as [
+  GenerateRoadmapRequestStage,
+  ...GenerateRoadmapRequestStage[]
+];
+
 const formSchema = z.object({
   industry: z.string().min(1, "Please select an industry"),
   location: z.string().min(1, "Please select a location"),
-  stage: z.enum(["pre-seed", "seed", "series-a", "series-b", "growth"], {
+  stage: z.enum(stageValues, {
     required_error: "Please select a company stage",
   }),
 });
@@ -23,7 +28,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 export default function Home() {
-  const [, setLocation] = useLocation();
+  const navigate = useNavigate();
   const { data: industries, isLoading: isLoadingIndustries } = useListIndustries();
   const { data: locations, isLoading: isLoadingLocations } = useListLocations();
   const generateRoadmap = useGenerateRoadmap();
@@ -39,34 +44,36 @@ export default function Home() {
 
   const onSubmit = (data: FormValues) => {
     generateRoadmap.mutate(
-      { data: {
-        industry: data.industry,
-        location: data.location,
-        stage: data.stage as any
-      }},
+      {
+        data: {
+          industry: data.industry,
+          location: data.location,
+          stage: data.stage,
+        },
+      },
       {
         onSuccess: (roadmap) => {
-          setLocation(`/roadmap/${roadmap.slug}`);
+          navigate(`/roadmap/${roadmap.slug}`);
         },
       }
     );
   };
 
-  const stages = [
-    { value: "pre-seed", label: "Pre-Seed" },
-    { value: "seed", label: "Seed" },
-    { value: "series-a", label: "Series A" },
-    { value: "series-b", label: "Series B" },
-    { value: "growth", label: "Growth / Late Stage" },
+  const stages: { value: GenerateRoadmapRequestStage; label: string }[] = [
+    { value: GenerateRoadmapRequestStage["pre-seed"], label: "Pre-Seed" },
+    { value: GenerateRoadmapRequestStage.seed, label: "Seed" },
+    { value: GenerateRoadmapRequestStage["series-a"], label: "Series A" },
+    { value: GenerateRoadmapRequestStage["series-b"], label: "Series B" },
+    { value: GenerateRoadmapRequestStage.growth, label: "Growth / Late Stage" },
   ];
 
   return (
     <Layout>
-      <SEO 
-        title="goals.ac — Generate Your 2026 B2B Growth Roadmap" 
+      <SEO
+        title="goals.ac — Generate Your 2026 B2B Growth Roadmap"
         description="Programmatic SEO platform for ambitious B2B startup founders to generate AI-powered 12-month growth roadmaps."
       />
-      
+
       <div className="flex-1 flex flex-col">
         {/* Hero Section */}
         <section className="relative py-24 md:py-32 overflow-hidden bg-zinc-950 text-zinc-50 border-b border-border">
@@ -119,7 +126,7 @@ export default function Home() {
                           </FormItem>
                         )}
                       />
-                      
+
                       <FormField
                         control={form.control}
                         name="location"
@@ -172,9 +179,9 @@ export default function Home() {
                     />
 
                     <div className="pt-4">
-                      <Button 
-                        type="submit" 
-                        size="lg" 
+                      <Button
+                        type="submit"
+                        size="lg"
                         className="w-full h-14 text-lg font-medium shadow-md transition-all hover:-translate-y-0.5"
                         disabled={generateRoadmap.isPending || isLoadingIndustries || isLoadingLocations}
                       >
@@ -204,7 +211,7 @@ export default function Home() {
                 We don't do generic advice. Every roadmap provides specific tactics, measurable KPIs, and phased timelines tailored to your exact context.
               </p>
             </div>
-            
+
             <div className="grid md:grid-cols-3 gap-8">
               <Card className="bg-background border-none shadow-sm">
                 <CardContent className="pt-6">
@@ -215,7 +222,7 @@ export default function Home() {
                   <p className="text-muted-foreground">Strategic milestones broken down by quarter, ensuring focus remains on high-leverage activities.</p>
                 </CardContent>
               </Card>
-              
+
               <Card className="bg-background border-none shadow-sm">
                 <CardContent className="pt-6">
                   <div className="rounded-lg bg-primary/10 w-12 h-12 flex items-center justify-center mb-6">
