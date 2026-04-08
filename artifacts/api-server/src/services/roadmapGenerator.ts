@@ -67,26 +67,39 @@ Make every tactic specific and actionable — reference real platforms, partners
 
 let aiClient: GoogleGenAI | null = null;
 
+/**
+ * Lazily initializes the Gemini AI client.
+ *
+ * Priority order for configuration:
+ * 1. Replit AI Integrations (AI_INTEGRATIONS_GEMINI_BASE_URL + AI_INTEGRATIONS_GEMINI_API_KEY)
+ *    — provisioned automatically, no user key required.
+ * 2. User-provided GEMINI_API_KEY — connects directly to Google AI API.
+ *
+ * Returns null if no configuration is available; the caller will surface a 503.
+ */
 async function getAiClient(): Promise<GoogleGenAI | null> {
-  const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  if (aiClient) return aiClient;
 
-  if (!baseUrl || !apiKey) {
-    return null;
-  }
+  const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
+  const integrationApiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+  const userApiKey = process.env.GEMINI_API_KEY;
 
-  if (!aiClient) {
-    const { GoogleGenAI: GenAI } = await import("@google/genai");
+  const { GoogleGenAI: GenAI } = await import("@google/genai");
+
+  if (integrationBaseUrl && integrationApiKey) {
     aiClient = new GenAI({
-      apiKey,
-      httpOptions: {
-        apiVersion: "",
-        baseUrl,
-      },
+      apiKey: integrationApiKey,
+      httpOptions: { apiVersion: "", baseUrl: integrationBaseUrl },
     });
+    return aiClient;
   }
 
-  return aiClient;
+  if (userApiKey) {
+    aiClient = new GenAI({ apiKey: userApiKey });
+    return aiClient;
+  }
+
+  return null;
 }
 
 export async function generateRoadmapContent(
@@ -98,7 +111,7 @@ export async function generateRoadmapContent(
 
   if (!ai) {
     throw new Error(
-      "AI generation is not configured. Ensure AI_INTEGRATIONS_GEMINI_BASE_URL and AI_INTEGRATIONS_GEMINI_API_KEY are set.",
+      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations (AI_INTEGRATIONS_GEMINI_BASE_URL + AI_INTEGRATIONS_GEMINI_API_KEY).",
     );
   }
 
