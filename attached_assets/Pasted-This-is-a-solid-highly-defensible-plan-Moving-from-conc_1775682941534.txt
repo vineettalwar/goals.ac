@@ -1,0 +1,77 @@
+This is a solid, highly defensible plan. Moving from concept to a Product Requirements Document (PRD) is the exact right next step to get this ready for a Replit build.
+
+Here is a structured PRD tailored for a rapid MVP deployment on Replit. You can hand this directly to a developer or use it as your own blueprint.
+
+---
+
+# Product Requirements Document (PRD): `goals.ac`
+
+## 1. Product Overview
+**Name:** `goals.ac` (The Outcome-Based Growth Engine)
+**Purpose:** A programmatic SEO (pSEO) platform that intercepts high-intent B2B traffic by offering dynamically generated, 12-month strategic growth roadmaps instead of generic blog content. 
+**Ultimate Goal:** Act as a high-converting, automated lead generation funnel for the `lead.sh` platform and Sometech consulting services.
+
+## 2. Target Audience
+* **Primary:** Startup Founders, CEOs, and CMOs in high-ticket verticals (SaaS, DeepTech, FinTech, HealthTech).
+* **User Intent:** Searching for "how to scale," "growth milestones," or "go-to-market strategy" rather than basic tactical execution ("SEO tips").
+
+## 3. Core Features (MVP Scope)
+The MVP will focus strictly on generating, hosting, and capturing leads from programmatic roadmaps.
+
+### 3.1. The "Brain" (Roadmap Generation Engine)
+* **Input Parameters:** Industry (e.g., FinTech), Location (e.g., London), Current Stage (e.g., Seed).
+* **AI Processing:** An API call to an LLM (Gemini 1.5 Flash) using a heavily engineered prompt to output a structured JSON object.
+* **Data Structure Output:** * Executive Summary (1 paragraph).
+    * Month 1-3: Foundation & Quick Wins.
+    * Month 4-6: Scaling & Automation.
+    * Month 7-12: Market Domination & KPIs.
+
+### 3.2. Programmatic Frontend (The SEO Moat)
+* **Dynamic Routing:** A template that automatically renders the JSON data into a clean, readable web page at a structured URL (e.g., `goals.ac/roadmap/fintech-london`).
+* **SEO Optimization:** Server-Side Rendering (SSR) so Google crawlers see fully loaded text, not a blank JavaScript shell. Automated injection of Title Tags, Meta Descriptions, and FAQ Schema.
+
+### 3.3. Conversion Layer (Lead.sh Integration)
+* **The Hook:** The generated page shows the full 12-month roadmap, but offers an interactive element: "Export this roadmap to Lead.sh" or "Download as a tracking dashboard."
+* **Lead Capture:** A modal that collects Name, Email, and Company URL to "unlock" the export.
+* **Webhook:** Captured data is immediately pushed via webhook to the Lead.sh pipeline, tagged with the specific roadmap they viewed.
+
+## 4. Technical Architecture (Replit Stack)
+This stack is optimized for speed of development and low maintenance overhead within the Replit ecosystem.
+
+* **Frontend Framework:** Next.js (crucial for SEO via Server-Side Rendering).
+* **Backend Logic:** Next.js API Routes (Node.js) to keep the repository unified.
+* **Database:** Replit DB (PostgreSQL integration) to store the generated JSON roadmaps and prevent duplicate API calls for the same parameters.
+* **AI Integration:** `@google/genai` SDK.
+* **Environment Variables:** Replit Secrets for secure API key storage.
+* **Hosting:** Replit Deployments (Autoscale tier) to ensure the site stays live and fast during Google bot crawls.
+
+## 5. User Flow
+
+### Flow A: Organic Search (The pSEO Engine)
+1.  User searches Google: *"12 month growth strategy for healthtech startups in Berlin"*
+2.  User clicks the `goals.ac/roadmap/healthtech-berlin` search result.
+3.  User reads the highly specific, AI-generated strategy.
+4.  User clicks the sticky CTA: **"Automate these milestones with Lead.sh"** -> Enters funnel.
+
+### Flow B: Direct Entry (The Interactive Tool)
+1.  User lands on the `goals.ac` homepage.
+2.  User sees a minimalist form: *"Generate your 2026 Growth Roadmap."*
+3.  User inputs their specific niche and city.
+4.  System generates a new page on the fly, saves it to the database (adding to the SEO footprint), and presents the roadmap.
+5.  User clicks export -> Enters funnel.
+
+## 6. Development Milestones (Phase 1)
+
+* **Milestone 1: Logic & Prompts (Days 1-3)**
+    * Set up Next.js app on Replit.
+    * Finalize the LLM prompt to reliably return clean, formatted JSON matching Sometech's consulting methodology.
+* **Milestone 2: Database & Generation (Days 4-7)**
+    * Connect Replit PostgreSQL.
+    * Write the script to loop through a CSV of 500 Industry/Location combinations and store the generated JSON responses in the database.
+* **Milestone 3: Frontend & SEO Template (Days 8-10)**
+    * Build the Next.js page template `[industry]-[location].tsx`.
+    * Ensure Lighthouse SEO score is 95+.
+* **Milestone 4: The Funnel (Days 11-14)**
+    * Build the lead capture modal.
+    * Wire the form submission to trigger a webhook to the Lead.sh CRM.
+    * Deploy to production via Replit Deployments.
