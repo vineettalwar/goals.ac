@@ -1,0 +1,1 @@
+ALTER TABLE "lead_captures" ADD CONSTRAINT "lead_captures_roadmap_email_unique" UNIQUE("roadmap_id","email");

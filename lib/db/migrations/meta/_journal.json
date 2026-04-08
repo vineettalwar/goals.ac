@@ -15,6 +15,13 @@
       "when": 1775683711380,
       "tag": "0001_amusing_venom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775687293950,
+      "tag": "0002_uneven_toad_men",
+      "breakpoints": true
     }
   ]
 }
