@@ -70,7 +70,7 @@ export default function Home() {
   return (
     <Layout>
       <SEO
-        title="goals.ac — Generate Your 2026 B2B Growth Roadmap"
+        title="goals.ac — Generate Your 2026 Growth Roadmap"
         description="Programmatic SEO platform for ambitious B2B startup founders to generate AI-powered 12-month growth roadmaps."
       />
 
@@ -132,7 +132,7 @@ export default function Home() {
                         name="location"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-base font-medium">Target Market</FormLabel>
+                            <FormLabel className="text-base font-medium">Location</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingLocations}>
                               <FormControl>
                                 <SelectTrigger className="h-12 text-base">
