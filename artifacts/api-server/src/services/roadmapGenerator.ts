@@ -1,4 +1,5 @@
 import type { GoogleGenAI } from "@google/genai";
+import { generateRoadmapSlug } from "@workspace/db";
 import { logger } from "../lib/logger";
 
 export interface RoadmapPhase {
@@ -102,6 +103,40 @@ async function getAiClient(): Promise<GoogleGenAI | null> {
   return null;
 }
 
+const EXPECTED_PHASE_TIMEFRAMES = ["Months 1-3", "Months 4-6", "Months 7-12"];
+
+function validateRoadmapContent(content: unknown): asserts content is RoadmapContent {
+  if (typeof content !== "object" || content === null) {
+    throw new Error("Roadmap content must be an object");
+  }
+  const c = content as Record<string, unknown>;
+  if (typeof c.executiveSummary !== "string" || c.executiveSummary.trim().length === 0) {
+    throw new Error("Roadmap missing executiveSummary");
+  }
+  if (!Array.isArray(c.phases) || c.phases.length !== 3) {
+    throw new Error(`Roadmap must have exactly 3 phases, got ${Array.isArray(c.phases) ? c.phases.length : typeof c.phases}`);
+  }
+  for (let i = 0; i < c.phases.length; i++) {
+    const phase = c.phases[i] as Record<string, unknown>;
+    const expectedTimeframe = EXPECTED_PHASE_TIMEFRAMES[i];
+    if (typeof phase.title !== "string" || phase.title.trim().length === 0) {
+      throw new Error(`Phase ${i + 1} missing title`);
+    }
+    if (typeof phase.timeframe !== "string" || !phase.timeframe.includes(expectedTimeframe.split(" ")[1])) {
+      throw new Error(`Phase ${i + 1} has unexpected timeframe: ${phase.timeframe}`);
+    }
+    if (!Array.isArray(phase.objectives) || phase.objectives.length === 0) {
+      throw new Error(`Phase ${i + 1} missing objectives`);
+    }
+    if (!Array.isArray(phase.tactics) || phase.tactics.length === 0) {
+      throw new Error(`Phase ${i + 1} missing tactics`);
+    }
+    if (!Array.isArray(phase.kpis) || phase.kpis.length === 0) {
+      throw new Error(`Phase ${i + 1} missing kpis`);
+    }
+  }
+}
+
 export async function generateRoadmapContent(
   industry: string,
   location: string,
@@ -137,10 +172,7 @@ export async function generateRoadmapContent(
 
       const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
       const parsed = JSON.parse(cleaned) as RoadmapContent;
-
-      if (!parsed.executiveSummary || !Array.isArray(parsed.phases) || parsed.phases.length === 0) {
-        throw new Error("Invalid roadmap structure from Gemini");
-      }
+      validateRoadmapContent(parsed);
 
       return parsed;
     } catch (err) {
@@ -156,15 +188,4 @@ export async function generateRoadmapContent(
   throw lastError;
 }
 
-export function generateSlug(industry: string, location: string, stage: string): string {
-  const slugify = (text: string) =>
-    text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .trim();
-
-  const base = `${slugify(industry)}-${slugify(location)}`;
-  return stage === "seed" ? base : `${base}-${slugify(stage)}`;
-}
+export { generateRoadmapSlug as generateSlug } from "@workspace/db";

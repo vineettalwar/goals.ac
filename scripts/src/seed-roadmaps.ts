@@ -1,5 +1,4 @@
-import { db } from "@workspace/db";
-import { roadmapsTable } from "@workspace/db";
+import { db, generateRoadmapSlug, roadmapsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 
 interface Combo {
@@ -61,20 +60,6 @@ const COMBOS: Combo[] = [
   { industry: "LogisticsTech", location: "Singapore", stage: "seed" },
 ];
 
-function slugify(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .trim();
-}
-
-function generateSlug(industry: string, location: string, stage: string): string {
-  const base = `${slugify(industry)}-${slugify(location)}`;
-  return stage === "seed" ? base : `${base}-${slugify(stage)}`;
-}
-
 const API_BASE = process.env.API_BASE_URL ?? "http://localhost:8080/api";
 
 async function seedRoadmaps() {
@@ -87,7 +72,7 @@ async function seedRoadmaps() {
 
   for (const [i, combo] of COMBOS.entries()) {
     const { industry, location, stage } = combo;
-    const slug = generateSlug(industry, location, stage);
+    const slug = generateRoadmapSlug(industry, location, stage);
 
     const existing = await db
       .select({ id: roadmapsTable.id })
