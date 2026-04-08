@@ -1,5 +1,5 @@
 const WEBHOOK_URL = process.env.LEADSH_WEBHOOK_URL;
-const MAX_RETRIES = 3;
+const MAX_RETRIES = 2;
 const RETRY_DELAY_MS = 1000;
 
 interface LeadshPayload {
