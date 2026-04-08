@@ -149,7 +149,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CaptureLeadResponse"
         "400":
-          description: Invalid input or duplicate submission
+          description: Invalid input (validation error)
           content:
             application/json:
               schema:
