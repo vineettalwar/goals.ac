@@ -1,4 +1,4 @@
-import { ai } from "@workspace/integrations-gemini-ai";
+import type { GoogleGenAI } from "@google/genai";
 import { logger } from "../lib/logger";
 
 export interface RoadmapPhase {
@@ -65,13 +65,44 @@ Return ONLY this exact JSON structure with no additional text:
 Make every tactic specific and actionable — reference real platforms, partnership structures, pricing models, hiring profiles, or distribution channels where applicable. The output must be immediately useful for a ${stage}-stage ${industry} founder in ${location}.`;
 }
 
+let aiClient: GoogleGenAI | null = null;
+
+async function getAiClient(): Promise<GoogleGenAI | null> {
+  const baseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
+  const apiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
+
+  if (!baseUrl || !apiKey) {
+    return null;
+  }
+
+  if (!aiClient) {
+    const { GoogleGenAI: GenAI } = await import("@google/genai");
+    aiClient = new GenAI({
+      apiKey,
+      httpOptions: {
+        apiVersion: "",
+        baseUrl,
+      },
+    });
+  }
+
+  return aiClient;
+}
+
 export async function generateRoadmapContent(
   industry: string,
   location: string,
   stage: string,
 ): Promise<RoadmapContent> {
-  const prompt = buildPrompt(industry, location, stage);
+  const ai = await getAiClient();
 
+  if (!ai) {
+    throw new Error(
+      "AI generation is not configured. Ensure AI_INTEGRATIONS_GEMINI_BASE_URL and AI_INTEGRATIONS_GEMINI_API_KEY are set.",
+    );
+  }
+
+  const prompt = buildPrompt(industry, location, stage);
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
