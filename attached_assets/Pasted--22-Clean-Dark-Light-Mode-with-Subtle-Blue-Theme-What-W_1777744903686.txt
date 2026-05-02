@@ -1,0 +1,29 @@
+#22 - Clean Dark/Light Mode with Subtle Blue Theme
+What & Why
+The app currently uses a purple gradient as its primary brand color. Replace all purple/violet/indigo gradients with a subtle, clean blue palette and implement a proper dark/light mode toggle. The result should feel minimal and professional rather than decorative.
+
+Done looks like
+All purple and violet gradients (text, background, orbs, mesh) are replaced with subtle blue equivalents
+Dark mode uses a clean near-black background with a subtle blue tint (no purple)
+Light mode uses a clean off-white background with standard blue accents
+Primary buttons, headings, and brand text use the new blue palette instead of indigo-to-violet gradients
+A theme toggle button (sun/moon icon) appears in the header
+User's preference is saved in localStorage and defaults to system preference if none is set
+No purple, violet, or indigo tones remain anywhere in the UI
+Out of scope
+Changing layout or component structure
+Redesigning individual pages beyond color/theme changes
+Steps
+Update CSS variables and theme — In index.css, replace the dark mode CSS variables (background, primary, card, border, ring) with clean dark-blue equivalents (no purple tint). Update light mode variables to use standard blue. Replace .text-gradient, .text-gradient-brand, bg-mesh-dark, orb-primary, orb-violet, orb-indigo, glass-card, and glow-primary utilities with subtle blue versions.
+
+Replace inline gradient classes across pages — Audit all pages and components for hardcoded Tailwind gradient classes (from-indigo-500 to-violet-500, etc.) and replace them with the new blue equivalents (from-blue-500 to-blue-600 or similar subtle values).
+
+Implement theme toggle — Add a ThemeProvider context that reads/writes localStorage and applies a dark class to the root element, defaulting to the system preference. Add a sun/moon icon toggle button to the site header.
+
+Relevant files
+artifacts/goals-ac/src/index.css
+artifacts/goals-ac/src/pages/home.tsx
+artifacts/goals-ac/src/pages/signup.tsx
+artifacts/goals-ac/src/pages/login.tsx
+artifacts/goals-ac/src/pages/roadmap-detail.tsx
+artifacts/goals-ac/src/components/ui/button.tsx
