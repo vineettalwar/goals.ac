@@ -53,8 +53,8 @@ export function Layout({ children }: LayoutProps) {
             </Link>
             <button
               onClick={toggleTheme}
-              className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               aria-label="Toggle theme"
+              className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>

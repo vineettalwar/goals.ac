@@ -259,7 +259,7 @@ export default function RoadmapDetail() {
                   </Card>
 
                   <Card className="border-white/[0.07] glass-card-md shadow-none">
-                    <CardHeader className="bg-violet-500/5 pb-4 rounded-t-xl">
+                    <CardHeader className="bg-blue-500/5 pb-4 rounded-t-xl">
                       <CardTitle className="text-lg flex items-center gap-2">
                         <TrendingUp className="w-5 h-5 text-blue-400" /> Key Tactics
                       </CardTitle>
@@ -268,7 +268,7 @@ export default function RoadmapDetail() {
                       <ul className="space-y-3">
                         {phase.tactics.map((tactic, i) => (
                           <li key={i} className="flex items-start gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0 mt-2" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2" />
                             <span className="leading-relaxed text-muted-foreground">{tactic}</span>
                           </li>
                         ))}

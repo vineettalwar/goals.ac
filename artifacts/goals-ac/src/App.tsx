@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setBaseUrl } from "@workspace/api-client-react";
 import { AuthProvider, useAuth } from "@/context/auth";
-import { ThemeProvider } from "@/context/theme";
 import { ActiveProjectProvider } from "@/context/active-project";
+import { ThemeProvider } from "@/context/theme";
 import type { ReactNode } from "react";
 
 import Home from "@/pages/home";
@@ -51,10 +51,10 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-      <AuthProvider>
-        <ActiveProjectProvider>
-          <TooltipProvider>
-            <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <AuthProvider>
+          <ActiveProjectProvider>
+            <TooltipProvider>
+              <BrowserRouter basename={import.meta.env.BASE_URL}>
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
@@ -75,11 +75,11 @@ function App() {
                 <Route path="/geo-audit/:id" element={<GeoAuditDetail />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
-            <Toaster />
-          </TooltipProvider>
-        </ActiveProjectProvider>
-      </AuthProvider>
+              </BrowserRouter>
+              <Toaster />
+            </TooltipProvider>
+          </ActiveProjectProvider>
+        </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
