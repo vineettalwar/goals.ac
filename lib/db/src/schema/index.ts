@@ -11,3 +11,4 @@ export * from "./users";
 export * from "./website_projects";
 export * from "./brand_profiles";
 export * from "./project_roadmaps";
+export * from "./content_pieces";

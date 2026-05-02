@@ -22,6 +22,8 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import Dashboard from "@/pages/dashboard";
 import ProjectDetail from "@/pages/project-detail";
+import ContentStudio from "@/pages/content-studio";
+import ContentPiecePage from "@/pages/content-piece";
 
 setBaseUrl(import.meta.env.BASE_URL.replace(/\/$/, ""));
 
@@ -58,6 +60,8 @@ function App() {
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
                 <Route path="/projects/:id" element={<RequireAuth><ProjectDetail /></RequireAuth>} />
+                <Route path="/projects/:id/content-studio" element={<RequireAuth><ContentStudio /></RequireAuth>} />
+                <Route path="/content-piece/:id" element={<RequireAuth><ContentPiecePage /></RequireAuth>} />
                 <Route path="/roadmaps" element={<RoadmapDirectory />} />
                 <Route path="/roadmap/:slug" element={<RoadmapDetail />} />
                 <Route path="/content-strategy/:id" element={<ContentStrategy />} />

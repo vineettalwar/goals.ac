@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { websiteProjectsTable, brandProfilesTable, projectRoadmapsTable, roadmapsTable, contentStrategiesTable, seoArticlesTable, geoAuditsTable } from "@workspace/db";
+import { websiteProjectsTable, brandProfilesTable, projectRoadmapsTable, roadmapsTable, contentStrategiesTable, contentItemsTable, seoArticlesTable, geoAuditsTable } from "@workspace/db";
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../lib/auth";
@@ -317,7 +317,12 @@ router.get("/website-projects/:id/content", requireAuth, async (req, res) => {
       ? await db.select().from(roadmapsTable).where(inArray(roadmapsTable.id, roadmapIds)).orderBy(desc(roadmapsTable.createdAt))
       : [];
 
-    res.json({ contentStrategies, seoArticles, geoAudits, roadmaps });
+    const strategyIds = contentStrategies.map((s) => s.id);
+    const contentItems = strategyIds.length > 0
+      ? await db.select().from(contentItemsTable).where(inArray(contentItemsTable.strategyId, strategyIds)).orderBy(contentItemsTable.day)
+      : [];
+
+    res.json({ contentStrategies, contentItems, seoArticles, geoAudits, roadmaps });
   } catch (err) {
     req.log.error(err, "Failed to get project content");
     res.status(500).json({ error: "Internal server error" });

@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth";
-import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertCircle, Map } from "lucide-react";
+import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertCircle, Map, Sparkles } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -201,6 +201,16 @@ export default function ProjectDetail() {
               )}
             </div>
           </div>
+        </div>
+
+        <div className="mb-6">
+          <Link to={`/projects/${id}/content-studio`}>
+            <Button className="w-full sm:w-auto" size="lg">
+              <Sparkles className="w-4 h-4 mr-2" />
+              Open Content Studio
+            </Button>
+          </Link>
+          <p className="text-xs text-muted-foreground mt-2">Generate blog posts, guides, whitepapers, and more — powered by AI.</p>
         </div>
 
         <Tabs defaultValue="brand">

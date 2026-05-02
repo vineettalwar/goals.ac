@@ -7,6 +7,7 @@ import seoArticlesRouter from "./seoArticles";
 import geoAuditsRouter from "./geoAudits";
 import authRouter from "./auth";
 import websiteProjectsRouter from "./websiteProjects";
+import contentPiecesRouter from "./contentPieces";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(industriesRouter);
 router.use(contentStrategiesRouter);
 router.use(seoArticlesRouter);
 router.use(geoAuditsRouter);
+router.use(contentPiecesRouter);
 
 export default router;
