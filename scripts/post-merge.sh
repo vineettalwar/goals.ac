@@ -15,8 +15,24 @@ ASKPASS_SCRIPT=$(mktemp)
 chmod 700 "$ASKPASS_SCRIPT"
 printf '#!/bin/bash\ncase "$1" in\n  *Username*) echo "x-access-token" ;;\n  *Password*) printf "%%s" "$GITHUB_TOKEN" ;;\nesac\n' > "$ASKPASS_SCRIPT"
 
-# Fast-forward push only — fails loudly if remote has diverged
-GIT_ASKPASS="$ASKPASS_SCRIPT" git push origin HEAD:main
+# Pull remote changes (rebase) so local is always ahead of remote
+GIT_ASKPASS="$ASKPASS_SCRIPT" git fetch origin main 2>&1 || {
+  rm -f "$ASKPASS_SCRIPT"
+  echo "WARNING: git fetch failed. Skipping GitHub sync." >&2
+  exit 0
+}
+
+GIT_ASKPASS="$ASKPASS_SCRIPT" git rebase origin/main 2>&1 || {
+  rm -f "$ASKPASS_SCRIPT"
+  echo "WARNING: git rebase failed. Skipping GitHub sync to avoid data loss." >&2
+  exit 0
+}
+
+GIT_ASKPASS="$ASKPASS_SCRIPT" git push origin HEAD:main 2>&1 || {
+  rm -f "$ASKPASS_SCRIPT"
+  echo "WARNING: git push failed. Skipping GitHub sync." >&2
+  exit 0
+}
 
 # Clean up askpass script immediately after use
 rm -f "$ASKPASS_SCRIPT"
