@@ -8,11 +8,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useAuth } from "@/context/auth";
 import {
   ArrowLeft, Copy, Check, Loader2, AlertCircle, Edit3, Eye,
   RefreshCw, Save, BookOpen, Newspaper, GraduationCap, Map,
-  FileSearch, LayoutTemplate, Globe, ImageIcon, Trash2
+  FileSearch, LayoutTemplate, Globe, ImageIcon, Trash2, Send, ExternalLink
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -38,6 +39,7 @@ interface ContentPiece {
   status: string;
   wordCount: number;
   plannedDate: string | null;
+  publishedUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -53,6 +55,160 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
   infographic_outline: { label: "Infographic Outline", icon: ImageIcon, color: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400" },
 };
 
+const STATUS_COLORS: Record<string, string> = {
+  draft: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+  ready: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  published: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  ready: "Ready",
+  published: "Published",
+};
+
+function PublishDialog({
+  open,
+  onClose,
+  onPublished,
+  pieceId,
+  token,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onPublished: (updated: ContentPiece) => void;
+  pieceId: number;
+  token: string | null;
+}) {
+  const [wpSiteUrl, setWpSiteUrl] = useState("");
+  const [wpUsername, setWpUsername] = useState("");
+  const [wpAppPassword, setWpAppPassword] = useState("");
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = () => {
+    setWpSiteUrl("");
+    setWpUsername("");
+    setWpAppPassword("");
+    setError(null);
+    setIsPublishing(false);
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const handlePublish = async () => {
+    if (!wpSiteUrl.trim() || !wpUsername.trim() || !wpAppPassword.trim()) return;
+    setIsPublishing(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/content-pieces/${pieceId}/publish`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          wpSiteUrl: wpSiteUrl.trim(),
+          wpUsername: wpUsername.trim(),
+          wpAppPassword: wpAppPassword.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error ?? "Publish failed");
+      }
+      const updated = await res.json() as ContentPiece;
+      onPublished(updated);
+      handleClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to publish");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Send className="w-4 h-4" />
+            Publish to WordPress
+          </DialogTitle>
+          <DialogDescription>
+            Enter your WordPress site credentials to publish this content directly.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 mt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="wp-url">WordPress Site URL</Label>
+            <Input
+              id="wp-url"
+              placeholder="https://yoursite.com"
+              value={wpSiteUrl}
+              onChange={(e) => setWpSiteUrl(e.target.value)}
+              disabled={isPublishing}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="wp-user">WordPress Username</Label>
+            <Input
+              id="wp-user"
+              placeholder="admin"
+              value={wpUsername}
+              onChange={(e) => setWpUsername(e.target.value)}
+              disabled={isPublishing}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="wp-pass">Application Password</Label>
+            <Input
+              id="wp-pass"
+              type="password"
+              placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+              value={wpAppPassword}
+              onChange={(e) => setWpAppPassword(e.target.value)}
+              disabled={isPublishing}
+            />
+            <p className="text-xs text-muted-foreground">
+              Generate an Application Password in WordPress under{" "}
+              <strong>Users → Profile → Application Passwords</strong>.
+              Your real password is never stored.
+            </p>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 pt-1">
+            <Button
+              onClick={handlePublish}
+              disabled={!wpSiteUrl.trim() || !wpUsername.trim() || !wpAppPassword.trim() || isPublishing}
+              className="flex-1"
+            >
+              {isPublishing ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Publishing...</>
+              ) : (
+                <><Send className="w-4 h-4 mr-2" />Publish Post</>
+              )}
+            </Button>
+            <Button variant="outline" onClick={handleClose} disabled={isPublishing}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ContentPiecePage() {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
@@ -66,6 +222,7 @@ export default function ContentPiecePage() {
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [publishOpen, setPublishOpen] = useState(false);
 
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
@@ -211,6 +368,8 @@ export default function ContentPiecePage() {
 
   const meta = FORMAT_META[piece.formatType];
   const Icon = meta.icon;
+  const statusColor = STATUS_COLORS[piece.status] ?? "bg-muted text-muted-foreground";
+  const statusLabel = STATUS_LABELS[piece.status] ?? piece.status;
 
   return (
     <Layout>
@@ -231,14 +390,25 @@ export default function ContentPiecePage() {
             </span>
             <div>
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{meta.label}</span>
-              <div className="flex items-center gap-2 mt-0.5">
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <span className="text-xs text-muted-foreground">{piece.wordCount.toLocaleString()} words</span>
                 <span className="text-muted-foreground/40">·</span>
                 <span className="text-xs text-muted-foreground">{format(parseISO(piece.createdAt), "d MMM yyyy")}</span>
                 <span className="text-muted-foreground/40">·</span>
-                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full capitalize ${piece.status === "ready" ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"}`}>
-                  {piece.status}
+                <span className={`text-xs font-medium px-1.5 py-0.5 rounded-full ${statusColor}`}>
+                  {statusLabel}
                 </span>
+                {piece.publishedUrl && (
+                  <a
+                    href={piece.publishedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    <ExternalLink className="w-3 h-3" />
+                    View live post
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -248,6 +418,11 @@ export default function ContentPiecePage() {
             <Button variant="outline" size="sm" onClick={handleCopy}>
               {copied ? <><Check className="w-4 h-4 mr-1.5 text-green-600" />Copied</> : <><Copy className="w-4 h-4 mr-1.5" />Copy</>}
             </Button>
+            {piece.status !== "published" && (
+              <Button size="sm" onClick={() => setPublishOpen(true)}>
+                <Send className="w-4 h-4 mr-1.5" />Publish
+              </Button>
+            )}
             {!isEditing ? (
               <Button variant="outline" size="sm" onClick={startEdit}>
                 <Edit3 className="w-4 h-4 mr-1.5" />Edit
@@ -278,6 +453,28 @@ export default function ContentPiecePage() {
           </div>
         </div>
 
+        {piece.publishedUrl && (
+          <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+            <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Published to WordPress</p>
+              <a
+                href={piece.publishedUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline truncate block"
+              >
+                {piece.publishedUrl}
+              </a>
+            </div>
+            <a href={piece.publishedUrl} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm" className="text-blue-600 border-blue-300 hover:bg-blue-50">
+                <ExternalLink className="w-3.5 h-3.5 mr-1.5" />View
+              </Button>
+            </a>
+          </div>
+        )}
+
         {isEditing ? (
           <div className="space-y-5">
             <div className="space-y-1.5">
@@ -300,6 +497,7 @@ export default function ContentPiecePage() {
                   <SelectContent>
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="ready">Ready</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -365,6 +563,11 @@ export default function ContentPiecePage() {
                 <Button variant="outline" onClick={startEdit}>
                   <Edit3 className="w-4 h-4 mr-2" />Edit
                 </Button>
+                {piece.status !== "published" && (
+                  <Button variant="outline" onClick={() => setPublishOpen(true)}>
+                    <Send className="w-4 h-4 mr-2" />Publish to WordPress
+                  </Button>
+                )}
                 <Button onClick={handleCopy}>
                   {copied ? <><Check className="w-4 h-4 mr-2" />Copied</> : <><Copy className="w-4 h-4 mr-2" />Copy Markdown</>}
                 </Button>
@@ -373,6 +576,14 @@ export default function ContentPiecePage() {
           </div>
         )}
       </div>
+
+      <PublishDialog
+        open={publishOpen}
+        onClose={() => setPublishOpen(false)}
+        onPublished={(updated) => setPiece(updated)}
+        pieceId={piece.id}
+        token={token}
+      />
     </Layout>
   );
 }

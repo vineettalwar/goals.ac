@@ -9,6 +9,7 @@ import {
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
+import { marked } from "marked";
 import { requireAuth } from "../lib/auth";
 import { generateContentPiece } from "../services/contentStudioGenerator";
 import { logger } from "../lib/logger";
@@ -21,7 +22,7 @@ const GenerateBody = z.object({
   angleHint: z.string().optional(),
 });
 
-const ALLOWED_STATUSES = ["draft", "ready"] as const;
+const ALLOWED_STATUSES = ["draft", "ready", "published"] as const;
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -261,6 +262,102 @@ router.delete("/content-pieces/:id", requireAuth, async (req, res) => {
     res.status(204).send();
   } catch (err) {
     logger.error({ err }, "Failed to delete content piece");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const PublishBody = z.object({
+  wpSiteUrl: z.string().url("Must be a valid WordPress site URL"),
+  wpUsername: z.string().min(1, "WordPress username is required"),
+  wpAppPassword: z.string().min(1, "WordPress application password is required"),
+});
+
+router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const parsed = PublishBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  const { wpSiteUrl, wpUsername, wpAppPassword } = parsed.data;
+
+  try {
+    const [piece] = await db
+      .select()
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.id, id))
+      .limit(1);
+
+    if (!piece) {
+      res.status(404).json({ error: "Content piece not found" });
+      return;
+    }
+
+    const [project] = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
+    const siteBase = wpSiteUrl.replace(/\/$/, "");
+    const wpApiUrl = `${siteBase}/wp-json/wp/v2/posts`;
+    const htmlContent = await marked(piece.bodyMarkdown);
+    const basicAuth = Buffer.from(`${wpUsername}:${wpAppPassword}`).toString("base64");
+
+    let wpRes: Response;
+    try {
+      wpRes = await fetch(wpApiUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Basic ${basicAuth}`,
+        },
+        body: JSON.stringify({
+          title: piece.title,
+          content: htmlContent,
+          status: "publish",
+        }),
+      });
+    } catch (fetchErr) {
+      req.log.error({ fetchErr }, "Network error reaching WordPress API");
+      res.status(502).json({ error: "Could not reach your WordPress site. Check the URL and try again." });
+      return;
+    }
+
+    if (!wpRes.ok) {
+      const wpBody = await wpRes.json().catch(() => ({})) as { message?: string; code?: string };
+      req.log.warn({ status: wpRes.status, wpBody }, "WordPress API returned error");
+      if (wpRes.status === 401 || wpRes.status === 403) {
+        res.status(401).json({ error: "WordPress authentication failed. Check your username and application password." });
+      } else {
+        res.status(502).json({ error: wpBody.message ?? "WordPress rejected the publish request." });
+      }
+      return;
+    }
+
+    const wpPost = await wpRes.json() as { link?: string; id?: number };
+    const publishedUrl = wpPost.link ?? `${siteBase}/?p=${wpPost.id}`;
+
+    const [updated] = await db
+      .update(contentPiecesTable)
+      .set({ status: "published", publishedUrl })
+      .where(eq(contentPiecesTable.id, id))
+      .returning();
+
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to publish content piece");
     res.status(500).json({ error: "Internal server error" });
   }
 });
