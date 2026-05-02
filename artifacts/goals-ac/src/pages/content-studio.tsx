@@ -17,8 +17,9 @@ import {
   Globe, ImageIcon, BarChart3, Filter, RefreshCw, Trash2, ArrowUpDown, ExternalLink
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO } from "date-fns";
-import { DndContext, type DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -334,17 +335,25 @@ function CreateModal({
   );
 }
 
-function DraggablePiece({ piece }: { piece: ContentPiece }) {
+function PieceChip({ piece, faded }: { piece: ContentPiece; faded?: boolean }) {
+  const meta = FORMAT_META[piece.formatType];
+  return (
+    <div
+      className={`text-xs px-1.5 py-0.5 rounded truncate ${meta.color} transition-opacity cursor-grab active:cursor-grabbing ${faded ? "opacity-30" : "hover:opacity-80"}`}
+      title={piece.title}
+    >
+      {piece.title}
+    </div>
+  );
+}
+
+function DraggablePiece({ piece, isRescheduling }: { piece: ContentPiece; isRescheduling?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: `piece-${piece.id}`,
     data: { piece },
   });
 
-  const meta = FORMAT_META[piece.formatType];
-
-  const style = transform
-    ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, opacity: isDragging ? 0.5 : 1, zIndex: isDragging ? 999 : undefined }
-    : undefined;
+  const style = { transform: CSS.Translate.toString(transform) };
 
   return (
     <div
@@ -352,11 +361,10 @@ function DraggablePiece({ piece }: { piece: ContentPiece }) {
       style={style}
       {...listeners}
       {...attributes}
+      className={isDragging ? "opacity-30" : undefined}
     >
       <Link to={`/content-piece/${piece.id}`} onClick={(e) => isDragging && e.preventDefault()}>
-        <div className={`text-xs px-1.5 py-0.5 rounded truncate ${meta.color} hover:opacity-80 transition-opacity cursor-grab active:cursor-grabbing`} title={piece.title}>
-          {piece.title}
-        </div>
+        <PieceChip piece={piece} faded={isRescheduling && !isDragging} />
       </Link>
     </div>
   );
@@ -377,12 +385,15 @@ function DroppableDay({ dateKey, children }: { dateKey: string; children: React.
 
 function ContentCalendar({
   pieces,
+  reschedulingId,
   onReschedule,
 }: {
   pieces: ContentPiece[];
+  reschedulingId: number | null;
   onReschedule: (pieceId: number, newDate: string) => void;
 }) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [activePiece, setActivePiece] = useState<ContentPiece | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -396,12 +407,24 @@ function ContentCalendar({
     piecesByDate[dateKey].push(piece);
   }
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const pieceId = Number((event.active.id as string).replace("piece-", ""));
+    setActivePiece(pieces.find((p) => p.id === pieceId) ?? null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    setActivePiece(null);
     if (!over) return;
 
     const pieceId = Number((active.id as string).replace("piece-", ""));
     const newDateKey = (over.id as string).replace("day-", "");
+
+    const piece = pieces.find((p) => p.id === pieceId);
+    if (!piece) return;
+    const currentDate = piece.plannedDate ?? piece.createdAt.split("T")[0];
+    if (currentDate === newDateKey) return;
+
     onReschedule(pieceId, newDateKey);
   };
 
@@ -427,7 +450,7 @@ function ContentCalendar({
         </div>
       )}
 
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+      <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden border border-border">
           {weekDays.map((d) => (
             <div key={d} className="bg-muted/50 text-center text-xs font-medium text-muted-foreground py-2">
@@ -451,7 +474,7 @@ function ContentCalendar({
                   </span>
                   <div className="space-y-0.5">
                     {dayPieces.slice(0, 2).map((p) => (
-                      <DraggablePiece key={p.id} piece={p} />
+                      <DraggablePiece key={p.id} piece={p} isRescheduling={reschedulingId === p.id} />
                     ))}
                     {dayPieces.length > 2 && (
                       <div className="text-xs text-muted-foreground px-1">+{dayPieces.length - 2} more</div>
@@ -462,6 +485,14 @@ function ContentCalendar({
             );
           })}
         </div>
+
+        <DragOverlay dropAnimation={null}>
+          {activePiece ? (
+            <div className="pointer-events-none rotate-1 shadow-xl opacity-95">
+              <PieceChip piece={activePiece} />
+            </div>
+          ) : null}
+        </DragOverlay>
       </DndContext>
     </div>
   );
@@ -497,6 +528,8 @@ export default function ContentStudio() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterSource, setFilterSource] = useState<string>("all");
   const [sortKey, setSortKey] = useState<SortKey>("newest");
+  const [reschedulingId, setReschedulingId] = useState<number | null>(null);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!token || !id) return;
@@ -609,6 +642,10 @@ export default function ContentStudio() {
   };
 
   const handleReschedule = async (pieceId: number, newDate: string) => {
+    const prevPieces = pieces;
+    setPieces((prev) => prev.map((p) => p.id === pieceId ? { ...p, plannedDate: newDate } : p));
+    setReschedulingId(pieceId);
+    setRescheduleError(null);
     try {
       const res = await fetch(`${API_BASE}/api/content-pieces/${pieceId}`, {
         method: "PATCH",
@@ -619,10 +656,14 @@ export default function ContentStudio() {
         const updated = await res.json() as Omit<ContentPiece, "source">;
         setPieces((prev) => prev.map((p) => p.id === pieceId ? { ...updated, source: "studio" as const } : p));
       } else {
-        alert("Failed to reschedule content piece. Please try again.");
+        setPieces(prevPieces);
+        setRescheduleError("Failed to reschedule — please try again.");
       }
     } catch {
-      alert("Failed to reschedule content piece. Please check your connection.");
+      setPieces(prevPieces);
+      setRescheduleError("Could not save — please check your connection.");
+    } finally {
+      setReschedulingId(null);
     }
   };
 
@@ -953,8 +994,15 @@ export default function ContentStudio() {
           </TabsContent>
 
           <TabsContent value="calendar">
+            {rescheduleError && (
+              <div className="flex items-center justify-between gap-2 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-2.5 mb-3">
+                <span>{rescheduleError}</span>
+                <button className="text-destructive/70 hover:text-destructive text-xs" onClick={() => setRescheduleError(null)}>✕</button>
+              </div>
+            )}
             <ContentCalendar
               pieces={pieces}
+              reschedulingId={reschedulingId}
               onReschedule={handleReschedule}
             />
           </TabsContent>
