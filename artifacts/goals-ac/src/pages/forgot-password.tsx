@@ -83,7 +83,7 @@ export default function ForgotPassword() {
               <div className="space-y-4">
                 <Button
                   variant="outline"
-                  className="w-full border-white/10 bg-white/5 hover:bg-white/10"
+                  className="w-full"
                   onClick={() => { setSubmitted(false); form.reset(); }}
                 >
                   Send another link
@@ -113,7 +113,7 @@ export default function ForgotPassword() {
                           <Input
                             type="email"
                             placeholder="you@example.com"
-                            className="bg-white/5 border-white/10 hover:border-white/20 transition-colors"
+                            className=""
                             {...field}
                           />
                         </FormControl>

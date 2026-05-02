@@ -80,14 +80,14 @@ export default function RoadmapDirectory() {
                   <Card className="h-full flex flex-col border-white/[0.07] glass-card-md shadow-none card-hover-glow cursor-pointer group">
                     <CardHeader className="pb-4">
                       <div className="flex flex-wrap gap-2 mb-4">
-                        <Badge className="bg-blue-500/15 text-blue-300 border-blue-500/25 font-mono text-xs">
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25 font-mono text-xs">
                           {roadmap.industry}
                         </Badge>
-                        <Badge className="bg-white/[0.06] text-zinc-400 border-white/10 font-mono text-xs">
+                        <Badge className="bg-muted text-muted-foreground border-border font-mono text-xs">
                           {formatStage(roadmap.stage)}
                         </Badge>
                       </div>
-                      <h3 className="text-xl font-bold tracking-tight leading-snug group-hover:text-blue-300 transition-colors">
+                      <h3 className="text-xl font-bold tracking-tight leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
                         Growth Strategy for {roadmap.location} Startups
                       </h3>
                     </CardHeader>
@@ -97,12 +97,12 @@ export default function RoadmapDirectory() {
                         <span>12-month execution plan</span>
                       </div>
                     </CardContent>
-                    <CardFooter className="border-t border-white/[0.06] bg-white/[0.02] pt-4 flex justify-between items-center text-sm text-muted-foreground rounded-b-xl">
+                    <CardFooter className="border-t pt-4 flex justify-between items-center text-sm text-muted-foreground rounded-b-xl">
                       <div className="flex items-center gap-2">
                         <Eye className="w-4 h-4" />
                         <span>{roadmap.viewCount} views</span>
                       </div>
-                      <div className="flex items-center gap-1 font-semibold text-foreground group-hover:text-blue-300 transition-colors">
+                      <div className="flex items-center gap-1 font-semibold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
                         View Plan <ArrowRight className="w-4 h-4" />
                       </div>
                     </CardFooter>

@@ -81,7 +81,7 @@ export default function Login() {
             <Button
               type="button"
               variant="outline"
-              className="w-full mb-4 bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 transition-colors gap-2"
+              className="w-full mb-4 gap-2"
               onClick={handleGoogleLogin}
             >
               <GoogleIcon />
@@ -90,7 +90,7 @@ export default function Login() {
 
             <div className="relative mb-4">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-white/10" />
+                <span className="w-full border-t" />
               </div>
               <div className="relative flex justify-center text-xs text-muted-foreground">
                 <span className="bg-card px-2">or</span>
@@ -111,7 +111,7 @@ export default function Login() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="you@example.com" className="bg-white/5 border-white/10 hover:border-white/20 transition-colors" {...field} />
+                        <Input type="email" placeholder="you@example.com" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -132,7 +132,7 @@ export default function Login() {
                         </Link>
                       </div>
                       <FormControl>
-                        <Input type="password" placeholder="••••••••" className="bg-white/5 border-white/10 hover:border-white/20 transition-colors" {...field} />
+                        <Input type="password" placeholder="••••••••" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

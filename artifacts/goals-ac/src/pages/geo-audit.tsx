@@ -38,20 +38,20 @@ type GeoAudit = {
 function StatusBadge({ status }: { status: "pass" | "fail" | "warn" }) {
   if (status === "pass") {
     return (
-      <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/25 hover:bg-emerald-500/20 gap-1">
+      <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25 dark:hover:bg-emerald-500/20 gap-1">
         <CheckCircle2 className="w-3 h-3" /> Pass
       </Badge>
     );
   }
   if (status === "fail") {
     return (
-      <Badge className="bg-red-500/15 text-red-300 border-red-500/25 hover:bg-red-500/20 gap-1">
+      <Badge className="bg-red-100 text-red-700 border-red-200 hover:bg-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/25 dark:hover:bg-red-500/20 gap-1">
         <XCircle className="w-3 h-3" /> Fail
       </Badge>
     );
   }
   return (
-    <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/25 hover:bg-amber-500/20 gap-1">
+    <Badge className="bg-amber-100 text-amber-700 border-amber-200 hover:bg-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/25 dark:hover:bg-amber-500/20 gap-1">
       <AlertTriangle className="w-3 h-3" /> Warn
     </Badge>
   );
@@ -331,11 +331,11 @@ export default function GeoAuditDetail() {
 
         {/* CTA */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <Button onClick={() => navigate("/geo-audit")} variant="outline" className="gap-2 border-white/10 bg-white/5 hover:bg-white/10">
+          <Button onClick={() => navigate("/geo-audit")} variant="outline" className="gap-2">
             <RotateCcw className="w-4 h-4" /> Run New Audit
           </Button>
           {audit.roadmapId && (
-            <Button asChild variant="outline" className="gap-2 border-white/10 bg-white/5 hover:bg-white/10">
+            <Button asChild variant="outline" className="gap-2">
               <Link to={`/roadmap/${audit.roadmapId}`}>
                 <ArrowLeft className="w-4 h-4" /> Back to Roadmap
               </Link>

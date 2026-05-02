@@ -9,17 +9,17 @@ import { ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 
 const FORMAT_COLORS: Record<string, string> = {
-  "LinkedIn post": "bg-blue-500/15 text-blue-300 border border-blue-500/25",
-  "Blog article": "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25",
-  "Twitter thread": "bg-sky-500/15 text-sky-300 border border-sky-500/25",
-  "Case study": "bg-blue-500/15 text-blue-300 border border-blue-500/25",
-  "Video script": "bg-red-500/15 text-red-300 border border-red-500/25",
-  "Newsletter": "bg-orange-500/15 text-orange-300 border border-orange-500/25",
-  "Podcast outline": "bg-pink-500/15 text-pink-300 border border-pink-500/25",
+  "LinkedIn post": "bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25",
+  "Blog article": "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25",
+  "Twitter thread": "bg-sky-100 text-sky-700 border border-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/25",
+  "Case study": "bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25",
+  "Video script": "bg-red-100 text-red-700 border border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/25",
+  "Newsletter": "bg-orange-100 text-orange-700 border border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/25",
+  "Podcast outline": "bg-pink-100 text-pink-700 border border-pink-200 dark:bg-pink-500/15 dark:text-pink-300 dark:border-pink-500/25",
 };
 
 function formatBadgeColor(fmt: string): string {
-  return FORMAT_COLORS[fmt] ?? "bg-white/10 text-zinc-300 border border-white/10";
+  return FORMAT_COLORS[fmt] ?? "bg-muted text-muted-foreground border border-border";
 }
 
 export default function ContentStrategy() {
@@ -81,13 +81,13 @@ export default function ContentStrategy() {
           </Link>
 
           <div className="flex flex-wrap items-center gap-3 mb-5">
-            <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+            <Badge className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30">
               {strategy.industry}
             </Badge>
-            <Badge variant="outline" className="text-zinc-300 border-zinc-700">
+            <Badge variant="outline">
               {strategy.location}
             </Badge>
-            <Badge variant="outline" className="text-zinc-300 border-zinc-700">
+            <Badge variant="outline">
               {strategy.stage.split("-").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")} Stage
             </Badge>
           </div>

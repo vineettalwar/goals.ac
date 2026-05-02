@@ -214,12 +214,12 @@ export default function ProjectDetail() {
         </div>
 
         <Tabs defaultValue="brand">
-          <TabsList className="mb-8 bg-white/5 border border-white/10">
+          <TabsList className="mb-8">
             <TabsTrigger value="brand">Brand Profile</TabsTrigger>
             <TabsTrigger value="content">
               Your Content
               {content && (content.contentStrategies.length + content.seoArticles.length + content.geoAudits.length + (content.roadmaps?.length ?? 0)) > 0 && (
-                <Badge variant="secondary" className="ml-2 text-xs bg-blue-500/20 text-blue-300">
+                <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
                   {content.contentStrategies.length + content.seoArticles.length + content.geoAudits.length + (content.roadmaps?.length ?? 0)}
                 </Badge>
               )}
@@ -245,7 +245,7 @@ export default function ProjectDetail() {
                           <FormItem>
                             <FormLabel>Company name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Acme Corp" className="bg-white/5 border-white/10 hover:border-white/20 transition-colors" {...field} />
+                              <Input placeholder="Acme Corp" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -258,7 +258,7 @@ export default function ProjectDetail() {
                           <FormItem>
                             <FormLabel>Industry</FormLabel>
                             <FormControl>
-                              <Input placeholder="B2B SaaS, E-commerce, etc." className="bg-white/5 border-white/10 hover:border-white/20 transition-colors" {...field} />
+                              <Input placeholder="B2B SaaS, E-commerce, etc." {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -274,7 +274,7 @@ export default function ProjectDetail() {
                           <FormControl>
                             <Textarea
                               placeholder="Describe your ideal customers — their role, company size, pain points, etc."
-                              className="resize-none bg-white/5 border-white/10 hover:border-white/20 transition-colors"
+                              className="resize-none"
                               rows={3}
                               {...field}
                             />
@@ -290,7 +290,7 @@ export default function ProjectDetail() {
                         <FormItem>
                           <FormLabel>Brand voice &amp; tone</FormLabel>
                           <FormControl>
-                            <Input placeholder="Professional yet approachable, data-driven, conversational..." className="bg-white/5 border-white/10 hover:border-white/20 transition-colors" {...field} />
+                            <Input placeholder="Professional yet approachable, data-driven, conversational..." {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -303,7 +303,7 @@ export default function ProjectDetail() {
                         <FormItem>
                           <FormLabel>Primary keywords</FormLabel>
                           <FormControl>
-                            <Input placeholder="keyword one, keyword two, keyword three" className="bg-white/5 border-white/10 hover:border-white/20 transition-colors" {...field} />
+                            <Input placeholder="keyword one, keyword two, keyword three" {...field} />
                           </FormControl>
                           <FormMessage />
                           <p className="text-xs text-muted-foreground">Comma-separated list of your main target keywords</p>
@@ -319,7 +319,7 @@ export default function ProjectDetail() {
                           <FormControl>
                             <Textarea
                               placeholder={"https://competitor1.com\nhttps://competitor2.com"}
-                              className="resize-none font-mono text-sm bg-white/5 border-white/10 hover:border-white/20 transition-colors"
+                              className="resize-none font-mono text-sm"
                               rows={3}
                               {...field}
                             />

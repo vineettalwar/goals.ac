@@ -83,7 +83,7 @@ export default function SeoArticlePage() {
             This SEO article does not exist or has been removed.
           </p>
           <Link to="/">
-            <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10">
+            <Button variant="outline">
               <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
             </Button>
           </Link>
@@ -117,7 +117,7 @@ export default function SeoArticlePage() {
             </Link>
           )}
 
-          <Button variant="outline" size="sm" onClick={handleCopy} className="border-white/10 bg-white/5 hover:bg-white/10">
+          <Button variant="outline" size="sm" onClick={handleCopy}>
             {copied ? (
               <>
                 <Check className="w-4 h-4 mr-2 text-emerald-400" />
@@ -143,11 +143,11 @@ export default function SeoArticlePage() {
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+            <Badge className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30">
               {article.primaryKeyword}
             </Badge>
             {article.secondaryKeywords.map((kw) => (
-              <Badge key={kw} className="bg-white/[0.06] text-zinc-400 border-white/10">
+              <Badge key={kw} className="bg-muted text-muted-foreground border-border">
                 {kw}
               </Badge>
             ))}
@@ -170,17 +170,17 @@ export default function SeoArticlePage() {
         </article>
 
         {/* Footer CTA */}
-        <div className="mt-12 border-t border-white/[0.06] pt-8 flex items-center justify-between flex-wrap gap-4">
+        <div className="mt-12 border-t pt-8 flex items-center justify-between flex-wrap gap-4">
           {article.roadmapId ? (
             <Link to={`/roadmap/${article.roadmapId}`}>
-              <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10">
+              <Button variant="outline">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Roadmap
               </Button>
             </Link>
           ) : (
             <Link to="/">
-              <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10">
+              <Button variant="outline">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Home
               </Button>

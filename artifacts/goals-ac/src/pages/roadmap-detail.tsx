@@ -190,15 +190,15 @@ export default function RoadmapDetail() {
 
         <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-4xl">
           <div className="flex flex-wrap items-center gap-3 mb-6">
-            <Badge variant="secondary" className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+            <Badge variant="secondary" className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30">
               {roadmap.industry}
             </Badge>
-            <ChevronRight className="w-4 h-4 text-zinc-600" />
-            <Badge variant="outline" className="text-zinc-300 border-zinc-700">
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            <Badge variant="outline">
               {roadmap.location}
             </Badge>
-            <ChevronRight className="w-4 h-4 text-zinc-600" />
-            <Badge variant="outline" className="text-zinc-300 border-zinc-700">
+            <ChevronRight className="w-4 h-4 text-muted-foreground" />
+            <Badge variant="outline">
               {formatStage(roadmap.stage)} Stage
             </Badge>
           </div>
@@ -303,19 +303,19 @@ export default function RoadmapDetail() {
       <div className="sticky bottom-0 z-40 border-t border-white/[0.06] bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 py-4 shadow-lg shadow-black/30">
         <div className="container mx-auto px-4 md:px-8 max-w-4xl space-y-3">
           {showSeoForm && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pb-3 border-b border-white/[0.06]">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pb-3 border-b">
               <Input
                 placeholder="Brand name"
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
-                className="flex-1 bg-white/5 border-white/10"
+                className="flex-1"
                 disabled={seoLoading}
               />
               <Input
                 placeholder="Website URL"
                 value={websiteUrl}
                 onChange={(e) => setWebsiteUrl(e.target.value)}
-                className="flex-1 bg-white/5 border-white/10"
+                className="flex-1"
                 disabled={seoLoading}
               />
               <Button onClick={handleGenerateSeo} disabled={seoLoading || !brandName || !websiteUrl} className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0">
@@ -348,7 +348,7 @@ export default function RoadmapDetail() {
                   size="sm"
                   variant="outline"
                   asChild
-                  className="gap-2 border-blue-400/30 text-blue-300 hover:bg-blue-500/10"
+                  className="gap-2 border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-400/30 dark:text-blue-300 dark:hover:bg-blue-500/10"
                 >
                   <Link to="/dashboard">
                     <Plus className="w-3.5 h-3.5" />
@@ -362,7 +362,7 @@ export default function RoadmapDetail() {
                     value={activeProjectId ? String(activeProjectId) : "__none__"}
                     onValueChange={(v) => { setActiveProjectId(v === "__none__" ? null : Number(v)); setIsPinned(false); }}
                   >
-                    <SelectTrigger className="w-[180px] h-9 text-sm gap-1.5 bg-white/5 border-white/10">
+                    <SelectTrigger className="w-[180px] h-9 text-sm gap-1.5">
                       <FolderOpen className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
                       <SelectValue placeholder="No project" />
                     </SelectTrigger>
@@ -379,12 +379,12 @@ export default function RoadmapDetail() {
                       size="sm"
                       onClick={handlePinRoadmap}
                       disabled={isPinning}
-                      className="gap-2 border-white/10 bg-white/5 hover:bg-white/10"
+                      className="gap-2"
                     >
                       {isPinning ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : isPinned ? (
-                        <BookmarkCheck className="w-4 h-4 text-blue-400" />
+                        <BookmarkCheck className="w-4 h-4 text-blue-500" />
                       ) : (
                         <BookmarkPlus className="w-4 h-4" />
                       )}
@@ -394,7 +394,7 @@ export default function RoadmapDetail() {
                 </>
               )}
               {!showSeoForm && (
-                <Button variant="outline" size="sm" onClick={() => setShowSeoForm(true)} className="border-white/10 bg-white/5 hover:bg-white/10">
+                <Button variant="outline" size="sm" onClick={() => setShowSeoForm(true)}>
                   <FileText className="w-4 h-4 mr-2" />
                   Generate SEO Article
                 </Button>
@@ -404,7 +404,7 @@ export default function RoadmapDetail() {
                 size="sm"
                 onClick={handleViewContentStrategy}
                 disabled={generatingStrategy}
-                className="gap-2 border-white/10 bg-white/5 hover:bg-white/10"
+                className="gap-2"
               >
                 {generatingStrategy ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -421,7 +421,7 @@ export default function RoadmapDetail() {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate(`/geo-audit?roadmap_id=${roadmap.id}`)}
-                className="gap-2 border-white/10 bg-white/5 hover:bg-white/10"
+                className="gap-2"
               >
                 <Zap className="w-4 h-4" />
                 Run GEO Audit

@@ -82,7 +82,7 @@ export default function GeoAuditForm() {
         <div className="orb orb-violet w-[250px] h-[250px] bottom-[-10%] right-[0%]" />
 
         <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 bg-blue-500/15 text-blue-300 border border-blue-500/25 rounded-full px-4 py-1.5 text-sm font-semibold mb-6 badge-glow">
+          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25 rounded-full px-4 py-1.5 text-sm font-semibold mb-6">
             <Zap className="w-4 h-4" />
             Generative Engine Optimization
           </div>
@@ -120,7 +120,7 @@ export default function GeoAuditForm() {
                     placeholder="https://yourstartup.com"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
-                    className="pl-9 bg-white/5 border-white/10 hover:border-white/20 transition-colors"
+                    className="pl-9"
                     disabled={isLoading}
                   />
                 </div>
@@ -133,7 +133,7 @@ export default function GeoAuditForm() {
                     value={activeProjectId ? String(activeProjectId) : "__none__"}
                     onValueChange={(v) => setActiveProjectId(v === "__none__" ? null : Number(v))}
                   >
-                    <SelectTrigger className="gap-1.5 bg-white/5 border-white/10">
+                    <SelectTrigger className="gap-1.5">
                       <FolderOpen className="w-4 h-4 shrink-0 text-muted-foreground" />
                       <SelectValue placeholder="No project" />
                     </SelectTrigger>

@@ -117,7 +117,7 @@ export default function Home() {
                             <FormLabel className="text-sm font-semibold">Industry</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingIndustries}>
                               <FormControl>
-                                <SelectTrigger className="h-11 text-sm bg-white/5 border-white/10 hover:border-white/20 transition-colors">
+                                <SelectTrigger className="h-11 text-sm">
                                   <SelectValue placeholder={isLoadingIndustries ? "Loading..." : "Select industry"} />
                                 </SelectTrigger>
                               </FormControl>
@@ -142,7 +142,7 @@ export default function Home() {
                             <FormLabel className="text-sm font-semibold">Location</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingLocations}>
                               <FormControl>
-                                <SelectTrigger className="h-11 text-sm bg-white/5 border-white/10 hover:border-white/20 transition-colors">
+                                <SelectTrigger className="h-11 text-sm">
                                   <SelectValue placeholder={isLoadingLocations ? "Loading..." : "Select location"} />
                                 </SelectTrigger>
                               </FormControl>
@@ -168,7 +168,7 @@ export default function Home() {
                           <FormLabel className="text-sm font-semibold">Company Stage</FormLabel>
                           <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl>
-                              <SelectTrigger className="h-11 text-sm bg-white/5 border-white/10 hover:border-white/20 transition-colors">
+                              <SelectTrigger className="h-11 text-sm">
                                 <SelectValue placeholder="Select current funding stage" />
                               </SelectTrigger>
                             </FormControl>
@@ -266,7 +266,7 @@ export default function Home() {
                   <div className="text-xs text-zinc-500 mb-3 font-semibold tracking-wide uppercase">AI Tool Coverage</div>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {["ChatGPT", "Google AI", "Claude", "Perplexity", "Gemini"].map((tool) => (
-                      <span key={tool} className="inline-flex items-center rounded-full bg-white/[0.06] border border-white/10 px-2.5 py-0.5 text-xs font-medium text-zinc-300">
+                      <span key={tool} className="inline-flex items-center rounded-full bg-muted border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
                         {tool}
                       </span>
                     ))}
@@ -278,7 +278,7 @@ export default function Home() {
                         className={`h-4 rounded text-[10px] flex items-center justify-center font-mono ${
                           i % 5 === 0
                             ? "bg-gradient-to-r from-blue-500/40 to-blue-600/40 text-blue-300 border border-blue-400/30"
-                            : "bg-white/[0.04] text-zinc-600 border border-white/[0.04]"
+                            : "bg-muted text-muted-foreground border border-border"
                         }`}
                       >
                         {i + 1}
@@ -306,7 +306,7 @@ export default function Home() {
                     {["Notion", "Shopify", "WordPress", "Webflow"].map((cms) => (
                       <div key={cms} className="flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
-                        <span className="text-xs text-zinc-300">{cms}</span>
+                        <span className="text-xs text-muted-foreground">{cms}</span>
                         <span className="ml-auto text-xs text-emerald-400 font-medium">Active</span>
                       </div>
                     ))}

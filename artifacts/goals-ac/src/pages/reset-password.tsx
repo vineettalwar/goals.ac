@@ -142,7 +142,6 @@ export default function ResetPassword() {
                           <Input
                             type="password"
                             placeholder="Min. 8 characters"
-                            className="bg-white/5 border-white/10 hover:border-white/20 transition-colors"
                             {...field}
                           />
                         </FormControl>
@@ -160,7 +159,6 @@ export default function ResetPassword() {
                           <Input
                             type="password"
                             placeholder="Repeat password"
-                            className="bg-white/5 border-white/10 hover:border-white/20 transition-colors"
                             {...field}
                           />
                         </FormControl>

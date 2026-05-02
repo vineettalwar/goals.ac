@@ -34,17 +34,17 @@ type AddProjectForm = z.infer<typeof addProjectSchema>;
 
 function CrawlStatusBadge({ status }: { status: string }) {
   if (status === "done") return (
-    <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/25">
+    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25">
       <CheckCircle2 className="w-3 h-3 mr-1" />Crawled
     </Badge>
   );
   if (status === "failed") return (
-    <Badge className="bg-red-500/15 text-red-300 border-red-500/25">
+    <Badge className="bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/25">
       <XCircle className="w-3 h-3 mr-1" />Failed
     </Badge>
   );
   return (
-    <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/25">
+    <Badge className="bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/25">
       <Clock className="w-3 h-3 mr-1" />Crawling...
     </Badge>
   );
@@ -152,7 +152,7 @@ export default function Dashboard() {
                       <FormItem>
                         <FormLabel>Project name</FormLabel>
                         <FormControl>
-                          <Input placeholder="My Company" className="bg-white/5 border-white/10" {...field} />
+                          <Input placeholder="My Company" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -249,7 +249,7 @@ export default function Dashboard() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" asChild className="bg-blue-500/20 text-blue-300 border-blue-500/30 hover:bg-blue-500/30">
+                      <Button size="sm" asChild className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30 dark:hover:bg-blue-500/30">
                         <Link to={`/projects/${project.id}`}>Open</Link>
                       </Button>
                     </div>
@@ -268,7 +268,7 @@ export default function Dashboard() {
           </DialogHeader>
           <p className="text-sm text-muted-foreground">This will permanently delete the project and all associated data. This action cannot be undone.</p>
           <div className="flex gap-3 mt-2">
-            <Button variant="outline" className="flex-1 border-white/10 bg-white/5" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+            <Button variant="outline" className="flex-1" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
             <Button
               variant="destructive"
               className="flex-1"
