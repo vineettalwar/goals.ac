@@ -126,7 +126,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
 const SOURCE_META: Record<string, { label: string; color: string }> = {
   studio: { label: "Studio", color: "bg-primary/10 text-primary" },
   seo_article: { label: "SEO Article", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  content_strategy: { label: "Strategy Item", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
+  content_strategy: { label: "Strategy", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400" },
   geo_audit: { label: "GEO Audit", color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
   roadmap: { label: "Roadmap", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
 };
@@ -160,11 +160,21 @@ function SourceBadge({ source }: { source: string }) {
   );
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  ready: "Ready",
+  published: "Published",
+  pending: "Pending",
+  in_progress: "In Progress",
+  completed: "Completed",
+};
+
 function StatusBadge({ status }: { status: string }) {
   const cls = STATUS_COLORS[status] ?? "bg-muted text-muted-foreground";
+  const label = STATUS_LABELS[status] ?? status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   return (
-    <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full capitalize ${cls}`}>
-      {status}
+    <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>
+      {label}
     </span>
   );
 }
