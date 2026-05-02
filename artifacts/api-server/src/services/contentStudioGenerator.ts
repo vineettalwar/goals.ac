@@ -365,6 +365,40 @@ async function generateWithClientStream(
   return parsed;
 }
 
+async function generateWithClientStreamBuffered(
+  ai: GoogleGenAI,
+  format: ContentFormatType,
+  brand: BrandContext,
+  keyword: string,
+  angleHint?: string,
+): Promise<{ chunks: string[]; result: ContentPieceResult }> {
+  const prompt = buildPrompt(format, brand, keyword, angleHint);
+  let accumulated = "";
+  const chunks: string[] = [];
+
+  const stream = await ai.models.generateContentStream({
+    model: "gemini-2.5-flash",
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: {
+      systemInstruction: SYSTEM_PROMPT,
+      responseMimeType: "application/json",
+      maxOutputTokens: 8192,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
+  });
+
+  for await (const chunk of stream) {
+    const text = chunk.text ?? "";
+    accumulated += text;
+    if (text) chunks.push(text);
+  }
+
+  const cleaned = accumulated.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
+  const parsed = JSON.parse(cleaned) as ContentPieceResult;
+  validateResult(parsed);
+  return { chunks, result: parsed };
+}
+
 export async function generateContentPieceStream(
   format: ContentFormatType,
   brand: BrandContext,
@@ -376,7 +410,14 @@ export async function generateContentPieceStream(
   if (userApiKey) {
     try {
       const userClient = await createUserGeminiClient(userApiKey);
-      return await generateWithClientStream(userClient, format, brand, keyword, onChunk, angleHint);
+      // Buffer the entire user-key stream before emitting any chunks to the
+      // client. This ensures that if the key is invalid or quota-exhausted,
+      // no partial output has been forwarded before we fall back.
+      const { chunks, result } = await generateWithClientStreamBuffered(
+        userClient, format, brand, keyword, angleHint,
+      );
+      for (const chunk of chunks) onChunk(chunk);
+      return result;
     } catch (err) {
       if (isUserKeyError(err)) {
         logger.warn({ err }, "User Gemini key failed for content stream, falling back to platform key");
