@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useListIndustries, useListLocations, useGenerateRoadmap, GenerateRoadmapRequestStage } from "@workspace/api-client-react";
-import { Loader2, TrendingUp, Pencil, LayoutGrid, Bookmark, GitBranch, Key } from "lucide-react";
+import { Loader2, Target, Pencil, LayoutGrid, Bookmark, GitBranch, Key } from "lucide-react";
 
 const stageValues = Object.values(GenerateRoadmapRequestStage) as [
   GenerateRoadmapRequestStage,
@@ -83,8 +83,8 @@ export default function Home() {
           <div className="orb orb-indigo w-[300px] h-[300px] bottom-[10%] left-[-5%]" />
 
           <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl text-center">
-            <div className="inline-flex items-center rounded-full border border-blue-400/30 bg-blue-500/10 px-4 py-1.5 text-sm font-semibold text-blue-300 mb-8 badge-glow">
-              <TrendingUp className="mr-2 h-4 w-4" />
+            <div className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-4 py-1.5 text-sm font-medium text-muted-foreground mb-8">
+              <Target className="mr-2 h-4 w-4 text-blue-500" />
               Data-Driven Growth Strategies for B2B Startups
             </div>
 

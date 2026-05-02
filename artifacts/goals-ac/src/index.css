@@ -306,13 +306,6 @@
     background-clip: text;
   }
 
-  .text-gradient-brand {
-    background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 50%, #60a5fa 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
   /* Accent glow orbs used as decorative elements */
   .orb {
     position: absolute;
@@ -344,9 +337,9 @@
     transform: translateY(-2px);
   }
 
-  /* Badge with subtle glow ring */
+  /* Badge — no glow */
   .badge-glow {
-    box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
+    box-shadow: none;
   }
 
   /* Hide ugly search cancel button in Chrome */
