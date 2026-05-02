@@ -326,7 +326,7 @@ export default function RoadmapDetail() {
                     {user?.hasGeminiKey && (
                       <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-white/15 px-1.5 py-0.5 text-xs font-medium">
                         <KeyRound className="w-3 h-3" />
-                        Your key
+                        Using your API key
                       </span>
                     )}
                   </>
@@ -424,7 +424,7 @@ export default function RoadmapDetail() {
                     {user?.hasGeminiKey && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-xs font-medium text-blue-300">
                         <KeyRound className="w-3 h-3" />
-                        Your key
+                        Using your API key
                       </span>
                     )}
                   </>

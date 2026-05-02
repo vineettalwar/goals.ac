@@ -447,7 +447,7 @@ function CreateModal({
                   {hasGeminiKey && (
                     <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-white/15 px-1.5 py-0.5 text-xs font-medium">
                       <KeyRound className="h-3 w-3" />
-                      Your key
+                      Using your API key
                     </span>
                   )}
                 </>

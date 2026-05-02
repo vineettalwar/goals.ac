@@ -201,7 +201,7 @@ export default function Home() {
                             {user?.hasGeminiKey && (
                               <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium">
                                 <KeyRound className="h-3 w-3" />
-                                Your key
+                                Using your API key
                               </span>
                             )}
                           </>

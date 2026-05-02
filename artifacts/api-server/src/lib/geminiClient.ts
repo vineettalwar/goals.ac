@@ -33,6 +33,13 @@ export async function createUserGeminiClient(userApiKey: string): Promise<Google
 }
 
 export function isUserKeyError(err: unknown): boolean {
+  if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    const status = typeof e["status"] === "number" ? e["status"] : typeof e["code"] === "number" ? e["code"] : null;
+    if (status === 401 || status === 403 || status === 429) return true;
+    const errCode = typeof e["errorCode"] === "string" ? (e["errorCode"] as string).toUpperCase() : "";
+    if (errCode === "API_KEY_INVALID" || errCode === "PERMISSION_DENIED" || errCode === "RESOURCE_EXHAUSTED") return true;
+  }
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
   return (
     msg.includes("401") ||
