@@ -129,7 +129,7 @@ export default function Dashboard() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white">
+              <Button className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white">
                 <Plus className="w-4 h-4 mr-2" />
                 Add website
               </Button>
@@ -171,7 +171,7 @@ export default function Dashboard() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white" disabled={form.formState.isSubmitting}>
+                  <Button type="submit" className="w-full glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white" disabled={form.formState.isSubmitting}>
                     {form.formState.isSubmitting ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Adding...</>
                     ) : (
@@ -188,13 +188,13 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 md:px-8 max-w-5xl py-10">
         {isLoadingProjects ? (
           <div className="flex items-center justify-center py-24">
-            <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
+            <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
           </div>
         ) : projects.length === 0 ? (
           <Card className="border-white/[0.07] glass-card shadow-none border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-20 text-center">
               <div className="w-14 h-14 rounded-full glass-card-md flex items-center justify-center mb-4">
-                <Globe className="w-7 h-7 text-indigo-400" />
+                <Globe className="w-7 h-7 text-blue-400" />
               </div>
               <CardTitle className="text-xl mb-2">No projects yet</CardTitle>
               <CardDescription className="mb-6 max-w-sm">
@@ -202,7 +202,7 @@ export default function Dashboard() {
               </CardDescription>
               <Button
                 onClick={() => setDialogOpen(true)}
-                className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white"
+                className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add your first website
@@ -221,7 +221,7 @@ export default function Dashboard() {
                         href={project.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-indigo-400 transition-colors mt-1"
+                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-blue-400 transition-colors mt-1"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -249,7 +249,7 @@ export default function Dashboard() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" asChild className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/30">
+                      <Button size="sm" asChild className="bg-blue-500/20 text-blue-300 border-blue-500/30 hover:bg-blue-500/30">
                         <Link to={`/projects/${project.id}`}>Open</Link>
                       </Button>
                     </div>

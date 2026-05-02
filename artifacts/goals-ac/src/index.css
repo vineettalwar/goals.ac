@@ -153,7 +153,7 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-/* DARK MODE — premium purple-indigo tinted dark */
+/* DARK MODE — deep blue-dark */
 .dark {
   --button-outline: rgba(255,255,255, .10);
   --badge-outline: rgba(255,255,255, .05);
@@ -259,9 +259,9 @@
   .bg-mesh-dark {
     background-color: #04050f;
     background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99, 102, 241, 0.18) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 40% at 90% 90%, rgba(139, 92, 246, 0.10) 0%, transparent 60%),
-      radial-gradient(ellipse 40% 30% at 10% 70%, rgba(79, 70, 229, 0.08) 0%, transparent 60%);
+      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(37, 99, 235, 0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 40% at 90% 90%, rgba(59, 130, 246, 0.10) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 30% at 10% 70%, rgba(29, 78, 216, 0.08) 0%, transparent 60%);
   }
 
   /* Frosted glass card */
@@ -290,24 +290,24 @@
 
   /* Primary glow for CTA buttons */
   .glow-primary {
-    box-shadow: 0 0 20px rgba(99, 102, 241, 0.35), 0 4px 16px rgba(0, 0, 0, 0.40);
+    box-shadow: 0 0 20px rgba(37, 99, 235, 0.35), 0 4px 16px rgba(0, 0, 0, 0.40);
     transition: box-shadow 0.25s ease, transform 0.25s ease;
   }
   .glow-primary:hover {
-    box-shadow: 0 0 36px rgba(99, 102, 241, 0.55), 0 8px 24px rgba(0, 0, 0, 0.50);
+    box-shadow: 0 0 36px rgba(37, 99, 235, 0.55), 0 8px 24px rgba(0, 0, 0, 0.50);
     transform: translateY(-2px);
   }
 
   /* Gradient text */
   .text-gradient {
-    background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 60%, #818cf8 100%);
+    background: linear-gradient(135deg, #ffffff 0%, #93c5fd 60%, #60a5fa 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .text-gradient-brand {
-    background: linear-gradient(135deg, #e0e7ff 0%, #a5b4fc 50%, #818cf8 100%);
+    background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 50%, #60a5fa 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -323,15 +323,15 @@
   }
 
   .orb-primary {
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.30) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, transparent 70%);
   }
 
   .orb-violet {
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.22) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.18) 0%, transparent 70%);
   }
 
   .orb-indigo {
-    background: radial-gradient(circle, rgba(79, 70, 229, 0.18) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(29, 78, 216, 0.15) 0%, transparent 70%);
   }
 
   /* Card hover glow */
@@ -339,14 +339,14 @@
     transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
   }
   .card-hover-glow:hover {
-    box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.3), 0 8px 32px rgba(0, 0, 0, 0.5);
-    border-color: rgba(99, 102, 241, 0.25) !important;
+    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3), 0 8px 32px rgba(0, 0, 0, 0.5);
+    border-color: rgba(37, 99, 235, 0.25) !important;
     transform: translateY(-2px);
   }
 
   /* Badge with subtle glow ring */
   .badge-glow {
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+    box-shadow: 0 0 12px rgba(37, 99, 235, 0.25);
   }
 
   /* Hide ugly search cancel button in Chrome */

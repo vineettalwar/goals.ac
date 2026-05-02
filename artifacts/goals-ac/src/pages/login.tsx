@@ -125,7 +125,7 @@ export default function Login() {
                         <FormLabel>Password</FormLabel>
                         <Link
                           to="/forgot-password"
-                          className="text-xs text-muted-foreground hover:text-indigo-400 transition-colors"
+                          className="text-xs text-muted-foreground hover:text-blue-400 transition-colors"
                         >
                           Forgot password?
                         </Link>
@@ -139,7 +139,7 @@ export default function Login() {
                 />
                 <Button
                   type="submit"
-                  className="w-full glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white"
+                  className="w-full glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
                   disabled={form.formState.isSubmitting}
                 >
                   {form.formState.isSubmitting ? (
@@ -152,7 +152,7 @@ export default function Login() {
             </Form>
             <p className="mt-6 text-center text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <Link to="/signup" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+              <Link to="/signup" className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
                 Sign up
               </Link>
             </p>

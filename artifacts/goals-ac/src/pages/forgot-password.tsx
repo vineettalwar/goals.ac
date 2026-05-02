@@ -59,8 +59,8 @@ export default function ForgotPassword() {
             {submitted ? (
               <>
                 <div className="flex justify-center mb-3">
-                  <div className="w-14 h-14 rounded-full bg-indigo-500/15 border border-indigo-400/20 flex items-center justify-center">
-                    <MailCheck className="w-7 h-7 text-indigo-400" />
+                  <div className="w-14 h-14 rounded-full bg-blue-500/15 border border-blue-400/20 flex items-center justify-center">
+                    <MailCheck className="w-7 h-7 text-blue-400" />
                   </div>
                 </div>
                 <CardTitle className="text-xl font-bold">Check your email</CardTitle>
@@ -88,7 +88,7 @@ export default function ForgotPassword() {
                   Send another link
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
-                  <Link to="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium inline-flex items-center gap-1">
+                  <Link to="/login" className="text-blue-400 hover:text-blue-300 transition-colors font-medium inline-flex items-center gap-1">
                     <ArrowLeft className="w-3.5 h-3.5" />
                     Back to sign in
                   </Link>
@@ -122,7 +122,7 @@ export default function ForgotPassword() {
                   />
                   <Button
                     type="submit"
-                    className="w-full glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white"
+                    className="w-full glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
                     disabled={form.formState.isSubmitting}
                   >
                     {form.formState.isSubmitting ? (
@@ -132,7 +132,7 @@ export default function ForgotPassword() {
                     )}
                   </Button>
                   <p className="text-center text-sm text-muted-foreground">
-                    <Link to="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium inline-flex items-center gap-1">
+                    <Link to="/login" className="text-blue-400 hover:text-blue-300 transition-colors font-medium inline-flex items-center gap-1">
                       <ArrowLeft className="w-3.5 h-3.5" />
                       Back to sign in
                     </Link>

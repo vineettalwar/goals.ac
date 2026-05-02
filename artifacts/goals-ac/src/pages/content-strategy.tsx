@@ -12,7 +12,7 @@ const FORMAT_COLORS: Record<string, string> = {
   "LinkedIn post": "bg-blue-500/15 text-blue-300 border border-blue-500/25",
   "Blog article": "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25",
   "Twitter thread": "bg-sky-500/15 text-sky-300 border border-sky-500/25",
-  "Case study": "bg-violet-500/15 text-violet-300 border border-violet-500/25",
+  "Case study": "bg-blue-500/15 text-blue-300 border border-blue-500/25",
   "Video script": "bg-red-500/15 text-red-300 border border-red-500/25",
   "Newsletter": "bg-orange-500/15 text-orange-300 border border-orange-500/25",
   "Podcast outline": "bg-pink-500/15 text-pink-300 border border-pink-500/25",
@@ -81,7 +81,7 @@ export default function ContentStrategy() {
           </Link>
 
           <div className="flex flex-wrap items-center gap-3 mb-5">
-            <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
+            <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
               {strategy.industry}
             </Badge>
             <Badge variant="outline" className="text-zinc-300 border-zinc-700">
@@ -96,7 +96,7 @@ export default function ContentStrategy() {
             30-Day Content Strategy
           </h1>
           <p className="text-zinc-400 text-sm font-medium">
-            {monthName} · <span className="text-indigo-400">{strategy.items?.length ?? 0} pieces of content</span>
+            {monthName} · <span className="text-blue-400">{strategy.items?.length ?? 0} pieces of content</span>
           </p>
         </div>
       </div>
@@ -111,7 +111,7 @@ export default function ContentStrategy() {
             >
               <CardContent className="p-4 flex flex-col gap-2 h-full">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-indigo-400">
+                  <span className="text-xs font-mono font-bold text-blue-400">
                     Day {item.day}
                   </span>
                 </div>
@@ -129,7 +129,7 @@ export default function ContentStrategy() {
                 </p>
 
                 <div className="pt-1 border-t border-white/[0.06]">
-                  <span className="text-xs text-indigo-400 font-medium truncate block">
+                  <span className="text-xs text-blue-400 font-medium truncate block">
                     🔑 {item.primaryKeyword}
                   </span>
                 </div>

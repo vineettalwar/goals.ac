@@ -77,7 +77,7 @@ export default function SeoArticlePage() {
     return (
       <Layout>
         <div className="container mx-auto px-4 md:px-8 py-24 text-center max-w-3xl">
-          <FileText className="w-12 h-12 text-indigo-400/50 mx-auto mb-4" />
+          <FileText className="w-12 h-12 text-blue-400/50 mx-auto mb-4" />
           <h1 className="text-3xl font-bold tracking-tight mb-4">Article Not Found</h1>
           <p className="text-muted-foreground mb-8">
             This SEO article does not exist or has been removed.
@@ -102,7 +102,7 @@ export default function SeoArticlePage() {
           {article.roadmapId ? (
             <Link
               to={`/roadmap/${article.roadmapId}`}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-indigo-400 transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-blue-400 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Roadmap
@@ -110,7 +110,7 @@ export default function SeoArticlePage() {
           ) : (
             <Link
               to="/"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-indigo-400 transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-blue-400 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Home
@@ -143,7 +143,7 @@ export default function SeoArticlePage() {
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
+            <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
               {article.primaryKeyword}
             </Badge>
             {article.secondaryKeywords.map((kw) => (
@@ -189,7 +189,7 @@ export default function SeoArticlePage() {
 
           <Button
             onClick={handleCopy}
-            className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white"
+            className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
           >
             {copied ? (
               <>

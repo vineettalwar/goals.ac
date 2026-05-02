@@ -82,7 +82,7 @@ export default function GeoAuditForm() {
         <div className="orb orb-violet w-[250px] h-[250px] bottom-[-10%] right-[0%]" />
 
         <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 bg-indigo-500/15 text-indigo-300 border border-indigo-500/25 rounded-full px-4 py-1.5 text-sm font-semibold mb-6 badge-glow">
+          <div className="inline-flex items-center gap-2 bg-blue-500/15 text-blue-300 border border-blue-500/25 rounded-full px-4 py-1.5 text-sm font-semibold mb-6 badge-glow">
             <Zap className="w-4 h-4" />
             Generative Engine Optimization
           </div>
@@ -103,7 +103,7 @@ export default function GeoAuditForm() {
               Enter the URL of the page you want to audit. We'll check 10 key GEO signals.
               {!user && (
                 <span className="block mt-1 text-xs text-muted-foreground">
-                  <a href="/signup" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">Sign up</a> to save results to a project.
+                  <a href="/signup" className="text-blue-400 hover:text-blue-300 underline underline-offset-2">Sign up</a> to save results to a project.
                 </span>
               )}
             </CardDescription>
@@ -156,7 +156,7 @@ export default function GeoAuditForm() {
               <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full gap-2 glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white"
+                className="w-full gap-2 glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
               >
                 {isLoading ? (
                   <>
@@ -176,17 +176,17 @@ export default function GeoAuditForm() {
 
         <div className="mt-10 grid sm:grid-cols-3 gap-6 text-center text-sm text-muted-foreground">
           <div className="flex flex-col items-center gap-2 glass-card-md rounded-xl p-5">
-            <ShieldCheck className="w-7 h-7 text-indigo-400" />
+            <ShieldCheck className="w-7 h-7 text-blue-400" />
             <span className="font-semibold text-foreground">10 checks</span>
             <span>Schema, titles, headings, images, HTTPS & more</span>
           </div>
           <div className="flex flex-col items-center gap-2 glass-card-md rounded-xl p-5">
-            <BarChart2 className="w-7 h-7 text-violet-400" />
+            <BarChart2 className="w-7 h-7 text-blue-400" />
             <span className="font-semibold text-foreground">GEO Score</span>
             <span>0–100 score showing AI readiness</span>
           </div>
           <div className="flex flex-col items-center gap-2 glass-card-md rounded-xl p-5">
-            <Zap className="w-7 h-7 text-indigo-400" />
+            <Zap className="w-7 h-7 text-blue-400" />
             <span className="font-semibold text-foreground">Fix guidance</span>
             <span>Actionable recommendations for each issue</span>
           </div>

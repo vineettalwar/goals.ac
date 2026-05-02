@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/auth";
+import { useTheme } from "@/context/theme";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LayoutDashboard, LogOut, ChevronDown, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, LogOut, ChevronDown, ShieldCheck, Sun, Moon } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -17,6 +18,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
   const handleLogout = () => {
@@ -49,6 +51,13 @@ export function Layout({ children }: LayoutProps) {
             >
               Directory
             </Link>
+            <button
+              onClick={toggleTheme}
+              className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -62,7 +71,7 @@ export function Layout({ children }: LayoutProps) {
                     <ChevronDown className="h-3 w-3 text-muted-foreground hidden sm:block" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-[hsl(227,34%,9%)] border border-white/15 shadow-xl">
+                <DropdownMenuContent align="end" className="w-48 bg-card border-border shadow-xl">
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard" className="flex items-center gap-2 text-foreground hover:text-foreground focus:text-foreground">
                       <LayoutDashboard className="h-4 w-4" />
@@ -73,7 +82,7 @@ export function Layout({ children }: LayoutProps) {
                     <>
                       <DropdownMenuSeparator className="bg-white/10" />
                       <DropdownMenuItem asChild>
-                        <Link to="/admin/content-strategies" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 focus:text-indigo-300">
+                        <Link to="/admin/content-strategies" className="flex items-center gap-2 text-blue-400 hover:text-blue-300 focus:text-blue-300">
                           <ShieldCheck className="h-4 w-4" />
                           Admin
                         </Link>
@@ -98,7 +107,7 @@ export function Layout({ children }: LayoutProps) {
                 <Button
                   size="sm"
                   asChild
-                  className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-400 hover:to-violet-400 border-0 text-white"
+                  className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border-0 text-white"
                 >
                   <Link to="/signup">Sign up</Link>
                 </Button>

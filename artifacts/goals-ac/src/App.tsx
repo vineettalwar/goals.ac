@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setBaseUrl } from "@workspace/api-client-react";
 import { AuthProvider, useAuth } from "@/context/auth";
+import { ThemeProvider } from "@/context/theme";
 import { ActiveProjectProvider } from "@/context/active-project";
 import type { ReactNode } from "react";
 
@@ -49,6 +50,7 @@ function RequireAuth({ children }: { children: ReactNode }) {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
       <AuthProvider>
         <ActiveProjectProvider>
           <TooltipProvider>
@@ -78,6 +80,7 @@ function App() {
           </TooltipProvider>
         </ActiveProjectProvider>
       </AuthProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

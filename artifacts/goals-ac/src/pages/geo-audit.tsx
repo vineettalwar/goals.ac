@@ -139,7 +139,7 @@ export default function GeoAuditDetail() {
         <div className="container mx-auto px-4 md:px-8 py-24 text-center">
           <h1 className="text-3xl font-bold tracking-tight mb-4">Audit Not Found</h1>
           <p className="text-muted-foreground mb-8">This audit does not exist or has been removed.</p>
-          <Button onClick={() => navigate("/geo-audit")} className="gap-2 glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0">
+          <Button onClick={() => navigate("/geo-audit")} className="gap-2 glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0">
             <RotateCcw className="w-4 h-4" /> Run New Audit
           </Button>
         </div>

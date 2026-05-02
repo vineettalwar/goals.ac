@@ -83,7 +83,7 @@ export default function Home() {
           <div className="orb orb-indigo w-[300px] h-[300px] bottom-[10%] left-[-5%]" />
 
           <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl text-center">
-            <div className="inline-flex items-center rounded-full border border-indigo-400/30 bg-indigo-500/10 px-4 py-1.5 text-sm font-semibold text-indigo-300 mb-8 badge-glow">
+            <div className="inline-flex items-center rounded-full border border-blue-400/30 bg-blue-500/10 px-4 py-1.5 text-sm font-semibold text-blue-300 mb-8 badge-glow">
               <TrendingUp className="mr-2 h-4 w-4" />
               Data-Driven Growth Strategies for B2B Startups
             </div>
@@ -190,7 +190,7 @@ export default function Home() {
                       <Button
                         type="submit"
                         size="lg"
-                        className="w-full h-12 text-base font-semibold glow-primary bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-600 hover:from-indigo-400 hover:via-violet-400 hover:to-indigo-500 border-0 text-white"
+                        className="w-full h-12 text-base font-semibold glow-primary bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border-0 text-white"
                         disabled={generateRoadmap.isPending || isLoadingIndustries || isLoadingLocations}
                       >
                         {generateRoadmap.isPending ? (
@@ -214,7 +214,7 @@ export default function Home() {
         <section className="py-28 bg-background">
           <div className="container mx-auto px-4 md:px-8 max-w-5xl">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center rounded-full border border-indigo-400/20 bg-indigo-500/[0.08] px-3 py-1 text-xs font-semibold text-indigo-400 mb-4">
+              <div className="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-3 py-1 text-xs font-semibold text-blue-400 mb-4">
                 Platform Features
               </div>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Everything you need to grow.</h2>
@@ -229,8 +229,8 @@ export default function Home() {
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-lg font-bold text-foreground">Branded SEO Content</h3>
-                  <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-3 border-indigo-400/20">
-                    <Pencil className="h-4 w-4 text-indigo-400" />
+                  <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-3 border-blue-400/20">
+                    <Pencil className="h-4 w-4 text-blue-400" />
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-6 leading-relaxed">Generates brand-aligned articles optimized for search and AI visibility. Structured to rank, attract traffic, and build authority.</p>
@@ -238,16 +238,16 @@ export default function Home() {
                   <div className="space-y-2.5">
                     {["Introduction", "Key Insights", "Implementation", "Conclusion"].map((section, i) => (
                       <div key={i} className="flex items-center gap-3">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-400/70 flex-shrink-0" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-blue-400/70 flex-shrink-0" />
                         <div className="h-1.5 rounded bg-white/10 flex-grow" style={{ width: `${70 + i * 5}%` }} />
                         <span className="text-xs text-zinc-500">{section}</span>
                       </div>
                     ))}
                   </div>
                   <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center gap-2">
-                    <div className="text-xs font-semibold text-indigo-400">SEO Score</div>
+                    <div className="text-xs font-semibold text-blue-400">SEO Score</div>
                     <div className="flex-1 h-1.5 rounded bg-white/10">
-                      <div className="h-full w-4/5 rounded bg-gradient-to-r from-indigo-500 to-violet-500" />
+                      <div className="h-full w-4/5 rounded bg-gradient-to-r from-blue-500 to-blue-600" />
                     </div>
                     <span className="text-xs text-zinc-400 font-mono">94/100</span>
                   </div>
@@ -258,8 +258,8 @@ export default function Home() {
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-lg font-bold text-foreground">30-Day Content Strategy</h3>
-                  <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-3 border-violet-400/20">
-                    <LayoutGrid className="h-4 w-4 text-violet-400" />
+                  <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-3 border-blue-400/20">
+                    <LayoutGrid className="h-4 w-4 text-blue-400" />
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-6 leading-relaxed">Plans a full month of content based on ranking and citation trends. Topics and formats chosen to maximize discoverability.</p>
@@ -278,7 +278,7 @@ export default function Home() {
                         key={i}
                         className={`h-4 rounded text-[10px] flex items-center justify-center font-mono ${
                           i % 5 === 0
-                            ? "bg-gradient-to-r from-indigo-500/40 to-violet-500/40 text-indigo-300 border border-indigo-400/30"
+                            ? "bg-gradient-to-r from-blue-500/40 to-blue-600/40 text-blue-300 border border-blue-400/30"
                             : "bg-white/[0.04] text-zinc-600 border border-white/[0.04]"
                         }`}
                       >
@@ -327,14 +327,14 @@ export default function Home() {
                 <div className="mt-auto glass-inner p-3">
                   <div className="flex items-center justify-between mb-2.5">
                     <span className="text-xs text-zinc-500 font-semibold tracking-wide uppercase">Domain Authority</span>
-                    <span className="text-xs font-bold text-indigo-400">+18 pts</span>
+                    <span className="text-xs font-bold text-blue-400">+18 pts</span>
                   </div>
                   <div className="space-y-2">
                     {[{ label: "DR 80+", val: 12 }, { label: "DR 60+", val: 34 }, { label: "DR 40+", val: 67 }].map((row) => (
                       <div key={row.label} className="flex items-center gap-2">
                         <span className="text-xs text-zinc-500 w-12 font-mono">{row.label}</span>
                         <div className="flex-1 h-1.5 rounded bg-white/10">
-                          <div className="h-full rounded bg-gradient-to-r from-indigo-500/60 to-violet-500/60" style={{ width: `${row.val}%` }} />
+                          <div className="h-full rounded bg-gradient-to-r from-blue-500/60 to-blue-600/60" style={{ width: `${row.val}%` }} />
                         </div>
                         <span className="text-xs text-zinc-500 font-mono">{row.val}</span>
                       </div>

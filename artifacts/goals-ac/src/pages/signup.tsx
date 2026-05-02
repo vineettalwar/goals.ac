@@ -138,7 +138,7 @@ export default function Signup() {
                 />
                 <Button
                   type="submit"
-                  className="w-full glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white"
+                  className="w-full glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
                   disabled={form.formState.isSubmitting}
                 >
                   {form.formState.isSubmitting ? (
@@ -151,7 +151,7 @@ export default function Signup() {
             </Form>
             <p className="mt-6 text-center text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/login" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+              <Link to="/login" className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
                 Sign in
               </Link>
             </p>

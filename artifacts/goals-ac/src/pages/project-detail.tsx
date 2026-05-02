@@ -219,7 +219,7 @@ export default function ProjectDetail() {
             <TabsTrigger value="content">
               Your Content
               {content && (content.contentStrategies.length + content.seoArticles.length + content.geoAudits.length + (content.roadmaps?.length ?? 0)) > 0 && (
-                <Badge variant="secondary" className="ml-2 text-xs bg-indigo-500/20 text-indigo-300">
+                <Badge variant="secondary" className="ml-2 text-xs bg-blue-500/20 text-blue-300">
                   {content.contentStrategies.length + content.seoArticles.length + content.geoAudits.length + (content.roadmaps?.length ?? 0)}
                 </Badge>
               )}
@@ -330,7 +330,7 @@ export default function ProjectDetail() {
                       )}
                     />
                     <div className="flex items-center gap-3">
-                      <Button type="submit" disabled={isSaving} className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white">
+                      <Button type="submit" disabled={isSaving} className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white">
                         {isSaving ? (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
                         ) : (
@@ -353,7 +353,7 @@ export default function ProjectDetail() {
                 <Card className="border-white/[0.07] glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <FileText className="w-4 h-4 text-indigo-400" />
+                      <FileText className="w-4 h-4 text-blue-400" />
                       SEO Articles
                     </CardTitle>
                   </CardHeader>
@@ -379,7 +379,7 @@ export default function ProjectDetail() {
                 <Card className="border-white/[0.07] glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <BarChart3 className="w-4 h-4 text-violet-400" />
+                      <BarChart3 className="w-4 h-4 text-blue-400" />
                       Content Strategies
                     </CardTitle>
                   </CardHeader>
@@ -415,7 +415,7 @@ export default function ProjectDetail() {
                         <div key={audit.id} className="py-3 flex items-center justify-between gap-4">
                           <div className="min-w-0">
                             <p className="font-medium text-sm truncate">{audit.url.replace(/^https?:\/\//, "")}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">GEO Score: <span className="text-indigo-400 font-semibold">{audit.geoScore}/100</span></p>
+                            <p className="text-xs text-muted-foreground mt-0.5">GEO Score: <span className="text-blue-400 font-semibold">{audit.geoScore}/100</span></p>
                           </div>
                           <Button size="sm" variant="ghost" asChild className="hover:bg-white/10">
                             <Link to={`/geo-audit/${audit.id}`}>View</Link>
@@ -457,13 +457,13 @@ export default function ProjectDetail() {
                 <Card className="border-white/[0.07] glass-card border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-14 h-14 rounded-full glass-card-md flex items-center justify-center mb-4">
-                      <FileText className="w-7 h-7 text-indigo-400" />
+                      <FileText className="w-7 h-7 text-blue-400" />
                     </div>
                     <CardTitle className="text-lg mb-2">No content yet</CardTitle>
                     <CardDescription className="max-w-sm mb-6">
                       Use the tools on the home page to generate roadmaps, content strategies, SEO articles, and GEO audits. They'll appear here when you're logged in.
                     </CardDescription>
-                    <Button className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white" asChild>
+                    <Button className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white" asChild>
                       <Link to="/">Generate content</Link>
                     </Button>
                   </CardContent>

@@ -80,20 +80,20 @@ export default function RoadmapDirectory() {
                   <Card className="h-full flex flex-col border-white/[0.07] glass-card-md shadow-none card-hover-glow cursor-pointer group">
                     <CardHeader className="pb-4">
                       <div className="flex flex-wrap gap-2 mb-4">
-                        <Badge className="bg-indigo-500/15 text-indigo-300 border-indigo-500/25 font-mono text-xs">
+                        <Badge className="bg-blue-500/15 text-blue-300 border-blue-500/25 font-mono text-xs">
                           {roadmap.industry}
                         </Badge>
                         <Badge className="bg-white/[0.06] text-zinc-400 border-white/10 font-mono text-xs">
                           {formatStage(roadmap.stage)}
                         </Badge>
                       </div>
-                      <h3 className="text-xl font-bold tracking-tight leading-snug group-hover:text-indigo-300 transition-colors">
+                      <h3 className="text-xl font-bold tracking-tight leading-snug group-hover:text-blue-300 transition-colors">
                         Growth Strategy for {roadmap.location} Startups
                       </h3>
                     </CardHeader>
                     <CardContent className="flex-1">
                       <div className="flex items-center text-sm text-muted-foreground gap-2 mb-4">
-                        <TrendingUp className="w-4 h-4 text-indigo-400" />
+                        <TrendingUp className="w-4 h-4 text-blue-400" />
                         <span>12-month execution plan</span>
                       </div>
                     </CardContent>
@@ -102,7 +102,7 @@ export default function RoadmapDirectory() {
                         <Eye className="w-4 h-4" />
                         <span>{roadmap.viewCount} views</span>
                       </div>
-                      <div className="flex items-center gap-1 font-semibold text-foreground group-hover:text-indigo-300 transition-colors">
+                      <div className="flex items-center gap-1 font-semibold text-foreground group-hover:text-blue-300 transition-colors">
                         View Plan <ArrowRight className="w-4 h-4" />
                       </div>
                     </CardFooter>
@@ -117,7 +117,7 @@ export default function RoadmapDirectory() {
             <p className="text-muted-foreground mb-6">Be the first to generate a growth strategy.</p>
             <Link
               to="/"
-              className="inline-flex items-center justify-center rounded-lg text-sm font-semibold transition-colors glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 text-white h-10 px-8"
+              className="inline-flex items-center justify-center rounded-lg text-sm font-semibold transition-colors glow-primary bg-gradient-to-r from-blue-500 to-blue-600 text-white h-10 px-8"
             >
               Generate Roadmap
             </Link>
