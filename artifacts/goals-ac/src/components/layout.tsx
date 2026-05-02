@@ -62,9 +62,9 @@ export function Layout({ children }: LayoutProps) {
                     <ChevronDown className="h-3 w-3 text-muted-foreground hidden sm:block" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-[hsl(227,34%,7%)] border border-white/15 shadow-xl">
+                <DropdownMenuContent align="end" className="w-48 bg-[hsl(227,34%,9%)] border border-white/15 shadow-xl">
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="flex items-center gap-2">
+                    <Link to="/dashboard" className="flex items-center gap-2 text-foreground hover:text-foreground focus:text-foreground">
                       <LayoutDashboard className="h-4 w-4" />
                       Dashboard
                     </Link>
@@ -73,7 +73,7 @@ export function Layout({ children }: LayoutProps) {
                     <>
                       <DropdownMenuSeparator className="bg-white/10" />
                       <DropdownMenuItem asChild>
-                        <Link to="/admin/content-strategies" className="flex items-center gap-2 text-indigo-400">
+                        <Link to="/admin/content-strategies" className="flex items-center gap-2 text-indigo-400 hover:text-indigo-300 focus:text-indigo-300">
                           <ShieldCheck className="h-4 w-4" />
                           Admin
                         </Link>
@@ -82,7 +82,7 @@ export function Layout({ children }: LayoutProps) {
                   )}
                   <DropdownMenuSeparator className="bg-white/10" />
                   <DropdownMenuItem
-                    className="flex items-center gap-2 text-destructive focus:text-destructive"
+                    className="flex items-center gap-2 text-rose-400 focus:text-rose-400 focus:bg-rose-400/10"
                     onClick={handleLogout}
                   >
                     <LogOut className="h-4 w-4" />
