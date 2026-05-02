@@ -14,6 +14,7 @@ export const websiteProjectsTable = pgTable("website_projects", {
   pageCount: integer("page_count").notNull().default(0),
   crawlStatus: text("crawl_status").notNull().default("pending"),
   crawlData: jsonb("crawl_data"),
+  scrapeStatus: text("scrape_status"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

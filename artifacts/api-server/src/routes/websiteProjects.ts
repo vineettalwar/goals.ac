@@ -5,6 +5,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../lib/auth";
 import { assertPublicUrl } from "../lib/ssrf-guard";
+import { scrapeBrandProfile } from "../services/brandScraper";
 
 const router: IRouter = Router();
 
@@ -103,6 +104,60 @@ async function fetchSitemapInfo(
   return { sitemapUrl: null, pageCount: 0, crawlData: null };
 }
 
+async function runBrandScrape(projectId: number, url: string, log: { error: (obj: unknown, msg: string) => void }): Promise<void> {
+  await db
+    .update(websiteProjectsTable)
+    .set({ scrapeStatus: "pending" })
+    .where(eq(websiteProjectsTable.id, projectId));
+
+  try {
+    await assertPublicUrl(url);
+    const extract = await scrapeBrandProfile(url);
+
+    const existing = await db
+      .select({ id: brandProfilesTable.id })
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, projectId))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const updates: Record<string, unknown> = {};
+      if (extract.companyName) updates.companyName = extract.companyName;
+      if (extract.industry) updates.industry = extract.industry;
+      if (extract.targetAudience) updates.targetAudience = extract.targetAudience;
+      if (extract.voiceTone) updates.voiceTone = extract.voiceTone;
+      if (extract.primaryKeywords.length > 0) updates.primaryKeywords = extract.primaryKeywords;
+      if (extract.competitorUrls.length > 0) updates.competitorUrls = extract.competitorUrls;
+
+      await db
+        .update(brandProfilesTable)
+        .set(updates)
+        .where(eq(brandProfilesTable.websiteProjectId, projectId));
+    } else {
+      await db.insert(brandProfilesTable).values({
+        websiteProjectId: projectId,
+        companyName: extract.companyName,
+        industry: extract.industry,
+        targetAudience: extract.targetAudience,
+        voiceTone: extract.voiceTone,
+        primaryKeywords: extract.primaryKeywords,
+        competitorUrls: extract.competitorUrls,
+      });
+    }
+
+    await db
+      .update(websiteProjectsTable)
+      .set({ scrapeStatus: "done" })
+      .where(eq(websiteProjectsTable.id, projectId));
+  } catch (err) {
+    log.error(err, "Brand scrape failed");
+    await db
+      .update(websiteProjectsTable)
+      .set({ scrapeStatus: "failed" })
+      .where(eq(websiteProjectsTable.id, projectId));
+  }
+}
+
 router.get("/website-projects", requireAuth, async (req, res) => {
   try {
     const projects = await db
@@ -134,6 +189,7 @@ router.post("/website-projects", requireAuth, async (req, res) => {
         name,
         url,
         crawlStatus: "pending",
+        scrapeStatus: "pending",
       })
       .returning();
 
@@ -145,12 +201,14 @@ router.post("/website-projects", requireAuth, async (req, res) => {
           .update(websiteProjectsTable)
           .set({ sitemapUrl, pageCount, crawlData, crawlStatus: "done" })
           .where(eq(websiteProjectsTable.id, project.id));
+
+        await runBrandScrape(project.id, url, req.log);
       })
       .catch(async (err) => {
         req.log.error(err, "Sitemap fetch failed");
         await db
           .update(websiteProjectsTable)
-          .set({ crawlStatus: "failed" })
+          .set({ crawlStatus: "failed", scrapeStatus: "failed" })
           .where(eq(websiteProjectsTable.id, project.id));
       });
   } catch (err) {
@@ -283,6 +341,33 @@ router.put("/website-projects/:id/brand-profile", requireAuth, async (req, res) 
   } catch (err) {
     req.log.error(err, "Failed to update brand profile");
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/website-projects/:id/scrape-brand", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid project id" });
+    return;
+  }
+
+  try {
+    const [project] = await db
+      .select()
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, id), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    res.json({ message: "Scrape started" });
+
+    await runBrandScrape(id, project.url, req.log);
+  } catch (err) {
+    req.log.error(err, "Failed to trigger brand scrape");
   }
 });
 

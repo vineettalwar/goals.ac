@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth";
-import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertCircle, Map, Sparkles } from "lucide-react";
+import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertCircle, Map, Sparkles, RefreshCw, Wand2 } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -34,6 +34,7 @@ interface WebsiteProject {
   sitemapUrl: string | null;
   pageCount: number;
   crawlStatus: string;
+  scrapeStatus: string | null;
   createdAt: string;
   brandProfile: BrandProfile | null;
 }
@@ -64,6 +65,8 @@ export default function ProjectDetail() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRescanning, setIsRescanning] = useState(false);
+  const scrapePollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const form = useForm<BrandProfileForm>({
     resolver: zodResolver(brandProfileSchema),
@@ -77,31 +80,43 @@ export default function ProjectDetail() {
     },
   });
 
+  const populateFormFromBrandProfile = useCallback((bp: BrandProfile) => {
+    form.reset({
+      companyName: bp.companyName,
+      industry: bp.industry,
+      targetAudience: bp.targetAudience,
+      voiceTone: bp.voiceTone,
+      primaryKeywords: bp.primaryKeywords.join(", "),
+      competitorUrls: bp.competitorUrls.join("\n"),
+    });
+  }, [form]);
+
+  const fetchProject = useCallback(async (): Promise<WebsiteProject | null> => {
+    if (!token || !id) return null;
+    const res = await fetch(`${API_BASE}/api/website-projects/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) return null;
+    return res.json() as Promise<WebsiteProject>;
+  }, [token, id]);
+
   const loadProject = useCallback(async () => {
     if (!token || !id) return;
     try {
-      const [projRes, contentRes] = await Promise.all([
-        fetch(`${API_BASE}/api/website-projects/${id}`, { headers: { Authorization: `Bearer ${token}` } }),
+      const [projData, contentRes] = await Promise.all([
+        fetchProject(),
         fetch(`${API_BASE}/api/website-projects/${id}/content`, { headers: { Authorization: `Bearer ${token}` } }),
       ]);
 
-      if (!projRes.ok) {
+      if (!projData) {
         setError("Project not found");
         return;
       }
 
-      const projData: WebsiteProject = await projRes.json();
       setProject(projData);
 
       if (projData.brandProfile) {
-        form.reset({
-          companyName: projData.brandProfile.companyName,
-          industry: projData.brandProfile.industry,
-          targetAudience: projData.brandProfile.targetAudience,
-          voiceTone: projData.brandProfile.voiceTone,
-          primaryKeywords: projData.brandProfile.primaryKeywords.join(", "),
-          competitorUrls: projData.brandProfile.competitorUrls.join("\n"),
-        });
+        populateFormFromBrandProfile(projData.brandProfile);
       }
 
       if (contentRes.ok) {
@@ -112,11 +127,47 @@ export default function ProjectDetail() {
     } finally {
       setIsLoading(false);
     }
-  }, [token, id, form]);
+  }, [token, id, fetchProject, populateFormFromBrandProfile]);
 
   useEffect(() => {
     loadProject();
   }, [loadProject]);
+
+  useEffect(() => {
+    if (!project) return;
+
+    const isPending = project.scrapeStatus === "pending";
+
+    if (isPending && !scrapePollerRef.current) {
+      scrapePollerRef.current = setInterval(async () => {
+        const updated = await fetchProject();
+        if (!updated) return;
+        setProject(updated);
+        if (updated.scrapeStatus !== "pending") {
+          if (scrapePollerRef.current) {
+            clearInterval(scrapePollerRef.current);
+            scrapePollerRef.current = null;
+          }
+          if (updated.brandProfile) {
+            populateFormFromBrandProfile(updated.brandProfile);
+          }
+          setIsRescanning(false);
+        }
+      }, 3000);
+    }
+
+    if (!isPending && scrapePollerRef.current) {
+      clearInterval(scrapePollerRef.current);
+      scrapePollerRef.current = null;
+    }
+
+    return () => {
+      if (scrapePollerRef.current) {
+        clearInterval(scrapePollerRef.current);
+        scrapePollerRef.current = null;
+      }
+    };
+  }, [project?.scrapeStatus, fetchProject, populateFormFromBrandProfile]);
 
   const onSaveBrandProfile = async (data: BrandProfileForm) => {
     if (!token || !id) return;
@@ -146,6 +197,20 @@ export default function ProjectDetail() {
     }
   };
 
+  const onRescan = async () => {
+    if (!token || !id || isRescanning) return;
+    setIsRescanning(true);
+    setProject((prev) => prev ? { ...prev, scrapeStatus: "pending" } : prev);
+    try {
+      await fetch(`${API_BASE}/api/website-projects/${id}/scrape-brand`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch {
+      setIsRescanning(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -168,6 +233,9 @@ export default function ProjectDetail() {
       </Layout>
     );
   }
+
+  const isScraping = project.scrapeStatus === "pending" || isRescanning;
+  const wasAutoFilled = project.scrapeStatus === "done";
 
   return (
     <Layout>
@@ -229,23 +297,99 @@ export default function ProjectDetail() {
           <TabsContent value="brand">
             <Card className="border-white/[0.07] glass-card-md shadow-none">
               <CardHeader>
-                <CardTitle>Brand Profile</CardTitle>
-                <CardDescription>
-                  This information is used to personalize all AI-generated content for your website.
-                </CardDescription>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>Brand Profile</CardTitle>
+                    <CardDescription>
+                      This information is used to personalize all AI-generated content for your website.
+                    </CardDescription>
+                  </div>
+                  {!isScraping && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={onRescan}
+                      className="flex-shrink-0 gap-1.5 text-xs"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      Re-scan website
+                    </Button>
+                  )}
+                </div>
+
+                {isScraping && (
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-blue-400/20 bg-blue-500/[0.07] px-4 py-3">
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-400">Analyzing your website…</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Reading your homepage and key pages to pre-fill your brand profile. This takes about 15–30 seconds.</p>
+                    </div>
+                  </div>
+                )}
+
+                {wasAutoFilled && !isScraping && (
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3">
+                    <Wand2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                    <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                      Auto-filled from your website — review and save to confirm.
+                    </p>
+                  </div>
+                )}
               </CardHeader>
               <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSaveBrandProfile)} className="space-y-6">
-                    <div className="grid gap-6 md:grid-cols-2">
+                {isScraping ? (
+                  <div className="space-y-6 animate-pulse">
+                    {[...Array(5)].map((_, i) => (
+                      <div key={i} className="space-y-2">
+                        <div className="h-4 w-28 rounded bg-muted" />
+                        <div className="h-10 rounded bg-muted" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSaveBrandProfile)} className="space-y-6">
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="companyName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Company name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Acme Corp" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="industry"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Industry</FormLabel>
+                              <FormControl>
+                                <Input placeholder="B2B SaaS, E-commerce, etc." {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                       <FormField
                         control={form.control}
-                        name="companyName"
+                        name="targetAudience"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Company name</FormLabel>
+                            <FormLabel>Target audience</FormLabel>
                             <FormControl>
-                              <Input placeholder="Acme Corp" {...field} />
+                              <Textarea
+                                placeholder="Describe your ideal customers — their role, company size, pain points, etc."
+                                className="resize-none"
+                                rows={3}
+                                {...field}
+                              />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -253,96 +397,65 @@ export default function ProjectDetail() {
                       />
                       <FormField
                         control={form.control}
-                        name="industry"
+                        name="voiceTone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Industry</FormLabel>
+                            <FormLabel>Brand voice &amp; tone</FormLabel>
                             <FormControl>
-                              <Input placeholder="B2B SaaS, E-commerce, etc." {...field} />
+                              <Input placeholder="Professional yet approachable, data-driven, conversational..." {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="targetAudience"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Target audience</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Describe your ideal customers — their role, company size, pain points, etc."
-                              className="resize-none"
-                              rows={3}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="voiceTone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Brand voice &amp; tone</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Professional yet approachable, data-driven, conversational..." {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="primaryKeywords"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Primary keywords</FormLabel>
-                          <FormControl>
-                            <Input placeholder="keyword one, keyword two, keyword three" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                          <p className="text-xs text-muted-foreground">Comma-separated list of your main target keywords</p>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="competitorUrls"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Competitor URLs</FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder={"https://competitor1.com\nhttps://competitor2.com"}
-                              className="resize-none font-mono text-sm"
-                              rows={3}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                          <p className="text-xs text-muted-foreground">One URL per line</p>
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex items-center gap-3">
-                      <Button type="submit" disabled={isSaving} className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white">
-                        {isSaving ? (
-                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
-                        ) : (
-                          <><Save className="mr-2 h-4 w-4" />Save brand profile</>
+                      <FormField
+                        control={form.control}
+                        name="primaryKeywords"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Primary keywords</FormLabel>
+                            <FormControl>
+                              <Input placeholder="keyword one, keyword two, keyword three" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                            <p className="text-xs text-muted-foreground">Comma-separated list of your main target keywords</p>
+                          </FormItem>
                         )}
-                      </Button>
-                      {saveSuccess && (
-                        <span className="text-sm text-emerald-400 font-medium">Saved successfully</span>
-                      )}
-                    </div>
-                  </form>
-                </Form>
+                      />
+                      <FormField
+                        control={form.control}
+                        name="competitorUrls"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Competitor URLs</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder={"https://competitor1.com\nhttps://competitor2.com"}
+                                className="resize-none font-mono text-sm"
+                                rows={3}
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                            <p className="text-xs text-muted-foreground">One URL per line</p>
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex items-center gap-3">
+                        <Button type="submit" disabled={isSaving} className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white">
+                          {isSaving ? (
+                            <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                          ) : (
+                            <><Save className="mr-2 h-4 w-4" />Save brand profile</>
+                          )}
+                        </Button>
+                        {saveSuccess && (
+                          <span className="text-sm text-emerald-400 font-medium">Saved successfully</span>
+                        )}
+                      </div>
+                    </form>
+                  </Form>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
