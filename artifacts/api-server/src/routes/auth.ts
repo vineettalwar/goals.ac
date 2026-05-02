@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { usersTable, websiteProjectsTable, contentStrategiesTable, seoArticlesTable, geoAuditsTable } from "@workspace/db";
+import { usersTable, websiteProjectsTable, contentStrategiesTable, contentItemsTable, seoArticlesTable, geoAuditsTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { hashPassword, comparePassword, signToken, requireAuth } from "../lib/auth";
@@ -206,27 +206,35 @@ router.post("/auth/change-password", requireAuth, async (req, res) => {
 });
 
 router.delete("/auth/me", requireAuth, async (req, res) => {
+  const userId = req.user!.userId;
+
   try {
-    const userId = req.user!.userId;
+    await db.transaction(async (tx) => {
+      const userProjects = await tx
+        .select({ id: websiteProjectsTable.id })
+        .from(websiteProjectsTable)
+        .where(eq(websiteProjectsTable.userId, userId));
 
-    const userProjects = await db
-      .select({ id: websiteProjectsTable.id })
-      .from(websiteProjectsTable)
-      .where(eq(websiteProjectsTable.userId, userId));
+      if (userProjects.length > 0) {
+        const projectIds = userProjects.map((p) => p.id);
 
-    if (userProjects.length > 0) {
-      const projectIds = userProjects.map((p) => p.id);
-      await db.delete(contentStrategiesTable).where(inArray(contentStrategiesTable.websiteProjectId, projectIds));
-      await db.delete(seoArticlesTable).where(inArray(seoArticlesTable.websiteProjectId, projectIds));
-      await db.delete(geoAuditsTable).where(inArray(geoAuditsTable.websiteProjectId, projectIds));
-    }
+        const strategies = await tx
+          .select({ id: contentStrategiesTable.id })
+          .from(contentStrategiesTable)
+          .where(inArray(contentStrategiesTable.websiteProjectId, projectIds));
 
-    const deleted = await db.delete(usersTable).where(eq(usersTable.id, userId)).returning({ id: usersTable.id });
+        if (strategies.length > 0) {
+          const strategyIds = strategies.map((s) => s.id);
+          await tx.delete(contentItemsTable).where(inArray(contentItemsTable.strategyId, strategyIds));
+        }
 
-    if (deleted.length === 0) {
-      res.status(404).json({ error: "User not found" });
-      return;
-    }
+        await tx.delete(contentStrategiesTable).where(inArray(contentStrategiesTable.websiteProjectId, projectIds));
+        await tx.delete(seoArticlesTable).where(inArray(seoArticlesTable.websiteProjectId, projectIds));
+        await tx.delete(geoAuditsTable).where(inArray(geoAuditsTable.websiteProjectId, projectIds));
+      }
+
+      await tx.delete(usersTable).where(eq(usersTable.id, userId));
+    });
 
     res.json({ ok: true });
   } catch (err) {
