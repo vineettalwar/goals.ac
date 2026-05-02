@@ -130,12 +130,12 @@ async function runBrandScrape(
       const updates: Record<string, unknown> = {};
 
       if (overwrite) {
-        if (extract.companyName) updates.companyName = extract.companyName;
-        if (extract.industry) updates.industry = extract.industry;
-        if (extract.targetAudience) updates.targetAudience = extract.targetAudience;
-        if (extract.voiceTone) updates.voiceTone = extract.voiceTone;
-        if (extract.primaryKeywords.length > 0) updates.primaryKeywords = extract.primaryKeywords;
-        if (extract.competitorUrls.length > 0) updates.competitorUrls = extract.competitorUrls;
+        updates.companyName = extract.companyName;
+        updates.industry = extract.industry;
+        updates.targetAudience = extract.targetAudience;
+        updates.voiceTone = extract.voiceTone;
+        updates.primaryKeywords = extract.primaryKeywords;
+        updates.competitorUrls = extract.competitorUrls;
       } else {
         if (!current.companyName && extract.companyName) updates.companyName = extract.companyName;
         if (!current.industry && extract.industry) updates.industry = extract.industry;

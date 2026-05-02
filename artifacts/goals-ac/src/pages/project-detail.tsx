@@ -266,6 +266,7 @@ export default function ProjectDetail() {
 
   const isScraping = project.scrapeStatus === "pending" || isRescanning;
   const wasAutoFilled = project.scrapeStatus === "done";
+  const scrapeFailed = project.scrapeStatus === "failed" && !isRescanning;
   const confidence = project.scrapeData?.confidence;
 
   return (
@@ -364,6 +365,16 @@ export default function ProjectDetail() {
                     <p className="text-sm text-emerald-600 dark:text-emerald-400">
                       Auto-filled from your website — review and save to confirm.
                     </p>
+                  </div>
+                )}
+
+                {scrapeFailed && (
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-red-400/20 bg-red-500/[0.07] px-4 py-3">
+                    <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-red-400">Website scan failed</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">We couldn't read your website. Fill in the fields manually, or try re-scanning.</p>
+                    </div>
                   </div>
                 )}
               </CardHeader>
