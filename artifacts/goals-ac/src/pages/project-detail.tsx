@@ -17,6 +17,21 @@ import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertC
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
+type Confidence = "high" | "medium" | "low";
+
+interface ScrapeConfidence {
+  companyName: Confidence;
+  industry: Confidence;
+  targetAudience: Confidence;
+  voiceTone: Confidence;
+  primaryKeywords: Confidence;
+  competitorUrls: Confidence;
+}
+
+interface ScrapeData {
+  confidence?: ScrapeConfidence;
+}
+
 interface BrandProfile {
   id: number;
   companyName: string;
@@ -35,6 +50,7 @@ interface WebsiteProject {
   pageCount: number;
   crawlStatus: string;
   scrapeStatus: string | null;
+  scrapeData: ScrapeData | null;
   createdAt: string;
   brandProfile: BrandProfile | null;
 }
@@ -55,6 +71,20 @@ const brandProfileSchema = z.object({
   competitorUrls: z.string(),
 });
 type BrandProfileForm = z.infer<typeof brandProfileSchema>;
+
+function ConfidenceBadge({ level }: { level: Confidence | undefined }) {
+  if (!level) return null;
+  const config = {
+    high: { label: "High confidence", className: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25" },
+    medium: { label: "Medium confidence", className: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25" },
+    low: { label: "Low confidence", className: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-500/15 dark:text-zinc-400 dark:border-zinc-500/25" },
+  }[level];
+  return (
+    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${config.className}`}>
+      {config.label}
+    </span>
+  );
+}
 
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -236,6 +266,7 @@ export default function ProjectDetail() {
 
   const isScraping = project.scrapeStatus === "pending" || isRescanning;
   const wasAutoFilled = project.scrapeStatus === "done";
+  const confidence = project.scrapeData?.confidence;
 
   return (
     <Layout>
@@ -355,7 +386,10 @@ export default function ProjectDetail() {
                           name="companyName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Company name</FormLabel>
+                              <div className="flex items-center gap-2">
+                                <FormLabel>Company name</FormLabel>
+                                {wasAutoFilled && <ConfidenceBadge level={confidence?.companyName} />}
+                              </div>
                               <FormControl>
                                 <Input placeholder="Acme Corp" {...field} />
                               </FormControl>
@@ -368,7 +402,10 @@ export default function ProjectDetail() {
                           name="industry"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Industry</FormLabel>
+                              <div className="flex items-center gap-2">
+                                <FormLabel>Industry</FormLabel>
+                                {wasAutoFilled && <ConfidenceBadge level={confidence?.industry} />}
+                              </div>
                               <FormControl>
                                 <Input placeholder="B2B SaaS, E-commerce, etc." {...field} />
                               </FormControl>
@@ -382,7 +419,10 @@ export default function ProjectDetail() {
                         name="targetAudience"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Target audience</FormLabel>
+                            <div className="flex items-center gap-2">
+                              <FormLabel>Target audience</FormLabel>
+                              {wasAutoFilled && <ConfidenceBadge level={confidence?.targetAudience} />}
+                            </div>
                             <FormControl>
                               <Textarea
                                 placeholder="Describe your ideal customers — their role, company size, pain points, etc."
@@ -400,7 +440,10 @@ export default function ProjectDetail() {
                         name="voiceTone"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Brand voice &amp; tone</FormLabel>
+                            <div className="flex items-center gap-2">
+                              <FormLabel>Brand voice &amp; tone</FormLabel>
+                              {wasAutoFilled && <ConfidenceBadge level={confidence?.voiceTone} />}
+                            </div>
                             <FormControl>
                               <Input placeholder="Professional yet approachable, data-driven, conversational..." {...field} />
                             </FormControl>
@@ -413,7 +456,10 @@ export default function ProjectDetail() {
                         name="primaryKeywords"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Primary keywords</FormLabel>
+                            <div className="flex items-center gap-2">
+                              <FormLabel>Primary keywords</FormLabel>
+                              {wasAutoFilled && <ConfidenceBadge level={confidence?.primaryKeywords} />}
+                            </div>
                             <FormControl>
                               <Input placeholder="keyword one, keyword two, keyword three" {...field} />
                             </FormControl>
@@ -427,7 +473,10 @@ export default function ProjectDetail() {
                         name="competitorUrls"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Competitor URLs</FormLabel>
+                            <div className="flex items-center gap-2">
+                              <FormLabel>Competitor URLs</FormLabel>
+                              {wasAutoFilled && <ConfidenceBadge level={confidence?.competitorUrls} />}
+                            </div>
                             <FormControl>
                               <Textarea
                                 placeholder={"https://competitor1.com\nhttps://competitor2.com"}

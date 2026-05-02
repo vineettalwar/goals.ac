@@ -92,6 +92,13 @@
       "when": 1746380000000,
       "tag": "0012_scrape_status",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1746381000000,
+      "tag": "0013_scrape_data",
+      "breakpoints": true
     }
   ]
 }

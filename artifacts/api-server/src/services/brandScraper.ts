@@ -1,6 +1,8 @@
 import type { GoogleGenAI } from "@google/genai";
 import { logger } from "../lib/logger";
 
+type Confidence = "high" | "medium" | "low";
+
 export interface BrandExtract {
   companyName: string;
   industry: string;
@@ -8,9 +10,17 @@ export interface BrandExtract {
   voiceTone: string;
   primaryKeywords: string[];
   competitorUrls: string[];
+  confidence: {
+    companyName: Confidence;
+    industry: Confidence;
+    targetAudience: Confidence;
+    voiceTone: Confidence;
+    primaryKeywords: Confidence;
+    competitorUrls: Confidence;
+  };
 }
 
-const SYSTEM_PROMPT = `You are an expert brand analyst. Given raw text scraped from a company's website, extract brand information. You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation — only raw JSON.`;
+const SYSTEM_PROMPT = `You are an expert brand analyst. Given raw text scraped from a company's website, extract brand information and rate your confidence for each field. You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation — only raw JSON.`;
 
 let aiClient: GoogleGenAI | null = null;
 
@@ -114,6 +124,11 @@ function pickKeyPages(links: string[], baseOrigin: string): string[] {
   return picked;
 }
 
+function parseConfidence(val: unknown): Confidence {
+  if (val === "high" || val === "medium" || val === "low") return val;
+  return "medium";
+}
+
 export async function scrapeBrandProfile(websiteUrl: string): Promise<BrandExtract> {
   const origin = new URL(websiteUrl).origin;
 
@@ -148,19 +163,26 @@ export async function scrapeBrandProfile(websiteUrl: string): Promise<BrandExtra
     throw new Error("AI not configured");
   }
 
-  const prompt = `Analyze this website text and extract brand information. The website URL is: ${websiteUrl}
+  const prompt = `Analyze this website text and extract brand information. Rate your confidence for each field based on how clearly it was found in the content. The website URL is: ${websiteUrl}
 
 WEBSITE TEXT:
 ${allText}
 
-Return ONLY this exact JSON structure:
+Return ONLY this exact JSON structure. For confidence, use "high" (clearly stated in content), "medium" (inferred from context), or "low" (best guess with limited signal):
+
 {
   "companyName": "<company name from the website>",
+  "companyNameConfidence": "<high|medium|low>",
   "industry": "<specific industry/niche, e.g. 'B2B SaaS', 'E-commerce', 'FinTech', 'HR Tech'>",
+  "industryConfidence": "<high|medium|low>",
   "targetAudience": "<2-3 sentences describing the ideal customer profile — their role, company size, pain points, and goals>",
+  "targetAudienceConfidence": "<high|medium|low>",
   "voiceTone": "<describe the brand voice, e.g. 'Professional yet conversational, data-driven and direct'>",
+  "voiceToneConfidence": "<high|medium|low>",
   "primaryKeywords": ["<keyword 1>", "<keyword 2>", "<keyword 3>", "<keyword 4>", "<keyword 5>"],
-  "competitorUrls": ["<competitor URL if mentioned on site, otherwise empty array>"]
+  "primaryKeywordsConfidence": "<high|medium|low>",
+  "competitorUrls": ["<competitor URL if mentioned on site, otherwise empty array>"],
+  "competitorUrlsConfidence": "<high|medium|low>"
 }
 
 Rules:
@@ -169,7 +191,8 @@ Rules:
 - targetAudience: Base this on the copy, not guesswork
 - voiceTone: Reflect the actual tone of the writing
 - primaryKeywords: Use terms the site itself emphasizes, 3-6 keywords
-- competitorUrls: Only include if explicitly mentioned; otherwise return []`;
+- competitorUrls: Only include if explicitly mentioned on the site; otherwise return []
+- Confidence "high" = field value is explicitly stated or clearly evident; "medium" = reasonably inferred; "low" = guessed from limited signals`;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
@@ -179,14 +202,14 @@ Rules:
         config: {
           systemInstruction: SYSTEM_PROMPT,
           temperature: 0.2,
-          maxOutputTokens: 1024,
+          maxOutputTokens: 1200,
           thinkingConfig: { thinkingBudget: 0 },
         },
       });
 
       const raw = response.text ?? "";
       const cleaned = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
-      const parsed = JSON.parse(cleaned) as BrandExtract;
+      const parsed = JSON.parse(cleaned) as Record<string, unknown>;
 
       if (!parsed.companyName || !parsed.industry) {
         throw new Error("Incomplete brand extract");
@@ -199,6 +222,14 @@ Rules:
         voiceTone: String(parsed.voiceTone || ""),
         primaryKeywords: Array.isArray(parsed.primaryKeywords) ? parsed.primaryKeywords.map(String) : [],
         competitorUrls: Array.isArray(parsed.competitorUrls) ? parsed.competitorUrls.map(String).filter(Boolean) : [],
+        confidence: {
+          companyName: parseConfidence(parsed.companyNameConfidence),
+          industry: parseConfidence(parsed.industryConfidence),
+          targetAudience: parseConfidence(parsed.targetAudienceConfidence),
+          voiceTone: parseConfidence(parsed.voiceToneConfidence),
+          primaryKeywords: parseConfidence(parsed.primaryKeywordsConfidence),
+          competitorUrls: parseConfidence(parsed.competitorUrlsConfidence),
+        },
       };
     } catch (err) {
       logger.warn({ err, attempt }, "Brand scrape parse error");

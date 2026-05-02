@@ -104,7 +104,12 @@ async function fetchSitemapInfo(
   return { sitemapUrl: null, pageCount: 0, crawlData: null };
 }
 
-async function runBrandScrape(projectId: number, url: string, log: { error: (obj: unknown, msg: string) => void }): Promise<void> {
+async function runBrandScrape(
+  projectId: number,
+  url: string,
+  log: { error: (obj: unknown, msg: string) => void },
+  overwrite = false,
+): Promise<void> {
   await db
     .update(websiteProjectsTable)
     .set({ scrapeStatus: "pending" })
@@ -115,24 +120,37 @@ async function runBrandScrape(projectId: number, url: string, log: { error: (obj
     const extract = await scrapeBrandProfile(url);
 
     const existing = await db
-      .select({ id: brandProfilesTable.id })
+      .select()
       .from(brandProfilesTable)
       .where(eq(brandProfilesTable.websiteProjectId, projectId))
       .limit(1);
 
     if (existing.length > 0) {
+      const current = existing[0];
       const updates: Record<string, unknown> = {};
-      if (extract.companyName) updates.companyName = extract.companyName;
-      if (extract.industry) updates.industry = extract.industry;
-      if (extract.targetAudience) updates.targetAudience = extract.targetAudience;
-      if (extract.voiceTone) updates.voiceTone = extract.voiceTone;
-      if (extract.primaryKeywords.length > 0) updates.primaryKeywords = extract.primaryKeywords;
-      if (extract.competitorUrls.length > 0) updates.competitorUrls = extract.competitorUrls;
 
-      await db
-        .update(brandProfilesTable)
-        .set(updates)
-        .where(eq(brandProfilesTable.websiteProjectId, projectId));
+      if (overwrite) {
+        if (extract.companyName) updates.companyName = extract.companyName;
+        if (extract.industry) updates.industry = extract.industry;
+        if (extract.targetAudience) updates.targetAudience = extract.targetAudience;
+        if (extract.voiceTone) updates.voiceTone = extract.voiceTone;
+        if (extract.primaryKeywords.length > 0) updates.primaryKeywords = extract.primaryKeywords;
+        if (extract.competitorUrls.length > 0) updates.competitorUrls = extract.competitorUrls;
+      } else {
+        if (!current.companyName && extract.companyName) updates.companyName = extract.companyName;
+        if (!current.industry && extract.industry) updates.industry = extract.industry;
+        if (!current.targetAudience && extract.targetAudience) updates.targetAudience = extract.targetAudience;
+        if (!current.voiceTone && extract.voiceTone) updates.voiceTone = extract.voiceTone;
+        if ((!current.primaryKeywords || current.primaryKeywords.length === 0) && extract.primaryKeywords.length > 0) updates.primaryKeywords = extract.primaryKeywords;
+        if ((!current.competitorUrls || current.competitorUrls.length === 0) && extract.competitorUrls.length > 0) updates.competitorUrls = extract.competitorUrls;
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await db
+          .update(brandProfilesTable)
+          .set(updates)
+          .where(eq(brandProfilesTable.websiteProjectId, projectId));
+      }
     } else {
       await db.insert(brandProfilesTable).values({
         websiteProjectId: projectId,
@@ -147,7 +165,7 @@ async function runBrandScrape(projectId: number, url: string, log: { error: (obj
 
     await db
       .update(websiteProjectsTable)
-      .set({ scrapeStatus: "done" })
+      .set({ scrapeStatus: "done", scrapeData: extract })
       .where(eq(websiteProjectsTable.id, projectId));
   } catch (err) {
     log.error(err, "Brand scrape failed");
@@ -365,7 +383,7 @@ router.post("/website-projects/:id/scrape-brand", requireAuth, async (req, res) 
 
     res.json({ message: "Scrape started" });
 
-    await runBrandScrape(id, project.url, req.log);
+    await runBrandScrape(id, project.url, req.log, true);
   } catch (err) {
     req.log.error(err, "Failed to trigger brand scrape");
   }
