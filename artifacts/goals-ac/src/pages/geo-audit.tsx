@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CheckCircle2, XCircle, AlertTriangle, RotateCcw, ArrowLeft, ExternalLink } from "lucide-react";
+import { useAuth } from "@/context/auth";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -99,6 +100,7 @@ export default function GeoAuditDetail() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const roadmapId = searchParams.get("roadmap_id");
+  const { token } = useAuth();
 
   const [audit, setAudit] = useState<GeoAudit | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,7 +110,9 @@ export default function GeoAuditDetail() {
     if (!id) return;
     setIsLoading(true);
     setIsError(false);
-    fetch(`${BASE}/api/geo-audits/${id}`)
+    const headers: Record<string, string> = {};
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+    fetch(`${BASE}/api/geo-audits/${id}`, { headers })
       .then((r) => {
         if (!r.ok) throw new Error("Not found");
         return r.json();
@@ -121,7 +125,7 @@ export default function GeoAuditDetail() {
         setIsError(true);
         setIsLoading(false);
       });
-  }, [id]);
+  }, [id, token]);
 
   if (isLoading) {
     return (

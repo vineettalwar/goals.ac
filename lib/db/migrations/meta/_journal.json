@@ -36,6 +36,27 @@
       "when": 1775689718342,
       "tag": "0004_slow_kingpin",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1777726091582,
+      "tag": "0005_same_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1777727718309,
+      "tag": "0006_fresh_iron_patriot",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777728304096,
+      "tag": "0007_amusing_ego",
+      "breakpoints": true
     }
   ]
 }

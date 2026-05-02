@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { SEO } from "@/components/seo";
 import { Layout } from "@/components/layout";
@@ -6,27 +6,35 @@ import {
   useGetRoadmap,
   getGetRoadmapQueryKey,
   useListContentStrategies,
+  getListContentStrategiesQueryKey,
   useGenerateContentStrategy,
 } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText, Zap } from "lucide-react";
-import { LeadCaptureModal } from "@/components/lead-capture-modal";
+import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText, Zap, FolderOpen, BookmarkPlus, BookmarkCheck } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/context/auth";
+import { useActiveProject } from "@/context/active-project";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 export default function RoadmapDetail() {
   const { slug = "" } = useParams<{ slug: string }>();
   const navigate = useNavigate();
+  const { user, token } = useAuth();
+  const { projects, activeProjectId, setActiveProjectId } = useActiveProject();
+
   const [generatingStrategy, setGeneratingStrategy] = useState(false);
   const [showSeoForm, setShowSeoForm] = useState(false);
   const [seoLoading, setSeoLoading] = useState(false);
   const [brandName, setBrandName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
+  const [isPinned, setIsPinned] = useState(false);
+  const [isPinning, setIsPinning] = useState(false);
 
   const { data: roadmap, isLoading, isError } = useGetRoadmap(slug, {
     query: {
@@ -35,13 +43,30 @@ export default function RoadmapDetail() {
     },
   });
 
+  useEffect(() => {
+    if (!roadmap?.id || !activeProjectId || !token) {
+      setIsPinned(false);
+      return;
+    }
+    fetch(`${API_BASE}/api/website-projects/${activeProjectId}/content`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: { roadmaps?: { id: number }[] } | null) => {
+        if (data?.roadmaps) {
+          setIsPinned(data.roadmaps.some((rm) => rm.id === roadmap.id));
+        }
+      })
+      .catch(() => {});
+  }, [roadmap?.id, activeProjectId, token]);
+
   const { data: allStrategies } = useListContentStrategies({
-    query: { enabled: !!roadmap?.id },
+    query: { enabled: !!roadmap?.id && !!user, queryKey: getListContentStrategiesQueryKey() },
   });
 
-  const existingStrategy = allStrategies?.find(
-    (s) => s.roadmapId === roadmap?.id
-  );
+  const existingStrategy = user
+    ? allStrategies?.find((s) => s.roadmapId === roadmap?.id)
+    : undefined;
 
   const generateStrategy = useGenerateContentStrategy();
 
@@ -61,6 +86,7 @@ export default function RoadmapDetail() {
           industry: roadmap.industry,
           location: roadmap.location,
           stage: roadmap.stage,
+          ...(activeProjectId ? { website_project_id: activeProjectId } : {}),
         },
       });
       navigate(`/content-strategy/${result.id}`);
@@ -104,9 +130,12 @@ export default function RoadmapDetail() {
     if (!roadmap || !brandName || !websiteUrl) return;
     setSeoLoading(true);
     try {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const res = await fetch(`${API_BASE}/api/seo-articles/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           brand_name: brandName,
           website_url: websiteUrl,
@@ -114,6 +143,7 @@ export default function RoadmapDetail() {
           location: roadmap.location,
           stage: roadmap.stage,
           roadmap_id: roadmap.id,
+          ...(activeProjectId ? { website_project_id: activeProjectId } : {}),
         }),
       });
       if (!res.ok) throw new Error("Generation failed");
@@ -121,6 +151,22 @@ export default function RoadmapDetail() {
       navigate(`/seo-article/${article.id}`);
     } catch {
       setSeoLoading(false);
+    }
+  };
+
+  const handlePinRoadmap = async () => {
+    if (!roadmap || !activeProjectId || !token) return;
+    setIsPinning(true);
+    try {
+      const method = isPinned ? "DELETE" : "POST";
+      await fetch(`${API_BASE}/api/website-projects/${activeProjectId}/roadmaps/${roadmap.id}`, {
+        method,
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setIsPinned(!isPinned);
+    } catch {
+    } finally {
+      setIsPinning(false);
     }
   };
 
@@ -275,10 +321,53 @@ export default function RoadmapDetail() {
           )}
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div>
-              <h4 className="font-semibold text-foreground">Need help executing this?</h4>
-              <p className="text-sm text-muted-foreground">Our team at Lead.sh can automate this entire outbound strategy.</p>
+              <h4 className="font-semibold text-foreground">Ready to execute your strategy?</h4>
+              <p className="text-sm text-muted-foreground">
+                {user ? (
+                  <>Generate content and audits — they'll be saved to your project.</>
+                ) : (
+                  <>Sign up to save your results and build a brand profile.</>
+                )}
+              </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+              {user && projects.length > 0 && (
+                <>
+                  <Select
+                    value={activeProjectId ? String(activeProjectId) : "__none__"}
+                    onValueChange={(v) => { setActiveProjectId(v === "__none__" ? null : Number(v)); setIsPinned(false); }}
+                  >
+                    <SelectTrigger className="w-[180px] h-9 text-sm gap-1.5">
+                      <FolderOpen className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                      <SelectValue placeholder="No project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No project</SelectItem>
+                      {projects.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {activeProjectId && (
+                    <Button
+                      variant={isPinned ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={handlePinRoadmap}
+                      disabled={isPinning}
+                      className="gap-2"
+                    >
+                      {isPinning ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : isPinned ? (
+                        <BookmarkCheck className="w-4 h-4" />
+                      ) : (
+                        <BookmarkPlus className="w-4 h-4" />
+                      )}
+                      {isPinned ? "Saved" : "Save roadmap"}
+                    </Button>
+                  )}
+                </>
+              )}
               {!showSeoForm && (
                 <Button variant="outline" size="sm" onClick={() => setShowSeoForm(true)}>
                   <FileText className="w-4 h-4 mr-2" />
@@ -312,7 +401,11 @@ export default function RoadmapDetail() {
                 <Zap className="w-4 h-4" />
                 Run GEO Audit
               </Button>
-              <LeadCaptureModal roadmapSlug={roadmap.slug} />
+              {!user && (
+                <Button size="sm" asChild>
+                  <a href="/signup">Sign up free</a>
+                </Button>
+              )}
             </div>
           </div>
         </div>

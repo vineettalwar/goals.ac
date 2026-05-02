@@ -1,7 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { SEO } from "@/components/seo";
 import { Layout } from "@/components/layout";
-import { useGetContentStrategy } from "@workspace/api-client-react";
+import { useGetContentStrategy, getGetContentStrategyQueryKey } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,7 +27,7 @@ export default function ContentStrategy() {
   const strategyId = Number(id);
 
   const { data: strategy, isLoading, isError } = useGetContentStrategy(strategyId, {
-    query: { enabled: !!strategyId && !isNaN(strategyId) },
+    query: { enabled: !!strategyId && !isNaN(strategyId), queryKey: getGetContentStrategyQueryKey(strategyId) },
   });
 
   if (isLoading) {

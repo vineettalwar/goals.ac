@@ -1,9 +1,10 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { contentStrategiesTable, contentItemsTable, roadmapsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { contentStrategiesTable, contentItemsTable, roadmapsTable, websiteProjectsTable } from "@workspace/db";
+import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { generateContentStrategy } from "../services/contentStrategyGenerator";
+import { requireAuth, optionalAuth } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -12,20 +13,36 @@ const GenerateContentStrategyBody = z.object({
   industry: z.string().min(1),
   location: z.string().min(1),
   stage: z.string().min(1),
+  website_project_id: z.number().int().positive().optional(),
 });
 
 const UpdateItemStatusBody = z.object({
   status: z.enum(["draft", "prepared", "published"]),
 });
 
-router.post("/content-strategies/generate", async (req, res) => {
+router.post("/content-strategies/generate", optionalAuth, async (req, res) => {
   const parsed = GenerateContentStrategyBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request: " + parsed.error.message });
     return;
   }
 
-  const { roadmap_id, industry, location, stage } = parsed.data;
+  const { roadmap_id, industry, location, stage, website_project_id } = parsed.data;
+
+  let validatedProjectId: number | null = null;
+
+  if (website_project_id && req.user) {
+    const [proj] = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, website_project_id), eq(websiteProjectsTable.userId, req.user.userId)))
+      .limit(1);
+    if (!proj) {
+      res.status(403).json({ error: "You do not have access to this project" });
+      return;
+    }
+    validatedProjectId = website_project_id;
+  }
 
   try {
     const roadmap = await db
@@ -57,6 +74,7 @@ router.post("/content-strategies/generate", async (req, res) => {
       .insert(contentStrategiesTable)
       .values({
         roadmapId: roadmap_id,
+        websiteProjectId: validatedProjectId,
         industry,
         location,
         stage,
@@ -90,11 +108,24 @@ router.post("/content-strategies/generate", async (req, res) => {
   }
 });
 
-router.get("/content-strategies", async (req, res) => {
+router.get("/content-strategies", requireAuth, async (req, res) => {
   try {
+    const userProjects = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.userId, req.user!.userId));
+
+    const projectIds = userProjects.map((p) => p.id);
+
+    if (projectIds.length === 0) {
+      res.json([]);
+      return;
+    }
+
     const strategies = await db
       .select()
       .from(contentStrategiesTable)
+      .where(inArray(contentStrategiesTable.websiteProjectId, projectIds))
       .orderBy(contentStrategiesTable.createdAt);
 
     res.json(strategies);
@@ -104,7 +135,7 @@ router.get("/content-strategies", async (req, res) => {
   }
 });
 
-router.get("/content-strategies/:id", async (req, res) => {
+router.get("/content-strategies/:id", optionalAuth, async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) {
@@ -123,6 +154,22 @@ router.get("/content-strategies/:id", async (req, res) => {
       return;
     }
 
+    if (strategy.websiteProjectId) {
+      if (!req.user) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+      const [proj] = await db
+        .select({ id: websiteProjectsTable.id })
+        .from(websiteProjectsTable)
+        .where(and(eq(websiteProjectsTable.id, strategy.websiteProjectId), eq(websiteProjectsTable.userId, req.user.userId)))
+        .limit(1);
+      if (!proj) {
+        res.status(403).json({ error: "You do not have access to this content strategy" });
+        return;
+      }
+    }
+
     const items = await db
       .select()
       .from(contentItemsTable)
@@ -136,7 +183,7 @@ router.get("/content-strategies/:id", async (req, res) => {
   }
 });
 
-router.patch("/content-strategies/:id/items/:itemId", async (req, res) => {
+router.patch("/content-strategies/:id/items/:itemId", requireAuth, async (req, res) => {
   try {
     const strategyId = Number(req.params.id);
     const itemId = Number(req.params.itemId);
@@ -152,13 +199,36 @@ router.patch("/content-strategies/:id/items/:itemId", async (req, res) => {
       return;
     }
 
+    const [strategy] = await db
+      .select()
+      .from(contentStrategiesTable)
+      .where(eq(contentStrategiesTable.id, strategyId))
+      .limit(1);
+
+    if (!strategy) {
+      res.status(404).json({ error: "Content strategy not found" });
+      return;
+    }
+
+    if (strategy.websiteProjectId) {
+      const [proj] = await db
+        .select({ id: websiteProjectsTable.id })
+        .from(websiteProjectsTable)
+        .where(and(eq(websiteProjectsTable.id, strategy.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+        .limit(1);
+      if (!proj) {
+        res.status(403).json({ error: "You do not have access to this content strategy" });
+        return;
+      }
+    }
+
     const [item] = await db
       .select()
       .from(contentItemsTable)
-      .where(eq(contentItemsTable.id, itemId))
+      .where(and(eq(contentItemsTable.id, itemId), eq(contentItemsTable.strategyId, strategyId)))
       .limit(1);
 
-    if (!item || item.strategyId !== strategyId) {
+    if (!item) {
       res.status(404).json({ error: "Content item not found" });
       return;
     }

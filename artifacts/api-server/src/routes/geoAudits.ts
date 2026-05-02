@@ -1,25 +1,51 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { geoAuditsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { geoAuditsTable, websiteProjectsTable } from "@workspace/db";
+import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { auditUrl } from "../services/geoAuditor";
+import { optionalAuth } from "../lib/auth";
+import { assertPublicUrl } from "../lib/ssrf-guard";
 
 const router: IRouter = Router();
 
 const CreateGeoAuditBody = z.object({
   url: z.string().url("Must be a valid URL"),
   roadmap_id: z.number().int().positive().optional(),
+  website_project_id: z.number().int().positive().optional(),
 });
 
-router.post("/geo-audits", async (req, res) => {
+router.post("/geo-audits", optionalAuth, async (req, res) => {
   const parsed = CreateGeoAuditBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request: " + parsed.error.message });
     return;
   }
 
-  const { url, roadmap_id } = parsed.data;
+  const { url, roadmap_id, website_project_id } = parsed.data;
+
+  try {
+    await assertPublicUrl(url);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(422).json({ error: message });
+    return;
+  }
+
+  let validatedProjectId: number | null = null;
+
+  if (website_project_id && req.user) {
+    const [proj] = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, website_project_id), eq(websiteProjectsTable.userId, req.user.userId)))
+      .limit(1);
+    if (!proj) {
+      res.status(403).json({ error: "You do not have access to this project" });
+      return;
+    }
+    validatedProjectId = website_project_id;
+  }
 
   req.log.info({ url, roadmap_id }, "Starting GEO audit");
 
@@ -44,6 +70,7 @@ router.post("/geo-audits", async (req, res) => {
       .values({
         url: auditResult.url,
         roadmapId: roadmap_id ?? null,
+        websiteProjectId: validatedProjectId,
         geoScore: auditResult.geoScore,
         issues: auditResult.issues,
         pageTitle: auditResult.pageTitle,
@@ -63,7 +90,7 @@ router.post("/geo-audits", async (req, res) => {
   }
 });
 
-router.get("/geo-audits/:id", async (req, res) => {
+router.get("/geo-audits/:id", optionalAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {
     res.status(400).json({ error: "Invalid audit id" });
@@ -80,6 +107,22 @@ router.get("/geo-audits/:id", async (req, res) => {
     if (!audit) {
       res.status(404).json({ error: "GEO audit not found" });
       return;
+    }
+
+    if (audit.websiteProjectId) {
+      if (!req.user) {
+        res.status(401).json({ error: "Authentication required" });
+        return;
+      }
+      const [proj] = await db
+        .select({ id: websiteProjectsTable.id })
+        .from(websiteProjectsTable)
+        .where(and(eq(websiteProjectsTable.id, audit.websiteProjectId), eq(websiteProjectsTable.userId, req.user.userId)))
+        .limit(1);
+      if (!proj) {
+        res.status(403).json({ error: "You do not have access to this audit" });
+        return;
+      }
     }
 
     res.json(audit);

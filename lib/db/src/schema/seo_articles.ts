@@ -2,10 +2,12 @@ import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { roadmapsTable } from "./roadmaps";
+import { websiteProjectsTable } from "./website_projects";
 
 export const seoArticlesTable = pgTable("seo_articles", {
   id: serial("id").primaryKey(),
   roadmapId: integer("roadmap_id").references(() => roadmapsTable.id),
+  websiteProjectId: integer("website_project_id").references(() => websiteProjectsTable.id, { onDelete: "set null" }),
   brandName: text("brand_name").notNull(),
   websiteUrl: text("website_url").notNull(),
   industry: text("industry").notNull(),

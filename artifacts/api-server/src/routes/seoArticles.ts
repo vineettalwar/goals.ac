@@ -1,18 +1,34 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { seoArticlesTable } from "@workspace/db";
-import { eq, desc } from "drizzle-orm";
+import { seoArticlesTable, websiteProjectsTable } from "@workspace/db";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { generateSeoArticleContent } from "../services/seoContentGenerator";
 import { logger } from "../lib/logger";
+import { optionalAuth, requireAuth } from "../lib/auth";
 
 const router: IRouter = Router();
 
-router.post("/seo-articles/generate", async (req, res) => {
+router.post("/seo-articles/generate", optionalAuth, async (req, res) => {
   try {
-    const { brand_name, website_url, industry, location, stage, roadmap_id } = req.body as Record<string, unknown>;
+    const { brand_name, website_url, industry, location, stage, roadmap_id, website_project_id } = req.body as Record<string, unknown>;
 
     if (!brand_name || !website_url || !industry || !location || !stage) {
       return res.status(400).json({ error: "Missing required fields: brand_name, website_url, industry, location, stage" });
+    }
+
+    let validatedProjectId: number | null = null;
+
+    if (website_project_id && req.user) {
+      const projectIdNum = Number(website_project_id);
+      const [proj] = await db
+        .select({ id: websiteProjectsTable.id })
+        .from(websiteProjectsTable)
+        .where(and(eq(websiteProjectsTable.id, projectIdNum), eq(websiteProjectsTable.userId, req.user.userId)))
+        .limit(1);
+      if (!proj) {
+        return res.status(403).json({ error: "You do not have access to this project" });
+      }
+      validatedProjectId = projectIdNum;
     }
 
     const articleContent = await generateSeoArticleContent(
@@ -30,6 +46,7 @@ router.post("/seo-articles/generate", async (req, res) => {
       .insert(seoArticlesTable)
       .values({
         roadmapId: roadmapIdNum,
+        websiteProjectId: validatedProjectId,
         brandName: brand_name as string,
         websiteUrl: website_url as string,
         industry: industry as string,
@@ -52,21 +69,24 @@ router.post("/seo-articles/generate", async (req, res) => {
   }
 });
 
-router.get("/seo-articles", async (req, res) => {
+router.get("/seo-articles", requireAuth, async (req, res) => {
   try {
-    const roadmapIdParam = req.query.roadmap_id;
-    const roadmapId = roadmapIdParam ? Number(roadmapIdParam) : undefined;
+    const userProjects = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.userId, req.user!.userId));
 
-    const articles = roadmapId
-      ? await db
-          .select()
-          .from(seoArticlesTable)
-          .where(eq(seoArticlesTable.roadmapId, roadmapId))
-          .orderBy(desc(seoArticlesTable.createdAt))
-      : await db
-          .select()
-          .from(seoArticlesTable)
-          .orderBy(desc(seoArticlesTable.createdAt));
+    const projectIds = userProjects.map((p) => p.id);
+
+    if (projectIds.length === 0) {
+      return res.json([]);
+    }
+
+    const articles = await db
+      .select()
+      .from(seoArticlesTable)
+      .where(inArray(seoArticlesTable.websiteProjectId, projectIds))
+      .orderBy(desc(seoArticlesTable.createdAt));
 
     return res.json(articles);
   } catch (err) {
@@ -75,7 +95,7 @@ router.get("/seo-articles", async (req, res) => {
   }
 });
 
-router.get("/seo-articles/:id", async (req, res) => {
+router.get("/seo-articles/:id", optionalAuth, async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (isNaN(id)) {
@@ -89,6 +109,20 @@ router.get("/seo-articles/:id", async (req, res) => {
 
     if (!article) {
       return res.status(404).json({ error: "Article not found" });
+    }
+
+    if (article.websiteProjectId) {
+      if (!req.user) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+      const [proj] = await db
+        .select({ id: websiteProjectsTable.id })
+        .from(websiteProjectsTable)
+        .where(and(eq(websiteProjectsTable.id, article.websiteProjectId), eq(websiteProjectsTable.userId, req.user.userId)))
+        .limit(1);
+      if (!proj) {
+        return res.status(403).json({ error: "You do not have access to this article" });
+      }
     }
 
     return res.json(article);

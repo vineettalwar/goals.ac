@@ -1,11 +1,13 @@
 import { pgTable, serial, text, integer, timestamp } from "drizzle-orm/pg-core";
 import { roadmapsTable } from "./roadmaps";
+import { websiteProjectsTable } from "./website_projects";
 
 export const contentStrategiesTable = pgTable("content_strategies", {
   id: serial("id").primaryKey(),
   roadmapId: integer("roadmap_id")
     .notNull()
     .references(() => roadmapsTable.id),
+  websiteProjectId: integer("website_project_id").references(() => websiteProjectsTable.id, { onDelete: "set null" }),
   industry: text("industry").notNull(),
   location: text("location").notNull(),
   stage: text("stage").notNull(),

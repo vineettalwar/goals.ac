@@ -8,6 +8,7 @@ import { Layout } from "@/components/layout";
 import { SEO } from "@/components/seo";
 import { Copy, Check, ArrowLeft, FileText } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/context/auth";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -29,8 +30,10 @@ interface SeoArticle {
   createdAt: string;
 }
 
-async function fetchSeoArticle(id: string): Promise<SeoArticle> {
-  const res = await fetch(`${API_BASE}/api/seo-articles/${id}`);
+async function fetchSeoArticle(id: string, token: string | null): Promise<SeoArticle> {
+  const headers: Record<string, string> = {};
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  const res = await fetch(`${API_BASE}/api/seo-articles/${id}`, { headers });
   if (!res.ok) {
     throw new Error("Article not found");
   }
@@ -39,11 +42,12 @@ async function fetchSeoArticle(id: string): Promise<SeoArticle> {
 
 export default function SeoArticlePage() {
   const { id = "" } = useParams<{ id: string }>();
+  const { token } = useAuth();
   const [copied, setCopied] = useState(false);
 
   const { data: article, isLoading, isError } = useQuery({
-    queryKey: ["seo-article", id],
-    queryFn: () => fetchSeoArticle(id),
+    queryKey: ["seo-article", id, !!token],
+    queryFn: () => fetchSeoArticle(id, token),
     enabled: !!id,
   });
 

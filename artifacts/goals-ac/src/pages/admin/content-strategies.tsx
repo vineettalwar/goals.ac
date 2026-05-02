@@ -3,7 +3,9 @@ import { useSearchParams, Link } from "react-router-dom";
 import { Layout } from "@/components/layout";
 import {
   useListContentStrategies,
+  getListContentStrategiesQueryKey,
   useGetContentStrategy,
+  getGetContentStrategyQueryKey,
   useUpdateContentItem,
 } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -119,7 +121,7 @@ export default function AdminContentStrategies() {
   const isAuthorized = useAdminGuard();
 
   const { data: strategies, isLoading } = useListContentStrategies({
-    query: { enabled: isAuthorized },
+    query: { enabled: isAuthorized, queryKey: getListContentStrategiesQueryKey() },
   });
 
   if (!isAuthorized) {

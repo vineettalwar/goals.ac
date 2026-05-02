@@ -1,0 +1,1 @@
+ALTER TABLE "website_projects" ADD COLUMN "crawl_data" jsonb;

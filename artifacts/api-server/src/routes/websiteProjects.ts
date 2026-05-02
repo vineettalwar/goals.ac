@@ -1,0 +1,391 @@
+import { Router, type IRouter } from "express";
+import { db } from "@workspace/db";
+import { websiteProjectsTable, brandProfilesTable, projectRoadmapsTable, roadmapsTable, contentStrategiesTable, seoArticlesTable, geoAuditsTable } from "@workspace/db";
+import { eq, and, desc, inArray } from "drizzle-orm";
+import { z } from "zod";
+import { requireAuth } from "../lib/auth";
+import { assertPublicUrl } from "../lib/ssrf-guard";
+
+const router: IRouter = Router();
+
+const CreateProjectBody = z.object({
+  name: z.string().min(1, "Project name is required"),
+  url: z.string().url("Must be a valid URL"),
+});
+
+const UpdateBrandProfileBody = z.object({
+  companyName: z.string().optional(),
+  industry: z.string().optional(),
+  targetAudience: z.string().optional(),
+  voiceTone: z.string().optional(),
+  primaryKeywords: z.array(z.string()).optional(),
+  competitorUrls: z.array(z.string()).optional(),
+});
+
+type CrawlData = {
+  sitemapType: "urlset" | "sitemapindex";
+  pageUrls: string[];
+  lastCrawledAt: string;
+};
+
+async function fetchXml(url: string): Promise<string | null> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const resp = await fetch(url, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!resp.ok) return null;
+    return await resp.text();
+  } catch {
+    clearTimeout(timeout);
+    return null;
+  }
+}
+
+function extractLocs(xml: string): string[] {
+  return (xml.match(/<loc>\s*(.*?)\s*<\/loc>/g) ?? [])
+    .map((m) => m.replace(/<\/?loc>/g, "").trim())
+    .filter(Boolean);
+}
+
+async function fetchSitemapInfo(
+  url: string,
+): Promise<{ sitemapUrl: string | null; pageCount: number; crawlData: CrawlData | null }> {
+  const baseUrl = new URL(url).origin;
+
+  await assertPublicUrl(baseUrl);
+
+  const candidates = [
+    `${baseUrl}/sitemap.xml`,
+    `${baseUrl}/sitemap_index.xml`,
+    `${baseUrl}/sitemap/sitemap.xml`,
+  ];
+
+  for (const candidate of candidates) {
+    const text = await fetchXml(candidate);
+    if (!text) continue;
+
+    if (text.includes("<sitemapindex")) {
+      const subSitemapUrls = extractLocs(text);
+      const allPageUrls: string[] = [];
+
+      for (const subUrl of subSitemapUrls.slice(0, 10)) {
+        try {
+          await assertPublicUrl(subUrl);
+        } catch {
+          continue;
+        }
+        const subText = await fetchXml(subUrl);
+        if (subText && subText.includes("<urlset")) {
+          allPageUrls.push(...extractLocs(subText));
+        }
+      }
+
+      const crawlData: CrawlData = {
+        sitemapType: "sitemapindex",
+        pageUrls: allPageUrls.slice(0, 200),
+        lastCrawledAt: new Date().toISOString(),
+      };
+      return { sitemapUrl: candidate, pageCount: allPageUrls.length, crawlData };
+    }
+
+    if (text.includes("<urlset")) {
+      const pageUrls = extractLocs(text);
+      const crawlData: CrawlData = {
+        sitemapType: "urlset",
+        pageUrls: pageUrls.slice(0, 200),
+        lastCrawledAt: new Date().toISOString(),
+      };
+      return { sitemapUrl: candidate, pageCount: pageUrls.length, crawlData };
+    }
+  }
+
+  return { sitemapUrl: null, pageCount: 0, crawlData: null };
+}
+
+router.get("/website-projects", requireAuth, async (req, res) => {
+  try {
+    const projects = await db
+      .select()
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.userId, req.user!.userId));
+
+    res.json(projects);
+  } catch (err) {
+    req.log.error(err, "Failed to list website projects");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/website-projects", requireAuth, async (req, res) => {
+  const parsed = CreateProjectBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  const { name, url } = parsed.data;
+
+  try {
+    const [project] = await db
+      .insert(websiteProjectsTable)
+      .values({
+        userId: req.user!.userId,
+        name,
+        url,
+        crawlStatus: "pending",
+      })
+      .returning();
+
+    res.status(201).json(project);
+
+    fetchSitemapInfo(url)
+      .then(async ({ sitemapUrl, pageCount, crawlData }) => {
+        await db
+          .update(websiteProjectsTable)
+          .set({ sitemapUrl, pageCount, crawlData, crawlStatus: "done" })
+          .where(eq(websiteProjectsTable.id, project.id));
+      })
+      .catch(async (err) => {
+        req.log.error(err, "Sitemap fetch failed");
+        await db
+          .update(websiteProjectsTable)
+          .set({ crawlStatus: "failed" })
+          .where(eq(websiteProjectsTable.id, project.id));
+      });
+  } catch (err) {
+    req.log.error(err, "Failed to create website project");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/website-projects/:id", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid project id" });
+    return;
+  }
+
+  try {
+    const [project] = await db
+      .select()
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, id), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    const [brandProfile] = await db
+      .select()
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, id))
+      .limit(1);
+
+    res.json({ ...project, brandProfile: brandProfile ?? null });
+  } catch (err) {
+    req.log.error(err, "Failed to get website project");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/website-projects/:id", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid project id" });
+    return;
+  }
+
+  try {
+    const [project] = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, id), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    await db.delete(websiteProjectsTable).where(eq(websiteProjectsTable.id, id));
+    res.status(204).send();
+  } catch (err) {
+    req.log.error(err, "Failed to delete website project");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/website-projects/:id/brand-profile", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid project id" });
+    return;
+  }
+
+  const parsed = UpdateBrandProfileBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  try {
+    const [project] = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, id), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    const existing = await db
+      .select({ id: brandProfilesTable.id })
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, id))
+      .limit(1);
+
+    let brandProfile;
+    if (existing.length > 0) {
+      const updates: Record<string, unknown> = {};
+      if (parsed.data.companyName !== undefined) updates.companyName = parsed.data.companyName;
+      if (parsed.data.industry !== undefined) updates.industry = parsed.data.industry;
+      if (parsed.data.targetAudience !== undefined) updates.targetAudience = parsed.data.targetAudience;
+      if (parsed.data.voiceTone !== undefined) updates.voiceTone = parsed.data.voiceTone;
+      if (parsed.data.primaryKeywords !== undefined) updates.primaryKeywords = parsed.data.primaryKeywords;
+      if (parsed.data.competitorUrls !== undefined) updates.competitorUrls = parsed.data.competitorUrls;
+
+      [brandProfile] = await db
+        .update(brandProfilesTable)
+        .set(updates)
+        .where(eq(brandProfilesTable.websiteProjectId, id))
+        .returning();
+    } else {
+      [brandProfile] = await db
+        .insert(brandProfilesTable)
+        .values({
+          websiteProjectId: id,
+          companyName: parsed.data.companyName ?? "",
+          industry: parsed.data.industry ?? "",
+          targetAudience: parsed.data.targetAudience ?? "",
+          voiceTone: parsed.data.voiceTone ?? "",
+          primaryKeywords: parsed.data.primaryKeywords ?? [],
+          competitorUrls: parsed.data.competitorUrls ?? [],
+        })
+        .returning();
+    }
+
+    res.json(brandProfile);
+  } catch (err) {
+    req.log.error(err, "Failed to update brand profile");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/website-projects/:id/content", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid project id" });
+    return;
+  }
+
+  try {
+    const [project] = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, id), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    const [contentStrategies, seoArticles, geoAudits, pinnedRoadmapLinks] = await Promise.all([
+      db.select().from(contentStrategiesTable).where(eq(contentStrategiesTable.websiteProjectId, id)).orderBy(desc(contentStrategiesTable.createdAt)),
+      db.select().from(seoArticlesTable).where(eq(seoArticlesTable.websiteProjectId, id)).orderBy(desc(seoArticlesTable.createdAt)),
+      db.select().from(geoAuditsTable).where(eq(geoAuditsTable.websiteProjectId, id)).orderBy(desc(geoAuditsTable.createdAt)),
+      db.select({ roadmapId: projectRoadmapsTable.roadmapId }).from(projectRoadmapsTable).where(eq(projectRoadmapsTable.projectId, id)),
+    ]);
+
+    const roadmapIds = pinnedRoadmapLinks.map((r) => r.roadmapId);
+    const roadmaps = roadmapIds.length > 0
+      ? await db.select().from(roadmapsTable).where(inArray(roadmapsTable.id, roadmapIds)).orderBy(desc(roadmapsTable.createdAt))
+      : [];
+
+    res.json({ contentStrategies, seoArticles, geoAudits, roadmaps });
+  } catch (err) {
+    req.log.error(err, "Failed to get project content");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/website-projects/:id/roadmaps/:roadmapId", requireAuth, async (req, res) => {
+  const projectId = Number(req.params.id);
+  const roadmapId = Number(req.params.roadmapId);
+  if (isNaN(projectId) || isNaN(roadmapId)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  try {
+    const [project] = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    const [roadmap] = await db.select({ id: roadmapsTable.id }).from(roadmapsTable).where(eq(roadmapsTable.id, roadmapId)).limit(1);
+    if (!roadmap) {
+      res.status(404).json({ error: "Roadmap not found" });
+      return;
+    }
+
+    await db.insert(projectRoadmapsTable).values({ projectId, roadmapId }).onConflictDoNothing();
+    res.status(201).json({ message: "Roadmap pinned to project" });
+  } catch (err) {
+    req.log.error(err, "Failed to pin roadmap to project");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/website-projects/:id/roadmaps/:roadmapId", requireAuth, async (req, res) => {
+  const projectId = Number(req.params.id);
+  const roadmapId = Number(req.params.roadmapId);
+  if (isNaN(projectId) || isNaN(roadmapId)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  try {
+    const [project] = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) {
+      res.status(404).json({ error: "Project not found" });
+      return;
+    }
+
+    await db.delete(projectRoadmapsTable).where(
+      and(eq(projectRoadmapsTable.projectId, projectId), eq(projectRoadmapsTable.roadmapId, roadmapId))
+    );
+    res.json({ message: "Roadmap unpinned from project" });
+  } catch (err) {
+    req.log.error(err, "Failed to unpin roadmap from project");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+export default router;

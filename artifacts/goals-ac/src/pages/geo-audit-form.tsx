@@ -7,7 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Loader2, Search, Zap, ShieldCheck, BarChart2 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, Search, Zap, ShieldCheck, BarChart2, FolderOpen } from "lucide-react";
+import { useAuth } from "@/context/auth";
+import { useActiveProject } from "@/context/active-project";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -15,6 +18,9 @@ export default function GeoAuditForm() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const roadmapId = searchParams.get("roadmap_id");
+
+  const { user, token } = useAuth();
+  const { projects, activeProjectId, setActiveProjectId } = useActiveProject();
 
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -37,10 +43,14 @@ export default function GeoAuditForm() {
     try {
       const body: Record<string, unknown> = { url: normalizedUrl };
       if (roadmapId) body.roadmap_id = Number(roadmapId);
+      if (activeProjectId && user) body.website_project_id = activeProjectId;
+
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
 
       const response = await fetch(`${BASE}/api/geo-audits`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(body),
       });
 
@@ -87,6 +97,11 @@ export default function GeoAuditForm() {
             <CardTitle>Scan your website</CardTitle>
             <CardDescription>
               Enter the URL of the page you want to audit. We'll check 10 key GEO signals.
+              {!user && (
+                <span className="block mt-1 text-xs text-muted-foreground">
+                  <a href="/signup" className="underline underline-offset-2">Sign up</a> to save results to a project.
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -106,6 +121,27 @@ export default function GeoAuditForm() {
                   />
                 </div>
               </div>
+
+              {user && projects.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Save to project (optional)</Label>
+                  <Select
+                    value={activeProjectId ? String(activeProjectId) : "__none__"}
+                    onValueChange={(v) => setActiveProjectId(v === "__none__" ? null : Number(v))}
+                  >
+                    <SelectTrigger className="gap-1.5">
+                      <FolderOpen className="w-4 h-4 shrink-0 text-muted-foreground" />
+                      <SelectValue placeholder="No project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">No project</SelectItem>
+                      {projects.map((p) => (
+                        <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {error && (
                 <Alert variant="destructive">

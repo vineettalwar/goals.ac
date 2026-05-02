@@ -7,7 +7,6 @@ import {
   CaptureLeadForRoadmapBody,
 } from "@workspace/api-zod";
 import { generateRoadmapContent, generateSlug } from "../services/roadmapGenerator";
-import { fireLeadshWebhook } from "../services/leadshWebhook";
 
 const router: IRouter = Router();
 
@@ -185,22 +184,7 @@ router.post("/roadmaps/:slug/leads", async (req, res) => {
       .values({ roadmapId, name, email, companyUrl })
       .returning({ id: leadCapturesTable.id });
 
-    fireLeadshWebhook(
-      {
-        roadmapSlug: slug,
-        industry: roadmap[0].industry,
-        location: roadmap[0].location,
-        stage: roadmap[0].stage,
-        lead: { name, email, companyUrl },
-      },
-      req.log,
-      async () => {
-        await db
-          .update(leadCapturesTable)
-          .set({ webhookSent: true })
-          .where(eq(leadCapturesTable.id, lead.id));
-      }
-    );
+    req.log.info({ leadId: lead.id, roadmapSlug: slug }, "Lead captured");
 
     res.status(201).json({ id: lead.id, message: "Lead captured successfully" });
   } catch (err) {

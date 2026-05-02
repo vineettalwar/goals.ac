@@ -1,8 +1,11 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setBaseUrl } from "@workspace/api-client-react";
+import { AuthProvider, useAuth } from "@/context/auth";
+import { ActiveProjectProvider } from "@/context/active-project";
+import type { ReactNode } from "react";
 
 import Home from "@/pages/home";
 import RoadmapDetail from "@/pages/roadmap-detail";
@@ -13,9 +16,11 @@ import SeoArticle from "@/pages/seo-article";
 import GeoAuditForm from "@/pages/geo-audit-form";
 import GeoAuditDetail from "@/pages/geo-audit";
 import NotFound from "@/pages/not-found";
+import Login from "@/pages/login";
+import Signup from "@/pages/signup";
+import Dashboard from "@/pages/dashboard";
+import ProjectDetail from "@/pages/project-detail";
 
-// The generated hooks already include /api in their paths (from OpenAPI servers config)
-// so we only need to set the base domain/path prefix (strip trailing slash)
 setBaseUrl(import.meta.env.BASE_URL.replace(/\/$/, ""));
 
 const queryClient = new QueryClient({
@@ -27,25 +32,42 @@ const queryClient = new QueryClient({
   },
 });
 
+function RequireAuth({ children }: { children: ReactNode }) {
+  const { user, isLoading } = useAuth();
+  const location = useLocation();
+
+  if (isLoading) return null;
+  if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  return <>{children}</>;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/roadmaps" element={<RoadmapDirectory />} />
-            <Route path="/roadmap/:slug" element={<RoadmapDetail />} />
-            <Route path="/content-strategy/:id" element={<ContentStrategy />} />
-            <Route path="/admin/content-strategies" element={<AdminContentStrategies />} />
-            <Route path="/seo-article/:id" element={<SeoArticle />} />
-            <Route path="/geo-audit" element={<GeoAuditForm />} />
-            <Route path="/geo-audit/:id" element={<GeoAuditDetail />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-        <Toaster />
-      </TooltipProvider>
+      <AuthProvider>
+        <ActiveProjectProvider>
+          <TooltipProvider>
+            <BrowserRouter basename={import.meta.env.BASE_URL}>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/signup" element={<Signup />} />
+                <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
+                <Route path="/projects/:id" element={<RequireAuth><ProjectDetail /></RequireAuth>} />
+                <Route path="/roadmaps" element={<RoadmapDirectory />} />
+                <Route path="/roadmap/:slug" element={<RoadmapDetail />} />
+                <Route path="/content-strategy/:id" element={<ContentStrategy />} />
+                <Route path="/admin/content-strategies" element={<AdminContentStrategies />} />
+                <Route path="/seo-article/:id" element={<SeoArticle />} />
+                <Route path="/geo-audit" element={<GeoAuditForm />} />
+                <Route path="/geo-audit/:id" element={<GeoAuditDetail />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+            <Toaster />
+          </TooltipProvider>
+        </ActiveProjectProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

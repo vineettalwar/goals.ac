@@ -1,9 +1,11 @@
 import { pgTable, serial, integer, text, boolean, jsonb, timestamp } from "drizzle-orm/pg-core";
 import { roadmapsTable } from "./roadmaps";
+import { websiteProjectsTable } from "./website_projects";
 
 export const geoAuditsTable = pgTable("geo_audits", {
   id: serial("id").primaryKey(),
   roadmapId: integer("roadmap_id").references(() => roadmapsTable.id),
+  websiteProjectId: integer("website_project_id").references(() => websiteProjectsTable.id, { onDelete: "set null" }),
   url: text("url").notNull(),
   geoScore: integer("geo_score").notNull(),
   issues: jsonb("issues").notNull().$type<GeoIssue[]>(),
