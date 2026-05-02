@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { usersTable, websiteProjectsTable, contentStrategiesTable, seoArticlesTable, geoAuditsTable } from "@workspace/db";
+import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { hashPassword, comparePassword, signToken, requireAuth } from "../lib/auth";
 import { sendEmail, buildPasswordResetEmail } from "../services/emailService";
@@ -122,6 +122,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
       email: user.email,
       name: user.name,
       role: user.role,
+      avatarUrl: user.avatarUrl ?? null,
       createdAt: user.createdAt,
       hasPassword: !!user.passwordHash,
       hasGoogleId: !!user.googleId,
@@ -134,6 +135,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
 
 const UpdateProfileBody = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+  avatarUrl: z.string().url("Must be a valid URL").nullable().optional(),
 });
 
 router.patch("/auth/me", requireAuth, async (req, res) => {
@@ -143,12 +145,17 @@ router.patch("/auth/me", requireAuth, async (req, res) => {
     return;
   }
 
+  const updates: Record<string, unknown> = { name: parsed.data.name };
+  if (parsed.data.avatarUrl !== undefined) {
+    updates.avatarUrl = parsed.data.avatarUrl;
+  }
+
   try {
     const [updated] = await db
       .update(usersTable)
-      .set({ name: parsed.data.name })
+      .set(updates)
       .where(eq(usersTable.id, req.user!.userId))
-      .returning({ id: usersTable.id, email: usersTable.email, name: usersTable.name, role: usersTable.role });
+      .returning({ id: usersTable.id, email: usersTable.email, name: usersTable.name, role: usersTable.role, avatarUrl: usersTable.avatarUrl });
 
     if (!updated) {
       res.status(404).json({ error: "User not found" });
@@ -200,7 +207,21 @@ router.post("/auth/change-password", requireAuth, async (req, res) => {
 
 router.delete("/auth/me", requireAuth, async (req, res) => {
   try {
-    const deleted = await db.delete(usersTable).where(eq(usersTable.id, req.user!.userId)).returning({ id: usersTable.id });
+    const userId = req.user!.userId;
+
+    const userProjects = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.userId, userId));
+
+    if (userProjects.length > 0) {
+      const projectIds = userProjects.map((p) => p.id);
+      await db.delete(contentStrategiesTable).where(inArray(contentStrategiesTable.websiteProjectId, projectIds));
+      await db.delete(seoArticlesTable).where(inArray(seoArticlesTable.websiteProjectId, projectIds));
+      await db.delete(geoAuditsTable).where(inArray(geoAuditsTable.websiteProjectId, projectIds));
+    }
+
+    const deleted = await db.delete(usersTable).where(eq(usersTable.id, userId)).returning({ id: usersTable.id });
 
     if (deleted.length === 0) {
       res.status(404).json({ error: "User not found" });

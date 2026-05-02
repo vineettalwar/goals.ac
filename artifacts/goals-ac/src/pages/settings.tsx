@@ -21,12 +21,14 @@ interface MeResponse {
   email: string;
   name: string;
   role: string;
+  avatarUrl: string | null;
   hasPassword: boolean;
   hasGoogleId: boolean;
 }
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+  avatarUrl: z.union([z.string().url("Must be a valid URL"), z.literal("")]).optional(),
 });
 type ProfileForm = z.infer<typeof profileSchema>;
 
@@ -57,7 +59,7 @@ export default function Settings() {
 
   const profileForm = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: "" },
+    defaultValues: { name: "", avatarUrl: "" },
   });
 
   const passwordForm = useForm<ChangePasswordForm>({
@@ -71,7 +73,7 @@ export default function Settings() {
       .then((r) => r.json())
       .then((data: MeResponse) => {
         setMeData(data);
-        profileForm.reset({ name: data.name });
+        profileForm.reset({ name: data.name, avatarUrl: data.avatarUrl ?? "" });
       })
       .catch(() => {
         toast({ title: "Failed to load profile", variant: "destructive" });
@@ -83,10 +85,14 @@ export default function Settings() {
     if (!token) return;
     setIsSavingProfile(true);
     try {
+      const body: Record<string, unknown> = { name: data.name };
+      if (data.avatarUrl !== undefined) {
+        body.avatarUrl = data.avatarUrl === "" ? null : data.avatarUrl;
+      }
       const res = await fetch(`${API_BASE}/api/auth/me`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ name: data.name }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -94,8 +100,8 @@ export default function Settings() {
         return;
       }
       const updated = await res.json();
-      updateUser({ name: updated.name });
-      setMeData((prev) => prev ? { ...prev, name: updated.name } : prev);
+      updateUser({ name: updated.name, avatarUrl: updated.avatarUrl ?? null });
+      setMeData((prev) => prev ? { ...prev, name: updated.name, avatarUrl: updated.avatarUrl ?? null } : prev);
       toast({ title: "Profile saved" });
     } finally {
       setIsSavingProfile(false);
@@ -188,6 +194,20 @@ export default function Settings() {
                         <FormControl>
                           <Input placeholder="Your name" {...field} />
                         </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={profileForm.control}
+                    name="avatarUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Avatar URL</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://example.com/photo.jpg" {...field} />
+                        </FormControl>
+                        <p className="text-xs text-muted-foreground mt-1">Paste a publicly accessible image URL. Leave blank to use your initials.</p>
                         <FormMessage />
                       </FormItem>
                     )}

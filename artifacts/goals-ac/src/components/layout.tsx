@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { LayoutDashboard, LogOut, ChevronDown, ShieldCheck, Sun, Moon, Settings } from "lucide-react";
 
 interface LayoutProps {
@@ -61,6 +61,7 @@ export function Layout({ children }: LayoutProps) {
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-2 rounded-full hover:opacity-80 transition-opacity focus:outline-none">
                     <Avatar className="h-8 w-8">
+                      {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
                       <AvatarFallback className="text-xs bg-primary/20 text-primary border border-primary/30">
                         {initials}
                       </AvatarFallback>

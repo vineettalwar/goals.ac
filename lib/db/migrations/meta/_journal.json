@@ -99,6 +99,13 @@
       "when": 1746381000000,
       "tag": "0013_scrape_data",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1746382000000,
+      "tag": "0014_avatar_url",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,9 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
+import { db } from "@workspace/db";
+import { usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 const jwtSecretEnv = process.env["JWT_SECRET"];
 if (!jwtSecretEnv && process.env["NODE_ENV"] === "production") {
@@ -39,7 +42,7 @@ declare global {
   }
 }
 
-export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers["authorization"];
   const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
 
@@ -48,12 +51,32 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
+  let payload: JwtPayload;
   try {
-    req.user = verifyToken(token);
-    next();
+    payload = verifyToken(token);
   } catch {
     res.status(401).json({ error: "Invalid or expired token" });
+    return;
   }
+
+  try {
+    const [user] = await db
+      .select({ id: usersTable.id })
+      .from(usersTable)
+      .where(eq(usersTable.id, payload.userId))
+      .limit(1);
+
+    if (!user) {
+      res.status(401).json({ error: "Invalid or expired token" });
+      return;
+    }
+  } catch {
+    res.status(500).json({ error: "Internal server error" });
+    return;
+  }
+
+  req.user = payload;
+  next();
 }
 
 export function requireSuperAdmin(req: Request, res: Response, next: NextFunction): void {
