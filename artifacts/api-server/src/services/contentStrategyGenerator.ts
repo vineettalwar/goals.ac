@@ -13,13 +13,13 @@ const SYSTEM_PROMPT = `You are a senior content strategist specializing in B2B S
 
 You MUST respond with a single valid JSON array and nothing else. No markdown, no code blocks, no explanation — only raw JSON.`;
 
-function buildPrompt(industry: string, location: string, stage: string): string {
-  return `Generate a 30-day content strategy for a ${industry} startup based in ${location} at the ${stage} stage.
+function buildBatchPrompt(industry: string, location: string, stage: string, startDay: number, endDay: number): string {
+  return `Generate days ${startDay} to ${endDay} of a 30-day content strategy for a ${industry} startup based in ${location} at the ${stage} stage.
 
-Return ONLY a JSON array of exactly 30 objects (one per day), each with this exact structure:
+Return ONLY a JSON array of exactly ${endDay - startDay + 1} objects (days ${startDay}–${endDay}), each with this exact structure:
 [
   {
-    "day": 1,
+    "day": ${startDay},
     "title": "<compelling content title>",
     "format": "<LinkedIn post | Blog article | Twitter thread | Case study | Video script | Newsletter | Podcast outline>",
     "topic_angle": "<specific angle or hook for this piece — 1-2 sentences>",
@@ -28,11 +28,12 @@ Return ONLY a JSON array of exactly 30 objects (one per day), each with this exa
 ]
 
 Requirements:
-- Mix formats across the 30 days (variety of LinkedIn posts, blog articles, Twitter threads, etc.)
+- Mix formats (LinkedIn posts, blog articles, Twitter threads, etc.)
+- Days ${startDay <= 10 ? "1-10: build brand awareness and foundational content" : startDay <= 20 ? "11-20: deepen authority and drive engagement" : "21-30: push conversion, social proof, and category leadership"}
 - Content must be specific to ${industry} in ${location} at the ${stage} stage
-- Progress logically: early days build awareness, later days drive conversion and authority
 - Each title must be compelling and specific — no generic titles
 - Keywords should be realistic terms potential customers search for
+- Day numbers must run from ${startDay} to ${endDay} exactly
 - Return ONLY the JSON array, no other text`;
 }
 
@@ -90,6 +91,42 @@ function validateContentItems(items: unknown): asserts items is ContentItem[] {
   }
 }
 
+async function generateBatch(
+  ai: GoogleGenAI,
+  industry: string,
+  location: string,
+  stage: string,
+  startDay: number,
+  endDay: number,
+): Promise<ContentItem[]> {
+  const prompt = buildBatchPrompt(industry, location, stage, startDay, endDay);
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
+          responseMimeType: "application/json",
+          maxOutputTokens: 4096,
+        },
+      });
+      const rawText = response.text;
+      if (!rawText) throw new Error("Empty response from Gemini");
+      const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
+      const parsed = JSON.parse(cleaned) as ContentItem[];
+      if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("Invalid batch response");
+      return parsed;
+    } catch (err) {
+      lastError = err;
+      logger.warn({ err, attempt, startDay, endDay }, "Content strategy batch attempt failed");
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+  throw lastError;
+}
+
 export async function generateContentStrategy(
   industry: string,
   location: string,
@@ -103,40 +140,13 @@ export async function generateContentStrategy(
     );
   }
 
-  const prompt = buildPrompt(industry, location, stage);
-  let lastError: unknown;
+  const [batch1, batch2, batch3] = await Promise.all([
+    generateBatch(ai, industry, location, stage, 1, 10),
+    generateBatch(ai, industry, location, stage, 11, 20),
+    generateBatch(ai, industry, location, stage, 21, 30),
+  ]);
 
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: "application/json",
-          maxOutputTokens: 8192,
-        },
-      });
-
-      const rawText = response.text;
-      if (!rawText) {
-        throw new Error("Empty response from Gemini");
-      }
-
-      const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
-      const parsed = JSON.parse(cleaned) as ContentItem[];
-      validateContentItems(parsed);
-
-      return parsed;
-    } catch (err) {
-      lastError = err;
-      logger.warn({ err, attempt, industry, location, stage }, "Content strategy generation attempt failed");
-
-      if (attempt < 3) {
-        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-      }
-    }
-  }
-
-  throw lastError;
+  const all = [...batch1, ...batch2, ...batch3].sort((a, b) => a.day - b.day);
+  validateContentItems(all);
+  return all;
 }

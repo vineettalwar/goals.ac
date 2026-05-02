@@ -14,7 +14,8 @@ import { useAuth } from "@/context/auth";
 import {
   Plus, FileText, Loader2, AlertCircle, ArrowLeft, Calendar,
   BookOpen, Newspaper, GraduationCap, Map as MapIcon, FileSearch, LayoutTemplate,
-  Globe, ImageIcon, BarChart3, Filter, RefreshCw, Trash2, ArrowUpDown, ExternalLink
+  Globe, ImageIcon, BarChart3, Filter, RefreshCw, Trash2, ArrowUpDown, ExternalLink,
+  Linkedin, Twitter, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
@@ -31,7 +32,15 @@ type ContentFormatType =
   | "whitepaper"
   | "pillar_page"
   | "location_page"
-  | "infographic_outline";
+  | "infographic_outline"
+  | "linkedin_post"
+  | "twitter_thread"
+  | "email_sequence"
+  | "ad_copy"
+  | "landing_page_copy"
+  | "product_description"
+  | "press_release"
+  | "faq_article";
 
 interface ContentPiece {
   id: number;
@@ -122,6 +131,62 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     description: "A structured content brief for a visual infographic — ready for a designer.",
     example: "e.g. 'The Anatomy of a High-Converting SaaS Landing Page'",
   },
+  linkedin_post: {
+    label: "LinkedIn Post",
+    icon: Linkedin,
+    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    description: "Founder-voice long-form posts that drive engagement and build authority.",
+    example: "e.g. 'What I learned growing from 0 to 500 B2B customers'",
+  },
+  twitter_thread: {
+    label: "Twitter / X Thread",
+    icon: Twitter,
+    color: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400",
+    description: "9-tweet threads that package a big insight into shareable, viral content.",
+    example: "e.g. 'The 5 SEO levers every SaaS founder ignores (thread 🧵)'",
+  },
+  email_sequence: {
+    label: "Email Sequence",
+    icon: Mail,
+    color: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+    description: "3-email nurture sequences with subject lines, preview text, and body copy.",
+    example: "e.g. Welcome → Education → Offer sequence for a SaaS trial",
+  },
+  ad_copy: {
+    label: "Ad Copy",
+    icon: Megaphone,
+    color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+    description: "Google Search and Meta ad copy — headlines, descriptions, and A/B variants.",
+    example: "e.g. Google Ads for 'B2B SEO software' with 3 headline variants",
+  },
+  landing_page_copy: {
+    label: "Landing Page Copy",
+    icon: MonitorPlay,
+    color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    description: "Full landing page copy — hero, features, testimonials, FAQ, and CTA sections.",
+    example: "e.g. Landing page for a growth roadmap SaaS product",
+  },
+  product_description: {
+    label: "Product Description",
+    icon: Package,
+    color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+    description: "Benefit-led product copy with features, use cases, and differentiators.",
+    example: "e.g. Product page for an AI-powered SEO audit tool",
+  },
+  press_release: {
+    label: "Press Release",
+    icon: Radio,
+    color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+    description: "Newsworthy press releases following AP style — ready to send to journalists.",
+    example: "e.g. 'goals.ac Raises £2M Seed Round to Power B2B Growth Roadmaps'",
+  },
+  faq_article: {
+    label: "FAQ / Knowledge Base",
+    icon: HelpCircle,
+    color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+    description: "8-12 Q&A articles that capture long-tail search intent and reduce support load.",
+    example: "e.g. 'Everything you need to know about B2B content strategy'",
+  },
 };
 
 const SOURCE_META: Record<string, { label: string; color: string }> = {
@@ -198,6 +263,7 @@ function CreateModal({
   const [keyword, setKeyword] = useState("");
   const [angleHint, setAngleHint] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [streamPreview, setStreamPreview] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   const reset = () => {
@@ -207,6 +273,7 @@ function CreateModal({
     setAngleHint("");
     setError(null);
     setIsGenerating(false);
+    setStreamPreview("");
   };
 
   const handleClose = () => {
@@ -217,20 +284,62 @@ function CreateModal({
   const handleGenerate = async () => {
     if (!selectedFormat || !keyword.trim()) return;
     setIsGenerating(true);
+    setStreamPreview("");
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/website-projects/${projectId}/content-pieces/generate`, {
+      const res = await fetch(`${API_BASE}/api/website-projects/${projectId}/content-pieces/generate/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ formatType: selectedFormat, targetKeyword: keyword.trim(), angleHint: angleHint.trim() || undefined }),
       });
-      if (!res.ok) {
+
+      if (!res.ok || !res.body) {
         const data = await res.json() as { error?: string };
         throw new Error(data.error ?? "Generation failed");
       }
-      const piece = (await res.json()) as Omit<ContentPiece, "source">;
-      onCreated({ ...piece, source: "studio" });
-      handleClose();
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalPiece: Omit<ContentPiece, "source"> | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: chunk")) continue;
+          if (line.startsWith("event: done")) continue;
+          if (line.startsWith("event: error")) {
+            throw new Error("Generation failed");
+          }
+          if (line.startsWith("data: ")) {
+            const raw = line.slice(6);
+            try {
+              const parsed = JSON.parse(raw) as { text?: string } | Omit<ContentPiece, "source">;
+              if ("text" in parsed && parsed.text) {
+                setStreamPreview((p) => {
+                  const combined = p + (parsed as { text: string }).text;
+                  const bodyMatch = combined.match(/"body_markdown"\s*:\s*"([\s\S]*?)(?<!\\)"(?=\s*[,}])/);
+                  return bodyMatch ? bodyMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : p;
+                });
+              } else if ("id" in parsed) {
+                finalPiece = parsed as Omit<ContentPiece, "source">;
+              }
+            } catch { /* partial JSON, skip */ }
+          }
+        }
+      }
+
+      if (finalPiece) {
+        onCreated({ ...finalPiece, source: "studio" });
+        handleClose();
+      } else {
+        throw new Error("Generation completed without result");
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate content");
     } finally {
@@ -310,6 +419,13 @@ function CreateModal({
               <p className="text-xs text-muted-foreground">Give the AI a specific angle or title direction.</p>
             </div>
 
+            {isGenerating && streamPreview && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs font-mono text-muted-foreground leading-relaxed max-h-40 overflow-y-auto whitespace-pre-wrap">
+                {streamPreview}
+                <span className="inline-block w-1.5 h-3.5 bg-primary animate-pulse ml-0.5 align-text-bottom" />
+              </div>
+            )}
+
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -323,7 +439,7 @@ function CreateModal({
               className="w-full"
             >
               {isGenerating ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Generating with AI...</>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{streamPreview ? "Generating…" : "Starting AI…"}</>
               ) : (
                 <>Generate {FORMAT_META[selectedFormat].label}</>
               )}

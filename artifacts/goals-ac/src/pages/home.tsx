@@ -102,7 +102,7 @@ export default function Home() {
         {/* Generator Section — floats over hero */}
         <section className="py-0 bg-background relative z-20 -mt-16">
           <div className="container mx-auto px-4 md:px-8 max-w-3xl">
-            <Card className="shadow-2xl border-white/10 glass-card overflow-hidden">
+            <Card className="shadow-md dark:shadow-2xl border-white/10 glass-card overflow-hidden">
               <CardContent className="p-8 md:p-12">
                 <h2 className="text-2xl font-bold tracking-tight mb-2">Generate your 2026 Growth Roadmap</h2>
                 <p className="text-muted-foreground text-sm mb-8">Free, instant, no sign-up required.</p>

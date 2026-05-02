@@ -12,7 +12,7 @@ import { z } from "zod";
 import { marked } from "marked";
 import { requireAuth } from "../lib/auth";
 import { assertPublicUrl } from "../lib/ssrf-guard";
-import { generateContentPiece } from "../services/contentStudioGenerator";
+import { generateContentPiece, generateContentPieceStream, type BrandContext } from "../services/contentStudioGenerator";
 import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
@@ -101,6 +101,85 @@ router.post("/website-projects/:id/content-pieces/generate", requireAuth, async 
   } catch (err) {
     logger.error({ err }, "Failed to generate content piece");
     res.status(503).json({ error: "Failed to generate content. Please try again." });
+  }
+});
+
+router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth, async (req, res) => {
+  const projectId = Number(req.params.id);
+  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
+
+  const parsed = GenerateBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
+
+  const { formatType, targetKeyword, angleHint } = parsed.data;
+  const bypassCache = req.headers["x-bypass-cache"] === "true";
+
+  try {
+    const [project] = await db
+      .select()
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+    const [brandProfile] = await db
+      .select()
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, projectId))
+      .limit(1);
+
+    const brand: BrandContext = {
+      companyName: brandProfile?.companyName ?? project.name,
+      websiteUrl: project.url,
+      industry: brandProfile?.industry ?? "",
+      targetAudience: brandProfile?.targetAudience ?? "",
+      voiceTone: brandProfile?.voiceTone ?? "",
+      primaryKeywords: brandProfile?.primaryKeywords ?? [],
+    };
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    const sendEvent = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    let result;
+    if (bypassCache) {
+      result = await generateContentPieceStream(
+        formatType as ContentFormatType,
+        brand,
+        targetKeyword,
+        (chunk) => sendEvent("chunk", { text: chunk }),
+        angleHint,
+      );
+    } else {
+      result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint, false);
+      sendEvent("chunk", { text: result.body_markdown });
+    }
+
+    const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
+    const [inserted] = await db
+      .insert(contentPiecesTable)
+      .values({
+        websiteProjectId: projectId,
+        formatType: formatType as ContentFormatType,
+        title: result.title,
+        targetKeyword: result.target_keyword,
+        bodyMarkdown: result.body_markdown,
+        wordCount,
+        status: "draft",
+      })
+      .returning();
+
+    sendEvent("done", inserted);
+    res.end();
+  } catch (err) {
+    logger.error({ err }, "Failed to stream content piece");
+    try { res.write(`event: error\ndata: ${JSON.stringify({ error: "Generation failed" })}\n\n`); res.end(); } catch { /* already closed */ }
   }
 });
 

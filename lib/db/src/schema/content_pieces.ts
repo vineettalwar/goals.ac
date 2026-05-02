@@ -12,6 +12,14 @@ export const CONTENT_FORMAT_TYPES = [
   "pillar_page",
   "location_page",
   "infographic_outline",
+  "linkedin_post",
+  "twitter_thread",
+  "email_sequence",
+  "ad_copy",
+  "landing_page_copy",
+  "product_description",
+  "press_release",
+  "faq_article",
 ] as const;
 
 export type ContentFormatType = (typeof CONTENT_FORMAT_TYPES)[number];

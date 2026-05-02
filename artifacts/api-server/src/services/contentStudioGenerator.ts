@@ -1,4 +1,5 @@
 import type { GoogleGenAI } from "@google/genai";
+import { createHash } from "node:crypto";
 import { logger } from "../lib/logger";
 import type { ContentFormatType } from "@workspace/db";
 
@@ -118,6 +119,108 @@ const FORMAT_CONFIGS: Record<ContentFormatType, { label: string; wordRange: stri
 - ## Call to Action — what the viewer should do next
 - Note: This is a content brief/outline for a designer, not prose. Each section is a visual panel.`,
   },
+  linkedin_post: {
+    label: "LinkedIn Post",
+    wordRange: "200-400",
+    structure: `- Opening hook: a bold statement, surprising stat, or provocative question (1-2 lines, no fluff)
+- ## The Core Insight — 3-4 short paragraphs sharing a genuine perspective or lesson
+- ## Practical Takeaways — 3-5 bullet points the reader can act on today
+- Closing line: a thought-provoking question or call-to-reflect that invites comments
+- Use short paragraphs (1-3 sentences each). No corporate language. Write like a founder speaking to peers.`,
+  },
+  twitter_thread: {
+    label: "Twitter / X Thread",
+    wordRange: "300-500",
+    structure: `- Tweet 1 (hook): A bold claim or surprising stat that makes people stop scrolling. End with "Thread 🧵"
+- Tweet 2: Context — why this matters for ${"{brand.industry}"} founders right now
+- Tweets 3-6: One insight per tweet. Start each with a number (2/, 3/, etc.). Short, punchy sentences.
+- Tweet 7: The counterintuitive point most people miss
+- Tweet 8: Practical 3-step framework or checklist
+- Tweet 9 (close): Restate the core insight. Tell them to bookmark / retweet if useful.
+- Each tweet ≤ 280 characters. Use line breaks for readability. Format as "1/ [text]\\n\\n2/ [text]" etc.`,
+  },
+  email_sequence: {
+    label: "Email Sequence",
+    wordRange: "800-1200",
+    structure: `- ## Email 1: Welcome / Problem Awareness
+  - Subject line (A/B option): two variants
+  - Preview text: 80-100 characters
+  - Body: warm opener, introduce the core problem, tease the solution, clear CTA
+- ## Email 2: Education / Value (Day 3)
+  - Subject line + preview text
+  - Body: deliver the promised insight, 3 key lessons, soft CTA to explore further
+- ## Email 3: Social Proof + Offer (Day 7)
+  - Subject line + preview text
+  - Body: case study or testimonial, bridge to the offer, strong CTA with urgency
+- Write in the brand voice. Keep each email 200-400 words. Include [FIRST NAME] personalization token.`,
+  },
+  ad_copy: {
+    label: "Ad Copy",
+    wordRange: "300-500",
+    structure: `- ## Google Search Ads
+  - Headline 1 (30 chars max): primary keyword + value prop
+  - Headline 2 (30 chars max): benefit or differentiator
+  - Headline 3 (30 chars max): CTA
+  - Description 1 (90 chars max): expand the benefit, include keyword
+  - Description 2 (90 chars max): social proof or urgency
+- ## Meta (Facebook/Instagram) Ads
+  - Primary Text (125 chars ideal): hook + problem agitation
+  - Headline (40 chars max): bold benefit statement
+  - Description (30 chars max): supporting proof point
+  - CTA button: [Book Now | Learn More | Get Started | Sign Up]
+- ## 3 Headline Variations: alternative angles for A/B testing`,
+  },
+  landing_page_copy: {
+    label: "Landing Page Copy",
+    wordRange: "600-900",
+    structure: `- ## Hero Section
+  - H1: clear, keyword-rich headline (benefit-led, ≤ 10 words)
+  - Subheadline: expand the promise (1-2 sentences)
+  - Primary CTA button text + secondary link text
+- ## Problem / Agitation — 2-3 short paragraphs naming the pain
+- ## Solution Introduction — 2-3 paragraphs introducing the product/service
+- ## Key Features (3-4 items)
+  - Feature name + 1-sentence benefit description each
+- ## Social Proof — 2 testimonial templates with [Name, Title, Company] placeholders
+- ## FAQ (3 questions) — anticipate objections
+- ## Final CTA Section — headline + CTA button + urgency line`,
+  },
+  product_description: {
+    label: "Product Description",
+    wordRange: "300-500",
+    structure: `- ## Product Name + Tagline (1 line)
+- ## The 30-Second Pitch — 2-3 sentences: what it is, who it's for, the #1 benefit
+- ## Key Benefits (3-5 bullet points) — outcome-focused, not feature lists
+- ## How It Works — 3-step simple explanation
+- ## Who It's For — 2-3 customer personas or use cases
+- ## Why Choose [Brand] — 2-3 differentiators vs. alternatives
+- ## CTA — one clear next step`,
+  },
+  press_release: {
+    label: "Press Release",
+    wordRange: "500-700",
+    structure: `- FOR IMMEDIATE RELEASE
+- ## Headline — newsworthy, specific, keyword-rich (active voice)
+- ## Subheadline — one sentence expanding the news
+- [City, Date] — Opening paragraph: the 5 Ws (who, what, when, where, why) in 2-3 sentences
+- ## Body Paragraph 1 — context and significance of the announcement
+- ## Quote from [CEO/Founder Name, Title, Company] — genuine-sounding, 2-3 sentences
+- ## Body Paragraph 2 — additional details, data points, or background
+- ## About [Company Name] — 3-sentence boilerplate
+- ### Media Contact: [Name] | [Email] | [Phone]`,
+  },
+  faq_article: {
+    label: "FAQ / Knowledge Base",
+    wordRange: "800-1200",
+    structure: `- ## Introduction — 1 paragraph explaining what this FAQ covers and who it's for
+- ## Frequently Asked Questions (8-12 questions)
+  - Each Q&A follows this format:
+    ### [Question phrased exactly as a user would type it]
+    [Answer: 2-4 sentences. Clear, direct, jargon-free. Link to related resources where relevant.]
+- Questions should progress from basic ("What is X?") to advanced ("How do I troubleshoot Y?")
+- Include the target keyword naturally in at least 3 question/answer pairs
+- ## Still Have Questions? — 1-paragraph close with CTA to contact support or book a demo`,
+  },
 };
 
 function buildPrompt(format: ContentFormatType, brand: BrandContext, keyword: string, angleHint?: string): string {
@@ -148,6 +251,35 @@ Requirements:
 - Reference ${brand.companyName} 2-3 times without being promotional
 - Use specific data points, named frameworks, and concrete examples
 - Content must be original, authoritative, and citation-worthy`;
+}
+
+interface CacheEntry {
+  result: ContentPieceResult;
+  expiresAt: number;
+}
+
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const CACHE_MAX_SIZE = 500;
+const contentCache = new Map<string, CacheEntry>();
+
+function cacheKey(format: string, keyword: string, brand: BrandContext): string {
+  const raw = `${format}::${keyword.toLowerCase().trim()}::${brand.companyName}::${brand.industry}::${brand.voiceTone}`;
+  return createHash("sha256").update(raw).digest("hex").slice(0, 16);
+}
+
+function cacheGet(key: string): ContentPieceResult | null {
+  const entry = contentCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { contentCache.delete(key); return null; }
+  return entry.result;
+}
+
+function cacheSet(key: string, result: ContentPieceResult): void {
+  if (contentCache.size >= CACHE_MAX_SIZE) {
+    const firstKey = contentCache.keys().next().value;
+    if (firstKey) contentCache.delete(firstKey);
+  }
+  contentCache.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
 let aiClient: GoogleGenAI | null = null;
@@ -185,12 +317,54 @@ function validateResult(result: unknown): asserts result is ContentPieceResult {
   if (typeof r.body_markdown !== "string" || r.body_markdown.trim().length < 200) throw new Error("body_markdown too short");
 }
 
+export async function generateContentPieceStream(
+  format: ContentFormatType,
+  brand: BrandContext,
+  keyword: string,
+  onChunk: (text: string) => void,
+  angleHint?: string,
+): Promise<ContentPieceResult> {
+  const ai = await getAiClient();
+  if (!ai) throw new Error("AI generation is not configured.");
+
+  const prompt = buildPrompt(format, brand, keyword, angleHint);
+  let accumulated = "";
+
+  const stream = await ai.models.generateContentStream({
+    model: "gemini-2.5-flash",
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: {
+      systemInstruction: SYSTEM_PROMPT,
+      responseMimeType: "application/json",
+      maxOutputTokens: 8192,
+    },
+  });
+
+  for await (const chunk of stream) {
+    const text = chunk.text ?? "";
+    accumulated += text;
+    if (text) onChunk(text);
+  }
+
+  const cleaned = accumulated.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
+  const parsed = JSON.parse(cleaned) as ContentPieceResult;
+  validateResult(parsed);
+  return parsed;
+}
+
 export async function generateContentPiece(
   format: ContentFormatType,
   brand: BrandContext,
   keyword: string,
   angleHint?: string,
+  bypassCache = false,
 ): Promise<ContentPieceResult> {
+  const key = cacheKey(format, keyword, brand);
+  if (!bypassCache) {
+    const cached = cacheGet(key);
+    if (cached) { logger.info({ format, keyword }, "Content piece served from cache"); return cached; }
+  }
+
   const ai = await getAiClient();
 
   if (!ai) {
@@ -220,7 +394,7 @@ export async function generateContentPiece(
       const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
       const parsed = JSON.parse(cleaned) as ContentPieceResult;
       validateResult(parsed);
-
+      cacheSet(key, parsed);
       return parsed;
     } catch (err) {
       lastError = err;
@@ -231,3 +405,5 @@ export async function generateContentPiece(
 
   throw lastError;
 }
+
+export { type BrandContext };
