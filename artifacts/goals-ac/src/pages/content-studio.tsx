@@ -444,7 +444,12 @@ function CreateModal({
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {streamPreview ? "Generating…" : "Starting AI…"}
-                  {hasGeminiKey && <KeyRound className="ml-1.5 h-3.5 w-3.5 opacity-70" />}
+                  {hasGeminiKey && (
+                    <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-white/15 px-1.5 py-0.5 text-xs font-medium">
+                      <KeyRound className="h-3 w-3" />
+                      Your key
+                    </span>
+                  )}
                 </>
               ) : (
                 <>Generate {FORMAT_META[selectedFormat].label}</>

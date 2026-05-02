@@ -198,7 +198,12 @@ export default function Home() {
                           <>
                             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                             Analyzing market & generating roadmap…
-                            {user?.hasGeminiKey && <KeyRound className="ml-2 h-4 w-4 opacity-70" />}
+                            {user?.hasGeminiKey && (
+                              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium">
+                                <KeyRound className="h-3 w-3" />
+                                Your key
+                              </span>
+                            )}
                           </>
                         ) : (
                           "Generate Growth Strategy →"

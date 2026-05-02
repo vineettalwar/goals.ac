@@ -212,6 +212,7 @@ export default function Settings() {
       }
       setGeminiKeyLastFour(data.lastFour ?? null);
       setMeData((prev) => prev ? { ...prev, hasGeminiKey: true } : prev);
+      updateUser({ hasGeminiKey: true });
       setGeminiKeyInput("");
       setGeminiTestResult(null);
       setGeminiKeyDialogOpen(false);
@@ -236,6 +237,7 @@ export default function Settings() {
       }
       setGeminiKeyLastFour(null);
       setMeData((prev) => prev ? { ...prev, hasGeminiKey: false } : prev);
+      updateUser({ hasGeminiKey: false });
       toast({ title: "Gemini API key removed" });
     } finally {
       setIsDeletingGeminiKey(false);

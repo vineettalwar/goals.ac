@@ -374,8 +374,16 @@ export async function generateContentPieceStream(
   userApiKey?: string | null,
 ): Promise<ContentPieceResult> {
   if (userApiKey) {
-    const userClient = await createUserGeminiClient(userApiKey);
-    return await generateWithClientStream(userClient, format, brand, keyword, onChunk, angleHint);
+    try {
+      const userClient = await createUserGeminiClient(userApiKey);
+      return await generateWithClientStream(userClient, format, brand, keyword, onChunk, angleHint);
+    } catch (err) {
+      if (isUserKeyError(err)) {
+        logger.warn({ err }, "User Gemini key failed for content stream, falling back to platform key");
+      } else {
+        throw err;
+      }
+    }
   }
 
   const platformClient = await getPlatformGeminiClient();
