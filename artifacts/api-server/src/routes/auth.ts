@@ -107,7 +107,7 @@ router.post("/auth/login", async (req, res) => {
 router.get("/auth/me", requireAuth, async (req, res) => {
   try {
     const [user] = await db
-      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, role: usersTable.role, createdAt: usersTable.createdAt })
+      .select()
       .from(usersTable)
       .where(eq(usersTable.id, req.user!.userId))
       .limit(1);
@@ -117,9 +117,99 @@ router.get("/auth/me", requireAuth, async (req, res) => {
       return;
     }
 
-    res.json(user);
+    res.json({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      createdAt: user.createdAt,
+      hasPassword: !!user.passwordHash,
+      hasGoogleId: !!user.googleId,
+    });
   } catch (err) {
     req.log.error(err, "Failed to fetch user");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const UpdateProfileBody = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+});
+
+router.patch("/auth/me", requireAuth, async (req, res) => {
+  const parsed = UpdateProfileBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  try {
+    const [updated] = await db
+      .update(usersTable)
+      .set({ name: parsed.data.name })
+      .where(eq(usersTable.id, req.user!.userId))
+      .returning({ id: usersTable.id, email: usersTable.email, name: usersTable.name, role: usersTable.role });
+
+    if (!updated) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json(updated);
+  } catch (err) {
+    req.log.error(err, "Failed to update profile");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const ChangePasswordBody = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "New password must be at least 8 characters"),
+});
+
+router.post("/auth/change-password", requireAuth, async (req, res) => {
+  const parsed = ChangePasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.user!.userId)).limit(1);
+
+    if (!user || !user.passwordHash) {
+      res.status(400).json({ error: "Password change is not available for this account" });
+      return;
+    }
+
+    const valid = await comparePassword(parsed.data.currentPassword, user.passwordHash);
+    if (!valid) {
+      res.status(400).json({ error: "Current password is incorrect" });
+      return;
+    }
+
+    const newHash = await hashPassword(parsed.data.newPassword);
+    await db.update(usersTable).set({ passwordHash: newHash }).where(eq(usersTable.id, user.id));
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err, "Failed to change password");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/auth/me", requireAuth, async (req, res) => {
+  try {
+    const deleted = await db.delete(usersTable).where(eq(usersTable.id, req.user!.userId)).returning({ id: usersTable.id });
+
+    if (deleted.length === 0) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err, "Failed to delete account");
     res.status(500).json({ error: "Internal server error" });
   }
 });
