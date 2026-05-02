@@ -290,19 +290,11 @@
 
   /* Primary glow for CTA buttons */
   .glow-primary {
-<<<<<<< HEAD
-    box-shadow: 0 0 20px rgba(37, 99, 235, 0.35), 0 4px 16px rgba(0, 0, 0, 0.40);
-    transition: box-shadow 0.25s ease, transform 0.25s ease;
-  }
-  .glow-primary:hover {
-    box-shadow: 0 0 36px rgba(37, 99, 235, 0.55), 0 8px 24px rgba(0, 0, 0, 0.50);
-=======
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.35), 0 4px 16px rgba(0, 0, 0, 0.40);
     transition: box-shadow 0.25s ease, transform 0.25s ease;
   }
   .glow-primary:hover {
     box-shadow: 0 0 36px rgba(59, 130, 246, 0.55), 0 8px 24px rgba(0, 0, 0, 0.50);
->>>>>>> 1edcd2c (Task #22: Replace purple gradient with subtle blue and add dark/light mode toggle)
     transform: translateY(-2px);
   }
 
@@ -331,27 +323,15 @@
   }
 
   .orb-primary {
-<<<<<<< HEAD
-    background: radial-gradient(circle, rgba(37, 99, 235, 0.25) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.28) 0%, transparent 70%);
   }
 
   .orb-violet {
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.18) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(37, 99, 235, 0.20) 0%, transparent 70%);
   }
 
   .orb-indigo {
-    background: radial-gradient(circle, rgba(29, 78, 216, 0.15) 0%, transparent 70%);
-=======
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.30) 0%, transparent 70%);
-  }
-
-  .orb-violet {
-    background: radial-gradient(circle, rgba(37, 99, 235, 0.22) 0%, transparent 70%);
-  }
-
-  .orb-indigo {
-    background: radial-gradient(circle, rgba(96, 165, 250, 0.18) 0%, transparent 70%);
->>>>>>> 1edcd2c (Task #22: Replace purple gradient with subtle blue and add dark/light mode toggle)
+    background: radial-gradient(circle, rgba(96, 165, 250, 0.16) 0%, transparent 70%);
   }
 
   /* Card hover glow */
@@ -359,23 +339,14 @@
     transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
   }
   .card-hover-glow:hover {
-<<<<<<< HEAD
-    box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3), 0 8px 32px rgba(0, 0, 0, 0.5);
-    border-color: rgba(37, 99, 235, 0.25) !important;
-=======
     box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3), 0 8px 32px rgba(0, 0, 0, 0.5);
     border-color: rgba(59, 130, 246, 0.25) !important;
->>>>>>> 1edcd2c (Task #22: Replace purple gradient with subtle blue and add dark/light mode toggle)
     transform: translateY(-2px);
   }
 
   /* Badge with subtle glow ring */
   .badge-glow {
-<<<<<<< HEAD
-    box-shadow: 0 0 12px rgba(37, 99, 235, 0.25);
-=======
     box-shadow: 0 0 12px rgba(59, 130, 246, 0.25);
->>>>>>> 1edcd2c (Task #22: Replace purple gradient with subtle blue and add dark/light mode toggle)
   }
 
   /* Hide ugly search cancel button in Chrome */
