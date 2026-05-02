@@ -111,45 +111,12 @@ router.post("/content-strategies/generate", optionalAuth, async (req, res) => {
 router.get("/content-strategies", requireAuth, requireSuperAdmin, async (req, res) => {
   try {
     const roadmapId = req.query.roadmap_id ? Number(req.query.roadmap_id) : null;
-    const isSuperAdmin = req.user!.role === "super_admin";
 
-    let strategies;
-
-    if (isSuperAdmin) {
-      strategies = await db
-        .select()
-        .from(contentStrategiesTable)
-        .where(roadmapId ? eq(contentStrategiesTable.roadmapId, roadmapId) : undefined)
-        .orderBy(contentStrategiesTable.createdAt);
-    } else {
-      const userProjects = await db
-        .select({ id: websiteProjectsTable.id })
-        .from(websiteProjectsTable)
-        .where(eq(websiteProjectsTable.userId, req.user!.userId));
-
-      const projectIds = userProjects.map((p) => p.id);
-
-      if (projectIds.length === 0) {
-        res.json([]);
-        return;
-      }
-
-      let whereClause;
-      if (roadmapId) {
-        whereClause = and(
-          eq(contentStrategiesTable.roadmapId, roadmapId),
-          inArray(contentStrategiesTable.websiteProjectId, projectIds),
-        );
-      } else {
-        whereClause = inArray(contentStrategiesTable.websiteProjectId, projectIds);
-      }
-
-      strategies = await db
-        .select()
-        .from(contentStrategiesTable)
-        .where(whereClause)
-        .orderBy(contentStrategiesTable.createdAt);
-    }
+    const strategies = await db
+      .select()
+      .from(contentStrategiesTable)
+      .where(roadmapId ? eq(contentStrategiesTable.roadmapId, roadmapId) : undefined)
+      .orderBy(contentStrategiesTable.createdAt);
 
     res.json(strategies);
   } catch (err) {
