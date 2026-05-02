@@ -50,11 +50,11 @@ export default function ForgotPassword() {
   return (
     <Layout>
       <SEO title="Reset Password — goals.ac" description="Reset your goals.ac password." />
-      <div className="flex-1 flex items-center justify-center py-16 px-4 bg-mesh-dark min-h-[80vh] relative overflow-hidden">
-        <div className="orb orb-primary w-[500px] h-[400px] top-[-10%] left-[50%] -translate-x-1/2 pointer-events-none" />
-        <div className="orb orb-violet w-[300px] h-[300px] bottom-[-5%] right-[5%] pointer-events-none" />
+      <div className="flex-1 flex items-center justify-center py-16 px-4 bg-background min-h-[80vh] relative overflow-hidden">
+        <div className="orb orb-primary w-[500px] h-[400px] top-[-10%] left-[50%] -translate-x-1/2 pointer-events-none dark:block hidden" />
+        <div className="orb orb-violet w-[300px] h-[300px] bottom-[-5%] right-[5%] pointer-events-none dark:block hidden" />
 
-        <Card className="w-full max-w-md relative z-10 glass-card border-white/10 shadow-2xl shadow-black/50">
+        <Card className="w-full max-w-md relative z-10 border shadow-xl">
           <CardHeader className="text-center pb-6">
             <Logo size={24} className="mb-1" />
             {submitted ? (
@@ -89,7 +89,7 @@ export default function ForgotPassword() {
                   Send another link
                 </Button>
                 <p className="text-center text-sm text-muted-foreground">
-                  <Link to="/login" className="text-blue-400 hover:text-blue-300 transition-colors font-medium inline-flex items-center gap-1">
+                  <Link to="/login" className="text-primary hover:text-primary/80 transition-colors font-medium inline-flex items-center gap-1">
                     <ArrowLeft className="w-3.5 h-3.5" />
                     Back to sign in
                   </Link>
@@ -133,7 +133,7 @@ export default function ForgotPassword() {
                     )}
                   </Button>
                   <p className="text-center text-sm text-muted-foreground">
-                    <Link to="/login" className="text-blue-400 hover:text-blue-300 transition-colors font-medium inline-flex items-center gap-1">
+                    <Link to="/login" className="text-primary hover:text-primary/80 transition-colors font-medium inline-flex items-center gap-1">
                       <ArrowLeft className="w-3.5 h-3.5" />
                       Back to sign in
                     </Link>

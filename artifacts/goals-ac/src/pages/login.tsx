@@ -67,11 +67,11 @@ export default function Login() {
   return (
     <Layout>
       <SEO title="Sign In — goals.ac" description="Sign in to your goals.ac account." />
-      <div className="flex-1 flex items-center justify-center py-16 px-4 bg-mesh-dark min-h-[80vh] relative overflow-hidden">
-        <div className="orb orb-primary w-[500px] h-[400px] top-[-10%] left-[50%] -translate-x-1/2 pointer-events-none" />
-        <div className="orb orb-violet w-[300px] h-[300px] bottom-[-5%] right-[5%] pointer-events-none" />
+      <div className="flex-1 flex items-center justify-center py-16 px-4 bg-background min-h-[80vh] relative overflow-hidden">
+        <div className="orb orb-primary w-[500px] h-[400px] top-[-10%] left-[50%] -translate-x-1/2 pointer-events-none dark:block hidden" />
+        <div className="orb orb-violet w-[300px] h-[300px] bottom-[-5%] right-[5%] pointer-events-none dark:block hidden" />
 
-        <Card className="w-full max-w-md relative z-10 glass-card border-white/10 shadow-2xl shadow-black/50">
+        <Card className="w-full max-w-md relative z-10 border shadow-xl">
           <CardHeader className="text-center pb-6">
             <Logo size={24} className="mb-1" />
             <CardTitle className="text-xl font-bold">Welcome back</CardTitle>
@@ -126,7 +126,7 @@ export default function Login() {
                         <FormLabel>Password</FormLabel>
                         <Link
                           to="/forgot-password"
-                          className="text-xs text-muted-foreground hover:text-blue-400 transition-colors"
+                          className="text-xs text-muted-foreground hover:text-primary transition-colors"
                         >
                           Forgot password?
                         </Link>
@@ -153,7 +153,7 @@ export default function Login() {
             </Form>
             <p className="mt-6 text-center text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <Link to="/signup" className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
+              <Link to="/signup" className="text-primary hover:text-primary/80 transition-colors font-medium">
                 Sign up
               </Link>
             </p>

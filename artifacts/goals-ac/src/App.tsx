@@ -27,6 +27,7 @@ import ContentStudio from "@/pages/content-studio";
 import ContentPiecePage from "@/pages/content-piece";
 import OAuthCallback from "@/pages/oauth-callback";
 import Settings from "@/pages/settings";
+import Onboarding from "@/pages/onboarding";
 
 setBaseUrl(import.meta.env.BASE_URL.replace(/\/$/, ""));
 
@@ -63,6 +64,7 @@ function App() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/oauth-callback" element={<OAuthCallback />} />
+                <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
                 <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
                 <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
                 <Route path="/projects/:id" element={<RequireAuth><ProjectDetail /></RequireAuth>} />

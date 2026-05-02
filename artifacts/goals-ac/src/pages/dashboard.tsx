@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth";
 import { Loader2, Plus, Globe, ExternalLink, Trash2, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { WIZARD_DONE_KEY } from "@/pages/onboarding";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -73,11 +74,14 @@ export default function Dashboard() {
       if (res.ok) {
         const data = await res.json();
         setProjects(data);
+        if (data.length === 0 && !localStorage.getItem(WIZARD_DONE_KEY)) {
+          navigate("/onboarding", { replace: true });
+        }
       }
     } finally {
       setIsLoadingProjects(false);
     }
-  }, [token]);
+  }, [token, navigate]);
 
   useEffect(() => {
     loadProjects();
@@ -119,13 +123,13 @@ export default function Dashboard() {
     <Layout>
       <SEO title="Dashboard — goals.ac" description="Manage your website SEO projects." />
       {/* Dashboard hero */}
-      <div className="relative bg-mesh-dark text-zinc-50 py-12 border-b border-white/[0.06] overflow-hidden">
-        <div className="orb orb-primary w-[500px] h-[350px] top-[-20%] left-[40%] -translate-x-1/2" />
-        <div className="orb orb-violet w-[250px] h-[250px] bottom-[-10%] right-[5%]" />
+      <div className="relative bg-muted/40 dark:bg-mesh-dark py-12 border-b border-border dark:border-white/[0.06] overflow-hidden">
+        <div className="orb orb-primary w-[500px] h-[350px] top-[-20%] left-[40%] -translate-x-1/2 hidden dark:block" />
+        <div className="orb orb-violet w-[250px] h-[250px] bottom-[-10%] right-[5%] hidden dark:block" />
         <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl flex items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gradient">Your Projects</h1>
-            <p className="text-zinc-400 mt-1">Welcome back, <span className="text-zinc-200 font-medium">{user?.name}</span></p>
+            <p className="text-muted-foreground mt-1">Welcome back, <span className="text-foreground font-medium">{user?.name}</span></p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -134,14 +138,14 @@ export default function Dashboard() {
                 Add website
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md glass-card border-white/10">
+            <DialogContent className="sm:max-w-md">
               <DialogHeader>
                 <DialogTitle>Add a website project</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onAddProject)} className="space-y-4 mt-2">
                   {form.formState.errors.root && (
-                    <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400 border border-red-500/20">
+                    <div className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-500 border border-red-200 dark:border-red-500/20">
                       {form.formState.errors.root.message}
                     </div>
                   )}
@@ -165,7 +169,7 @@ export default function Dashboard() {
                       <FormItem>
                         <FormLabel>Website URL</FormLabel>
                         <FormControl>
-                          <Input type="url" placeholder="https://example.com" className="bg-white/5 border-white/10" {...field} />
+                          <Input type="url" placeholder="https://example.com" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -191,10 +195,10 @@ export default function Dashboard() {
             <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
           </div>
         ) : projects.length === 0 ? (
-          <Card className="border-white/[0.07] glass-card shadow-none border-dashed">
+          <Card className="border shadow-none border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-14 h-14 rounded-full glass-card-md flex items-center justify-center mb-4">
-                <Globe className="w-7 h-7 text-blue-400" />
+              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Globe className="w-7 h-7 text-primary" />
               </div>
               <CardTitle className="text-xl mb-2">No projects yet</CardTitle>
               <CardDescription className="mb-6 max-w-sm">
@@ -212,7 +216,7 @@ export default function Dashboard() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {projects.map((project) => (
-              <Card key={project.id} className="group border-white/[0.07] glass-card-md shadow-none card-hover-glow">
+              <Card key={project.id} className="group border shadow-none card-hover-glow">
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
@@ -221,7 +225,7 @@ export default function Dashboard() {
                         href={project.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-blue-400 transition-colors mt-1"
+                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mt-1"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
@@ -262,7 +266,7 @@ export default function Dashboard() {
       </div>
 
       <Dialog open={deleteConfirmId !== null} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
-        <DialogContent className="sm:max-w-sm glass-card border-white/10">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Delete project?</DialogTitle>
           </DialogHeader>
