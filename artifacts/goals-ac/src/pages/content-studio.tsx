@@ -134,6 +134,10 @@ const SOURCE_META: Record<string, { label: string; color: string }> = {
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
   ready: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+  published: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+  pending: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
+  in_progress: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+  completed: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
 };
 
 function FormatBadge({ type }: { type: ContentFormatType }) {
@@ -626,6 +630,17 @@ export default function ContentStudio() {
 
   const sorted = sortItems(filtered, sortKey);
 
+  const statsBreakdown = [
+    { label: "Studio", count: pieces.length, color: "text-primary" },
+    { label: "Strategy Items", count: legacyItems.filter((i) => i.source === "content_strategy").length, color: "text-purple-500" },
+    { label: "SEO Articles", count: legacyItems.filter((i) => i.source === "seo_article").length, color: "text-blue-500" },
+    { label: "GEO Audits", count: legacyItems.filter((i) => i.source === "geo_audit").length, color: "text-emerald-500" },
+    { label: "Roadmaps", count: legacyItems.filter((i) => i.source === "roadmap").length, color: "text-amber-500" },
+  ].filter((s) => s.count > 0);
+
+  const studioSorted = sorted.filter(isContentPiece);
+  const legacySorted = sorted.filter((i) => !isContentPiece(i)) as LegacyItem[];
+
   if (isLoading) {
     return (
       <Layout>
@@ -726,6 +741,10 @@ export default function ContentStudio() {
                     <SelectItem value="all">All statuses</SelectItem>
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="ready">Ready</SelectItem>
+                    <SelectItem value="published">Published</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="in_progress">In Progress</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
                   </SelectContent>
                 </Select>
 
@@ -752,6 +771,18 @@ export default function ContentStudio() {
                   </Button>
                 )}
               </div>
+
+            {statsBreakdown.length > 0 && (
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 px-1 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">{allItems.length} total</span>
+                <span className="text-border">|</span>
+                {statsBreakdown.map((s) => (
+                  <span key={s.label}>
+                    <span className={`font-semibold ${s.color}`}>{s.count}</span> {s.label}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {sorted.length === 0 && allItems.length === 0 ? (
               <Card className="border-dashed border-2">
@@ -784,58 +815,129 @@ export default function ContentStudio() {
                   <span>Words</span>
                   <span>Date</span>
                 </div>
-                {sorted.map((item) => {
-                  if (isContentPiece(item)) {
-                    return (
-                      <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
-                        <div className="min-w-0">
-                          <Link to={`/content-piece/${item.id}`} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2">
-                            {item.title}
-                          </Link>
+
+                {filterSource === "all" && studioSorted.length > 0 && legacySorted.length > 0 ? (
+                  <>
+                    {studioSorted.length > 0 && (
+                      <>
+                        <div className="flex items-center gap-2 pt-1 pb-0.5">
+                          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Studio Content</span>
+                          <div className="flex-1 h-px bg-border/50" />
+                          <span className="text-xs text-muted-foreground">{studioSorted.length}</span>
                         </div>
-                        <SourceBadge source={item.source} />
-                        <FormatBadge type={item.formatType} />
-                        <span className="text-xs text-muted-foreground truncate">{item.targetKeyword}</span>
-                        <StatusBadge status={item.status} />
-                        <span className="text-xs text-muted-foreground">{item.wordCount > 0 ? item.wordCount.toLocaleString() : "—"}</span>
-                        <div className="flex items-center gap-2">
+                        {studioSorted.map((item) => (
+                          <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
+                            <div className="min-w-0">
+                              <Link to={`/content-piece/${item.id}`} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2">
+                                {item.title}
+                              </Link>
+                            </div>
+                            <SourceBadge source={item.source} />
+                            <FormatBadge type={item.formatType} />
+                            <span className="text-xs text-muted-foreground truncate">{item.targetKeyword}</span>
+                            <StatusBadge status={item.status} />
+                            <span className="text-xs text-muted-foreground">{item.wordCount > 0 ? item.wordCount.toLocaleString() : "—"}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {format(parseISO(item.createdAt), "d MMM yyyy")}
+                              </span>
+                              <button
+                                onClick={() => handleDelete(item.id)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                    {legacySorted.length > 0 && (
+                      <>
+                        <div className="flex items-center gap-2 pt-3 pb-0.5">
+                          <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Legacy Content</span>
+                          <div className="flex-1 h-px bg-border/50" />
+                          <span className="text-xs text-muted-foreground">{legacySorted.length}</span>
+                        </div>
+                        {legacySorted.map((item) => (
+                          <div key={`${item.source}-${item.id}`} className="flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
+                            <div className="min-w-0">
+                              <Link to={item.linkTo} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2 flex items-center gap-1">
+                                {item.title}
+                                <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                              </Link>
+                              {item.subtitle && (
+                                <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.subtitle}</p>
+                              )}
+                            </div>
+                            <SourceBadge source={item.source} />
+                            <span className="text-xs text-muted-foreground">—</span>
+                            <span className="text-xs text-muted-foreground truncate">{item.keyword}</span>
+                            <StatusBadge status={item.status} />
+                            <span className="text-xs text-muted-foreground">{item.wordCount > 0 ? item.wordCount.toLocaleString() : "—"}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(parseISO(item.createdAt), "d MMM yyyy")}
+                            </span>
+                          </div>
+                        ))}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  sorted.map((item) => {
+                    if (isContentPiece(item)) {
+                      return (
+                        <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
+                          <div className="min-w-0">
+                            <Link to={`/content-piece/${item.id}`} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2">
+                              {item.title}
+                            </Link>
+                          </div>
+                          <SourceBadge source={item.source} />
+                          <FormatBadge type={item.formatType} />
+                          <span className="text-xs text-muted-foreground truncate">{item.targetKeyword}</span>
+                          <StatusBadge status={item.status} />
+                          <span className="text-xs text-muted-foreground">{item.wordCount > 0 ? item.wordCount.toLocaleString() : "—"}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">
+                              {format(parseISO(item.createdAt), "d MMM yyyy")}
+                            </span>
+                            <button
+                              onClick={() => handleDelete(item.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div key={`${item.source}-${item.id}`} className="flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
+                          <div className="min-w-0">
+                            <Link to={item.linkTo} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2 flex items-center gap-1">
+                              {item.title}
+                              <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                            </Link>
+                            {item.subtitle && (
+                              <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.subtitle}</p>
+                            )}
+                          </div>
+                          <SourceBadge source={item.source} />
+                          <span className="text-xs text-muted-foreground">—</span>
+                          <span className="text-xs text-muted-foreground truncate">{item.keyword}</span>
+                          <StatusBadge status={item.status} />
+                          <span className="text-xs text-muted-foreground">{item.wordCount > 0 ? item.wordCount.toLocaleString() : "—"}</span>
                           <span className="text-xs text-muted-foreground">
                             {format(parseISO(item.createdAt), "d MMM yyyy")}
                           </span>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
                         </div>
-                      </div>
-                    );
-                  } else {
-                    return (
-                      <div key={`${item.source}-${item.id}`} className="flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
-                        <div className="min-w-0">
-                          <Link to={item.linkTo} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2 flex items-center gap-1">
-                            {item.title}
-                            <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
-                          </Link>
-                          {item.subtitle && (
-                            <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.subtitle}</p>
-                          )}
-                        </div>
-                        <SourceBadge source={item.source} />
-                        <span className="text-xs text-muted-foreground">—</span>
-                        <span className="text-xs text-muted-foreground truncate">{item.keyword}</span>
-                        <StatusBadge status={item.status} />
-                        <span className="text-xs text-muted-foreground">{item.wordCount > 0 ? item.wordCount.toLocaleString() : "—"}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {format(parseISO(item.createdAt), "d MMM yyyy")}
-                        </span>
-                      </div>
-                    );
-                  }
-                })}
+                      );
+                    }
+                  })
+                )}
               </div>
             )}
           </TabsContent>
