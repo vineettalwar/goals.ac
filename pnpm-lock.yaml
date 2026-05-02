@@ -173,9 +173,6 @@ importers:
       '@google/genai':
         specifier: ^1.44.0
         version: 1.48.0
-      '@types/marked':
-        specifier: ^6.0.0
-        version: 6.0.0
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -1817,10 +1814,6 @@ packages:
 
   '@types/jsonwebtoken@9.0.10':
     resolution: {integrity: sha512-asx5hIG9Qmf/1oStypjanR7iKTv0gXQ1Ov/jfrX6kS/EO0OFni8orbmGCn0672NHR3kXHwpAwR+B368ZGN/2rA==}
-
-  '@types/marked@6.0.0':
-    resolution: {integrity: sha512-jmjpa4BwUsmhxcfsgUit/7A9KbrC48Q0q8KvnY107ogcjGgTFDlIL3RpihNpx2Mu1hM4mdFQjoVc4O6JoGKHsA==}
-    deprecated: This is a stub types definition. marked provides its own type definitions, so you do not need this installed.
 
   '@types/mdast@4.0.4':
     resolution: {integrity: sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA==}
@@ -5002,10 +4995,6 @@ snapshots:
     dependencies:
       '@types/ms': 2.1.0
       '@types/node': 25.3.5
-
-  '@types/marked@6.0.0':
-    dependencies:
-      marked: 18.0.3
 
   '@types/mdast@4.0.4':
     dependencies:

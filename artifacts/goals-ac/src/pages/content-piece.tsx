@@ -266,7 +266,7 @@ export default function ContentPiecePage() {
         body: JSON.stringify({
           title: editTitle,
           bodyMarkdown: editBody,
-          status: editStatus,
+          ...(editStatus !== "published" ? { status: editStatus } : {}),
           plannedDate: editPlannedDate || null,
         }),
       });
@@ -497,7 +497,6 @@ export default function ContentPiecePage() {
                   <SelectContent>
                     <SelectItem value="draft">Draft</SelectItem>
                     <SelectItem value="ready">Ready</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
