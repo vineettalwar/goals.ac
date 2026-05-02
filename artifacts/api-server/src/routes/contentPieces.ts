@@ -25,12 +25,14 @@ const GenerateBody = z.object({
 
 const ALLOWED_STATUSES = ["draft", "ready", "published"] as const;
 
+const PATCH_STATUSES = ["draft", "ready"] as const;
+
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const UpdateBody = z.object({
   title: z.string().optional(),
   bodyMarkdown: z.string().optional(),
-  status: z.enum(ALLOWED_STATUSES).optional(),
+  status: z.enum(PATCH_STATUSES).optional(),
   plannedDate: z.string().regex(ISO_DATE_RE, "plannedDate must be a valid ISO date (YYYY-MM-DD)").nullable().optional(),
 }).refine(
   (data) => Object.values(data).some((v) => v !== undefined),

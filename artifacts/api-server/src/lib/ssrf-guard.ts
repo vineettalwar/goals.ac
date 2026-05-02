@@ -9,11 +9,17 @@ const PRIVATE_IP_RANGES = [
   /^0\./,
   /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
   /^::1$/,
-  /^fc00:/i,
+  /^::$/,
+  /^fc[0-9a-f]{2}:/i,
+  /^fd[0-9a-f]{2}:/i,
   /^fe80:/i,
+  /^::ffff:/i,
+  /^2002:0*a/i,
+  /^2002:0*ac1[0-9a-f]/i,
+  /^2002:0*c0a8/i,
 ];
 
-const PRIVATE_HOSTNAME = /^(localhost|.*\.local|.*\.internal|.*\.corp)$/i;
+const PRIVATE_HOSTNAME = /^(localhost|.*\.local|.*\.internal|.*\.corp|.*\.example\.com)$/i;
 
 function isPrivateIp(ip: string): boolean {
   return PRIVATE_IP_RANGES.some((r) => r.test(ip));
@@ -54,14 +60,25 @@ export async function assertPublicUrl(rawUrl: string): Promise<void> {
 
   const hostname = parsed.hostname;
 
-  try {
-    const { address } = await dns.lookup(hostname, { family: 4 });
+  const results = await Promise.allSettled([
+    dns.lookup(hostname, { family: 4 }),
+    dns.lookup(hostname, { family: 6 }),
+  ]);
+
+  let resolvedAtLeastOne = false;
+
+  for (const result of results) {
+    if (result.status === "rejected") {
+      continue;
+    }
+    resolvedAtLeastOne = true;
+    const { address } = result.value;
     if (isPrivateIp(address)) {
       throw new Error(`URL resolves to a private/reserved address: ${address}`);
     }
-  } catch (err: unknown) {
-    if (err instanceof Error && err.message.startsWith("URL resolves")) {
-      throw err;
-    }
+  }
+
+  if (!resolvedAtLeastOne) {
+    throw new Error(`Could not resolve hostname: ${hostname}`);
   }
 }
