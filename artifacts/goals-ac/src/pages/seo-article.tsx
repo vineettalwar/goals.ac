@@ -34,9 +34,7 @@ async function fetchSeoArticle(id: string, token: string | null): Promise<SeoArt
   const headers: Record<string, string> = {};
   if (token) headers["Authorization"] = `Bearer ${token}`;
   const res = await fetch(`${API_BASE}/api/seo-articles/${id}`, { headers });
-  if (!res.ok) {
-    throw new Error("Article not found");
-  }
+  if (!res.ok) throw new Error("Article not found");
   return res.json() as Promise<SeoArticle>;
 }
 
@@ -79,13 +77,13 @@ export default function SeoArticlePage() {
     return (
       <Layout>
         <div className="container mx-auto px-4 md:px-8 py-24 text-center max-w-3xl">
-          <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+          <FileText className="w-12 h-12 text-indigo-400/50 mx-auto mb-4" />
           <h1 className="text-3xl font-bold tracking-tight mb-4">Article Not Found</h1>
           <p className="text-muted-foreground mb-8">
             This SEO article does not exist or has been removed.
           </p>
           <Link to="/">
-            <Button variant="outline">
+            <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10">
               <ArrowLeft className="w-4 h-4 mr-2" /> Back to Home
             </Button>
           </Link>
@@ -104,7 +102,7 @@ export default function SeoArticlePage() {
           {article.roadmapId ? (
             <Link
               to={`/roadmap/${article.roadmapId}`}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-indigo-400 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Roadmap
@@ -112,17 +110,17 @@ export default function SeoArticlePage() {
           ) : (
             <Link
               to="/"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-indigo-400 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Home
             </Link>
           )}
 
-          <Button variant="outline" size="sm" onClick={handleCopy}>
+          <Button variant="outline" size="sm" onClick={handleCopy} className="border-white/10 bg-white/5 hover:bg-white/10">
             {copied ? (
               <>
-                <Check className="w-4 h-4 mr-2 text-green-600" />
+                <Check className="w-4 h-4 mr-2 text-emerald-400" />
                 Copied!
               </>
             ) : (
@@ -134,8 +132,8 @@ export default function SeoArticlePage() {
           </Button>
         </div>
 
-        {/* Header */}
-        <header className="mb-8">
+        {/* Article header */}
+        <header className="mb-10 pb-8 border-b border-white/[0.06]">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 leading-tight">
             {article.title}
           </h1>
@@ -145,18 +143,18 @@ export default function SeoArticlePage() {
           </p>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="bg-primary text-primary-foreground">
+            <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
               {article.primaryKeyword}
             </Badge>
             {article.secondaryKeywords.map((kw) => (
-              <Badge key={kw} variant="secondary">
+              <Badge key={kw} className="bg-white/[0.06] text-zinc-400 border-white/10">
                 {kw}
               </Badge>
             ))}
           </div>
 
-          <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground border-t border-border/40 pt-4">
-            <span>{article.brandName}</span>
+          <div className="flex items-center gap-4 mt-5 text-sm text-muted-foreground">
+            <span className="font-medium">{article.brandName}</span>
             <span>·</span>
             <span>{article.wordCount.toLocaleString()} words</span>
             <span>·</span>
@@ -167,29 +165,32 @@ export default function SeoArticlePage() {
         </header>
 
         {/* Article Body */}
-        <article className="prose prose-zinc dark:prose-invert max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3 prose-p:leading-relaxed prose-p:text-base prose-li:leading-relaxed">
+        <article className="prose prose-zinc dark:prose-invert max-w-none prose-headings:font-bold prose-headings:tracking-tight prose-h2:text-2xl prose-h2:mt-10 prose-h2:mb-4 prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3 prose-p:leading-relaxed prose-p:text-base prose-li:leading-relaxed prose-headings:text-foreground prose-strong:text-foreground">
           <ReactMarkdown>{article.content}</ReactMarkdown>
         </article>
 
         {/* Footer CTA */}
-        <div className="mt-12 border-t border-border/40 pt-8 flex items-center justify-between flex-wrap gap-4">
+        <div className="mt-12 border-t border-white/[0.06] pt-8 flex items-center justify-between flex-wrap gap-4">
           {article.roadmapId ? (
             <Link to={`/roadmap/${article.roadmapId}`}>
-              <Button variant="outline">
+              <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Roadmap
               </Button>
             </Link>
           ) : (
             <Link to="/">
-              <Button variant="outline">
+              <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10">
                 <ArrowLeft className="w-4 h-4 mr-2" />
                 Back to Home
               </Button>
             </Link>
           )}
 
-          <Button onClick={handleCopy} variant="default">
+          <Button
+            onClick={handleCopy}
+            className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white"
+          >
             {copied ? (
               <>
                 <Check className="w-4 h-4 mr-2" />

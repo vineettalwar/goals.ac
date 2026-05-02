@@ -9,17 +9,17 @@ import { ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 
 const FORMAT_COLORS: Record<string, string> = {
-  "LinkedIn post": "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-  "Blog article": "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-  "Twitter thread": "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
-  "Case study": "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  "Video script": "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-  "Newsletter": "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300",
-  "Podcast outline": "bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-300",
+  "LinkedIn post": "bg-blue-500/15 text-blue-300 border border-blue-500/25",
+  "Blog article": "bg-emerald-500/15 text-emerald-300 border border-emerald-500/25",
+  "Twitter thread": "bg-sky-500/15 text-sky-300 border border-sky-500/25",
+  "Case study": "bg-violet-500/15 text-violet-300 border border-violet-500/25",
+  "Video script": "bg-red-500/15 text-red-300 border border-red-500/25",
+  "Newsletter": "bg-orange-500/15 text-orange-300 border border-orange-500/25",
+  "Podcast outline": "bg-pink-500/15 text-pink-300 border border-pink-500/25",
 };
 
-function formatBadgeColor(format: string): string {
-  return FORMAT_COLORS[format] ?? "bg-muted text-muted-foreground";
+function formatBadgeColor(fmt: string): string {
+  return FORMAT_COLORS[fmt] ?? "bg-white/10 text-zinc-300 border border-white/10";
 }
 
 export default function ContentStrategy() {
@@ -67,8 +67,11 @@ export default function ContentStrategy() {
       />
 
       {/* Header */}
-      <div className="bg-zinc-950 text-zinc-50 py-12 md:py-16 border-b border-border">
-        <div className="container mx-auto px-4 md:px-8 max-w-5xl">
+      <div className="relative bg-mesh-dark text-zinc-50 py-12 md:py-16 border-b border-white/[0.06] overflow-hidden">
+        <div className="orb orb-primary w-[400px] h-[350px] top-[-20%] left-[30%]" />
+        <div className="orb orb-violet w-[250px] h-[250px] bottom-[-10%] right-[10%]" />
+
+        <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl">
           <Link
             to={`/roadmap/${strategy.roadmapId}`}
             className="inline-flex items-center gap-1 text-zinc-400 hover:text-zinc-200 text-sm mb-6 transition-colors"
@@ -78,7 +81,7 @@ export default function ContentStrategy() {
           </Link>
 
           <div className="flex flex-wrap items-center gap-3 mb-5">
-            <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 border-primary/20">
+            <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
               {strategy.industry}
             </Badge>
             <Badge variant="outline" className="text-zinc-300 border-zinc-700">
@@ -89,11 +92,11 @@ export default function ContentStrategy() {
             </Badge>
           </div>
 
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 text-gradient">
             30-Day Content Strategy
           </h1>
-          <p className="text-zinc-400 text-sm">
-            {monthName} · {strategy.items?.length ?? 0} pieces of content
+          <p className="text-zinc-400 text-sm font-medium">
+            {monthName} · <span className="text-indigo-400">{strategy.items?.length ?? 0} pieces of content</span>
           </p>
         </div>
       </div>
@@ -104,18 +107,16 @@ export default function ContentStrategy() {
           {(strategy.items ?? []).sort((a, b) => a.day - b.day).map((item) => (
             <Card
               key={item.id}
-              className="border-border/50 shadow-sm hover:shadow-md transition-shadow h-full"
+              className="border-white/[0.07] glass-card-md shadow-none card-hover-glow h-full"
             >
               <CardContent className="p-4 flex flex-col gap-2 h-full">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-muted-foreground">
+                  <span className="text-xs font-mono font-bold text-indigo-400">
                     Day {item.day}
                   </span>
                 </div>
 
-                <span
-                  className={`text-xs font-medium px-2 py-0.5 rounded-full w-fit ${formatBadgeColor(item.format)}`}
-                >
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit ${formatBadgeColor(item.format)}`}>
                   {item.format}
                 </span>
 
@@ -127,8 +128,8 @@ export default function ContentStrategy() {
                   {item.topicAngle}
                 </p>
 
-                <div className="pt-1 border-t border-border/40">
-                  <span className="text-xs text-primary font-medium truncate block">
+                <div className="pt-1 border-t border-white/[0.06]">
+                  <span className="text-xs text-indigo-400 font-medium truncate block">
                     🔑 {item.primaryKeyword}
                   </span>
                 </div>

@@ -72,12 +72,10 @@ export default function RoadmapDetail() {
 
   const handleViewContentStrategy = async () => {
     if (!roadmap) return;
-
     if (existingStrategy) {
       navigate(`/content-strategy/${existingStrategy.id}`);
       return;
     }
-
     setGeneratingStrategy(true);
     try {
       const result = await generateStrategy.mutateAsync({
@@ -132,7 +130,6 @@ export default function RoadmapDetail() {
     try {
       const headers: Record<string, string> = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
-
       const res = await fetch(`${API_BASE}/api/seo-articles/generate`, {
         method: "POST",
         headers,
@@ -181,11 +178,14 @@ export default function RoadmapDetail() {
         description={roadmap.content.executiveSummary.substring(0, 155) + "..."}
       />
 
-      {/* Header */}
-      <div className="bg-zinc-950 text-zinc-50 py-16 md:py-24 border-b border-border">
-        <div className="container mx-auto px-4 md:px-8 max-w-4xl">
+      {/* Header with gradient orbs */}
+      <div className="relative bg-mesh-dark text-zinc-50 py-16 md:py-24 border-b border-white/[0.06] overflow-hidden">
+        <div className="orb orb-primary w-[500px] h-[400px] top-[-20%] left-[40%] -translate-x-1/2" />
+        <div className="orb orb-violet w-[300px] h-[300px] bottom-[-10%] right-[5%]" />
+
+        <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-4xl">
           <div className="flex flex-wrap items-center gap-3 mb-6">
-            <Badge variant="secondary" className="bg-primary/20 text-primary hover:bg-primary/30 border-primary/20">
+            <Badge variant="secondary" className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30">
               {roadmap.industry}
             </Badge>
             <ChevronRight className="w-4 h-4 text-zinc-600" />
@@ -198,7 +198,7 @@ export default function RoadmapDetail() {
             </Badge>
           </div>
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight text-gradient">
             12-Month Growth Strategy
           </h1>
 
@@ -215,7 +215,7 @@ export default function RoadmapDetail() {
       {/* Content */}
       <div className="container mx-auto px-4 md:px-8 py-16 max-w-4xl">
         <section className="mb-16">
-          <h2 className="text-2xl font-bold tracking-tight mb-6 border-b pb-4">Executive Summary</h2>
+          <h2 className="text-2xl font-bold tracking-tight mb-6 border-b border-border/50 pb-4">Executive Summary</h2>
           <p className="text-lg leading-relaxed text-muted-foreground">
             {roadmap.content.executiveSummary}
           </p>
@@ -224,63 +224,63 @@ export default function RoadmapDetail() {
         <div className="space-y-16">
           {roadmap.content.phases.map((phase, index) => (
             <section key={index} className="relative">
-              <div className="absolute left-0 top-0 bottom-0 w-px bg-border/60 hidden md:block" />
+              <div className="absolute left-0 top-0 bottom-0 w-px bg-gradient-to-b from-indigo-500/40 via-indigo-500/20 to-transparent hidden md:block" />
 
               <div className="md:pl-10">
                 <div className="flex items-baseline gap-4 mb-6">
-                  <Badge className="bg-primary text-primary-foreground font-mono text-xs px-2 py-1 rounded-md">
+                  <Badge className="bg-indigo-500/20 text-indigo-300 border-indigo-500/30 font-mono text-xs px-2.5 py-1 rounded-md">
                     {phase.timeframe}
                   </Badge>
                   <h3 className="text-2xl font-bold tracking-tight">{phase.title}</h3>
                 </div>
 
-                <div className="grid gap-6">
-                  <Card className="border-border/50 shadow-sm">
-                    <CardHeader className="bg-muted/30 pb-4">
+                <div className="grid gap-5">
+                  <Card className="border-white/[0.07] glass-card-md shadow-none">
+                    <CardHeader className="bg-indigo-500/5 pb-4 rounded-t-xl">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <Target className="w-5 h-5 text-primary" /> Core Objectives
+                        <Target className="w-5 h-5 text-indigo-400" /> Core Objectives
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-5">
                       <ul className="space-y-3">
                         {phase.objectives.map((obj, i) => (
                           <li key={i} className="flex items-start gap-3">
-                            <CheckCircle2 className="w-5 h-5 text-muted-foreground shrink-0 mt-0.5" />
-                            <span className="leading-relaxed">{obj}</span>
+                            <CheckCircle2 className="w-5 h-5 text-indigo-400/60 shrink-0 mt-0.5" />
+                            <span className="leading-relaxed text-muted-foreground">{obj}</span>
                           </li>
                         ))}
                       </ul>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-border/50 shadow-sm">
-                    <CardHeader className="bg-muted/30 pb-4">
+                  <Card className="border-white/[0.07] glass-card-md shadow-none">
+                    <CardHeader className="bg-violet-500/5 pb-4 rounded-t-xl">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-primary" /> Key Tactics
+                        <TrendingUp className="w-5 h-5 text-violet-400" /> Key Tactics
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-5">
                       <ul className="space-y-3">
                         {phase.tactics.map((tactic, i) => (
                           <li key={i} className="flex items-start gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-primary shrink-0 mt-2" />
-                            <span className="leading-relaxed">{tactic}</span>
+                            <div className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0 mt-2" />
+                            <span className="leading-relaxed text-muted-foreground">{tactic}</span>
                           </li>
                         ))}
                       </ul>
                     </CardContent>
                   </Card>
 
-                  <Card className="border-border/50 shadow-sm bg-zinc-50 dark:bg-zinc-900/50">
+                  <Card className="border-white/[0.07] glass-card-md shadow-none">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <BarChart className="w-5 h-5 text-primary" /> Success KPIs
+                        <BarChart className="w-5 h-5 text-indigo-400" /> Success KPIs
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="grid sm:grid-cols-2 gap-3">
                         {phase.kpis.map((kpi, i) => (
-                          <div key={i} className="bg-background border border-border/50 p-4 rounded-lg font-medium text-sm">
+                          <div key={i} className="glass-inner p-4 text-sm font-medium text-foreground">
                             {kpi}
                           </div>
                         ))}
@@ -295,25 +295,25 @@ export default function RoadmapDetail() {
       </div>
 
       {/* Sticky CTA Bar */}
-      <div className="sticky bottom-0 z-40 border-t border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 py-4 shadow-lg shadow-black/5">
+      <div className="sticky bottom-0 z-40 border-t border-white/[0.06] bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 py-4 shadow-lg shadow-black/30">
         <div className="container mx-auto px-4 md:px-8 max-w-4xl space-y-3">
           {showSeoForm && (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pb-3 border-b border-border/40">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pb-3 border-b border-white/[0.06]">
               <Input
                 placeholder="Brand name"
                 value={brandName}
                 onChange={(e) => setBrandName(e.target.value)}
-                className="flex-1"
+                className="flex-1 bg-white/5 border-white/10"
                 disabled={seoLoading}
               />
               <Input
                 placeholder="Website URL"
                 value={websiteUrl}
                 onChange={(e) => setWebsiteUrl(e.target.value)}
-                className="flex-1"
+                className="flex-1 bg-white/5 border-white/10"
                 disabled={seoLoading}
               />
-              <Button onClick={handleGenerateSeo} disabled={seoLoading || !brandName || !websiteUrl}>
+              <Button onClick={handleGenerateSeo} disabled={seoLoading || !brandName || !websiteUrl} className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0">
                 {seoLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating…</> : "Generate"}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setShowSeoForm(false)} disabled={seoLoading}>Cancel</Button>
@@ -337,7 +337,7 @@ export default function RoadmapDetail() {
                     value={activeProjectId ? String(activeProjectId) : "__none__"}
                     onValueChange={(v) => { setActiveProjectId(v === "__none__" ? null : Number(v)); setIsPinned(false); }}
                   >
-                    <SelectTrigger className="w-[180px] h-9 text-sm gap-1.5">
+                    <SelectTrigger className="w-[180px] h-9 text-sm gap-1.5 bg-white/5 border-white/10">
                       <FolderOpen className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
                       <SelectValue placeholder="No project" />
                     </SelectTrigger>
@@ -354,12 +354,12 @@ export default function RoadmapDetail() {
                       size="sm"
                       onClick={handlePinRoadmap}
                       disabled={isPinning}
-                      className="gap-2"
+                      className="gap-2 border-white/10 bg-white/5 hover:bg-white/10"
                     >
                       {isPinning ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : isPinned ? (
-                        <BookmarkCheck className="w-4 h-4" />
+                        <BookmarkCheck className="w-4 h-4 text-indigo-400" />
                       ) : (
                         <BookmarkPlus className="w-4 h-4" />
                       )}
@@ -369,7 +369,7 @@ export default function RoadmapDetail() {
                 </>
               )}
               {!showSeoForm && (
-                <Button variant="outline" size="sm" onClick={() => setShowSeoForm(true)}>
+                <Button variant="outline" size="sm" onClick={() => setShowSeoForm(true)} className="border-white/10 bg-white/5 hover:bg-white/10">
                   <FileText className="w-4 h-4 mr-2" />
                   Generate SEO Article
                 </Button>
@@ -379,7 +379,7 @@ export default function RoadmapDetail() {
                 size="sm"
                 onClick={handleViewContentStrategy}
                 disabled={generatingStrategy}
-                className="gap-2"
+                className="gap-2 border-white/10 bg-white/5 hover:bg-white/10"
               >
                 {generatingStrategy ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -396,13 +396,17 @@ export default function RoadmapDetail() {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate(`/geo-audit?roadmap_id=${roadmap.id}`)}
-                className="gap-2"
+                className="gap-2 border-white/10 bg-white/5 hover:bg-white/10"
               >
                 <Zap className="w-4 h-4" />
                 Run GEO Audit
               </Button>
               {!user && (
-                <Button size="sm" asChild>
+                <Button
+                  size="sm"
+                  asChild
+                  className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white"
+                >
                   <a href="/signup">Sign up free</a>
                 </Button>
               )}

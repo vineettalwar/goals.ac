@@ -29,9 +29,13 @@ export default function RoadmapDirectory() {
         description="Browse our directory of data-driven growth roadmaps for B2B startups across various industries and locations."
       />
 
-      <div className="bg-zinc-950 text-zinc-50 py-16 border-b border-border">
-        <div className="container mx-auto px-4 md:px-8 max-w-6xl">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+      {/* Hero */}
+      <div className="relative bg-mesh-dark text-zinc-50 py-16 border-b border-white/[0.06] overflow-hidden">
+        <div className="orb orb-primary w-[500px] h-[400px] top-[-20%] left-[30%]" />
+        <div className="orb orb-violet w-[300px] h-[300px] bottom-[-20%] right-[5%]" />
+
+        <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-6xl">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-gradient">
             Growth Strategy Directory
           </h1>
           <p className="text-xl text-zinc-400 max-w-2xl">
@@ -42,9 +46,9 @@ export default function RoadmapDirectory() {
 
       <div className="container mx-auto px-4 md:px-8 py-12 max-w-6xl">
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {[...Array(6)].map((_, i) => (
-              <Card key={i} className="overflow-hidden">
+              <Card key={i} className="overflow-hidden border-white/[0.07] glass-card-md shadow-none">
                 <CardHeader className="pb-4">
                   <div className="flex gap-2 mb-3">
                     <Skeleton className="h-5 w-20" />
@@ -57,7 +61,7 @@ export default function RoadmapDirectory() {
                   <Skeleton className="h-4 w-full mb-2" />
                   <Skeleton className="h-4 w-4/5" />
                 </CardContent>
-                <CardFooter className="pt-4 border-t">
+                <CardFooter className="pt-4 border-t border-white/[0.06]">
                   <Skeleton className="h-4 w-1/3" />
                 </CardFooter>
               </Card>
@@ -66,39 +70,39 @@ export default function RoadmapDirectory() {
         ) : data?.roadmaps && data.roadmaps.length > 0 ? (
           <>
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-semibold tracking-tight">Recent Roadmaps</h2>
+              <h2 className="text-2xl font-bold tracking-tight">Recent Roadmaps</h2>
               <span className="text-sm text-muted-foreground">{data.total} total strategies</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {data.roadmaps.map((roadmap) => (
                 <Link key={roadmap.id} to={`/roadmap/${roadmap.slug}`}>
-                  <Card className="h-full flex flex-col hover:border-primary/50 transition-colors cursor-pointer group shadow-sm">
+                  <Card className="h-full flex flex-col border-white/[0.07] glass-card-md shadow-none card-hover-glow cursor-pointer group">
                     <CardHeader className="pb-4">
                       <div className="flex flex-wrap gap-2 mb-4">
-                        <Badge variant="secondary" className="font-mono text-xs">
+                        <Badge className="bg-indigo-500/15 text-indigo-300 border-indigo-500/25 font-mono text-xs">
                           {roadmap.industry}
                         </Badge>
-                        <Badge variant="outline" className="font-mono text-xs">
+                        <Badge className="bg-white/[0.06] text-zinc-400 border-white/10 font-mono text-xs">
                           {formatStage(roadmap.stage)}
                         </Badge>
                       </div>
-                      <h3 className="text-xl font-bold tracking-tight leading-snug group-hover:text-primary transition-colors">
+                      <h3 className="text-xl font-bold tracking-tight leading-snug group-hover:text-indigo-300 transition-colors">
                         Growth Strategy for {roadmap.location} Startups
                       </h3>
                     </CardHeader>
                     <CardContent className="flex-1">
                       <div className="flex items-center text-sm text-muted-foreground gap-2 mb-4">
-                        <TrendingUp className="w-4 h-4" />
+                        <TrendingUp className="w-4 h-4 text-indigo-400" />
                         <span>12-month execution plan</span>
                       </div>
                     </CardContent>
-                    <CardFooter className="border-t bg-muted/20 pt-4 flex justify-between items-center text-sm text-muted-foreground">
+                    <CardFooter className="border-t border-white/[0.06] bg-white/[0.02] pt-4 flex justify-between items-center text-sm text-muted-foreground rounded-b-xl">
                       <div className="flex items-center gap-2">
                         <Eye className="w-4 h-4" />
                         <span>{roadmap.viewCount} views</span>
                       </div>
-                      <div className="flex items-center gap-1 font-medium text-foreground group-hover:text-primary transition-colors">
+                      <div className="flex items-center gap-1 font-semibold text-foreground group-hover:text-indigo-300 transition-colors">
                         View Plan <ArrowRight className="w-4 h-4" />
                       </div>
                     </CardFooter>
@@ -108,12 +112,12 @@ export default function RoadmapDirectory() {
             </div>
           </>
         ) : (
-          <div className="text-center py-24 bg-muted/30 rounded-xl border border-border border-dashed">
-            <h3 className="text-lg font-medium mb-2">No roadmaps found</h3>
+          <div className="text-center py-24 glass-card rounded-2xl">
+            <h3 className="text-lg font-semibold mb-2">No roadmaps found</h3>
             <p className="text-muted-foreground mb-6">Be the first to generate a growth strategy.</p>
             <Link
               to="/"
-              className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-10 px-8"
+              className="inline-flex items-center justify-center rounded-lg text-sm font-semibold transition-colors glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 text-white h-10 px-8"
             >
               Generate Roadmap
             </Link>

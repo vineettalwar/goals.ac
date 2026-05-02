@@ -76,13 +76,17 @@ export default function GeoAuditForm() {
         description="Scan your website for technical gaps that affect AI search visibility. Get a GEO score and actionable fixes."
       />
 
-      <div className="bg-zinc-950 text-zinc-50 py-16 md:py-24 border-b border-border">
-        <div className="container mx-auto px-4 md:px-8 max-w-3xl text-center">
-          <div className="inline-flex items-center gap-2 bg-primary/20 text-primary border border-primary/20 rounded-full px-4 py-1.5 text-sm font-medium mb-6">
+      {/* Hero */}
+      <div className="relative bg-mesh-dark text-zinc-50 py-16 md:py-24 border-b border-white/[0.06] overflow-hidden">
+        <div className="orb orb-primary w-[500px] h-[400px] top-[-20%] left-[50%] -translate-x-1/2" />
+        <div className="orb orb-violet w-[250px] h-[250px] bottom-[-10%] right-[0%]" />
+
+        <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-3xl text-center">
+          <div className="inline-flex items-center gap-2 bg-indigo-500/15 text-indigo-300 border border-indigo-500/25 rounded-full px-4 py-1.5 text-sm font-semibold mb-6 badge-glow">
             <Zap className="w-4 h-4" />
             Generative Engine Optimization
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 leading-tight">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 leading-tight text-gradient">
             Technical GEO Audit
           </h1>
           <p className="text-lg text-zinc-400 max-w-xl mx-auto">
@@ -92,14 +96,14 @@ export default function GeoAuditForm() {
       </div>
 
       <div className="container mx-auto px-4 md:px-8 py-12 max-w-2xl">
-        <Card className="border-border/60 shadow-sm">
+        <Card className="border-white/[0.08] glass-card shadow-none">
           <CardHeader>
             <CardTitle>Scan your website</CardTitle>
             <CardDescription>
               Enter the URL of the page you want to audit. We'll check 10 key GEO signals.
               {!user && (
                 <span className="block mt-1 text-xs text-muted-foreground">
-                  <a href="/signup" className="underline underline-offset-2">Sign up</a> to save results to a project.
+                  <a href="/signup" className="text-indigo-400 hover:text-indigo-300 underline underline-offset-2">Sign up</a> to save results to a project.
                 </span>
               )}
             </CardDescription>
@@ -116,7 +120,7 @@ export default function GeoAuditForm() {
                     placeholder="https://yourstartup.com"
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
-                    className="pl-9"
+                    className="pl-9 bg-white/5 border-white/10 hover:border-white/20 transition-colors"
                     disabled={isLoading}
                   />
                 </div>
@@ -129,7 +133,7 @@ export default function GeoAuditForm() {
                     value={activeProjectId ? String(activeProjectId) : "__none__"}
                     onValueChange={(v) => setActiveProjectId(v === "__none__" ? null : Number(v))}
                   >
-                    <SelectTrigger className="gap-1.5">
+                    <SelectTrigger className="gap-1.5 bg-white/5 border-white/10">
                       <FolderOpen className="w-4 h-4 shrink-0 text-muted-foreground" />
                       <SelectValue placeholder="No project" />
                     </SelectTrigger>
@@ -149,7 +153,11 @@ export default function GeoAuditForm() {
                 </Alert>
               )}
 
-              <Button type="submit" disabled={isLoading} className="w-full gap-2">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full gap-2 glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white"
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -167,19 +175,19 @@ export default function GeoAuditForm() {
         </Card>
 
         <div className="mt-10 grid sm:grid-cols-3 gap-6 text-center text-sm text-muted-foreground">
-          <div className="flex flex-col items-center gap-2">
-            <ShieldCheck className="w-7 h-7 text-primary" />
-            <span className="font-medium text-foreground">10 checks</span>
+          <div className="flex flex-col items-center gap-2 glass-card-md rounded-xl p-5">
+            <ShieldCheck className="w-7 h-7 text-indigo-400" />
+            <span className="font-semibold text-foreground">10 checks</span>
             <span>Schema, titles, headings, images, HTTPS & more</span>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <BarChart2 className="w-7 h-7 text-primary" />
-            <span className="font-medium text-foreground">GEO Score</span>
+          <div className="flex flex-col items-center gap-2 glass-card-md rounded-xl p-5">
+            <BarChart2 className="w-7 h-7 text-violet-400" />
+            <span className="font-semibold text-foreground">GEO Score</span>
             <span>0–100 score showing AI readiness</span>
           </div>
-          <div className="flex flex-col items-center gap-2">
-            <Zap className="w-7 h-7 text-primary" />
-            <span className="font-medium text-foreground">Fix guidance</span>
+          <div className="flex flex-col items-center gap-2 glass-card-md rounded-xl p-5">
+            <Zap className="w-7 h-7 text-indigo-400" />
+            <span className="font-semibold text-foreground">Fix guidance</span>
             <span>Actionable recommendations for each issue</span>
           </div>
         </div>

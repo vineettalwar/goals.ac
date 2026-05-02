@@ -35,36 +35,30 @@ type GeoAudit = {
   createdAt: string;
 };
 
-function ScoreBadge({ score }: { score: number }) {
-  if (score >= 75) return <span className="text-green-500">{score}</span>;
-  if (score >= 50) return <span className="text-yellow-500">{score}</span>;
-  return <span className="text-red-500">{score}</span>;
-}
-
 function StatusBadge({ status }: { status: "pass" | "fail" | "warn" }) {
   if (status === "pass") {
     return (
-      <Badge className="bg-green-100 text-green-800 border-green-200 hover:bg-green-100 gap-1">
+      <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/25 hover:bg-emerald-500/20 gap-1">
         <CheckCircle2 className="w-3 h-3" /> Pass
       </Badge>
     );
   }
   if (status === "fail") {
     return (
-      <Badge className="bg-red-100 text-red-800 border-red-200 hover:bg-red-100 gap-1">
+      <Badge className="bg-red-500/15 text-red-300 border-red-500/25 hover:bg-red-500/20 gap-1">
         <XCircle className="w-3 h-3" /> Fail
       </Badge>
     );
   }
   return (
-    <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-100 gap-1">
+    <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/25 hover:bg-amber-500/20 gap-1">
       <AlertTriangle className="w-3 h-3" /> Warn
     </Badge>
   );
 }
 
 function ScoreRing({ score }: { score: number }) {
-  const color = score >= 75 ? "#22c55e" : score >= 50 ? "#eab308" : "#ef4444";
+  const color = score >= 75 ? "#34d399" : score >= 50 ? "#fbbf24" : "#f87171";
   const radius = 54;
   const circumference = 2 * Math.PI * radius;
   const dash = (score / 100) * circumference;
@@ -72,7 +66,7 @@ function ScoreRing({ score }: { score: number }) {
   return (
     <div className="relative inline-flex items-center justify-center">
       <svg width="140" height="140" viewBox="0 0 140 140">
-        <circle cx="70" cy="70" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="12" />
+        <circle cx="70" cy="70" r={radius} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="12" />
         <circle
           cx="70"
           cy="70"
@@ -89,7 +83,7 @@ function ScoreRing({ score }: { score: number }) {
         <div className="text-4xl font-bold leading-none" style={{ color }}>
           {score}
         </div>
-        <div className="text-xs text-muted-foreground mt-1">GEO Score</div>
+        <div className="text-xs text-muted-foreground mt-1 font-medium">GEO Score</div>
       </div>
     </div>
   );
@@ -145,7 +139,7 @@ export default function GeoAuditDetail() {
         <div className="container mx-auto px-4 md:px-8 py-24 text-center">
           <h1 className="text-3xl font-bold tracking-tight mb-4">Audit Not Found</h1>
           <p className="text-muted-foreground mb-8">This audit does not exist or has been removed.</p>
-          <Button onClick={() => navigate("/geo-audit")} className="gap-2">
+          <Button onClick={() => navigate("/geo-audit")} className="gap-2 glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0">
             <RotateCcw className="w-4 h-4" /> Run New Audit
           </Button>
         </div>
@@ -172,8 +166,11 @@ export default function GeoAuditDetail() {
       />
 
       {/* Header */}
-      <div className="bg-zinc-950 text-zinc-50 py-12 md:py-16 border-b border-border">
-        <div className="container mx-auto px-4 md:px-8 max-w-4xl">
+      <div className="relative bg-mesh-dark text-zinc-50 py-12 md:py-16 border-b border-white/[0.06] overflow-hidden">
+        <div className="orb orb-primary w-[400px] h-[300px] top-[-20%] right-[20%]" />
+        <div className="orb orb-indigo w-[250px] h-[250px] bottom-[-10%] left-[5%]" />
+
+        <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-4xl">
           <div className="flex flex-wrap items-center gap-3 mb-6 text-sm text-zinc-400">
             {roadmapId ? (
               <Link
@@ -196,7 +193,7 @@ export default function GeoAuditDetail() {
             <ScoreRing score={audit.geoScore} />
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-2 text-gradient">
                 GEO Audit Results
               </h1>
               <a
@@ -208,7 +205,7 @@ export default function GeoAuditDetail() {
                 {audit.url}
                 <ExternalLink className="w-3.5 h-3.5 shrink-0" />
               </a>
-              <p className="text-zinc-300 text-lg">{scoreLabel}</p>
+              <p className="text-zinc-300 text-lg font-medium">{scoreLabel}</p>
               {audit.pageTitle && (
                 <p className="text-zinc-500 text-sm mt-1">"{audit.pageTitle}"</p>
               )}
@@ -217,42 +214,42 @@ export default function GeoAuditDetail() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 md:px-8 py-10 max-w-4xl space-y-8">
+      <div className="container mx-auto px-4 md:px-8 py-10 max-w-4xl space-y-6">
         {/* Summary counts */}
         <div className="grid grid-cols-3 gap-4">
-          <Card className="border-red-200 bg-red-50">
+          <Card className="border-red-500/20 bg-red-500/5 glass-card-md shadow-none">
             <CardContent className="pt-5 text-center">
-              <div className="text-3xl font-bold text-red-600">{failCount}</div>
-              <div className="text-sm text-red-700 mt-1 font-medium">
+              <div className="text-3xl font-bold text-red-400">{failCount}</div>
+              <div className="text-sm text-red-400/70 mt-1 font-medium">
                 {failCount === 1 ? "Issue" : "Issues"}
               </div>
             </CardContent>
           </Card>
-          <Card className="border-yellow-200 bg-yellow-50">
+          <Card className="border-amber-500/20 bg-amber-500/5 glass-card-md shadow-none">
             <CardContent className="pt-5 text-center">
-              <div className="text-3xl font-bold text-yellow-600">{warnCount}</div>
-              <div className="text-sm text-yellow-700 mt-1 font-medium">
+              <div className="text-3xl font-bold text-amber-400">{warnCount}</div>
+              <div className="text-sm text-amber-400/70 mt-1 font-medium">
                 {warnCount === 1 ? "Warning" : "Warnings"}
               </div>
             </CardContent>
           </Card>
-          <Card className="border-green-200 bg-green-50">
+          <Card className="border-emerald-500/20 bg-emerald-500/5 glass-card-md shadow-none">
             <CardContent className="pt-5 text-center">
-              <div className="text-3xl font-bold text-green-600">{passCount}</div>
-              <div className="text-sm text-green-700 mt-1 font-medium">Passing</div>
+              <div className="text-3xl font-bold text-emerald-400">{passCount}</div>
+              <div className="text-sm text-emerald-400/70 mt-1 font-medium">Passing</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Issues table */}
-        <Card className="border-border/60">
+        <Card className="border-white/[0.07] glass-card-md shadow-none">
           <CardHeader>
             <CardTitle>Check Results</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="border-white/[0.06]">
                   <TableHead className="w-[160px]">Check</TableHead>
                   <TableHead className="w-[90px]">Status</TableHead>
                   <TableHead>Detail</TableHead>
@@ -261,14 +258,14 @@ export default function GeoAuditDetail() {
               </TableHeader>
               <TableBody>
                 {audit.issues.map((issue) => (
-                  <TableRow key={issue.check}>
-                    <TableCell className="font-medium">{issue.check}</TableCell>
+                  <TableRow key={issue.check} className="border-white/[0.04]">
+                    <TableCell className="font-medium text-sm">{issue.check}</TableCell>
                     <TableCell>
                       <StatusBadge status={issue.status} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{issue.detail}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {issue.fix || <span className="text-green-600 font-medium">No action needed</span>}
+                      {issue.fix || <span className="text-emerald-400 font-medium">No action needed</span>}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -282,7 +279,7 @@ export default function GeoAuditDetail() {
           {audit.issues
             .filter((i) => i.status !== "pass")
             .map((issue) => (
-              <Card key={issue.check} className="border-border/60">
+              <Card key={issue.check} className="border-white/[0.07] glass-card-md shadow-none">
                 <CardContent className="pt-4 pb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <StatusBadge status={issue.status} />
@@ -295,27 +292,27 @@ export default function GeoAuditDetail() {
         </div>
 
         {/* Page metadata */}
-        <Card className="border-border/60">
+        <Card className="border-white/[0.07] glass-card-md shadow-none">
           <CardHeader>
             <CardTitle>Page Metadata</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-3">
               <div className="text-muted-foreground">Page Title</div>
-              <div className="font-medium">{audit.pageTitle || <span className="text-red-500">Missing</span>}</div>
+              <div className="font-medium">{audit.pageTitle || <span className="text-red-400">Missing</span>}</div>
 
               <div className="text-muted-foreground">Meta Description</div>
               <div className="font-medium">
                 {audit.metaDescription ? (
                   <span className="line-clamp-2">{audit.metaDescription}</span>
                 ) : (
-                  <span className="text-red-500">Missing</span>
+                  <span className="text-red-400">Missing</span>
                 )}
               </div>
 
               <div className="text-muted-foreground">Schema.org Types</div>
               <div className="font-medium">
-                {audit.schemaTypes.length > 0 ? audit.schemaTypes.join(", ") : <span className="text-red-500">None</span>}
+                {audit.schemaTypes.length > 0 ? audit.schemaTypes.join(", ") : <span className="text-red-400">None</span>}
               </div>
 
               <div className="text-muted-foreground">H1 Tags</div>
@@ -325,7 +322,7 @@ export default function GeoAuditDetail() {
               <div className="font-medium">
                 {audit.imageCount} total
                 {audit.imagesMissingAlt > 0 && (
-                  <span className="text-red-500 ml-1">({audit.imagesMissingAlt} missing alt)</span>
+                  <span className="text-red-400 ml-1">({audit.imagesMissingAlt} missing alt)</span>
                 )}
               </div>
             </div>
@@ -334,11 +331,11 @@ export default function GeoAuditDetail() {
 
         {/* CTA */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <Button onClick={() => navigate("/geo-audit")} variant="outline" className="gap-2">
+          <Button onClick={() => navigate("/geo-audit")} variant="outline" className="gap-2 border-white/10 bg-white/5 hover:bg-white/10">
             <RotateCcw className="w-4 h-4" /> Run New Audit
           </Button>
           {audit.roadmapId && (
-            <Button asChild variant="outline" className="gap-2">
+            <Button asChild variant="outline" className="gap-2 border-white/10 bg-white/5 hover:bg-white/10">
               <Link to={`/roadmap/${audit.roadmapId}`}>
                 <ArrowLeft className="w-4 h-4" /> Back to Roadmap
               </Link>

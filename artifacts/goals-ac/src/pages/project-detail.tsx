@@ -204,12 +204,12 @@ export default function ProjectDetail() {
         </div>
 
         <Tabs defaultValue="brand">
-          <TabsList className="mb-8">
+          <TabsList className="mb-8 bg-white/5 border border-white/10">
             <TabsTrigger value="brand">Brand Profile</TabsTrigger>
             <TabsTrigger value="content">
               Your Content
               {content && (content.contentStrategies.length + content.seoArticles.length + content.geoAudits.length + (content.roadmaps?.length ?? 0)) > 0 && (
-                <Badge variant="secondary" className="ml-2 text-xs">
+                <Badge variant="secondary" className="ml-2 text-xs bg-indigo-500/20 text-indigo-300">
                   {content.contentStrategies.length + content.seoArticles.length + content.geoAudits.length + (content.roadmaps?.length ?? 0)}
                 </Badge>
               )}
@@ -217,7 +217,7 @@ export default function ProjectDetail() {
           </TabsList>
 
           <TabsContent value="brand">
-            <Card>
+            <Card className="border-white/[0.07] glass-card-md shadow-none">
               <CardHeader>
                 <CardTitle>Brand Profile</CardTitle>
                 <CardDescription>
@@ -235,7 +235,7 @@ export default function ProjectDetail() {
                           <FormItem>
                             <FormLabel>Company name</FormLabel>
                             <FormControl>
-                              <Input placeholder="Acme Corp" {...field} />
+                              <Input placeholder="Acme Corp" className="bg-white/5 border-white/10 hover:border-white/20 transition-colors" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -248,7 +248,7 @@ export default function ProjectDetail() {
                           <FormItem>
                             <FormLabel>Industry</FormLabel>
                             <FormControl>
-                              <Input placeholder="B2B SaaS, E-commerce, etc." {...field} />
+                              <Input placeholder="B2B SaaS, E-commerce, etc." className="bg-white/5 border-white/10 hover:border-white/20 transition-colors" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -264,7 +264,7 @@ export default function ProjectDetail() {
                           <FormControl>
                             <Textarea
                               placeholder="Describe your ideal customers — their role, company size, pain points, etc."
-                              className="resize-none"
+                              className="resize-none bg-white/5 border-white/10 hover:border-white/20 transition-colors"
                               rows={3}
                               {...field}
                             />
@@ -280,7 +280,7 @@ export default function ProjectDetail() {
                         <FormItem>
                           <FormLabel>Brand voice &amp; tone</FormLabel>
                           <FormControl>
-                            <Input placeholder="Professional yet approachable, data-driven, conversational..." {...field} />
+                            <Input placeholder="Professional yet approachable, data-driven, conversational..." className="bg-white/5 border-white/10 hover:border-white/20 transition-colors" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -293,7 +293,7 @@ export default function ProjectDetail() {
                         <FormItem>
                           <FormLabel>Primary keywords</FormLabel>
                           <FormControl>
-                            <Input placeholder="keyword one, keyword two, keyword three" {...field} />
+                            <Input placeholder="keyword one, keyword two, keyword three" className="bg-white/5 border-white/10 hover:border-white/20 transition-colors" {...field} />
                           </FormControl>
                           <FormMessage />
                           <p className="text-xs text-muted-foreground">Comma-separated list of your main target keywords</p>
@@ -309,7 +309,7 @@ export default function ProjectDetail() {
                           <FormControl>
                             <Textarea
                               placeholder={"https://competitor1.com\nhttps://competitor2.com"}
-                              className="resize-none font-mono text-sm"
+                              className="resize-none font-mono text-sm bg-white/5 border-white/10 hover:border-white/20 transition-colors"
                               rows={3}
                               {...field}
                             />
@@ -320,7 +320,7 @@ export default function ProjectDetail() {
                       )}
                     />
                     <div className="flex items-center gap-3">
-                      <Button type="submit" disabled={isSaving}>
+                      <Button type="submit" disabled={isSaving} className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white">
                         {isSaving ? (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
                         ) : (
@@ -328,7 +328,7 @@ export default function ProjectDetail() {
                         )}
                       </Button>
                       {saveSuccess && (
-                        <span className="text-sm text-green-600 font-medium">Saved successfully</span>
+                        <span className="text-sm text-emerald-400 font-medium">Saved successfully</span>
                       )}
                     </div>
                   </form>
@@ -340,22 +340,22 @@ export default function ProjectDetail() {
           <TabsContent value="content">
             <div className="space-y-6">
               {content && content.seoArticles.length > 0 && (
-                <Card>
+                <Card className="border-white/[0.07] glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <FileText className="w-4 h-4" />
+                      <FileText className="w-4 h-4 text-indigo-400" />
                       SEO Articles
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="divide-y">
+                    <div className="divide-y divide-white/[0.05]">
                       {content.seoArticles.map((article) => (
                         <div key={article.id} className="py-3 flex items-center justify-between gap-4">
                           <div className="min-w-0">
                             <p className="font-medium text-sm truncate">{article.title}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">{article.primaryKeyword} · {article.wordCount} words</p>
                           </div>
-                          <Button size="sm" variant="ghost" asChild>
+                          <Button size="sm" variant="ghost" asChild className="hover:bg-white/10">
                             <Link to={`/seo-article/${article.id}`}>View</Link>
                           </Button>
                         </div>
@@ -366,22 +366,22 @@ export default function ProjectDetail() {
               )}
 
               {content && content.contentStrategies.length > 0 && (
-                <Card>
+                <Card className="border-white/[0.07] glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <BarChart3 className="w-4 h-4" />
+                      <BarChart3 className="w-4 h-4 text-violet-400" />
                       Content Strategies
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="divide-y">
+                    <div className="divide-y divide-white/[0.05]">
                       {content.contentStrategies.map((strategy) => (
                         <div key={strategy.id} className="py-3 flex items-center justify-between gap-4">
                           <div className="min-w-0">
                             <p className="font-medium text-sm">{strategy.industry} · {strategy.location}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">{strategy.stage}</p>
                           </div>
-                          <Button size="sm" variant="ghost" asChild>
+                          <Button size="sm" variant="ghost" asChild className="hover:bg-white/10">
                             <Link to={`/content-strategy/${strategy.id}`}>View</Link>
                           </Button>
                         </div>
@@ -392,22 +392,22 @@ export default function ProjectDetail() {
               )}
 
               {content && content.geoAudits.length > 0 && (
-                <Card>
+                <Card className="border-white/[0.07] glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Search className="w-4 h-4" />
+                      <Search className="w-4 h-4 text-sky-400" />
                       GEO Audits
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="divide-y">
+                    <div className="divide-y divide-white/[0.05]">
                       {content.geoAudits.map((audit) => (
                         <div key={audit.id} className="py-3 flex items-center justify-between gap-4">
                           <div className="min-w-0">
                             <p className="font-medium text-sm truncate">{audit.url.replace(/^https?:\/\//, "")}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">GEO Score: {audit.geoScore}/100</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">GEO Score: <span className="text-indigo-400 font-semibold">{audit.geoScore}/100</span></p>
                           </div>
-                          <Button size="sm" variant="ghost" asChild>
+                          <Button size="sm" variant="ghost" asChild className="hover:bg-white/10">
                             <Link to={`/geo-audit/${audit.id}`}>View</Link>
                           </Button>
                         </div>
@@ -418,22 +418,22 @@ export default function ProjectDetail() {
               )}
 
               {content && content.roadmaps && content.roadmaps.length > 0 && (
-                <Card>
+                <Card className="border-white/[0.07] glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Map className="w-4 h-4" />
+                      <Map className="w-4 h-4 text-emerald-400" />
                       Growth Roadmaps
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="divide-y">
+                    <div className="divide-y divide-white/[0.05]">
                       {content.roadmaps.map((roadmap) => (
                         <div key={roadmap.id} className="py-3 flex items-center justify-between gap-4">
                           <div className="min-w-0">
                             <p className="font-medium text-sm">{roadmap.industry} · {roadmap.location}</p>
                             <p className="text-xs text-muted-foreground mt-0.5 capitalize">{roadmap.stage} stage</p>
                           </div>
-                          <Button size="sm" variant="ghost" asChild>
+                          <Button size="sm" variant="ghost" asChild className="hover:bg-white/10">
                             <Link to={`/roadmap/${roadmap.slug}`}>View</Link>
                           </Button>
                         </div>
@@ -444,14 +444,16 @@ export default function ProjectDetail() {
               )}
 
               {content && content.contentStrategies.length === 0 && content.seoArticles.length === 0 && content.geoAudits.length === 0 && (!content.roadmaps || content.roadmaps.length === 0) && (
-                <Card className="border-dashed border-2">
+                <Card className="border-white/[0.07] glass-card border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-                    <FileText className="w-10 h-10 text-muted-foreground mb-4" />
+                    <div className="w-14 h-14 rounded-full glass-card-md flex items-center justify-center mb-4">
+                      <FileText className="w-7 h-7 text-indigo-400" />
+                    </div>
                     <CardTitle className="text-lg mb-2">No content yet</CardTitle>
-                    <CardDescription className="max-w-sm">
+                    <CardDescription className="max-w-sm mb-6">
                       Use the tools on the home page to generate roadmaps, content strategies, SEO articles, and GEO audits. They'll appear here when you're logged in.
                     </CardDescription>
-                    <Button className="mt-6" asChild>
+                    <Button className="glow-primary bg-gradient-to-r from-indigo-500 to-violet-500 border-0 text-white" asChild>
                       <Link to="/">Generate content</Link>
                     </Button>
                   </CardContent>
