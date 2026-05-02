@@ -5,6 +5,8 @@ import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { hashPassword, comparePassword, signToken, requireAuth } from "../lib/auth";
 import { sendEmail, buildPasswordResetEmail } from "../services/emailService";
+import { encryptApiKey, decryptApiKey } from "../lib/encryption";
+import { createUserGeminiClient } from "../lib/geminiClient";
 import crypto from "crypto";
 
 const router: IRouter = Router();
@@ -126,6 +128,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
       createdAt: user.createdAt,
       hasPassword: !!user.passwordHash,
       hasGoogleId: !!user.googleId,
+      hasGeminiKey: !!user.encryptedGeminiKey,
     });
   } catch (err) {
     req.log.error(err, "Failed to fetch user");
@@ -239,6 +242,92 @@ router.delete("/auth/me", requireAuth, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     req.log.error(err, "Failed to delete account");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/auth/api-key", requireAuth, async (req, res) => {
+  try {
+    const [user] = await db
+      .select({ encryptedGeminiKey: usersTable.encryptedGeminiKey })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.user!.userId))
+      .limit(1);
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    if (!user.encryptedGeminiKey) {
+      res.json({ hasKey: false });
+      return;
+    }
+
+    let lastFour = "••••";
+    try {
+      const decrypted = decryptApiKey(user.encryptedGeminiKey);
+      lastFour = decrypted.slice(-4);
+    } catch {
+      // if decryption fails, just show placeholder
+    }
+
+    res.json({ hasKey: true, lastFour });
+  } catch (err) {
+    req.log.error(err, "Failed to fetch API key status");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+const ApiKeyBody = z.object({
+  key: z.string().min(10, "API key is too short"),
+});
+
+router.post("/auth/api-key/test", requireAuth, async (req, res) => {
+  const parsed = ApiKeyBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  try {
+    const client = await createUserGeminiClient(parsed.data.key);
+    await client.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: [{ role: "user", parts: [{ text: "Reply with the single word: ok" }] }],
+      config: { maxOutputTokens: 16, thinkingConfig: { thinkingBudget: 0 } },
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    res.json({ ok: false, error: msg });
+  }
+});
+
+router.patch("/auth/api-key", requireAuth, async (req, res) => {
+  const parsed = ApiKeyBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  try {
+    const encrypted = encryptApiKey(parsed.data.key);
+    await db.update(usersTable).set({ encryptedGeminiKey: encrypted }).where(eq(usersTable.id, req.user!.userId));
+    const lastFour = parsed.data.key.slice(-4);
+    res.json({ ok: true, hasKey: true, lastFour });
+  } catch (err) {
+    req.log.error(err, "Failed to save API key");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/auth/api-key", requireAuth, async (req, res) => {
+  try {
+    await db.update(usersTable).set({ encryptedGeminiKey: null }).where(eq(usersTable.id, req.user!.userId));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err, "Failed to remove API key");
     res.status(500).json({ error: "Internal server error" });
   }
 });

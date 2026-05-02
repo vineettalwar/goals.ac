@@ -1,6 +1,7 @@
-import type { GoogleGenAI } from "@google/genai";
 import { generateRoadmapSlug } from "@workspace/db";
 import { logger } from "../lib/logger";
+import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "../lib/geminiClient";
+import type { GoogleGenAI } from "@google/genai";
 
 export interface RoadmapPhase {
   title: string;
@@ -66,43 +67,6 @@ Return ONLY this exact JSON structure with no additional text:
 Make every tactic specific and actionable — reference real platforms, partnership structures, pricing models, hiring profiles, or distribution channels where applicable. The output must be immediately useful for a ${stage}-stage ${industry} founder in ${location}.`;
 }
 
-let aiClient: GoogleGenAI | null = null;
-
-/**
- * Lazily initializes the Gemini AI client.
- *
- * Priority order for configuration:
- * 1. Replit AI Integrations (AI_INTEGRATIONS_GEMINI_BASE_URL + AI_INTEGRATIONS_GEMINI_API_KEY)
- *    — provisioned automatically, no user key required.
- * 2. User-provided GEMINI_API_KEY — connects directly to Google AI API.
- *
- * Returns null if no configuration is available; the caller will surface a 503.
- */
-async function getAiClient(): Promise<GoogleGenAI | null> {
-  if (aiClient) return aiClient;
-
-  const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  const integrationApiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-  const userApiKey = process.env.GEMINI_API_KEY;
-
-  const { GoogleGenAI: GenAI } = await import("@google/genai");
-
-  if (integrationBaseUrl && integrationApiKey) {
-    aiClient = new GenAI({
-      apiKey: integrationApiKey,
-      httpOptions: { apiVersion: "", baseUrl: integrationBaseUrl },
-    });
-    return aiClient;
-  }
-
-  if (userApiKey) {
-    aiClient = new GenAI({ apiKey: userApiKey });
-    return aiClient;
-  }
-
-  return null;
-}
-
 const EXPECTED_PHASE_TIMEFRAMES = ["Months 1-3", "Months 4-6", "Months 7-12"];
 
 function validateRoadmapContent(content: unknown): asserts content is RoadmapContent {
@@ -122,7 +86,7 @@ function validateRoadmapContent(content: unknown): asserts content is RoadmapCon
     if (typeof phase.title !== "string" || phase.title.trim().length === 0) {
       throw new Error(`Phase ${i + 1} missing title`);
     }
-    if (typeof phase.timeframe !== "string" || !phase.timeframe.includes(expectedTimeframe.split(" ")[1])) {
+    if (typeof phase.timeframe !== "string" || !phase.timeframe.includes(expectedTimeframe!.split(" ")[1]!)) {
       throw new Error(`Phase ${i + 1} has unexpected timeframe: ${phase.timeframe}`);
     }
     if (!Array.isArray(phase.objectives) || phase.objectives.length === 0) {
@@ -137,19 +101,12 @@ function validateRoadmapContent(content: unknown): asserts content is RoadmapCon
   }
 }
 
-export async function generateRoadmapContent(
+async function generateWithClient(
+  ai: GoogleGenAI,
   industry: string,
   location: string,
   stage: string,
 ): Promise<RoadmapContent> {
-  const ai = await getAiClient();
-
-  if (!ai) {
-    throw new Error(
-      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations (AI_INTEGRATIONS_GEMINI_BASE_URL + AI_INTEGRATIONS_GEMINI_API_KEY).",
-    );
-  }
-
   const prompt = buildPrompt(industry, location, stage);
   let lastError: unknown;
 
@@ -162,6 +119,7 @@ export async function generateRoadmapContent(
           systemInstruction: SYSTEM_PROMPT,
           responseMimeType: "application/json",
           maxOutputTokens: 8192,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       });
 
@@ -186,6 +144,35 @@ export async function generateRoadmapContent(
   }
 
   throw lastError;
+}
+
+export async function generateRoadmapContent(
+  industry: string,
+  location: string,
+  stage: string,
+  userApiKey?: string | null,
+): Promise<RoadmapContent> {
+  if (userApiKey) {
+    try {
+      const userClient = await createUserGeminiClient(userApiKey);
+      return await generateWithClient(userClient, industry, location, stage);
+    } catch (err) {
+      if (isUserKeyError(err)) {
+        logger.warn({ err }, "User Gemini key failed for roadmap generation, falling back to platform key");
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const platformClient = await getPlatformGeminiClient();
+  if (!platformClient) {
+    throw new Error(
+      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
+    );
+  }
+
+  return generateWithClient(platformClient, industry, location, stage);
 }
 
 export { generateRoadmapSlug as generateSlug } from "@workspace/db";

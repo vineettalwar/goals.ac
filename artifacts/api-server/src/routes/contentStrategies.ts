@@ -5,6 +5,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { generateContentStrategy } from "../services/contentStrategyGenerator";
 import { requireAuth, requireSuperAdmin, optionalAuth } from "../lib/auth";
+import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 
 const router: IRouter = Router();
 
@@ -58,9 +59,11 @@ router.post("/content-strategies/generate", optionalAuth, async (req, res) => {
 
     req.log.info({ roadmap_id, industry, location, stage }, "Generating content strategy with Gemini");
 
+    const userApiKey = req.user ? await getDecryptedUserGeminiKey(req.user.userId) : null;
+
     let items;
     try {
-      items = await generateContentStrategy(industry, location, stage);
+      items = await generateContentStrategy(industry, location, stage, userApiKey);
     } catch (err) {
       req.log.error(err, "Gemini content strategy generation failed");
       res.status(503).json({

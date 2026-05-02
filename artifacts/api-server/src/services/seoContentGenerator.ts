@@ -1,5 +1,6 @@
-import type { GoogleGenAI } from "@google/genai";
 import { logger } from "../lib/logger";
+import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "../lib/geminiClient";
+import type { GoogleGenAI } from "@google/genai";
 
 export interface SeoArticleContent {
   title: string;
@@ -48,86 +49,28 @@ Return ONLY this exact JSON structure with no additional text:
 
 Article content structure (all in valid markdown):
 - Start with a compelling 2-3 sentence introduction that hooks the reader and states the article's premise
-- ## Section 1: [Industry Context in ${location}] — 200-250 words on the current state of ${industry} in ${location}, key trends, market dynamics
-- ## Section 2: [Core Challenge for ${stage} ${industry} Startups] — 200-250 words on the biggest growth challenge at this stage
-- ## Section 3: [Strategic Approach] — 200-250 words on how smart ${industry} companies in ${location} are solving this
-- ## Section 4: [${brandName}'s Perspective / Unique Angle] — 150-200 words naturally weaving in ${brandName}'s approach without being promotional
-- ## Section 5: [Practical Steps / Framework] — 200-250 words with actionable numbered steps or bullet points
-- ## Section 6: [Future Outlook] — 100-150 words on where ${industry} in ${location} is heading
-- ### Conclusion — 100-150 words summarizing key points and a forward-looking call to reflection
+- ## Why [Topic] Matters for ${industry} Startups in ${location} (200-250 words)
+- ## [Key Strategic Insight 1 specific to ${industry}] (250-300 words)
+- ## [Key Strategic Insight 2 specific to ${location} market] (250-300 words)
+- ## Practical Playbook: [Actionable Framework] (300-350 words with numbered steps or bullet points)
+- ## Common Mistakes ${industry} Founders Make (150-200 words)
+- ## Conclusion (100-150 words — forward-looking, ties back to the opening premise)
 
 Requirements:
-- Use specific data points, statistics, and named frameworks where appropriate
-- Reference real tools, platforms, and market dynamics relevant to ${location}
-- Write at a level that earns citations from AI search tools (authoritative, specific, non-generic)
-- Naturally mention ${brandName} 2-3 times without making it an advertisement
-- Include ${location}-specific market context throughout`;
+- Reference ${brandName} naturally 2-3 times as an example or authority
+- Include specific data points, named frameworks, and real tools used in ${industry}
+- Weave in ${location}-specific market context (regulations, ecosystem, buyer behaviour)
+- The content must be citation-worthy for AI search tools`;
 }
 
-let aiClient: GoogleGenAI | null = null;
-
-async function getAiClient(): Promise<GoogleGenAI | null> {
-  if (aiClient) return aiClient;
-
-  const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  const integrationApiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-  const userApiKey = process.env.GEMINI_API_KEY;
-
-  const { GoogleGenAI: GenAI } = await import("@google/genai");
-
-  if (integrationBaseUrl && integrationApiKey) {
-    aiClient = new GenAI({
-      apiKey: integrationApiKey,
-      httpOptions: { apiVersion: "", baseUrl: integrationBaseUrl },
-    });
-    return aiClient;
-  }
-
-  if (userApiKey) {
-    aiClient = new GenAI({ apiKey: userApiKey });
-    return aiClient;
-  }
-
-  return null;
-}
-
-function validateSeoArticleContent(content: unknown): asserts content is SeoArticleContent {
-  if (typeof content !== "object" || content === null) {
-    throw new Error("SEO article content must be an object");
-  }
-  const c = content as Record<string, unknown>;
-  if (typeof c.title !== "string" || c.title.trim().length === 0) {
-    throw new Error("SEO article missing title");
-  }
-  if (typeof c.meta_description !== "string" || c.meta_description.trim().length === 0) {
-    throw new Error("SEO article missing meta_description");
-  }
-  if (typeof c.primary_keyword !== "string" || c.primary_keyword.trim().length === 0) {
-    throw new Error("SEO article missing primary_keyword");
-  }
-  if (!Array.isArray(c.secondary_keywords) || c.secondary_keywords.length === 0) {
-    throw new Error("SEO article missing secondary_keywords");
-  }
-  if (typeof c.content !== "string" || c.content.trim().length < 500) {
-    throw new Error("SEO article content is too short or missing");
-  }
-}
-
-export async function generateSeoArticleContent(
+async function generateWithClient(
+  ai: GoogleGenAI,
   brandName: string,
   websiteUrl: string,
   industry: string,
   location: string,
   stage: string,
 ): Promise<SeoArticleContent> {
-  const ai = await getAiClient();
-
-  if (!ai) {
-    throw new Error(
-      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations (AI_INTEGRATIONS_GEMINI_BASE_URL + AI_INTEGRATIONS_GEMINI_API_KEY).",
-    );
-  }
-
   const prompt = buildPrompt(brandName, websiteUrl, industry, location, stage);
   let lastError: unknown;
 
@@ -140,28 +83,58 @@ export async function generateSeoArticleContent(
           systemInstruction: SYSTEM_PROMPT,
           responseMimeType: "application/json",
           maxOutputTokens: 8192,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       });
 
       const rawText = response.text;
-      if (!rawText) {
-        throw new Error("Empty response from Gemini");
-      }
+      if (!rawText) throw new Error("Empty response from Gemini");
 
       const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
-      const parsed = JSON.parse(cleaned) as SeoArticleContent;
-      validateSeoArticleContent(parsed);
+      const result = JSON.parse(cleaned) as SeoArticleContent;
 
-      return parsed;
+      if (!result.title || !result.content || result.content.length < 500) {
+        throw new Error("Invalid article structure from Gemini");
+      }
+
+      return result;
     } catch (err) {
       lastError = err;
-      logger.warn({ err, attempt, brandName, industry, location, stage }, "Gemini SEO generation attempt failed");
-
-      if (attempt < 3) {
-        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-      }
+      logger.warn({ err, attempt }, "SEO article generation attempt failed");
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
   }
 
   throw lastError;
+}
+
+export async function generateSeoArticleContent(
+  brandName: string,
+  websiteUrl: string,
+  industry: string,
+  location: string,
+  stage: string,
+  userApiKey?: string | null,
+): Promise<SeoArticleContent> {
+  if (userApiKey) {
+    try {
+      const userClient = await createUserGeminiClient(userApiKey);
+      return await generateWithClient(userClient, brandName, websiteUrl, industry, location, stage);
+    } catch (err) {
+      if (isUserKeyError(err)) {
+        logger.warn({ err }, "User Gemini key failed for SEO article generation, falling back to platform key");
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const platformClient = await getPlatformGeminiClient();
+  if (!platformClient) {
+    throw new Error(
+      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
+    );
+  }
+
+  return generateWithClient(platformClient, brandName, websiteUrl, industry, location, stage);
 }

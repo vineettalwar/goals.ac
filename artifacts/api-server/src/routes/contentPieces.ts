@@ -14,6 +14,7 @@ import { requireAuth } from "../lib/auth";
 import { assertPublicUrl } from "../lib/ssrf-guard";
 import { generateContentPiece, generateContentPieceStream, type BrandContext } from "../services/contentStudioGenerator";
 import { logger } from "../lib/logger";
+import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 
 const router: IRouter = Router();
 
@@ -81,7 +82,8 @@ router.post("/website-projects/:id/content-pieces/generate", requireAuth, async 
       primaryKeywords: brandProfile?.primaryKeywords ?? [],
     };
 
-    const result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint);
+    const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+    const result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint, false, userApiKey);
     const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
 
     const [inserted] = await db
@@ -147,6 +149,8 @@ router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth,
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     };
 
+    const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+
     let result;
     if (bypassCache) {
       result = await generateContentPieceStream(
@@ -155,9 +159,10 @@ router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth,
         targetKeyword,
         (chunk) => sendEvent("chunk", { text: chunk }),
         angleHint,
+        userApiKey,
       );
     } else {
-      result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint, false);
+      result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint, false, userApiKey);
       sendEvent("chunk", { text: result.body_markdown });
     }
 

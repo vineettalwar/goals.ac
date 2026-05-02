@@ -7,6 +7,8 @@ import {
   CaptureLeadForRoadmapBody,
 } from "@workspace/api-zod";
 import { generateRoadmapContent, generateSlug } from "../services/roadmapGenerator";
+import { optionalAuth } from "../lib/auth";
+import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 
 const router: IRouter = Router();
 
@@ -52,7 +54,7 @@ router.get("/roadmaps", async (req, res) => {
   }
 });
 
-router.post("/roadmaps/generate", async (req, res) => {
+router.post("/roadmaps/generate", optionalAuth, async (req, res) => {
   const parsed = GenerateRoadmapBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request: " + parsed.error.message });
@@ -78,9 +80,11 @@ router.post("/roadmaps/generate", async (req, res) => {
 
     req.log.info({ industry, location, stage }, "Generating new roadmap with Gemini");
 
+    const userApiKey = req.user ? await getDecryptedUserGeminiKey(req.user.userId) : null;
+
     let content;
     try {
-      content = await generateRoadmapContent(industry, location, stage);
+      content = await generateRoadmapContent(industry, location, stage, userApiKey);
     } catch (err) {
       req.log.error(err, "Gemini generation failed");
       res.status(503).json({

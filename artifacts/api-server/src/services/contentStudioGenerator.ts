@@ -1,6 +1,7 @@
-import type { GoogleGenAI } from "@google/genai";
 import { createHash } from "node:crypto";
 import { logger } from "../lib/logger";
+import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "../lib/geminiClient";
+import type { GoogleGenAI } from "@google/genai";
 import type { ContentFormatType } from "@workspace/db";
 
 export interface ContentPieceResult {
@@ -132,7 +133,7 @@ const FORMAT_CONFIGS: Record<ContentFormatType, { label: string; wordRange: stri
     label: "Twitter / X Thread",
     wordRange: "300-500",
     structure: `- Tweet 1 (hook): A bold claim or surprising stat that makes people stop scrolling. End with "Thread 🧵"
-- Tweet 2: Context — why this matters for ${"{brand.industry}"} founders right now
+- Tweet 2: Context — why this matters for founders right now
 - Tweets 3-6: One insight per tweet. Start each with a number (2/, 3/, etc.). Short, punchy sentences.
 - Tweet 7: The counterintuitive point most people miss
 - Tweet 8: Practical 3-step framework or checklist
@@ -282,33 +283,6 @@ function cacheSet(key: string, result: ContentPieceResult): void {
   contentCache.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
-let aiClient: GoogleGenAI | null = null;
-
-async function getAiClient(): Promise<GoogleGenAI | null> {
-  if (aiClient) return aiClient;
-
-  const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  const integrationApiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-  const userApiKey = process.env.GEMINI_API_KEY;
-
-  const { GoogleGenAI: GenAI } = await import("@google/genai");
-
-  if (integrationBaseUrl && integrationApiKey) {
-    aiClient = new GenAI({
-      apiKey: integrationApiKey,
-      httpOptions: { apiVersion: "", baseUrl: integrationBaseUrl },
-    });
-    return aiClient;
-  }
-
-  if (userApiKey) {
-    aiClient = new GenAI({ apiKey: userApiKey });
-    return aiClient;
-  }
-
-  return null;
-}
-
 function validateResult(result: unknown): asserts result is ContentPieceResult {
   if (typeof result !== "object" || result === null) throw new Error("Result must be an object");
   const r = result as Record<string, unknown>;
@@ -317,16 +291,54 @@ function validateResult(result: unknown): asserts result is ContentPieceResult {
   if (typeof r.body_markdown !== "string" || r.body_markdown.trim().length < 200) throw new Error("body_markdown too short");
 }
 
-export async function generateContentPieceStream(
+async function generateWithClient(
+  ai: GoogleGenAI,
+  format: ContentFormatType,
+  brand: BrandContext,
+  keyword: string,
+  angleHint?: string,
+): Promise<ContentPieceResult> {
+  const prompt = buildPrompt(format, brand, keyword, angleHint);
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
+          responseMimeType: "application/json",
+          maxOutputTokens: 8192,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      });
+
+      const rawText = response.text;
+      if (!rawText) throw new Error("Empty response from Gemini");
+
+      const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
+      const parsed = JSON.parse(cleaned) as ContentPieceResult;
+      validateResult(parsed);
+      return parsed;
+    } catch (err) {
+      lastError = err;
+      logger.warn({ err, attempt, format, keyword }, "Content studio generation attempt failed");
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+
+  throw lastError;
+}
+
+async function generateWithClientStream(
+  ai: GoogleGenAI,
   format: ContentFormatType,
   brand: BrandContext,
   keyword: string,
   onChunk: (text: string) => void,
   angleHint?: string,
 ): Promise<ContentPieceResult> {
-  const ai = await getAiClient();
-  if (!ai) throw new Error("AI generation is not configured.");
-
   const prompt = buildPrompt(format, brand, keyword, angleHint);
   let accumulated = "";
 
@@ -337,6 +349,7 @@ export async function generateContentPieceStream(
       systemInstruction: SYSTEM_PROMPT,
       responseMimeType: "application/json",
       maxOutputTokens: 8192,
+      thinkingConfig: { thinkingBudget: 0 },
     },
   });
 
@@ -352,58 +365,71 @@ export async function generateContentPieceStream(
   return parsed;
 }
 
+export async function generateContentPieceStream(
+  format: ContentFormatType,
+  brand: BrandContext,
+  keyword: string,
+  onChunk: (text: string) => void,
+  angleHint?: string,
+  userApiKey?: string | null,
+): Promise<ContentPieceResult> {
+  if (userApiKey) {
+    try {
+      const userClient = await createUserGeminiClient(userApiKey);
+      return await generateWithClientStream(userClient, format, brand, keyword, onChunk, angleHint);
+    } catch (err) {
+      if (isUserKeyError(err)) {
+        logger.warn({ err }, "User Gemini key failed for content stream, falling back to platform key");
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const platformClient = await getPlatformGeminiClient();
+  if (!platformClient) throw new Error("AI generation is not configured.");
+  return generateWithClientStream(platformClient, format, brand, keyword, onChunk, angleHint);
+}
+
 export async function generateContentPiece(
   format: ContentFormatType,
   brand: BrandContext,
   keyword: string,
   angleHint?: string,
   bypassCache = false,
+  userApiKey?: string | null,
 ): Promise<ContentPieceResult> {
   const key = cacheKey(format, keyword, brand);
-  if (!bypassCache) {
+  if (!bypassCache && !userApiKey) {
     const cached = cacheGet(key);
     if (cached) { logger.info({ format, keyword }, "Content piece served from cache"); return cached; }
   }
 
-  const ai = await getAiClient();
+  if (userApiKey) {
+    try {
+      const userClient = await createUserGeminiClient(userApiKey);
+      const result = await generateWithClient(userClient, format, brand, keyword, angleHint);
+      cacheSet(key, result);
+      return result;
+    } catch (err) {
+      if (isUserKeyError(err)) {
+        logger.warn({ err }, "User Gemini key failed for content piece, falling back to platform key");
+      } else {
+        throw err;
+      }
+    }
+  }
 
-  if (!ai) {
+  const platformClient = await getPlatformGeminiClient();
+  if (!platformClient) {
     throw new Error(
       "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
     );
   }
 
-  const prompt = buildPrompt(format, brand, keyword, angleHint);
-  let lastError: unknown;
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: "application/json",
-          maxOutputTokens: 8192,
-        },
-      });
-
-      const rawText = response.text;
-      if (!rawText) throw new Error("Empty response from Gemini");
-
-      const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
-      const parsed = JSON.parse(cleaned) as ContentPieceResult;
-      validateResult(parsed);
-      cacheSet(key, parsed);
-      return parsed;
-    } catch (err) {
-      lastError = err;
-      logger.warn({ err, attempt, format, keyword }, "Content studio generation attempt failed");
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
-    }
-  }
-
-  throw lastError;
+  const result = await generateWithClient(platformClient, format, brand, keyword, angleHint);
+  cacheSet(key, result);
+  return result;
 }
 
 export { type BrandContext };

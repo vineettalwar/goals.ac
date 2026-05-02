@@ -1,5 +1,6 @@
-import type { GoogleGenAI } from "@google/genai";
 import { logger } from "../lib/logger";
+import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "../lib/geminiClient";
+import type { GoogleGenAI } from "@google/genai";
 
 export interface ContentItem {
   day: number;
@@ -35,33 +36,6 @@ Requirements:
 - Keywords should be realistic terms potential customers search for
 - Day numbers must run from ${startDay} to ${endDay} exactly
 - Return ONLY the JSON array, no other text`;
-}
-
-let aiClient: GoogleGenAI | null = null;
-
-async function getAiClient(): Promise<GoogleGenAI | null> {
-  if (aiClient) return aiClient;
-
-  const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  const integrationApiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-  const userApiKey = process.env.GEMINI_API_KEY;
-
-  const { GoogleGenAI: GenAI } = await import("@google/genai");
-
-  if (integrationBaseUrl && integrationApiKey) {
-    aiClient = new GenAI({
-      apiKey: integrationApiKey,
-      httpOptions: { apiVersion: "", baseUrl: integrationBaseUrl },
-    });
-    return aiClient;
-  }
-
-  if (userApiKey) {
-    aiClient = new GenAI({ apiKey: userApiKey });
-    return aiClient;
-  }
-
-  return null;
 }
 
 function validateContentItems(items: unknown): asserts items is ContentItem[] {
@@ -110,6 +84,7 @@ async function generateBatch(
           systemInstruction: SYSTEM_PROMPT,
           responseMimeType: "application/json",
           maxOutputTokens: 4096,
+          thinkingConfig: { thinkingBudget: 0 },
         },
       });
       const rawText = response.text;
@@ -127,26 +102,47 @@ async function generateBatch(
   throw lastError;
 }
 
-export async function generateContentStrategy(
+async function generateWithClient(
+  ai: GoogleGenAI,
   industry: string,
   location: string,
   stage: string,
 ): Promise<ContentItem[]> {
-  const ai = await getAiClient();
-
-  if (!ai) {
-    throw new Error(
-      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
-    );
-  }
-
   const [batch1, batch2, batch3] = await Promise.all([
     generateBatch(ai, industry, location, stage, 1, 10),
     generateBatch(ai, industry, location, stage, 11, 20),
     generateBatch(ai, industry, location, stage, 21, 30),
   ]);
-
   const all = [...batch1, ...batch2, ...batch3].sort((a, b) => a.day - b.day);
   validateContentItems(all);
   return all;
+}
+
+export async function generateContentStrategy(
+  industry: string,
+  location: string,
+  stage: string,
+  userApiKey?: string | null,
+): Promise<ContentItem[]> {
+  if (userApiKey) {
+    try {
+      const userClient = await createUserGeminiClient(userApiKey);
+      return await generateWithClient(userClient, industry, location, stage);
+    } catch (err) {
+      if (isUserKeyError(err)) {
+        logger.warn({ err }, "User Gemini key failed for content strategy generation, falling back to platform key");
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const platformClient = await getPlatformGeminiClient();
+  if (!platformClient) {
+    throw new Error(
+      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
+    );
+  }
+
+  return generateWithClient(platformClient, industry, location, stage);
 }

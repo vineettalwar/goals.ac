@@ -9,6 +9,7 @@ export interface AuthUser {
   name: string;
   role: string;
   avatarUrl?: string | null;
+  hasGeminiKey?: boolean;
 }
 
 interface AuthContextValue {

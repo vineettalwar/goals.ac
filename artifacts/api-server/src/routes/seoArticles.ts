@@ -5,6 +5,7 @@ import { eq, desc, and, inArray } from "drizzle-orm";
 import { generateSeoArticleContent } from "../services/seoContentGenerator";
 import { logger } from "../lib/logger";
 import { optionalAuth, requireAuth } from "../lib/auth";
+import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 
 const router: IRouter = Router();
 
@@ -31,12 +32,15 @@ router.post("/seo-articles/generate", optionalAuth, async (req, res) => {
       validatedProjectId = projectIdNum;
     }
 
+    const userApiKey = req.user ? await getDecryptedUserGeminiKey(req.user.userId) : null;
+
     const articleContent = await generateSeoArticleContent(
       brand_name as string,
       website_url as string,
       industry as string,
       location as string,
       stage as string,
+      userApiKey,
     );
 
     const wordCount = articleContent.content.split(/\s+/).filter(Boolean).length;
