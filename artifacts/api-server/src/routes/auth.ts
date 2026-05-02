@@ -129,6 +129,8 @@ router.get("/auth/google", (req, res) => {
     res.status(503).json({ error: "Google OAuth is not configured" });
     return;
   }
+  const state = crypto.randomBytes(16).toString("hex");
+  res.cookie("oauth_state", state, { httpOnly: true, sameSite: "lax", maxAge: 10 * 60 * 1000 });
   const params = new URLSearchParams({
     client_id: GOOGLE_CLIENT_ID,
     redirect_uri: getGoogleCallbackUrl(),
@@ -136,15 +138,24 @@ router.get("/auth/google", (req, res) => {
     scope: "openid email profile",
     access_type: "offline",
     prompt: "select_account",
+    state,
   });
   res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
 });
 
 router.get("/auth/google/callback", async (req, res) => {
   const appOrigin = getAppOrigin();
-  const { code, error: oauthError } = req.query;
+  const { code, error: oauthError, state } = req.query;
+  const expectedState = req.cookies?.["oauth_state"];
+
+  res.clearCookie("oauth_state");
 
   if (oauthError || !code || typeof code !== "string") {
+    res.redirect(`${appOrigin}/login?error=oauth_failed`);
+    return;
+  }
+
+  if (!state || state !== expectedState) {
     res.redirect(`${appOrigin}/login?error=oauth_failed`);
     return;
   }

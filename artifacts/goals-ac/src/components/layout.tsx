@@ -9,7 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { LayoutDashboard, LogOut, ChevronDown } from "lucide-react";
+import { LayoutDashboard, LogOut, ChevronDown, ShieldCheck } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -69,6 +69,17 @@ export function Layout({ children }: LayoutProps) {
                       Dashboard
                     </Link>
                   </DropdownMenuItem>
+                  {user.role === "super_admin" && (
+                    <>
+                      <DropdownMenuSeparator className="bg-white/10" />
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/content-strategies" className="flex items-center gap-2 text-indigo-400">
+                          <ShieldCheck className="h-4 w-4" />
+                          Admin
+                        </Link>
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuSeparator className="bg-white/10" />
                   <DropdownMenuItem
                     className="flex items-center gap-2 text-destructive focus:text-destructive"

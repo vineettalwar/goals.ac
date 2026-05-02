@@ -108,7 +108,7 @@ router.post("/content-strategies/generate", optionalAuth, async (req, res) => {
   }
 });
 
-router.get("/content-strategies", requireAuth, async (req, res) => {
+router.get("/content-strategies", requireAuth, requireSuperAdmin, async (req, res) => {
   try {
     const roadmapId = req.query.roadmap_id ? Number(req.query.roadmap_id) : null;
     const isSuperAdmin = req.user!.role === "super_admin";
@@ -206,7 +206,7 @@ router.get("/content-strategies/:id", optionalAuth, async (req, res) => {
   }
 });
 
-router.patch("/content-strategies/:id/items/:itemId", requireAuth, async (req, res) => {
+router.patch("/content-strategies/:id/items/:itemId", requireAuth, requireSuperAdmin, async (req, res) => {
   try {
     const strategyId = Number(req.params.id);
     const itemId = Number(req.params.itemId);
