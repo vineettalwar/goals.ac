@@ -1,21 +1,20 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { SEO } from "@/components/seo";
 import { Layout } from "@/components/layout";
 import {
   useGetRoadmap,
   getGetRoadmapQueryKey,
-  useListContentStrategies,
-  getListContentStrategiesQueryKey,
   useGenerateContentStrategy,
 } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText, Zap, FolderOpen, BookmarkPlus, BookmarkCheck } from "lucide-react";
+import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText, Zap, FolderOpen, BookmarkPlus, BookmarkCheck, Plus } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/context/active-project";
@@ -60,13 +59,19 @@ export default function RoadmapDetail() {
       .catch(() => {});
   }, [roadmap?.id, activeProjectId, token]);
 
-  const { data: allStrategies } = useListContentStrategies({
-    query: { enabled: !!roadmap?.id && !!user, queryKey: getListContentStrategiesQueryKey() },
+  const { data: existingStrategy } = useQuery<{ id: number } | null>({
+    queryKey: ["content-strategy-for-roadmap", roadmap?.id, token],
+    enabled: !!roadmap?.id && !!user && !!token,
+    queryFn: async () => {
+      const res = await fetch(
+        `${API_BASE}/api/content-strategies?roadmap_id=${roadmap!.id}`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      if (!res.ok) return null;
+      const list = await res.json() as { id: number }[];
+      return list.length > 0 ? list[0] : null;
+    },
   });
-
-  const existingStrategy = user
-    ? allStrategies?.find((s) => s.roadmapId === roadmap?.id)
-    : undefined;
 
   const generateStrategy = useGenerateContentStrategy();
 
@@ -323,7 +328,14 @@ export default function RoadmapDetail() {
             <div>
               <h4 className="font-semibold text-foreground">Ready to execute your strategy?</h4>
               <p className="text-sm text-muted-foreground">
-                {user ? (
+                {user && projects.length === 0 ? (
+                  <>
+                    <Link to="/dashboard" className="text-indigo-400 hover:text-indigo-300 transition-colors font-medium">
+                      Add a website project
+                    </Link>{" "}
+                    to save generated content and track results.
+                  </>
+                ) : user ? (
                   <>Generate content and audits — they'll be saved to your project.</>
                 ) : (
                   <>Sign up to save your results and build a brand profile.</>
@@ -331,6 +343,19 @@ export default function RoadmapDetail() {
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+              {user && projects.length === 0 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  asChild
+                  className="gap-2 border-indigo-400/30 text-indigo-300 hover:bg-indigo-500/10"
+                >
+                  <Link to="/dashboard">
+                    <Plus className="w-3.5 h-3.5" />
+                    Add project
+                  </Link>
+                </Button>
+              )}
               {user && projects.length > 0 && (
                 <>
                   <Select

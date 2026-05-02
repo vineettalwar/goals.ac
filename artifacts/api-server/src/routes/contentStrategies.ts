@@ -110,6 +110,8 @@ router.post("/content-strategies/generate", optionalAuth, async (req, res) => {
 
 router.get("/content-strategies", requireAuth, async (req, res) => {
   try {
+    const roadmapId = req.query.roadmap_id ? Number(req.query.roadmap_id) : null;
+
     const userProjects = await db
       .select({ id: websiteProjectsTable.id })
       .from(websiteProjectsTable)
@@ -122,10 +124,20 @@ router.get("/content-strategies", requireAuth, async (req, res) => {
       return;
     }
 
+    let whereClause;
+    if (roadmapId) {
+      whereClause = and(
+        eq(contentStrategiesTable.roadmapId, roadmapId),
+        inArray(contentStrategiesTable.websiteProjectId, projectIds),
+      );
+    } else {
+      whereClause = inArray(contentStrategiesTable.websiteProjectId, projectIds);
+    }
+
     const strategies = await db
       .select()
       .from(contentStrategiesTable)
-      .where(inArray(contentStrategiesTable.websiteProjectId, projectIds))
+      .where(whereClause)
       .orderBy(contentStrategiesTable.createdAt);
 
     res.json(strategies);
