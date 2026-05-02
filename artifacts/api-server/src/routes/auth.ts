@@ -133,17 +133,18 @@ router.post("/auth/forgot-password", async (req, res) => {
       return;
     }
 
-    const resetToken = crypto.randomBytes(32).toString("hex");
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
     const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
 
     await db
       .update(usersTable)
-      .set({ passwordResetToken: resetToken, passwordResetExpires: resetExpires })
+      .set({ passwordResetToken: tokenHash, passwordResetExpires: resetExpires })
       .where(eq(usersTable.id, user.id));
 
     const devDomain = process.env["REPLIT_DEV_DOMAIN"];
     const appOrigin = process.env["APP_ORIGIN"] ?? (devDomain ? `https://${devDomain}` : "https://goals.ac");
-    const resetUrl = `${appOrigin}/reset-password?token=${resetToken}`;
+    const resetUrl = `${appOrigin}/reset-password?token=${rawToken}`;
 
     try {
       await sendEmail({
@@ -172,10 +173,12 @@ router.post("/auth/reset-password", async (req, res) => {
   const { token, password } = parsed.data;
 
   try {
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
     const [user] = await db
       .select()
       .from(usersTable)
-      .where(eq(usersTable.passwordResetToken, token))
+      .where(eq(usersTable.passwordResetToken, tokenHash))
       .limit(1);
 
     if (!user) {
