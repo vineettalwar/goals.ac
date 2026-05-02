@@ -214,7 +214,7 @@ export default function Home() {
         <section className="py-28 bg-background">
           <div className="container mx-auto px-4 md:px-8 max-w-5xl">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center rounded-full border border-indigo-400/20 bg-indigo-500/8 px-3 py-1 text-xs font-semibold text-indigo-400 mb-4">
+              <div className="inline-flex items-center rounded-full border border-indigo-400/20 bg-indigo-500/[0.08] px-3 py-1 text-xs font-semibold text-indigo-400 mb-4">
                 Platform Features
               </div>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Everything you need to grow.</h2>

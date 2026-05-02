@@ -118,11 +118,14 @@ export default function Dashboard() {
   return (
     <Layout>
       <SEO title="Dashboard — goals.ac" description="Manage your website SEO projects." />
-      <div className="container mx-auto px-4 md:px-8 max-w-5xl py-12">
-        <div className="flex items-center justify-between mb-10">
+      {/* Dashboard hero */}
+      <div className="relative bg-mesh-dark text-zinc-50 py-12 border-b border-white/[0.06] overflow-hidden">
+        <div className="orb orb-primary w-[500px] h-[350px] top-[-20%] left-[40%] -translate-x-1/2" />
+        <div className="orb orb-violet w-[250px] h-[250px] bottom-[-10%] right-[5%]" />
+        <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl flex items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-gradient">Your Projects</h1>
-            <p className="text-muted-foreground mt-1">Welcome back, <span className="text-foreground font-medium">{user?.name}</span></p>
+            <p className="text-zinc-400 mt-1">Welcome back, <span className="text-zinc-200 font-medium">{user?.name}</span></p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
@@ -180,7 +183,9 @@ export default function Dashboard() {
             </DialogContent>
           </Dialog>
         </div>
+      </div>
 
+      <div className="container mx-auto px-4 md:px-8 max-w-5xl py-10">
         {isLoadingProjects ? (
           <div className="flex items-center justify-center py-24">
             <Loader2 className="h-8 w-8 animate-spin text-indigo-400" />
