@@ -1,6 +1,6 @@
 {
-  "id": "f956f2a5-e6fc-4d07-9c15-8034d481ba65",
-  "prevId": "a7c2e9d4-3b5f-4e6a-8c0d-1e2f3a4b5c6d",
+  "id": "a7c2e9d4-3b5f-4e6a-8c0d-1e2f3a4b5c6d",
+  "prevId": "5a4fb5ba-4e71-4b50-8ed8-d45c7b5726d3",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -818,26 +818,13 @@
           "name": "password_hash",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
-        },
-        "google_id": {
-          "name": "google_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "name": {
           "name": "name",
           "type": "text",
           "primaryKey": false,
           "notNull": true
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'user'"
         },
         "password_reset_token": {
           "name": "password_reset_token",
@@ -875,13 +862,6 @@
           "nullsNotDistinct": false,
           "columns": [
             "email"
-          ]
-        },
-        "users_google_id_unique": {
-          "name": "users_google_id_unique",
-          "nullsNotDistinct": false,
-          "columns": [
-            "google_id"
           ]
         }
       },
@@ -1219,12 +1199,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "published_url": {
-          "name": "published_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1238,6 +1212,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "published_url": {
+          "name": "published_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
