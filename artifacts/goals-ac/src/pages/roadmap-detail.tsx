@@ -319,7 +319,13 @@ export default function RoadmapDetail() {
                 disabled={seoLoading}
               />
               <Button onClick={handleGenerateSeo} disabled={seoLoading || !brandName || !websiteUrl} className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0">
-                {seoLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Generating…</> : "Generate"}
+                {seoLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Generating…
+                    {user?.hasGeminiKey && <KeyRound className="w-3 h-3 ml-1.5 opacity-70" />}
+                  </>
+                ) : "Generate"}
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setShowSeoForm(false)} disabled={seoLoading}>Cancel</Button>
             </div>
@@ -407,15 +413,17 @@ export default function RoadmapDetail() {
                 className="gap-2"
               >
                 {generatingStrategy ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Generating…
+                    {user?.hasGeminiKey && <KeyRound className="w-3 h-3 opacity-70" />}
+                  </>
                 ) : (
-                  <FileText className="w-4 h-4" />
+                  <>
+                    <FileText className="w-4 h-4" />
+                    {existingStrategy ? "View Content Strategy" : "Generate Content Strategy"}
+                  </>
                 )}
-                {generatingStrategy
-                  ? "Generating…"
-                  : existingStrategy
-                  ? "View Content Strategy"
-                  : "Generate Content Strategy"}
               </Button>
               <Button
                 variant="outline"

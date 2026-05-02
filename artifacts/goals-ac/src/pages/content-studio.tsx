@@ -15,7 +15,7 @@ import {
   Plus, FileText, Loader2, AlertCircle, ArrowLeft, Calendar,
   BookOpen, Newspaper, GraduationCap, Map as MapIcon, FileSearch, LayoutTemplate,
   Globe, ImageIcon, BarChart3, Filter, RefreshCw, Trash2, ArrowUpDown, ExternalLink,
-  Linkedin, Twitter, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle
+  Linkedin, Twitter, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle, KeyRound
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
@@ -251,12 +251,14 @@ function CreateModal({
   onCreated,
   projectId,
   token,
+  hasGeminiKey,
 }: {
   open: boolean;
   onClose: () => void;
   onCreated: (piece: ContentPiece) => void;
   projectId: string;
   token: string | null;
+  hasGeminiKey?: boolean;
 }) {
   const [step, setStep] = useState<"format" | "details">("format");
   const [selectedFormat, setSelectedFormat] = useState<ContentFormatType | null>(null);
@@ -439,7 +441,11 @@ function CreateModal({
               className="w-full"
             >
               {isGenerating ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{streamPreview ? "Generating…" : "Starting AI…"}</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {streamPreview ? "Generating…" : "Starting AI…"}
+                  {hasGeminiKey && <KeyRound className="ml-1.5 h-3.5 w-3.5 opacity-70" />}
+                </>
               ) : (
                 <>Generate {FORMAT_META[selectedFormat].label}</>
               )}
@@ -631,7 +637,7 @@ function sortItems(items: HubItem[], sortKey: SortKey): HubItem[] {
 
 export default function ContentStudio() {
   const { id } = useParams<{ id: string }>();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const navigate = useNavigate();
 
   const [projectName, setProjectName] = useState<string>("");
@@ -1169,6 +1175,7 @@ export default function ContentStudio() {
         onCreated={handleCreated}
         projectId={id!}
         token={token}
+        hasGeminiKey={!!user?.hasGeminiKey}
       />
     </Layout>
   );
