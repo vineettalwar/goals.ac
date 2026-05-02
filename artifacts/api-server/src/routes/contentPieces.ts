@@ -11,6 +11,7 @@ import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
 import { marked } from "marked";
 import { requireAuth } from "../lib/auth";
+import { assertPublicUrl } from "../lib/ssrf-guard";
 import { generateContentPiece } from "../services/contentStudioGenerator";
 import { logger } from "../lib/logger";
 
@@ -312,6 +313,14 @@ router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
 
     const siteBase = wpSiteUrl.replace(/\/$/, "");
     const wpApiUrl = `${siteBase}/wp-json/wp/v2/posts`;
+
+    try {
+      await assertPublicUrl(siteBase);
+    } catch (ssrfErr) {
+      res.status(400).json({ error: ssrfErr instanceof Error ? ssrfErr.message : "Invalid WordPress site URL" });
+      return;
+    }
+
     const htmlContent = await marked(piece.bodyMarkdown);
     const basicAuth = Buffer.from(`${wpUsername}:${wpAppPassword}`).toString("base64");
 
