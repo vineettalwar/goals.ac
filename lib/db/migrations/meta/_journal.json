@@ -57,6 +57,13 @@
       "when": 1777728304096,
       "tag": "0007_amusing_ego",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1777736411034,
+      "tag": "0008_aspiring_firebrand",
+      "breakpoints": true
     }
   ]
 }

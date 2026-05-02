@@ -4,6 +4,8 @@ import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { hashPassword, comparePassword, signToken, requireAuth } from "../lib/auth";
+import { sendEmail, buildPasswordResetEmail } from "../services/emailService";
+import crypto from "crypto";
 
 const router: IRouter = Router();
 
@@ -16,6 +18,15 @@ const SignupBody = z.object({
 const LoginBody = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+});
+
+const ForgotPasswordBody = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+const ResetPasswordBody = z.object({
+  token: z.string().min(1, "Token is required"),
+  password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
 router.post("/auth/signup", async (req, res) => {
@@ -97,6 +108,101 @@ router.get("/auth/me", requireAuth, async (req, res) => {
     res.json(user);
   } catch (err) {
     req.log.error(err, "Failed to fetch user");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/forgot-password", async (req, res) => {
+  const parsed = ForgotPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  const { email } = parsed.data;
+
+  try {
+    const [user] = await db
+      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name })
+      .from(usersTable)
+      .where(eq(usersTable.email, email))
+      .limit(1);
+
+    if (!user) {
+      res.json({ ok: true });
+      return;
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000);
+
+    await db
+      .update(usersTable)
+      .set({ passwordResetToken: resetToken, passwordResetExpires: resetExpires })
+      .where(eq(usersTable.id, user.id));
+
+    const appOrigin = process.env["APP_ORIGIN"] ?? "https://goals.ac";
+    const resetUrl = `${appOrigin}/reset-password?token=${resetToken}`;
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: "Reset your goals.ac password",
+        html: buildPasswordResetEmail({ name: user.name, resetUrl }),
+      });
+    } catch (emailErr) {
+      req.log.error(emailErr, "Failed to send password reset email");
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    req.log.error(err, "Failed to process forgot-password");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/reset-password", async (req, res) => {
+  const parsed = ResetPasswordBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  const { token, password } = parsed.data;
+
+  try {
+    const [user] = await db
+      .select()
+      .from(usersTable)
+      .where(eq(usersTable.passwordResetToken, token))
+      .limit(1);
+
+    if (!user) {
+      res.status(400).json({ error: "Invalid or expired reset link. Please request a new one." });
+      return;
+    }
+
+    if (!user.passwordResetExpires || user.passwordResetExpires < new Date()) {
+      res.status(400).json({ error: "This reset link has expired. Please request a new one." });
+      return;
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    await db
+      .update(usersTable)
+      .set({
+        passwordHash,
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      })
+      .where(eq(usersTable.id, user.id));
+
+    const jwtToken = signToken({ userId: user.id, email: user.email });
+
+    res.json({ token: jwtToken, user: { id: user.id, email: user.email, name: user.name } });
+  } catch (err) {
+    req.log.error(err, "Failed to reset password");
     res.status(500).json({ error: "Internal server error" });
   }
 });

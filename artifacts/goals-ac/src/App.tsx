@@ -18,6 +18,8 @@ import GeoAuditDetail from "@/pages/geo-audit";
 import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import Dashboard from "@/pages/dashboard";
 import ProjectDetail from "@/pages/project-detail";
 
@@ -52,6 +54,8 @@ function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/signup" element={<Signup />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
                 <Route path="/projects/:id" element={<RequireAuth><ProjectDetail /></RequireAuth>} />
                 <Route path="/roadmaps" element={<RoadmapDirectory />} />
