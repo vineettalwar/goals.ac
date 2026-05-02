@@ -83,8 +83,7 @@ export default function Home() {
           <div className="orb orb-indigo w-[300px] h-[300px] bottom-[10%] left-[-5%]" />
 
           <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl text-center">
-            <div className="inline-flex items-center rounded-full border border-border/60 bg-muted/40 px-4 py-1.5 text-sm font-medium text-muted-foreground mb-8">
-              <Target className="mr-2 h-4 w-4 text-blue-500" />
+            <div className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-sm font-medium text-blue-300 mb-8">
               Data-Driven Growth Strategies for B2B Startups
             </div>
 

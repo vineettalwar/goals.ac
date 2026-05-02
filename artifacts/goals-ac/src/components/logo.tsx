@@ -24,10 +24,9 @@ export function LogoIcon({ size = 20 }: { size?: number }) {
 export function Logo({ size = 20, showWordmark = true, className = "" }: LogoProps) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
-      <LogoIcon size={size} />
       {showWordmark && (
         <span className="font-bold text-xl tracking-tight leading-none select-none">
-          <span className="text-foreground">goals</span>
+          <span className="text-gray-900 dark:text-white">goals</span>
           <span className="text-blue-500 font-medium">.ac</span>
         </span>
       )}
