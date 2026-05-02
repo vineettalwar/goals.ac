@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SEO } from "@/components/seo";
+import { Logo } from "@/components/logo";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -72,7 +73,7 @@ export default function Login() {
 
         <Card className="w-full max-w-md relative z-10 glass-card border-white/10 shadow-2xl shadow-black/50">
           <CardHeader className="text-center pb-6">
-            <div className="text-2xl font-bold text-gradient-brand mb-1">goals.ac</div>
+            <Logo size={24} className="mb-1" />
             <CardTitle className="text-xl font-bold">Welcome back</CardTitle>
             <CardDescription>Sign in to your goals.ac account</CardDescription>
           </CardHeader>

@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/auth";
 import { useTheme } from "@/context/theme";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -38,11 +39,8 @@ export function Layout({ children }: LayoutProps) {
       {/* Glass header — frosted content scrolls behind it */}
       <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
         <div className="container mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-          <Link
-            to="/"
-            className="font-bold text-xl tracking-tight hover:opacity-90 transition-opacity text-gradient-brand"
-          >
-            goals.ac
+          <Link to="/" className="hover:opacity-90 transition-opacity">
+            <Logo />
           </Link>
           <nav className="flex items-center gap-4 text-sm font-medium">
             <Link
@@ -123,9 +121,9 @@ export function Layout({ children }: LayoutProps) {
 
       <footer className="border-t border-white/[0.06] bg-black/20 py-12 mt-auto backdrop-blur-sm">
         <div className="container mx-auto px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <p className="font-medium">
-            <span className="text-gradient-brand">goals.ac</span>
-            <span className="ml-2">© {new Date().getFullYear()}. All rights reserved.</span>
+          <p className="font-medium flex items-center gap-2">
+            <Logo size={20} />
+            <span>© {new Date().getFullYear()}. All rights reserved.</span>
           </p>
           <div className="flex gap-4">
             <Link to="/roadmaps" className="hover:text-foreground transition-colors">Roadmaps</Link>
