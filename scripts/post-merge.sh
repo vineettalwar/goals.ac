@@ -5,9 +5,9 @@ pnpm --filter db push
 
 # Push to GitHub automatically after each task merge
 if [ -z "$GITHUB_TOKEN" ]; then
-  echo "ERROR: GITHUB_TOKEN is not set. GitHub sync cannot proceed." >&2
+  echo "WARNING: GITHUB_TOKEN is not set. Skipping GitHub sync." >&2
   echo "Hint: add GITHUB_TOKEN as a Replit Secret with 'repo' scope." >&2
-  exit 1
+  exit 0
 fi
 
 # Use a temporary askpass script so the token is never written to .git/config
