@@ -62,7 +62,7 @@ export function Layout({ children }: LayoutProps) {
                     <ChevronDown className="h-3 w-3 text-muted-foreground hidden sm:block" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 glass-card-md border-white/10">
+                <DropdownMenuContent align="end" className="w-48 bg-[hsl(227,34%,7%)] border border-white/15 shadow-xl">
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard" className="flex items-center gap-2">
                       <LayoutDashboard className="h-4 w-4" />
