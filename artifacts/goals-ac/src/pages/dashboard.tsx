@@ -253,7 +253,7 @@ export default function Dashboard() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
-                      <Button size="sm" asChild className="bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30 dark:hover:bg-blue-500/30">
+                      <Button size="sm" asChild className="border bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30 dark:hover:bg-blue-500/30">
                         <Link to={`/projects/${project.id}`}>Open</Link>
                       </Button>
                     </div>
