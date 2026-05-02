@@ -47,3 +47,6 @@ channel = "stable-25_05"
 
 [userenv.production]
 APP_ORIGIN = "https://goals.ac"
+
+[userenv.shared]
+RESEND_FROM_EMAIL = "noreply@goals.ac"

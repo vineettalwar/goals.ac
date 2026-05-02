@@ -141,7 +141,8 @@ router.post("/auth/forgot-password", async (req, res) => {
       .set({ passwordResetToken: resetToken, passwordResetExpires: resetExpires })
       .where(eq(usersTable.id, user.id));
 
-    const appOrigin = process.env["APP_ORIGIN"] ?? "https://goals.ac";
+    const devDomain = process.env["REPLIT_DEV_DOMAIN"];
+    const appOrigin = process.env["APP_ORIGIN"] ?? (devDomain ? `https://${devDomain}` : "https://goals.ac");
     const resetUrl = `${appOrigin}/reset-password?token=${resetToken}`;
 
     try {
