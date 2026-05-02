@@ -1,1 +1,0 @@
--- snapshot baseline: no new DDL (changes already applied via 0010 and 0011)
