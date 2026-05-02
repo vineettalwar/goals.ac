@@ -78,6 +78,13 @@
       "when": 1746203400000,
       "tag": "0010_published_url_content_pieces",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1746290000000,
+      "tag": "0011_google_oauth_role",
+      "breakpoints": true
     }
   ]
 }

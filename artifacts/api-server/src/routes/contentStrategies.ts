@@ -4,7 +4,7 @@ import { contentStrategiesTable, contentItemsTable, roadmapsTable, websiteProjec
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { generateContentStrategy } from "../services/contentStrategyGenerator";
-import { requireAuth, optionalAuth } from "../lib/auth";
+import { requireAuth, requireSuperAdmin, optionalAuth } from "../lib/auth";
 
 const router: IRouter = Router();
 
@@ -111,34 +111,45 @@ router.post("/content-strategies/generate", optionalAuth, async (req, res) => {
 router.get("/content-strategies", requireAuth, async (req, res) => {
   try {
     const roadmapId = req.query.roadmap_id ? Number(req.query.roadmap_id) : null;
+    const isSuperAdmin = req.user!.role === "super_admin";
 
-    const userProjects = await db
-      .select({ id: websiteProjectsTable.id })
-      .from(websiteProjectsTable)
-      .where(eq(websiteProjectsTable.userId, req.user!.userId));
+    let strategies;
 
-    const projectIds = userProjects.map((p) => p.id);
-
-    if (projectIds.length === 0) {
-      res.json([]);
-      return;
-    }
-
-    let whereClause;
-    if (roadmapId) {
-      whereClause = and(
-        eq(contentStrategiesTable.roadmapId, roadmapId),
-        inArray(contentStrategiesTable.websiteProjectId, projectIds),
-      );
+    if (isSuperAdmin) {
+      strategies = await db
+        .select()
+        .from(contentStrategiesTable)
+        .where(roadmapId ? eq(contentStrategiesTable.roadmapId, roadmapId) : undefined)
+        .orderBy(contentStrategiesTable.createdAt);
     } else {
-      whereClause = inArray(contentStrategiesTable.websiteProjectId, projectIds);
-    }
+      const userProjects = await db
+        .select({ id: websiteProjectsTable.id })
+        .from(websiteProjectsTable)
+        .where(eq(websiteProjectsTable.userId, req.user!.userId));
 
-    const strategies = await db
-      .select()
-      .from(contentStrategiesTable)
-      .where(whereClause)
-      .orderBy(contentStrategiesTable.createdAt);
+      const projectIds = userProjects.map((p) => p.id);
+
+      if (projectIds.length === 0) {
+        res.json([]);
+        return;
+      }
+
+      let whereClause;
+      if (roadmapId) {
+        whereClause = and(
+          eq(contentStrategiesTable.roadmapId, roadmapId),
+          inArray(contentStrategiesTable.websiteProjectId, projectIds),
+        );
+      } else {
+        whereClause = inArray(contentStrategiesTable.websiteProjectId, projectIds);
+      }
+
+      strategies = await db
+        .select()
+        .from(contentStrategiesTable)
+        .where(whereClause)
+        .orderBy(contentStrategiesTable.createdAt);
+    }
 
     res.json(strategies);
   } catch (err) {
@@ -166,7 +177,7 @@ router.get("/content-strategies/:id", optionalAuth, async (req, res) => {
       return;
     }
 
-    if (strategy.websiteProjectId) {
+    if (strategy.websiteProjectId && req.user?.role !== "super_admin") {
       if (!req.user) {
         res.status(401).json({ error: "Authentication required" });
         return;
@@ -222,7 +233,7 @@ router.patch("/content-strategies/:id/items/:itemId", requireAuth, async (req, r
       return;
     }
 
-    if (strategy.websiteProjectId) {
+    if (strategy.websiteProjectId && req.user!.role !== "super_admin") {
       const [proj] = await db
         .select({ id: websiteProjectsTable.id })
         .from(websiteProjectsTable)

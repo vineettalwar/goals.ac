@@ -9,6 +9,18 @@ import crypto from "crypto";
 
 const router: IRouter = Router();
 
+const GOOGLE_CLIENT_ID = process.env["GOOGLE_CLIENT_ID"];
+const GOOGLE_CLIENT_SECRET = process.env["GOOGLE_CLIENT_SECRET"];
+
+function getAppOrigin(): string {
+  const devDomain = process.env["REPLIT_DEV_DOMAIN"];
+  return process.env["APP_ORIGIN"] ?? (devDomain ? `https://${devDomain}` : "https://goals.ac");
+}
+
+function getGoogleCallbackUrl(): string {
+  return `${getAppOrigin()}/api/auth/google/callback`;
+}
+
 const SignupBody = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
@@ -49,11 +61,11 @@ router.post("/auth/signup", async (req, res) => {
     const [user] = await db
       .insert(usersTable)
       .values({ name, email, passwordHash })
-      .returning({ id: usersTable.id, email: usersTable.email, name: usersTable.name });
+      .returning({ id: usersTable.id, email: usersTable.email, name: usersTable.name, role: usersTable.role });
 
-    const token = signToken({ userId: user.id, email: user.email });
+    const token = signToken({ userId: user.id, email: user.email, role: user.role });
 
-    res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name } });
+    res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {
     req.log.error(err, "Failed to sign up user");
     res.status(500).json({ error: "Internal server error" });
@@ -72,7 +84,7 @@ router.post("/auth/login", async (req, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
 
-    if (!user) {
+    if (!user || !user.passwordHash) {
       res.status(401).json({ error: "Invalid email or password" });
       return;
     }
@@ -83,9 +95,9 @@ router.post("/auth/login", async (req, res) => {
       return;
     }
 
-    const token = signToken({ userId: user.id, email: user.email });
+    const token = signToken({ userId: user.id, email: user.email, role: user.role });
 
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name } });
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {
     req.log.error(err, "Failed to log in user");
     res.status(500).json({ error: "Internal server error" });
@@ -95,7 +107,7 @@ router.post("/auth/login", async (req, res) => {
 router.get("/auth/me", requireAuth, async (req, res) => {
   try {
     const [user] = await db
-      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, createdAt: usersTable.createdAt })
+      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, role: usersTable.role, createdAt: usersTable.createdAt })
       .from(usersTable)
       .where(eq(usersTable.id, req.user!.userId))
       .limit(1);
@@ -109,6 +121,114 @@ router.get("/auth/me", requireAuth, async (req, res) => {
   } catch (err) {
     req.log.error(err, "Failed to fetch user");
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/auth/google", (req, res) => {
+  if (!GOOGLE_CLIENT_ID) {
+    res.status(503).json({ error: "Google OAuth is not configured" });
+    return;
+  }
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    redirect_uri: getGoogleCallbackUrl(),
+    response_type: "code",
+    scope: "openid email profile",
+    access_type: "offline",
+    prompt: "select_account",
+  });
+  res.redirect(`https://accounts.google.com/o/oauth2/v2/auth?${params}`);
+});
+
+router.get("/auth/google/callback", async (req, res) => {
+  const appOrigin = getAppOrigin();
+  const { code, error: oauthError } = req.query;
+
+  if (oauthError || !code || typeof code !== "string") {
+    res.redirect(`${appOrigin}/login?error=oauth_failed`);
+    return;
+  }
+
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+    res.redirect(`${appOrigin}/login?error=oauth_failed`);
+    return;
+  }
+
+  try {
+    const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        code,
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        redirect_uri: getGoogleCallbackUrl(),
+        grant_type: "authorization_code",
+      }),
+    });
+
+    const tokenData = await tokenRes.json() as { access_token?: string; error?: string };
+    if (!tokenData.access_token) {
+      req.log.error({ tokenData }, "Google token exchange failed");
+      res.redirect(`${appOrigin}/login?error=oauth_failed`);
+      return;
+    }
+
+    const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const profile = await profileRes.json() as { id: string; email: string; name: string };
+
+    if (!profile.id || !profile.email) {
+      res.redirect(`${appOrigin}/login?error=oauth_failed`);
+      return;
+    }
+
+    let user: typeof usersTable.$inferSelect;
+
+    const [byGoogleId] = await db.select().from(usersTable).where(eq(usersTable.googleId, profile.id)).limit(1);
+    if (byGoogleId) {
+      user = byGoogleId;
+    } else {
+      const [byEmail] = await db.select().from(usersTable).where(eq(usersTable.email, profile.email)).limit(1);
+      if (byEmail) {
+        const [updated] = await db
+          .update(usersTable)
+          .set({ googleId: profile.id })
+          .where(eq(usersTable.id, byEmail.id))
+          .returning();
+        user = updated;
+      } else {
+        const [created] = await db
+          .insert(usersTable)
+          .values({ email: profile.email, name: profile.name, googleId: profile.id })
+          .returning();
+        user = created;
+      }
+    }
+
+    const SUPER_ADMIN_EMAIL = "vineettalwar007@gmail.com";
+    if (user.email === SUPER_ADMIN_EMAIL && user.role !== "super_admin") {
+      const [promoted] = await db
+        .update(usersTable)
+        .set({ role: "super_admin" })
+        .where(eq(usersTable.id, user.id))
+        .returning();
+      user = promoted;
+    }
+
+    const jwtToken = signToken({ userId: user.id, email: user.email, role: user.role });
+    const params = new URLSearchParams({
+      token: jwtToken,
+      id: String(user.id),
+      email: user.email,
+      name: user.name,
+      role: user.role,
+    });
+    res.redirect(`${appOrigin}/oauth-callback?${params}`);
+  } catch (err) {
+    req.log.error(err, "Google OAuth callback failed");
+    res.redirect(`${appOrigin}/login?error=oauth_failed`);
   }
 });
 
@@ -142,9 +262,7 @@ router.post("/auth/forgot-password", async (req, res) => {
       .set({ passwordResetToken: tokenHash, passwordResetExpires: resetExpires })
       .where(eq(usersTable.id, user.id));
 
-    const devDomain = process.env["REPLIT_DEV_DOMAIN"];
-    const appOrigin = process.env["APP_ORIGIN"] ?? (devDomain ? `https://${devDomain}` : "https://goals.ac");
-    const resetUrl = `${appOrigin}/reset-password?token=${rawToken}`;
+    const resetUrl = `${getAppOrigin()}/reset-password?token=${rawToken}`;
 
     try {
       await sendEmail({
@@ -195,16 +313,12 @@ router.post("/auth/reset-password", async (req, res) => {
 
     await db
       .update(usersTable)
-      .set({
-        passwordHash,
-        passwordResetToken: null,
-        passwordResetExpires: null,
-      })
+      .set({ passwordHash, passwordResetToken: null, passwordResetExpires: null })
       .where(eq(usersTable.id, user.id));
 
-    const jwtToken = signToken({ userId: user.id, email: user.email });
+    const jwtToken = signToken({ userId: user.id, email: user.email, role: user.role });
 
-    res.json({ token: jwtToken, user: { id: user.id, email: user.email, name: user.name } });
+    res.json({ token: jwtToken, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {
     req.log.error(err, "Failed to reset password");
     res.status(500).json({ error: "Internal server error" });

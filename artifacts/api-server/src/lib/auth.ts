@@ -20,6 +20,7 @@ export function comparePassword(password: string, hash: string): Promise<boolean
 export interface JwtPayload {
   userId: number;
   email: string;
+  role: string;
 }
 
 export function signToken(payload: JwtPayload): string {
@@ -53,6 +54,18 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
   } catch {
     res.status(401).json({ error: "Invalid or expired token" });
   }
+}
+
+export function requireSuperAdmin(req: Request, res: Response, next: NextFunction): void {
+  if (!req.user) {
+    res.status(401).json({ error: "Authentication required" });
+    return;
+  }
+  if (req.user.role !== "super_admin") {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+  next();
 }
 
 export function optionalAuth(req: Request, _res: Response, next: NextFunction): void {

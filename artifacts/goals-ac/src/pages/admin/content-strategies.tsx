@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useSearchParams, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Layout } from "@/components/layout";
+import { useAuth } from "@/context/auth";
 import {
   useListContentStrategies,
   getListContentStrategiesQueryKey,
@@ -15,20 +16,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Circle, ChevronLeft } from "lucide-react";
 import { format } from "date-fns";
 
-const ADMIN_SECRET = import.meta.env.VITE_ADMIN_SECRET;
-
 function useAdminGuard() {
-  const [searchParams] = useSearchParams();
-  const secret = searchParams.get("secret");
-  const envSecret = ADMIN_SECRET;
-  if (envSecret) {
-    return secret === envSecret;
-  }
-  return !!secret;
+  const { user } = useAuth();
+  return user?.role === "super_admin";
 }
 
-function StrategyDetail({ id, secret }: { id: number; secret: string }) {
-  const { data: strategy, isLoading } = useGetContentStrategy(id);
+function StrategyDetail({ id }: { id: number }) {
+  const { data: strategy, isLoading } = useGetContentStrategy(id, {
+    query: { queryKey: getGetContentStrategyQueryKey(id) },
+  });
   const updateItem = useUpdateContentItem();
 
   if (isLoading || !strategy) {
@@ -57,7 +53,7 @@ function StrategyDetail({ id, secret }: { id: number; secret: string }) {
     <div>
       <div className="flex items-center gap-3 mb-6">
         <Button variant="ghost" size="sm" asChild>
-          <Link to={`/admin/content-strategies?secret=${secret}`}>
+          <Link to="/admin/content-strategies">
             <ChevronLeft className="w-4 h-4 mr-1" />
             All Strategies
           </Link>
@@ -114,15 +110,15 @@ function StrategyDetail({ id, secret }: { id: number; secret: string }) {
 }
 
 export default function AdminContentStrategies() {
-  const [searchParams] = useSearchParams();
-  const secret = searchParams.get("secret") ?? "";
   const [selectedId, setSelectedId] = useState<number | null>(null);
-
+  const { isLoading: authLoading } = useAuth();
   const isAuthorized = useAdminGuard();
 
   const { data: strategies, isLoading } = useListContentStrategies({
     query: { enabled: isAuthorized, queryKey: getListContentStrategiesQueryKey() },
   });
+
+  if (authLoading) return null;
 
   if (!isAuthorized) {
     return (
@@ -130,7 +126,7 @@ export default function AdminContentStrategies() {
         <div className="container mx-auto px-4 py-24 text-center max-w-md">
           <h1 className="text-2xl font-bold mb-3">Access Denied</h1>
           <p className="text-muted-foreground text-sm">
-            Provide the admin secret via <code className="bg-muted px-1 rounded">?secret=...</code> query parameter.
+            This page is restricted to super admins.
           </p>
         </div>
       </Layout>
@@ -146,7 +142,7 @@ export default function AdminContentStrategies() {
         </div>
 
         {selectedId ? (
-          <StrategyDetail id={selectedId} secret={secret} />
+          <StrategyDetail id={selectedId} />
         ) : (
           <>
             {isLoading ? (
