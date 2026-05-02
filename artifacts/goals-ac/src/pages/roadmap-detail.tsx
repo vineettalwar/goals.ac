@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText, Zap, FolderOpen, BookmarkPlus, BookmarkCheck, Plus } from "lucide-react";
+import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText, Zap, FolderOpen, BookmarkPlus, BookmarkCheck, Plus, KeyRound } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/context/active-project";

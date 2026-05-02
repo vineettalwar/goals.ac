@@ -50,4 +50,3 @@ APP_ORIGIN = "https://goals.ac"
 
 [userenv.shared]
 RESEND_FROM_EMAIL = "noreply@goals.ac"
-GEMINI_KEY_ENCRYPTION_SECRET = "e134434e4af88423124d297920ef0225a834960321db1f9be480ebf29697f3c8"

@@ -10,7 +10,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useListIndustries, useListLocations, useGenerateRoadmap, GenerateRoadmapRequestStage } from "@workspace/api-client-react";
-import { Loader2, Target, Pencil, LayoutGrid, Bookmark, GitBranch, Key } from "lucide-react";
+import { Loader2, Target, Pencil, LayoutGrid, Bookmark, GitBranch, Key, KeyRound } from "lucide-react";
+import { useAuth } from "@/context/auth";
 
 const stageValues = Object.values(GenerateRoadmapRequestStage) as [
   GenerateRoadmapRequestStage,
