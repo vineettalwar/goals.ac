@@ -3,7 +3,7 @@ import { logger } from "../lib/logger";
 import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "../lib/geminiClient";
 import { getCache } from "../lib/cache";
 import type { GoogleGenAI } from "@google/genai";
-import type { ContentFormatType } from "@workspace/db";
+import type { ContentFormatType, ContentStyle } from "@workspace/db";
 
 export interface ContentPieceResult {
   title: string;
@@ -18,6 +18,7 @@ interface BrandContext {
   targetAudience: string;
   voiceTone: string;
   primaryKeywords: string[];
+  contentStyle?: ContentStyle | null;
 }
 
 const SYSTEM_PROMPT = `You are a world-class SEO content strategist and writer. You produce authoritative, deeply researched content that ranks on Google and is cited by AI search tools like ChatGPT, Perplexity, and Claude.
@@ -237,9 +238,28 @@ const FORMAT_CONFIGS: Record<ContentFormatType, { label: string; wordRange: stri
   },
 };
 
+function buildContentStyleContext(style?: ContentStyle | null): string {
+  if (!style) return "";
+  const lines: string[] = [];
+  if (style.personaName) lines.push(`WRITING PERSONA: ${style.personaName}`);
+  if (style.tonePreset) lines.push(`TONE: ${style.tonePreset}`);
+  if (style.defaultWordCount) lines.push(`TARGET WORD COUNT: ~${style.defaultWordCount} words (override format default if instructed)`);
+  if (style.primaryLanguage && style.primaryLanguage !== "English") lines.push(`LANGUAGE: ${style.primaryLanguage}`);
+  if (style.readingLevel) lines.push(`READING LEVEL: ${style.readingLevel}`);
+  if (style.forbiddenWords && style.forbiddenWords.length > 0) {
+    lines.push(`DO NOT USE THESE WORDS/PHRASES: ${style.forbiddenWords.join(", ")}`);
+  }
+  if (lines.length === 0) return "";
+  return "\nCONTENT STYLE GUIDELINES:\n" + lines.map((l) => `- ${l}`).join("\n");
+}
+
 function buildPrompt(format: ContentFormatType, brand: BrandContext, keyword: string, angleHint?: string): string {
   const config = FORMAT_CONFIGS[format];
   const kwList = brand.primaryKeywords.length > 0 ? brand.primaryKeywords.slice(0, 5).join(", ") : keyword;
+  const wordRange = brand.contentStyle?.defaultWordCount
+    ? `~${brand.contentStyle.defaultWordCount}`
+    : config.wordRange;
+  const styleContext = buildContentStyleContext(brand.contentStyle);
 
   return `Create a ${config.label} for ${brand.companyName} (${brand.websiteUrl}), a company in the ${brand.industry} industry.
 
@@ -247,9 +267,9 @@ TARGET KEYWORD: "${keyword}"
 BRAND VOICE: ${brand.voiceTone || "Professional, clear, and authoritative"}
 TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
 RELATED KEYWORDS TO WEAVE IN: ${kwList}
-${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}
+${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${styleContext}
 
-Write ${config.wordRange} words following this structure:
+Write ${wordRange} words following this structure:
 ${config.structure}
 
 Return ONLY this exact JSON with no additional text:
@@ -270,6 +290,7 @@ Requirements:
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export function buildCacheKey(format: string, keyword: string, brand: BrandContext, angleHint?: string): string {
+  const style = brand.contentStyle;
   const raw = [
     format,
     keyword.toLowerCase().trim(),
@@ -280,6 +301,12 @@ export function buildCacheKey(format: string, keyword: string, brand: BrandConte
     brand.targetAudience,
     (brand.primaryKeywords ?? []).slice().sort().join(","),
     angleHint?.trim() ?? "",
+    style?.tonePreset ?? "",
+    style?.personaName ?? "",
+    style?.defaultWordCount?.toString() ?? "",
+    style?.primaryLanguage ?? "",
+    style?.readingLevel ?? "",
+    (style?.forbiddenWords ?? []).slice().sort().join(","),
   ].join("::");
   return createHash("sha256").update(raw).digest("hex").slice(0, 16);
 }
@@ -470,6 +497,7 @@ function buildRepurposePrompt(
   existingKeyword: string,
 ): string {
   const config = FORMAT_CONFIGS[targetFormat];
+  const styleContext = buildContentStyleContext(brand.contentStyle);
   return `Repurpose the following existing content into a ${config.label} for ${brand.companyName} (${brand.websiteUrl}).
 
 EXISTING CONTENT:
@@ -478,7 +506,7 @@ ${existingContent.slice(0, 4000)}
 TARGET FORMAT: ${config.label} (${config.wordRange} words)
 TARGET KEYWORD: "${existingKeyword}"
 BRAND VOICE: ${brand.voiceTone || "Professional, clear, and authoritative"}
-TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
+TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}${styleContext}
 
 Rewrite the content following this structure:
 ${config.structure}

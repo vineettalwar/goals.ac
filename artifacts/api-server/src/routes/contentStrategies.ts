@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { contentStrategiesTable, contentItemsTable, roadmapsTable, websiteProjectsTable } from "@workspace/db";
+import type { ContentStyle } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { generateContentStrategy, generateContentStrategyWithProgress } from "../services/contentStrategyGenerator";
@@ -31,14 +32,16 @@ router.post("/content-strategies/generate/stream", optionalAuth, async (req, res
   const { roadmap_id, industry, location, stage, website_project_id } = parsed.data;
 
   let validatedProjectId: number | null = null;
+  let projectContentStyle: ContentStyle | null = null;
   if (website_project_id && req.user) {
     const [proj] = await db
-      .select({ id: websiteProjectsTable.id })
+      .select({ id: websiteProjectsTable.id, contentStyle: websiteProjectsTable.contentStyle })
       .from(websiteProjectsTable)
       .where(and(eq(websiteProjectsTable.id, website_project_id), eq(websiteProjectsTable.userId, req.user.userId)))
       .limit(1);
     if (!proj) { res.status(403).json({ error: "You do not have access to this project" }); return; }
     validatedProjectId = website_project_id;
+    projectContentStyle = proj.contentStyle as ContentStyle | null;
   }
 
   const roadmap = await db.select().from(roadmapsTable).where(eq(roadmapsTable.id, roadmap_id)).limit(1);
@@ -64,6 +67,7 @@ router.post("/content-strategies/generate/stream", optionalAuth, async (req, res
           sendEvent("progress", { batchNum, totalBatches, itemCount: batchItems.length });
         },
         userApiKey,
+        projectContentStyle,
       );
     } catch (err) {
       req.log.error(err, "Gemini content strategy stream generation failed");
@@ -102,10 +106,11 @@ router.post("/content-strategies/generate", optionalAuth, async (req, res) => {
   const { roadmap_id, industry, location, stage, website_project_id } = parsed.data;
 
   let validatedProjectId: number | null = null;
+  let projectContentStyle: ContentStyle | null = null;
 
   if (website_project_id && req.user) {
     const [proj] = await db
-      .select({ id: websiteProjectsTable.id })
+      .select({ id: websiteProjectsTable.id, contentStyle: websiteProjectsTable.contentStyle })
       .from(websiteProjectsTable)
       .where(and(eq(websiteProjectsTable.id, website_project_id), eq(websiteProjectsTable.userId, req.user.userId)))
       .limit(1);
@@ -114,6 +119,7 @@ router.post("/content-strategies/generate", optionalAuth, async (req, res) => {
       return;
     }
     validatedProjectId = website_project_id;
+    projectContentStyle = proj.contentStyle as ContentStyle | null;
   }
 
   try {
@@ -134,7 +140,7 @@ router.post("/content-strategies/generate", optionalAuth, async (req, res) => {
 
     let items;
     try {
-      items = await generateContentStrategy(industry, location, stage, userApiKey);
+      items = await generateContentStrategy(industry, location, stage, userApiKey, projectContentStyle);
     } catch (err) {
       req.log.error(err, "Gemini content strategy generation failed");
       res.status(503).json({

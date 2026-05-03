@@ -161,6 +161,7 @@ router.post("/website-projects/:id/content-pieces/generate", requireAuth, async 
       targetAudience: brandProfile?.targetAudience ?? "",
       voiceTone: brandProfile?.voiceTone ?? "",
       primaryKeywords: brandProfile?.primaryKeywords ?? [],
+      contentStyle: project.contentStyle ?? null,
     };
 
     const bypassCache = req.headers["x-bypass-cache"] === "true";
@@ -219,6 +220,7 @@ router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth,
       targetAudience: brandProfile?.targetAudience ?? "",
       voiceTone: brandProfile?.voiceTone ?? "",
       primaryKeywords: brandProfile?.primaryKeywords ?? [],
+      contentStyle: project.contentStyle ?? null,
     };
 
     res.setHeader("Content-Type", "text/event-stream");
@@ -604,6 +606,7 @@ router.post("/content-pieces/:id/regenerate", requireAuth, async (req, res) => {
       targetAudience: brandProfile?.targetAudience ?? "",
       voiceTone: brandProfile?.voiceTone ?? "",
       primaryKeywords: brandProfile?.primaryKeywords ?? [],
+      contentStyle: project.contentStyle ?? null,
     };
 
     const result = await generateContentPiece(piece.formatType as ContentFormatType, brand, piece.targetKeyword, undefined, true);
@@ -664,6 +667,7 @@ router.post("/website-projects/:id/content-pieces/repurpose", requireAuth, async
       targetAudience: brandProfile?.targetAudience ?? "",
       voiceTone: brandProfile?.voiceTone ?? "",
       primaryKeywords: brandProfile?.primaryKeywords ?? [],
+      contentStyle: project.contentStyle ?? null,
     };
 
     const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
@@ -752,6 +756,7 @@ router.post("/content-pieces/:id/repurpose", requireAuth, async (req, res) => {
       targetAudience: brandProfile?.targetAudience ?? "",
       voiceTone: brandProfile?.voiceTone ?? "",
       primaryKeywords: brandProfile?.primaryKeywords ?? [],
+      contentStyle: project.contentStyle ?? null,
     };
 
     const sourceContent = bodyOverride ?? piece.bodyMarkdown;

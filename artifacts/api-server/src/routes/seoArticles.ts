@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { seoArticlesTable, websiteProjectsTable } from "@workspace/db";
+import type { ContentStyle } from "@workspace/db";
 import { eq, desc, and, inArray } from "drizzle-orm";
 import { generateSeoArticleContent, generateSeoArticleContentStream } from "../services/seoContentGenerator";
 import { logger } from "../lib/logger";
@@ -19,15 +20,17 @@ router.post("/seo-articles/generate/stream", optionalAuth, async (req, res) => {
     }
 
     let validatedProjectId: number | null = null;
+    let projectContentStyle: ContentStyle | null = null;
     if (website_project_id && req.user) {
       const projectIdNum = Number(website_project_id);
       const [proj] = await db
-        .select({ id: websiteProjectsTable.id })
+        .select({ id: websiteProjectsTable.id, contentStyle: websiteProjectsTable.contentStyle })
         .from(websiteProjectsTable)
         .where(and(eq(websiteProjectsTable.id, projectIdNum), eq(websiteProjectsTable.userId, req.user.userId)))
         .limit(1);
       if (!proj) { res.status(403).json({ error: "You do not have access to this project" }); return; }
       validatedProjectId = projectIdNum;
+      projectContentStyle = proj.contentStyle as ContentStyle | null;
     }
 
     res.setHeader("Content-Type", "text/event-stream");
@@ -51,6 +54,7 @@ router.post("/seo-articles/generate/stream", optionalAuth, async (req, res) => {
         stage as string,
         (chunk) => sendEvent("chunk", { text: chunk }),
         userApiKey,
+        projectContentStyle,
       );
     } catch (err) {
       logger.error({ err }, "Failed to stream SEO article");
@@ -99,11 +103,12 @@ router.post("/seo-articles/generate", optionalAuth, async (req, res) => {
     }
 
     let validatedProjectId: number | null = null;
+    let projectContentStyle: ContentStyle | null = null;
 
     if (website_project_id && req.user) {
       const projectIdNum = Number(website_project_id);
       const [proj] = await db
-        .select({ id: websiteProjectsTable.id })
+        .select({ id: websiteProjectsTable.id, contentStyle: websiteProjectsTable.contentStyle })
         .from(websiteProjectsTable)
         .where(and(eq(websiteProjectsTable.id, projectIdNum), eq(websiteProjectsTable.userId, req.user.userId)))
         .limit(1);
@@ -111,6 +116,7 @@ router.post("/seo-articles/generate", optionalAuth, async (req, res) => {
         return res.status(403).json({ error: "You do not have access to this project" });
       }
       validatedProjectId = projectIdNum;
+      projectContentStyle = proj.contentStyle as ContentStyle | null;
     }
 
     const userApiKey = req.user ? await getDecryptedUserGeminiKey(req.user.userId) : null;
@@ -122,6 +128,7 @@ router.post("/seo-articles/generate", optionalAuth, async (req, res) => {
       location as string,
       stage as string,
       userApiKey,
+      projectContentStyle,
     );
 
     const wordCount = articleContent.content.split(/\s+/).filter(Boolean).length;

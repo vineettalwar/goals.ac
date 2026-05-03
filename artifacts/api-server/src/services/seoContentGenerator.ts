@@ -1,6 +1,7 @@
 import { logger } from "../lib/logger";
 import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "../lib/geminiClient";
 import type { GoogleGenAI } from "@google/genai";
+import type { ContentStyle } from "@workspace/db";
 
 export interface SeoArticleContent {
   title: string;
@@ -16,12 +17,28 @@ Your articles are brand-aligned, industry-specific, and location-aware. They com
 
 You MUST respond with a single valid JSON object and nothing else. No markdown, no code blocks, no explanation — only raw JSON.`;
 
+function buildContentStyleContext(style?: ContentStyle | null): string {
+  if (!style) return "";
+  const lines: string[] = [];
+  if (style.personaName) lines.push(`WRITING PERSONA: ${style.personaName}`);
+  if (style.tonePreset) lines.push(`TONE: ${style.tonePreset}`);
+  if (style.defaultWordCount) lines.push(`TARGET WORD COUNT: ~${style.defaultWordCount} words`);
+  if (style.primaryLanguage && style.primaryLanguage !== "English") lines.push(`LANGUAGE: ${style.primaryLanguage}`);
+  if (style.readingLevel) lines.push(`READING LEVEL: ${style.readingLevel}`);
+  if (style.forbiddenWords && style.forbiddenWords.length > 0) {
+    lines.push(`DO NOT USE THESE WORDS/PHRASES: ${style.forbiddenWords.join(", ")}`);
+  }
+  if (lines.length === 0) return "";
+  return "\nCONTENT STYLE GUIDELINES:\n" + lines.map((l) => `- ${l}`).join("\n");
+}
+
 function buildPrompt(
   brandName: string,
   websiteUrl: string,
   industry: string,
   location: string,
   stage: string,
+  contentStyle?: ContentStyle | null,
 ): string {
   const stageContext: Record<string, string> = {
     "pre-seed": "early-stage startup validating its concept",
@@ -32,10 +49,14 @@ function buildPrompt(
   };
 
   const stageDesc = stageContext[stage] ?? stage;
+  const wordRange = contentStyle?.defaultWordCount
+    ? `${contentStyle.defaultWordCount}–${Math.round(contentStyle.defaultWordCount * 1.25)}`
+    : "1200–1500";
+  const styleContext = buildContentStyleContext(contentStyle);
 
   return `Write a comprehensive, brand-aligned SEO article for ${brandName} (${websiteUrl}), a ${stageDesc} in the ${industry} industry based in ${location}.
 
-The article must be 1200–1500 words, structured for both search ranking and AI citation. Write from the perspective of a knowledgeable insider in the ${industry} space in ${location}.
+The article must be ${wordRange} words, structured for both search ranking and AI citation. Write from the perspective of a knowledgeable insider in the ${industry} space in ${location}.${styleContext}
 
 Return ONLY this exact JSON structure with no additional text:
 
@@ -70,8 +91,9 @@ async function generateWithClient(
   industry: string,
   location: string,
   stage: string,
+  contentStyle?: ContentStyle | null,
 ): Promise<SeoArticleContent> {
-  const prompt = buildPrompt(brandName, websiteUrl, industry, location, stage);
+  const prompt = buildPrompt(brandName, websiteUrl, industry, location, stage, contentStyle);
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -115,11 +137,12 @@ export async function generateSeoArticleContent(
   location: string,
   stage: string,
   userApiKey?: string | null,
+  contentStyle?: ContentStyle | null,
 ): Promise<SeoArticleContent> {
   if (userApiKey) {
     try {
       const userClient = await createUserGeminiClient(userApiKey);
-      return await generateWithClient(userClient, brandName, websiteUrl, industry, location, stage);
+      return await generateWithClient(userClient, brandName, websiteUrl, industry, location, stage, contentStyle);
     } catch (err) {
       if (isUserKeyError(err)) {
         logger.warn({ err }, "User Gemini key failed for SEO article generation, falling back to platform key");
@@ -136,7 +159,7 @@ export async function generateSeoArticleContent(
     );
   }
 
-  return generateWithClient(platformClient, brandName, websiteUrl, industry, location, stage);
+  return generateWithClient(platformClient, brandName, websiteUrl, industry, location, stage, contentStyle);
 }
 
 async function generateStreamWithClient(
@@ -147,8 +170,9 @@ async function generateStreamWithClient(
   location: string,
   stage: string,
   onChunk: (text: string) => void,
+  contentStyle?: ContentStyle | null,
 ): Promise<SeoArticleContent> {
-  const prompt = buildPrompt(brandName, websiteUrl, industry, location, stage);
+  const prompt = buildPrompt(brandName, websiteUrl, industry, location, stage, contentStyle);
   let accumulated = "";
 
   const stream = await ai.models.generateContentStream({
@@ -184,11 +208,12 @@ export async function generateSeoArticleContentStream(
   stage: string,
   onChunk: (text: string) => void,
   userApiKey?: string | null,
+  contentStyle?: ContentStyle | null,
 ): Promise<SeoArticleContent> {
   if (userApiKey) {
     try {
       const userClient = await createUserGeminiClient(userApiKey);
-      return await generateStreamWithClient(userClient, brandName, websiteUrl, industry, location, stage, onChunk);
+      return await generateStreamWithClient(userClient, brandName, websiteUrl, industry, location, stage, onChunk, contentStyle);
     } catch (err) {
       if (isUserKeyError(err)) {
         logger.warn({ err }, "User Gemini key failed for SEO article stream, falling back to platform key");
@@ -205,5 +230,5 @@ export async function generateSeoArticleContentStream(
     );
   }
 
-  return generateStreamWithClient(platformClient, brandName, websiteUrl, industry, location, stage, onChunk);
+  return generateStreamWithClient(platformClient, brandName, websiteUrl, industry, location, stage, onChunk, contentStyle);
 }

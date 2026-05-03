@@ -1,6 +1,7 @@
 import { logger } from "../lib/logger";
 import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "../lib/geminiClient";
 import type { GoogleGenAI } from "@google/genai";
+import type { ContentStyle } from "@workspace/db";
 
 export interface ContentItem {
   day: number;
@@ -14,8 +15,23 @@ const SYSTEM_PROMPT = `You are a senior content strategist specializing in B2B S
 
 You MUST respond with a single valid JSON array and nothing else. No markdown, no code blocks, no explanation — only raw JSON.`;
 
-function buildBatchPrompt(industry: string, location: string, stage: string, startDay: number, endDay: number): string {
-  return `Generate days ${startDay} to ${endDay} of a 30-day content strategy for a ${industry} startup based in ${location} at the ${stage} stage.
+function buildContentStyleContext(style?: ContentStyle | null): string {
+  if (!style) return "";
+  const lines: string[] = [];
+  if (style.personaName) lines.push(`Writing Persona: ${style.personaName}`);
+  if (style.tonePreset) lines.push(`Tone: ${style.tonePreset}`);
+  if (style.primaryLanguage && style.primaryLanguage !== "English") lines.push(`Language: ${style.primaryLanguage}`);
+  if (style.readingLevel) lines.push(`Reading Level: ${style.readingLevel}`);
+  if (style.forbiddenWords && style.forbiddenWords.length > 0) {
+    lines.push(`Avoid these words/phrases: ${style.forbiddenWords.join(", ")}`);
+  }
+  if (lines.length === 0) return "";
+  return "\n\nContent Style Guidelines:\n" + lines.map((l) => `- ${l}`).join("\n");
+}
+
+function buildBatchPrompt(industry: string, location: string, stage: string, startDay: number, endDay: number, contentStyle?: ContentStyle | null): string {
+  const styleContext = buildContentStyleContext(contentStyle);
+  return `Generate days ${startDay} to ${endDay} of a 30-day content strategy for a ${industry} startup based in ${location} at the ${stage} stage.${styleContext}
 
 Return ONLY a JSON array of exactly ${endDay - startDay + 1} objects (days ${startDay}–${endDay}), each with this exact structure:
 [
@@ -72,8 +88,9 @@ async function generateBatch(
   stage: string,
   startDay: number,
   endDay: number,
+  contentStyle?: ContentStyle | null,
 ): Promise<ContentItem[]> {
-  const prompt = buildBatchPrompt(industry, location, stage, startDay, endDay);
+  const prompt = buildBatchPrompt(industry, location, stage, startDay, endDay, contentStyle);
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
@@ -107,11 +124,12 @@ async function generateWithClient(
   industry: string,
   location: string,
   stage: string,
+  contentStyle?: ContentStyle | null,
 ): Promise<ContentItem[]> {
   const [batch1, batch2, batch3] = await Promise.all([
-    generateBatch(ai, industry, location, stage, 1, 10),
-    generateBatch(ai, industry, location, stage, 11, 20),
-    generateBatch(ai, industry, location, stage, 21, 30),
+    generateBatch(ai, industry, location, stage, 1, 10, contentStyle),
+    generateBatch(ai, industry, location, stage, 11, 20, contentStyle),
+    generateBatch(ai, industry, location, stage, 21, 30, contentStyle),
   ]);
   const all = [...batch1, ...batch2, ...batch3].sort((a, b) => a.day - b.day);
   validateContentItems(all);
@@ -123,11 +141,12 @@ export async function generateContentStrategy(
   location: string,
   stage: string,
   userApiKey?: string | null,
+  contentStyle?: ContentStyle | null,
 ): Promise<ContentItem[]> {
   if (userApiKey) {
     try {
       const userClient = await createUserGeminiClient(userApiKey);
-      return await generateWithClient(userClient, industry, location, stage);
+      return await generateWithClient(userClient, industry, location, stage, contentStyle);
     } catch (err) {
       if (isUserKeyError(err)) {
         logger.warn({ err }, "User Gemini key failed for content strategy generation, falling back to platform key");
@@ -144,7 +163,7 @@ export async function generateContentStrategy(
     );
   }
 
-  return generateWithClient(platformClient, industry, location, stage);
+  return generateWithClient(platformClient, industry, location, stage, contentStyle);
 }
 
 const BATCH_RANGES: [number, number][] = [[1, 10], [11, 20], [21, 30]];
@@ -155,10 +174,11 @@ async function generateWithClientProgress(
   location: string,
   stage: string,
   onBatch: (batchNum: number, totalBatches: number, items: ContentItem[]) => void,
+  contentStyle?: ContentStyle | null,
 ): Promise<ContentItem[]> {
   let completed = 0;
   const batchPromises = BATCH_RANGES.map(([start, end]) =>
-    generateBatch(ai, industry, location, stage, start, end).then((items) => {
+    generateBatch(ai, industry, location, stage, start, end, contentStyle).then((items) => {
       completed++;
       onBatch(completed, BATCH_RANGES.length, items);
       return items;
@@ -176,11 +196,12 @@ export async function generateContentStrategyWithProgress(
   stage: string,
   onBatch: (batchNum: number, totalBatches: number, items: ContentItem[]) => void,
   userApiKey?: string | null,
+  contentStyle?: ContentStyle | null,
 ): Promise<ContentItem[]> {
   if (userApiKey) {
     try {
       const userClient = await createUserGeminiClient(userApiKey);
-      return await generateWithClientProgress(userClient, industry, location, stage, onBatch);
+      return await generateWithClientProgress(userClient, industry, location, stage, onBatch, contentStyle);
     } catch (err) {
       if (isUserKeyError(err)) {
         logger.warn({ err }, "User Gemini key failed for content strategy stream, falling back to platform key");
@@ -197,5 +218,5 @@ export async function generateContentStrategyWithProgress(
     );
   }
 
-  return generateWithClientProgress(platformClient, industry, location, stage, onBatch);
+  return generateWithClientProgress(platformClient, industry, location, stage, onBatch, contentStyle);
 }

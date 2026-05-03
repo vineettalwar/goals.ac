@@ -12,8 +12,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Slider } from "@/components/ui/slider";
 import { useAuth } from "@/context/auth";
-import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertCircle, Map, Sparkles, RefreshCw, Wand2, CheckCircle2, Link2, Unlink, Send } from "lucide-react";
+import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertCircle, Map, Sparkles, RefreshCw, Wand2, CheckCircle2, Link2, Unlink, Send, Palette } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -32,6 +34,15 @@ interface ScrapeData {
   confidence?: ScrapeConfidence;
 }
 
+interface ContentStyle {
+  tonePreset?: "professional" | "casual" | "technical" | "conversational";
+  personaName?: string;
+  defaultWordCount?: number;
+  primaryLanguage?: string;
+  forbiddenWords?: string[];
+  readingLevel?: "general" | "intermediate" | "expert";
+}
+
 interface BrandProfile {
   id: number;
   companyName: string;
@@ -40,6 +51,7 @@ interface BrandProfile {
   voiceTone: string;
   primaryKeywords: string[];
   competitorUrls: string[];
+  updatedAt?: string;
 }
 
 interface CmsIntegrationStatus {
@@ -56,6 +68,7 @@ interface WebsiteProject {
   crawlStatus: string;
   scrapeStatus: string | null;
   scrapeData: ScrapeData | null;
+  contentStyle: ContentStyle | null;
   createdAt: string;
   brandProfile: BrandProfile | null;
 }
@@ -77,6 +90,16 @@ const brandProfileSchema = z.object({
 });
 type BrandProfileForm = z.infer<typeof brandProfileSchema>;
 
+const contentStyleSchema = z.object({
+  tonePreset: z.enum(["professional", "casual", "technical", "conversational"]).optional(),
+  personaName: z.string().optional(),
+  defaultWordCount: z.number().min(300).max(3000).optional(),
+  primaryLanguage: z.string().optional(),
+  forbiddenWords: z.string().optional(),
+  readingLevel: z.enum(["general", "intermediate", "expert"]).optional(),
+});
+type ContentStyleForm = z.infer<typeof contentStyleSchema>;
+
 function ConfidenceBadge({ level }: { level: Confidence | undefined }) {
   if (!level) return null;
   const config = {
@@ -91,6 +114,31 @@ function ConfidenceBadge({ level }: { level: Confidence | undefined }) {
   );
 }
 
+const TONE_PRESETS = [
+  { value: "professional", label: "Professional" },
+  { value: "casual", label: "Casual" },
+  { value: "technical", label: "Technical" },
+  { value: "conversational", label: "Conversational" },
+] as const;
+
+const READING_LEVELS = [
+  { value: "general", label: "General — accessible to everyone" },
+  { value: "intermediate", label: "Intermediate — assumes some domain knowledge" },
+  { value: "expert", label: "Expert — deep technical audience" },
+] as const;
+
+const LANGUAGES = [
+  "English", "Spanish", "French", "German", "Portuguese", "Italian",
+  "Dutch", "Swedish", "Norwegian", "Danish", "Polish", "Japanese",
+  "Korean", "Chinese (Simplified)", "Chinese (Traditional)",
+];
+
+const WORD_COUNT_PRESETS = [
+  { label: "Short", value: 400 },
+  { label: "Medium", value: 800 },
+  { label: "Long", value: 1500 },
+];
+
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
@@ -99,6 +147,8 @@ export default function ProjectDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSavingStyle, setIsSavingStyle] = useState(false);
+  const [saveStyleSuccess, setSaveStyleSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRescanning, setIsRescanning] = useState(false);
   const scrapePollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -131,6 +181,18 @@ export default function ProjectDetail() {
     },
   });
 
+  const styleForm = useForm<ContentStyleForm>({
+    resolver: zodResolver(contentStyleSchema),
+    defaultValues: {
+      tonePreset: undefined,
+      personaName: "",
+      defaultWordCount: 800,
+      primaryLanguage: "English",
+      forbiddenWords: "",
+      readingLevel: undefined,
+    },
+  });
+
   const populateFormFromBrandProfile = useCallback((bp: BrandProfile) => {
     form.reset({
       companyName: bp.companyName,
@@ -141,6 +203,17 @@ export default function ProjectDetail() {
       competitorUrls: bp.competitorUrls.join("\n"),
     });
   }, [form]);
+
+  const populateStyleForm = useCallback((cs: ContentStyle | null) => {
+    styleForm.reset({
+      tonePreset: cs?.tonePreset ?? undefined,
+      personaName: cs?.personaName ?? "",
+      defaultWordCount: cs?.defaultWordCount ?? 800,
+      primaryLanguage: cs?.primaryLanguage ?? "English",
+      forbiddenWords: cs?.forbiddenWords?.join(", ") ?? "",
+      readingLevel: cs?.readingLevel ?? undefined,
+    });
+  }, [styleForm]);
 
   const fetchProject = useCallback(async (): Promise<WebsiteProject | null> => {
     if (!token || !id) return null;
@@ -181,6 +254,7 @@ export default function ProjectDetail() {
       if (projData.brandProfile) {
         populateFormFromBrandProfile(projData.brandProfile);
       }
+      populateStyleForm(projData.contentStyle);
 
       if (contentRes.ok) {
         setContent(await contentRes.json());
@@ -192,7 +266,7 @@ export default function ProjectDetail() {
     } finally {
       setIsLoading(false);
     }
-  }, [token, id, fetchProject, populateFormFromBrandProfile, loadCmsIntegrations]);
+  }, [token, id, fetchProject, populateFormFromBrandProfile, loadCmsIntegrations, populateStyleForm]);
 
   useEffect(() => {
     loadProject();
@@ -274,6 +348,36 @@ export default function ProjectDetail() {
       }
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const onSaveContentStyle = async (data: ContentStyleForm) => {
+    if (!token || !id) return;
+    setIsSavingStyle(true);
+    setSaveStyleSuccess(false);
+    try {
+      const contentStyle: ContentStyle = {};
+      if (data.tonePreset) contentStyle.tonePreset = data.tonePreset;
+      if (data.personaName?.trim()) contentStyle.personaName = data.personaName.trim();
+      if (data.defaultWordCount) contentStyle.defaultWordCount = data.defaultWordCount;
+      if (data.primaryLanguage?.trim()) contentStyle.primaryLanguage = data.primaryLanguage.trim();
+      if (data.forbiddenWords?.trim()) {
+        contentStyle.forbiddenWords = data.forbiddenWords.split(",").map((w) => w.trim()).filter(Boolean);
+      }
+      if (data.readingLevel) contentStyle.readingLevel = data.readingLevel;
+
+      const res = await fetch(`${API_BASE}/api/website-projects/${id}/brand-profile`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ contentStyle }),
+      });
+      if (res.ok) {
+        setProject((prev) => prev ? { ...prev, contentStyle } : prev);
+        setSaveStyleSuccess(true);
+        setTimeout(() => setSaveStyleSuccess(false), 3000);
+      }
+    } finally {
+      setIsSavingStyle(false);
     }
   };
 
@@ -430,6 +534,10 @@ export default function ProjectDetail() {
   const scrapeFailed = project.scrapeStatus === "failed" && !isRescanning;
   const confidence = project.scrapeData?.confidence;
 
+  const brandProfileUpdatedAt = project.brandProfile?.updatedAt
+    ? new Date(project.brandProfile.updatedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    : null;
+
   return (
     <Layout>
       <SEO title={`${project.name} — goals.ac`} description={`SEO project for ${project.url}`} />
@@ -495,7 +603,7 @@ export default function ProjectDetail() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="brand">
+          <TabsContent value="brand" className="space-y-6">
             <Card className="border-white/[0.07] glass-card-md shadow-none">
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
@@ -504,6 +612,9 @@ export default function ProjectDetail() {
                     <CardDescription>
                       This information is used to personalize all AI-generated content for your website.
                     </CardDescription>
+                    {brandProfileUpdatedAt && (
+                      <p className="text-xs text-muted-foreground mt-1">Last updated {brandProfileUpdatedAt}</p>
+                    )}
                   </div>
                   {!isScraping && (
                     <Button
@@ -685,6 +796,196 @@ export default function ProjectDetail() {
                     </form>
                   </Form>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card className="border-white/[0.07] glass-card-md shadow-none">
+              <CardHeader>
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Palette className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <div>
+                    <CardTitle>Content Style</CardTitle>
+                    <CardDescription>
+                      Fine-tune the writing persona, tone, and format preferences for all AI-generated content in this project.
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Form {...styleForm}>
+                  <form onSubmit={styleForm.handleSubmit(onSaveContentStyle)} className="space-y-6">
+                    <FormField
+                      control={styleForm.control}
+                      name="tonePreset"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Tone preset</FormLabel>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {TONE_PRESETS.map((preset) => (
+                              <button
+                                key={preset.value}
+                                type="button"
+                                onClick={() => field.onChange(field.value === preset.value ? undefined : preset.value)}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                                  field.value === preset.value
+                                    ? "bg-blue-500/20 border-blue-400/50 text-blue-300"
+                                    : "bg-white/[0.04] border-white/[0.08] text-muted-foreground hover:border-white/20 hover:text-foreground"
+                                }`}
+                              >
+                                {preset.label}
+                              </button>
+                            ))}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={styleForm.control}
+                      name="personaName"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Writing persona</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder='e.g. "Alex, our Head of Growth" or "Dr. Sarah Chen, Chief Research Officer"'
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">Give the AI writer a name and role to adopt when generating content</p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={styleForm.control}
+                      name="defaultWordCount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between mb-2">
+                            <FormLabel>Default word count</FormLabel>
+                            <span className="text-sm font-semibold text-foreground">{field.value?.toLocaleString() ?? 800} words</span>
+                          </div>
+                          <div className="flex gap-2 mb-3">
+                            {WORD_COUNT_PRESETS.map((preset) => (
+                              <button
+                                key={preset.label}
+                                type="button"
+                                onClick={() => field.onChange(preset.value)}
+                                className={`px-3 py-1 rounded-md text-xs font-medium border transition-all ${
+                                  field.value === preset.value
+                                    ? "bg-blue-500/20 border-blue-400/50 text-blue-300"
+                                    : "bg-white/[0.04] border-white/[0.08] text-muted-foreground hover:border-white/20 hover:text-foreground"
+                                }`}
+                              >
+                                {preset.label} ({preset.value})
+                              </button>
+                            ))}
+                          </div>
+                          <FormControl>
+                            <Slider
+                              min={300}
+                              max={3000}
+                              step={100}
+                              value={[field.value ?? 800]}
+                              onValueChange={(vals) => field.onChange(vals[0])}
+                              className="w-full"
+                            />
+                          </FormControl>
+                          <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                            <span>300</span>
+                            <span>3,000</span>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="grid gap-6 md:grid-cols-2">
+                      <FormField
+                        control={styleForm.control}
+                        name="primaryLanguage"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Primary content language</FormLabel>
+                            <Select value={field.value ?? "English"} onValueChange={field.onChange}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select language" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {LANGUAGES.map((lang) => (
+                                  <SelectItem key={lang} value={lang}>{lang}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={styleForm.control}
+                        name="readingLevel"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Audience reading level</FormLabel>
+                            <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v || undefined)}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select reading level" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="">Not specified</SelectItem>
+                                {READING_LEVELS.map((level) => (
+                                  <SelectItem key={level.value} value={level.value}>{level.label}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <FormField
+                      control={styleForm.control}
+                      name="forbiddenWords"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Forbidden words &amp; phrases</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="synergy, leverage, disruptive, game-changer, revolutionary"
+                              {...field}
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">Comma-separated — the AI will avoid these in all generated content</p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <div className="flex items-center gap-3">
+                      <Button type="submit" disabled={isSavingStyle} className="glow-primary bg-gradient-to-r from-purple-500 to-purple-600 border-0 text-white">
+                        {isSavingStyle ? (
+                          <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+                        ) : (
+                          <><Save className="mr-2 h-4 w-4" />Save content style</>
+                        )}
+                      </Button>
+                      {saveStyleSuccess && (
+                        <span className="text-sm text-emerald-400 font-medium">Saved successfully</span>
+                      )}
+                    </div>
+                  </form>
+                </Form>
               </CardContent>
             </Card>
           </TabsContent>

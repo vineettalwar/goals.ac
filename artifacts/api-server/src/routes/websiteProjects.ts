@@ -14,6 +14,15 @@ const CreateProjectBody = z.object({
   url: z.string().url("Must be a valid URL"),
 });
 
+const ContentStyleBody = z.object({
+  tonePreset: z.enum(["professional", "casual", "technical", "conversational"]).optional(),
+  personaName: z.string().optional(),
+  defaultWordCount: z.number().int().min(300).max(3000).optional(),
+  primaryLanguage: z.string().optional(),
+  forbiddenWords: z.array(z.string()).optional(),
+  readingLevel: z.enum(["general", "intermediate", "expert"]).optional(),
+});
+
 const UpdateBrandProfileBody = z.object({
   companyName: z.string().optional(),
   industry: z.string().optional(),
@@ -21,6 +30,7 @@ const UpdateBrandProfileBody = z.object({
   voiceTone: z.string().optional(),
   primaryKeywords: z.array(z.string()).optional(),
   competitorUrls: z.array(z.string()).optional(),
+  contentStyle: ContentStyleBody.optional(),
 });
 
 type CrawlData = {
@@ -325,6 +335,13 @@ router.put("/website-projects/:id/brand-profile", requireAuth, async (req, res) 
       .where(eq(brandProfilesTable.websiteProjectId, id))
       .limit(1);
 
+    if (parsed.data.contentStyle !== undefined) {
+      await db
+        .update(websiteProjectsTable)
+        .set({ contentStyle: parsed.data.contentStyle })
+        .where(eq(websiteProjectsTable.id, id));
+    }
+
     let brandProfile;
     if (existing.length > 0) {
       const updates: Record<string, unknown> = {};
@@ -355,7 +372,13 @@ router.put("/website-projects/:id/brand-profile", requireAuth, async (req, res) 
         .returning();
     }
 
-    res.json(brandProfile);
+    const [updatedProject] = await db
+      .select({ contentStyle: websiteProjectsTable.contentStyle, updatedAt: websiteProjectsTable.updatedAt })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, id))
+      .limit(1);
+
+    res.json({ ...brandProfile, contentStyle: updatedProject?.contentStyle ?? null, updatedAt: updatedProject?.updatedAt });
   } catch (err) {
     req.log.error(err, "Failed to update brand profile");
     res.status(500).json({ error: "Internal server error" });
