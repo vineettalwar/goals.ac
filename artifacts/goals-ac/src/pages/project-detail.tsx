@@ -631,9 +631,9 @@ export default function ProjectDetail() {
 
                 {isScraping && (
                   <div className="mt-3 flex items-center gap-3 rounded-lg border border-blue-400/20 bg-blue-500/[0.07] px-4 py-3">
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-400 flex-shrink-0" />
+                    <Loader2 className="h-4 w-4 animate-spin text-blue-500 dark:text-blue-400 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-blue-400">Analyzing your website…</p>
+                      <p className="text-sm font-medium text-blue-500 dark:text-blue-400">Analyzing your website…</p>
                       <p className="text-xs text-muted-foreground mt-0.5">Reading your homepage and key pages to pre-fill your brand profile. This takes about 15–30 seconds.</p>
                     </div>
                   </div>
@@ -641,7 +641,7 @@ export default function ProjectDetail() {
 
                 {wasAutoFilled && !isScraping && (
                   <div className="mt-3 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3">
-                    <Globe className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                    <Globe className="h-4 w-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
                     <p className="text-sm text-emerald-600 dark:text-emerald-400">
                       Auto-filled from your website — review and save to confirm.
                     </p>
@@ -650,9 +650,9 @@ export default function ProjectDetail() {
 
                 {scrapeFailed && (
                   <div className="mt-3 flex items-center gap-3 rounded-lg border border-red-400/20 bg-red-500/[0.07] px-4 py-3">
-                    <AlertCircle className="h-4 w-4 text-red-400 flex-shrink-0" />
+                    <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-red-400">Website scan failed</p>
+                      <p className="text-sm font-medium text-red-500 dark:text-red-400">Website scan failed</p>
                       <p className="text-xs text-muted-foreground mt-0.5">We couldn't read your website. Fill in the fields manually, or try re-scanning.</p>
                     </div>
                   </div>
@@ -790,7 +790,7 @@ export default function ProjectDetail() {
                           )}
                         </Button>
                         {saveSuccess && (
-                          <span className="text-sm text-emerald-400 font-medium">Saved successfully</span>
+                          <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Saved successfully</span>
                         )}
                       </div>
                     </form>
@@ -981,7 +981,7 @@ export default function ProjectDetail() {
                         )}
                       </Button>
                       {saveStyleSuccess && (
-                        <span className="text-sm text-emerald-400 font-medium">Saved successfully</span>
+                        <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Saved successfully</span>
                       )}
                     </div>
                   </form>
@@ -1230,19 +1230,19 @@ export default function ProjectDetail() {
                 <Card className="border-white/[0.07] glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <FileText className="w-4 h-4 text-blue-400" />
+                      <FileText className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                       SEO Articles
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="divide-y divide-white/[0.05]">
+                    <div className="divide-y divide-border">
                       {content.seoArticles.map((article) => (
                         <div key={article.id} className="py-3 flex items-center justify-between gap-4">
                           <div className="min-w-0">
                             <p className="font-medium text-sm truncate">{article.title}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">{article.primaryKeyword} · {article.wordCount} words</p>
                           </div>
-                          <Button size="sm" variant="ghost" asChild className="hover:bg-white/10">
+                          <Button size="sm" variant="ghost" asChild className="hover:bg-muted dark:hover:bg-white/[0.07]">
                             <Link to={`/seo-article/${article.id}`}>View</Link>
                           </Button>
                         </div>
@@ -1256,19 +1256,19 @@ export default function ProjectDetail() {
                 <Card className="border-white/[0.07] glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <BarChart3 className="w-4 h-4 text-blue-400" />
+                      <BarChart3 className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                       Content Strategies
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="divide-y divide-white/[0.05]">
+                    <div className="divide-y divide-border">
                       {content.contentStrategies.map((strategy) => (
                         <div key={strategy.id} className="py-3 flex items-center justify-between gap-4">
                           <div className="min-w-0">
                             <p className="font-medium text-sm">{strategy.industry} · {strategy.location}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">{strategy.stage}</p>
                           </div>
-                          <Button size="sm" variant="ghost" asChild className="hover:bg-white/10">
+                          <Button size="sm" variant="ghost" asChild className="hover:bg-muted dark:hover:bg-white/[0.07]">
                             <Link to={`/content-strategy/${strategy.id}`}>View</Link>
                           </Button>
                         </div>
@@ -1282,19 +1282,19 @@ export default function ProjectDetail() {
                 <Card className="border-white/[0.07] glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Search className="w-4 h-4 text-sky-400" />
+                      <Search className="w-4 h-4 text-sky-500 dark:text-sky-400" />
                       GEO Audits
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="divide-y divide-white/[0.05]">
+                    <div className="divide-y divide-border">
                       {content.geoAudits.map((audit) => (
                         <div key={audit.id} className="py-3 flex items-center justify-between gap-4">
                           <div className="min-w-0">
                             <p className="font-medium text-sm truncate">{audit.url.replace(/^https?:\/\//, "")}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">GEO Score: <span className="text-blue-400 font-semibold">{audit.geoScore}/100</span></p>
+                            <p className="text-xs text-muted-foreground mt-0.5">GEO Score: <span className="text-blue-600 dark:text-blue-400 font-semibold">{audit.geoScore}/100</span></p>
                           </div>
-                          <Button size="sm" variant="ghost" asChild className="hover:bg-white/10">
+                          <Button size="sm" variant="ghost" asChild className="hover:bg-muted dark:hover:bg-white/[0.07]">
                             <Link to={`/geo-audit/${audit.id}`}>View</Link>
                           </Button>
                         </div>
@@ -1308,19 +1308,19 @@ export default function ProjectDetail() {
                 <Card className="border-white/[0.07] glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Map className="w-4 h-4 text-emerald-400" />
+                      <Map className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
                       Growth Roadmaps
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="divide-y divide-white/[0.05]">
+                    <div className="divide-y divide-border">
                       {content.roadmaps.map((roadmap) => (
                         <div key={roadmap.id} className="py-3 flex items-center justify-between gap-4">
                           <div className="min-w-0">
                             <p className="font-medium text-sm">{roadmap.industry} · {roadmap.location}</p>
                             <p className="text-xs text-muted-foreground mt-0.5 capitalize">{roadmap.stage} stage</p>
                           </div>
-                          <Button size="sm" variant="ghost" asChild className="hover:bg-white/10">
+                          <Button size="sm" variant="ghost" asChild className="hover:bg-muted dark:hover:bg-white/[0.07]">
                             <Link to={`/roadmap/${roadmap.slug}`}>View</Link>
                           </Button>
                         </div>
@@ -1334,7 +1334,7 @@ export default function ProjectDetail() {
                 <Card className="border-white/[0.07] glass-card border-dashed">
                   <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                     <div className="w-14 h-14 rounded-full glass-card-md flex items-center justify-center mb-4">
-                      <FileText className="w-7 h-7 text-blue-400" />
+                      <FileText className="w-7 h-7 text-blue-500 dark:text-blue-400" />
                     </div>
                     <CardTitle className="text-lg mb-2">No content yet</CardTitle>
                     <CardDescription className="max-w-sm mb-6">

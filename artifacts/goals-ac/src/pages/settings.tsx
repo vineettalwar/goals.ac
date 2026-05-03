@@ -271,7 +271,7 @@ export default function Settings() {
           <Card className="border-white/[0.07] glass-card-md shadow-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <User className="w-4 h-4 text-blue-400" />
+                <User className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                 Profile
               </CardTitle>
               <CardDescription>Update your display name. Your email address cannot be changed.</CardDescription>
@@ -336,7 +336,7 @@ export default function Settings() {
           <Card className="border-white/[0.07] glass-card-md shadow-none">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
-                <KeyRound className="w-4 h-4 text-blue-400" />
+                <KeyRound className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                 AI Integration
               </CardTitle>
               <CardDescription>
@@ -348,9 +348,9 @@ export default function Settings() {
               {hasGeminiKey ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
-                    <CheckCircle2 className="w-4 h-4 text-green-400 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-green-300">Gemini API key connected</p>
+                      <p className="text-sm font-medium text-green-800 dark:text-green-300">Gemini API key connected</p>
                       <p className="text-xs text-muted-foreground">Ending in ••••{geminiKeyLastFour ?? "••••"}</p>
                     </div>
                   </div>
@@ -359,7 +359,6 @@ export default function Settings() {
                       variant="outline"
                       size="sm"
                       onClick={() => { setGeminiKeyInput(""); setGeminiTestResult(null); setGeminiKeyDialogOpen(true); }}
-                      className="border-white/10 hover:border-white/20"
                     >
                       Replace key
                     </Button>
@@ -368,7 +367,7 @@ export default function Settings() {
                       size="sm"
                       onClick={onRemoveGeminiKey}
                       disabled={isDeletingGeminiKey}
-                      className="border-red-400/30 text-red-400 hover:bg-red-400/10 hover:text-red-400 hover:border-red-400/50"
+                      className="border-red-400/30 text-red-500 dark:text-red-400 hover:bg-red-400/10 hover:text-red-500 dark:hover:text-red-400 hover:border-red-400/50"
                     >
                       {isDeletingGeminiKey ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove key"}
                     </Button>
@@ -383,7 +382,6 @@ export default function Settings() {
                     variant="outline"
                     size="sm"
                     onClick={() => { setGeminiKeyInput(""); setGeminiTestResult(null); setGeminiKeyDialogOpen(true); }}
-                    className="border-white/10 hover:border-white/20"
                   >
                     <KeyRound className="mr-2 h-3.5 w-3.5" />
                     Add Gemini API key
@@ -394,7 +392,7 @@ export default function Settings() {
                       href="https://aistudio.google.com/apikey"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-400 hover:underline"
+                      className="text-blue-500 dark:text-blue-400 hover:underline"
                     >
                       aistudio.google.com
                     </a>
@@ -409,7 +407,7 @@ export default function Settings() {
             <Card className="border-white/[0.07] glass-card-md shadow-none">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Lock className="w-4 h-4 text-blue-400" />
+                  <Lock className="w-4 h-4 text-blue-500 dark:text-blue-400" />
                   Change password
                 </CardTitle>
                 <CardDescription>Choose a strong password with at least 8 characters.</CardDescription>
@@ -472,7 +470,7 @@ export default function Settings() {
           {/* Danger zone */}
           <Card className="border-red-400/20 glass-card-md shadow-none">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-base text-red-400">
+              <CardTitle className="flex items-center gap-2 text-base text-red-600 dark:text-red-400">
                 <AlertTriangle className="w-4 h-4" />
                 Danger zone
               </CardTitle>
@@ -502,7 +500,7 @@ export default function Settings() {
         <DialogContent className="bg-card border-border">
           <DialogHeader>
             <DialogTitle className="text-foreground flex items-center gap-2">
-              <KeyRound className="w-4 h-4 text-blue-400" />
+              <KeyRound className="w-4 h-4 text-blue-500 dark:text-blue-400" />
               {hasGeminiKey ? "Replace Gemini API Key" : "Add Gemini API Key"}
             </DialogTitle>
             <DialogDescription>
@@ -526,7 +524,7 @@ export default function Settings() {
                   href="https://aistudio.google.com/apikey"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-blue-400 hover:underline"
+                  className="text-blue-500 dark:text-blue-400 hover:underline"
                 >
                   aistudio.google.com
                 </a>
@@ -534,13 +532,13 @@ export default function Settings() {
             </div>
 
             {geminiTestResult === "ok" && (
-              <div className="flex items-center gap-2 p-2.5 rounded-md bg-green-500/10 border border-green-500/20 text-sm text-green-300">
+              <div className="flex items-center gap-2 p-2.5 rounded-md bg-green-500/10 border border-green-500/20 text-sm text-green-700 dark:text-green-300">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 Key is valid and working
               </div>
             )}
             {geminiTestResult === "error" && (
-              <div className="flex items-start gap-2 p-2.5 rounded-md bg-red-500/10 border border-red-500/20 text-sm text-red-300">
+              <div className="flex items-start gap-2 p-2.5 rounded-md bg-red-500/10 border border-red-500/20 text-sm text-red-700 dark:text-red-300">
                 <XCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{geminiTestError ?? "Key validation failed"}</span>
               </div>
@@ -551,7 +549,6 @@ export default function Settings() {
               variant="outline"
               onClick={onTestGeminiKey}
               disabled={!geminiKeyInput.trim() || isTestingGeminiKey || isSavingGeminiKey}
-              className="border-white/10 hover:border-white/20"
             >
               {isTestingGeminiKey ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Testing…</> : "Test key"}
             </Button>
