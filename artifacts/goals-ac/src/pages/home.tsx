@@ -11,7 +11,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { useListIndustries, useListLocations, GenerateRoadmapRequestStage } from "@workspace/api-client-react";
-import { Loader2, Target, Pencil, LayoutGrid, Bookmark, GitBranch, CheckCircle2, Circle, KeyRound, Key } from "lucide-react";
+import { Loader2, Target, Pencil, LayoutGrid, Bookmark, GitBranch, CheckCircle2, Circle, KeyRound, Key, Search, BarChart3, MessageSquare, Sparkles, ArrowRight, Lock } from "lucide-react";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/context/auth";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -512,6 +513,116 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        {/* Unlock more with signup */}
+        <section className="py-24 bg-mesh-dark text-zinc-50 border-t border-white/[0.06] relative overflow-hidden">
+          <div className="orb orb-violet w-[500px] h-[400px] top-[-10%] right-[-10%]" />
+          <div className="orb orb-indigo w-[400px] h-[400px] bottom-[-10%] left-[-5%]" />
+
+          <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl">
+            <div className="text-center mb-14">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-3 py-1 text-xs font-semibold text-blue-300 mb-4">
+                <Sparkles className="h-3 w-3" />
+                Free with signup
+              </div>
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Unlock the full growth stack.</h2>
+              <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
+                Create a free account to access AI-powered competitor intelligence, keyword tracking, and your personal growth dashboard.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-5 mb-12">
+              {[
+                {
+                  icon: Search,
+                  title: "Competitor Analysis",
+                  desc: "Drop in any competitor URL. Get a tactical breakdown of their strengths, gaps, and 90-day plays you can win.",
+                  color: "text-purple-400",
+                  border: "border-purple-400/20",
+                },
+                {
+                  icon: BarChart3,
+                  title: "Keyword Tracking",
+                  desc: "Track up to 10 keywords with AI-powered volume estimates, difficulty scores, and content opportunities.",
+                  color: "text-emerald-400",
+                  border: "border-emerald-400/20",
+                },
+                {
+                  icon: MessageSquare,
+                  title: "AI Strategy Chat",
+                  desc: "Ask any question about your roadmap. Get instant, context-aware answers from your personal growth advisor.",
+                  color: "text-blue-400",
+                  border: "border-blue-400/20",
+                },
+              ].map((feat) => (
+                <div key={feat.title} className={`rounded-2xl glass-card p-6 flex flex-col card-hover-glow relative ${feat.border}`}>
+                  <div className="absolute top-4 right-4">
+                    <Lock className="h-3.5 w-3.5 text-zinc-500" />
+                  </div>
+                  <div className={`rounded-xl glass-card-md w-10 h-10 flex items-center justify-center mb-4 ${feat.border}`}>
+                    <feat.icon className={`h-5 w-5 ${feat.color}`} />
+                  </div>
+                  <h3 className="text-lg font-bold text-foreground mb-2">{feat.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{feat.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {!user && (
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                <Button asChild size="lg" className="h-12 px-8 text-base font-semibold glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white">
+                  <Link to="/signup">
+                    Create free account <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" size="lg" className="h-12 px-8 text-base font-semibold border-white/15 bg-white/[0.04] text-zinc-100 hover:bg-white/[0.08] hover:text-white">
+                  <Link to="/login">Sign in</Link>
+                </Button>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Final CTA — for logged-out marketing punch */}
+        {!user && (
+          <section className="py-28 bg-background border-t border-border">
+            <div className="container mx-auto px-4 md:px-8 max-w-4xl text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/[0.08] px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-6">
+                  <Target className="h-3 w-3" />
+                  Built for B2B founders
+                </div>
+                <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-5">
+                  Stop guessing your next move.
+                </h2>
+                <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+                  Join hundreds of founders building data-driven growth engines instead of running on gut feel.
+                  Free forever for the core platform.
+                </p>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                  <Button asChild size="lg" className="h-12 px-8 text-base font-semibold glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white">
+                    <Link to="/signup">
+                      Start for free <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="ghost" size="lg" className="h-12 px-8 text-base font-semibold">
+                    <Link to="/geo-audit">
+                      Or run a free GEO audit →
+                    </Link>
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-6">
+                  No credit card required · Build a roadmap or audit before you sign up
+                </p>
+              </motion.div>
+            </div>
+          </section>
+        )}
       </div>
     </Layout>
   );

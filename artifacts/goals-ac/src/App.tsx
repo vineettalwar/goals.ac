@@ -79,8 +79,8 @@ function App() {
                 <Route path="/seo-article/:id" element={<SeoArticle />} />
                 <Route path="/geo-audit" element={<GeoAuditForm />} />
                 <Route path="/geo-audit/:id" element={<GeoAuditDetail />} />
-                <Route path="/competitor-analysis" element={<CompetitorAnalysis />} />
-                <Route path="/keyword-tracking" element={<KeywordTracking />} />
+                <Route path="/competitor-analysis" element={<RequireAuth><CompetitorAnalysis /></RequireAuth>} />
+                <Route path="/keyword-tracking" element={<RequireAuth><KeywordTracking /></RequireAuth>} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </BrowserRouter>

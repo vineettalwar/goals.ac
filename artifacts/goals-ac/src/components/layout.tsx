@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LayoutDashboard, LogOut, ChevronDown, ShieldCheck, Sun, Moon, Settings, Search, BarChart3, Zap } from "lucide-react";
+import { LayoutDashboard, LogOut, ChevronDown, ShieldCheck, Sun, Moon, Settings, Search, BarChart3, Zap, Lock } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -62,15 +62,17 @@ export function Layout({ children }: LayoutProps) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/competitor-analysis" className="flex items-center gap-2 text-foreground hover:text-foreground focus:text-foreground">
+                  <Link to={user ? "/competitor-analysis" : "/signup"} className="flex items-center gap-2 text-foreground hover:text-foreground focus:text-foreground">
                     <Search className="h-4 w-4 text-purple-500" />
-                    Competitor Analysis
+                    <span className="flex-1">Competitor Analysis</span>
+                    {!user && <Lock className="h-3 w-3 text-muted-foreground" />}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/keyword-tracking" className="flex items-center gap-2 text-foreground hover:text-foreground focus:text-foreground">
+                  <Link to={user ? "/keyword-tracking" : "/signup"} className="flex items-center gap-2 text-foreground hover:text-foreground focus:text-foreground">
                     <BarChart3 className="h-4 w-4 text-emerald-500" />
-                    Keyword Tracking
+                    <span className="flex-1">Keyword Tracking</span>
+                    {!user && <Lock className="h-3 w-3 text-muted-foreground" />}
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
