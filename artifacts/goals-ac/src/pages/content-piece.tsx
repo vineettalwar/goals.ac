@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import ReactMarkdown from "react-markdown";
-import { Layout } from "@/components/layout";
+import { AppLayout } from "@/components/app-layout";
 import { SEO } from "@/components/seo";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -690,24 +690,24 @@ export default function ContentPiecePage() {
 
   if (isLoading) {
     return (
-      <Layout>
+      <AppLayout>
         <div className="flex items-center justify-center py-32">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
   if (error || !piece) {
     return (
-      <Layout>
+      <AppLayout>
         <div className="flex flex-col items-center justify-center py-32 text-center">
           <AlertCircle className="h-10 w-10 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold mb-2">Content not found</h2>
           <p className="text-muted-foreground mb-6">{error ?? "This content piece does not exist."}</p>
           <Button asChild><Link to="/dashboard">Back to Dashboard</Link></Button>
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
@@ -717,7 +717,7 @@ export default function ContentPiecePage() {
   const statusLabel = STATUS_LABELS[piece.status] ?? piece.status;
 
   return (
-    <Layout>
+    <AppLayout>
       <SEO title={`${piece.title} | Content Studio | goals.ac`} description={`${meta.label} — ${piece.targetKeyword}`} />
       <div className="container mx-auto px-4 md:px-8 max-w-4xl py-10">
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
@@ -962,6 +962,6 @@ export default function ContentPiecePage() {
         piece={piece}
         token={token}
       />
-    </Layout>
+    </AppLayout>
   );
 }

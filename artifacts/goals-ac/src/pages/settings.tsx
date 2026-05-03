@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SEO } from "@/components/seo";
-import { Layout } from "@/components/layout";
+import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -246,11 +246,11 @@ export default function Settings() {
 
   if (isLoadingMe) {
     return (
-      <Layout>
+      <AppLayout>
         <div className="flex items-center justify-center py-32">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
@@ -258,7 +258,7 @@ export default function Settings() {
   const hasGeminiKey = meData?.hasGeminiKey ?? false;
 
   return (
-    <Layout>
+    <AppLayout>
       <SEO title="Account Settings — goals.ac" description="Manage your profile, password, and account." />
       <div className="container mx-auto px-4 md:px-8 max-w-2xl py-12">
         <div className="mb-10">
@@ -307,7 +307,7 @@ export default function Settings() {
                     )}
                   />
                   <div>
-                    <FormLabel className="text-sm font-medium">Email address</FormLabel>
+                    <label className="text-sm font-medium">Email address</label>
                     <div className="mt-1.5 flex items-center gap-2">
                       <Input
                         value={meData?.email ?? ""}
@@ -605,6 +605,6 @@ export default function Settings() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </AppLayout>
   );
 }

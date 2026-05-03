@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Layout } from "@/components/layout";
+import { AppLayout } from "@/components/app-layout";
 import { SEO } from "@/components/seo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -1226,29 +1226,29 @@ export default function ContentStudio() {
 
   if (isLoading) {
     return (
-      <Layout>
+      <AppLayout>
         <div className="flex items-center justify-center py-32">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
   if (error) {
     return (
-      <Layout>
+      <AppLayout>
         <div className="flex flex-col items-center justify-center py-32 text-center">
           <AlertCircle className="h-10 w-10 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold mb-2">Something went wrong</h2>
           <p className="text-muted-foreground mb-6">{error}</p>
           <Button asChild><Link to="/dashboard">Back to Dashboard</Link></Button>
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
   return (
-    <Layout>
+    <AppLayout>
       <SEO title={`Content Studio — ${projectName} | goals.ac`} description="Manage and generate SEO content for your project." />
       <div className="container mx-auto px-4 md:px-8 max-w-6xl py-10">
         <div className="mb-8">
@@ -1603,6 +1603,6 @@ export default function ContentStudio() {
         hasGeminiKey={!!user?.hasGeminiKey}
         pieces={pieces.filter((p) => p.source === "studio")}
       />
-    </Layout>
+    </AppLayout>
   );
 }

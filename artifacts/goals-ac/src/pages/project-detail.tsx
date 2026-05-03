@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SEO } from "@/components/seo";
-import { Layout } from "@/components/layout";
+import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -508,24 +508,24 @@ export default function ProjectDetail() {
 
   if (isLoading) {
     return (
-      <Layout>
+      <AppLayout>
         <div className="flex items-center justify-center py-32">
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
   if (error || !project) {
     return (
-      <Layout>
+      <AppLayout>
         <div className="flex flex-col items-center justify-center py-32 text-center">
           <AlertCircle className="h-10 w-10 text-muted-foreground mb-4" />
           <h2 className="text-xl font-semibold mb-2">Project not found</h2>
           <p className="text-muted-foreground mb-6">This project doesn't exist or you don't have access to it.</p>
           <Button asChild><Link to="/dashboard">Back to Dashboard</Link></Button>
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
@@ -539,7 +539,7 @@ export default function ProjectDetail() {
     : null;
 
   return (
-    <Layout>
+    <AppLayout>
       <SEO title={`${project.name} — goals.ac`} description={`SEO project for ${project.url}`} />
       <div className="container mx-auto px-4 md:px-8 max-w-5xl py-12">
         <div className="mb-8">
@@ -1350,6 +1350,6 @@ export default function ProjectDetail() {
           </TabsContent>
         </Tabs>
       </div>
-    </Layout>
+    </AppLayout>
   );
 }

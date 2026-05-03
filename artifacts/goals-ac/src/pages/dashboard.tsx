@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SEO } from "@/components/seo";
-import { Layout } from "@/components/layout";
+import { AppLayout } from "@/components/app-layout";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -148,7 +148,7 @@ export default function Dashboard() {
   };
 
   return (
-    <Layout>
+    <AppLayout>
       <SEO title="Dashboard — goals.ac" description="Manage your website SEO projects." />
       {/* Dashboard hero */}
       <div className="relative bg-muted/40 dark:bg-mesh-dark py-12 border-b border-border dark:border-white/[0.06] overflow-hidden">
@@ -355,6 +355,6 @@ export default function Dashboard() {
           </div>
         </DialogContent>
       </Dialog>
-    </Layout>
+    </AppLayout>
   );
 }
