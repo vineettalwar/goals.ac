@@ -1,0 +1,54 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: goalsac
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d goalsac"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api-server:
+    build:
+      context: .
+      dockerfile: artifacts/api-server/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: "8080"
+      NODE_ENV: development
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/goalsac
+      # Dev-only placeholder secrets — replace with real values for any shared/production use.
+      # Generate your own: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+      JWT_SECRET: dev-only-change-me-in-production-jwt-secret-32ch
+      GEMINI_KEY_ENCRYPTION_SECRET: dev-only-change-me-in-production-enc-secret-32ch
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  goals-ac:
+    build:
+      context: .
+      dockerfile: artifacts/goals-ac/Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      PORT: "5173"
+      BASE_PATH: /
+      # Proxy /api requests to the api-server container during Vite dev
+      VITE_API_PROXY_TARGET: http://api-server:8080
+    depends_on:
+      - api-server
+
+volumes:
+  pgdata:

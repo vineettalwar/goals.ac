@@ -2,7 +2,50 @@
 
 Step-by-step instructions for running the full goals.ac stack outside of Replit.
 
-## Prerequisites
+## Quick Start (Docker Compose) — Recommended
+
+The fastest way to get the full stack running. No manual Postgres setup or environment configuration required.
+
+**Prerequisites:** [Docker](https://docs.docker.com/get-docker/) with the Compose plugin (included in Docker Desktop).
+
+```sh
+git clone https://github.com/vineettalwar/goals.ac.git
+cd goals.ac
+docker compose up --build
+```
+
+This starts three services:
+
+| Service | URL | Description |
+|---|---|---|
+| Frontend | <http://localhost:5173> | Vite dev server (goals-ac) |
+| API | <http://localhost:8080/api> | Express API server |
+| Postgres | localhost:5432 | PostgreSQL 17 (`goalsac` database) |
+
+The API server runs database migrations automatically on startup. Open <http://localhost:5173> once all three services are healthy.
+
+**Optional env vars** — create a `.env` file in the repo root to add keys for AI generation, Google OAuth, or email:
+
+```sh
+cp .env.example .env
+# Edit .env and fill in GEMINI_API_KEY, GOOGLE_CLIENT_ID, etc.
+```
+
+The `DATABASE_URL`, `JWT_SECRET`, and `GEMINI_KEY_ENCRYPTION_SECRET` are pre-configured with safe development defaults in `docker-compose.yml`; you only need to override them if you want custom values.
+
+To stop and remove containers:
+```sh
+docker compose down          # keep the Postgres volume
+docker compose down -v       # also remove the Postgres volume (fresh DB)
+```
+
+---
+
+## Manual Setup
+
+Follow the steps below if you prefer to run the services without Docker.
+
+### Prerequisites
 
 | Requirement | Version | Notes |
 |---|---|---|
@@ -10,14 +53,14 @@ Step-by-step instructions for running the full goals.ac stack outside of Replit.
 | pnpm | 9+ | `npm install -g pnpm` |
 | PostgreSQL | 14+ | Local install or Docker |
 
-## 1. Clone the Repository
+### 1. Clone the Repository
 
 ```sh
 git clone https://github.com/vineettalwar/goals.ac.git
 cd goals.ac
 ```
 
-## 2. Install Dependencies
+### 2. Install Dependencies
 
 ```sh
 pnpm install
@@ -25,9 +68,9 @@ pnpm install
 
 This installs all workspace packages. No separate `npm install` calls needed.
 
-## 3. Set Up PostgreSQL
+### 3. Set Up PostgreSQL
 
-### Option A — Local PostgreSQL
+#### Option A — Local PostgreSQL
 
 ```sh
 # macOS (Homebrew)
@@ -38,7 +81,7 @@ brew services start postgresql@17
 createdb goalsac
 ```
 
-### Option B — Docker
+#### Option B — Docker
 
 ```sh
 docker run -d \
@@ -49,7 +92,7 @@ docker run -d \
   postgres:17
 ```
 
-## 4. Configure Environment Variables
+### 4. Configure Environment Variables
 
 Copy the example file and fill in your values:
 
@@ -84,7 +127,7 @@ To generate a secure random secret:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-## 5. Run Database Migrations
+### 5. Run Database Migrations
 
 ```sh
 pnpm --filter @workspace/db run migrate
@@ -92,7 +135,7 @@ pnpm --filter @workspace/db run migrate
 
 This creates all tables. On first run it will apply all 20 migrations (0000–0019).
 
-## 6. Seed Reference Data (Optional)
+### 6. Seed Reference Data (Optional)
 
 ```sh
 pnpm --filter @workspace/db run seed
@@ -100,7 +143,7 @@ pnpm --filter @workspace/db run seed
 
 Seeds industries and locations. Skip this if you're connecting to an existing database.
 
-## 7. Start the API Server
+### 7. Start the API Server
 
 In one terminal:
 
@@ -116,7 +159,7 @@ curl http://localhost:8080/api/healthz
 # → {"status":"ok"}
 ```
 
-## 8. Start the Frontend
+### 8. Start the Frontend
 
 In a second terminal:
 
@@ -128,7 +171,7 @@ Open `http://localhost:5173` in your browser.
 
 **Important**: The frontend proxies `/api` requests to the API server via Vite. If the API is on a different port, update the `proxy` config in `artifacts/goals-ac/vite.config.ts`.
 
-## 9. Running Both Together (Optional)
+### 9. Running Both Together (Optional)
 
 Add a root-level dev script if you want to run both simultaneously:
 
@@ -145,7 +188,7 @@ npx concurrently \
   "PORT=5173 pnpm --filter @workspace/goals-ac run dev"
 ```
 
-## 10. Verify the Setup
+### 10. Verify the Setup
 
 1. Open `http://localhost:5173`
 2. Click "Sign up" and create an account
