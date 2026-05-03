@@ -440,28 +440,43 @@ async function generateWithClientStream(
   angleHint?: string,
 ): Promise<ContentPieceResult> {
   const prompt = buildPrompt(format, brand, keyword, angleHint);
-  let accumulated = "";
+  let lastError: unknown;
 
-  const stream = await ai.models.generateContentStream({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      systemInstruction: SYSTEM_PROMPT,
-      responseMimeType: "application/json",
-      maxOutputTokens: 8192,
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  });
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      let accumulated = "";
+      // Only emit chunks on the first attempt — retries are silent so no
+      // duplicate/garbled text is written to an already-open SSE connection.
+      const emit = attempt === 1 ? onChunk : () => {};
 
-  for await (const chunk of stream) {
-    const text = chunk.text ?? "";
-    accumulated += text;
-    if (text) onChunk(text);
+      const stream = await ai.models.generateContentStream({
+        model: "gemini-2.5-flash",
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        config: {
+          systemInstruction: SYSTEM_PROMPT,
+          responseMimeType: "application/json",
+          maxOutputTokens: 8192,
+          thinkingConfig: { thinkingBudget: 0 },
+        },
+      });
+
+      for await (const chunk of stream) {
+        const text = chunk.text ?? "";
+        accumulated += text;
+        if (text) emit(text);
+      }
+
+      const parsed = cleanAndParse(accumulated);
+      validateResult(parsed);
+      return parsed;
+    } catch (err) {
+      lastError = err;
+      logger.warn({ err, attempt, format, keyword }, "Content studio stream attempt failed");
+      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+    }
   }
 
-  const parsed = cleanAndParse(accumulated);
-  validateResult(parsed);
-  return parsed;
+  throw lastError;
 }
 
 

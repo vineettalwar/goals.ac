@@ -292,14 +292,22 @@ router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth,
       }
     }
 
-    const result = await generateContentPieceStream(
-      formatType as ContentFormatType,
-      brand,
-      targetKeyword,
-      (chunk) => sendEvent("chunk", { text: chunk }),
-      angleHint,
-      userApiKey,
-    );
+    let result;
+    try {
+      result = await generateContentPieceStream(
+        formatType as ContentFormatType,
+        brand,
+        targetKeyword,
+        (chunk) => sendEvent("chunk", { text: chunk }),
+        angleHint,
+        userApiKey,
+      );
+    } catch (streamErr) {
+      logger.warn({ streamErr }, "Streaming generation exhausted retries, falling back to non-streaming");
+      result = await generateContentPiece(
+        formatType as ContentFormatType, brand, targetKeyword, angleHint, true, userApiKey,
+      );
+    }
 
     await cacheSet(cacheKeyStr, result);
 
@@ -322,7 +330,7 @@ router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth,
     res.end();
   } catch (err) {
     logger.error({ err }, "Failed to stream content piece");
-    try { res.write(`event: error\ndata: ${JSON.stringify({ error: "Generation failed" })}\n\n`); res.end(); } catch { /* already closed */ }
+    try { res.write(`event: error\ndata: ${JSON.stringify({ error: "Generation failed. Please try again." })}\n\n`); res.end(); } catch { /* already closed */ }
   }
 });
 
