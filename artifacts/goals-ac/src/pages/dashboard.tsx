@@ -12,8 +12,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth";
-import { Loader2, Plus, Globe, ExternalLink, Trash2, Clock, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, Plus, Globe, ExternalLink, Trash2, Clock, CheckCircle2, XCircle, FileText, ArrowRight } from "lucide-react";
 import { WIZARD_DONE_KEY } from "@/pages/onboarding";
+
+interface DraftPiece {
+  id: number;
+  title: string;
+  websiteProjectId: number;
+  projectName?: string;
+  formatType: string;
+  wordCount: number;
+  createdAt: string;
+}
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -59,6 +69,8 @@ export default function Dashboard() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [drafts, setDrafts] = useState<DraftPiece[]>([]);
+  const [draftsExpanded, setDraftsExpanded] = useState(false);
 
   const form = useForm<AddProjectForm>({
     resolver: zodResolver(addProjectSchema),
@@ -72,11 +84,27 @@ export default function Dashboard() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
-        const data = await res.json();
+        const data = await res.json() as WebsiteProject[];
         setProjects(data);
         if (data.length === 0 && !localStorage.getItem(WIZARD_DONE_KEY)) {
           navigate("/onboarding", { replace: true });
         }
+        const allDrafts: DraftPiece[] = [];
+        await Promise.all(
+          data.map(async (project) => {
+            try {
+              const r = await fetch(`${API_BASE}/api/website-projects/${project.id}/content-pieces?status=draft`, {
+                headers: { Authorization: `Bearer ${token}` },
+              });
+              if (r.ok) {
+                const pieces = await r.json() as DraftPiece[];
+                pieces.forEach((p) => allDrafts.push({ ...p, projectName: project.name }));
+              }
+            } catch { }
+          })
+        );
+        allDrafts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setDrafts(allDrafts);
       }
     } finally {
       setIsLoadingProjects(false);
@@ -190,6 +218,49 @@ export default function Dashboard() {
       </div>
 
       <div className="container mx-auto px-4 md:px-8 max-w-5xl py-10">
+        {drafts.length > 0 && !isLoadingProjects && (
+          <div className="mb-8 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/10 p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                <span className="font-semibold text-sm text-amber-800 dark:text-amber-300">
+                  {drafts.length} draft{drafts.length !== 1 ? "s" : ""} need your review
+                </span>
+              </div>
+              <button
+                onClick={() => setDraftsExpanded((v) => !v)}
+                className="text-xs text-amber-700 dark:text-amber-400 hover:underline"
+              >
+                {draftsExpanded ? "Show less" : "Show all"}
+              </button>
+            </div>
+            <div className="space-y-1">
+              {(draftsExpanded ? drafts : drafts.slice(0, 3)).map((d) => (
+                <Link
+                  key={d.id}
+                  to={`/content-piece/${d.id}`}
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-800/20 transition-colors group"
+                >
+                  <FileText className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                  <span className="text-sm font-medium text-amber-900 dark:text-amber-200 truncate flex-1">{d.title}</span>
+                  {d.projectName && (
+                    <span className="text-xs text-amber-600 dark:text-amber-400 flex-shrink-0">{d.projectName}</span>
+                  )}
+                  <ArrowRight className="w-3.5 h-3.5 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                </Link>
+              ))}
+              {!draftsExpanded && drafts.length > 3 && (
+                <button
+                  onClick={() => setDraftsExpanded(true)}
+                  className="text-xs text-amber-600 dark:text-amber-400 hover:underline px-3 py-1"
+                >
+                  +{drafts.length - 3} more
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {isLoadingProjects ? (
           <div className="flex items-center justify-center py-24">
             <Loader2 className="h-8 w-8 animate-spin text-blue-400" />

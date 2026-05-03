@@ -15,7 +15,7 @@ import {
   RefreshCw, Save, BookOpen, Newspaper, GraduationCap, Map,
   FileSearch, LayoutTemplate, Globe, ImageIcon, Trash2, Send, ExternalLink,
   Linkedin, Twitter, Instagram, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle,
-  Shuffle, CheckCircle2, Circle
+  Shuffle, CheckCircle2, Circle, FileText
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -547,6 +547,8 @@ export default function ContentPiecePage() {
   const [publishOpen, setPublishOpen] = useState(false);
   const [repurposeOpen, setRepurposeOpen] = useState(false);
 
+  const [isMarkingReady, setIsMarkingReady] = useState(false);
+
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
   const [editStatus, setEditStatus] = useState("");
@@ -651,6 +653,26 @@ export default function ContentPiecePage() {
       }
     } catch {
       alert("Failed to delete content piece. Please check your connection.");
+    }
+  };
+
+  const handleMarkReady = async () => {
+    if (!token || !id || !piece) return;
+    setIsMarkingReady(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/content-pieces/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: "ready" }),
+      });
+      if (res.ok) {
+        const updated = await res.json() as ContentPiece;
+        setPiece(updated);
+        setEditStatus("ready");
+      }
+    } catch {
+    } finally {
+      setIsMarkingReady(false);
     }
   };
 
@@ -778,6 +800,25 @@ export default function ContentPiecePage() {
             </Button>
           </div>
         </div>
+
+        {piece.status === "draft" && !isEditing && (
+          <div className="flex items-center justify-between gap-4 mb-6 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-500/25">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                This is a <span className="font-semibold">draft</span> — review the content below, then mark it ready when it's good to publish.
+              </p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleMarkReady}
+              disabled={isMarkingReady}
+              className="flex-shrink-0 bg-amber-500 hover:bg-amber-600 border-0 text-white"
+            >
+              {isMarkingReady ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />Mark as ready</>}
+            </Button>
+          </div>
+        )}
 
         {piece.publishedUrl && (
           <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">

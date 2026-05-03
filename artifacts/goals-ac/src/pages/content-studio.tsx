@@ -16,7 +16,7 @@ import {
   BookOpen, Newspaper, GraduationCap, Map as MapIcon, FileSearch, LayoutTemplate,
   Globe, ImageIcon, BarChart3, Filter, RefreshCw, Trash2, ArrowUpDown, ExternalLink,
   Linkedin, Twitter, Instagram, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle, KeyRound,
-  Shuffle, CheckCircle2
+  Shuffle, CheckCircle2, ArrowRight
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO } from "date-fns";
@@ -1147,6 +1147,22 @@ export default function ContentStudio() {
     }
   };
 
+  const handleMarkReady = async (pieceId: number) => {
+    setPieces((prev) => prev.map((p) => p.id === pieceId ? { ...p, status: "ready" } : p));
+    try {
+      const res = await fetch(`${API_BASE}/api/content-pieces/${pieceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: "ready" }),
+      });
+      if (!res.ok) {
+        setPieces((prev) => prev.map((p) => p.id === pieceId ? { ...p, status: "draft" } : p));
+      }
+    } catch {
+      setPieces((prev) => prev.map((p) => p.id === pieceId ? { ...p, status: "draft" } : p));
+    }
+  };
+
   const handleReschedule = async (pieceId: number, newDate: string) => {
     const prevPieces = pieces;
     setPieces((prev) => prev.map((p) => p.id === pieceId ? { ...p, plannedDate: newDate } : p));
@@ -1383,7 +1399,7 @@ export default function ContentStudio() {
                           <span className="text-xs text-muted-foreground">{studioSorted.length}</span>
                         </div>
                         {studioSorted.map((item) => (
-                          <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
+                          <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_auto_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
                             <div className="min-w-0">
                               <Link to={`/content-piece/${item.id}`} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2">
                                 {item.title}
@@ -1392,7 +1408,19 @@ export default function ContentStudio() {
                             <SourceBadge source={item.source} />
                             <FormatBadge type={item.formatType} />
                             <span className="text-xs text-muted-foreground truncate">{item.targetKeyword}</span>
-                            <StatusBadge status={item.status} />
+                            <div className="flex items-center gap-1.5">
+                              <StatusBadge status={item.status} />
+                              {item.status === "draft" && (
+                                <button
+                                  onClick={() => handleMarkReady(item.id)}
+                                  title="Mark as ready"
+                                  className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:text-green-600 dark:hover:text-green-400 transition-colors opacity-0 group-hover:opacity-100"
+                                >
+                                  <ArrowRight className="w-3 h-3" />
+                                  Ready
+                                </button>
+                              )}
+                            </div>
                             <span className="text-xs text-muted-foreground">{item.wordCount > 0 ? item.wordCount.toLocaleString() : "—"}</span>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-muted-foreground">
@@ -1445,7 +1473,7 @@ export default function ContentStudio() {
                   sorted.map((item) => {
                     if (isContentPiece(item)) {
                       return (
-                        <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
+                        <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_auto_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
                           <div className="min-w-0">
                             <Link to={`/content-piece/${item.id}`} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2">
                               {item.title}
@@ -1454,7 +1482,19 @@ export default function ContentStudio() {
                           <SourceBadge source={item.source} />
                           <FormatBadge type={item.formatType} />
                           <span className="text-xs text-muted-foreground truncate">{item.targetKeyword}</span>
-                          <StatusBadge status={item.status} />
+                          <div className="flex items-center gap-1.5">
+                            <StatusBadge status={item.status} />
+                            {item.status === "draft" && (
+                              <button
+                                onClick={() => handleMarkReady(item.id)}
+                                title="Mark as ready"
+                                className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:text-green-600 dark:hover:text-green-400 transition-colors opacity-0 group-hover:opacity-100"
+                              >
+                                <ArrowRight className="w-3 h-3" />
+                                Ready
+                              </button>
+                            )}
+                          </div>
                           <span className="text-xs text-muted-foreground">{item.wordCount > 0 ? item.wordCount.toLocaleString() : "—"}</span>
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-muted-foreground">

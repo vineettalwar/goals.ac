@@ -333,6 +333,10 @@ router.get("/website-projects/:id/content-pieces", requireAuth, async (req, res)
     return;
   }
 
+  const statusFilter = typeof req.query.status === "string" && ALLOWED_STATUSES.includes(req.query.status as typeof ALLOWED_STATUSES[number])
+    ? req.query.status as typeof ALLOWED_STATUSES[number]
+    : null;
+
   try {
     const [project] = await db
       .select({ id: websiteProjectsTable.id })
@@ -345,10 +349,14 @@ router.get("/website-projects/:id/content-pieces", requireAuth, async (req, res)
       return;
     }
 
+    const whereClause = statusFilter
+      ? and(eq(contentPiecesTable.websiteProjectId, projectId), eq(contentPiecesTable.status, statusFilter))
+      : eq(contentPiecesTable.websiteProjectId, projectId);
+
     const pieces = await db
       .select()
       .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.websiteProjectId, projectId))
+      .where(whereClause)
       .orderBy(desc(contentPiecesTable.createdAt));
 
     res.json(pieces);
