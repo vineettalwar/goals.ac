@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/auth";
 import {
   Loader2, Globe, CheckCircle2, ArrowRight, Sparkles, FileText,
-  Map, ChevronRight, Check, X,
+  Map, ChevronRight, Check,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -193,10 +193,15 @@ export default function Onboarding() {
       await fetch(`${API_BASE}/api/website-projects/${project.id}/brand-profile`, {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ voiceTone: selectedTone }),
+        body: JSON.stringify({
+          voiceTone: selectedTone,
+          contentStyle: {
+            tonePreset: selectedTone.toLowerCase() as "professional" | "casual" | "technical" | "conversational",
+            defaultWordCount: wordCount,
+            primaryLanguage: language,
+          },
+        }),
       });
-      localStorage.setItem(`goals_ac_wizard_wc_${project.id}`, String(wordCount));
-      localStorage.setItem(`goals_ac_wizard_lang_${project.id}`, language);
       setStep(4);
     } finally {
       setIsSavingStyle(false);
