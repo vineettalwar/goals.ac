@@ -54,7 +54,7 @@ export default function ForgotPassword() {
         <div className="orb orb-primary w-[500px] h-[400px] top-[-10%] left-[50%] -translate-x-1/2 pointer-events-none dark:block hidden" />
         <div className="orb orb-violet w-[300px] h-[300px] bottom-[-5%] right-[5%] pointer-events-none dark:block hidden" />
 
-        <Card className="w-full max-w-md relative z-10 border shadow-xl">
+        <Card className="w-full max-w-md relative z-10 border shadow-sm">
           <CardHeader className="text-center pb-6">
             <Logo size={24} className="mb-1" />
             {submitted ? (

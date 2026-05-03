@@ -390,7 +390,7 @@ export default function RoadmapDetail() {
       </div>
 
       {/* Sticky CTA Bar */}
-      <div className="sticky bottom-0 z-40 border-t border-white/[0.06] bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 py-4 shadow-lg shadow-black/30">
+      <div className="sticky bottom-0 z-40 border-t border-white/[0.06] bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 py-4 shadow-sm">
         <div className="container mx-auto px-4 md:px-8 max-w-4xl space-y-3">
           {showSeoForm && (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pb-3 border-b">

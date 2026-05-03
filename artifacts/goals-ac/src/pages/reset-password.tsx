@@ -71,7 +71,7 @@ export default function ResetPassword() {
         <SEO title="Reset Password — goals.ac" description="Reset your goals.ac password." />
         <div className="flex-1 flex items-center justify-center py-16 px-4 bg-background min-h-[80vh] relative overflow-hidden">
           <div className="orb orb-primary w-[500px] h-[400px] top-[-10%] left-[50%] -translate-x-1/2 pointer-events-none dark:block hidden" />
-          <Card className="w-full max-w-md relative z-10 border shadow-xl">
+          <Card className="w-full max-w-md relative z-10 border shadow-sm">
             <CardHeader className="text-center pb-6">
               <Logo size={24} className="mb-1" />
               <div className="flex justify-center mb-3">
@@ -100,7 +100,7 @@ export default function ResetPassword() {
         <div className="orb orb-primary w-[500px] h-[400px] top-[-10%] left-[50%] -translate-x-1/2 pointer-events-none dark:block hidden" />
         <div className="orb orb-violet w-[300px] h-[300px] bottom-[-5%] right-[5%] pointer-events-none dark:block hidden" />
 
-        <Card className="w-full max-w-md relative z-10 border shadow-xl">
+        <Card className="w-full max-w-md relative z-10 border shadow-sm">
           <CardHeader className="text-center pb-6">
             <Logo size={24} className="mb-1" />
             {success ? (

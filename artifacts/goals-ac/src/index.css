@@ -65,6 +65,15 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+
+  --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.03);
+  --shadow-xs:  0px 1px 3px 0px rgba(0,0,0,0.04);
+  --shadow-sm:  0px 1px 3px 0px rgba(0,0,0,0.05), 0px 1px 2px -1px rgba(0,0,0,0.03);
+  --shadow:     0px 1px 6px 0px rgba(0,0,0,0.06), 0px 1px 3px -1px rgba(0,0,0,0.03);
+  --shadow-md:  0px 2px 8px 0px rgba(0,0,0,0.07), 0px 1px 4px -1px rgba(0,0,0,0.04);
+  --shadow-lg:  0px 4px 12px 0px rgba(0,0,0,0.07), 0px 2px 4px -1px rgba(0,0,0,0.04);
+  --shadow-xl:  0px 6px 16px 0px rgba(0,0,0,0.08), 0px 3px 6px -1px rgba(0,0,0,0.04);
+  --shadow-2xl: 0px 8px 24px 0px rgba(0,0,0,0.09);
 }
 
 /* LIGHT MODE */
@@ -126,14 +135,6 @@
   --app-font-serif: Georgia, serif;
   --app-font-mono: 'JetBrains Mono', monospace;
   --radius: 0.625rem;
-  --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.03);
-  --shadow-xs: 0px 1px 3px 0px rgba(0,0,0,0.04);
-  --shadow-sm: 0px 1px 4px 0px rgba(0,0,0,0.05), 0px 1px 2px -1px rgba(0,0,0,0.03);
-  --shadow: 0px 2px 8px 0px rgba(0,0,0,0.06), 0px 1px 3px -1px rgba(0,0,0,0.03);
-  --shadow-md: 0px 4px 14px 0px rgba(0,0,0,0.07), 0px 2px 4px -1px rgba(0,0,0,0.04);
-  --shadow-lg: 0px 8px 20px 0px rgba(0,0,0,0.08), 0px 4px 6px -1px rgba(0,0,0,0.04);
-  --shadow-xl: 0px 16px 32px 0px rgba(0,0,0,0.09), 0px 8px 10px -1px rgba(0,0,0,0.05);
-  --shadow-2xl: 0px 24px 48px 0px rgba(0,0,0,0.10);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 
@@ -210,15 +211,6 @@
   --chart-3: 30 80% 55%;
   --chart-4: 199 80% 60%;
   --chart-5: 340 75% 55%;
-
-  --shadow-2xs: 0px 1px 2px 0px rgba(0,0,0,0.40);
-  --shadow-xs: 0px 1px 3px 0px rgba(0,0,0,0.50);
-  --shadow-sm: 0px 2px 6px 0px rgba(0,0,0,0.50), 0px 1px 2px -1px rgba(0,0,0,0.40);
-  --shadow: 0px 4px 12px 0px rgba(0,0,0,0.55), 0px 2px 4px -1px rgba(0,0,0,0.40);
-  --shadow-md: 0px 8px 24px 0px rgba(0,0,0,0.60), 0px 4px 6px -1px rgba(0,0,0,0.50);
-  --shadow-lg: 0px 16px 40px 0px rgba(0,0,0,0.65), 0px 8px 10px -1px rgba(0,0,0,0.50);
-  --shadow-xl: 0px 24px 56px 0px rgba(0,0,0,0.70), 0px 12px 16px -1px rgba(0,0,0,0.60);
-  --shadow-2xl: 0px 32px 72px 0px rgba(0,0,0,0.75);
 
   --sidebar-primary-border: hsl(var(--sidebar-primary));
   --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
