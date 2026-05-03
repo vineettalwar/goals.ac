@@ -193,7 +193,7 @@ export default function GeoAuditDetail() {
             <ScoreRing score={audit.geoScore} />
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-2 text-gradient">
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">
                 GEO Audit Results
               </h1>
               <a

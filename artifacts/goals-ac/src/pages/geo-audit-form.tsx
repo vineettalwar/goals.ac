@@ -101,7 +101,7 @@ export default function GeoAuditForm() {
 
           <motion.h1
             {...fadeUp(0.08)}
-            className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.06] text-gradient"
+            className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-5 leading-[1.06]"
           >
             Technical GEO Audit
           </motion.h1>

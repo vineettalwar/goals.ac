@@ -115,8 +115,7 @@ export default function Pricing() {
               transition={{ duration: 0.5, delay: 0.08 }}
               className="text-5xl md:text-6xl font-bold tracking-tight mb-6 leading-[1.08]"
             >
-              Free to start.{" "}
-              <span className="text-gradient">Pay when you scale.</span>
+              Free to start. Pay when you scale.
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 14 }}

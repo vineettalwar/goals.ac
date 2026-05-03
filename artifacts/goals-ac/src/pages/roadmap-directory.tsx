@@ -35,7 +35,7 @@ export default function RoadmapDirectory() {
         <div className="orb orb-violet w-[300px] h-[300px] bottom-[-20%] right-[5%]" />
 
         <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-6xl">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-gradient">
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
             Growth Strategy Directory
           </h1>
           <p className="text-xl text-zinc-400 max-w-2xl">

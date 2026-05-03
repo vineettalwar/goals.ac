@@ -180,8 +180,7 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.08, ease: "easeOut" }}
               className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.08]"
             >
-              Grow your startup on{" "}
-              <span className="text-gradient">content autopilot.</span>
+              Grow your startup on content autopilot.
             </motion.h1>
 
             <motion.p
@@ -559,7 +558,7 @@ export default function Home() {
               ].map((item, i) => (
                 <div key={item.step} className="relative">
                   <div className="rounded-2xl border border-border bg-card p-6 h-full">
-                    <div className="text-3xl font-bold text-gradient mb-3">{item.step}</div>
+                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-3">{item.step}</div>
                     <h3 className="text-lg font-bold mb-2">{item.title}</h3>
                     <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
                   </div>

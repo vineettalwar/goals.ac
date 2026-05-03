@@ -52,8 +52,7 @@ export default function ContentEngine() {
               transition={{ duration: 0.5, delay: 0.08 }}
               className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.05]"
             >
-              Ship a year of content{" "}
-              <span className="text-gradient">in a weekend.</span>
+              Ship a year of content in a weekend.
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 14 }}
@@ -285,7 +284,7 @@ export default function ContentEngine() {
                   { stat: "6 mo", label: "average head start vs competitors not optimizing" },
                 ].map((row) => (
                   <div key={row.stat} className="rounded-2xl glass-card p-5 flex items-center gap-5">
-                    <div className="text-4xl font-bold text-gradient flex-shrink-0">{row.stat}</div>
+                    <div className="text-4xl font-bold text-blue-400 flex-shrink-0">{row.stat}</div>
                     <div className="text-sm text-zinc-400 leading-relaxed">{row.label}</div>
                   </div>
                 ))}

@@ -34,8 +34,7 @@ export default function About() {
               transition={{ duration: 0.5, delay: 0.08 }}
               className="text-5xl md:text-6xl font-bold tracking-tight mb-6 leading-[1.08]"
             >
-              Content is the engine.{" "}
-              <span className="text-gradient">We built it for you.</span>
+              Content is the engine. We built it for you.
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 14 }}
@@ -121,7 +120,7 @@ export default function About() {
                 },
               ].map((value) => (
                 <div key={value.num} className="rounded-2xl glass-card p-6 card-hover-glow">
-                  <div className="text-4xl font-bold text-gradient mb-4">{value.num}</div>
+                  <div className="text-4xl font-bold text-blue-400 mb-4">{value.num}</div>
                   <h3 className="text-xl font-bold mb-3">{value.title}</h3>
                   <p className="text-sm text-zinc-400 leading-relaxed">{value.desc}</p>
                 </div>

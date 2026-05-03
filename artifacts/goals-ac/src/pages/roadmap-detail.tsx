@@ -296,7 +296,7 @@ export default function RoadmapDetail() {
             </Badge>
           </div>
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight text-gradient">
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight">
             12-Month Growth Strategy
           </h1>
 
