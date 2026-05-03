@@ -20,6 +20,7 @@ function buildContentStyleContext(style?: ContentStyle | null): string {
   const lines: string[] = [];
   if (style.personaName) lines.push(`Writing Persona: ${style.personaName}`);
   if (style.tonePreset) lines.push(`Tone: ${style.tonePreset}`);
+  if (style.defaultWordCount) lines.push(`Target Word Count: ~${style.defaultWordCount} words`);
   if (style.primaryLanguage && style.primaryLanguage !== "English") lines.push(`Language: ${style.primaryLanguage}`);
   if (style.readingLevel) lines.push(`Reading Level: ${style.readingLevel}`);
   if (style.forbiddenWords && style.forbiddenWords.length > 0) {

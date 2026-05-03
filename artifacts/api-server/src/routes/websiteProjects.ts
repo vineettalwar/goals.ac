@@ -373,12 +373,12 @@ router.put("/website-projects/:id/brand-profile", requireAuth, async (req, res) 
     }
 
     const [updatedProject] = await db
-      .select({ contentStyle: websiteProjectsTable.contentStyle, updatedAt: websiteProjectsTable.updatedAt })
+      .select({ contentStyle: websiteProjectsTable.contentStyle })
       .from(websiteProjectsTable)
       .where(eq(websiteProjectsTable.id, id))
       .limit(1);
 
-    res.json({ ...brandProfile, contentStyle: updatedProject?.contentStyle ?? null, updatedAt: updatedProject?.updatedAt });
+    res.json({ ...brandProfile, contentStyle: updatedProject?.contentStyle ?? null });
   } catch (err) {
     req.log.error(err, "Failed to update brand profile");
     res.status(500).json({ error: "Internal server error" });
