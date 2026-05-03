@@ -43,10 +43,11 @@ export function Layout({ children }: LayoutProps) {
           </Link>
           <nav className="flex items-center gap-3 text-sm font-medium">
             <Link
-              to="/roadmaps"
-              className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+              to={user ? "/roadmaps" : "/signup"}
+              className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1 flex items-center gap-1"
             >
               Directory
+              {!user && <Lock className="h-3 w-3 text-muted-foreground/70" />}
             </Link>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -161,9 +162,10 @@ export function Layout({ children }: LayoutProps) {
             <span className="text-muted-foreground">© {new Date().getFullYear()}. All rights reserved.</span>
           </p>
           <div className="flex gap-6">
-            <Link to="/roadmaps" className="hover:text-foreground transition-colors">Roadmaps</Link>
-            <Link to="/competitor-analysis" className="hover:text-foreground transition-colors">Competitor Analysis</Link>
-            <Link to="/keyword-tracking" className="hover:text-foreground transition-colors">Keyword Tracking</Link>
+            <Link to="/geo-audit" className="hover:text-foreground transition-colors">GEO Audit</Link>
+            <Link to={user ? "/roadmaps" : "/signup"} className="hover:text-foreground transition-colors">Roadmaps</Link>
+            <Link to={user ? "/competitor-analysis" : "/signup"} className="hover:text-foreground transition-colors">Competitor Analysis</Link>
+            <Link to={user ? "/keyword-tracking" : "/signup"} className="hover:text-foreground transition-colors">Keyword Tracking</Link>
           </div>
         </div>
       </footer>

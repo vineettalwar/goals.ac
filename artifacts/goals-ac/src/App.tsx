@@ -72,8 +72,8 @@ function App() {
                 <Route path="/projects/:id" element={<RequireAuth><ProjectDetail /></RequireAuth>} />
                 <Route path="/projects/:id/content-studio" element={<RequireAuth><ContentStudio /></RequireAuth>} />
                 <Route path="/content-piece/:id" element={<RequireAuth><ContentPiecePage /></RequireAuth>} />
-                <Route path="/roadmaps" element={<RoadmapDirectory />} />
-                <Route path="/roadmap/:slug" element={<RoadmapDetail />} />
+                <Route path="/roadmaps" element={<RequireAuth><RoadmapDirectory /></RequireAuth>} />
+                <Route path="/roadmap/:slug" element={<RequireAuth><RoadmapDetail /></RequireAuth>} />
                 <Route path="/content-strategy/:id" element={<ContentStrategy />} />
                 <Route path="/admin/content-strategies" element={<AdminContentStrategies />} />
                 <Route path="/seo-article/:id" element={<SeoArticle />} />
