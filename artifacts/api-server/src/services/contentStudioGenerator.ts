@@ -244,7 +244,7 @@ function buildContentStyleContext(style?: ContentStyle | null): string {
   if (style.personaName) lines.push(`WRITING PERSONA: ${style.personaName}`);
   if (style.tonePreset) lines.push(`TONE: ${style.tonePreset}`);
   if (style.defaultWordCount) lines.push(`TARGET WORD COUNT: ~${style.defaultWordCount} words (override format default if instructed)`);
-  if (style.primaryLanguage && style.primaryLanguage !== "English") lines.push(`LANGUAGE: ${style.primaryLanguage}`);
+  if (style.primaryLanguage) lines.push(`LANGUAGE: ${style.primaryLanguage}`);
   if (style.readingLevel) lines.push(`READING LEVEL: ${style.readingLevel}`);
   if (style.forbiddenWords && style.forbiddenWords.length > 0) {
     lines.push(`DO NOT USE THESE WORDS/PHRASES: ${style.forbiddenWords.join(", ")}`);

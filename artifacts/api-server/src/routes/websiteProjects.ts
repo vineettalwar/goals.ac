@@ -340,6 +340,12 @@ router.put("/website-projects/:id/brand-profile", requireAuth, async (req, res) 
         .update(websiteProjectsTable)
         .set({ contentStyle: parsed.data.contentStyle })
         .where(eq(websiteProjectsTable.id, id));
+      if (existing.length > 0) {
+        await db
+          .update(brandProfilesTable)
+          .set({ updatedAt: new Date() })
+          .where(eq(brandProfilesTable.websiteProjectId, id));
+      }
     }
 
     const updates: Record<string, unknown> = {};
