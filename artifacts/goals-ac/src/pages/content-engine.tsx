@@ -300,7 +300,7 @@ export default function ContentEngine() {
             <Zap className="h-10 w-10 text-blue-500 mx-auto mb-5" />
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
               Stop renting an agency.<br />
-              <span className="text-gradient">Own your content engine.</span>
+              Own your content engine.
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
               Free forever for the core platform. Sign up to start generating brand-aligned content in minutes.
