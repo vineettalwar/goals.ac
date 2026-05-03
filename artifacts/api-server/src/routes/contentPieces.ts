@@ -1026,11 +1026,16 @@ router.post("/content-pieces/:id/publish/notion", requireAuth, async (req, res) 
       return;
     }
 
+    const tags: string[] = [];
+    if (piece.targetKeyword) tags.push(piece.targetKeyword);
+    if (piece.formatType) tags.push(piece.formatType.replace(/_/g, " "));
+
     const notionPageUrl = await publishToNotion(
       creds.notion.integrationToken,
       creds.notion.databaseId,
       piece.title,
       piece.bodyMarkdown,
+      { status: piece.status ?? "draft", tags },
     );
 
     const [updated] = await db

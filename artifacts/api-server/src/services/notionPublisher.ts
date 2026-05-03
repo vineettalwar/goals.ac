@@ -108,21 +108,75 @@ export function markdownToNotionBlocks(markdown: string): NotionBlock[] {
   return blocks;
 }
 
+interface NotionDatabaseProperty {
+  id: string;
+  name: string;
+  type: string;
+}
+
+async function fetchDatabaseProperties(
+  integrationToken: string,
+  databaseId: string,
+): Promise<Record<string, NotionDatabaseProperty>> {
+  const res = await fetch(`${NOTION_API}/databases/${databaseId}`, {
+    headers: {
+      Authorization: `Bearer ${integrationToken}`,
+      "Notion-Version": NOTION_VERSION,
+    },
+  });
+  if (!res.ok) return {};
+  const db = await res.json() as { properties?: Record<string, NotionDatabaseProperty> };
+  return db.properties ?? {};
+}
+
 export async function publishToNotion(
   integrationToken: string,
   databaseId: string,
   title: string,
   bodyMarkdown: string,
+  meta?: { status?: string; tags?: string[] },
 ): Promise<string> {
   await assertPublicUrl(NOTION_API);
 
-  const blocks = markdownToNotionBlocks(bodyMarkdown);
+  const [blocks, dbProperties] = await Promise.all([
+    Promise.resolve(markdownToNotionBlocks(bodyMarkdown)),
+    fetchDatabaseProperties(integrationToken, databaseId),
+  ]);
 
-  const pageProperties: Record<string, unknown> = {
-    Name: {
-      title: [{ type: "text", text: { content: title } }],
-    },
+  const pageProperties: Record<string, unknown> = {};
+
+  const titlePropName = Object.keys(dbProperties).find(
+    (k) => dbProperties[k].type === "title",
+  ) ?? "Name";
+  pageProperties[titlePropName] = {
+    title: [{ type: "text", text: { content: title } }],
   };
+
+  if (meta?.status) {
+    const statusProp = Object.entries(dbProperties).find(
+      ([, v]) => v.type === "status" || v.type === "select",
+    );
+    if (statusProp) {
+      const [propName, propDef] = statusProp;
+      if (propDef.type === "status") {
+        pageProperties[propName] = { status: { name: meta.status } };
+      } else {
+        pageProperties[propName] = { select: { name: meta.status } };
+      }
+    }
+  }
+
+  if (meta?.tags && meta.tags.length > 0) {
+    const tagsProp = Object.entries(dbProperties).find(
+      ([, v]) => v.type === "multi_select",
+    );
+    if (tagsProp) {
+      const [propName] = tagsProp;
+      pageProperties[propName] = {
+        multi_select: meta.tags.map((t) => ({ name: t })),
+      };
+    }
+  }
 
   const backlink: NotionBlock = {
     object: "block",
