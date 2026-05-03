@@ -28,6 +28,8 @@ import ContentPiecePage from "@/pages/content-piece";
 import OAuthCallback from "@/pages/oauth-callback";
 import Settings from "@/pages/settings";
 import Onboarding from "@/pages/onboarding";
+import CompetitorAnalysis from "@/pages/competitor-analysis";
+import KeywordTracking from "@/pages/keyword-tracking";
 
 setBaseUrl(import.meta.env.BASE_URL.replace(/\/$/, ""));
 
@@ -77,6 +79,8 @@ function App() {
                 <Route path="/seo-article/:id" element={<SeoArticle />} />
                 <Route path="/geo-audit" element={<GeoAuditForm />} />
                 <Route path="/geo-audit/:id" element={<GeoAuditDetail />} />
+                <Route path="/competitor-analysis" element={<CompetitorAnalysis />} />
+                <Route path="/keyword-tracking" element={<KeywordTracking />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </BrowserRouter>

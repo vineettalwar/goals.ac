@@ -8,6 +8,9 @@ import geoAuditsRouter from "./geoAudits";
 import authRouter from "./auth";
 import websiteProjectsRouter from "./websiteProjects";
 import contentPiecesRouter from "./contentPieces";
+import chatRouter from "./chat";
+import competitorAnalysisRouter from "./competitorAnalysis";
+import keywordAnalysisRouter from "./keywordAnalysis";
 
 const router: IRouter = Router();
 
@@ -20,5 +23,8 @@ router.use(contentStrategiesRouter);
 router.use(seoArticlesRouter);
 router.use(geoAuditsRouter);
 router.use(contentPiecesRouter);
+router.use(chatRouter);
+router.use(competitorAnalysisRouter);
+router.use(keywordAnalysisRouter);
 
 export default router;

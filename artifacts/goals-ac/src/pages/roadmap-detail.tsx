@@ -13,10 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText, Zap, FolderOpen, BookmarkPlus, BookmarkCheck, Plus, KeyRound } from "lucide-react";
+import { CheckCircle2, ChevronRight, Eye, Target, TrendingUp, BarChart, Loader2, FileText, Zap, FolderOpen, BookmarkPlus, BookmarkCheck, Plus, KeyRound, Mail, Download } from "lucide-react";
 import { format } from "date-fns";
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/context/active-project";
+import { RoadmapChat } from "@/components/roadmap-chat";
+import { LeadCaptureModal } from "@/components/lead-capture-modal";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -34,6 +36,7 @@ export default function RoadmapDetail() {
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [isPinned, setIsPinned] = useState(false);
   const [isPinning, setIsPinning] = useState(false);
+  const [showLeadCapture, setShowLeadCapture] = useState(false);
 
   const { data: roadmap, isLoading, isError } = useGetRoadmap(slug, {
     query: {
@@ -531,10 +534,36 @@ export default function RoadmapDetail() {
                   <a href="/signup">Sign up free</a>
                 </Button>
               )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLeadCapture(true)}
+                className="gap-2"
+              >
+                <Mail className="w-4 h-4" />
+                Get execution guide
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => window.print()}
+                className="gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Export PDF
+              </Button>
             </div>
           </div>
         </div>
       </div>
+
+      <RoadmapChat slug={slug} />
+
+      <LeadCaptureModal
+        roadmapSlug={slug}
+        open={showLeadCapture}
+        onOpenChange={setShowLeadCapture}
+      />
     </Layout>
   );
 }

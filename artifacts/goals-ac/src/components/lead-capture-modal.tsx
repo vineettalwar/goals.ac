@@ -21,10 +21,17 @@ type FormValues = z.infer<typeof formSchema>;
 interface LeadCaptureModalProps {
   roadmapSlug: string;
   trigger?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-export function LeadCaptureModal({ roadmapSlug, trigger }: LeadCaptureModalProps) {
-  const [open, setOpen] = useState(false);
+export function LeadCaptureModal({ roadmapSlug, trigger, open: controlledOpen, onOpenChange }: LeadCaptureModalProps) {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+  const setOpen = (v: boolean) => {
+    setInternalOpen(v);
+    onOpenChange?.(v);
+  };
   const [isSubmitted, setIsSubmitted] = useState(false);
   const { toast } = useToast();
   

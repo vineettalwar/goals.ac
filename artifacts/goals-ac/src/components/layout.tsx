@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { LayoutDashboard, LogOut, ChevronDown, ShieldCheck, Sun, Moon, Settings } from "lucide-react";
+import { LayoutDashboard, LogOut, ChevronDown, ShieldCheck, Sun, Moon, Settings, Search, BarChart3, Zap } from "lucide-react";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -48,6 +48,33 @@ export function Layout({ children }: LayoutProps) {
             >
               Directory
             </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors px-2 py-1 focus:outline-none">
+                  Tools <ChevronDown className="h-3 w-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-52 bg-card border-border shadow-md">
+                <DropdownMenuItem asChild>
+                  <Link to="/geo-audit" className="flex items-center gap-2 text-foreground hover:text-foreground focus:text-foreground">
+                    <Zap className="h-4 w-4 text-blue-500" />
+                    GEO Audit
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/competitor-analysis" className="flex items-center gap-2 text-foreground hover:text-foreground focus:text-foreground">
+                    <Search className="h-4 w-4 text-purple-500" />
+                    Competitor Analysis
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/keyword-tracking" className="flex items-center gap-2 text-foreground hover:text-foreground focus:text-foreground">
+                    <BarChart3 className="h-4 w-4 text-emerald-500" />
+                    Keyword Tracking
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
@@ -133,6 +160,8 @@ export function Layout({ children }: LayoutProps) {
           </p>
           <div className="flex gap-6">
             <Link to="/roadmaps" className="hover:text-foreground transition-colors">Roadmaps</Link>
+            <Link to="/competitor-analysis" className="hover:text-foreground transition-colors">Competitor Analysis</Link>
+            <Link to="/keyword-tracking" className="hover:text-foreground transition-colors">Keyword Tracking</Link>
           </div>
         </div>
       </footer>
