@@ -139,7 +139,7 @@ export default function Signup() {
                 />
                 <Button
                   type="submit"
-                  className="w-full glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
+                  className="w-full glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
                   disabled={form.formState.isSubmitting}
                 >
                   {form.formState.isSubmitting ? (

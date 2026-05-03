@@ -83,7 +83,7 @@ export default function ResetPassword() {
               <CardDescription>This password reset link is invalid or has expired.</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild className="w-full glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white">
+              <Button asChild className="w-full glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white">
                 <Link to="/forgot-password">Request a new link</Link>
               </Button>
             </CardContent>
@@ -168,7 +168,7 @@ export default function ResetPassword() {
                   />
                   <Button
                     type="submit"
-                    className="w-full glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
+                    className="w-full glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
                     disabled={form.formState.isSubmitting}
                   >
                     {form.formState.isSubmitting ? (

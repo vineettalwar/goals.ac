@@ -36,23 +36,22 @@ export function Layout({ children }: LayoutProps) {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-background text-foreground font-sans selection:bg-primary/20">
-      {/* Glass header — frosted content scrolls behind it */}
-      <header className="sticky top-0 z-50 w-full border-b border-white/[0.06] bg-background/70 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
-          <Link to="/" className="hover:opacity-90 transition-opacity">
+      <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
+        <div className="container mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
+          <Link to="/" className="hover:opacity-80 transition-opacity">
             <Logo />
           </Link>
-          <nav className="flex items-center gap-4 text-sm font-medium">
+          <nav className="flex items-center gap-3 text-sm font-medium">
             <Link
               to="/roadmaps"
-              className="text-muted-foreground hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
             >
               Directory
             </Link>
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
-              className="rounded-lg p-2 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             >
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
@@ -60,9 +59,9 @@ export function Layout({ children }: LayoutProps) {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button className="flex items-center gap-2 rounded-full hover:opacity-80 transition-opacity focus:outline-none">
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-7 w-7">
                       {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
-                      <AvatarFallback className="text-xs bg-primary/20 text-primary border border-primary/30">
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary border border-primary/20">
                         {initials}
                       </AvatarFallback>
                     </Avatar>
@@ -70,7 +69,7 @@ export function Layout({ children }: LayoutProps) {
                     <ChevronDown className="h-3 w-3 text-muted-foreground hidden sm:block" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 bg-card border-border shadow-xl">
+                <DropdownMenuContent align="end" className="w-48 bg-card border-border shadow-md">
                   <DropdownMenuItem asChild>
                     <Link to="/dashboard" className="flex items-center gap-2 text-foreground hover:text-foreground focus:text-foreground">
                       <LayoutDashboard className="h-4 w-4" />
@@ -85,18 +84,18 @@ export function Layout({ children }: LayoutProps) {
                   </DropdownMenuItem>
                   {user.role === "super_admin" && (
                     <>
-                      <DropdownMenuSeparator className="bg-white/10" />
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
-                        <Link to="/admin/content-strategies" className="flex items-center gap-2 text-blue-400 hover:text-blue-300 focus:text-blue-300">
+                        <Link to="/admin/content-strategies" className="flex items-center gap-2 text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 focus:text-blue-600">
                           <ShieldCheck className="h-4 w-4" />
                           Admin
                         </Link>
                       </DropdownMenuItem>
                     </>
                   )}
-                  <DropdownMenuSeparator className="bg-white/10" />
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    className="flex items-center gap-2 text-rose-400 focus:text-rose-400 focus:bg-rose-400/10"
+                    className="flex items-center gap-2 text-rose-500 dark:text-rose-400 focus:text-rose-500 focus:bg-rose-50 dark:focus:bg-rose-400/10"
                     onClick={handleLogout}
                   >
                     <LogOut className="h-4 w-4" />
@@ -106,13 +105,13 @@ export function Layout({ children }: LayoutProps) {
               </DropdownMenu>
             ) : (
               <div className="flex items-center gap-2">
-                <Button variant="ghost" size="sm" asChild>
+                <Button variant="ghost" size="sm" asChild className="text-muted-foreground hover:text-foreground">
                   <Link to="/login">Sign in</Link>
                 </Button>
                 <Button
                   size="sm"
                   asChild
-                  className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border-0 text-white"
+                  className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white glow-primary"
                 >
                   <Link to="/signup">Sign up</Link>
                 </Button>
@@ -126,13 +125,13 @@ export function Layout({ children }: LayoutProps) {
         {children}
       </main>
 
-      <footer className="border-t border-white/[0.06] bg-black/20 py-12 mt-auto backdrop-blur-sm">
+      <footer className="border-t border-border bg-background py-10 mt-auto">
         <div className="container mx-auto px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <p className="font-medium flex items-center gap-2">
-            <Logo size={20} />
+            <Logo size={18} />
             <span>© {new Date().getFullYear()}. All rights reserved.</span>
           </p>
-          <div className="flex gap-4">
+          <div className="flex gap-6">
             <Link to="/roadmaps" className="hover:text-foreground transition-colors">Roadmaps</Link>
           </div>
         </div>

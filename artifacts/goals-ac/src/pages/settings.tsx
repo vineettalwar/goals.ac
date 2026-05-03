@@ -323,7 +323,7 @@ export default function Settings() {
                   <Button
                     type="submit"
                     disabled={isSavingProfile}
-                    className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
+                    className="glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
                   >
                     {isSavingProfile ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : "Save profile"}
                   </Button>
@@ -457,7 +457,7 @@ export default function Settings() {
                     <Button
                       type="submit"
                       disabled={isSavingPassword}
-                      className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
+                      className="glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
                     >
                       {isSavingPassword ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Updating…</> : "Update password"}
                     </Button>
@@ -555,7 +555,7 @@ export default function Settings() {
             <Button
               onClick={onSaveGeminiKey}
               disabled={!geminiKeyInput.trim() || isSavingGeminiKey || isTestingGeminiKey}
-              className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
+              className="glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
             >
               {isSavingGeminiKey ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</> : "Save key"}
             </Button>

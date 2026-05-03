@@ -161,7 +161,7 @@ export default function Dashboard() {
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white">
+              <Button className="glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white">
                 <Plus className="w-4 h-4 mr-2" />
                 Add website
               </Button>
@@ -203,7 +203,7 @@ export default function Dashboard() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white" disabled={form.formState.isSubmitting}>
+                  <Button type="submit" className="w-full glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white" disabled={form.formState.isSubmitting}>
                     {form.formState.isSubmitting ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Adding...</>
                     ) : (
@@ -277,7 +277,7 @@ export default function Dashboard() {
               </CardDescription>
               <Button
                 onClick={() => setDialogOpen(true)}
-                className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
+                className="glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Add your first website

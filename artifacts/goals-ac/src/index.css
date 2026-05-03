@@ -164,7 +164,6 @@
   --elevate-1: rgba(255,255,255, .04);
   --elevate-2: rgba(255,255,255, .09);
 
-  /* Clean near-black with a subtle blue tint */
   --background: 215 30% 5%;
   --foreground: 210 25% 95%;
 
@@ -172,7 +171,6 @@
   --input: 215 18% 14%;
   --ring: 213 94% 68%;
 
-  /* Cards slightly lighter than background for depth */
   --card: 215 25% 8%;
   --card-foreground: 210 25% 95%;
   --card-border: 215 18% 16%;
@@ -190,7 +188,6 @@
   --popover-foreground: 210 25% 95%;
   --popover-border: 215 18% 16%;
 
-  /* Clean blue primary */
   --primary: 213 94% 68%;
   --primary-foreground: 215 30% 5%;
 
@@ -237,7 +234,6 @@
     @apply font-sans antialiased bg-background text-foreground;
   }
 
-  /* Headings: tighter tracking, heavier weight by default */
   h1, h2, h3, h4, h5, h6 {
     @apply tracking-tight;
     font-weight: 700;
@@ -245,19 +241,16 @@
 }
 
 /* ─── Glass cards — unlayered so they beat Tailwind border/background utilities ─── */
-/* Light mode: solid, readable card appearance */
 .glass-card {
   background: hsl(var(--card));
   border: 1px solid hsl(var(--border));
 }
-/* Dark mode or inside a dark mesh section: frosted glass */
 .dark .glass-card,
 .bg-mesh-dark .glass-card {
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px) saturate(160%);
-  -webkit-backdrop-filter: blur(16px) saturate(160%);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.20), inset 0 1px 0 rgba(255,255,255,0.06);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .glass-card-md {
@@ -266,103 +259,99 @@
 }
 .dark .glass-card-md,
 .bg-mesh-dark .glass-card-md {
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(12px) saturate(140%);
-  -webkit-backdrop-filter: blur(12px) saturate(140%);
-  box-shadow: 0 1px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
 /* ─── glass-inner — unlayered so it beats Tailwind utilities ─── */
-/* Light mode: subtle muted block */
 .glass-inner {
   background: hsl(var(--muted));
   border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
 }
-/* Dark mode or inside a dark mesh section: faint white-tint block */
 .dark .glass-inner,
 .bg-mesh-dark .glass-inner {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 0.5rem;
 }
 
-/* ─── Glass & premium utilities ─────────────────────────────────── */
+/* ─── Primary CTA buttons — clean, no outer glow ─── */
+.glow-primary {
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.glow-primary:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.glow-primary:active {
+  filter: brightness(0.97);
+  transform: translateY(0);
+}
+
+/* ─── Premium utilities ─────────────────────────────────── */
 @layer utilities {
 
-  /* Gradient mesh background for dark sections */
+  /* Gradient mesh background — atmospheric, not harsh */
   .bg-mesh-dark {
-    background-color: #030c15;
+    background-color: #050e1a;
     background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59, 130, 246, 0.18) 0%, transparent 70%),
-      radial-gradient(ellipse 50% 40% at 90% 90%, rgba(37, 99, 235, 0.10) 0%, transparent 60%),
-      radial-gradient(ellipse 40% 30% at 10% 70%, rgba(96, 165, 250, 0.08) 0%, transparent 60%);
+      radial-gradient(ellipse 90% 70% at 50% -5%, rgba(59, 130, 246, 0.10) 0%, transparent 65%),
+      radial-gradient(ellipse 50% 40% at 85% 95%, rgba(37, 99, 235, 0.05) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 30% at 10% 65%, rgba(96, 165, 250, 0.04) 0%, transparent 60%);
   }
 
-  /* Primary glow for CTA buttons */
-  .glow-primary {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.35), 0 4px 16px rgba(0, 0, 0, 0.40);
-    transition: box-shadow 0.25s ease, transform 0.25s ease;
-  }
-  .glow-primary:hover {
-    box-shadow: 0 0 36px rgba(59, 130, 246, 0.55), 0 8px 24px rgba(0, 0, 0, 0.50);
-    transform: translateY(-2px);
-  }
-
-  /* Gradient text */
+  /* Gradient text — refined, not saturated */
   .text-gradient {
-    background: linear-gradient(135deg, #ffffff 0%, #93c5fd 60%, #60a5fa 100%);
+    background: linear-gradient(140deg, #ffffff 0%, #cbd5fe 55%, #93c5fd 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
-  /* Accent glow orbs used as decorative elements */
+  /* Accent orbs — very subtle atmospheric glow */
   .orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(80px);
+    filter: blur(120px);
     pointer-events: none;
     z-index: 0;
   }
 
   .orb-primary {
-    background: radial-gradient(circle, rgba(59, 130, 246, 0.28) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.10) 0%, transparent 70%);
   }
 
   .orb-violet {
-    background: radial-gradient(circle, rgba(37, 99, 235, 0.20) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(99, 102, 241, 0.07) 0%, transparent 70%);
   }
 
   .orb-indigo {
-    background: radial-gradient(circle, rgba(96, 165, 250, 0.16) 0%, transparent 70%);
+    background: radial-gradient(circle, rgba(96, 165, 250, 0.05) 0%, transparent 70%);
   }
 
-  /* Card hover glow */
+  /* Card hover — clean lift, no glow */
   .card-hover-glow {
-    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
   .card-hover-glow:hover {
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2), 0 4px 16px rgba(0, 0, 0, 0.08);
-    border-color: rgba(59, 130, 246, 0.2) !important;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
   }
   .dark .card-hover-glow:hover {
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.3), 0 8px 24px rgba(0, 0, 0, 0.40);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
   }
 
-  /* Badge — no glow */
   .badge-glow {
     box-shadow: none;
   }
 
-  /* Hide ugly search cancel button in Chrome */
   input[type="search"]::-webkit-search-cancel-button {
     @apply hidden;
   }
 
-  /* Placeholder styling for contentEditable div */
   [contenteditable][data-placeholder]:empty::before {
     content: attr(data-placeholder);
     color: hsl(var(--muted-foreground));

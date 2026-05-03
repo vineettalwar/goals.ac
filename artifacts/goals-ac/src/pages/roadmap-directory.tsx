@@ -117,7 +117,7 @@ export default function RoadmapDirectory() {
             <p className="text-muted-foreground mb-6">Be the first to generate a growth strategy.</p>
             <Link
               to="/"
-              className="inline-flex items-center justify-center rounded-lg text-sm font-semibold transition-colors glow-primary bg-gradient-to-r from-blue-500 to-blue-600 text-white h-10 px-8"
+              className="inline-flex items-center justify-center rounded-lg text-sm font-semibold transition-colors glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white h-10 px-8"
             >
               Generate Roadmap
             </Link>

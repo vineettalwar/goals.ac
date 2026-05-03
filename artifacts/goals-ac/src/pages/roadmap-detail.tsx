@@ -408,7 +408,7 @@ export default function RoadmapDetail() {
                 className="flex-1"
                 disabled={seoLoading}
               />
-              <Button onClick={handleGenerateSeo} disabled={seoLoading || !brandName || !websiteUrl} className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0">
+              <Button onClick={handleGenerateSeo} disabled={seoLoading || !brandName || !websiteUrl} className="glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0">
                 {seoLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -540,7 +540,7 @@ export default function RoadmapDetail() {
                 <Button
                   size="sm"
                   asChild
-                  className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white"
+                  className="glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
                 >
                   <a href="/signup">Sign up free</a>
                 </Button>

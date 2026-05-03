@@ -782,7 +782,7 @@ export default function ProjectDetail() {
                         )}
                       />
                       <div className="flex items-center gap-3">
-                        <Button type="submit" disabled={isSaving} className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white">
+                        <Button type="submit" disabled={isSaving} className="glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white">
                           {isSaving ? (
                             <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
                           ) : (
@@ -1340,7 +1340,7 @@ export default function ProjectDetail() {
                     <CardDescription className="max-w-sm mb-6">
                       Use the tools on the home page to generate roadmaps, content strategies, SEO articles, and GEO audits. They'll appear here when you're logged in.
                     </CardDescription>
-                    <Button className="glow-primary bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white" asChild>
+                    <Button className="glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white" asChild>
                       <Link to="/">Generate content</Link>
                     </Button>
                   </CardContent>

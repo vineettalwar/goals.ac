@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -162,26 +163,46 @@ export default function Home() {
           <div className="orb orb-indigo w-[300px] h-[300px] bottom-[10%] left-[-5%]" />
 
           <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl text-center">
-            <div className="inline-flex items-center rounded-full border border-blue-500/30 bg-blue-500/10 px-4 py-1.5 text-sm font-medium text-blue-300 mb-8">
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: "easeOut" }}
+              className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-4 py-1.5 text-xs font-semibold text-zinc-300 mb-8 tracking-wide uppercase"
+            >
               Data-Driven Growth Strategies for B2B Startups
-            </div>
+            </motion.div>
 
-            <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.08]">
+            <motion.h1
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.08, ease: "easeOut" }}
+              className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.08]"
+            >
               Stop guessing.{" "}
               <br className="hidden md:block" />
               <span className="text-gradient">Start executing.</span>
-            </h1>
+            </motion.h1>
 
-            <p className="text-xl md:text-2xl text-zinc-400 mb-14 max-w-3xl mx-auto leading-relaxed">
+            <motion.p
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.18, ease: "easeOut" }}
+              className="text-xl md:text-2xl text-zinc-400 mb-14 max-w-3xl mx-auto leading-relaxed"
+            >
               Generate a precise, AI-powered 12-month growth roadmap tailored to your specific industry, location, and company stage.
-            </p>
+            </motion.p>
           </div>
         </section>
 
         {/* Generator Section — floats over hero */}
         <section className="py-0 bg-background relative z-20 -mt-16">
           <div className="container mx-auto px-4 md:px-8 max-w-3xl">
-            <Card className="shadow-sm dark:shadow-lg border-white/10 glass-card overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
+            >
+            <Card className="border-border glass-card overflow-hidden">
               <CardContent className="p-8 md:p-12">
                 <h2 className="text-2xl font-bold tracking-tight mb-2">Generate your 2026 Growth Roadmap</h2>
                 <p className="text-muted-foreground text-sm mb-8">Free, instant, no sign-up required.</p>
@@ -268,7 +289,7 @@ export default function Home() {
                       <Button
                         type="submit"
                         size="lg"
-                        className="w-full h-12 text-base font-semibold glow-primary bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border-0 text-white"
+                        className="w-full h-12 text-base font-semibold glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
                         disabled={isPending || isLoadingIndustries || isLoadingLocations}
                       >
                         {isPending ? (
@@ -316,6 +337,7 @@ export default function Home() {
                 </Form>
               </CardContent>
             </Card>
+            </motion.div>
           </div>
         </section>
 
