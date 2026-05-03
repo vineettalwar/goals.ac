@@ -2,12 +2,93 @@ import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
 import { seoArticlesTable, websiteProjectsTable } from "@workspace/db";
 import { eq, desc, and, inArray } from "drizzle-orm";
-import { generateSeoArticleContent } from "../services/seoContentGenerator";
+import { generateSeoArticleContent, generateSeoArticleContentStream } from "../services/seoContentGenerator";
 import { logger } from "../lib/logger";
 import { optionalAuth, requireAuth } from "../lib/auth";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 
 const router: IRouter = Router();
+
+router.post("/seo-articles/generate/stream", optionalAuth, async (req, res) => {
+  try {
+    const { brand_name, website_url, industry, location, stage, roadmap_id, website_project_id } = req.body as Record<string, unknown>;
+
+    if (!brand_name || !website_url || !industry || !location || !stage) {
+      res.status(400).json({ error: "Missing required fields: brand_name, website_url, industry, location, stage" });
+      return;
+    }
+
+    let validatedProjectId: number | null = null;
+    if (website_project_id && req.user) {
+      const projectIdNum = Number(website_project_id);
+      const [proj] = await db
+        .select({ id: websiteProjectsTable.id })
+        .from(websiteProjectsTable)
+        .where(and(eq(websiteProjectsTable.id, projectIdNum), eq(websiteProjectsTable.userId, req.user.userId)))
+        .limit(1);
+      if (!proj) { res.status(403).json({ error: "You do not have access to this project" }); return; }
+      validatedProjectId = projectIdNum;
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    const sendEvent = (event: string, data: unknown) => {
+      try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch { /* closed */ }
+    };
+
+    const userApiKey = req.user ? await getDecryptedUserGeminiKey(req.user.userId) : null;
+
+    let articleContent;
+    try {
+      articleContent = await generateSeoArticleContentStream(
+        brand_name as string,
+        website_url as string,
+        industry as string,
+        location as string,
+        stage as string,
+        (chunk) => sendEvent("chunk", { text: chunk }),
+        userApiKey,
+      );
+    } catch (err) {
+      logger.error({ err }, "Failed to stream SEO article");
+      sendEvent("error", { error: "SEO article generation temporarily unavailable. Please try again." });
+      res.end();
+      return;
+    }
+
+    const wordCount = articleContent.content.split(/\s+/).filter(Boolean).length;
+    const roadmapIdNum = roadmap_id ? Number(roadmap_id) : null;
+
+    const [inserted] = await db
+      .insert(seoArticlesTable)
+      .values({
+        roadmapId: roadmapIdNum,
+        websiteProjectId: validatedProjectId,
+        brandName: brand_name as string,
+        websiteUrl: website_url as string,
+        industry: industry as string,
+        location: location as string,
+        stage: stage as string,
+        title: articleContent.title,
+        metaDescription: articleContent.meta_description,
+        primaryKeyword: articleContent.primary_keyword,
+        secondaryKeywords: articleContent.secondary_keywords,
+        content: articleContent.content,
+        wordCount,
+        status: "draft",
+      })
+      .returning();
+
+    sendEvent("done", inserted);
+    res.end();
+  } catch (err) {
+    logger.error({ err }, "Failed to stream SEO article");
+    try { res.write(`event: error\ndata: ${JSON.stringify({ error: "Internal server error" })}\n\n`); res.end(); } catch { /* closed */ }
+  }
+});
 
 router.post("/seo-articles/generate", optionalAuth, async (req, res) => {
   try {

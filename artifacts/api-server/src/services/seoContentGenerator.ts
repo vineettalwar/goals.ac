@@ -138,3 +138,72 @@ export async function generateSeoArticleContent(
 
   return generateWithClient(platformClient, brandName, websiteUrl, industry, location, stage);
 }
+
+async function generateStreamWithClient(
+  ai: GoogleGenAI,
+  brandName: string,
+  websiteUrl: string,
+  industry: string,
+  location: string,
+  stage: string,
+  onChunk: (text: string) => void,
+): Promise<SeoArticleContent> {
+  const prompt = buildPrompt(brandName, websiteUrl, industry, location, stage);
+  let accumulated = "";
+
+  const stream = await ai.models.generateContentStream({
+    model: "gemini-2.5-flash",
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    config: {
+      systemInstruction: SYSTEM_PROMPT,
+      responseMimeType: "application/json",
+      maxOutputTokens: 8192,
+      thinkingConfig: { thinkingBudget: 0 },
+    },
+  });
+
+  for await (const chunk of stream) {
+    const text = chunk.text ?? "";
+    accumulated += text;
+    if (text) onChunk(text);
+  }
+
+  const cleaned = accumulated.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
+  const result = JSON.parse(cleaned) as SeoArticleContent;
+  if (!result.title || !result.content || result.content.length < 500) {
+    throw new Error("Invalid article structure from Gemini stream");
+  }
+  return result;
+}
+
+export async function generateSeoArticleContentStream(
+  brandName: string,
+  websiteUrl: string,
+  industry: string,
+  location: string,
+  stage: string,
+  onChunk: (text: string) => void,
+  userApiKey?: string | null,
+): Promise<SeoArticleContent> {
+  if (userApiKey) {
+    try {
+      const userClient = await createUserGeminiClient(userApiKey);
+      return await generateStreamWithClient(userClient, brandName, websiteUrl, industry, location, stage, onChunk);
+    } catch (err) {
+      if (isUserKeyError(err)) {
+        logger.warn({ err }, "User Gemini key failed for SEO article stream, falling back to platform key");
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const platformClient = await getPlatformGeminiClient();
+  if (!platformClient) {
+    throw new Error(
+      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
+    );
+  }
+
+  return generateStreamWithClient(platformClient, brandName, websiteUrl, industry, location, stage, onChunk);
+}

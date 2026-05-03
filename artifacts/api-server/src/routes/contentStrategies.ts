@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { contentStrategiesTable, contentItemsTable, roadmapsTable, websiteProjectsTable } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { generateContentStrategy } from "../services/contentStrategyGenerator";
+import { generateContentStrategy, generateContentStrategyWithProgress } from "../services/contentStrategyGenerator";
 import { requireAuth, requireSuperAdmin, optionalAuth } from "../lib/auth";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 
@@ -19,6 +19,77 @@ const GenerateContentStrategyBody = z.object({
 
 const UpdateItemStatusBody = z.object({
   status: z.enum(["draft", "prepared", "published"]),
+});
+
+router.post("/content-strategies/generate/stream", optionalAuth, async (req, res) => {
+  const parsed = GenerateContentStrategyBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request: " + parsed.error.message });
+    return;
+  }
+
+  const { roadmap_id, industry, location, stage, website_project_id } = parsed.data;
+
+  let validatedProjectId: number | null = null;
+  if (website_project_id && req.user) {
+    const [proj] = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, website_project_id), eq(websiteProjectsTable.userId, req.user.userId)))
+      .limit(1);
+    if (!proj) { res.status(403).json({ error: "You do not have access to this project" }); return; }
+    validatedProjectId = website_project_id;
+  }
+
+  const roadmap = await db.select().from(roadmapsTable).where(eq(roadmapsTable.id, roadmap_id)).limit(1);
+  if (roadmap.length === 0) { res.status(404).json({ error: "Roadmap not found" }); return; }
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const sendEvent = (event: string, data: unknown) => {
+    try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch { /* closed */ }
+  };
+
+  try {
+    const userApiKey = req.user ? await getDecryptedUserGeminiKey(req.user.userId) : null;
+
+    let items;
+    try {
+      items = await generateContentStrategyWithProgress(
+        industry, location, stage,
+        (batchNum, totalBatches, batchItems) => {
+          sendEvent("progress", { batchNum, totalBatches, itemCount: batchItems.length });
+        },
+        userApiKey,
+      );
+    } catch (err) {
+      req.log.error(err, "Gemini content strategy stream generation failed");
+      sendEvent("error", { error: "Content strategy generation temporarily unavailable. Please try again." });
+      res.end();
+      return;
+    }
+
+    const now = new Date();
+    const [strategy] = await db
+      .insert(contentStrategiesTable)
+      .values({ roadmapId: roadmap_id, websiteProjectId: validatedProjectId, industry, location, stage, month: now.getMonth() + 1, year: now.getFullYear() })
+      .returning();
+
+    await db.insert(contentItemsTable).values(
+      items.map((item) => ({ strategyId: strategy.id, day: item.day, title: item.title, format: item.format, topicAngle: item.topic_angle, primaryKeyword: item.primary_keyword, status: "draft" as const })),
+    );
+
+    const contentItems = await db.select().from(contentItemsTable).where(eq(contentItemsTable.strategyId, strategy.id)).orderBy(contentItemsTable.day);
+
+    sendEvent("done", { ...strategy, items: contentItems });
+    res.end();
+  } catch (err) {
+    req.log.error(err, "Failed to stream content strategy");
+    try { res.write(`event: error\ndata: ${JSON.stringify({ error: "Internal server error" })}\n\n`); res.end(); } catch { /* closed */ }
+  }
 });
 
 router.post("/content-strategies/generate", optionalAuth, async (req, res) => {

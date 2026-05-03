@@ -251,3 +251,144 @@ export const UpdateContentItemResponse = zod.object({
   status: zod.string(),
   createdAt: zod.coerce.date(),
 });
+
+/**
+ * All supported content format types for the Content Studio
+ */
+export const ContentFormatType = zod.enum([
+  "blog_post",
+  "news_article",
+  "tutorial",
+  "guide",
+  "whitepaper",
+  "pillar_page",
+  "location_page",
+  "infographic_outline",
+  "linkedin_post",
+  "twitter_thread",
+  "instagram_post",
+  "email_sequence",
+  "ad_copy",
+  "landing_page_copy",
+  "product_description",
+  "press_release",
+  "faq_article",
+]);
+
+/**
+ * Response shape for a generated content piece (non-streaming)
+ * @summary Generate a content piece
+ */
+export const GenerateContentPieceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GenerateContentPieceBody = zod.object({
+  formatType: ContentFormatType,
+  targetKeyword: zod.string().min(1),
+  angleHint: zod.string().optional(),
+});
+
+export const GenerateContentPieceResponse = zod.object({
+  id: zod.number(),
+  websiteProjectId: zod.number(),
+  formatType: ContentFormatType,
+  title: zod.string(),
+  targetKeyword: zod.string(),
+  bodyMarkdown: zod.string(),
+  wordCount: zod.number(),
+  status: zod.string(),
+  plannedDate: zod.string().nullable().optional(),
+  publishedUrl: zod.string().nullable().optional(),
+  createdAt: zod.coerce.date(),
+  updatedAt: zod.coerce.date(),
+});
+
+/**
+ * SSE streaming endpoint for content piece generation
+ * @summary Stream a generated content piece
+ */
+export const GenerateContentPieceStreamBody = zod.object({
+  formatType: ContentFormatType,
+  targetKeyword: zod.string().min(1),
+  angleHint: zod.string().optional(),
+});
+
+export const ContentPieceStreamChunkEvent = zod.object({
+  text: zod.string(),
+});
+
+export const ContentPieceStreamDoneEvent = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  targetKeyword: zod.string(),
+  wordCount: zod.number(),
+});
+
+/**
+ * SEO article generation endpoint (non-streaming)
+ * @summary Generate an SEO article
+ */
+export const GenerateSeoArticleBody = zod.object({
+  brand_name: zod.string(),
+  website_url: zod.string(),
+  industry: zod.string(),
+  location: zod.string(),
+  stage: zod.string(),
+  roadmap_id: zod.number().optional(),
+  website_project_id: zod.number().optional(),
+});
+
+export const GenerateSeoArticleResponse = zod.object({
+  id: zod.number(),
+  roadmapId: zod.number().nullable(),
+  websiteProjectId: zod.number().nullable(),
+  brandName: zod.string(),
+  websiteUrl: zod.string(),
+  industry: zod.string(),
+  location: zod.string(),
+  stage: zod.string(),
+  title: zod.string(),
+  metaDescription: zod.string(),
+  primaryKeyword: zod.string(),
+  secondaryKeywords: zod.array(zod.string()),
+  content: zod.string(),
+  wordCount: zod.number(),
+  status: zod.string(),
+  createdAt: zod.coerce.date(),
+});
+
+/**
+ * SSE streaming endpoint for SEO article generation
+ * @summary Stream an SEO article
+ */
+export const GenerateSeoArticleStreamBody = GenerateSeoArticleBody;
+
+export const SeoArticleStreamChunkEvent = zod.object({
+  text: zod.string(),
+});
+
+export const SeoArticleStreamDoneEvent = zod.object({
+  id: zod.number(),
+  title: zod.string(),
+  wordCount: zod.number(),
+});
+
+/**
+ * SSE streaming endpoint for content strategy generation with batch progress
+ * @summary Stream a content strategy with batch progress events
+ */
+export const GenerateContentStrategyStreamBody = zod.object({
+  roadmap_id: zod.number(),
+  industry: zod.string(),
+  location: zod.string(),
+  stage: zod.string(),
+});
+
+export const ContentStrategyStreamProgressEvent = zod.object({
+  batchNum: zod.number(),
+  totalBatches: zod.number(),
+  itemCount: zod.number(),
+});
+
+export const ContentStrategyStreamDoneEvent = GenerateContentStrategyResponse;

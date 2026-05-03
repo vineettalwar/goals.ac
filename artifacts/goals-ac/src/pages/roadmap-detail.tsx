@@ -5,7 +5,6 @@ import { Layout } from "@/components/layout";
 import {
   useGetRoadmap,
   getGetRoadmapQueryKey,
-  useGenerateContentStrategy,
 } from "@workspace/api-client-react";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +27,7 @@ export default function RoadmapDetail() {
   const { projects, activeProjectId, setActiveProjectId } = useActiveProject();
 
   const [generatingStrategy, setGeneratingStrategy] = useState(false);
+  const [strategyBatch, setStrategyBatch] = useState<{ current: number; total: number } | null>(null);
   const [showSeoForm, setShowSeoForm] = useState(false);
   const [seoLoading, setSeoLoading] = useState(false);
   const [brandName, setBrandName] = useState("");
@@ -73,8 +73,6 @@ export default function RoadmapDetail() {
     },
   });
 
-  const generateStrategy = useGenerateContentStrategy();
-
   const handleViewContentStrategy = async () => {
     if (!roadmap) return;
     if (existingStrategy) {
@@ -82,19 +80,81 @@ export default function RoadmapDetail() {
       return;
     }
     setGeneratingStrategy(true);
+    setStrategyBatch(null);
     try {
-      const result = await generateStrategy.mutateAsync({
-        data: {
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+      const res = await fetch(`${API_BASE}/api/content-strategies/generate/stream`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
           roadmap_id: roadmap.id,
           industry: roadmap.industry,
           location: roadmap.location,
           stage: roadmap.stage,
           ...(activeProjectId ? { website_project_id: activeProjectId } : {}),
-        },
+        }),
       });
-      navigate(`/content-strategy/${result.id}`);
+
+      if (!res.ok || !res.body) {
+        const fallback = await fetch(`${API_BASE}/api/content-strategies/generate`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            roadmap_id: roadmap.id,
+            industry: roadmap.industry,
+            location: roadmap.location,
+            stage: roadmap.stage,
+            ...(activeProjectId ? { website_project_id: activeProjectId } : {}),
+          }),
+        });
+        if (!fallback.ok) throw new Error("Strategy generation failed");
+        const result = await fallback.json() as { id: number };
+        navigate(`/content-strategy/${result.id}`);
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let strategyId: number | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: progress")) continue;
+          if (line.startsWith("event: done")) continue;
+          if (line.startsWith("event: error")) throw new Error("Strategy generation failed");
+          if (line.startsWith("data: ")) {
+            const raw = line.slice(6);
+            try {
+              const parsed = JSON.parse(raw) as { batchNum?: number; totalBatches?: number; id?: number };
+              if (parsed.batchNum !== undefined && parsed.totalBatches !== undefined) {
+                setStrategyBatch({ current: parsed.batchNum, total: parsed.totalBatches });
+              } else if (parsed.id !== undefined) {
+                strategyId = parsed.id;
+              }
+            } catch { /* partial */ }
+          }
+        }
+      }
+
+      if (strategyId) {
+        navigate(`/content-strategy/${strategyId}`);
+      } else {
+        throw new Error("Strategy generation completed without result");
+      }
+    } catch {
+      setGeneratingStrategy(false);
+      setStrategyBatch(null);
     } finally {
       setGeneratingStrategy(false);
+      setStrategyBatch(null);
     }
   };
 
@@ -132,25 +192,55 @@ export default function RoadmapDetail() {
   const handleGenerateSeo = async () => {
     if (!roadmap || !brandName || !websiteUrl) return;
     setSeoLoading(true);
+    const body = JSON.stringify({
+      brand_name: brandName,
+      website_url: websiteUrl,
+      industry: roadmap.industry,
+      location: roadmap.location,
+      stage: roadmap.stage,
+      roadmap_id: roadmap.id,
+      ...(activeProjectId ? { website_project_id: activeProjectId } : {}),
+    });
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+
     try {
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-      const res = await fetch(`${API_BASE}/api/seo-articles/generate`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          brand_name: brandName,
-          website_url: websiteUrl,
-          industry: roadmap.industry,
-          location: roadmap.location,
-          stage: roadmap.stage,
-          roadmap_id: roadmap.id,
-          ...(activeProjectId ? { website_project_id: activeProjectId } : {}),
-        }),
-      });
-      if (!res.ok) throw new Error("Generation failed");
-      const article = await res.json() as { id: number };
-      navigate(`/seo-article/${article.id}`);
+      let articleId: number | null = null;
+      try {
+        const res = await fetch(`${API_BASE}/api/seo-articles/generate/stream`, { method: "POST", headers, body });
+        if (res.ok && res.body) {
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            const lines = buf.split("\n");
+            buf = lines.pop() ?? "";
+            for (const line of lines) {
+              if (line.startsWith("event: error")) throw new Error("SEO article generation failed");
+              if (line.startsWith("data: ")) {
+                try {
+                  const parsed = JSON.parse(line.slice(6)) as { id?: number };
+                  if (parsed.id !== undefined) articleId = parsed.id;
+                } catch { /* partial */ }
+              }
+            }
+          }
+        }
+      } catch {
+        /* stream failed — fall back to non-streaming */
+      }
+
+      if (!articleId) {
+        const fallback = await fetch(`${API_BASE}/api/seo-articles/generate`, { method: "POST", headers, body });
+        if (!fallback.ok) throw new Error("SEO article generation failed");
+        const article = await fallback.json() as { id: number };
+        articleId = article.id;
+      }
+
+      if (articleId) navigate(`/seo-article/${articleId}`);
     } catch {
       setSeoLoading(false);
     }
@@ -420,7 +510,9 @@ export default function RoadmapDetail() {
                 {generatingStrategy ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating…
+                    {strategyBatch
+                      ? `Batch ${strategyBatch.current}/${strategyBatch.total}…`
+                      : "Generating…"}
                     {user?.hasGeminiKey && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-xs font-medium text-blue-300">
                         <KeyRound className="w-3 h-3" />

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { logger } from "../lib/logger";
 import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "../lib/geminiClient";
+import { getCache } from "../lib/cache";
 import type { GoogleGenAI } from "@google/genai";
 import type { ContentFormatType } from "@workspace/db";
 
@@ -140,6 +141,18 @@ const FORMAT_CONFIGS: Record<ContentFormatType, { label: string; wordRange: stri
 - Tweet 9 (close): Restate the core insight. Tell them to bookmark / retweet if useful.
 - Each tweet ≤ 280 characters. Use line breaks for readability. Format as "1/ [text]\\n\\n2/ [text]" etc.`,
   },
+  instagram_post: {
+    label: "Instagram Post",
+    wordRange: "150-300",
+    structure: `- ## Caption (first 125 characters are visible before "more" — make them count)
+  - Hook: one striking sentence — a bold statement, relatable pain, or surprising fact
+  - 3-4 short paragraphs expanding the idea (2-3 lines each, mobile-friendly)
+  - Closing CTA: invite to save, share, comment, or click the link in bio
+- ## Hashtag Block (separate from caption)
+  - 10-15 relevant hashtags mixing high-volume (#startup, #marketing) and niche-specific tags
+- ## Alt Text: one sentence describing the visual for accessibility
+- Write in first-person, conversational tone. Short sentences. High energy. No corporate speak.`,
+  },
   email_sequence: {
     label: "Email Sequence",
     wordRange: "800-1200",
@@ -254,33 +267,41 @@ Requirements:
 - Content must be original, authoritative, and citation-worthy`;
 }
 
-interface CacheEntry {
-  result: ContentPieceResult;
-  expiresAt: number;
-}
-
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-const CACHE_MAX_SIZE = 500;
-const contentCache = new Map<string, CacheEntry>();
 
-function cacheKey(format: string, keyword: string, brand: BrandContext): string {
-  const raw = `${format}::${keyword.toLowerCase().trim()}::${brand.companyName}::${brand.industry}::${brand.voiceTone}`;
+export function buildCacheKey(format: string, keyword: string, brand: BrandContext, angleHint?: string): string {
+  const raw = [
+    format,
+    keyword.toLowerCase().trim(),
+    brand.companyName,
+    brand.websiteUrl,
+    brand.industry,
+    brand.voiceTone,
+    brand.targetAudience,
+    (brand.primaryKeywords ?? []).slice().sort().join(","),
+    angleHint?.trim() ?? "",
+  ].join("::");
   return createHash("sha256").update(raw).digest("hex").slice(0, 16);
 }
 
-function cacheGet(key: string): ContentPieceResult | null {
-  const entry = contentCache.get(key);
-  if (!entry) return null;
-  if (Date.now() > entry.expiresAt) { contentCache.delete(key); return null; }
-  return entry.result;
+export async function cacheGet(key: string): Promise<ContentPieceResult | null> {
+  try {
+    const cache = await getCache();
+    const raw = await cache.get(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as ContentPieceResult;
+  } catch {
+    return null;
+  }
 }
 
-function cacheSet(key: string, result: ContentPieceResult): void {
-  if (contentCache.size >= CACHE_MAX_SIZE) {
-    const firstKey = contentCache.keys().next().value;
-    if (firstKey) contentCache.delete(firstKey);
+export async function cacheSet(key: string, result: ContentPieceResult): Promise<void> {
+  try {
+    const cache = await getCache();
+    await cache.set(key, JSON.stringify(result), CACHE_TTL_MS);
+  } catch (err) {
+    logger.warn({ err }, "Failed to write content piece to cache");
   }
-  contentCache.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS });
 }
 
 function validateResult(result: unknown): asserts result is ContentPieceResult {
@@ -365,39 +386,6 @@ async function generateWithClientStream(
   return parsed;
 }
 
-async function generateWithClientStreamBuffered(
-  ai: GoogleGenAI,
-  format: ContentFormatType,
-  brand: BrandContext,
-  keyword: string,
-  angleHint?: string,
-): Promise<{ chunks: string[]; result: ContentPieceResult }> {
-  const prompt = buildPrompt(format, brand, keyword, angleHint);
-  let accumulated = "";
-  const chunks: string[] = [];
-
-  const stream = await ai.models.generateContentStream({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      systemInstruction: SYSTEM_PROMPT,
-      responseMimeType: "application/json",
-      maxOutputTokens: 8192,
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  });
-
-  for await (const chunk of stream) {
-    const text = chunk.text ?? "";
-    accumulated += text;
-    if (text) chunks.push(text);
-  }
-
-  const cleaned = accumulated.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
-  const parsed = JSON.parse(cleaned) as ContentPieceResult;
-  validateResult(parsed);
-  return { chunks, result: parsed };
-}
 
 export async function generateContentPieceStream(
   format: ContentFormatType,
@@ -408,19 +396,17 @@ export async function generateContentPieceStream(
   userApiKey?: string | null,
 ): Promise<ContentPieceResult> {
   if (userApiKey) {
+    let chunksEmitted = 0;
     try {
       const userClient = await createUserGeminiClient(userApiKey);
-      // Buffer the entire user-key stream before emitting any chunks to the
-      // client. This ensures that if the key is invalid or quota-exhausted,
-      // no partial output has been forwarded before we fall back.
-      const { chunks, result } = await generateWithClientStreamBuffered(
-        userClient, format, brand, keyword, angleHint,
+      return await generateWithClientStream(
+        userClient, format, brand, keyword,
+        (chunk) => { chunksEmitted++; onChunk(chunk); },
+        angleHint,
       );
-      for (const chunk of chunks) onChunk(chunk);
-      return result;
     } catch (err) {
-      if (isUserKeyError(err)) {
-        logger.warn({ err }, "User Gemini key failed for content stream, falling back to platform key");
+      if (isUserKeyError(err) && chunksEmitted === 0) {
+        logger.warn({ err }, "User Gemini key failed for content stream before first chunk, falling back to platform key");
       } else {
         throw err;
       }
@@ -440,9 +426,9 @@ export async function generateContentPiece(
   bypassCache = false,
   userApiKey?: string | null,
 ): Promise<ContentPieceResult> {
-  const key = cacheKey(format, keyword, brand);
-  if (!bypassCache && !userApiKey) {
-    const cached = cacheGet(key);
+  const key = buildCacheKey(format, keyword, brand, angleHint);
+  if (!bypassCache) {
+    const cached = await cacheGet(key);
     if (cached) { logger.info({ format, keyword }, "Content piece served from cache"); return cached; }
   }
 
@@ -450,7 +436,7 @@ export async function generateContentPiece(
     try {
       const userClient = await createUserGeminiClient(userApiKey);
       const result = await generateWithClient(userClient, format, brand, keyword, angleHint);
-      cacheSet(key, result);
+      await cacheSet(key, result);
       return result;
     } catch (err) {
       if (isUserKeyError(err)) {
@@ -469,8 +455,105 @@ export async function generateContentPiece(
   }
 
   const result = await generateWithClient(platformClient, format, brand, keyword, angleHint);
-  cacheSet(key, result);
+  await cacheSet(key, result);
   return result;
+}
+
+const REPURPOSE_SYSTEM_PROMPT = `You are a world-class content strategist and copywriter. You take existing content and expertly repurpose it into a different format while preserving the core insights and brand voice.
+
+You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation — only raw JSON.`;
+
+function buildRepurposePrompt(
+  targetFormat: ContentFormatType,
+  brand: BrandContext,
+  existingContent: string,
+  existingKeyword: string,
+): string {
+  const config = FORMAT_CONFIGS[targetFormat];
+  return `Repurpose the following existing content into a ${config.label} for ${brand.companyName} (${brand.websiteUrl}).
+
+EXISTING CONTENT:
+${existingContent.slice(0, 4000)}
+
+TARGET FORMAT: ${config.label} (${config.wordRange} words)
+TARGET KEYWORD: "${existingKeyword}"
+BRAND VOICE: ${brand.voiceTone || "Professional, clear, and authoritative"}
+TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
+
+Rewrite the content following this structure:
+${config.structure}
+
+Return ONLY this exact JSON with no additional text:
+{
+  "title": "<compelling, SEO-optimised title that includes the target keyword — 55-70 characters>",
+  "target_keyword": "${existingKeyword}",
+  "body_markdown": "<full repurposed content in valid markdown following the structure above>"
+}
+
+Requirements:
+- Preserve the core insights and key messages from the original
+- Adapt the format, tone, and structure to suit ${config.label}
+- Write entirely in the brand voice described above
+- Reference ${brand.companyName} 2-3 times naturally
+- Content must feel fresh and purpose-built for this format, not just copy-pasted`;
+}
+
+export async function repurposeContentPiece(
+  targetFormat: ContentFormatType,
+  brand: BrandContext,
+  existingContent: string,
+  existingKeyword: string,
+  userApiKey?: string | null,
+): Promise<ContentPieceResult> {
+  const prompt = buildRepurposePrompt(targetFormat, brand, existingContent, existingKeyword);
+
+  async function attemptGeneration(ai: GoogleGenAI): Promise<ContentPieceResult> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const response = await ai.models.generateContent({
+          model: "gemini-2.5-flash",
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          config: {
+            systemInstruction: REPURPOSE_SYSTEM_PROMPT,
+            responseMimeType: "application/json",
+            maxOutputTokens: 8192,
+            thinkingConfig: { thinkingBudget: 0 },
+          },
+        });
+        const rawText = response.text;
+        if (!rawText) throw new Error("Empty response from Gemini");
+        const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
+        const parsed = JSON.parse(cleaned) as ContentPieceResult;
+        validateResult(parsed);
+        return parsed;
+      } catch (err) {
+        lastError = err;
+        logger.warn({ err, attempt, targetFormat }, "Repurpose generation attempt failed");
+        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      }
+    }
+    throw lastError;
+  }
+
+  if (userApiKey) {
+    try {
+      const userClient = await createUserGeminiClient(userApiKey);
+      return await attemptGeneration(userClient);
+    } catch (err) {
+      if (isUserKeyError(err)) {
+        logger.warn({ err }, "User Gemini key failed for repurpose generation, falling back to platform key");
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const platformClient = await getPlatformGeminiClient();
+  if (!platformClient) {
+    throw new Error("AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.");
+  }
+  return attemptGeneration(platformClient);
 }
 
 export { type BrandContext };

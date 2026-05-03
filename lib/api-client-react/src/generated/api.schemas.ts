@@ -155,3 +155,85 @@ export type ListRoadmapsParams = {
   industry?: string;
   location?: string;
 };
+
+export type ContentFormatType =
+  | "blog_post"
+  | "news_article"
+  | "tutorial"
+  | "guide"
+  | "whitepaper"
+  | "pillar_page"
+  | "location_page"
+  | "infographic_outline"
+  | "linkedin_post"
+  | "twitter_thread"
+  | "instagram_post"
+  | "email_sequence"
+  | "ad_copy"
+  | "landing_page_copy"
+  | "product_description"
+  | "press_release"
+  | "faq_article";
+
+export interface GenerateContentPieceRequest {
+  formatType: ContentFormatType;
+  targetKeyword: string;
+  angleHint?: string;
+}
+
+export interface ContentPiece {
+  id: number;
+  websiteProjectId: number;
+  formatType: ContentFormatType;
+  title: string;
+  targetKeyword: string;
+  bodyMarkdown: string;
+  wordCount: number;
+  status: string;
+  plannedDate?: string | null;
+  publishedUrl?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GenerateSeoArticleRequest {
+  brand_name: string;
+  website_url: string;
+  industry: string;
+  location: string;
+  stage: string;
+  roadmap_id?: number;
+  website_project_id?: number;
+}
+
+export interface SeoArticle {
+  id: number;
+  roadmapId: number | null;
+  websiteProjectId: number | null;
+  brandName: string;
+  websiteUrl: string;
+  industry: string;
+  location: string;
+  stage: string;
+  title: string;
+  metaDescription: string;
+  primaryKeyword: string;
+  secondaryKeywords: string[];
+  content: string;
+  wordCount: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface GenerateContentStrategyStreamRequest {
+  roadmap_id: number;
+  industry: string;
+  location: string;
+  stage: string;
+}
+
+export interface ContentStrategyStreamProgressEvent {
+  batchNum: number;
+  totalBatches: number;
+  itemCount: number;
+}

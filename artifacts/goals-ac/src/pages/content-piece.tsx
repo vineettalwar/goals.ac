@@ -13,7 +13,9 @@ import { useAuth } from "@/context/auth";
 import {
   ArrowLeft, Copy, Check, Loader2, AlertCircle, Edit3, Eye,
   RefreshCw, Save, BookOpen, Newspaper, GraduationCap, Map,
-  FileSearch, LayoutTemplate, Globe, ImageIcon, Trash2, Send, ExternalLink
+  FileSearch, LayoutTemplate, Globe, ImageIcon, Trash2, Send, ExternalLink,
+  Linkedin, Twitter, Instagram, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle,
+  Shuffle
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -27,7 +29,16 @@ type ContentFormatType =
   | "whitepaper"
   | "pillar_page"
   | "location_page"
-  | "infographic_outline";
+  | "infographic_outline"
+  | "linkedin_post"
+  | "twitter_thread"
+  | "instagram_post"
+  | "email_sequence"
+  | "ad_copy"
+  | "landing_page_copy"
+  | "product_description"
+  | "press_release"
+  | "faq_article";
 
 interface ContentPiece {
   id: number;
@@ -53,7 +64,18 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
   pillar_page: { label: "Pillar Page", icon: LayoutTemplate, color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
   location_page: { label: "Location Page", icon: Globe, color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400" },
   infographic_outline: { label: "Infographic Outline", icon: ImageIcon, color: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400" },
+  linkedin_post: { label: "LinkedIn Post", icon: Linkedin, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  twitter_thread: { label: "Twitter / X Thread", icon: Twitter, color: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400" },
+  instagram_post: { label: "Instagram Post", icon: Instagram, color: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400" },
+  email_sequence: { label: "Email Sequence", icon: Mail, color: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400" },
+  ad_copy: { label: "Ad Copy", icon: Megaphone, color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" },
+  landing_page_copy: { label: "Landing Page Copy", icon: MonitorPlay, color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+  product_description: { label: "Product Description", icon: Package, color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" },
+  press_release: { label: "Press Release", icon: Radio, color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
+  faq_article: { label: "FAQ / Knowledge Base", icon: HelpCircle, color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400" },
 };
+
+const ALL_FORMATS = Object.keys(FORMAT_META) as ContentFormatType[];
 
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
@@ -209,6 +231,128 @@ function PublishDialog({
   );
 }
 
+function RepurposeDialog({
+  open,
+  onClose,
+  piece,
+  token,
+}: {
+  open: boolean;
+  onClose: () => void;
+  piece: ContentPiece;
+  token: string | null;
+}) {
+  const navigate = useNavigate();
+  const [targetFormat, setTargetFormat] = useState<ContentFormatType | "">("");
+  const [isRepurposing, setIsRepurposing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = () => {
+    setTargetFormat("");
+    setError(null);
+    setIsRepurposing(false);
+  };
+
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const handleRepurpose = async () => {
+    if (!targetFormat) return;
+    setIsRepurposing(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/content-pieces/${piece.id}/repurpose`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ targetFormat }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error ?? "Repurpose failed");
+      }
+      const newPiece = await res.json() as ContentPiece;
+      handleClose();
+      navigate(`/content-piece/${newPiece.id}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to repurpose content");
+    } finally {
+      setIsRepurposing(false);
+    }
+  };
+
+  const otherFormats = ALL_FORMATS.filter((f) => f !== piece.formatType);
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Shuffle className="w-4 h-4" />
+            Repurpose Content
+          </DialogTitle>
+          <DialogDescription>
+            Convert this {FORMAT_META[piece.formatType].label} into a different format. A new content piece will be created.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 mt-2">
+          <div className="space-y-1.5">
+            <Label>Target format</Label>
+            <Select value={targetFormat} onValueChange={(v) => setTargetFormat(v as ContentFormatType)} disabled={isRepurposing}>
+              <SelectTrigger>
+                <SelectValue placeholder="Choose a format…" />
+              </SelectTrigger>
+              <SelectContent>
+                {otherFormats.map((f) => {
+                  const meta = FORMAT_META[f];
+                  const Icon = meta.icon;
+                  return (
+                    <SelectItem key={f} value={f}>
+                      <span className="flex items-center gap-2">
+                        <Icon className="w-3.5 h-3.5" />
+                        {meta.label}
+                      </span>
+                    </SelectItem>
+                  );
+                })}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              The AI will adapt this content's key insights and messaging into the chosen format.
+            </p>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
+              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          <div className="flex items-center gap-3 pt-1">
+            <Button
+              onClick={handleRepurpose}
+              disabled={!targetFormat || isRepurposing}
+              className="flex-1"
+            >
+              {isRepurposing ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Repurposing…</>
+              ) : (
+                <><Shuffle className="w-4 h-4 mr-2" />Repurpose</>
+              )}
+            </Button>
+            <Button variant="outline" onClick={handleClose} disabled={isRepurposing}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function ContentPiecePage() {
   const { id } = useParams<{ id: string }>();
   const { token } = useAuth();
@@ -223,6 +367,7 @@ export default function ContentPiecePage() {
   const [copied, setCopied] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [repurposeOpen, setRepurposeOpen] = useState(false);
 
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
@@ -366,7 +511,7 @@ export default function ContentPiecePage() {
     );
   }
 
-  const meta = FORMAT_META[piece.formatType];
+  const meta = FORMAT_META[piece.formatType] ?? { label: piece.formatType, icon: BookOpen, color: "bg-muted text-muted-foreground" };
   const Icon = meta.icon;
   const statusColor = STATUS_COLORS[piece.status] ?? "bg-muted text-muted-foreground";
   const statusLabel = STATUS_LABELS[piece.status] ?? piece.status;
@@ -417,6 +562,9 @@ export default function ContentPiecePage() {
             {saveSuccess && <span className="text-sm text-green-600 font-medium">Saved</span>}
             <Button variant="outline" size="sm" onClick={handleCopy}>
               {copied ? <><Check className="w-4 h-4 mr-1.5 text-green-600" />Copied</> : <><Copy className="w-4 h-4 mr-1.5" />Copy</>}
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setRepurposeOpen(true)} title="Convert to another format">
+              <Shuffle className="w-4 h-4 mr-1.5" />Repurpose
             </Button>
             {piece.status !== "published" && (
               <Button size="sm" onClick={() => setPublishOpen(true)}>
@@ -559,6 +707,9 @@ export default function ContentPiecePage() {
                 </Button>
               </Link>
               <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={() => setRepurposeOpen(true)}>
+                  <Shuffle className="w-4 h-4 mr-2" />Repurpose
+                </Button>
                 <Button variant="outline" onClick={startEdit}>
                   <Edit3 className="w-4 h-4 mr-2" />Edit
                 </Button>
@@ -581,6 +732,13 @@ export default function ContentPiecePage() {
         onClose={() => setPublishOpen(false)}
         onPublished={(updated) => setPiece(updated)}
         pieceId={piece.id}
+        token={token}
+      />
+
+      <RepurposeDialog
+        open={repurposeOpen}
+        onClose={() => setRepurposeOpen(false)}
+        piece={piece}
         token={token}
       />
     </Layout>

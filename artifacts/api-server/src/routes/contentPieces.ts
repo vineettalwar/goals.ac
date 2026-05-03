@@ -12,7 +12,7 @@ import { z } from "zod";
 import { marked } from "marked";
 import { requireAuth } from "../lib/auth";
 import { assertPublicUrl } from "../lib/ssrf-guard";
-import { generateContentPiece, generateContentPieceStream, type BrandContext } from "../services/contentStudioGenerator";
+import { generateContentPiece, generateContentPieceStream, repurposeContentPiece, buildCacheKey, cacheGet, cacheSet, type BrandContext } from "../services/contentStudioGenerator";
 import { logger } from "../lib/logger";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 
@@ -82,8 +82,9 @@ router.post("/website-projects/:id/content-pieces/generate", requireAuth, async 
       primaryKeywords: brandProfile?.primaryKeywords ?? [],
     };
 
+    const bypassCache = req.headers["x-bypass-cache"] === "true";
     const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
-    const result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint, false, userApiKey);
+    const result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint, bypassCache, userApiKey);
     const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
 
     const [inserted] = await db
@@ -114,7 +115,6 @@ router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth,
   if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
 
   const { formatType, targetKeyword, angleHint } = parsed.data;
-  const bypassCache = req.headers["x-bypass-cache"] === "true";
 
   try {
     const [project] = await db
@@ -149,22 +149,45 @@ router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth,
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     };
 
+    const bypassCache = req.headers["x-bypass-cache"] === "true";
     const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
 
-    let result;
-    if (bypassCache) {
-      result = await generateContentPieceStream(
-        formatType as ContentFormatType,
-        brand,
-        targetKeyword,
-        (chunk) => sendEvent("chunk", { text: chunk }),
-        angleHint,
-        userApiKey,
-      );
-    } else {
-      result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint, false, userApiKey);
-      sendEvent("chunk", { text: result.body_markdown });
+    if (!bypassCache) {
+      const cacheKeyStr = buildCacheKey(formatType, targetKeyword, brand, angleHint);
+      const cached = await cacheGet(cacheKeyStr);
+      if (cached) {
+        logger.info({ formatType, targetKeyword }, "Content piece streaming served from cache");
+        sendEvent("chunk", { text: cached.body_markdown });
+        const wordCount = cached.body_markdown.split(/\s+/).filter(Boolean).length;
+        const [inserted] = await db
+          .insert(contentPiecesTable)
+          .values({
+            websiteProjectId: projectId,
+            formatType: formatType as ContentFormatType,
+            title: cached.title,
+            targetKeyword: cached.target_keyword,
+            bodyMarkdown: cached.body_markdown,
+            wordCount,
+            status: "draft",
+          })
+          .returning();
+        sendEvent("done", inserted);
+        res.end();
+        return;
+      }
     }
+
+    const result = await generateContentPieceStream(
+      formatType as ContentFormatType,
+      brand,
+      targetKeyword,
+      (chunk) => sendEvent("chunk", { text: chunk }),
+      angleHint,
+      userApiKey,
+    );
+
+    const cacheKeyStr = buildCacheKey(formatType, targetKeyword, brand, angleHint);
+    await cacheSet(cacheKeyStr, result);
 
     const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
     const [inserted] = await db
@@ -502,7 +525,7 @@ router.post("/content-pieces/:id/regenerate", requireAuth, async (req, res) => {
       primaryKeywords: brandProfile?.primaryKeywords ?? [],
     };
 
-    const result = await generateContentPiece(piece.formatType as ContentFormatType, brand, piece.targetKeyword);
+    const result = await generateContentPiece(piece.formatType as ContentFormatType, brand, piece.targetKeyword, undefined, true);
     const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
 
     const [updated] = await db
@@ -520,6 +543,166 @@ router.post("/content-pieces/:id/regenerate", requireAuth, async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to regenerate content piece");
     res.status(503).json({ error: "Failed to regenerate content. Please try again." });
+  }
+});
+
+const RepurposeFromTextBody = z.object({
+  targetFormat: z.enum(CONTENT_FORMAT_TYPES as unknown as [string, ...string[]]),
+  existingContent: z.string().min(50, "Existing content must be at least 50 characters"),
+  targetKeyword: z.string().min(1, "Target keyword is required"),
+});
+
+router.post("/website-projects/:id/content-pieces/repurpose", requireAuth, async (req, res) => {
+  const projectId = Number(req.params.id);
+  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
+
+  const parsed = RepurposeFromTextBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
+
+  const { targetFormat, existingContent, targetKeyword } = parsed.data;
+
+  try {
+    const [project] = await db
+      .select()
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+    const [brandProfile] = await db
+      .select()
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, projectId))
+      .limit(1);
+
+    const brand: BrandContext = {
+      companyName: brandProfile?.companyName ?? project.name,
+      websiteUrl: project.url,
+      industry: brandProfile?.industry ?? "",
+      targetAudience: brandProfile?.targetAudience ?? "",
+      voiceTone: brandProfile?.voiceTone ?? "",
+      primaryKeywords: brandProfile?.primaryKeywords ?? [],
+    };
+
+    const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+    const result = await repurposeContentPiece(
+      targetFormat as ContentFormatType,
+      brand,
+      existingContent,
+      targetKeyword,
+      userApiKey,
+    );
+
+    const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
+    const [inserted] = await db
+      .insert(contentPiecesTable)
+      .values({
+        websiteProjectId: projectId,
+        formatType: targetFormat as ContentFormatType,
+        title: result.title,
+        targetKeyword: result.target_keyword,
+        bodyMarkdown: result.body_markdown,
+        wordCount,
+        status: "draft",
+      })
+      .returning();
+
+    res.status(201).json(inserted);
+  } catch (err) {
+    logger.error({ err }, "Failed to repurpose content from text");
+    res.status(503).json({ error: "Failed to repurpose content. Please try again." });
+  }
+});
+
+const RepurposeBody = z.object({
+  targetFormat: z.enum(CONTENT_FORMAT_TYPES as unknown as [string, ...string[]]),
+  existingContent: z.string().min(50, "Existing content must be at least 50 characters").optional(),
+});
+
+router.post("/content-pieces/:id/repurpose", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) {
+    res.status(400).json({ error: "Invalid id" });
+    return;
+  }
+
+  const parsed = RepurposeBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    return;
+  }
+
+  const { targetFormat, existingContent: bodyOverride } = parsed.data;
+
+  try {
+    const [piece] = await db
+      .select()
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.id, id))
+      .limit(1);
+
+    if (!piece) {
+      res.status(404).json({ error: "Content piece not found" });
+      return;
+    }
+
+    const [project] = await db
+      .select()
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
+    const [brandProfile] = await db
+      .select()
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, piece.websiteProjectId))
+      .limit(1);
+
+    const brand: BrandContext = {
+      companyName: brandProfile?.companyName ?? project.name,
+      websiteUrl: project.url,
+      industry: brandProfile?.industry ?? "",
+      targetAudience: brandProfile?.targetAudience ?? "",
+      voiceTone: brandProfile?.voiceTone ?? "",
+      primaryKeywords: brandProfile?.primaryKeywords ?? [],
+    };
+
+    const sourceContent = bodyOverride ?? piece.bodyMarkdown;
+    const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+
+    const result = await repurposeContentPiece(
+      targetFormat as ContentFormatType,
+      brand,
+      sourceContent,
+      piece.targetKeyword,
+      userApiKey,
+    );
+
+    const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
+
+    const [inserted] = await db
+      .insert(contentPiecesTable)
+      .values({
+        websiteProjectId: piece.websiteProjectId,
+        formatType: targetFormat as ContentFormatType,
+        title: result.title,
+        targetKeyword: result.target_keyword,
+        bodyMarkdown: result.body_markdown,
+        wordCount,
+        status: "draft",
+      })
+      .returning();
+
+    res.status(201).json(inserted);
+  } catch (err) {
+    logger.error({ err }, "Failed to repurpose content piece");
+    res.status(503).json({ error: "Failed to repurpose content. Please try again." });
   }
 });
 

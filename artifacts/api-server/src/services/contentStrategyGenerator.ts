@@ -146,3 +146,56 @@ export async function generateContentStrategy(
 
   return generateWithClient(platformClient, industry, location, stage);
 }
+
+const BATCH_RANGES: [number, number][] = [[1, 10], [11, 20], [21, 30]];
+
+async function generateWithClientProgress(
+  ai: GoogleGenAI,
+  industry: string,
+  location: string,
+  stage: string,
+  onBatch: (batchNum: number, totalBatches: number, items: ContentItem[]) => void,
+): Promise<ContentItem[]> {
+  let completed = 0;
+  const batchPromises = BATCH_RANGES.map(([start, end]) =>
+    generateBatch(ai, industry, location, stage, start, end).then((items) => {
+      completed++;
+      onBatch(completed, BATCH_RANGES.length, items);
+      return items;
+    }),
+  );
+  const batches = await Promise.all(batchPromises);
+  const sorted = batches.flat().sort((a, b) => a.day - b.day);
+  validateContentItems(sorted);
+  return sorted;
+}
+
+export async function generateContentStrategyWithProgress(
+  industry: string,
+  location: string,
+  stage: string,
+  onBatch: (batchNum: number, totalBatches: number, items: ContentItem[]) => void,
+  userApiKey?: string | null,
+): Promise<ContentItem[]> {
+  if (userApiKey) {
+    try {
+      const userClient = await createUserGeminiClient(userApiKey);
+      return await generateWithClientProgress(userClient, industry, location, stage, onBatch);
+    } catch (err) {
+      if (isUserKeyError(err)) {
+        logger.warn({ err }, "User Gemini key failed for content strategy stream, falling back to platform key");
+      } else {
+        throw err;
+      }
+    }
+  }
+
+  const platformClient = await getPlatformGeminiClient();
+  if (!platformClient) {
+    throw new Error(
+      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
+    );
+  }
+
+  return generateWithClientProgress(platformClient, industry, location, stage, onBatch);
+}

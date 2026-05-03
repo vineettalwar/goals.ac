@@ -15,8 +15,10 @@ import {
   Plus, FileText, Loader2, AlertCircle, ArrowLeft, Calendar,
   BookOpen, Newspaper, GraduationCap, Map as MapIcon, FileSearch, LayoutTemplate,
   Globe, ImageIcon, BarChart3, Filter, RefreshCw, Trash2, ArrowUpDown, ExternalLink,
-  Linkedin, Twitter, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle, KeyRound
+  Linkedin, Twitter, Instagram, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle, KeyRound,
+  Shuffle
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO } from "date-fns";
 import { DndContext, DragOverlay, type DragEndEvent, type DragStartEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
@@ -35,6 +37,7 @@ type ContentFormatType =
   | "infographic_outline"
   | "linkedin_post"
   | "twitter_thread"
+  | "instagram_post"
   | "email_sequence"
   | "ad_copy"
   | "landing_page_copy"
@@ -74,13 +77,14 @@ function isContentPiece(item: HubItem): item is ContentPiece {
   return item.source === "studio";
 }
 
-const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.ElementType; color: string; description: string; example: string }> = {
+const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.ElementType; color: string; description: string; example: string; wordRange: string }> = {
   blog_post: {
     label: "Blog Post",
     icon: BookOpen,
     color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     description: "Engaging, shareable articles that build authority and drive organic traffic.",
     example: "e.g. '5 Ways SaaS Startups Can Win at Local SEO'",
+    wordRange: "900–1,200 words",
   },
   news_article: {
     label: "News Article",
@@ -88,6 +92,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
     description: "Timely coverage of industry events, product launches, or market trends.",
     example: "e.g. 'AI Search Disrupts Traditional SEO — What Brands Need to Know'",
+    wordRange: "600–900 words",
   },
   tutorial: {
     label: "Tutorial",
@@ -95,6 +100,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
     description: "Step-by-step how-to content that solves a specific problem for your audience.",
     example: "e.g. 'How to Set Up Google Search Console in 10 Minutes'",
+    wordRange: "1,200–1,600 words",
   },
   guide: {
     label: "Comprehensive Guide",
@@ -102,6 +108,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
     description: "In-depth evergreen guides covering a topic end-to-end. Great for link building.",
     example: "e.g. 'The Complete Guide to Technical SEO for B2B SaaS'",
+    wordRange: "1,400–1,800 words",
   },
   whitepaper: {
     label: "Whitepaper",
@@ -109,6 +116,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
     description: "Authoritative long-form research documents for lead gen and thought leadership.",
     example: "e.g. 'The State of GEO Optimisation for UK SMEs — 2025 Report'",
+    wordRange: "1,800–2,500 words",
   },
   pillar_page: {
     label: "Pillar Page",
@@ -116,6 +124,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
     description: "Comprehensive hub pages that anchor your topic clusters and capture broad keywords.",
     example: "e.g. 'SEO for Startups: Everything You Need to Know'",
+    wordRange: "2,000–3,000 words",
   },
   location_page: {
     label: "Location / Language Page",
@@ -123,6 +132,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
     description: "Location-specific or language-specific landing pages to capture local search intent.",
     example: "e.g. 'SEO Agency in Manchester — Goals.ac'",
+    wordRange: "800–1,200 words",
   },
   infographic_outline: {
     label: "Infographic Outline",
@@ -130,6 +140,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-400",
     description: "A structured content brief for a visual infographic — ready for a designer.",
     example: "e.g. 'The Anatomy of a High-Converting SaaS Landing Page'",
+    wordRange: "400–600 words",
   },
   linkedin_post: {
     label: "LinkedIn Post",
@@ -137,6 +148,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
     description: "Founder-voice long-form posts that drive engagement and build authority.",
     example: "e.g. 'What I learned growing from 0 to 500 B2B customers'",
+    wordRange: "200–400 words",
   },
   twitter_thread: {
     label: "Twitter / X Thread",
@@ -144,6 +156,15 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400",
     description: "9-tweet threads that package a big insight into shareable, viral content.",
     example: "e.g. 'The 5 SEO levers every SaaS founder ignores (thread 🧵)'",
+    wordRange: "300–500 words",
+  },
+  instagram_post: {
+    label: "Instagram Post",
+    icon: Instagram,
+    color: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400",
+    description: "Hook-driven caption with hashtag block — optimised for saves and shares.",
+    example: "e.g. 'The one thing we changed that 3x'd our inbound leads'",
+    wordRange: "150–300 words",
   },
   email_sequence: {
     label: "Email Sequence",
@@ -151,6 +172,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
     description: "3-email nurture sequences with subject lines, preview text, and body copy.",
     example: "e.g. Welcome → Education → Offer sequence for a SaaS trial",
+    wordRange: "800–1,200 words",
   },
   ad_copy: {
     label: "Ad Copy",
@@ -158,6 +180,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
     description: "Google Search and Meta ad copy — headlines, descriptions, and A/B variants.",
     example: "e.g. Google Ads for 'B2B SEO software' with 3 headline variants",
+    wordRange: "300–500 words",
   },
   landing_page_copy: {
     label: "Landing Page Copy",
@@ -165,6 +188,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
     description: "Full landing page copy — hero, features, testimonials, FAQ, and CTA sections.",
     example: "e.g. Landing page for a growth roadmap SaaS product",
+    wordRange: "600–900 words",
   },
   product_description: {
     label: "Product Description",
@@ -172,6 +196,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
     description: "Benefit-led product copy with features, use cases, and differentiators.",
     example: "e.g. Product page for an AI-powered SEO audit tool",
+    wordRange: "300–500 words",
   },
   press_release: {
     label: "Press Release",
@@ -179,6 +204,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
     description: "Newsworthy press releases following AP style — ready to send to journalists.",
     example: "e.g. 'goals.ac Raises £2M Seed Round to Power B2B Growth Roadmaps'",
+    wordRange: "500–700 words",
   },
   faq_article: {
     label: "FAQ / Knowledge Base",
@@ -186,6 +212,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
     color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
     description: "8-12 Q&A articles that capture long-tail search intent and reduce support load.",
     example: "e.g. 'Everything you need to know about B2B content strategy'",
+    wordRange: "800–1,200 words",
   },
 };
 
@@ -245,6 +272,25 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+const FORMAT_CATEGORIES: { label: string; formats: ContentFormatType[] }[] = [
+  {
+    label: "Long-form Articles",
+    formats: ["blog_post", "news_article", "tutorial", "guide", "whitepaper", "pillar_page", "location_page", "infographic_outline"],
+  },
+  {
+    label: "Social Media",
+    formats: ["linkedin_post", "twitter_thread", "instagram_post"],
+  },
+  {
+    label: "Email & Ads",
+    formats: ["email_sequence", "ad_copy"],
+  },
+  {
+    label: "Web Copy",
+    formats: ["landing_page_copy", "product_description", "press_release", "faq_article"],
+  },
+];
+
 function CreateModal({
   open,
   onClose,
@@ -252,6 +298,7 @@ function CreateModal({
   projectId,
   token,
   hasGeminiKey,
+  pieces,
 }: {
   open: boolean;
   onClose: () => void;
@@ -259,14 +306,22 @@ function CreateModal({
   projectId: string;
   token: string | null;
   hasGeminiKey?: boolean;
+  pieces?: ContentPiece[];
 }) {
-  const [step, setStep] = useState<"format" | "details">("format");
+  const [step, setStep] = useState<"format" | "details" | "repurpose">("format");
   const [selectedFormat, setSelectedFormat] = useState<ContentFormatType | null>(null);
   const [keyword, setKeyword] = useState("");
   const [angleHint, setAngleHint] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDone, setIsDone] = useState(false);
   const [streamPreview, setStreamPreview] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const [repurposeFormat, setRepurposeFormat] = useState<ContentFormatType | "">("");
+  const [repurposeKeyword, setRepurposeKeyword] = useState("");
+  const [repurposeContent, setRepurposeContent] = useState("");
+  const [repurposeSource, setRepurposeSource] = useState<"paste" | "existing">("paste");
+  const [repurposeSelectedId, setRepurposeSelectedId] = useState<number | null>(null);
 
   const reset = () => {
     setStep("format");
@@ -276,11 +331,32 @@ function CreateModal({
     setError(null);
     setIsGenerating(false);
     setStreamPreview("");
+    setRepurposeFormat("");
+    setRepurposeKeyword("");
+    setRepurposeContent("");
+    setRepurposeSource("paste");
+    setRepurposeSelectedId(null);
+    setIsDone(false);
   };
 
   const handleClose = () => {
     reset();
     onClose();
+  };
+
+  const handleGenerateFallback = async (): Promise<void> => {
+    const res = await fetch(`${API_BASE}/api/website-projects/${projectId}/content-pieces/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ formatType: selectedFormat, targetKeyword: keyword.trim(), angleHint: angleHint.trim() || undefined }),
+    });
+    if (!res.ok) {
+      const data = await res.json() as { error?: string };
+      throw new Error(data.error ?? "Generation failed");
+    }
+    const newPiece = await res.json() as Omit<ContentPiece, "source">;
+    onCreated({ ...newPiece, source: "studio" });
+    handleClose();
   };
 
   const handleGenerate = async () => {
@@ -289,20 +365,27 @@ function CreateModal({
     setStreamPreview("");
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/website-projects/${projectId}/content-pieces/generate/stream`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ formatType: selectedFormat, targetKeyword: keyword.trim(), angleHint: angleHint.trim() || undefined }),
-      });
+      let res: Response;
+      try {
+        res = await fetch(`${API_BASE}/api/website-projects/${projectId}/content-pieces/generate/stream`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ formatType: selectedFormat, targetKeyword: keyword.trim(), angleHint: angleHint.trim() || undefined }),
+        });
+      } catch {
+        await handleGenerateFallback();
+        return;
+      }
 
       if (!res.ok || !res.body) {
-        const data = await res.json() as { error?: string };
-        throw new Error(data.error ?? "Generation failed");
+        await handleGenerateFallback();
+        return;
       }
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let jsonAccumulated = "";
       let finalPiece: Omit<ContentPiece, "source"> | null = null;
 
       while (true) {
@@ -323,11 +406,11 @@ function CreateModal({
             try {
               const parsed = JSON.parse(raw) as { text?: string } | Omit<ContentPiece, "source">;
               if ("text" in parsed && parsed.text) {
-                setStreamPreview((p) => {
-                  const combined = p + (parsed as { text: string }).text;
-                  const bodyMatch = combined.match(/"body_markdown"\s*:\s*"([\s\S]*?)(?<!\\)"(?=\s*[,}])/);
-                  return bodyMatch ? bodyMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"') : p;
-                });
+                jsonAccumulated += (parsed as { text: string }).text;
+                const bodyMatch = jsonAccumulated.match(/"body_markdown"\s*:\s*"([\s\S]*?)(?<!\\)"(?=\s*[,}])/);
+                if (bodyMatch) {
+                  setStreamPreview(bodyMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"'));
+                }
               } else if ("id" in parsed) {
                 finalPiece = parsed as Omit<ContentPiece, "source">;
               }
@@ -337,6 +420,8 @@ function CreateModal({
       }
 
       if (finalPiece) {
+        setIsDone(true);
+        await new Promise((resolve) => setTimeout(resolve, 900));
         onCreated({ ...finalPiece, source: "studio" });
         handleClose();
       } else {
@@ -349,37 +434,97 @@ function CreateModal({
     }
   };
 
+  const handleRepurpose = async () => {
+    if (!repurposeFormat || !repurposeKeyword.trim() || !repurposeContent.trim()) return;
+    setIsGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/website-projects/${projectId}/content-pieces/repurpose`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          targetFormat: repurposeFormat,
+          existingContent: repurposeContent.trim(),
+          targetKeyword: repurposeKeyword.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error ?? "Repurpose failed");
+      }
+      const newPiece = await res.json() as Omit<ContentPiece, "source">;
+      onCreated({ ...newPiece, source: "studio" });
+      handleClose();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to repurpose content");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Content</DialogTitle>
           <DialogDescription>
-            {step === "format" ? "Choose a content format to generate." : "Configure your content piece."}
+            {step === "format" ? "Choose a content format to generate." : step === "repurpose" ? "Repurpose existing content into a new format." : "Configure your content piece."}
           </DialogDescription>
         </DialogHeader>
 
         {step === "format" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-            {(Object.entries(FORMAT_META) as [ContentFormatType, typeof FORMAT_META[ContentFormatType]][]).map(([type, meta]) => {
-              const Icon = meta.icon;
-              return (
-                <button
-                  key={type}
-                  onClick={() => { setSelectedFormat(type); setStep("details"); }}
-                  className="text-left p-4 rounded-lg border border-border hover:border-primary hover:bg-accent/50 transition-all"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className={`p-1.5 rounded-md ${meta.color}`}>
-                      <Icon className="w-4 h-4" />
-                    </span>
-                    <span className="font-medium text-sm">{meta.label}</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{meta.description}</p>
-                  <p className="text-xs text-muted-foreground/70 mt-1 italic">{meta.example}</p>
-                </button>
-              );
-            })}
+          <div className="space-y-5 mt-2">
+            {FORMAT_CATEGORIES.map((cat) => (
+              <div key={cat.label}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">{cat.label}</span>
+                  <div className="flex-1 h-px bg-border/50" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {cat.formats.map((type) => {
+                    const meta = FORMAT_META[type];
+                    const Icon = meta.icon;
+                    return (
+                      <button
+                        key={type}
+                        onClick={() => { setSelectedFormat(type); setStep("details"); }}
+                        className="text-left p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/50 transition-all"
+                      >
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className={`p-1.5 rounded-md ${meta.color}`}>
+                              <Icon className="w-3.5 h-3.5" />
+                            </span>
+                            <span className="font-medium text-sm">{meta.label}</span>
+                          </div>
+                          <span className="text-[10px] text-muted-foreground/60 whitespace-nowrap">{meta.wordRange}</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{meta.description}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Repurpose</span>
+                <div className="flex-1 h-px bg-border/50" />
+              </div>
+              <button
+                onClick={() => setStep("repurpose")}
+                className="w-full text-left p-3 rounded-lg border border-border hover:border-primary hover:bg-accent/50 transition-all"
+              >
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="p-1.5 rounded-md bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400">
+                    <Shuffle className="w-3.5 h-3.5" />
+                  </span>
+                  <span className="font-medium text-sm">Repurpose Existing Content</span>
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">Paste any existing content and convert it into a different format — blog post to LinkedIn thread, guide to email sequence, and more.</p>
+              </button>
+            </div>
           </div>
         )}
 
@@ -421,7 +566,13 @@ function CreateModal({
               <p className="text-xs text-muted-foreground">Give the AI a specific angle or title direction.</p>
             </div>
 
-            {isGenerating && streamPreview && (
+            {isDone && (
+              <div className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800/50 p-3">
+                <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+                Done! Opening your content piece…
+              </div>
+            )}
+            {isGenerating && !isDone && streamPreview && (
               <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs font-mono text-muted-foreground leading-relaxed max-h-40 overflow-y-auto whitespace-pre-wrap">
                 {streamPreview}
                 <span className="inline-block w-1.5 h-3.5 bg-primary animate-pulse ml-0.5 align-text-bottom" />
@@ -453,6 +604,148 @@ function CreateModal({
                 </>
               ) : (
                 <>Generate {FORMAT_META[selectedFormat].label}</>
+              )}
+            </Button>
+          </div>
+        )}
+
+        {step === "repurpose" && (
+          <div className="space-y-5 mt-2">
+            <button
+              onClick={() => setStep("format")}
+              className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" /> Back to format selection
+            </button>
+
+            <div className="flex items-center gap-2 p-3 bg-fuchsia-50 dark:bg-fuchsia-900/20 rounded-lg border border-fuchsia-200 dark:border-fuchsia-800/50">
+              <Shuffle className="w-4 h-4 text-fuchsia-600 dark:text-fuchsia-400" />
+              <span className="text-sm font-medium text-fuchsia-900 dark:text-fuchsia-300">Repurpose Existing Content</span>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="repurpose-format">Convert to format <span className="text-destructive">*</span></Label>
+              <Select value={repurposeFormat} onValueChange={(v) => setRepurposeFormat(v as ContentFormatType)} disabled={isGenerating}>
+                <SelectTrigger id="repurpose-format">
+                  <SelectValue placeholder="Choose target format…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.entries(FORMAT_META) as [ContentFormatType, typeof FORMAT_META[ContentFormatType]][]).map(([type, meta]) => {
+                    const Icon = meta.icon;
+                    return (
+                      <SelectItem key={type} value={type}>
+                        <span className="flex items-center gap-2">
+                          <Icon className="w-3.5 h-3.5" />
+                          {meta.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="repurpose-keyword">Target keyword <span className="text-destructive">*</span></Label>
+              <Input
+                id="repurpose-keyword"
+                placeholder="e.g. B2B content strategy"
+                value={repurposeKeyword}
+                onChange={(e) => setRepurposeKeyword(e.target.value)}
+                disabled={isGenerating}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-1 rounded-lg border border-border overflow-hidden text-sm">
+                <button
+                  type="button"
+                  className={`flex-1 px-3 py-1.5 transition-colors ${repurposeSource === "paste" ? "bg-primary text-primary-foreground font-medium" : "bg-muted/40 text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => setRepurposeSource("paste")}
+                  disabled={isGenerating}
+                >
+                  Paste content
+                </button>
+                <button
+                  type="button"
+                  className={`flex-1 px-3 py-1.5 transition-colors ${repurposeSource === "existing" ? "bg-primary text-primary-foreground font-medium" : "bg-muted/40 text-muted-foreground hover:text-foreground"}`}
+                  onClick={() => setRepurposeSource("existing")}
+                  disabled={isGenerating}
+                >
+                  Select from library
+                </button>
+              </div>
+
+              {repurposeSource === "paste" ? (
+                <>
+                  <Textarea
+                    id="repurpose-content"
+                    placeholder="Paste your existing blog post, guide, article, or any content here…"
+                    value={repurposeContent}
+                    onChange={(e) => setRepurposeContent(e.target.value)}
+                    disabled={isGenerating}
+                    rows={7}
+                    className="text-sm resize-y"
+                  />
+                  <p className="text-xs text-muted-foreground">The AI will adapt this content's core insights into the chosen format.</p>
+                </>
+              ) : (
+                <div className="space-y-1 max-h-52 overflow-y-auto rounded-lg border border-border divide-y divide-border">
+                  {(!pieces || pieces.length === 0) ? (
+                    <p className="text-xs text-muted-foreground p-4 text-center">No content pieces in this project yet.</p>
+                  ) : pieces.map((p) => {
+                    const meta = FORMAT_META[p.formatType];
+                    const Icon = meta?.icon;
+                    const isSelected = repurposeSelectedId === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => {
+                          setRepurposeSelectedId(p.id);
+                          setRepurposeContent(p.bodyMarkdown);
+                        }}
+                        disabled={isGenerating}
+                        className={`w-full text-left px-3 py-2.5 flex items-start gap-2.5 transition-colors ${isSelected ? "bg-primary/10 border-l-2 border-primary" : "hover:bg-muted/50"}`}
+                      >
+                        {Icon && <Icon className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${meta.color.split(" ")[0]}`} />}
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{p.title}</p>
+                          <p className="text-xs text-muted-foreground">{meta?.label} · {p.wordCount} words</p>
+                        </div>
+                        {isSelected && <svg className="w-4 h-4 ml-auto flex-shrink-0 text-primary mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {error && (
+              <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
+                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                {error}
+              </div>
+            )}
+
+            <Button
+              onClick={handleRepurpose}
+              disabled={!repurposeFormat || !repurposeKeyword.trim() || repurposeContent.trim().length < 50 || isGenerating}
+              className="w-full"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Repurposing content…
+                  {hasGeminiKey && (
+                    <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-white/15 px-1.5 py-0.5 text-xs font-medium">
+                      <KeyRound className="h-3 w-3" />
+                      Using your API key
+                    </span>
+                  )}
+                </>
+              ) : (
+                <><Shuffle className="mr-2 h-4 w-4" />Repurpose Content</>
               )}
             </Button>
           </div>
@@ -1181,6 +1474,7 @@ export default function ContentStudio() {
         projectId={id!}
         token={token}
         hasGeminiKey={!!user?.hasGeminiKey}
+        pieces={pieces.filter((p) => p.source === "studio")}
       />
     </Layout>
   );

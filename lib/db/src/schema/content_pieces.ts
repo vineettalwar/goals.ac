@@ -14,6 +14,7 @@ export const CONTENT_FORMAT_TYPES = [
   "infographic_outline",
   "linkedin_post",
   "twitter_thread",
+  "instagram_post",
   "email_sequence",
   "ad_copy",
   "landing_page_copy",

@@ -24,6 +24,7 @@
     "node-html-parser": "^7.1.0",
     "pino": "^9",
     "pino-http": "^10",
+    "redis": "^5.12.1",
     "zod": "catalog:"
   },
   "devDependencies": {

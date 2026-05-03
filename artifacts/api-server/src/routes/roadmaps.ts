@@ -117,6 +117,77 @@ router.post("/roadmaps/generate", optionalAuth, async (req, res) => {
   }
 });
 
+router.post("/roadmaps/generate/stream", optionalAuth, async (req, res) => {
+  const parsed = GenerateRoadmapBody.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: "Invalid request: " + parsed.error.message });
+    return;
+  }
+
+  const { industry, location, stage } = parsed.data;
+
+  try {
+    const slug = generateSlug(industry, location, stage);
+
+    const existing = await db
+      .select()
+      .from(roadmapsTable)
+      .where(eq(roadmapsTable.slug, slug))
+      .limit(1);
+
+    if (existing.length > 0) {
+      req.log.info({ slug }, "Returning cached roadmap via stream");
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+      res.write(`event: cached\ndata: ${JSON.stringify(existing[0])}\n\n`);
+      res.end();
+      return;
+    }
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    const sendEvent = (event: string, data: unknown) => {
+      try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch { /* closed */ }
+    };
+
+    const userApiKey = req.user ? await getDecryptedUserGeminiKey(req.user.userId) : null;
+
+    let content;
+    try {
+      content = await generateRoadmapContent(industry, location, stage, userApiKey, (evt) => {
+        if (evt.type === "summary") {
+          sendEvent("summary", { executiveSummary: evt.data });
+        } else if (evt.type === "phase") {
+          sendEvent("phase", { phaseIndex: evt.phaseIndex, phase: evt.data });
+        }
+      });
+    } catch (err) {
+      req.log.error(err, "Gemini generation failed during stream");
+      sendEvent("error", { error: "Roadmap generation temporarily unavailable. Please try again shortly." });
+      res.end();
+      return;
+    }
+
+    const [inserted] = await db
+      .insert(roadmapsTable)
+      .values({ slug, industry, location, stage, content })
+      .onConflictDoNothing({ target: roadmapsTable.slug })
+      .returning();
+
+    const finalRoadmap = inserted ?? (await db.select().from(roadmapsTable).where(eq(roadmapsTable.slug, slug)).limit(1))[0];
+    sendEvent("done", finalRoadmap);
+    res.end();
+  } catch (err) {
+    req.log.error(err, "Failed to stream roadmap generation");
+    try { res.write(`event: error\ndata: ${JSON.stringify({ error: "Internal server error" })}\n\n`); res.end(); } catch { /* closed */ }
+  }
+});
+
 router.get("/roadmaps/:slug", async (req, res) => {
   try {
     const { slug } = req.params;

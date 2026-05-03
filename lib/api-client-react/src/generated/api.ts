@@ -20,17 +20,21 @@ import type {
   CaptureLeadRequest,
   CaptureLeadResponse,
   ContentItem,
+  ContentPiece,
   ContentStrategy,
   ContentStrategyWithItems,
   ErrorResponse,
+  GenerateContentPieceRequest,
   GenerateContentStrategyRequest,
   GenerateRoadmapRequest,
+  GenerateSeoArticleRequest,
   HealthStatus,
   Industry,
   ListRoadmapsParams,
   Location,
   Roadmap,
   RoadmapListResponse,
+  SeoArticle,
   UpdateContentItemRequest,
 } from "./api.schemas";
 
@@ -969,3 +973,153 @@ export const useUpdateContentItem = <
 > => {
   return useMutation(getUpdateContentItemMutationOptions(options));
 };
+
+/**
+ * Generates a content piece using AI (non-streaming)
+ * @summary Generate a content piece for a website project
+ */
+export const getGenerateContentPieceUrl = (id: number) => {
+  return `/api/website-projects/${id}/content-pieces/generate`;
+};
+
+export const generateContentPiece = async (
+  id: number,
+  generateContentPieceRequest: GenerateContentPieceRequest,
+  options?: RequestInit,
+): Promise<ContentPiece> => {
+  return customFetch<ContentPiece>(getGenerateContentPieceUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateContentPieceRequest),
+  });
+};
+
+export const getGenerateContentPieceMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateContentPiece>>,
+    TError,
+    { id: number; data: BodyType<GenerateContentPieceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateContentPiece>>,
+  TError,
+  { id: number; data: BodyType<GenerateContentPieceRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateContentPiece"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateContentPiece>>,
+    { id: number; data: BodyType<GenerateContentPieceRequest> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+    return generateContentPiece(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateContentPieceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateContentPiece>>
+>;
+export type GenerateContentPieceMutationBody = BodyType<GenerateContentPieceRequest>;
+export type GenerateContentPieceMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Generate a content piece for a website project
+ */
+export const useGenerateContentPiece = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateContentPiece>>,
+    TError,
+    { id: number; data: BodyType<GenerateContentPieceRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateContentPiece>>,
+  TError,
+  { id: number; data: BodyType<GenerateContentPieceRequest> },
+  TContext
+> => {
+  return useMutation(getGenerateContentPieceMutationOptions(options));
+};
+
+/**
+ * Generates an SEO article using AI (non-streaming)
+ * @summary Generate an SEO article
+ */
+export const getGenerateSeoArticleUrl = () => {
+  return `/api/seo-articles/generate`;
+};
+
+export const generateSeoArticle = async (
+  generateSeoArticleRequest: GenerateSeoArticleRequest,
+  options?: RequestInit,
+): Promise<SeoArticle> => {
+  return customFetch<SeoArticle>(getGenerateSeoArticleUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateSeoArticleRequest),
+  });
+};
+
+export const getGenerateSeoArticleMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateSeoArticle>>,
+    TError,
+    { data: BodyType<GenerateSeoArticleRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateSeoArticle>>,
+  TError,
+  { data: BodyType<GenerateSeoArticleRequest> },
+  TContext
+> => {
+  const mutationKey = ["generateSeoArticle"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateSeoArticle>>,
+    { data: BodyType<GenerateSeoArticleRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+    return generateSeoArticle(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateSeoArticleMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateSeoArticle>>
+>;
+export type GenerateSeoArticleMutationBody = BodyType<GenerateSeoArticleRequest>;
+export type GenerateSeoArticleMutationError = ErrorType<ErrorResponse>;

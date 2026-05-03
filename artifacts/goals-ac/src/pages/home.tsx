@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,9 +9,20 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { useListIndustries, useListLocations, useGenerateRoadmap, GenerateRoadmapRequestStage } from "@workspace/api-client-react";
-import { Loader2, Target, Pencil, LayoutGrid, Bookmark, GitBranch, Key, KeyRound } from "lucide-react";
+import { useListIndustries, useListLocations, GenerateRoadmapRequestStage } from "@workspace/api-client-react";
+import { Loader2, Target, Pencil, LayoutGrid, Bookmark, GitBranch, CheckCircle2, Circle, KeyRound, Key } from "lucide-react";
 import { useAuth } from "@/context/auth";
+
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+type GenerationPhase = "summary" | "phase0" | "phase1" | "phase2";
+
+const PHASE_LABELS: Record<GenerationPhase, string> = {
+  summary: "Executive Summary",
+  phase0: "Phase 1: Foundation & Quick Wins (Months 1–3)",
+  phase1: "Phase 2: Scaling & Automation (Months 4–6)",
+  phase2: "Phase 3: Market Domination & Expansion (Months 7–12)",
+};
 
 const stageValues = Object.values(GenerateRoadmapRequestStage) as [
   GenerateRoadmapRequestStage,
@@ -30,10 +41,14 @@ type FormValues = z.infer<typeof formSchema>;
 
 export default function Home() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const { data: industries, isLoading: isLoadingIndustries } = useListIndustries();
   const { data: locations, isLoading: isLoadingLocations } = useListLocations();
-  const generateRoadmap = useGenerateRoadmap();
+
+  const [isPending, setIsPending] = useState(false);
+  const [completedPhases, setCompletedPhases] = useState<Set<GenerationPhase>>(new Set());
+  const [generationError, setGenerationError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -44,21 +59,74 @@ export default function Home() {
     },
   });
 
-  const onSubmit = (data: FormValues) => {
-    generateRoadmap.mutate(
-      {
-        data: {
-          industry: data.industry,
-          location: data.location,
-          stage: data.stage,
-        },
-      },
-      {
-        onSuccess: (roadmap) => {
-          navigate(`/roadmap/${roadmap.slug}`);
-        },
+  const onSubmit = async (data: FormValues) => {
+    setIsPending(true);
+    setCompletedPhases(new Set());
+    setGenerationError(null);
+
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
+    try {
+      const authHeaders: Record<string, string> = {};
+      if (token) authHeaders["Authorization"] = `Bearer ${token}`;
+      const response = await fetch(`${API_BASE}/api/roadmaps/generate/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...authHeaders },
+        body: JSON.stringify({ industry: data.industry, location: data.location, stage: data.stage }),
+        signal: ac.signal,
+      });
+
+      if (!response.ok || !response.body) {
+        const errJson = await response.json().catch(() => ({ error: "Generation failed" }));
+        setGenerationError(errJson.error ?? "Generation failed");
+        setIsPending(false);
+        return;
       }
-    );
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const chunks = buffer.split("\n\n");
+        buffer = chunks.pop() ?? "";
+
+        for (const chunk of chunks) {
+          const lines = chunk.split("\n");
+          const eventLine = lines.find((l) => l.startsWith("event:"));
+          const dataLine = lines.find((l) => l.startsWith("data:"));
+          if (!eventLine || !dataLine) continue;
+
+          const eventType = eventLine.replace("event:", "").trim();
+          const payload = JSON.parse(dataLine.replace("data:", "").trim());
+
+          if (eventType === "summary") {
+            setCompletedPhases((prev) => new Set([...prev, "summary"]));
+          } else if (eventType === "phase" && typeof payload.phaseIndex === "number") {
+            const key = `phase${payload.phaseIndex}` as GenerationPhase;
+            setCompletedPhases((prev) => new Set([...prev, key]));
+          } else if (eventType === "cached" || eventType === "done") {
+            navigate(`/roadmap/${payload.slug}`);
+            return;
+          } else if (eventType === "error") {
+            setGenerationError(payload.error ?? "Generation failed");
+            setIsPending(false);
+            return;
+          }
+        }
+      }
+    } catch (err: unknown) {
+      if ((err as { name?: string }).name !== "AbortError") {
+        setGenerationError("Roadmap generation failed. Please try again.");
+        setIsPending(false);
+      }
+    }
   };
 
   const stages: { value: GenerateRoadmapRequestStage; label: string }[] = [
@@ -187,17 +255,17 @@ export default function Home() {
                       )}
                     />
 
-                    <div className="pt-2">
+                    <div className="pt-2 space-y-4">
                       <Button
                         type="submit"
                         size="lg"
                         className="w-full h-12 text-base font-semibold glow-primary bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 border-0 text-white"
-                        disabled={generateRoadmap.isPending || isLoadingIndustries || isLoadingLocations}
+                        disabled={isPending || isLoadingIndustries || isLoadingLocations}
                       >
-                        {generateRoadmap.isPending ? (
+                        {isPending ? (
                           <>
                             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Analyzing market & generating roadmap…
+                            Generating roadmap…
                             {user?.hasGeminiKey && (
                               <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium">
                                 <KeyRound className="h-3 w-3" />
@@ -209,6 +277,31 @@ export default function Home() {
                           "Generate Growth Strategy →"
                         )}
                       </Button>
+
+                      {isPending && (
+                        <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 space-y-2">
+                          <p className="text-xs font-semibold text-blue-300 uppercase tracking-wide mb-2">Generating in parallel…</p>
+                          {(Object.keys(PHASE_LABELS) as GenerationPhase[]).map((key) => {
+                            const done = completedPhases.has(key);
+                            return (
+                              <div key={key} className="flex items-center gap-2 text-sm">
+                                {done ? (
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                                ) : (
+                                  <Circle className="h-4 w-4 text-zinc-600 shrink-0 animate-pulse" />
+                                )}
+                                <span className={done ? "text-zinc-200" : "text-zinc-500"}>
+                                  {PHASE_LABELS[key]}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {generationError && (
+                        <p className="text-sm text-red-400 text-center">{generationError}</p>
+                      )}
                     </div>
                   </form>
                 </Form>
