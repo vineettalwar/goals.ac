@@ -134,6 +134,13 @@
       "when": 1746550000000,
       "tag": "0018_content_piece_cache_key",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1777795400192,
+      "tag": "0019_narrow_bloodstrike",
+      "breakpoints": true
     }
   ]
 }

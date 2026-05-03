@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="artifacts/goals-ac/public/og-image.png" alt="goals.ac" width="600" />
+</p>
+
 # goals.ac
 
 **AI-powered programmatic SEO platform for B2B startup growth roadmaps.**
