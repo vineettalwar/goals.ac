@@ -1,6 +1,6 @@
 {
-  "id": "99498fbf-f227-4bd3-9f88-6f0c235dc6a7",
-  "prevId": "4d5e6f7a-0015-4b8c-1d2e-f3a4b5c60015",
+  "id": "1a2b3c4d-0012-4e5f-8a9b-c0d1e2f30012",
+  "prevId": "f956f2a5-e6fc-4d07-9c15-8034d481ba65",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -839,18 +839,6 @@
           "notNull": true,
           "default": "'user'"
         },
-        "avatar_url": {
-          "name": "avatar_url",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "encrypted_gemini_key": {
-          "name": "encrypted_gemini_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "password_reset_token": {
           "name": "password_reset_token",
           "type": "text",
@@ -955,24 +943,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "scrape_status": {
-          "name": "scrape_status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "scrape_data": {
-          "name": "scrape_data",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "cms_integrations": {
-          "name": "cms_integrations",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -986,6 +956,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "scrape_status": {
+          "name": "scrape_status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},

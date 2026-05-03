@@ -177,7 +177,7 @@ cd lib/db && npx tsc --build
 
 Migrations run automatically when the API server starts (the `dev` workflow runs `migrate` before serving).
 
-**Known issue**: Migrations 0010–0018 were partially hand-written without snapshots. The `drizzle-kit generate` command may re-detect some of these — always review the diff before applying.
+The full snapshot chain (0000–0019) is intact. Running `drizzle-kit generate` after a schema change should produce only the new diff with no re-detection of old migrations.
 
 ---
 
@@ -229,4 +229,4 @@ Add the Replit preview URL to your Google OAuth app's authorized redirect URIs. 
 - User can add their own Gemini key in Account Settings as a fallback
 
 ### Cache not returning existing pieces
-The `cache_key` column was added in migration 0018. If pieces generated before this migration don't have a `cache_key`, they won't be returned from cache. New pieces generated after 0018 are automatically cached.
+The `cache_key` column was added via migration 0018 (hand-written) and reconciled into the snapshot chain in migration 0019. If pieces generated before 0018 don't have a `cache_key`, they won't be returned from cache. New pieces are automatically cached.

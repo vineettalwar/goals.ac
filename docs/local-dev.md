@@ -90,7 +90,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 pnpm --filter @workspace/db run migrate
 ```
 
-This creates all tables. On first run it will apply all 19 migrations (0000–0018).
+This creates all tables. On first run it will apply all 20 migrations (0000–0019).
 
 ## 6. Seed Reference Data (Optional)
 
