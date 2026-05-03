@@ -128,7 +128,7 @@ export default function Dashboard() {
         <div className="orb orb-violet w-[250px] h-[250px] bottom-[-10%] right-[5%] hidden dark:block" />
         <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-gradient">Your Projects</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Your Projects</h1>
             <p className="text-muted-foreground mt-1">Welcome back, <span className="text-foreground font-medium">{user?.name}</span></p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
