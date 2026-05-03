@@ -352,10 +352,12 @@ function CreateModal({
     onClose();
   };
 
-  const handleGenerateFallback = async (): Promise<void> => {
+  const handleGenerateFallback = async (useBypass = false): Promise<void> => {
+    const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+    if (useBypass) headers["x-bypass-cache"] = "true";
     const res = await fetch(`${API_BASE}/api/website-projects/${projectId}/content-pieces/generate`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers,
       body: JSON.stringify({ formatType: selectedFormat, targetKeyword: keyword.trim(), angleHint: angleHint.trim() || undefined }),
     });
     if (!res.ok) {
@@ -402,12 +404,12 @@ function CreateModal({
           body: JSON.stringify({ formatType: selectedFormat, targetKeyword: keyword.trim(), angleHint: angleHint.trim() || undefined }),
         });
       } catch {
-        await handleGenerateFallback();
+        await handleGenerateFallback(useBypass);
         return;
       }
 
       if (!res.ok || !res.body) {
-        await handleGenerateFallback();
+        await handleGenerateFallback(useBypass);
         return;
       }
 
