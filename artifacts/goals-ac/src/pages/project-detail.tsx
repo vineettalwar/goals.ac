@@ -115,6 +115,8 @@ export default function ProjectDetail() {
   const [isDisconnectingWebflow, setIsDisconnectingWebflow] = useState(false);
   const [cmsError, setCmsError] = useState<string | null>(null);
   const [cmsSaveSuccess, setCmsSaveSuccess] = useState<string | null>(null);
+  const [isTestingHealth, setIsTestingHealth] = useState(false);
+  const [healthStatus, setHealthStatus] = useState<Record<string, { ok: boolean; error?: string }> | null>(null);
 
   const form = useForm<BrandProfileForm>({
     resolver: zodResolver(brandProfileSchema),
@@ -357,10 +359,30 @@ export default function ProjectDetail() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setCmsIntegrations((prev) => { const n = { ...prev }; delete n.webflow; return n; });
+      setHealthStatus((prev) => { if (!prev) return prev; const n = { ...prev }; delete n.webflow; return n; });
     } catch {
       setCmsError("Failed to disconnect Webflow");
     } finally {
       setIsDisconnectingWebflow(false);
+    }
+  };
+
+  const onTestHealth = async () => {
+    if (!token || !id) return;
+    setIsTestingHealth(true);
+    setCmsError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/website-projects/${id}/cms-integrations/test`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setHealthStatus(await res.json() as Record<string, { ok: boolean; error?: string }>);
+      }
+    } catch {
+      setCmsError("Failed to test connections");
+    } finally {
+      setIsTestingHealth(false);
     }
   };
 
@@ -665,6 +687,14 @@ export default function ProjectDetail() {
                   <span>{cmsSaveSuccess}</span>
                 </div>
               )}
+              {(cmsIntegrations.notion || cmsIntegrations.webflow) && (
+                <div className="flex items-center justify-end">
+                  <Button variant="outline" size="sm" onClick={onTestHealth} disabled={isTestingHealth}>
+                    {isTestingHealth ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+                    Test connections
+                  </Button>
+                </div>
+              )}
 
               {/* Notion */}
               <Card className="border shadow-sm">
@@ -709,6 +739,12 @@ export default function ProjectDetail() {
                         <span className="font-medium text-foreground">Token:</span>
                         <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{cmsIntegrations.notion.integrationTokenHint}</code>
                       </div>
+                      {healthStatus?.notion && (
+                        <div className={`flex items-center gap-1.5 text-xs font-medium mt-1 ${healthStatus.notion.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                          {healthStatus.notion.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                          {healthStatus.notion.ok ? "Connection healthy" : healthStatus.notion.error}
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground mt-2">To update credentials, disconnect first then re-connect.</p>
                     </div>
                   ) : (
@@ -795,6 +831,12 @@ export default function ProjectDetail() {
                         <span className="font-medium text-foreground">Token:</span>
                         <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{cmsIntegrations.webflow.apiTokenHint}</code>
                       </div>
+                      {healthStatus?.webflow && (
+                        <div className={`flex items-center gap-1.5 text-xs font-medium mt-1 ${healthStatus.webflow.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}>
+                          {healthStatus.webflow.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                          {healthStatus.webflow.ok ? "Connection healthy" : healthStatus.webflow.error}
+                        </div>
+                      )}
                       <p className="text-xs text-muted-foreground mt-2">To update credentials, disconnect first then re-connect.</p>
                     </div>
                   ) : (

@@ -91,6 +91,11 @@ const STATUS_LABELS: Record<string, string> = {
 
 type PublishPlatform = "wordpress" | "notion" | "webflow";
 
+type CmsConnectionStatus = {
+  notion?: { databaseId: string; integrationTokenHint: string };
+  webflow?: { collectionId: string; apiTokenHint: string; bodyFieldSlug: string };
+};
+
 function PublishDialog({
   open,
   onClose,
@@ -112,6 +117,25 @@ function PublishDialog({
   const [wpAppPassword, setWpAppPassword] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [connections, setConnections] = useState<CmsConnectionStatus | null>(null);
+  const [isLoadingConnections, setIsLoadingConnections] = useState(false);
+
+  useEffect(() => {
+    if (!open || !token) return;
+    setIsLoadingConnections(true);
+    fetch(`${API_BASE}/api/website-projects/${projectId}/cms-integrations`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data: CmsConnectionStatus) => {
+        setConnections(data);
+        if (!data.notion && !data.webflow) {
+          setPlatform("wordpress");
+        }
+      })
+      .catch(() => setConnections({}))
+      .finally(() => setIsLoadingConnections(false));
+  }, [open, token, projectId]);
 
   const reset = () => {
     setWpSiteUrl("");
@@ -168,6 +192,12 @@ function PublishDialog({
     webflow: "Webflow",
   };
 
+  const availablePlatforms: PublishPlatform[] = [
+    "wordpress",
+    ...(connections?.notion ? (["notion"] as PublishPlatform[]) : []),
+    ...(connections?.webflow ? (["webflow"] as PublishPlatform[]) : []),
+  ];
+
   const canPublish = platform === "wordpress"
     ? wpSiteUrl.trim() && wpUsername.trim() && wpAppPassword.trim()
     : true;
@@ -185,106 +215,119 @@ function PublishDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 mt-2">
-          <div className="space-y-1.5">
-            <Label>Platform</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {(["wordpress", "notion", "webflow"] as PublishPlatform[]).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => { setPlatform(p); setError(null); }}
-                  disabled={isPublishing}
-                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none ${
-                    platform === p
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  {platformLabels[p]}
-                </button>
-              ))}
-            </div>
+        {isLoadingConnections ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
           </div>
-
-          {platform === "wordpress" && (
-            <>
-              <div className="space-y-1.5">
-                <Label htmlFor="wp-url">WordPress Site URL</Label>
-                <Input
-                  id="wp-url"
-                  placeholder="https://yoursite.com"
-                  value={wpSiteUrl}
-                  onChange={(e) => setWpSiteUrl(e.target.value)}
-                  disabled={isPublishing}
-                />
+        ) : (
+          <div className="space-y-4 mt-2">
+            <div className="space-y-1.5">
+              <Label>Platform</Label>
+              <div className={`grid gap-2 ${availablePlatforms.length === 1 ? "grid-cols-1" : availablePlatforms.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                {availablePlatforms.map((p) => (
+                  <button
+                    key={p}
+                    type="button"
+                    onClick={() => { setPlatform(p); setError(null); }}
+                    disabled={isPublishing}
+                    className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none ${
+                      platform === p
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {platformLabels[p]}
+                  </button>
+                ))}
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="wp-user">WordPress Username</Label>
-                <Input
-                  id="wp-user"
-                  placeholder="admin"
-                  value={wpUsername}
-                  onChange={(e) => setWpUsername(e.target.value)}
-                  disabled={isPublishing}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="wp-pass">Application Password</Label>
-                <Input
-                  id="wp-pass"
-                  type="password"
-                  placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
-                  value={wpAppPassword}
-                  onChange={(e) => setWpAppPassword(e.target.value)}
-                  disabled={isPublishing}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Generate an Application Password in WordPress under{" "}
-                  <strong>Users → Profile → Application Passwords</strong>.
+              {connections && !connections.notion && !connections.webflow && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Connect Notion or Webflow in <strong>Project Settings → Publishing</strong> to publish there.
                 </p>
-              </div>
-            </>
-          )}
-
-          {platform === "notion" && (
-            <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-              <p>This will publish to the Notion database connected in your <strong className="text-foreground">Project Settings → Publishing</strong> tab.</p>
-              <p className="mt-1.5">Make sure Notion is connected before publishing.</p>
-            </div>
-          )}
-
-          {platform === "webflow" && (
-            <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
-              <p>This will create a draft CMS item in the Webflow collection connected in your <strong className="text-foreground">Project Settings → Publishing</strong> tab.</p>
-              <p className="mt-1.5">Make sure Webflow is connected before publishing.</p>
-            </div>
-          )}
-
-          {error && (
-            <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>{error}</span>
-            </div>
-          )}
-
-          <div className="flex items-center gap-3 pt-1">
-            <Button
-              onClick={handlePublish}
-              disabled={!canPublish || isPublishing}
-              className="flex-1"
-            >
-              {isPublishing ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Publishing…</>
-              ) : (
-                <><Send className="w-4 h-4 mr-2" />Publish to {platformLabels[platform]}</>
               )}
-            </Button>
-            <Button variant="outline" onClick={handleClose} disabled={isPublishing}>
-              Cancel
-            </Button>
+            </div>
+
+            {platform === "wordpress" && (
+              <>
+                <div className="space-y-1.5">
+                  <Label htmlFor="wp-url">WordPress Site URL</Label>
+                  <Input
+                    id="wp-url"
+                    placeholder="https://yoursite.com"
+                    value={wpSiteUrl}
+                    onChange={(e) => setWpSiteUrl(e.target.value)}
+                    disabled={isPublishing}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="wp-user">WordPress Username</Label>
+                  <Input
+                    id="wp-user"
+                    placeholder="admin"
+                    value={wpUsername}
+                    onChange={(e) => setWpUsername(e.target.value)}
+                    disabled={isPublishing}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="wp-pass">Application Password</Label>
+                  <Input
+                    id="wp-pass"
+                    type="password"
+                    placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                    value={wpAppPassword}
+                    onChange={(e) => setWpAppPassword(e.target.value)}
+                    disabled={isPublishing}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Generate an Application Password in WordPress under{" "}
+                    <strong>Users → Profile → Application Passwords</strong>.
+                  </p>
+                </div>
+              </>
+            )}
+
+            {platform === "notion" && connections?.notion && (
+              <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm space-y-1">
+                <p className="font-medium text-foreground">Connected Notion database</p>
+                <p className="text-muted-foreground">Database ID: <code className="text-xs bg-muted px-1 rounded">{connections.notion.databaseId}</code></p>
+                <p className="text-muted-foreground text-xs mt-1">The content will be published as a new page in this database.</p>
+              </div>
+            )}
+
+            {platform === "webflow" && connections?.webflow && (
+              <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm space-y-1">
+                <p className="font-medium text-foreground">Connected Webflow collection</p>
+                <p className="text-muted-foreground">Collection ID: <code className="text-xs bg-muted px-1 rounded">{connections.webflow.collectionId}</code></p>
+                <p className="text-muted-foreground text-xs mt-1">A draft CMS item will be created. You can review and publish it in Webflow.</p>
+              </div>
+            )}
+
+            {error && (
+              <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-3 pt-1">
+              <Button
+                onClick={handlePublish}
+                disabled={!canPublish || isPublishing}
+                className="flex-1"
+              >
+                {isPublishing ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Publishing…</>
+                ) : (
+                  <><Send className="w-4 h-4 mr-2" />Publish to {platformLabels[platform]}</>
+                )}
+              </Button>
+              <Button variant="outline" onClick={handleClose} disabled={isPublishing}>
+                Cancel
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </DialogContent>
     </Dialog>
   );

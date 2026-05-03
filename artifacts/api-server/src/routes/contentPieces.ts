@@ -787,6 +787,77 @@ router.post("/content-pieces/:id/repurpose", requireAuth, async (req, res) => {
   }
 });
 
+router.post("/website-projects/:id/cms-integrations/test", requireAuth, async (req, res) => {
+  const projectId = Number(req.params.id);
+  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
+
+  try {
+    const [project] = await db
+      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+    const stored = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
+    const creds = decryptCmsCredentials(stored);
+
+    const health: Record<string, { ok: boolean; error?: string }> = {};
+
+    if (creds.notion) {
+      try {
+        await assertPublicUrl("https://api.notion.com");
+        const testRes = await fetch(`https://api.notion.com/v1/databases/${creds.notion.databaseId}`, {
+          headers: {
+            Authorization: `Bearer ${creds.notion.integrationToken}`,
+            "Notion-Version": "2022-06-28",
+          },
+        });
+        if (testRes.ok) {
+          health.notion = { ok: true };
+        } else if (testRes.status === 401) {
+          health.notion = { ok: false, error: "Invalid integration token" };
+        } else if (testRes.status === 404) {
+          health.notion = { ok: false, error: "Database not found or not shared with integration" };
+        } else {
+          health.notion = { ok: false, error: `Notion API error: ${testRes.status}` };
+        }
+      } catch (err) {
+        health.notion = { ok: false, error: err instanceof Error ? err.message : "Connection failed" };
+      }
+    }
+
+    if (creds.webflow) {
+      try {
+        await assertPublicUrl("https://api.webflow.com");
+        const testRes = await fetch(`https://api.webflow.com/v2/collections/${creds.webflow.collectionId}`, {
+          headers: {
+            Authorization: `Bearer ${creds.webflow.apiToken}`,
+            accept: "application/json",
+          },
+        });
+        if (testRes.ok) {
+          health.webflow = { ok: true };
+        } else if (testRes.status === 401 || testRes.status === 403) {
+          health.webflow = { ok: false, error: "Invalid API token" };
+        } else if (testRes.status === 404) {
+          health.webflow = { ok: false, error: "Collection not found" };
+        } else {
+          health.webflow = { ok: false, error: `Webflow API error: ${testRes.status}` };
+        }
+      } catch (err) {
+        health.webflow = { ok: false, error: err instanceof Error ? err.message : "Connection failed" };
+      }
+    }
+
+    res.json(health);
+  } catch (err) {
+    req.log.error({ err }, "Failed to test CMS integrations");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 const CmsIntegrationsBody = z.object({
   notion: z.object({
     integrationToken: z.string().min(1, "Notion integration token is required"),

@@ -118,6 +118,18 @@ export async function publishToNotion(
 
   const blocks = markdownToNotionBlocks(bodyMarkdown);
 
+  const pageProperties: Record<string, unknown> = {
+    Name: {
+      title: [{ type: "text", text: { content: title } }],
+    },
+  };
+
+  const createBody: Record<string, unknown> = {
+    parent: { database_id: databaseId },
+    properties: pageProperties,
+    children: blocks.slice(0, 100),
+  };
+
   const createRes = await fetch(`${NOTION_API}/pages`, {
     method: "POST",
     headers: {
@@ -125,15 +137,7 @@ export async function publishToNotion(
       "Content-Type": "application/json",
       "Notion-Version": NOTION_VERSION,
     },
-    body: JSON.stringify({
-      parent: { database_id: databaseId },
-      properties: {
-        Name: {
-          title: [{ type: "text", text: { content: title } }],
-        },
-      },
-      children: blocks.slice(0, 100),
-    }),
+    body: JSON.stringify(createBody),
   });
 
   if (!createRes.ok) {
