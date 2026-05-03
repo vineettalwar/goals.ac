@@ -35,3 +35,17 @@ a complex operation drizzle-kit cannot express), you **must** also run
 drizzle-kit can produce the matching snapshot. Commit both the hand-written
 `.sql` file and the generated snapshot together. Do **not** commit a hand-written
 migration without its snapshot.
+
+### Historical note — snapshot chain repair
+
+Migrations 0012–0015, 0017, and 0018 were originally written by hand without
+running `drizzle-kit generate`, so their snapshot files were missing from
+`lib/db/migrations/meta/`. This broke the snapshot chain: drizzle-kit could not
+tell what had already been applied and would have re-detected those changes on
+the next `generate` run, risking double-application of DDL statements.
+
+The chain was fully repaired by backfilling snapshots for 0012–0015, 0017, and
+0018, and then generating migration 0019 to reconcile the diff. Running
+`pnpm --filter @workspace/db run generate` against the current schema now
+correctly reports **"No schema changes, nothing to migrate"**. Future `generate`
+runs will produce only genuine diffs.
