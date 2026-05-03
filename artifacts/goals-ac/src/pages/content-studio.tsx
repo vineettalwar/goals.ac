@@ -1351,12 +1351,13 @@ export default function ContentStudio() {
               </div>
 
             {statsBreakdown.length > 0 && (
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 px-1 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">{allItems.length} total</span>
-                <span className="text-border">|</span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-4 px-1 text-xs text-muted-foreground">
+                <span>{allItems.length} total</span>
                 {statsBreakdown.map((s) => (
-                  <span key={s.label}>
-                    <span className={`font-semibold ${s.color}`}>{s.count}</span> {s.label}
+                  <span key={s.label} className="flex items-center gap-1.5">
+                    <span className="w-px h-3 bg-border" />
+                    <span className={`font-medium ${s.color}`}>{s.count}</span>
+                    <span>{s.label}</span>
                   </span>
                 ))}
               </div>

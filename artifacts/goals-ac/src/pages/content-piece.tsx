@@ -802,18 +802,19 @@ export default function ContentPiecePage() {
         </div>
 
         {piece.status === "draft" && !isEditing && (
-          <div className="flex items-center justify-between gap-4 mb-6 px-4 py-3 rounded-lg bg-amber-50 dark:bg-amber-900/15 border border-amber-200 dark:border-amber-500/25">
+          <div className="flex items-center justify-between gap-4 mb-6 px-4 py-3 rounded-lg bg-muted/50 border border-border">
             <div className="flex items-center gap-2.5 min-w-0">
-              <FileText className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0" />
-              <p className="text-sm text-amber-800 dark:text-amber-300">
-                This is a <span className="font-semibold">draft</span> — review the content below, then mark it ready when it's good to publish.
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+              <p className="text-sm text-muted-foreground">
+                Draft — review the content below, then mark it ready when it's good to publish.
               </p>
             </div>
             <Button
+              variant="outline"
               size="sm"
               onClick={handleMarkReady}
               disabled={isMarkingReady}
-              className="flex-shrink-0 bg-amber-500 hover:bg-amber-600 border-0 text-white"
+              className="flex-shrink-0"
             >
               {isMarkingReady ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />Mark as ready</>}
             </Button>
@@ -901,16 +902,16 @@ export default function ContentPiecePage() {
           <div>
             <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-3 leading-tight">{piece.title}</h1>
 
-            <div className="flex flex-wrap items-center gap-3 mb-8 pb-6 border-b border-border/50">
-              <span className="text-sm text-muted-foreground">Keyword:</span>
-              <span className="inline-flex items-center text-sm font-medium bg-primary/10 text-primary px-2.5 py-0.5 rounded-full">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-8 pb-5 border-b border-border/50 text-sm text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <Circle className="w-2 h-2 fill-primary text-primary" />
                 {piece.targetKeyword}
               </span>
+              {piece.wordCount > 0 && (
+                <span>{piece.wordCount.toLocaleString()} words</span>
+              )}
               {piece.plannedDate && (
-                <>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="text-sm text-muted-foreground">Planned: {format(parseISO(piece.plannedDate), "d MMM yyyy")}</span>
-                </>
+                <span>Planned {format(parseISO(piece.plannedDate), "d MMM yyyy")}</span>
               )}
             </div>
 

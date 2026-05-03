@@ -331,6 +331,59 @@ export async function cacheSet(key: string, result: ContentPieceResult): Promise
   }
 }
 
+/**
+ * Gemini occasionally emits raw C0 control characters (e.g. literal \n, \r, \t)
+ * inside JSON string values, which JSON.parse rejects. This function walks the
+ * raw output character-by-character, tracking string boundaries, and escapes
+ * any control character found inside a string region.
+ */
+function sanitizeJsonControlChars(raw: string): string {
+  let out = "";
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    const code = raw.charCodeAt(i);
+
+    if (escaped) {
+      out += ch;
+      escaped = false;
+      continue;
+    }
+
+    if (ch === "\\" && inString) {
+      out += ch;
+      escaped = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      out += ch;
+      continue;
+    }
+
+    if (inString && code < 0x20) {
+      if (code === 0x0a) out += "\\n";
+      else if (code === 0x0d) out += "\\r";
+      else if (code === 0x09) out += "\\t";
+      else out += `\\u${code.toString(16).padStart(4, "0")}`;
+      continue;
+    }
+
+    out += ch;
+  }
+
+  return out;
+}
+
+function cleanAndParse(raw: string): ContentPieceResult {
+  const stripped = raw.trim().replace(/^```json\s*/i, "").replace(/```\s*$/, "");
+  const sanitized = sanitizeJsonControlChars(stripped);
+  return JSON.parse(sanitized) as ContentPieceResult;
+}
+
 function validateResult(result: unknown): asserts result is ContentPieceResult {
   if (typeof result !== "object" || result === null) throw new Error("Result must be an object");
   const r = result as Record<string, unknown>;
@@ -365,8 +418,7 @@ async function generateWithClient(
       const rawText = response.text;
       if (!rawText) throw new Error("Empty response from Gemini");
 
-      const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
-      const parsed = JSON.parse(cleaned) as ContentPieceResult;
+      const parsed = cleanAndParse(rawText);
       validateResult(parsed);
       return parsed;
     } catch (err) {
@@ -407,8 +459,7 @@ async function generateWithClientStream(
     if (text) onChunk(text);
   }
 
-  const cleaned = accumulated.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
-  const parsed = JSON.parse(cleaned) as ContentPieceResult;
+  const parsed = cleanAndParse(accumulated);
   validateResult(parsed);
   return parsed;
 }
@@ -551,8 +602,7 @@ export async function repurposeContentPiece(
         });
         const rawText = response.text;
         if (!rawText) throw new Error("Empty response from Gemini");
-        const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
-        const parsed = JSON.parse(cleaned) as ContentPieceResult;
+        const parsed = cleanAndParse(rawText);
         validateResult(parsed);
         return parsed;
       } catch (err) {

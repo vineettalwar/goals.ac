@@ -802,8 +802,8 @@ export default function ProjectDetail() {
             <Card className="border-white/[0.07] glass-card-md shadow-none">
               <CardHeader>
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <Palette className="w-4 h-4 text-purple-400" />
+                  <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Palette className="w-4 h-4 text-primary" />
                   </div>
                   <div>
                     <CardTitle>Content Style</CardTitle>
