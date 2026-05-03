@@ -248,7 +248,7 @@ export default function Dashboard() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-destructive hover:text-red-400 hover:bg-red-500/10"
+                        className="text-destructive hover:text-red-600 hover:bg-red-100 dark:hover:text-red-400 dark:hover:bg-red-500/10"
                         onClick={() => setDeleteConfirmId(project.id)}
                       >
                         <Trash2 className="w-4 h-4" />
