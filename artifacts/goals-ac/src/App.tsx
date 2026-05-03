@@ -30,6 +30,8 @@ import Settings from "@/pages/settings";
 import Onboarding from "@/pages/onboarding";
 import CompetitorAnalysis from "@/pages/competitor-analysis";
 import KeywordTracking from "@/pages/keyword-tracking";
+import About from "@/pages/about";
+import Pricing from "@/pages/pricing";
 
 setBaseUrl(import.meta.env.BASE_URL.replace(/\/$/, ""));
 
@@ -81,6 +83,8 @@ function App() {
                 <Route path="/geo-audit/:id" element={<GeoAuditDetail />} />
                 <Route path="/competitor-analysis" element={<RequireAuth><CompetitorAnalysis /></RequireAuth>} />
                 <Route path="/keyword-tracking" element={<RequireAuth><KeywordTracking /></RequireAuth>} />
+                <Route path="/about" element={<About />} />
+                <Route path="/pricing" element={<Pricing />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </BrowserRouter>

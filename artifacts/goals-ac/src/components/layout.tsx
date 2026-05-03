@@ -49,6 +49,18 @@ export function Layout({ children }: LayoutProps) {
               Directory
               {!user && <Lock className="h-3 w-3 text-muted-foreground/70" />}
             </Link>
+            <Link
+              to="/pricing"
+              className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+            >
+              Pricing
+            </Link>
+            <Link
+              to="/about"
+              className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+            >
+              About
+            </Link>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors px-2 py-1 focus:outline-none">
@@ -155,17 +167,53 @@ export function Layout({ children }: LayoutProps) {
         {children}
       </main>
 
-      <footer className="border-t border-border bg-background py-10 mt-auto">
-        <div className="container mx-auto px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <p className="flex items-center gap-2 text-sm">
-            <Logo size={15} textClassName="text-sm" />
-            <span className="text-muted-foreground">© {new Date().getFullYear()}. All rights reserved.</span>
-          </p>
-          <div className="flex gap-6">
-            <Link to="/geo-audit" className="hover:text-foreground transition-colors">GEO Audit</Link>
-            <Link to={user ? "/roadmaps" : "/signup"} className="hover:text-foreground transition-colors">Roadmaps</Link>
-            <Link to={user ? "/competitor-analysis" : "/signup"} className="hover:text-foreground transition-colors">Competitor Analysis</Link>
-            <Link to={user ? "/keyword-tracking" : "/signup"} className="hover:text-foreground transition-colors">Keyword Tracking</Link>
+      <footer className="border-t border-border bg-background mt-auto">
+        <div className="container mx-auto px-4 md:px-8 py-14">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-10">
+            <div className="col-span-2 md:col-span-1">
+              <Logo size={18} />
+              <p className="text-sm text-muted-foreground mt-3 max-w-xs leading-relaxed">
+                The data-driven growth platform for B2B founders.
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold mb-4">Product</h4>
+              <ul className="space-y-2.5 text-sm text-muted-foreground">
+                <li><Link to="/" className="hover:text-foreground transition-colors">Build a roadmap</Link></li>
+                <li><Link to="/geo-audit" className="hover:text-foreground transition-colors">GEO Audit</Link></li>
+                <li><Link to={user ? "/competitor-analysis" : "/signup"} className="hover:text-foreground transition-colors">Competitor Analysis</Link></li>
+                <li><Link to={user ? "/keyword-tracking" : "/signup"} className="hover:text-foreground transition-colors">Keyword Tracking</Link></li>
+                <li><Link to={user ? "/roadmaps" : "/signup"} className="hover:text-foreground transition-colors">Roadmap Directory</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold mb-4">Company</h4>
+              <ul className="space-y-2.5 text-sm text-muted-foreground">
+                <li><Link to="/about" className="hover:text-foreground transition-colors">About</Link></li>
+                <li><Link to="/pricing" className="hover:text-foreground transition-colors">Pricing</Link></li>
+                <li><a href="mailto:hello@goals.ac" className="hover:text-foreground transition-colors">Contact</a></li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold mb-4">Get started</h4>
+              <ul className="space-y-2.5 text-sm text-muted-foreground">
+                {user ? (
+                  <>
+                    <li><Link to="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link></li>
+                    <li><Link to="/settings" className="hover:text-foreground transition-colors">Settings</Link></li>
+                  </>
+                ) : (
+                  <>
+                    <li><Link to="/signup" className="hover:text-foreground transition-colors">Sign up free</Link></li>
+                    <li><Link to="/login" className="hover:text-foreground transition-colors">Sign in</Link></li>
+                  </>
+                )}
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-border pt-6 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-muted-foreground">
+            <p>© {new Date().getFullYear()} goals.ac. All rights reserved.</p>
+            <p>Built for founders who'd rather ship than plan.</p>
           </div>
         </div>
       </footer>

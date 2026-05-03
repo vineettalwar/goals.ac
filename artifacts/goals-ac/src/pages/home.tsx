@@ -514,6 +514,93 @@ export default function Home() {
           </div>
         </section>
 
+        {/* How it works */}
+        <section className="py-24 bg-background border-t border-border">
+          <div className="container mx-auto px-4 md:px-8 max-w-5xl">
+            <div className="text-center mb-14">
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/[0.08] px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-4">
+                How it works
+              </div>
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">From zero to roadmap in 60 seconds.</h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                No long onboarding. No expensive consultants. Just answer three questions and ship.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6">
+              {[
+                {
+                  step: "01",
+                  title: "Tell us about you",
+                  desc: "Pick your industry, location, and funding stage. That's it. Three questions.",
+                },
+                {
+                  step: "02",
+                  title: "We build your roadmap",
+                  desc: "Our AI generates a 12-month growth plan tailored to your context — executive summary, quarterly phases, KPIs, and concrete plays.",
+                },
+                {
+                  step: "03",
+                  title: "Execute with our tools",
+                  desc: "Sign up to unlock competitor analysis, keyword tracking, content studio, and AI strategy chat — all built into your roadmap.",
+                },
+              ].map((item, i) => (
+                <div key={item.step} className="relative">
+                  <div className="rounded-2xl border border-border bg-card p-6 h-full">
+                    <div className="text-3xl font-bold text-gradient mb-3">{item.step}</div>
+                    <h3 className="text-lg font-bold mb-2">{item.title}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                  </div>
+                  {i < 2 && (
+                    <div className="hidden md:block absolute top-1/2 -right-3 -translate-y-1/2 text-muted-foreground/30">
+                      <ArrowRight className="h-5 w-5" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* FAQ */}
+        <section className="py-24 bg-background border-t border-border">
+          <div className="container mx-auto px-4 md:px-8 max-w-3xl">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Common questions</h2>
+              <p className="text-lg text-muted-foreground">Everything you need to know before starting.</p>
+            </div>
+            <div className="space-y-4">
+              {[
+                {
+                  q: "Is the roadmap generator really free?",
+                  a: "Yes — fully free, no signup required. Build as many roadmaps as you want. To save them, share them, or use the rest of the platform you'll need a free account.",
+                },
+                {
+                  q: "How is this different from a consultant?",
+                  a: "Consultants take weeks and cost thousands. We give you a roadmap in 60 seconds, free. The output isn't a 200-page deck — it's a tactical plan you can execute starting today.",
+                },
+                {
+                  q: "What's a GEO audit?",
+                  a: "GEO (Generative Engine Optimization) is SEO for AI tools. Our audit scans your site for technical gaps that hurt your visibility in ChatGPT, Perplexity, Google AI, and others.",
+                },
+                {
+                  q: "Do you support my industry?",
+                  a: "We support 50+ B2B verticals — SaaS, AI/ML, FinTech, HRTech, ClimaTech, AgriTech and more. If we don't have yours, the roadmap generator will adapt based on your inputs.",
+                },
+                {
+                  q: "What about my data?",
+                  a: "Your roadmap data is private to your account. We never sell data or share with third parties. See our Pro and Team plans for SOC 2 / GDPR docs.",
+                },
+              ].map((faq) => (
+                <div key={faq.q} className="rounded-xl border border-border bg-card p-6">
+                  <h3 className="font-semibold mb-2">{faq.q}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{faq.a}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* Unlock more with signup */}
         <section className="py-24 bg-mesh-dark text-zinc-50 border-t border-white/[0.06] relative overflow-hidden">
           <div className="orb orb-violet w-[500px] h-[400px] top-[-10%] right-[-10%]" />
