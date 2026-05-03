@@ -935,14 +935,14 @@ export default function ProjectDetail() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Audience reading level</FormLabel>
-                            <Select value={field.value ?? ""} onValueChange={(v) => field.onChange(v || undefined)}>
+                            <Select value={field.value ?? "none"} onValueChange={(v) => field.onChange(v === "none" ? undefined : v)}>
                               <FormControl>
                                 <SelectTrigger>
                                   <SelectValue placeholder="Select reading level" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="">Not specified</SelectItem>
+                                <SelectItem value="none">Not specified</SelectItem>
                                 {READING_LEVELS.map((level) => (
                                   <SelectItem key={level.value} value={level.value}>{level.label}</SelectItem>
                                 ))}
