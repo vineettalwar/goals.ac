@@ -705,6 +705,98 @@ const RepurposeBody = z.object({
   existingContent: z.string().min(50, "Existing content must be at least 50 characters").optional(),
 });
 
+router.post("/content-pieces/:id/repurpose/stream", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  const parsed = RepurposeBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
+
+  const { targetFormat, existingContent: bodyOverride } = parsed.data;
+
+  try {
+    const [piece] = await db
+      .select()
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.id, id))
+      .limit(1);
+
+    if (!piece) { res.status(404).json({ error: "Content piece not found" }); return; }
+
+    const [project] = await db
+      .select()
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) { res.status(403).json({ error: "Access denied" }); return; }
+
+    const [brandProfile] = await db
+      .select()
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, piece.websiteProjectId))
+      .limit(1);
+
+    const brand: BrandContext = {
+      companyName: brandProfile?.companyName ?? project.name,
+      websiteUrl: project.url,
+      industry: brandProfile?.industry ?? "",
+      targetAudience: brandProfile?.targetAudience ?? "",
+      voiceTone: brandProfile?.voiceTone ?? "",
+      primaryKeywords: brandProfile?.primaryKeywords ?? [],
+    };
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
+
+    const sendEvent = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    sendEvent("step", { step: "analyzing", label: "Analyzing source content" });
+
+    const sourceContent = bodyOverride ?? piece.bodyMarkdown;
+    const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+
+    sendEvent("step", { step: "generating", label: "Generating repurposed content" });
+
+    const result = await repurposeContentPiece(
+      targetFormat as ContentFormatType,
+      brand,
+      sourceContent,
+      piece.targetKeyword,
+      userApiKey,
+    );
+
+    sendEvent("step", { step: "saving", label: "Saving new piece" });
+
+    const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
+    const [inserted] = await db
+      .insert(contentPiecesTable)
+      .values({
+        websiteProjectId: piece.websiteProjectId,
+        formatType: targetFormat as ContentFormatType,
+        title: result.title,
+        targetKeyword: result.target_keyword,
+        bodyMarkdown: result.body_markdown,
+        wordCount,
+        status: "draft",
+      })
+      .returning();
+
+    sendEvent("done", inserted);
+    res.end();
+  } catch (err) {
+    logger.error({ err }, "Failed to stream repurpose content piece");
+    try {
+      res.write(`event: error\ndata: ${JSON.stringify({ error: err instanceof Error ? err.message : "Failed to repurpose content" })}\n\n`);
+      res.end();
+    } catch { /* already ended */ }
+  }
+});
+
 router.post("/content-pieces/:id/repurpose", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (isNaN(id)) {

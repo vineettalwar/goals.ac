@@ -15,7 +15,7 @@ import {
   RefreshCw, Save, BookOpen, Newspaper, GraduationCap, Map,
   FileSearch, LayoutTemplate, Globe, ImageIcon, Trash2, Send, ExternalLink,
   Linkedin, Twitter, Instagram, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle,
-  Shuffle
+  Shuffle, CheckCircle2, Circle
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 
@@ -333,6 +333,14 @@ function PublishDialog({
   );
 }
 
+type RepurposeStep = "analyzing" | "generating" | "saving";
+
+const REPURPOSE_STEPS: { key: RepurposeStep; label: string }[] = [
+  { key: "analyzing", label: "Analyzing source content" },
+  { key: "generating", label: "Generating repurposed content" },
+  { key: "saving", label: "Saving new piece" },
+];
+
 function RepurposeDialog({
   open,
   onClose,
@@ -347,15 +355,19 @@ function RepurposeDialog({
   const navigate = useNavigate();
   const [targetFormat, setTargetFormat] = useState<ContentFormatType | "">("");
   const [isRepurposing, setIsRepurposing] = useState(false);
+  const [completedSteps, setCompletedSteps] = useState<Set<RepurposeStep>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   const reset = () => {
     setTargetFormat("");
     setError(null);
     setIsRepurposing(false);
+    setCompletedSteps(new Set());
   };
 
   const handleClose = () => {
+    abortRef.current?.abort();
     reset();
     onClose();
   };
@@ -363,24 +375,65 @@ function RepurposeDialog({
   const handleRepurpose = async () => {
     if (!targetFormat) return;
     setIsRepurposing(true);
+    setCompletedSteps(new Set());
     setError(null);
+
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
     try {
-      const res = await fetch(`${API_BASE}/api/content-pieces/${piece.id}/repurpose`, {
+      const res = await fetch(`${API_BASE}/api/content-pieces/${piece.id}/repurpose/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ targetFormat }),
+        signal: ac.signal,
       });
-      if (!res.ok) {
+
+      if (!res.ok || !res.body) {
         const data = await res.json() as { error?: string };
         throw new Error(data.error ?? "Repurpose failed");
       }
-      const newPiece = await res.json() as ContentPiece;
-      handleClose();
-      navigate(`/content-piece/${newPiece.id}`);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to repurpose content");
-    } finally {
-      setIsRepurposing(false);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const chunks = buffer.split("\n\n");
+        buffer = chunks.pop() ?? "";
+
+        for (const chunk of chunks) {
+          const lines = chunk.split("\n");
+          const eventLine = lines.find((l) => l.startsWith("event:"));
+          const dataLine = lines.find((l) => l.startsWith("data:"));
+          if (!eventLine || !dataLine) continue;
+
+          const eventType = eventLine.replace("event:", "").trim();
+          const payload = JSON.parse(dataLine.replace("data:", "").trim()) as Record<string, unknown>;
+
+          if (eventType === "step") {
+            const step = payload.step as RepurposeStep;
+            setCompletedSteps((prev) => new Set([...prev, step]));
+          } else if (eventType === "done") {
+            const newPiece = payload as unknown as ContentPiece;
+            handleClose();
+            navigate(`/content-piece/${newPiece.id}`);
+            return;
+          } else if (eventType === "error") {
+            throw new Error((payload.error as string) ?? "Repurpose failed");
+          }
+        }
+      }
+    } catch (err: unknown) {
+      if ((err as { name?: string }).name !== "AbortError") {
+        setError(err instanceof Error ? err.message : "Failed to repurpose content");
+        setIsRepurposing(false);
+      }
     }
   };
 
@@ -425,6 +478,29 @@ function RepurposeDialog({
               The AI will adapt this content's key insights and messaging into the chosen format.
             </p>
           </div>
+
+          {isRepurposing && (
+            <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 space-y-2">
+              <p className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase tracking-wide mb-2">
+                Repurposing…
+              </p>
+              {REPURPOSE_STEPS.map(({ key, label }) => {
+                const done = completedSteps.has(key);
+                return (
+                  <div key={key} className="flex items-center gap-2 text-sm">
+                    {done ? (
+                      <CheckCircle2 className="h-4 w-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
+                    ) : (
+                      <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0 animate-pulse" />
+                    )}
+                    <span className={done ? "text-foreground" : "text-muted-foreground"}>
+                      {label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {error && (
             <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
