@@ -787,6 +787,30 @@ router.post("/content-pieces/:id/repurpose", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/user/cms-summary", requireAuth, async (req, res) => {
+  try {
+    const projects = await db
+      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.userId, req.user!.userId));
+
+    let hasNotion = false;
+    let hasWebflow = false;
+
+    for (const p of projects) {
+      const stored = (p.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
+      if (stored.notion) hasNotion = true;
+      if (stored.webflow) hasWebflow = true;
+      if (hasNotion && hasWebflow) break;
+    }
+
+    res.json({ notion: hasNotion, webflow: hasWebflow });
+  } catch (err) {
+    req.log.error({ err }, "Failed to fetch CMS summary");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/website-projects/:id/cms-integrations/test", requireAuth, async (req, res) => {
   const projectId = Number(req.params.id);
   if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }

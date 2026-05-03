@@ -117,6 +117,7 @@ export default function ProjectDetail() {
   const [cmsSaveSuccess, setCmsSaveSuccess] = useState<string | null>(null);
   const [isTestingHealth, setIsTestingHealth] = useState(false);
   const [healthStatus, setHealthStatus] = useState<Record<string, { ok: boolean; error?: string }> | null>(null);
+  const [activeTab, setActiveTab] = useState("brand");
 
   const form = useForm<BrandProfileForm>({
     resolver: zodResolver(brandProfileSchema),
@@ -196,6 +197,21 @@ export default function ProjectDetail() {
   useEffect(() => {
     loadProject();
   }, [loadProject]);
+
+  useEffect(() => {
+    if (activeTab !== "publishing" || !token || !id) return;
+    const hasCms = cmsIntegrations.notion || cmsIntegrations.webflow;
+    if (!hasCms || isTestingHealth) return;
+    setIsTestingHealth(true);
+    fetch(`${API_BASE}/api/website-projects/${id}/cms-integrations/test`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => setHealthStatus(data as Record<string, { ok: boolean; error?: string }>))
+      .catch(() => {})
+      .finally(() => setIsTestingHealth(false));
+  }, [activeTab, token, id, cmsIntegrations.notion, cmsIntegrations.webflow]);
 
   useEffect(() => {
     if (!project) return;
@@ -458,7 +474,7 @@ export default function ProjectDetail() {
           <p className="text-xs text-muted-foreground mt-2">Generate blog posts, guides, whitepapers, and more — powered by AI.</p>
         </div>
 
-        <Tabs defaultValue="brand">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-8">
             <TabsTrigger value="brand">Brand Profile</TabsTrigger>
             <TabsTrigger value="content">

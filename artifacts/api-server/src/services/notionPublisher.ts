@@ -124,10 +124,23 @@ export async function publishToNotion(
     },
   };
 
+  const backlink: NotionBlock = {
+    object: "block",
+    type: "paragraph",
+    paragraph: {
+      rich_text: [
+        { type: "text", text: { content: "Published via " } },
+        { type: "text", text: { content: "goals.ac", link: { url: "https://goals.ac" } } },
+      ],
+    },
+  };
+
+  const allBlocks = [...blocks, { object: "block", type: "divider", divider: {} } as NotionBlock, backlink];
+
   const createBody: Record<string, unknown> = {
     parent: { database_id: databaseId },
     properties: pageProperties,
-    children: blocks.slice(0, 100),
+    children: allBlocks.slice(0, 100),
   };
 
   const createRes = await fetch(`${NOTION_API}/pages`, {

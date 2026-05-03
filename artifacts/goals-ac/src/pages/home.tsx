@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -49,6 +49,15 @@ export default function Home() {
   const [completedPhases, setCompletedPhases] = useState<Set<GenerationPhase>>(new Set());
   const [generationError, setGenerationError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const [cmsSummary, setCmsSummary] = useState<{ notion: boolean; webflow: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!token) return;
+    fetch(`${API_BASE}/api/user/cms-summary`, { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((d: { notion: boolean; webflow: boolean }) => setCmsSummary(d))
+      .catch(() => {});
+  }, [token]);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -402,13 +411,25 @@ export default function Home() {
                 </div>
                 <p className="text-sm text-muted-foreground mb-5 leading-relaxed">Publishes content directly to your CMS across platforms without manual workflows.</p>
                 <div className="mt-auto glass-inner p-3">
-                  <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">Supported Platforms</div>
+                  <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">
+                    {cmsSummary ? "Connected Platforms" : "Supported Platforms"}
+                  </div>
                   <div className="space-y-2">
-                    {[{ name: "WordPress", color: "bg-blue-400" }, { name: "Notion", color: "bg-zinc-400" }, { name: "Webflow", color: "bg-purple-400" }].map((cms) => (
+                    {[
+                      { name: "WordPress", color: "bg-blue-400", connected: cmsSummary ? true : false },
+                      { name: "Notion", color: "bg-zinc-400", connected: cmsSummary ? cmsSummary.notion : false },
+                      { name: "Webflow", color: "bg-purple-400", connected: cmsSummary ? cmsSummary.webflow : false },
+                    ].map((cms) => (
                       <div key={cms.name} className="flex items-center gap-2">
                         <div className={`w-1.5 h-1.5 rounded-full ${cms.color} flex-shrink-0`} />
                         <span className="text-xs text-muted-foreground">{cms.name}</span>
-                        <span className="ml-auto text-xs text-zinc-500 font-medium">Available</span>
+                        {cmsSummary ? (
+                          <span className={`ml-auto text-xs font-medium ${cms.connected ? "text-emerald-400" : "text-zinc-500"}`}>
+                            {cms.connected ? "Connected" : "Not connected"}
+                          </span>
+                        ) : (
+                          <span className="ml-auto text-xs text-zinc-500 font-medium">Available</span>
+                        )}
                       </div>
                     ))}
                   </div>

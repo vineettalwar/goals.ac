@@ -51,7 +51,7 @@ export default function ResetPassword() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, password: data.password }),
       });
-      const body = await res.json() as { error?: string; token?: string; user?: { id: number; email: string; name: string } };
+      const body = await res.json() as { error?: string; token?: string; user?: { id: number; email: string; name: string; role: string } };
       if (!res.ok) {
         throw new Error(body.error ?? "Something went wrong");
       }
