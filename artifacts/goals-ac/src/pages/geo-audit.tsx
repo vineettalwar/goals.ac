@@ -219,24 +219,24 @@ export default function GeoAuditDetail() {
         <div className="grid grid-cols-3 gap-4">
           <Card className="border-red-500/20 bg-red-500/5 glass-card-md shadow-none">
             <CardContent className="pt-5 text-center">
-              <div className="text-3xl font-bold text-red-400">{failCount}</div>
-              <div className="text-sm text-red-400/70 mt-1 font-medium">
+              <div className="text-3xl font-bold text-red-600 dark:text-red-400">{failCount}</div>
+              <div className="text-sm text-red-600/70 dark:text-red-400/70 mt-1 font-medium">
                 {failCount === 1 ? "Issue" : "Issues"}
               </div>
             </CardContent>
           </Card>
           <Card className="border-amber-500/20 bg-amber-500/5 glass-card-md shadow-none">
             <CardContent className="pt-5 text-center">
-              <div className="text-3xl font-bold text-amber-400">{warnCount}</div>
-              <div className="text-sm text-amber-400/70 mt-1 font-medium">
+              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{warnCount}</div>
+              <div className="text-sm text-amber-600/70 dark:text-amber-400/70 mt-1 font-medium">
                 {warnCount === 1 ? "Warning" : "Warnings"}
               </div>
             </CardContent>
           </Card>
           <Card className="border-emerald-500/20 bg-emerald-500/5 glass-card-md shadow-none">
             <CardContent className="pt-5 text-center">
-              <div className="text-3xl font-bold text-emerald-400">{passCount}</div>
-              <div className="text-sm text-emerald-400/70 mt-1 font-medium">Passing</div>
+              <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{passCount}</div>
+              <div className="text-sm text-emerald-600/70 dark:text-emerald-400/70 mt-1 font-medium">Passing</div>
             </CardContent>
           </Card>
         </div>
@@ -249,7 +249,7 @@ export default function GeoAuditDetail() {
           <CardContent className="p-0">
             <Table>
               <TableHeader>
-                <TableRow className="border-white/[0.06]">
+                <TableRow className="border-border">
                   <TableHead className="w-[160px]">Check</TableHead>
                   <TableHead className="w-[90px]">Status</TableHead>
                   <TableHead>Detail</TableHead>
@@ -258,14 +258,14 @@ export default function GeoAuditDetail() {
               </TableHeader>
               <TableBody>
                 {audit.issues.map((issue) => (
-                  <TableRow key={issue.check} className="border-white/[0.04]">
+                  <TableRow key={issue.check} className="border-border/50">
                     <TableCell className="font-medium text-sm">{issue.check}</TableCell>
                     <TableCell>
                       <StatusBadge status={issue.status} />
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{issue.detail}</TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
-                      {issue.fix || <span className="text-emerald-400 font-medium">No action needed</span>}
+                      {issue.fix || <span className="text-emerald-600 dark:text-emerald-400 font-medium">No action needed</span>}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -299,20 +299,20 @@ export default function GeoAuditDetail() {
           <CardContent className="space-y-3 text-sm">
             <div className="grid grid-cols-2 gap-x-6 gap-y-3">
               <div className="text-muted-foreground">Page Title</div>
-              <div className="font-medium">{audit.pageTitle || <span className="text-red-400">Missing</span>}</div>
+              <div className="font-medium">{audit.pageTitle || <span className="text-red-600 dark:text-red-400">Missing</span>}</div>
 
               <div className="text-muted-foreground">Meta Description</div>
               <div className="font-medium">
                 {audit.metaDescription ? (
                   <span className="line-clamp-2">{audit.metaDescription}</span>
                 ) : (
-                  <span className="text-red-400">Missing</span>
+                  <span className="text-red-600 dark:text-red-400">Missing</span>
                 )}
               </div>
 
               <div className="text-muted-foreground">Schema.org Types</div>
               <div className="font-medium">
-                {audit.schemaTypes.length > 0 ? audit.schemaTypes.join(", ") : <span className="text-red-400">None</span>}
+                {audit.schemaTypes.length > 0 ? audit.schemaTypes.join(", ") : <span className="text-red-600 dark:text-red-400">None</span>}
               </div>
 
               <div className="text-muted-foreground">H1 Tags</div>
@@ -322,7 +322,7 @@ export default function GeoAuditDetail() {
               <div className="font-medium">
                 {audit.imageCount} total
                 {audit.imagesMissingAlt > 0 && (
-                  <span className="text-red-400 ml-1">({audit.imagesMissingAlt} missing alt)</span>
+                  <span className="text-red-600 dark:text-red-400 ml-1">({audit.imagesMissingAlt} missing alt)</span>
                 )}
               </div>
             </div>

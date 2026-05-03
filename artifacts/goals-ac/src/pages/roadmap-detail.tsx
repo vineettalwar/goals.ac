@@ -333,14 +333,14 @@ export default function RoadmapDetail() {
                   <Card className="border-white/[0.07] glass-card-md shadow-none">
                     <CardHeader className="bg-blue-500/5 pb-4 rounded-t-xl">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <Target className="w-5 h-5 text-blue-400" /> Core Objectives
+                        <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Core Objectives
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-5">
                       <ul className="space-y-3">
                         {phase.objectives.map((obj, i) => (
                           <li key={i} className="flex items-start gap-3">
-                            <CheckCircle2 className="w-5 h-5 text-blue-400/60 shrink-0 mt-0.5" />
+                            <CheckCircle2 className="w-5 h-5 text-blue-500/60 dark:text-blue-400/60 shrink-0 mt-0.5" />
                             <span className="leading-relaxed text-muted-foreground">{obj}</span>
                           </li>
                         ))}
@@ -351,14 +351,14 @@ export default function RoadmapDetail() {
                   <Card className="border-white/[0.07] glass-card-md shadow-none">
                     <CardHeader className="bg-blue-500/5 pb-4 rounded-t-xl">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-blue-400" /> Key Tactics
+                        <TrendingUp className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Key Tactics
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-5">
                       <ul className="space-y-3">
                         {phase.tactics.map((tactic, i) => (
                           <li key={i} className="flex items-start gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400 shrink-0 mt-2" />
+                            <div className="w-1.5 h-1.5 rounded-full bg-blue-500 dark:bg-blue-400 shrink-0 mt-2" />
                             <span className="leading-relaxed text-muted-foreground">{tactic}</span>
                           </li>
                         ))}
@@ -369,7 +369,7 @@ export default function RoadmapDetail() {
                   <Card className="border-white/[0.07] glass-card-md shadow-none">
                     <CardHeader className="pb-4">
                       <CardTitle className="text-lg flex items-center gap-2">
-                        <BarChart className="w-5 h-5 text-blue-400" /> Success KPIs
+                        <BarChart className="w-5 h-5 text-blue-600 dark:text-blue-400" /> Success KPIs
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -390,7 +390,7 @@ export default function RoadmapDetail() {
       </div>
 
       {/* Sticky CTA Bar */}
-      <div className="sticky bottom-0 z-40 border-t border-white/[0.06] bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 py-4 shadow-sm">
+      <div className="sticky bottom-0 z-40 border-t border-border/60 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/70 py-4 shadow-sm">
         <div className="container mx-auto px-4 md:px-8 max-w-4xl space-y-3">
           {showSeoForm && (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pb-3 border-b">
@@ -431,7 +431,7 @@ export default function RoadmapDetail() {
               <p className="text-sm text-muted-foreground">
                 {user && projects.length === 0 ? (
                   <>
-                    <Link to="/dashboard" className="text-blue-400 hover:text-blue-300 transition-colors font-medium">
+                    <Link to="/dashboard" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium">
                       Add a website project
                     </Link>{" "}
                     to save generated content and track results.
@@ -514,7 +514,7 @@ export default function RoadmapDetail() {
                       ? `Batch ${strategyBatch.current}/${strategyBatch.total}…`
                       : "Generating…"}
                     {user?.hasGeminiKey && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-xs font-medium text-blue-300">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/20 px-1.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
                         <KeyRound className="w-3 h-3" />
                         Using your API key
                       </span>

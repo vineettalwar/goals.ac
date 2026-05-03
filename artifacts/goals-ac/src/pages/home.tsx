@@ -289,17 +289,17 @@ export default function Home() {
 
                       {isPending && (
                         <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 space-y-2">
-                          <p className="text-xs font-semibold text-blue-300 uppercase tracking-wide mb-2">Generating in parallel…</p>
+                          <p className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase tracking-wide mb-2">Generating in parallel…</p>
                           {(Object.keys(PHASE_LABELS) as GenerationPhase[]).map((key) => {
                             const done = completedPhases.has(key);
                             return (
                               <div key={key} className="flex items-center gap-2 text-sm">
                                 {done ? (
-                                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                                 ) : (
-                                  <Circle className="h-4 w-4 text-zinc-600 shrink-0 animate-pulse" />
+                                  <Circle className="h-4 w-4 text-muted-foreground shrink-0 animate-pulse" />
                                 )}
-                                <span className={done ? "text-zinc-200" : "text-zinc-500"}>
+                                <span className={done ? "text-foreground" : "text-muted-foreground"}>
                                   {PHASE_LABELS[key]}
                                 </span>
                               </div>
@@ -309,7 +309,7 @@ export default function Home() {
                       )}
 
                       {generationError && (
-                        <p className="text-sm text-red-400 text-center">{generationError}</p>
+                        <p className="text-sm text-red-600 dark:text-red-400 text-center">{generationError}</p>
                       )}
                     </div>
                   </form>
@@ -323,7 +323,7 @@ export default function Home() {
         <section className="py-28 bg-background">
           <div className="container mx-auto px-4 md:px-8 max-w-5xl">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-3 py-1 text-xs font-semibold text-blue-400 mb-4">
+              <div className="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-4">
                 Platform Features
               </div>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Everything you need to grow.</h2>
@@ -354,7 +354,7 @@ export default function Home() {
                     ))}
                   </div>
                   <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center gap-2">
-                    <div className="text-xs font-semibold text-blue-400">SEO Score</div>
+                    <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">SEO Score</div>
                     <div className="flex-1 h-1.5 rounded bg-white/10">
                       <div className="h-full w-4/5 rounded bg-gradient-to-r from-blue-500 to-blue-600" />
                     </div>

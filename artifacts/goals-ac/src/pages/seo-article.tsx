@@ -102,7 +102,7 @@ export default function SeoArticlePage() {
           {article.roadmapId ? (
             <Link
               to={`/roadmap/${article.roadmapId}`}
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-blue-400 transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Roadmap
@@ -110,7 +110,7 @@ export default function SeoArticlePage() {
           ) : (
             <Link
               to="/"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-blue-400 transition-colors"
+              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Home
@@ -120,7 +120,7 @@ export default function SeoArticlePage() {
           <Button variant="outline" size="sm" onClick={handleCopy}>
             {copied ? (
               <>
-                <Check className="w-4 h-4 mr-2 text-emerald-400" />
+                <Check className="w-4 h-4 mr-2 text-emerald-600 dark:text-emerald-400" />
                 Copied!
               </>
             ) : (
@@ -133,7 +133,7 @@ export default function SeoArticlePage() {
         </div>
 
         {/* Article header */}
-        <header className="mb-10 pb-8 border-b border-white/[0.06]">
+        <header className="mb-10 pb-8 border-b border-border/50">
           <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 leading-tight">
             {article.title}
           </h1>

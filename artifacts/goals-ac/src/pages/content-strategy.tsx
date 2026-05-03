@@ -111,7 +111,7 @@ export default function ContentStrategy() {
             >
               <CardContent className="p-4 flex flex-col gap-2 h-full">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono font-bold text-blue-400">
+                  <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
                     Day {item.day}
                   </span>
                 </div>
@@ -128,8 +128,8 @@ export default function ContentStrategy() {
                   {item.topicAngle}
                 </p>
 
-                <div className="pt-1 border-t border-white/[0.06]">
-                  <span className="text-xs text-blue-400 font-medium truncate block">
+                <div className="pt-1 border-t border-border/50">
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium truncate block">
                     🔑 {item.primaryKeyword}
                   </span>
                 </div>

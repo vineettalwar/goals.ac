@@ -273,6 +273,21 @@
   box-shadow: 0 1px 8px rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
+/* ─── glass-inner — unlayered so it beats Tailwind utilities ─── */
+/* Light mode: subtle muted block */
+.glass-inner {
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+}
+/* Dark mode or inside a dark mesh section: faint white-tint block */
+.dark .glass-inner,
+.bg-mesh-dark .glass-inner {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 0.5rem;
+}
+
 /* ─── Glass & premium utilities ─────────────────────────────────── */
 @layer utilities {
 
@@ -283,13 +298,6 @@
       radial-gradient(ellipse 80% 60% at 50% -10%, rgba(59, 130, 246, 0.18) 0%, transparent 70%),
       radial-gradient(ellipse 50% 40% at 90% 90%, rgba(37, 99, 235, 0.10) 0%, transparent 60%),
       radial-gradient(ellipse 40% 30% at 10% 70%, rgba(96, 165, 250, 0.08) 0%, transparent 60%);
-  }
-
-  /* Inner preview block inside glass cards */
-  .glass-inner {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    border-radius: 0.5rem;
   }
 
   /* Primary glow for CTA buttons */
