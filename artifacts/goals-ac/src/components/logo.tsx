@@ -2,6 +2,7 @@ interface LogoProps {
   size?: number;
   showWordmark?: boolean;
   className?: string;
+  textClassName?: string;
 }
 
 export function LogoIcon({ size = 20 }: { size?: number }) {
@@ -22,12 +23,12 @@ export function LogoIcon({ size = 20 }: { size?: number }) {
   );
 }
 
-export function Logo({ size = 20, showWordmark = true, className = "" }: LogoProps) {
+export function Logo({ size = 20, showWordmark = true, className = "", textClassName = "text-xl" }: LogoProps) {
   return (
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <LogoIcon size={size} />
       {showWordmark && (
-        <span className="font-bold text-xl tracking-tight leading-none select-none">
+        <span className={`font-bold tracking-tight leading-none select-none ${textClassName}`}>
           <span className="text-foreground">goals</span>
           <span className="text-primary font-medium">.ac</span>
         </span>

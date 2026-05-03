@@ -127,9 +127,9 @@ export function Layout({ children }: LayoutProps) {
 
       <footer className="border-t border-border bg-background py-10 mt-auto">
         <div className="container mx-auto px-4 md:px-8 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
-          <p className="font-medium flex items-center gap-2">
-            <Logo size={18} />
-            <span>© {new Date().getFullYear()}. All rights reserved.</span>
+          <p className="flex items-center gap-2 text-sm">
+            <Logo size={15} textClassName="text-sm" />
+            <span className="text-muted-foreground">© {new Date().getFullYear()}. All rights reserved.</span>
           </p>
           <div className="flex gap-6">
             <Link to="/roadmaps" className="hover:text-foreground transition-colors">Roadmaps</Link>

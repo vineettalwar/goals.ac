@@ -428,20 +428,6 @@ export default function RoadmapDetail() {
           <div className="flex flex-col gap-2.5">
             <div>
               <h4 className="font-semibold text-foreground text-sm">Ready to execute your strategy?</h4>
-              <p className="text-sm text-muted-foreground">
-                {user && projects.length === 0 ? (
-                  <>
-                    <Link to="/dashboard" className="text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors font-medium">
-                      Add a website project
-                    </Link>{" "}
-                    to save generated content and track results.
-                  </>
-                ) : user ? (
-                  <>Generate content and audits — they'll be saved to your project.</>
-                ) : (
-                  <>Sign up to save your results and build a brand profile.</>
-                )}
-              </p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
               {user && projects.length === 0 && (
