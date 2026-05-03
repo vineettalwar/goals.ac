@@ -38,6 +38,7 @@ export const contentPiecesTable = pgTable("content_pieces", {
   wordCount: integer("word_count").notNull().default(0),
   plannedDate: date("planned_date"),
   publishedUrl: text("published_url"),
+  cacheKey: text("cache_key"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

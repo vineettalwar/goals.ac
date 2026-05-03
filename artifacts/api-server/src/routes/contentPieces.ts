@@ -165,6 +165,22 @@ router.post("/website-projects/:id/content-pieces/generate", requireAuth, async 
     };
 
     const bypassCache = req.headers["x-bypass-cache"] === "true";
+    const cacheKeyStr = buildCacheKey(formatType, targetKeyword, brand, angleHint);
+
+    if (!bypassCache) {
+      const [existing] = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(and(eq(contentPiecesTable.websiteProjectId, projectId), eq(contentPiecesTable.cacheKey, cacheKeyStr)))
+        .limit(1);
+      if (existing) {
+        logger.info({ formatType, targetKeyword }, "Content piece served from DB cache");
+        res.setHeader("X-Cache", "HIT");
+        res.status(200).json(existing);
+        return;
+      }
+    }
+
     const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
     const result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint, bypassCache, userApiKey);
     const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
@@ -179,6 +195,7 @@ router.post("/website-projects/:id/content-pieces/generate", requireAuth, async 
         bodyMarkdown: result.body_markdown,
         wordCount,
         status: "draft",
+        cacheKey: cacheKeyStr,
       })
       .returning();
 
@@ -234,24 +251,39 @@ router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth,
 
     const bypassCache = req.headers["x-bypass-cache"] === "true";
     const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+    const cacheKeyStr = buildCacheKey(formatType, targetKeyword, brand, angleHint);
 
     if (!bypassCache) {
-      const cacheKeyStr = buildCacheKey(formatType, targetKeyword, brand, angleHint);
-      const cached = await cacheGet(cacheKeyStr);
-      if (cached) {
-        logger.info({ formatType, targetKeyword }, "Content piece streaming served from cache");
-        sendEvent("chunk", { text: cached.body_markdown });
-        const wordCount = cached.body_markdown.split(/\s+/).filter(Boolean).length;
+      const [existing] = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(and(eq(contentPiecesTable.websiteProjectId, projectId), eq(contentPiecesTable.cacheKey, cacheKeyStr)))
+        .limit(1);
+      if (existing) {
+        logger.info({ formatType, targetKeyword }, "Content piece streaming served from DB cache");
+        sendEvent("cached", existing);
+        res.end();
+        return;
+      }
+    }
+
+    if (!bypassCache) {
+      const aiCached = await cacheGet(cacheKeyStr);
+      if (aiCached) {
+        logger.info({ formatType, targetKeyword }, "Content piece streaming served from AI cache");
+        sendEvent("chunk", { text: aiCached.body_markdown });
+        const wordCount = aiCached.body_markdown.split(/\s+/).filter(Boolean).length;
         const [inserted] = await db
           .insert(contentPiecesTable)
           .values({
             websiteProjectId: projectId,
             formatType: formatType as ContentFormatType,
-            title: cached.title,
-            targetKeyword: cached.target_keyword,
-            bodyMarkdown: cached.body_markdown,
+            title: aiCached.title,
+            targetKeyword: aiCached.target_keyword,
+            bodyMarkdown: aiCached.body_markdown,
             wordCount,
             status: "draft",
+            cacheKey: cacheKeyStr,
           })
           .returning();
         sendEvent("done", inserted);
@@ -269,7 +301,6 @@ router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth,
       userApiKey,
     );
 
-    const cacheKeyStr = buildCacheKey(formatType, targetKeyword, brand, angleHint);
     await cacheSet(cacheKeyStr, result);
 
     const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
@@ -283,6 +314,7 @@ router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth,
         bodyMarkdown: result.body_markdown,
         wordCount,
         status: "draft",
+        cacheKey: cacheKeyStr,
       })
       .returning();
 

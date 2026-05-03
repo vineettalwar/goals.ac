@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout";
 import { SEO } from "@/components/seo";
@@ -314,6 +314,9 @@ function CreateModal({
   const [angleHint, setAngleHint] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDone, setIsDone] = useState(false);
+  const [isCachedResult, setIsCachedResult] = useState(false);
+  const [bypassCache, setBypassCache] = useState(false);
+  const _cachedPiece = useRef<Omit<ContentPiece, "source"> | null>(null);
   const [streamPreview, setStreamPreview] = useState("");
   const [detectedSections, setDetectedSections] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -339,6 +342,9 @@ function CreateModal({
     setRepurposeSource("paste");
     setRepurposeSelectedId(null);
     setIsDone(false);
+    setIsCachedResult(false);
+    setBypassCache(false);
+    _cachedPiece.current = null;
   };
 
   const handleClose = () => {
@@ -377,18 +383,22 @@ function CreateModal({
       .filter(Boolean);
   };
 
-  const handleGenerate = async () => {
+  const handleGenerate = async (forceBypass = false) => {
     if (!selectedFormat || !keyword.trim()) return;
+    const useBypass = forceBypass || bypassCache;
     setIsGenerating(true);
+    setIsCachedResult(false);
     setStreamPreview("");
     setDetectedSections([]);
     setError(null);
     try {
       let res: Response;
       try {
+        const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+        if (useBypass) headers["x-bypass-cache"] = "true";
         res = await fetch(`${API_BASE}/api/website-projects/${projectId}/content-pieces/generate/stream`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          headers,
           body: JSON.stringify({ formatType: selectedFormat, targetKeyword: keyword.trim(), angleHint: angleHint.trim() || undefined }),
         });
       } catch {
@@ -406,6 +416,7 @@ function CreateModal({
       let buffer = "";
       let jsonAccumulated = "";
       let finalPiece: Omit<ContentPiece, "source"> | null = null;
+      let fromCache = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -417,6 +428,7 @@ function CreateModal({
         for (const line of lines) {
           if (line.startsWith("event: chunk")) continue;
           if (line.startsWith("event: done")) continue;
+          if (line.startsWith("event: cached")) { fromCache = true; continue; }
           if (line.startsWith("event: error")) {
             throw new Error("Generation failed");
           }
@@ -441,10 +453,16 @@ function CreateModal({
       }
 
       if (finalPiece) {
-        setIsDone(true);
-        await new Promise((resolve) => setTimeout(resolve, 900));
-        onCreated({ ...finalPiece, source: "studio" });
-        handleClose();
+        if (fromCache) {
+          _cachedPiece.current = finalPiece;
+          setIsCachedResult(true);
+          setIsDone(true);
+        } else {
+          setIsDone(true);
+          await new Promise((resolve) => setTimeout(resolve, 900));
+          onCreated({ ...finalPiece, source: "studio" });
+          handleClose();
+        }
       } else {
         throw new Error("Generation completed without result");
       }
@@ -587,10 +605,29 @@ function CreateModal({
               <p className="text-xs text-muted-foreground">Give the AI a specific angle or title direction.</p>
             </div>
 
-            {isDone && (
+            {isDone && !isCachedResult && (
               <div className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800/50 p-3">
                 <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 Done! Opening your content piece…
+              </div>
+            )}
+
+            {isDone && isCachedResult && (
+              <div className="rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 p-3 space-y-2.5">
+                <div className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-300">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                  This piece already exists — returning the cached version.
+                </div>
+                <p className="text-xs text-amber-700/80 dark:text-amber-400/70">Same format, keyword, and brand settings were used before. You can open it or regenerate a fresh version.</p>
+                <div className="flex gap-2">
+                  <Button size="sm" className="flex-1" onClick={() => { if (_cachedPiece.current) { onCreated({ ..._cachedPiece.current, source: "studio" }); handleClose(); } }}>
+                    Open existing piece
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1" onClick={() => { setIsDone(false); setIsCachedResult(false); handleGenerate(true); }}>
+                    <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                    Regenerate
+                  </Button>
+                </div>
               </div>
             )}
 
@@ -634,8 +671,8 @@ function CreateModal({
             )}
 
             <Button
-              onClick={handleGenerate}
-              disabled={!keyword.trim() || isGenerating}
+              onClick={() => handleGenerate()}
+              disabled={!keyword.trim() || isGenerating || isDone}
               className="w-full"
             >
               {isGenerating ? (
