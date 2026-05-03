@@ -237,8 +237,8 @@ function FormatBadge({ type }: { type: ContentFormatType }) {
   const meta = FORMAT_META[type];
   const Icon = meta.icon;
   return (
-    <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${meta.color}`}>
-      <Icon className="w-3 h-3" />
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+      <Icon className="w-3.5 h-3.5 shrink-0" />
       {meta.label}
     </span>
   );
@@ -262,11 +262,21 @@ const STATUS_LABELS: Record<string, string> = {
   completed: "Completed",
 };
 
+const STATUS_DOT_COLORS: Record<string, string> = {
+  draft: "bg-amber-400",
+  ready: "bg-green-500",
+  published: "bg-blue-500",
+  pending: "bg-slate-400",
+  in_progress: "bg-blue-400",
+  completed: "bg-green-500",
+};
+
 function StatusBadge({ status }: { status: string }) {
-  const cls = STATUS_COLORS[status] ?? "bg-muted text-muted-foreground";
+  const dot = STATUS_DOT_COLORS[status] ?? "bg-muted-foreground";
   const label = STATUS_LABELS[status] ?? status.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   return (
-    <span className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${cls}`}>
+    <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap">
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dot}`} />
       {label}
     </span>
   );
@@ -1277,13 +1287,9 @@ export default function ContentStudio() {
           </TabsList>
 
           <TabsContent value="hub">
-            <div className="flex flex-wrap items-center gap-3 mb-5">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Filter className="w-4 h-4" />
-                  Filter:
-                </div>
+            <div className="flex flex-wrap items-center gap-2 mb-5">
                 <Select value={filterSource} onValueChange={setFilterSource}>
-                  <SelectTrigger className="w-36 h-8 text-sm">
+                  <SelectTrigger className="w-32 h-8 text-xs border-dashed">
                     <SelectValue placeholder="All sources" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1296,7 +1302,7 @@ export default function ContentStudio() {
                   </SelectContent>
                 </Select>
                 <Select value={filterFormat} onValueChange={setFilterFormat}>
-                  <SelectTrigger className="w-44 h-8 text-sm">
+                  <SelectTrigger className="w-36 h-8 text-xs border-dashed">
                     <SelectValue placeholder="All formats" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1307,7 +1313,7 @@ export default function ContentStudio() {
                   </SelectContent>
                 </Select>
                 <Select value={filterStatus} onValueChange={setFilterStatus}>
-                  <SelectTrigger className="w-36 h-8 text-sm">
+                  <SelectTrigger className="w-32 h-8 text-xs border-dashed">
                     <SelectValue placeholder="All statuses" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1321,12 +1327,11 @@ export default function ContentStudio() {
                   </SelectContent>
                 </Select>
 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground ml-2">
-                  <ArrowUpDown className="w-4 h-4" />
-                  Sort:
-                </div>
+                <div className="w-px h-5 bg-border mx-1" />
+
                 <Select value={sortKey} onValueChange={(v) => setSortKey(v as SortKey)}>
-                  <SelectTrigger className="w-40 h-8 text-sm">
+                  <SelectTrigger className="w-36 h-8 text-xs border-dashed">
+                    <ArrowUpDown className="w-3 h-3 mr-1.5 text-muted-foreground" />
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -1339,7 +1344,7 @@ export default function ContentStudio() {
                 </Select>
 
                 {(filterFormat !== "all" || filterStatus !== "all" || filterSource !== "all") && (
-                  <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setFilterFormat("all"); setFilterStatus("all"); setFilterSource("all"); }}>
+                  <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" onClick={() => { setFilterFormat("all"); setFilterStatus("all"); setFilterSource("all"); }}>
                     <RefreshCw className="w-3 h-3 mr-1" /> Clear
                   </Button>
                 )}
@@ -1379,10 +1384,9 @@ export default function ContentStudio() {
               </div>
             ) : (
               <div className="space-y-2">
-                <div className="hidden md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b">
+                <div className="hidden md:grid md:grid-cols-[1fr_160px_110px_auto_70px_80px] gap-3 px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide border-b">
                   <span>Title</span>
-                  <span>Source</span>
-                  <span>Format / Type</span>
+                  <span>Format</span>
                   <span>Keyword</span>
                   <span>Status</span>
                   <span>Words</span>
@@ -1399,22 +1403,21 @@ export default function ContentStudio() {
                           <span className="text-xs text-muted-foreground">{studioSorted.length}</span>
                         </div>
                         {studioSorted.map((item) => (
-                          <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_auto_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
+                          <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_160px_110px_auto_70px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
                             <div className="min-w-0">
                               <Link to={`/content-piece/${item.id}`} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2">
                                 {item.title}
                               </Link>
                             </div>
-                            <SourceBadge source={item.source} />
                             <FormatBadge type={item.formatType} />
                             <span className="text-xs text-muted-foreground truncate">{item.targetKeyword}</span>
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                               <StatusBadge status={item.status} />
                               {item.status === "draft" && (
                                 <button
                                   onClick={() => handleMarkReady(item.id)}
                                   title="Mark as ready"
-                                  className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:text-green-600 dark:hover:text-green-400 transition-colors opacity-0 group-hover:opacity-100"
+                                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-green-600 dark:hover:text-green-400 transition-colors opacity-0 group-hover:opacity-100"
                                 >
                                   <ArrowRight className="w-3 h-3" />
                                   Ready
@@ -1446,7 +1449,7 @@ export default function ContentStudio() {
                           <span className="text-xs text-muted-foreground">{legacySorted.length}</span>
                         </div>
                         {legacySorted.map((item) => (
-                          <div key={`${item.source}-${item.id}`} className="flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
+                          <div key={`${item.source}-${item.id}`} className="flex flex-col md:grid md:grid-cols-[1fr_160px_110px_auto_70px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
                             <div className="min-w-0">
                               <Link to={item.linkTo} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2 flex items-center gap-1">
                                 {item.title}
@@ -1456,7 +1459,6 @@ export default function ContentStudio() {
                                 <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.subtitle}</p>
                               )}
                             </div>
-                            <SourceBadge source={item.source} />
                             <span className="text-xs text-muted-foreground">—</span>
                             <span className="text-xs text-muted-foreground truncate">{item.keyword}</span>
                             <StatusBadge status={item.status} />
@@ -1473,22 +1475,21 @@ export default function ContentStudio() {
                   sorted.map((item) => {
                     if (isContentPiece(item)) {
                       return (
-                        <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_auto_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
+                        <div key={`studio-${item.id}`} className="group flex flex-col md:grid md:grid-cols-[1fr_160px_110px_auto_70px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
                           <div className="min-w-0">
                             <Link to={`/content-piece/${item.id}`} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2">
                               {item.title}
                             </Link>
                           </div>
-                          <SourceBadge source={item.source} />
                           <FormatBadge type={item.formatType} />
                           <span className="text-xs text-muted-foreground truncate">{item.targetKeyword}</span>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
                             <StatusBadge status={item.status} />
                             {item.status === "draft" && (
                               <button
                                 onClick={() => handleMarkReady(item.id)}
                                 title="Mark as ready"
-                                className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:text-green-600 dark:hover:text-green-400 transition-colors opacity-0 group-hover:opacity-100"
+                                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-green-600 dark:hover:text-green-400 transition-colors opacity-0 group-hover:opacity-100"
                               >
                                 <ArrowRight className="w-3 h-3" />
                                 Ready
@@ -1512,7 +1513,7 @@ export default function ContentStudio() {
                       );
                     } else {
                       return (
-                        <div key={`${item.source}-${item.id}`} className="flex flex-col md:grid md:grid-cols-[1fr_140px_140px_110px_80px_90px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
+                        <div key={`${item.source}-${item.id}`} className="flex flex-col md:grid md:grid-cols-[1fr_160px_110px_auto_70px_80px] gap-3 items-start md:items-center px-4 py-3 rounded-lg border border-transparent hover:border-border hover:bg-accent/30 transition-all">
                           <div className="min-w-0">
                             <Link to={item.linkTo} className="font-medium text-sm hover:text-primary transition-colors line-clamp-2 flex items-center gap-1">
                               {item.title}
@@ -1522,7 +1523,6 @@ export default function ContentStudio() {
                               <p className="text-xs text-muted-foreground mt-0.5 truncate">{item.subtitle}</p>
                             )}
                           </div>
-                          <SourceBadge source={item.source} />
                           <span className="text-xs text-muted-foreground">—</span>
                           <span className="text-xs text-muted-foreground truncate">{item.keyword}</span>
                           <StatusBadge status={item.status} />
