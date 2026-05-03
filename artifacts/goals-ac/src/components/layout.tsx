@@ -50,6 +50,12 @@ export function Layout({ children }: LayoutProps) {
               {!user && <Lock className="h-3 w-3 text-muted-foreground/70" />}
             </Link>
             <Link
+              to="/content-engine"
+              className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+            >
+              Content Engine
+            </Link>
+            <Link
               to="/pricing"
               className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
             >
@@ -179,6 +185,7 @@ export function Layout({ children }: LayoutProps) {
             <div>
               <h4 className="text-sm font-semibold mb-4">Product</h4>
               <ul className="space-y-2.5 text-sm text-muted-foreground">
+                <li><Link to="/content-engine" className="hover:text-foreground transition-colors">Content Engine</Link></li>
                 <li><Link to="/" className="hover:text-foreground transition-colors">Build a roadmap</Link></li>
                 <li><Link to="/geo-audit" className="hover:text-foreground transition-colors">GEO Audit</Link></li>
                 <li><Link to={user ? "/competitor-analysis" : "/signup"} className="hover:text-foreground transition-colors">Competitor Analysis</Link></li>

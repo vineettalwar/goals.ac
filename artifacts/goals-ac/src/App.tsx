@@ -32,6 +32,7 @@ import CompetitorAnalysis from "@/pages/competitor-analysis";
 import KeywordTracking from "@/pages/keyword-tracking";
 import About from "@/pages/about";
 import Pricing from "@/pages/pricing";
+import ContentEngine from "@/pages/content-engine";
 
 setBaseUrl(import.meta.env.BASE_URL.replace(/\/$/, ""));
 
@@ -85,6 +86,7 @@ function App() {
                 <Route path="/keyword-tracking" element={<RequireAuth><KeywordTracking /></RequireAuth>} />
                 <Route path="/about" element={<About />} />
                 <Route path="/pricing" element={<Pricing />} />
+                <Route path="/content-engine" element={<ContentEngine />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </BrowserRouter>
