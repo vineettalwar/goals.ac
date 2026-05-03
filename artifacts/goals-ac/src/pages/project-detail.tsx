@@ -830,8 +830,8 @@ export default function ProjectDetail() {
                                 onClick={() => field.onChange(field.value === preset.value ? undefined : preset.value)}
                                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
                                   field.value === preset.value
-                                    ? "bg-blue-500/20 border-blue-400/50 text-blue-300"
-                                    : "bg-white/[0.04] border-white/[0.08] text-muted-foreground hover:border-white/20 hover:text-foreground"
+                                    ? "bg-blue-50 border-blue-400 text-blue-700 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-300"
+                                    : "bg-muted/50 border-border text-foreground hover:border-primary/40 hover:bg-muted"
                                 }`}
                               >
                                 {preset.label}
@@ -878,8 +878,8 @@ export default function ProjectDetail() {
                                 onClick={() => field.onChange(preset.value)}
                                 className={`px-3 py-1 rounded-md text-xs font-medium border transition-all ${
                                   field.value === preset.value
-                                    ? "bg-blue-500/20 border-blue-400/50 text-blue-300"
-                                    : "bg-white/[0.04] border-white/[0.08] text-muted-foreground hover:border-white/20 hover:text-foreground"
+                                    ? "bg-blue-50 border-blue-400 text-blue-700 dark:bg-blue-500/20 dark:border-blue-400/50 dark:text-blue-300"
+                                    : "bg-muted/50 border-border text-foreground hover:border-primary/40 hover:bg-muted"
                                 }`}
                               >
                                 {preset.label} ({preset.value})
@@ -973,7 +973,7 @@ export default function ProjectDetail() {
                     />
 
                     <div className="flex items-center gap-3">
-                      <Button type="submit" disabled={isSavingStyle} className="glow-primary bg-gradient-to-r from-purple-500 to-purple-600 border-0 text-white">
+                      <Button type="submit" disabled={isSavingStyle} className="bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white hover:from-blue-600 hover:to-blue-700">
                         {isSavingStyle ? (
                           <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving...</>
                         ) : (
