@@ -16,7 +16,7 @@ import {
   BookOpen, Newspaper, GraduationCap, Map as MapIcon, FileSearch, LayoutTemplate,
   Globe, ImageIcon, BarChart3, Filter, RefreshCw, Trash2, ArrowUpDown, ExternalLink,
   Linkedin, Twitter, Instagram, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle, KeyRound,
-  Shuffle
+  Shuffle, CheckCircle2
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, parseISO } from "date-fns";
@@ -315,6 +315,7 @@ function CreateModal({
   const [isGenerating, setIsGenerating] = useState(false);
   const [isDone, setIsDone] = useState(false);
   const [streamPreview, setStreamPreview] = useState("");
+  const [detectedSections, setDetectedSections] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [repurposeFormat, setRepurposeFormat] = useState<ContentFormatType | "">("");
@@ -331,6 +332,7 @@ function CreateModal({
     setError(null);
     setIsGenerating(false);
     setStreamPreview("");
+    setDetectedSections([]);
     setRepurposeFormat("");
     setRepurposeKeyword("");
     setRepurposeContent("");
@@ -359,10 +361,27 @@ function CreateModal({
     handleClose();
   };
 
+  const extractSections = (jsonAccumulated: string): string[] => {
+    const bodyIdx = jsonAccumulated.indexOf('"body_markdown"');
+    if (bodyIdx === -1) return [];
+    const afterKey = jsonAccumulated.slice(bodyIdx + '"body_markdown"'.length);
+    const valueMatch = afterKey.match(/:\s*"([\s\S]*)/);
+    if (!valueMatch) return [];
+    const rawValue = valueMatch[1];
+    // body_markdown is a JSON-escaped string — newlines appear as literal \n (two chars)
+    const lines = rawValue.split("\\n");
+    return lines
+      .map((l) => l.replace(/\\"/g, '"').trim())
+      .filter((l) => /^#{1,3}\s/.test(l))
+      .map((l) => l.replace(/^#+\s*/, "").trim())
+      .filter(Boolean);
+  };
+
   const handleGenerate = async () => {
     if (!selectedFormat || !keyword.trim()) return;
     setIsGenerating(true);
     setStreamPreview("");
+    setDetectedSections([]);
     setError(null);
     try {
       let res: Response;
@@ -407,9 +426,11 @@ function CreateModal({
               const parsed = JSON.parse(raw) as { text?: string } | Omit<ContentPiece, "source">;
               if ("text" in parsed && parsed.text) {
                 jsonAccumulated += (parsed as { text: string }).text;
-                const bodyMatch = jsonAccumulated.match(/"body_markdown"\s*:\s*"([\s\S]*?)(?<!\\)"(?=\s*[,}])/);
-                if (bodyMatch) {
-                  setStreamPreview(bodyMatch[1].replace(/\\n/g, "\n").replace(/\\"/g, '"'));
+                const sections = extractSections(jsonAccumulated);
+                if (sections.length > 0) {
+                  setDetectedSections(sections);
+                } else if (jsonAccumulated.length > 30) {
+                  setDetectedSections(["Crafting title\u2026"]);
                 }
               } else if ("id" in parsed) {
                 finalPiece = parsed as Omit<ContentPiece, "source">;
@@ -568,14 +589,40 @@ function CreateModal({
 
             {isDone && (
               <div className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800/50 p-3">
-                <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
                 Done! Opening your content piece…
               </div>
             )}
-            {isGenerating && !isDone && streamPreview && (
-              <div className="rounded-lg border border-border bg-muted/30 p-3 text-xs font-mono text-muted-foreground leading-relaxed max-h-40 overflow-y-auto whitespace-pre-wrap">
-                {streamPreview}
-                <span className="inline-block w-1.5 h-3.5 bg-primary animate-pulse ml-0.5 align-text-bottom" />
+
+            {isGenerating && !isDone && (
+              <div className="rounded-lg border border-border overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Writing your {FORMAT_META[selectedFormat].label}…
+                  </span>
+                  <span className="text-xs text-muted-foreground/60">{FORMAT_META[selectedFormat].wordRange} words</span>
+                </div>
+                <div className="px-3 py-2.5 space-y-1.5 max-h-40 overflow-y-auto">
+                  {detectedSections.length === 0 ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />
+                      Starting…
+                    </div>
+                  ) : (
+                    <>
+                      {detectedSections.slice(0, -1).map((sec, i) => (
+                        <div key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
+                          {sec}
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                        <Loader2 className="w-3 h-3 animate-spin text-primary flex-shrink-0" />
+                        {detectedSections[detectedSections.length - 1]}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )}
 
@@ -594,7 +641,7 @@ function CreateModal({
               {isGenerating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {streamPreview ? "Generating…" : "Starting AI…"}
+                  Generating…
                   {hasGeminiKey && (
                     <span className="ml-1.5 inline-flex items-center gap-1 rounded-full bg-white/15 px-1.5 py-0.5 text-xs font-medium">
                       <KeyRound className="h-3 w-3" />
