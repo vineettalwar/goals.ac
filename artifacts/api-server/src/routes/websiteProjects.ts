@@ -342,21 +342,30 @@ router.put("/website-projects/:id/brand-profile", requireAuth, async (req, res) 
         .where(eq(websiteProjectsTable.id, id));
     }
 
+    const updates: Record<string, unknown> = {};
+    if (parsed.data.companyName !== undefined) updates.companyName = parsed.data.companyName;
+    if (parsed.data.industry !== undefined) updates.industry = parsed.data.industry;
+    if (parsed.data.targetAudience !== undefined) updates.targetAudience = parsed.data.targetAudience;
+    if (parsed.data.voiceTone !== undefined) updates.voiceTone = parsed.data.voiceTone;
+    if (parsed.data.primaryKeywords !== undefined) updates.primaryKeywords = parsed.data.primaryKeywords;
+    if (parsed.data.competitorUrls !== undefined) updates.competitorUrls = parsed.data.competitorUrls;
+    const hasBrandUpdates = Object.keys(updates).length > 0;
+
     let brandProfile;
     if (existing.length > 0) {
-      const updates: Record<string, unknown> = {};
-      if (parsed.data.companyName !== undefined) updates.companyName = parsed.data.companyName;
-      if (parsed.data.industry !== undefined) updates.industry = parsed.data.industry;
-      if (parsed.data.targetAudience !== undefined) updates.targetAudience = parsed.data.targetAudience;
-      if (parsed.data.voiceTone !== undefined) updates.voiceTone = parsed.data.voiceTone;
-      if (parsed.data.primaryKeywords !== undefined) updates.primaryKeywords = parsed.data.primaryKeywords;
-      if (parsed.data.competitorUrls !== undefined) updates.competitorUrls = parsed.data.competitorUrls;
-
-      [brandProfile] = await db
-        .update(brandProfilesTable)
-        .set(updates)
-        .where(eq(brandProfilesTable.websiteProjectId, id))
-        .returning();
+      if (hasBrandUpdates) {
+        [brandProfile] = await db
+          .update(brandProfilesTable)
+          .set(updates)
+          .where(eq(brandProfilesTable.websiteProjectId, id))
+          .returning();
+      } else {
+        [brandProfile] = await db
+          .select()
+          .from(brandProfilesTable)
+          .where(eq(brandProfilesTable.websiteProjectId, id))
+          .limit(1);
+      }
     } else {
       [brandProfile] = await db
         .insert(brandProfilesTable)
