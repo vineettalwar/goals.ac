@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { useListIndustries, useListLocations, GenerateRoadmapRequestStage } from "@workspace/api-client-react";
 import { Loader2, Target, Pencil, LayoutGrid, Bookmark, GitBranch, CheckCircle2, Circle, KeyRound, Key, Search, BarChart3, MessageSquare, Sparkles, ArrowRight, Lock } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -580,7 +581,7 @@ export default function Home() {
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Common questions</h2>
               <p className="text-lg text-muted-foreground">Everything you need to know before starting.</p>
             </div>
-            <div className="space-y-4">
+            <Accordion type="single" collapsible className="w-full space-y-3">
               {[
                 {
                   q: "Is the roadmap generator really free?",
@@ -602,13 +603,21 @@ export default function Home() {
                   q: "What about my data?",
                   a: "Your roadmap data is private to your account. We never sell data or share with third parties. See our Pro and Team plans for SOC 2 / GDPR docs.",
                 },
-              ].map((faq) => (
-                <div key={faq.q} className="rounded-xl border border-border bg-card p-6">
-                  <h3 className="font-semibold mb-2">{faq.q}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{faq.a}</p>
-                </div>
+              ].map((faq, i) => (
+                <AccordionItem
+                  key={faq.q}
+                  value={`item-${i}`}
+                  className="rounded-xl border border-border bg-card px-6 border-b"
+                >
+                  <AccordionTrigger className="text-base font-semibold hover:no-underline py-5">
+                    {faq.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-sm text-muted-foreground leading-relaxed pb-5">
+                    {faq.a}
+                  </AccordionContent>
+                </AccordionItem>
               ))}
-            </div>
+            </Accordion>
           </div>
         </section>
 
