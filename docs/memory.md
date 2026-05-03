@@ -22,7 +22,7 @@ Living document capturing architectural decisions, historical context, and lesso
 
 **Reasoning**: Drizzle has a lightweight query builder that compiles directly to SQL with zero runtime magic. Prisma's generated client is a black box; Drizzle lets you see exactly what query is being sent. Drizzle's schema-as-code approach (TypeScript) integrates cleanly with Zod via `drizzle-zod`. The generated Zod insert schemas are used directly in API validation.
 
-**Gotcha**: The migration system uses `drizzle-kit generate` to track a snapshot chain. **Never write SQL migrations by hand without also running `generate` to update the snapshot.** Several early migrations (0010–0017) were written by hand, breaking the snapshot chain — 0012–0015 and 0017–0018 have no matching snapshot files. The migration runner still applies them in order, but drizzle-kit `generate` may re-detect these changes. See `CONTRIBUTING.md`.
+**Gotcha**: The migration system uses `drizzle-kit generate` to track a snapshot chain. **Never write SQL migrations by hand without also running `generate` to update the snapshot.** Several early migrations (0010–0018) were written by hand, previously breaking the snapshot chain. The chain has since been fully repaired — snapshots 0012–0015, 0017, and 0018 were backfilled and migration 0019 was generated to reconcile the gap. Running `drizzle-kit generate` now correctly reports "No schema changes" when the schema is up to date. See `CONTRIBUTING.md`.
 
 **Files**: `lib/db/src/schema/`, `lib/db/migrations/`
 
@@ -184,6 +184,6 @@ The `buildContentStyleContext(style)` function in `contentStudioGenerator.ts` tu
 ## Historical Gotchas
 
 - **Double migration 0008**: There are two files named `0008_aspiring_firebrand.sql` and `0008_condemned_rocket_racer.sql`. This happened because an early migration was renamed. The journal references `0008_condemned_rocket_racer` — the other file is a stale artifact that should not be applied.
-- **Snapshot gaps**: Migrations 0012–0015, 0017, 0018 have no matching snapshot files in `meta/`. The runner applies them fine, but `drizzle-kit generate` may try to re-include them. Always review generated SQL before applying.
+- **Snapshot chain**: Previously, migrations 0012–0015, 0017, and 0018 were missing snapshot files in `meta/`. These were backfilled in Task #54; the chain is now complete (0000–0019). `drizzle-kit generate` reports "No schema changes" on the current schema — future generates will produce only genuine diffs.
 - **`contentStyle` TS errors**: The `@workspace/db` compiled declarations in `lib/db/dist/` can go stale. If you see "Property 'contentStyle' does not exist" errors after a schema change, run `cd lib/db && npx tsc --build` to regenerate.
 - **Port collisions**: Vite will increment the port if the default is in use. The API server always binds to the `PORT` env var; Vite uses `PORT` too. Ensure the artifact `PORT` assignments don't collide.
