@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth";
-import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertCircle, Map, Sparkles, RefreshCw, Wand2 } from "lucide-react";
+import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertCircle, Map, Sparkles, RefreshCw, Wand2, CheckCircle2, Link2, Unlink, Send } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -40,6 +40,11 @@ interface BrandProfile {
   voiceTone: string;
   primaryKeywords: string[];
   competitorUrls: string[];
+}
+
+interface CmsIntegrationStatus {
+  notion?: { connected: boolean; databaseId: string; integrationTokenHint: string };
+  webflow?: { connected: boolean; collectionId: string; bodyFieldSlug: string; apiTokenHint: string };
 }
 
 interface WebsiteProject {
@@ -98,6 +103,19 @@ export default function ProjectDetail() {
   const [isRescanning, setIsRescanning] = useState(false);
   const scrapePollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [cmsIntegrations, setCmsIntegrations] = useState<CmsIntegrationStatus>({});
+  const [notionToken, setNotionToken] = useState("");
+  const [notionDbId, setNotionDbId] = useState("");
+  const [webflowToken, setWebflowToken] = useState("");
+  const [webflowCollId, setWebflowCollId] = useState("");
+  const [webflowBodyField, setWebflowBodyField] = useState("post-body");
+  const [isSavingNotion, setIsSavingNotion] = useState(false);
+  const [isSavingWebflow, setIsSavingWebflow] = useState(false);
+  const [isDisconnectingNotion, setIsDisconnectingNotion] = useState(false);
+  const [isDisconnectingWebflow, setIsDisconnectingWebflow] = useState(false);
+  const [cmsError, setCmsError] = useState<string | null>(null);
+  const [cmsSaveSuccess, setCmsSaveSuccess] = useState<string | null>(null);
+
   const form = useForm<BrandProfileForm>({
     resolver: zodResolver(brandProfileSchema),
     defaultValues: {
@@ -130,6 +148,18 @@ export default function ProjectDetail() {
     return res.json() as Promise<WebsiteProject>;
   }, [token, id]);
 
+  const loadCmsIntegrations = useCallback(async () => {
+    if (!token || !id) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/website-projects/${id}/cms-integrations`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setCmsIntegrations(await res.json() as CmsIntegrationStatus);
+      }
+    } catch { /* ignore */ }
+  }, [token, id]);
+
   const loadProject = useCallback(async () => {
     if (!token || !id) return;
     try {
@@ -152,12 +182,14 @@ export default function ProjectDetail() {
       if (contentRes.ok) {
         setContent(await contentRes.json());
       }
+
+      await loadCmsIntegrations();
     } catch {
       setError("Failed to load project");
     } finally {
       setIsLoading(false);
     }
-  }, [token, id, fetchProject, populateFormFromBrandProfile]);
+  }, [token, id, fetchProject, populateFormFromBrandProfile, loadCmsIntegrations]);
 
   useEffect(() => {
     loadProject();
@@ -241,6 +273,97 @@ export default function ProjectDetail() {
     }
   };
 
+  const onSaveNotion = async () => {
+    if (!token || !id || !notionToken.trim() || !notionDbId.trim()) return;
+    setIsSavingNotion(true);
+    setCmsError(null);
+    setCmsSaveSuccess(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/website-projects/${id}/cms-integrations`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ notion: { integrationToken: notionToken.trim(), databaseId: notionDbId.trim() } }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error ?? "Failed to save");
+      }
+      const updated = await res.json() as CmsIntegrationStatus;
+      setCmsIntegrations(updated);
+      setNotionToken("");
+      setNotionDbId("");
+      setCmsSaveSuccess("Notion connected successfully");
+      setTimeout(() => setCmsSaveSuccess(null), 3000);
+    } catch (err) {
+      setCmsError(err instanceof Error ? err.message : "Failed to connect Notion");
+    } finally {
+      setIsSavingNotion(false);
+    }
+  };
+
+  const onDisconnectNotion = async () => {
+    if (!token || !id) return;
+    setIsDisconnectingNotion(true);
+    setCmsError(null);
+    try {
+      await fetch(`${API_BASE}/api/website-projects/${id}/cms-integrations/notion`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCmsIntegrations((prev) => { const n = { ...prev }; delete n.notion; return n; });
+    } catch {
+      setCmsError("Failed to disconnect Notion");
+    } finally {
+      setIsDisconnectingNotion(false);
+    }
+  };
+
+  const onSaveWebflow = async () => {
+    if (!token || !id || !webflowToken.trim() || !webflowCollId.trim()) return;
+    setIsSavingWebflow(true);
+    setCmsError(null);
+    setCmsSaveSuccess(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/website-projects/${id}/cms-integrations`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ webflow: { apiToken: webflowToken.trim(), collectionId: webflowCollId.trim(), bodyFieldSlug: webflowBodyField.trim() || "post-body" } }),
+      });
+      if (!res.ok) {
+        const data = await res.json() as { error?: string };
+        throw new Error(data.error ?? "Failed to save");
+      }
+      const updated = await res.json() as CmsIntegrationStatus;
+      setCmsIntegrations(updated);
+      setWebflowToken("");
+      setWebflowCollId("");
+      setWebflowBodyField("post-body");
+      setCmsSaveSuccess("Webflow connected successfully");
+      setTimeout(() => setCmsSaveSuccess(null), 3000);
+    } catch (err) {
+      setCmsError(err instanceof Error ? err.message : "Failed to connect Webflow");
+    } finally {
+      setIsSavingWebflow(false);
+    }
+  };
+
+  const onDisconnectWebflow = async () => {
+    if (!token || !id) return;
+    setIsDisconnectingWebflow(true);
+    setCmsError(null);
+    try {
+      await fetch(`${API_BASE}/api/website-projects/${id}/cms-integrations/webflow`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setCmsIntegrations((prev) => { const n = { ...prev }; delete n.webflow; return n; });
+    } catch {
+      setCmsError("Failed to disconnect Webflow");
+    } finally {
+      setIsDisconnectingWebflow(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <Layout>
@@ -321,6 +444,14 @@ export default function ProjectDetail() {
               {content && (content.contentStrategies.length + content.seoArticles.length + content.geoAudits.length + (content.roadmaps?.length ?? 0)) > 0 && (
                 <Badge variant="secondary" className="ml-2 text-xs bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
                   {content.contentStrategies.length + content.seoArticles.length + content.geoAudits.length + (content.roadmaps?.length ?? 0)}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="publishing">
+              Publishing
+              {(cmsIntegrations.notion || cmsIntegrations.webflow) && (
+                <Badge variant="secondary" className="ml-2 text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                  {(cmsIntegrations.notion ? 1 : 0) + (cmsIntegrations.webflow ? 1 : 0)}
                 </Badge>
               )}
             </TabsTrigger>
@@ -518,6 +649,220 @@ export default function ProjectDetail() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="publishing">
+            <div className="space-y-6">
+              {cmsError && (
+                <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-4 py-3">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>{cmsError}</span>
+                </div>
+              )}
+              {cmsSaveSuccess && (
+                <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 rounded-md px-4 py-3 border border-emerald-200 dark:border-emerald-500/20">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  <span>{cmsSaveSuccess}</span>
+                </div>
+              )}
+
+              {/* Notion */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <span className="w-5 h-5 rounded bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-[10px] font-bold text-white dark:text-zinc-900">N</span>
+                        Notion
+                        {cmsIntegrations.notion && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" />Connected
+                          </span>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        Publish content directly to a Notion database as a new page.
+                      </CardDescription>
+                    </div>
+                    {cmsIntegrations.notion && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onDisconnectNotion}
+                        disabled={isDisconnectingNotion}
+                        className="flex-shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
+                      >
+                        {isDisconnectingNotion ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5 mr-1.5" />}
+                        Disconnect
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {cmsIntegrations.notion ? (
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">Database ID:</span>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{cmsIntegrations.notion.databaseId}</code>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">Token:</span>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{cmsIntegrations.notion.integrationTokenHint}</code>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">To update credentials, disconnect first then re-connect.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">Integration Token</label>
+                        <Input
+                          type="password"
+                          placeholder="secret_..."
+                          value={notionToken}
+                          onChange={(e) => setNotionToken(e.target.value)}
+                          disabled={isSavingNotion}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Create an integration at <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">notion.so/my-integrations</a> and share your database with it.
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">Database ID</label>
+                        <Input
+                          placeholder="32-character hex ID from your database URL"
+                          value={notionDbId}
+                          onChange={(e) => setNotionDbId(e.target.value)}
+                          disabled={isSavingNotion}
+                        />
+                        <p className="text-xs text-muted-foreground">Found in your database URL: notion.so/your-workspace/<strong>{"<database-id>"}</strong>?v=...</p>
+                      </div>
+                      <Button
+                        onClick={onSaveNotion}
+                        disabled={!notionToken.trim() || !notionDbId.trim() || isSavingNotion}
+                        size="sm"
+                      >
+                        {isSavingNotion ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Connecting…</> : <><Link2 className="w-3.5 h-3.5 mr-1.5" />Connect Notion</>}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Webflow */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <span className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center text-[10px] font-bold text-white">W</span>
+                        Webflow
+                        {cmsIntegrations.webflow && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" />Connected
+                          </span>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        Publish content as a draft CMS item in your Webflow collection.
+                      </CardDescription>
+                    </div>
+                    {cmsIntegrations.webflow && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onDisconnectWebflow}
+                        disabled={isDisconnectingWebflow}
+                        className="flex-shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
+                      >
+                        {isDisconnectingWebflow ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5 mr-1.5" />}
+                        Disconnect
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {cmsIntegrations.webflow ? (
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">Collection ID:</span>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{cmsIntegrations.webflow.collectionId}</code>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">Body field:</span>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{cmsIntegrations.webflow.bodyFieldSlug}</code>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">Token:</span>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{cmsIntegrations.webflow.apiTokenHint}</code>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-2">To update credentials, disconnect first then re-connect.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">API Token</label>
+                        <Input
+                          type="password"
+                          placeholder="Webflow site API token"
+                          value={webflowToken}
+                          onChange={(e) => setWebflowToken(e.target.value)}
+                          disabled={isSavingWebflow}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Found in Webflow: <strong>Site Settings → Integrations → API access</strong>
+                        </p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">Collection ID</label>
+                        <Input
+                          placeholder="64-character collection ID"
+                          value={webflowCollId}
+                          onChange={(e) => setWebflowCollId(e.target.value)}
+                          disabled={isSavingWebflow}
+                        />
+                        <p className="text-xs text-muted-foreground">Found in your Webflow CMS collection URL.</p>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">Body field slug</label>
+                        <Input
+                          placeholder="post-body"
+                          value={webflowBodyField}
+                          onChange={(e) => setWebflowBodyField(e.target.value)}
+                          disabled={isSavingWebflow}
+                        />
+                        <p className="text-xs text-muted-foreground">The slug of the Rich Text field in your collection that holds content (default: <code>post-body</code>).</p>
+                      </div>
+                      <Button
+                        onClick={onSaveWebflow}
+                        disabled={!webflowToken.trim() || !webflowCollId.trim() || isSavingWebflow}
+                        size="sm"
+                      >
+                        {isSavingWebflow ? <><Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />Connecting…</> : <><Link2 className="w-3.5 h-3.5 mr-1.5" />Connect Webflow</>}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* WordPress note */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <span className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">W</span>
+                    WordPress
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Publish content directly to any WordPress site using Application Passwords.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Send className="w-4 h-4 flex-shrink-0" />
+                    <span>WordPress credentials are entered per-publish. Open a content piece and click <strong>Publish</strong> to connect.</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </TabsContent>
 
           <TabsContent value="content">

@@ -113,6 +113,13 @@
       "when": 1746383000000,
       "tag": "0015_gemini_key",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1777792770195,
+      "tag": "0016_safe_scarecrow",
+      "breakpoints": true
     }
   ]
 }

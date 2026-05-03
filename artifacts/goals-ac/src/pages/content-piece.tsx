@@ -89,19 +89,24 @@ const STATUS_LABELS: Record<string, string> = {
   published: "Published",
 };
 
+type PublishPlatform = "wordpress" | "notion" | "webflow";
+
 function PublishDialog({
   open,
   onClose,
   onPublished,
   pieceId,
+  projectId,
   token,
 }: {
   open: boolean;
   onClose: () => void;
   onPublished: (updated: ContentPiece) => void;
   pieceId: number;
+  projectId: number;
   token: string | null;
 }) {
+  const [platform, setPlatform] = useState<PublishPlatform>("wordpress");
   const [wpSiteUrl, setWpSiteUrl] = useState("");
   const [wpUsername, setWpUsername] = useState("");
   const [wpAppPassword, setWpAppPassword] = useState("");
@@ -122,18 +127,26 @@ function PublishDialog({
   };
 
   const handlePublish = async () => {
-    if (!wpSiteUrl.trim() || !wpUsername.trim() || !wpAppPassword.trim()) return;
+    if (platform === "wordpress" && (!wpSiteUrl.trim() || !wpUsername.trim() || !wpAppPassword.trim())) return;
     setIsPublishing(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/api/content-pieces/${pieceId}/publish`, {
+      let endpoint = "";
+      let body: object | null = null;
+
+      if (platform === "wordpress") {
+        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish`;
+        body = { wpSiteUrl: wpSiteUrl.trim(), wpUsername: wpUsername.trim(), wpAppPassword: wpAppPassword.trim() };
+      } else if (platform === "notion") {
+        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/notion`;
+      } else if (platform === "webflow") {
+        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/webflow`;
+      }
+
+      const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({
-          wpSiteUrl: wpSiteUrl.trim(),
-          wpUsername: wpUsername.trim(),
-          wpAppPassword: wpAppPassword.trim(),
-        }),
+        ...(body ? { body: JSON.stringify(body) } : {}),
       });
       if (!res.ok) {
         const data = await res.json() as { error?: string };
@@ -149,58 +162,104 @@ function PublishDialog({
     }
   };
 
+  const platformLabels: Record<PublishPlatform, string> = {
+    wordpress: "WordPress",
+    notion: "Notion",
+    webflow: "Webflow",
+  };
+
+  const canPublish = platform === "wordpress"
+    ? wpSiteUrl.trim() && wpUsername.trim() && wpAppPassword.trim()
+    : true;
+
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Send className="w-4 h-4" />
-            Publish to WordPress
+            Publish Content
           </DialogTitle>
           <DialogDescription>
-            Enter your WordPress site credentials to publish this content directly.
+            Choose a platform to publish this content piece to.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 mt-2">
           <div className="space-y-1.5">
-            <Label htmlFor="wp-url">WordPress Site URL</Label>
-            <Input
-              id="wp-url"
-              placeholder="https://yoursite.com"
-              value={wpSiteUrl}
-              onChange={(e) => setWpSiteUrl(e.target.value)}
-              disabled={isPublishing}
-            />
+            <Label>Platform</Label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["wordpress", "notion", "webflow"] as PublishPlatform[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => { setPlatform(p); setError(null); }}
+                  disabled={isPublishing}
+                  className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none ${
+                    platform === p
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  {platformLabels[p]}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="wp-user">WordPress Username</Label>
-            <Input
-              id="wp-user"
-              placeholder="admin"
-              value={wpUsername}
-              onChange={(e) => setWpUsername(e.target.value)}
-              disabled={isPublishing}
-            />
-          </div>
+          {platform === "wordpress" && (
+            <>
+              <div className="space-y-1.5">
+                <Label htmlFor="wp-url">WordPress Site URL</Label>
+                <Input
+                  id="wp-url"
+                  placeholder="https://yoursite.com"
+                  value={wpSiteUrl}
+                  onChange={(e) => setWpSiteUrl(e.target.value)}
+                  disabled={isPublishing}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="wp-user">WordPress Username</Label>
+                <Input
+                  id="wp-user"
+                  placeholder="admin"
+                  value={wpUsername}
+                  onChange={(e) => setWpUsername(e.target.value)}
+                  disabled={isPublishing}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="wp-pass">Application Password</Label>
+                <Input
+                  id="wp-pass"
+                  type="password"
+                  placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                  value={wpAppPassword}
+                  onChange={(e) => setWpAppPassword(e.target.value)}
+                  disabled={isPublishing}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Generate an Application Password in WordPress under{" "}
+                  <strong>Users → Profile → Application Passwords</strong>.
+                </p>
+              </div>
+            </>
+          )}
 
-          <div className="space-y-1.5">
-            <Label htmlFor="wp-pass">Application Password</Label>
-            <Input
-              id="wp-pass"
-              type="password"
-              placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
-              value={wpAppPassword}
-              onChange={(e) => setWpAppPassword(e.target.value)}
-              disabled={isPublishing}
-            />
-            <p className="text-xs text-muted-foreground">
-              Generate an Application Password in WordPress under{" "}
-              <strong>Users → Profile → Application Passwords</strong>.
-              Your real password is never stored.
-            </p>
-          </div>
+          {platform === "notion" && (
+            <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              <p>This will publish to the Notion database connected in your <strong className="text-foreground">Project Settings → Publishing</strong> tab.</p>
+              <p className="mt-1.5">Make sure Notion is connected before publishing.</p>
+            </div>
+          )}
+
+          {platform === "webflow" && (
+            <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+              <p>This will create a draft CMS item in the Webflow collection connected in your <strong className="text-foreground">Project Settings → Publishing</strong> tab.</p>
+              <p className="mt-1.5">Make sure Webflow is connected before publishing.</p>
+            </div>
+          )}
 
           {error && (
             <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
@@ -212,13 +271,13 @@ function PublishDialog({
           <div className="flex items-center gap-3 pt-1">
             <Button
               onClick={handlePublish}
-              disabled={!wpSiteUrl.trim() || !wpUsername.trim() || !wpAppPassword.trim() || isPublishing}
+              disabled={!canPublish || isPublishing}
               className="flex-1"
             >
               {isPublishing ? (
-                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Publishing...</>
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Publishing…</>
               ) : (
-                <><Send className="w-4 h-4 mr-2" />Publish Post</>
+                <><Send className="w-4 h-4 mr-2" />Publish to {platformLabels[platform]}</>
               )}
             </Button>
             <Button variant="outline" onClick={handleClose} disabled={isPublishing}>
@@ -605,7 +664,7 @@ export default function ContentPiecePage() {
           <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
             <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Published to WordPress</p>
+              <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Published</p>
               <a
                 href={piece.publishedUrl}
                 target="_blank"
@@ -715,7 +774,7 @@ export default function ContentPiecePage() {
                 </Button>
                 {piece.status !== "published" && (
                   <Button variant="outline" onClick={() => setPublishOpen(true)}>
-                    <Send className="w-4 h-4 mr-2" />Publish to WordPress
+                    <Send className="w-4 h-4 mr-2" />Publish
                   </Button>
                 )}
                 <Button onClick={handleCopy}>
@@ -732,6 +791,7 @@ export default function ContentPiecePage() {
         onClose={() => setPublishOpen(false)}
         onPublished={(updated) => setPiece(updated)}
         pieceId={piece.id}
+        projectId={piece.websiteProjectId}
         token={token}
       />
 

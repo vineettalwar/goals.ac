@@ -44,13 +44,14 @@ Email/password authentication using:
 
 ### Database Tables
 - `users` — email, password_hash, name
-- `website_projects` — user_id (FK), name, url, sitemap_url, page_count, crawl_status
+- `website_projects` — user_id (FK), name, url, sitemap_url, page_count, crawl_status, cms_integrations (JSONB, encrypted tokens for Notion/Webflow)
 - `brand_profiles` — website_project_id (FK, unique), company_name, industry, target_audience, voice_tone, primary_keywords[], competitor_urls[]
 - `roadmaps` — AI-generated growth roadmaps
 - `content_strategies` / `content_items` — 30-day content plans (optional website_project_id)
 - `seo_articles` — AI-generated SEO content (optional website_project_id)
 - `geo_audits` — technical GEO audit results (optional website_project_id)
 - `lead_captures` — legacy lead data (webhook disabled from core flow)
+- `content_pieces` — AI-generated content pieces (blog posts, guides, etc.) with publishing support
 
 ### Key Routes (Frontend)
 - `/` — Home / roadmap generator (guest accessible)
@@ -73,3 +74,17 @@ Email/password authentication using:
 - `PUT /api/website-projects/:id/brand-profile` — Upsert brand profile (requires auth)
 - `DELETE /api/website-projects/:id` — Delete project (requires auth)
 - `GET /api/website-projects/:id/content` — Aggregated content for a project (requires auth)
+- `GET /api/website-projects/:id/cms-integrations` — Get masked CMS credentials (Notion/Webflow)
+- `PATCH /api/website-projects/:id/cms-integrations` — Save/update CMS credentials (encrypted)
+- `DELETE /api/website-projects/:id/cms-integrations/:platform` — Disconnect a CMS (notion|webflow)
+- `POST /api/content-pieces/:id/publish` — Publish to WordPress (credentials in body)
+- `POST /api/content-pieces/:id/publish/notion` — Publish to connected Notion database
+- `POST /api/content-pieces/:id/publish/webflow` — Publish as draft to connected Webflow collection
+
+### CMS Integration Architecture
+- Notion/Webflow credentials stored encrypted in `website_projects.cms_integrations` JSONB column
+- Encryption uses AES-256-GCM via `artifacts/api-server/src/lib/encryption.ts` (same key as Gemini API key)
+- Notion publisher: `artifacts/api-server/src/services/notionPublisher.ts` (markdown→Notion blocks)
+- Webflow publisher: `artifacts/api-server/src/services/webflowPublisher.ts` (markdown→HTML→CMS item)
+- Project Settings → Publishing tab shows connection status and connect/disconnect forms
+- PublishDialog in content-piece.tsx lets users pick WordPress / Notion / Webflow per-publish

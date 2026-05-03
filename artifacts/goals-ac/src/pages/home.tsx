@@ -402,41 +402,37 @@ export default function Home() {
                 </div>
                 <p className="text-sm text-muted-foreground mb-5 leading-relaxed">Publishes content directly to your CMS across platforms without manual workflows.</p>
                 <div className="mt-auto glass-inner p-3">
-                  <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">Connected Platforms</div>
+                  <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">Supported Platforms</div>
                   <div className="space-y-2">
-                    {["Notion", "Shopify", "WordPress", "Webflow"].map((cms) => (
-                      <div key={cms} className="flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
-                        <span className="text-xs text-muted-foreground">{cms}</span>
-                        <span className="ml-auto text-xs text-emerald-400 font-medium">Active</span>
+                    {[{ name: "WordPress", color: "bg-blue-400" }, { name: "Notion", color: "bg-zinc-400" }, { name: "Webflow", color: "bg-purple-400" }].map((cms) => (
+                      <div key={cms.name} className="flex items-center gap-2">
+                        <div className={`w-1.5 h-1.5 rounded-full ${cms.color} flex-shrink-0`} />
+                        <span className="text-xs text-muted-foreground">{cms.name}</span>
+                        <span className="ml-auto text-xs text-zinc-500 font-medium">Available</span>
                       </div>
                     ))}
                   </div>
                 </div>
               </div>
 
-              {/* Card 4: Authority Backlinks */}
+              {/* Card 4: Multi-CMS Publishing */}
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-base font-bold text-foreground">Authority Backlinks</h3>
+                  <h3 className="text-base font-bold text-foreground">Multi-CMS Publishing</h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-2 border-amber-400/20">
                     <GitBranch className="h-4 w-4 text-amber-400" />
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-5 leading-relaxed">Builds contextual backlinks through a trusted network to strengthen authority.</p>
+                <p className="text-sm text-muted-foreground mb-5 leading-relaxed">Connect Notion and Webflow to publish directly from your Content Studio — no copy-pasting.</p>
                 <div className="mt-auto glass-inner p-3">
-                  <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-xs text-zinc-500 font-semibold tracking-wide uppercase">Domain Authority</span>
-                    <span className="text-xs font-bold text-blue-400">+18 pts</span>
-                  </div>
+                  <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">One-click publish to</div>
                   <div className="space-y-2">
-                    {[{ label: "DR 80+", val: 12 }, { label: "DR 60+", val: 34 }, { label: "DR 40+", val: 67 }].map((row) => (
+                    {[{ label: "Notion Databases", pct: 100 }, { label: "Webflow CMS", pct: 100 }, { label: "WordPress REST", pct: 100 }].map((row) => (
                       <div key={row.label} className="flex items-center gap-2">
-                        <span className="text-xs text-zinc-500 w-12 font-mono">{row.label}</span>
+                        <span className="text-xs text-zinc-500 w-28">{row.label}</span>
                         <div className="flex-1 h-1.5 rounded bg-white/10">
-                          <div className="h-full rounded bg-gradient-to-r from-blue-500/60 to-blue-600/60" style={{ width: `${row.val}%` }} />
+                          <div className="h-full rounded bg-gradient-to-r from-amber-500/60 to-amber-400/60" style={{ width: `${row.pct}%` }} />
                         </div>
-                        <span className="text-xs text-zinc-500 font-mono">{row.val}</span>
                       </div>
                     ))}
                   </div>

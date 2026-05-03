@@ -15,6 +15,87 @@ import { assertPublicUrl } from "../lib/ssrf-guard";
 import { generateContentPiece, generateContentPieceStream, repurposeContentPiece, buildCacheKey, cacheGet, cacheSet, type BrandContext } from "../services/contentStudioGenerator";
 import { logger } from "../lib/logger";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
+import { encryptApiKey, decryptApiKey } from "../lib/encryption";
+import { publishToNotion } from "../services/notionPublisher";
+import { publishToWebflow } from "../services/webflowPublisher";
+
+interface CmsIntegrationCredentials {
+  notion?: {
+    integrationToken: string;
+    databaseId: string;
+  };
+  webflow?: {
+    apiToken: string;
+    collectionId: string;
+    bodyFieldSlug: string;
+  };
+}
+
+function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsIntegrationCredentials {
+  const result: CmsIntegrationCredentials = {};
+  if (creds.notion) {
+    result.notion = {
+      integrationToken: encryptApiKey(creds.notion.integrationToken),
+      databaseId: creds.notion.databaseId,
+    };
+  }
+  if (creds.webflow) {
+    result.webflow = {
+      apiToken: encryptApiKey(creds.webflow.apiToken),
+      collectionId: creds.webflow.collectionId,
+      bodyFieldSlug: creds.webflow.bodyFieldSlug,
+    };
+  }
+  return result;
+}
+
+function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsIntegrationCredentials {
+  const result: CmsIntegrationCredentials = {};
+  if (stored.notion) {
+    try {
+      result.notion = {
+        integrationToken: decryptApiKey(stored.notion.integrationToken),
+        databaseId: stored.notion.databaseId,
+      };
+    } catch {
+      result.notion = stored.notion;
+    }
+  }
+  if (stored.webflow) {
+    try {
+      result.webflow = {
+        apiToken: decryptApiKey(stored.webflow.apiToken),
+        collectionId: stored.webflow.collectionId,
+        bodyFieldSlug: stored.webflow.bodyFieldSlug,
+      };
+    } catch {
+      result.webflow = stored.webflow;
+    }
+  }
+  return result;
+}
+
+function maskCmsCredentials(decrypted: CmsIntegrationCredentials): object {
+  const result: Record<string, unknown> = {};
+  if (decrypted.notion) {
+    const tok = decrypted.notion.integrationToken;
+    result.notion = {
+      connected: true,
+      databaseId: decrypted.notion.databaseId,
+      integrationTokenHint: tok.length > 8 ? `...${tok.slice(-4)}` : "****",
+    };
+  }
+  if (decrypted.webflow) {
+    const tok = decrypted.webflow.apiToken;
+    result.webflow = {
+      connected: true,
+      collectionId: decrypted.webflow.collectionId,
+      bodyFieldSlug: decrypted.webflow.bodyFieldSlug,
+      apiTokenHint: tok.length > 8 ? `...${tok.slice(-4)}` : "****",
+    };
+  }
+  return result;
+}
 
 const router: IRouter = Router();
 
@@ -703,6 +784,220 @@ router.post("/content-pieces/:id/repurpose", requireAuth, async (req, res) => {
   } catch (err) {
     logger.error({ err }, "Failed to repurpose content piece");
     res.status(503).json({ error: "Failed to repurpose content. Please try again." });
+  }
+});
+
+const CmsIntegrationsBody = z.object({
+  notion: z.object({
+    integrationToken: z.string().min(1, "Notion integration token is required"),
+    databaseId: z.string().min(1, "Notion database ID is required"),
+  }).optional(),
+  webflow: z.object({
+    apiToken: z.string().min(1, "Webflow API token is required"),
+    collectionId: z.string().min(1, "Webflow collection ID is required"),
+    bodyFieldSlug: z.string().min(1, "Body field slug is required").default("post-body"),
+  }).optional(),
+});
+
+router.get("/website-projects/:id/cms-integrations", requireAuth, async (req, res) => {
+  const projectId = Number(req.params.id);
+  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
+
+  try {
+    const [project] = await db
+      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+    if (!project.cmsIntegrations) {
+      res.json({});
+      return;
+    }
+
+    const stored = project.cmsIntegrations as CmsIntegrationCredentials;
+    const decrypted = decryptCmsCredentials(stored);
+    res.json(maskCmsCredentials(decrypted));
+  } catch (err) {
+    req.log.error({ err }, "Failed to get CMS integrations");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.patch("/website-projects/:id/cms-integrations", requireAuth, async (req, res) => {
+  const projectId = Number(req.params.id);
+  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
+
+  const parsed = CmsIntegrationsBody.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
+
+  try {
+    const [project] = await db
+      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+    const existing = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
+    const existingDecrypted = decryptCmsCredentials(existing);
+
+    const merged: CmsIntegrationCredentials = { ...existingDecrypted };
+
+    if (parsed.data.notion) {
+      merged.notion = parsed.data.notion;
+    }
+    if (parsed.data.webflow) {
+      merged.webflow = {
+        ...parsed.data.webflow,
+        bodyFieldSlug: parsed.data.webflow.bodyFieldSlug ?? "post-body",
+      };
+    }
+
+    const encrypted = encryptCmsCredentials(merged);
+
+    await db
+      .update(websiteProjectsTable)
+      .set({ cmsIntegrations: encrypted })
+      .where(eq(websiteProjectsTable.id, projectId));
+
+    res.json(maskCmsCredentials(merged));
+  } catch (err) {
+    req.log.error({ err }, "Failed to save CMS integrations");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/website-projects/:id/cms-integrations/:platform", requireAuth, async (req, res) => {
+  const projectId = Number(req.params.id);
+  const platform = req.params.platform;
+  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
+  if (platform !== "notion" && platform !== "webflow") { res.status(400).json({ error: "Invalid platform" }); return; }
+
+  try {
+    const [project] = await db
+      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+
+    const existing = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
+    const updated = { ...existing };
+    delete updated[platform];
+
+    await db
+      .update(websiteProjectsTable)
+      .set({ cmsIntegrations: updated })
+      .where(eq(websiteProjectsTable.id, projectId));
+
+    res.status(204).send();
+  } catch (err) {
+    req.log.error({ err }, "Failed to disconnect CMS integration");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/content-pieces/:id/publish/notion", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  try {
+    const [piece] = await db
+      .select()
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.id, id))
+      .limit(1);
+
+    if (!piece) { res.status(404).json({ error: "Content piece not found" }); return; }
+
+    const [project] = await db
+      .select({ id: websiteProjectsTable.id, cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) { res.status(403).json({ error: "Access denied" }); return; }
+
+    const stored = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
+    const creds = decryptCmsCredentials(stored);
+
+    if (!creds.notion) {
+      res.status(400).json({ error: "Notion is not connected. Configure it in Project Settings → Publishing." });
+      return;
+    }
+
+    const notionPageUrl = await publishToNotion(
+      creds.notion.integrationToken,
+      creds.notion.databaseId,
+      piece.title,
+      piece.bodyMarkdown,
+    );
+
+    const [updated] = await db
+      .update(contentPiecesTable)
+      .set({ status: "published", publishedUrl: notionPageUrl })
+      .where(eq(contentPiecesTable.id, id))
+      .returning();
+
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to publish to Notion");
+    res.status(502).json({ error: err instanceof Error ? err.message : "Failed to publish to Notion" });
+  }
+});
+
+router.post("/content-pieces/:id/publish/webflow", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+
+  try {
+    const [piece] = await db
+      .select()
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.id, id))
+      .limit(1);
+
+    if (!piece) { res.status(404).json({ error: "Content piece not found" }); return; }
+
+    const [project] = await db
+      .select({ id: websiteProjectsTable.id, cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+
+    if (!project) { res.status(403).json({ error: "Access denied" }); return; }
+
+    const stored = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
+    const creds = decryptCmsCredentials(stored);
+
+    if (!creds.webflow) {
+      res.status(400).json({ error: "Webflow is not connected. Configure it in Project Settings → Publishing." });
+      return;
+    }
+
+    const webflowItemUrl = await publishToWebflow(
+      creds.webflow.apiToken,
+      creds.webflow.collectionId,
+      creds.webflow.bodyFieldSlug,
+      piece.title,
+      piece.bodyMarkdown,
+    );
+
+    const [updated] = await db
+      .update(contentPiecesTable)
+      .set({ status: "published", publishedUrl: webflowItemUrl })
+      .where(eq(contentPiecesTable.id, id))
+      .returning();
+
+    res.json(updated);
+  } catch (err) {
+    req.log.error({ err }, "Failed to publish to Webflow");
+    res.status(502).json({ error: err instanceof Error ? err.message : "Failed to publish to Webflow" });
   }
 });
 
