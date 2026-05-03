@@ -9,8 +9,8 @@ export default function About() {
   return (
     <Layout>
       <SEO
-        title="About goals.ac — The data-driven growth platform for B2B founders"
-        description="We help B2B founders stop guessing and start executing data-driven growth strategies tailored to their stage, industry, and market."
+        title="About goals.ac — The AI content engine for B2B founders"
+        description="We're building the AI content engine that helps B2B startups grow on autopilot — brand-aligned articles, GEO-optimized pages, and the strategy tools to know what to write next."
       />
 
       <div className="flex-1 flex flex-col">
@@ -34,8 +34,8 @@ export default function About() {
               transition={{ duration: 0.5, delay: 0.08 }}
               className="text-5xl md:text-6xl font-bold tracking-tight mb-6 leading-[1.08]"
             >
-              Growth is a system.{" "}
-              <span className="text-gradient">Not a guess.</span>
+              Content is the engine.{" "}
+              <span className="text-gradient">We built it for you.</span>
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 14 }}
@@ -43,8 +43,8 @@ export default function About() {
               transition={{ duration: 0.5, delay: 0.18 }}
               className="text-lg md:text-xl text-zinc-400 max-w-2xl mx-auto leading-relaxed"
             >
-              We're building the operating system for B2B startup growth — because founders deserve better
-              than generic advice and gut-feel strategy.
+              We're building the AI content engine for B2B startups — because every founder deserves a
+              compounding growth flywheel without an agency retainer.
             </motion.p>
           </div>
         </section>
@@ -59,21 +59,20 @@ export default function About() {
                   Our Mission
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-5 leading-tight">
-                  Every founder gets a growth playbook tailored to their reality.
+                  Every B2B startup deserves a content flywheel.
                 </h2>
                 <p className="text-lg text-muted-foreground leading-relaxed mb-4">
-                  Most founders have to choose between expensive consultants who deliver generic frameworks
-                  and free advice that doesn't account for their stage, industry, or market.
+                  The biggest growth lever for B2B startups is content — articles that rank in Google, pages that get cited by AI tools, playbooks that drive inbound. But agencies are expensive and freelancers are inconsistent.
                 </p>
                 <p className="text-lg text-muted-foreground leading-relaxed">
-                  goals.ac uses AI to compress months of strategy work into minutes — and gives you the tools to execute.
+                  goals.ac is the AI content engine that ships brand-aligned content continuously — backed by the strategy tools you need to know what to write next.
                 </p>
               </div>
               <div className="space-y-4">
                 {[
-                  { icon: Target, label: "Specific to your stage", desc: "Pre-seed plays differ from Series B plays. We treat them differently." },
-                  { icon: BarChart3, label: "Backed by data", desc: "Search trends, citation patterns, and market signals — not opinions." },
-                  { icon: Zap, label: "Actually executable", desc: "Quarterly plans with concrete deliverables, not vision boards." },
+                  { icon: Target, label: "Brand-aligned by default", desc: "Every piece sounds like you wrote it — voice, tone, and POV captured up front." },
+                  { icon: BarChart3, label: "Built to rank", desc: "Optimized for both Google search and AI citation. Real keywords, real intent." },
+                  { icon: Zap, label: "Ship continuously", desc: "From draft to published in minutes. Multi-CMS, calendar, approval flow." },
                 ].map((item) => (
                   <div key={item.label} className="rounded-xl border border-border bg-card p-5 flex items-start gap-4">
                     <div className="rounded-lg bg-blue-500/10 border border-blue-400/20 w-10 h-10 flex items-center justify-center flex-shrink-0">

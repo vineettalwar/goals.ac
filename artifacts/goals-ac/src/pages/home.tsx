@@ -151,8 +151,8 @@ export default function Home() {
   return (
     <Layout>
       <SEO
-        title="goals.ac — Generate Your 2026 Growth Roadmap"
-        description="Programmatic SEO platform for ambitious B2B startup founders to generate AI-powered 12-month growth roadmaps."
+        title="goals.ac — AI Content Engine for B2B Startups"
+        description="The AI content engine that grows your B2B startup on autopilot. Generate SEO articles, GEO-optimized content, and growth playbooks tailored to your industry."
       />
 
       <div className="flex-1 flex flex-col">
@@ -170,7 +170,7 @@ export default function Home() {
               transition={{ duration: 0.45, ease: "easeOut" }}
               className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-4 py-1.5 text-xs font-semibold text-zinc-300 mb-8 tracking-wide uppercase"
             >
-              Data-Driven Growth Strategies for B2B Startups
+              The AI Content Engine for B2B Startups
             </motion.div>
 
             <motion.h1
@@ -179,18 +179,26 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.08, ease: "easeOut" }}
               className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.08]"
             >
-              Stop guessing.{" "}
-              <br className="hidden md:block" />
-              <span className="text-gradient">Start executing.</span>
+              Grow your startup on{" "}
+              <span className="text-gradient">content autopilot.</span>
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.18, ease: "easeOut" }}
-              className="text-xl md:text-2xl text-zinc-400 mb-14 max-w-3xl mx-auto leading-relaxed"
+              className="text-xl md:text-2xl text-zinc-400 mb-10 max-w-3xl mx-auto leading-relaxed"
             >
-              Generate a precise, AI-powered 12-month growth roadmap tailored to your specific industry, location, and company stage.
+              goals.ac generates brand-aligned SEO articles, GEO-optimized content, and growth playbooks — tailored to your industry, stage, and audience. Ship content that ranks, every week.
+            </motion.p>
+
+            <motion.p
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.24, ease: "easeOut" }}
+              className="text-sm text-zinc-500 mb-14 uppercase tracking-wider font-semibold"
+            >
+              ↓ Try it free — generate your growth roadmap below
             </motion.p>
           </div>
         </section>
@@ -205,8 +213,11 @@ export default function Home() {
             >
             <Card className="border-border glass-card overflow-hidden">
               <CardContent className="p-8 md:p-12">
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mb-3 uppercase tracking-wide">
+                  Free starter tool
+                </div>
                 <h2 className="text-2xl font-bold tracking-tight mb-2">Generate your 2026 Growth Roadmap</h2>
-                <p className="text-muted-foreground text-sm mb-8">Free, instant, no sign-up required.</p>
+                <p className="text-muted-foreground text-sm mb-8">A taste of what goals.ac can do — instant, no sign-up. Unlock the full content engine after.</p>
                 <Form {...form}>
                   <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                     <div className="grid gap-6 md:grid-cols-2">
@@ -349,9 +360,9 @@ export default function Home() {
               <div className="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-4">
                 Platform Features
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Everything you need to grow.</h2>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">An AI content engine, not just a tool.</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                From content creation to technical audits, every tool you need to dominate search and AI visibility.
+                Generate, optimize, and publish content that ranks in Google and gets cited by AI. Plus the strategy tools to know what to write next.
               </p>
             </div>
 
@@ -521,9 +532,9 @@ export default function Home() {
               <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/[0.08] px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-4">
                 How it works
               </div>
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">From zero to roadmap in 60 seconds.</h2>
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">From zero to published content in days, not months.</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                No long onboarding. No expensive consultants. Just answer three questions and ship.
+                No agency retainers. No 6-month content plans. Just AI-generated, brand-aligned content that ships continuously.
               </p>
             </div>
 
@@ -531,18 +542,18 @@ export default function Home() {
               {[
                 {
                   step: "01",
-                  title: "Tell us about you",
-                  desc: "Pick your industry, location, and funding stage. That's it. Three questions.",
+                  title: "Tell us your brand",
+                  desc: "Industry, audience, voice, and stage. The AI learns who you are so every piece sounds like you wrote it.",
                 },
                 {
                   step: "02",
-                  title: "We build your roadmap",
-                  desc: "Our AI generates a 12-month growth plan tailored to your context — executive summary, quarterly phases, KPIs, and concrete plays.",
+                  title: "AI generates your content",
+                  desc: "SEO articles, GEO-optimized pages, social posts, and growth playbooks — all brand-aligned, all built to rank.",
                 },
                 {
                   step: "03",
-                  title: "Execute with our tools",
-                  desc: "Sign up to unlock competitor analysis, keyword tracking, content studio, and AI strategy chat — all built into your roadmap.",
+                  title: "Publish & track",
+                  desc: "Push to Notion, Webflow, or WordPress. Track keyword rankings and AI citations as content compounds.",
                 },
               ].map((item, i) => (
                 <div key={item.step} className="relative">
@@ -573,11 +584,11 @@ export default function Home() {
               {[
                 {
                   q: "Is the roadmap generator really free?",
-                  a: "Yes — fully free, no signup required. Build as many roadmaps as you want. To save them, share them, or use the rest of the platform you'll need a free account.",
+                  a: "Yes — fully free, no signup required. The roadmap is our free starter tool. The full AI content engine (article generation, GEO optimization, multi-CMS publishing) requires a free account.",
                 },
                 {
-                  q: "How is this different from a consultant?",
-                  a: "Consultants take weeks and cost thousands. We give you a roadmap in 60 seconds, free. The output isn't a 200-page deck — it's a tactical plan you can execute starting today.",
+                  q: "How is this different from a content agency?",
+                  a: "Agencies cost $5K–$15K/month and take weeks per piece. goals.ac generates brand-aligned, SEO-optimized content in minutes — at a fraction of the price. You stay in control of voice and approval.",
                 },
                 {
                   q: "What's a GEO audit?",
