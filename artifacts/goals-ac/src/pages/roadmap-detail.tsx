@@ -425,9 +425,9 @@ export default function RoadmapDetail() {
               <Button variant="ghost" size="sm" onClick={() => setShowSeoForm(false)} disabled={seoLoading}>Cancel</Button>
             </div>
           )}
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col gap-2.5">
             <div>
-              <h4 className="font-semibold text-foreground">Ready to execute your strategy?</h4>
+              <h4 className="font-semibold text-foreground text-sm">Ready to execute your strategy?</h4>
               <p className="text-sm text-muted-foreground">
                 {user && projects.length === 0 ? (
                   <>
@@ -443,7 +443,7 @@ export default function RoadmapDetail() {
                 )}
               </p>
             </div>
-            <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+            <div className="flex items-center gap-2 flex-wrap">
               {user && projects.length === 0 && (
                 <Button
                   size="sm"
