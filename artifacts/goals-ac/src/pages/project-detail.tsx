@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { useAuth } from "@/context/auth";
-import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertCircle, Map, Sparkles, RefreshCw, Wand2, CheckCircle2, Link2, Unlink, Send, Palette } from "lucide-react";
+import { Loader2, ExternalLink, Save, FileText, BarChart3, Search, Globe, AlertCircle, Map, Layers, RefreshCw, CheckCircle2, Link2, Unlink, Send, Palette } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -575,7 +575,7 @@ export default function ProjectDetail() {
         <div className="mb-6">
           <Link to={`/projects/${id}/content-studio`}>
             <Button className="w-full sm:w-auto" size="lg">
-              <Sparkles className="w-4 h-4 mr-2" />
+              <Layers className="w-4 h-4 mr-2" />
               Open Content Studio
             </Button>
           </Link>
@@ -641,7 +641,7 @@ export default function ProjectDetail() {
 
                 {wasAutoFilled && !isScraping && (
                   <div className="mt-3 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3">
-                    <Wand2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                    <Globe className="h-4 w-4 text-emerald-400 flex-shrink-0" />
                     <p className="text-sm text-emerald-600 dark:text-emerald-400">
                       Auto-filled from your website — review and save to confirm.
                     </p>
