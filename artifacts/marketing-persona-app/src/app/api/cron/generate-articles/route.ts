@@ -1,0 +1,117 @@
+import { NextResponse } from "next/server";
+import { db } from "@workspace/db";
+import {
+  companiesTable,
+  marketingPersonasTable,
+  scheduledArticlesTable,
+  wordpressConnectionsTable,
+} from "@workspace/db/schema";
+import { eq, and } from "drizzle-orm";
+import { generateArticle } from "@/lib/ai/article-generator";
+import { publishToWordPress } from "@/lib/publishers/wordpress";
+import { decryptSecret } from "@/lib/encryption";
+
+export async function GET(req: Request) {
+  const authHeader = req.headers.get("authorization");
+  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const companies = await db
+    .select()
+    .from(companiesTable)
+    .where(eq(companiesTable.onboardingComplete, true));
+
+  const results: { companyId: number; articleId?: number; error?: string }[] = [];
+
+  for (const company of companies) {
+    try {
+      const [wp] = await db
+        .select()
+        .from(wordpressConnectionsTable)
+        .where(and(eq(wordpressConnectionsTable.companyId, company.id), eq(wordpressConnectionsTable.isVerified, true)))
+        .limit(1);
+
+      const [persona] = await db
+        .select()
+        .from(marketingPersonasTable)
+        .where(and(eq(marketingPersonasTable.companyId, company.id), eq(marketingPersonasTable.isActive, true)))
+        .limit(1);
+
+      const [articleRecord] = await db
+        .insert(scheduledArticlesTable)
+        .values({ companyId: company.id, personaId: persona?.id ?? null, status: "generating" })
+        .returning();
+
+      const generated = await generateArticle({
+        company: {
+          name: company.name,
+          websiteUrl: company.websiteUrl,
+          industry: company.industry,
+          description: company.description,
+          targetAudience: company.targetAudience,
+        },
+        persona: persona
+          ? { name: persona.name, jobTitle: persona.jobTitle, painPoints: persona.painPoints, goals: persona.goals, preferredContent: persona.preferredContent }
+          : null,
+      });
+
+      let status: string = "ready";
+      let publishedUrl: string | undefined;
+      let wordpressPostId: number | undefined;
+
+      if (wp && wp.defaultStatus === "publish") {
+        const appPassword = decryptSecret(wp.encryptedAppPassword);
+        const result = await publishToWordPress(
+          { siteUrl: wp.siteUrl, username: wp.username, appPassword },
+          generated.title,
+          generated.bodyMarkdown,
+          "publish",
+          generated.metaDescription,
+          wp.defaultCategoryId ? [wp.defaultCategoryId] : undefined
+        );
+        status = "published";
+        publishedUrl = result.url;
+        wordpressPostId = result.postId;
+      }
+
+      // Append FAQ to body markdown (same as manual generate endpoint)
+      let fullBody = generated.bodyMarkdown;
+      if (generated.faqSection?.length > 0) {
+        fullBody += "\n\n## Frequently Asked Questions\n\n";
+        fullBody += generated.faqSection.map((f) => `**${f.question}**\n\n${f.answer}`).join("\n\n");
+      }
+
+      const [updated] = await db
+        .update(scheduledArticlesTable)
+        .set({
+          title: generated.title,
+          bodyMarkdown: fullBody,
+          metaDescription: generated.metaDescription,
+          primaryKeyword: generated.primaryKeyword,
+          secondaryKeywords: generated.secondaryKeywords,
+          wordCount: generated.wordCount,
+          status,
+          publishedUrl: publishedUrl ?? null,
+          wordpressPostId: wordpressPostId ?? null,
+          articleMetadata: {
+            citations: generated.citations ?? [],
+            faqSection: generated.faqSection ?? [],
+            jsonLdSchema: generated.jsonLdSchema ?? null,
+            personaAlignment: generated.personaAlignment ?? null,
+            searchIntent: generated.searchIntent ?? null,
+            readingTimeMinutes: generated.readingTimeMinutes ?? null,
+            internalLinkSuggestions: generated.internalLinkSuggestions ?? [],
+          },
+        })
+        .where(eq(scheduledArticlesTable.id, articleRecord.id))
+        .returning();
+
+      results.push({ companyId: company.id, articleId: updated.id });
+    } catch (err) {
+      results.push({ companyId: company.id, error: err instanceof Error ? err.message : "Unknown error" });
+    }
+  }
+
+  return NextResponse.json({ processed: results.length, results });
+}
