@@ -20,11 +20,9 @@ export default async function AppLayout({ children, params }: { children: React.
     .where(eq(companiesTable.userId, userId))
     .limit(1);
 
-  // Redirect to onboarding if no company record yet (and not already on exempt path)
-  // Note: path checking in RSC requires headers
+  // Middleware injects x-pathname so we can check the current route reliably in RSC
   const { headers } = await import("next/headers");
-  const headersList = await headers();
-  const pathname = headersList.get("x-invoke-path") ?? headersList.get("next-url") ?? "";
+  const pathname = (await headers()).get("x-pathname") ?? "";
   const isExempt = ONBOARDING_EXEMPT.some((p) => pathname.startsWith(p));
 
   if (!company && !isExempt) {

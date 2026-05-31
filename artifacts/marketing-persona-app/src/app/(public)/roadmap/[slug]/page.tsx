@@ -3,7 +3,9 @@ import Link from "next/link";
 import { db } from "@workspace/db";
 import { roadmapsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { RoadmapChat } from "@/components/roadmap-chat";
+import { RoadmapLeadCTA } from "./roadmap-lead-cta";
 
 interface Phase {
   title: string;
@@ -21,7 +23,9 @@ interface RoadmapContent {
 export default async function PublicRoadmapPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
-  let roadmap: { id: number; industry: string; location: string; stage: string; content: unknown; viewCount: number } | undefined;
+  let roadmap:
+    | { id: number; industry: string; location: string; stage: string; content: unknown; viewCount: number }
+    | undefined;
 
   try {
     [roadmap] = await db
@@ -30,7 +34,6 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
       .where(eq(roadmapsTable.slug, slug))
       .limit(1);
 
-    // increment view count (fire-and-forget)
     if (roadmap) {
       db.update(roadmapsTable)
         .set({ viewCount: roadmap.viewCount + 1 })
@@ -47,13 +50,18 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
   const phases = content?.phases ?? [];
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-12 space-y-8">
+    <div className="max-w-3xl mx-auto px-6 py-12 space-y-8 pb-32">
       <div>
-        <Link href="/roadmaps" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4">
+        <Link
+          href="/roadmaps"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground mb-4"
+        >
           <ArrowLeft className="h-3.5 w-3.5" /> All roadmaps
         </Link>
         <h1 className="text-3xl font-bold">{roadmap.industry} Growth Roadmap</h1>
-        <p className="text-muted-foreground mt-1">{roadmap.location} · {roadmap.stage} stage</p>
+        <p className="text-muted-foreground mt-1">
+          {roadmap.location} · {roadmap.stage} stage
+        </p>
       </div>
 
       {content?.executiveSummary && (
@@ -72,9 +80,16 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
             </div>
             {phase.objectives?.length > 0 && (
               <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Objectives</h4>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  Objectives
+                </h4>
                 <ul className="space-y-1.5">
-                  {phase.objectives.map((o, j) => <li key={j} className="text-sm flex gap-2"><span className="text-primary">•</span>{o}</li>)}
+                  {phase.objectives.map((o, j) => (
+                    <li key={j} className="text-sm flex gap-2">
+                      <span className="text-primary">•</span>
+                      {o}
+                    </li>
+                  ))}
                 </ul>
               </div>
             )}
@@ -82,24 +97,36 @@ export default async function PublicRoadmapPage({ params }: { params: Promise<{ 
               <div>
                 <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Tactics</h4>
                 <ul className="space-y-1.5">
-                  {phase.tactics.map((t, j) => <li key={j} className="text-sm flex gap-2"><span className="text-muted-foreground">→</span>{t}</li>)}
+                  {phase.tactics.map((t, j) => (
+                    <li key={j} className="text-sm flex gap-2">
+                      <span className="text-muted-foreground">→</span>
+                      {t}
+                    </li>
+                  ))}
                 </ul>
+              </div>
+            )}
+            {phase.kpis?.length > 0 && (
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">KPIs</h4>
+                <div className="flex flex-wrap gap-2">
+                  {phase.kpis.map((kpi, j) => (
+                    <span key={j} className="text-xs bg-muted rounded-md px-2.5 py-1">
+                      {kpi}
+                    </span>
+                  ))}
+                </div>
               </div>
             )}
           </div>
         ))}
       </div>
 
-      <div className="paper-card rounded-xl p-6 text-center space-y-3">
-        <p className="font-semibold">Want a roadmap tailored to your business?</p>
-        <p className="text-sm text-muted-foreground">Sign up free and generate a custom strategy in minutes.</p>
-        <Link
-          href="/signup"
-          className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-lg text-sm font-medium"
-        >
-          Get your free roadmap <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
+      {/* Lead capture CTA — client component so it can open modal */}
+      <RoadmapLeadCTA slug={slug} />
+
+      {/* Floating AI chat assistant */}
+      <RoadmapChat slug={slug} />
     </div>
   );
 }

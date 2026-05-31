@@ -1,7 +1,23 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@workspace/db";
 import { seoArticlesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const { id } = await params;
+  const numericId = parseInt(id, 10);
+  if (isNaN(numericId)) return {};
+
+  const [row] = await db
+    .select({ title: seoArticlesTable.title, metaDescription: seoArticlesTable.metaDescription })
+    .from(seoArticlesTable)
+    .where(eq(seoArticlesTable.id, numericId))
+    .limit(1);
+
+  if (!row) return {};
+  return { title: row.title, description: row.metaDescription ?? undefined };
+}
 
 export default async function PublicSeoArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

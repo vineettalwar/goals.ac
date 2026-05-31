@@ -75,11 +75,18 @@ export async function GET(req: Request) {
         wordpressPostId = result.postId;
       }
 
+      // Append FAQ to body markdown (same as manual generate endpoint)
+      let fullBody = generated.bodyMarkdown;
+      if (generated.faqSection?.length > 0) {
+        fullBody += "\n\n## Frequently Asked Questions\n\n";
+        fullBody += generated.faqSection.map((f) => `**${f.question}**\n\n${f.answer}`).join("\n\n");
+      }
+
       const [updated] = await db
         .update(scheduledArticlesTable)
         .set({
           title: generated.title,
-          bodyMarkdown: generated.bodyMarkdown,
+          bodyMarkdown: fullBody,
           metaDescription: generated.metaDescription,
           primaryKeyword: generated.primaryKeyword,
           secondaryKeywords: generated.secondaryKeywords,
@@ -87,6 +94,15 @@ export async function GET(req: Request) {
           status,
           publishedUrl: publishedUrl ?? null,
           wordpressPostId: wordpressPostId ?? null,
+          articleMetadata: {
+            citations: generated.citations ?? [],
+            faqSection: generated.faqSection ?? [],
+            jsonLdSchema: generated.jsonLdSchema ?? null,
+            personaAlignment: generated.personaAlignment ?? null,
+            searchIntent: generated.searchIntent ?? null,
+            readingTimeMinutes: generated.readingTimeMinutes ?? null,
+            internalLinkSuggestions: generated.internalLinkSuggestions ?? [],
+          },
         })
         .where(eq(scheduledArticlesTable.id, articleRecord.id))
         .returning();

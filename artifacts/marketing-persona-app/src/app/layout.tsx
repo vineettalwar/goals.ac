@@ -1,11 +1,7 @@
-"use client";
-
+import type { Metadata } from "next";
 import "./globals.css";
 import { Plus_Jakarta_Sans } from "next/font/google";
-import { SessionProvider } from "next-auth/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Toaster } from "sonner";
-import { useState } from "react";
+import { Providers } from "./providers";
 
 const jakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -13,22 +9,21 @@ const jakartaSans = Plus_Jakarta_Sans({
   display: "swap",
 });
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const [queryClient] = useState(() => new QueryClient({
-    defaultOptions: {
-      queries: { refetchOnWindowFocus: false, retry: 1 },
-    },
-  }));
+export const metadata: Metadata = {
+  title: { default: "goals.ac", template: "%s — goals.ac" },
+  description: "AI-powered B2B content growth engine. Grow faster with persona-driven SEO articles, roadmaps, and automated WordPress publishing.",
+  metadataBase: new URL(process.env.NEXTAUTH_URL ?? "https://goals.ac"),
+  openGraph: {
+    siteName: "goals.ac",
+    type: "website",
+  },
+};
 
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={jakartaSans.variable}>
       <body>
-        <SessionProvider>
-          <QueryClientProvider client={queryClient}>
-            {children}
-            <Toaster position="bottom-right" richColors />
-          </QueryClientProvider>
-        </SessionProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );
