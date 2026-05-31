@@ -141,6 +141,13 @@
       "when": 1777795400192,
       "tag": "0019_narrow_bloodstrike",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1748649600000,
+      "tag": "0020_marketing_persona_tables",
+      "breakpoints": true
     }
   ]
 }

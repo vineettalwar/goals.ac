@@ -1,0 +1,110 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --font-sans: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --radius: 0.75rem;
+
+  /* Paper palette */
+  --background:              #FAFAF8;
+  --foreground:              #1A1A1A;
+  --card:                    #FFFFFF;
+  --card-foreground:         #1A1A1A;
+  --border:                  #E8E5E0;
+  --input:                   #E8E5E0;
+  --ring:                    #2D3B2D;
+
+  --primary:                 #2D3B2D;
+  --primary-foreground:      #FFFFFF;
+
+  --secondary:               #F5F3EF;
+  --secondary-foreground:    #1A1A1A;
+
+  --muted:                   #F5F3EF;
+  --muted-foreground:        #6B6560;
+
+  --accent:                  #F5F3EF;
+  --accent-foreground:       #1A1A1A;
+
+  --destructive:             #C0392B;
+  --destructive-foreground:  #FFFFFF;
+
+  --sidebar-bg:              #FFFFFF;
+  --sidebar-border:          #E8E5E0;
+}
+
+@layer base {
+  * {
+    @apply border-border box-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight;
+  }
+}
+
+@layer utilities {
+  /* Core paper card surface */
+  .paper-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+
+  /* Step indicator dots */
+  .step-dot {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border: 1.5px solid var(--border);
+    background: var(--card);
+    color: var(--muted-foreground);
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .step-dot.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-foreground);
+    box-shadow: 0 0 0 3px rgba(45, 59, 45, 0.12);
+  }
+  .step-dot.complete {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+}
