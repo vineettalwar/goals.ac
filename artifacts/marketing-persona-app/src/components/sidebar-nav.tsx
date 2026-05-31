@@ -12,7 +12,8 @@ import {
   Settings,
   LogOut,
   Leaf,
-  ChevronDown,
+  Layers,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +22,9 @@ const NAV_ITEMS = [
   { label: "Autopilot", href: "/autopilot", icon: Zap },
   { label: "Projects", href: "/projects", icon: FolderOpen },
   { label: "Roadmaps", href: "/roadmaps", icon: Map },
-  { label: "Analytics", href: "/keyword-tracking", icon: BarChart2 },
+  { label: "Content Engine", href: "/content-engine", icon: Layers },
+  { label: "Competitor AI", href: "/competitor-analysis", icon: Search },
+  { label: "Keywords", href: "/keyword-tracking", icon: BarChart2 },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
