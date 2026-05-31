@@ -17,6 +17,24 @@ export interface ArticleInput {
     preferredContent: string[];
   } | null;
   keyword?: string;
+  existingArticleTitles?: string[]; // for internal link suggestions
+}
+
+export interface Citation {
+  text: string;       // anchor text used in article
+  url: string;        // authoritative external URL
+  source: string;     // source name e.g. "Harvard Business Review"
+}
+
+export interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+export interface InternalLinkSuggestion {
+  anchorText: string;      // text to hyperlink
+  suggestedSlug: string;   // e.g. "/blog/keyword-research-guide"
+  rationale: string;       // why this internal link matters
 }
 
 export interface GeneratedArticle {
@@ -26,50 +44,68 @@ export interface GeneratedArticle {
   secondaryKeywords: string[];
   bodyMarkdown: string;
   wordCount: number;
+  readingTimeMinutes: number;
+  searchIntent: "informational" | "navigational" | "commercial" | "transactional";
+  faqSection: FaqItem[];
+  citations: Citation[];
+  internalLinkSuggestions: InternalLinkSuggestion[];
+  jsonLdSchema: object;    // Article + FAQPage structured data
+  personaAlignment: string; // 1-sentence: why this article matches the persona
 }
 
-const SYSTEM_PROMPT = `You are an expert SEO content writer and strategist. Write high-quality, well-researched articles that genuinely help the target reader.
+const SYSTEM_PROMPT = `You are a world-class SEO strategist and content writer who produces editorial-quality articles that rank on Google and surface in AI search engines (ChatGPT, Perplexity, Claude).
 
 Writing principles:
-- Be specific and concrete — no vague generalities
-- Use real examples, data points, and actionable steps
-- Write naturally for humans, not keyword density
-- Structure with clear headings, short paragraphs, and lists where helpful
-- Avoid AI-sounding filler phrases like "In today's fast-paced world" or "In conclusion"
+- Be specific, concrete, and direct — no vague generalities or padding
+- Use real-world examples, stats, named frameworks, and actionable steps
+- Write naturally for humans — no AI-sounding filler ("In today's fast-paced world", "In conclusion")
+- Structure with H2/H3 headings, short paragraphs, and scannable bullet lists
+- Every claim that can be cited MUST be cited with a real, authoritative source (gov, university, industry research, named publications)
+- Include a 4-6 item FAQ section targeting long-tail and "People Also Ask" queries
+- The article must be worth bookmarking and sharing
 
-Respond ONLY with a valid JSON object. No prose, no markdown fences outside the bodyMarkdown field.`;
+Respond ONLY with a valid JSON object. No prose outside JSON.`;
 
 export async function generateArticle(input: ArticleInput): Promise<GeneratedArticle> {
   const ai = getAiClient();
 
   const personaContext = input.persona
-    ? `
-Target reader persona: ${input.persona.name} (${input.persona.jobTitle})
-Their pain points: ${input.persona.painPoints.slice(0, 3).join("; ")}
-Their goals: ${input.persona.goals.slice(0, 2).join("; ")}
-Content they prefer: ${input.persona.preferredContent.join(", ")}`
+    ? `Target reader persona: ${input.persona.name} (${input.persona.jobTitle})
+Pain points: ${input.persona.painPoints.slice(0, 3).join("; ")}
+Goals: ${input.persona.goals.slice(0, 2).join("; ")}
+Preferred content: ${input.persona.preferredContent.join(", ")}`
     : `Target reader: ${input.company.targetAudience}`;
 
-  const keywordContext = input.keyword
-    ? `Target keyword to rank for: "${input.keyword}"`
-    : `Select the most valuable SEO keyword for ${input.company.name} in ${input.company.industry} based on the audience context.`;
+  const keywordCtx = input.keyword
+    ? `Primary keyword to rank for: "${input.keyword}"`
+    : `Select the highest-value SEO keyword for ${input.company.name} in ${input.company.industry} based on the audience.`;
 
-  const prompt = `Write a 1200-1500 word SEO article for ${input.company.name} (${input.company.websiteUrl}), a company in the ${input.company.industry} industry.
+  const existingArticlesCtx = input.existingArticleTitles?.length
+    ? `Existing published articles on this site (use for internal link suggestions): ${input.existingArticleTitles.slice(0, 10).join("; ")}`
+    : "";
+
+  const prompt = `Write a detailed 1400-1800 word SEO article for ${input.company.name} (${input.company.websiteUrl}), a ${input.company.industry} company.
 
 Company description: ${input.company.description}
 ${personaContext}
+${keywordCtx}
+${existingArticlesCtx}
 
-${keywordContext}
+Return a JSON object with these EXACT fields:
 
-Return a JSON object with these fields:
-- title: string — compelling, SEO-optimized headline
-- metaDescription: string — 150-160 character meta description
-- primaryKeyword: string — the main keyword this article targets
-- secondaryKeywords: string[] — 3-5 related keywords naturally used in the article
-- bodyMarkdown: string — the full article in clean Markdown (use ## for H2, ### for H3, - for bullets). 1200-1500 words.
-- wordCount: number — approximate word count of bodyMarkdown
-
-The article should directly address the persona's pain points and help them achieve their goals.`;
+- title: string — compelling, SEO-optimized H1 headline
+- metaDescription: string — 150-160 chars, includes primary keyword, drives clicks
+- primaryKeyword: string — main keyword this article targets
+- secondaryKeywords: string[] — 4-6 related/LSI keywords woven naturally into the article
+- bodyMarkdown: string — full article in Markdown (## H2, ### H3, - bullets). 1400-1800 words. Must include at minimum: an intro paragraph, 4-6 H2 sections with detail, a short conclusion. Embed citations inline using [Source Name](URL) format.
+- wordCount: number
+- readingTimeMinutes: number
+- searchIntent: "informational" | "navigational" | "commercial" | "transactional"
+- faqSection: array of { question: string, answer: string } — 4-6 FAQs targeting PAA and long-tail queries around the primary keyword
+- citations: array of { text: string, url: string, source: string } — 4-8 real authoritative sources cited in the article (use .gov, .edu, named publications, industry research). Use REAL URLs.
+- internalLinkSuggestions: array of { anchorText: string, suggestedSlug: string, rationale: string } — 3-5 internal link opportunities using contextually relevant anchor text
+- jsonLdSchema: object — valid JSON-LD combining Article schema and FAQPage schema based on the article content
+- personaAlignment: string — one sentence explaining exactly why this article addresses the target persona's core need`;
 
   const response = await ai.models.generateContent({
     model: "gemini-2.5-flash",
@@ -77,8 +113,8 @@ The article should directly address the persona's pain points and help them achi
     config: {
       systemInstruction: SYSTEM_PROMPT,
       responseMimeType: "application/json",
-      maxOutputTokens: 8192,
-      thinkingConfig: { thinkingBudget: 1024 },
+      maxOutputTokens: 16384,
+      thinkingConfig: { thinkingBudget: 2048 },
     },
   });
 

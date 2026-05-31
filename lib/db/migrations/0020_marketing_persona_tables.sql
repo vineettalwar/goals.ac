@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS "scheduled_articles" (
 	"published_url" text,
 	"wordpress_post_id" integer,
 	"error_message" text,
+	"article_metadata" jsonb,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );

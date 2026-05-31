@@ -84,16 +84,34 @@ export async function POST(req: Request) {
       keyword: parsed.data.keyword,
     });
 
+    // Append FAQ to body markdown
+    let fullBody = generated.bodyMarkdown;
+    if (generated.faqSection?.length > 0) {
+      fullBody += "\n\n## Frequently Asked Questions\n\n";
+      fullBody += generated.faqSection
+        .map((f) => `**${f.question}**\n\n${f.answer}`)
+        .join("\n\n");
+    }
+
     const [updated] = await db
       .update(scheduledArticlesTable)
       .set({
         title: generated.title,
-        bodyMarkdown: generated.bodyMarkdown,
+        bodyMarkdown: fullBody,
         metaDescription: generated.metaDescription,
         primaryKeyword: generated.primaryKeyword,
         secondaryKeywords: generated.secondaryKeywords,
         wordCount: generated.wordCount,
         status: "ready",
+        articleMetadata: {
+          citations: generated.citations ?? [],
+          faqSection: generated.faqSection ?? [],
+          jsonLdSchema: generated.jsonLdSchema ?? null,
+          personaAlignment: generated.personaAlignment ?? null,
+          searchIntent: generated.searchIntent ?? null,
+          readingTimeMinutes: generated.readingTimeMinutes ?? null,
+          internalLinkSuggestions: generated.internalLinkSuggestions ?? [],
+        },
       })
       .where(eq(scheduledArticlesTable.id, article.id))
       .returning();
