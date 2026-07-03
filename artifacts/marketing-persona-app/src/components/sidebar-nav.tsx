@@ -15,12 +15,14 @@ import {
   Leaf,
   Layers,
   Search,
+  Brain,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Autopilot", href: "/autopilot", icon: Zap },
+  { label: "Agent", href: "/agent", icon: Brain },
   { label: "Projects", href: "/projects", icon: FolderOpen },
   { label: "Roadmaps", href: "/roadmaps", icon: Map },
   { label: "Topical Map", href: "/topical-map", icon: Network },

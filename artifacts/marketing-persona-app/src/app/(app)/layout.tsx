@@ -5,8 +5,6 @@ import { companiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { SidebarNav } from "@/components/sidebar-nav";
 
-const ONBOARDING_EXEMPT = ["/onboarding", "/settings", "/api"];
-
 export default async function AppLayout({ children, params }: { children: React.ReactNode; params?: unknown }) {
   const session = await auth();
   if (!session) redirect("/login");
@@ -20,12 +18,7 @@ export default async function AppLayout({ children, params }: { children: React.
     .where(eq(companiesTable.userId, userId))
     .limit(1);
 
-  // Middleware injects x-pathname so we can check the current route reliably in RSC
-  const { headers } = await import("next/headers");
-  const pathname = (await headers()).get("x-pathname") ?? "";
-  const isExempt = ONBOARDING_EXEMPT.some((p) => pathname.startsWith(p));
-
-  if (!company && !isExempt) {
+  if (!company) {
     redirect("/onboarding");
   }
 

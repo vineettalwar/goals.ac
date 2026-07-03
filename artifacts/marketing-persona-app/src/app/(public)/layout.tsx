@@ -8,6 +8,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="font-bold text-xl tracking-tight text-primary">goals.ac</Link>
           <nav className="hidden sm:flex items-center gap-6 text-sm">
+            <Link href="/features" className="text-muted-foreground hover:text-foreground transition-colors">Features</Link>
             <Link href="/roadmaps" className="text-muted-foreground hover:text-foreground transition-colors">Roadmaps</Link>
             <Link href="/about" className="text-muted-foreground hover:text-foreground transition-colors">About</Link>
             <Link href="/pricing" className="text-muted-foreground hover:text-foreground transition-colors">Pricing</Link>
@@ -33,7 +34,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             <p className="text-xs text-muted-foreground leading-relaxed">AI-powered growth strategy and content for B2B startups.</p>
           </div>
           {[
-            { title: "Product", links: [["Roadmaps", "/roadmaps"], ["Pricing", "/pricing"]] },
+            { title: "Product", links: [["Features", "/features"], ["Roadmaps", "/roadmaps"], ["Pricing", "/pricing"]] },
             { title: "Company", links: [["About", "/about"]] },
             { title: "Legal", links: [["Privacy", "/privacy"], ["Terms", "/terms"]] },
           ].map(({ title, links }) => (
