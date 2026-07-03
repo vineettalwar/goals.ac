@@ -26,8 +26,10 @@ export function GenerateArticleButton({ companyId }: { companyId: number }) {
       return;
     }
 
-    const { article } = await res.json();
-    toast.success("Article generated!");
+    const { article, generation } = await res.json();
+    const source = generation?.source === "user-key" ? "your API key" : "platform key";
+    const cost = typeof generation?.estimatedCostUsd === "number" ? ` · ~$${generation.estimatedCostUsd.toFixed(4)}` : "";
+    toast.success(`Article generated with ${source}${cost}`);
     router.push(`/autopilot/articles/${article.id}`);
     router.refresh();
   }

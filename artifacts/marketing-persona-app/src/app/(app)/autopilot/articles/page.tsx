@@ -49,12 +49,19 @@ export default async function ArticlesPage() {
                 <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Primary keyword</th>
                 <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Status</th>
                 <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Words</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">AI Source</th>
+                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Est. Cost</th>
                 <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Created</th>
               </tr>
             </thead>
             <tbody>
-              {articles.map((article, i) => (
-                <tr key={article.id} className={i < articles.length - 1 ? "border-b border-border" : ""}>
+              {articles.map((article, i) => {
+                const metadata = (article.articleMetadata ?? {}) as {
+                  generationSource?: "user-key" | "replit-proxy" | "platform-key";
+                  estimatedCostUsd?: number;
+                };
+                return (
+                  <tr key={article.id} className={i < articles.length - 1 ? "border-b border-border" : ""}>
                   <td className="px-4 py-3 max-w-xs">
                     <Link href={`/autopilot/articles/${article.id}`} className="hover:underline font-medium line-clamp-1">
                       {article.title ?? "Generating..."}
@@ -71,10 +78,17 @@ export default async function ArticlesPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{article.wordCount > 0 ? article.wordCount.toLocaleString() : "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">
+                    {metadata.generationSource === "user-key" ? "Your key" : metadata.generationSource ? "Platform" : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">
+                    {typeof metadata.estimatedCostUsd === "number" ? `~$${metadata.estimatedCostUsd.toFixed(4)}` : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground text-xs">
                     {new Date(article.createdAt).toLocaleDateString()}
                   </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

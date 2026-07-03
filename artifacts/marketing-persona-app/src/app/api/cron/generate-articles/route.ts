@@ -10,6 +10,14 @@ import { eq, and } from "drizzle-orm";
 import { generateArticle } from "@/lib/ai/article-generator";
 import { publishToWordPress } from "@/lib/publishers/wordpress";
 import { decryptSecret } from "@/lib/encryption";
+import { getAiClientForUser } from "@/lib/ai/gemini-client";
+
+function estimateCostUsd(totalTokens: number | undefined, wordCount: number): number {
+  if (typeof totalTokens === "number" && totalTokens > 0) {
+    return Number((totalTokens * 0.0000004).toFixed(4));
+  }
+  return Number((Math.max(wordCount, 800) * 0.00002).toFixed(4));
+}
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization");
@@ -43,6 +51,8 @@ export async function GET(req: Request) {
         .values({ companyId: company.id, personaId: persona?.id ?? null, status: "generating" })
         .returning();
 
+      const aiConfig = await getAiClientForUser(company.userId);
+
       const generated = await generateArticle({
         company: {
           name: company.name,
@@ -54,7 +64,12 @@ export async function GET(req: Request) {
         persona: persona
           ? { name: persona.name, jobTitle: persona.jobTitle, painPoints: persona.painPoints, goals: persona.goals, preferredContent: persona.preferredContent }
           : null,
+      }, {
+        aiClient: aiConfig.client,
       });
+
+      const { source } = aiConfig;
+      const estimatedCostUsd = estimateCostUsd(generated.generationUsage?.totalTokens, generated.wordCount);
 
       let status: string = "ready";
       let publishedUrl: string | undefined;
@@ -102,6 +117,9 @@ export async function GET(req: Request) {
             searchIntent: generated.searchIntent ?? null,
             readingTimeMinutes: generated.readingTimeMinutes ?? null,
             internalLinkSuggestions: generated.internalLinkSuggestions ?? [],
+            generationSource: source,
+            estimatedCostUsd,
+            generationUsage: generated.generationUsage ?? null,
           },
         })
         .where(eq(scheduledArticlesTable.id, articleRecord.id))

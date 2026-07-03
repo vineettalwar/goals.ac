@@ -6,7 +6,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ArticleActions } from "./article-actions";
-import { ArrowLeft, ExternalLink, Clock, Target, BookOpen, Link2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Clock, Target, BookOpen, Link2, Wallet } from "lucide-react";
 
 interface ArticleMetadata {
   citations?: { text: string; url: string; source: string }[];
@@ -16,6 +16,13 @@ interface ArticleMetadata {
   searchIntent?: string;
   readingTimeMinutes?: number;
   internalLinkSuggestions?: { anchorText: string; suggestedSlug: string; rationale: string }[];
+  generationSource?: "user-key" | "replit-proxy" | "platform-key";
+  estimatedCostUsd?: number;
+  generationUsage?: {
+    promptTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
 }
 
 const STATUS_VARIANT = {
@@ -85,9 +92,19 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
               {article.status}
             </Badge>
             {meta.searchIntent && <Badge variant="muted">{meta.searchIntent}</Badge>}
+            {meta.generationSource && (
+              <Badge variant="muted">
+                {meta.generationSource === "user-key" ? "Your API key" : "Platform AI"}
+              </Badge>
+            )}
             {meta.readingTimeMinutes && (
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Clock className="h-3 w-3" /> {meta.readingTimeMinutes} min read
+              </span>
+            )}
+            {typeof meta.estimatedCostUsd === "number" && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Wallet className="h-3 w-3" /> ~${meta.estimatedCostUsd.toFixed(4)}
               </span>
             )}
           </div>

@@ -1,5 +1,6 @@
 import { getAiClient } from "./gemini-client";
 import { cleanAndParse } from "./utils";
+import type { GoogleGenAI } from "@google/genai";
 
 export interface ArticleInput {
   company: {
@@ -17,6 +18,9 @@ export interface ArticleInput {
     preferredContent: string[];
   } | null;
   keyword?: string;
+  angle?: string;
+  contentGoal?: string;
+  tonePreference?: string;
   existingArticleTitles?: string[]; // for internal link suggestions
 }
 
@@ -51,6 +55,11 @@ export interface GeneratedArticle {
   internalLinkSuggestions: InternalLinkSuggestion[];
   jsonLdSchema: object;    // Article + FAQPage structured data
   personaAlignment: string; // 1-sentence: why this article matches the persona
+  generationUsage?: {
+    promptTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
 }
 
 const SYSTEM_PROMPT = `You are a world-class SEO strategist and content writer who produces editorial-quality articles that rank on Google and surface in AI search engines (ChatGPT, Perplexity, Claude).
@@ -66,8 +75,11 @@ Writing principles:
 
 Respond ONLY with a valid JSON object. No prose outside JSON.`;
 
-export async function generateArticle(input: ArticleInput): Promise<GeneratedArticle> {
-  const ai = getAiClient();
+export async function generateArticle(
+  input: ArticleInput,
+  options?: { aiClient?: GoogleGenAI }
+): Promise<GeneratedArticle> {
+  const ai = options?.aiClient ?? getAiClient();
 
   const personaContext = input.persona
     ? `Target reader persona: ${input.persona.name} (${input.persona.jobTitle})
@@ -84,12 +96,19 @@ Preferred content: ${input.persona.preferredContent.join(", ")}`
     ? `Existing published articles on this site (use for internal link suggestions): ${input.existingArticleTitles.slice(0, 10).join("; ")}`
     : "";
 
+  const angleCtx = input.angle ? `Preferred angle for this draft: ${input.angle}` : "";
+  const goalCtx = input.contentGoal ? `Business goal for this article: ${input.contentGoal}` : "";
+  const toneCtx = input.tonePreference ? `Tone preference: ${input.tonePreference}` : "";
+
   const prompt = `Write a detailed 1400-1800 word SEO article for ${input.company.name} (${input.company.websiteUrl}), a ${input.company.industry} company.
 
 Company description: ${input.company.description}
 ${personaContext}
 ${keywordCtx}
 ${existingArticlesCtx}
+${angleCtx}
+${goalCtx}
+${toneCtx}
 
 Return a JSON object with these EXACT fields:
 
@@ -119,5 +138,21 @@ Return a JSON object with these EXACT fields:
   });
 
   const raw = response.text ?? "";
-  return cleanAndParse<GeneratedArticle>(raw);
+  const parsed = cleanAndParse<GeneratedArticle>(raw);
+  const usageMetadata = (
+    response as unknown as {
+      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
+    }
+  ).usageMetadata;
+
+  return {
+    ...parsed,
+    generationUsage: usageMetadata
+      ? {
+          promptTokens: usageMetadata.promptTokenCount,
+          outputTokens: usageMetadata.candidatesTokenCount,
+          totalTokens: usageMetadata.totalTokenCount,
+        }
+      : undefined,
+  };
 }

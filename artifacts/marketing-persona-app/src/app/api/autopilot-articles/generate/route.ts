@@ -4,13 +4,25 @@ import { companiesTable, marketingPersonasTable, scheduledArticlesTable } from "
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateArticle } from "@/lib/ai/article-generator";
+import { getAiClientForUser } from "@/lib/ai/gemini-client";
 import { z } from "zod";
 
 const schema = z.object({
   companyId: z.number(),
   personaId: z.number().optional(),
   keyword: z.string().optional(),
+  angle: z.string().optional(),
+  contentGoal: z.string().optional(),
+  tonePreference: z.string().optional(),
 });
+
+function estimateCostUsd(totalTokens: number | undefined, wordCount: number): number {
+  if (typeof totalTokens === "number" && totalTokens > 0) {
+    // Approximate blended Gemini Flash token cost; shown as an estimate in UI.
+    return Number((totalTokens * 0.0000004).toFixed(4));
+  }
+  return Number((Math.max(wordCount, 800) * 0.00002).toFixed(4));
+}
 
 export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
@@ -64,6 +76,7 @@ export async function POST(req: Request) {
 
   // Generate the article inline
   try {
+    const { client, source } = await getAiClientForUser(userId!);
     const generated = await generateArticle({
       company: {
         name: company.name,
@@ -82,7 +95,12 @@ export async function POST(req: Request) {
           }
         : null,
       keyword: parsed.data.keyword,
-    });
+      angle: parsed.data.angle,
+      contentGoal: parsed.data.contentGoal,
+      tonePreference: parsed.data.tonePreference,
+    }, { aiClient: client });
+
+    const estimatedCostUsd = estimateCostUsd(generated.generationUsage?.totalTokens, generated.wordCount);
 
     // Append FAQ to body markdown
     let fullBody = generated.bodyMarkdown;
@@ -111,12 +129,21 @@ export async function POST(req: Request) {
           searchIntent: generated.searchIntent ?? null,
           readingTimeMinutes: generated.readingTimeMinutes ?? null,
           internalLinkSuggestions: generated.internalLinkSuggestions ?? [],
+          generationSource: source,
+          estimatedCostUsd,
+          generationUsage: generated.generationUsage ?? null,
         },
       })
       .where(eq(scheduledArticlesTable.id, article.id))
       .returning();
 
-    return NextResponse.json({ article: updated }, { status: 201 });
+    return NextResponse.json({
+      article: updated,
+      generation: {
+        source,
+        estimatedCostUsd,
+      },
+    }, { status: 201 });
   } catch (err) {
     await db
       .update(scheduledArticlesTable)

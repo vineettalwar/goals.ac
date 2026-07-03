@@ -9,10 +9,10 @@ import {
 import { eq, desc } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowRight, Plus, Zap } from "lucide-react";
+import { ArrowRight, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { GenerateArticleButton } from "./generate-article-button";
+import { ContentAgentPanel } from "@/components/content-agent-panel";
 
 const STATUS_BADGE: Record<string, React.ComponentProps<typeof Badge>["variant"]> = {
   ready: "success",
@@ -103,6 +103,8 @@ export default async function AutopilotPage() {
           )}
         </div>
       </div>
+
+      <ContentAgentPanel companyId={company.id} />
 
       {/* Articles */}
       <div>
