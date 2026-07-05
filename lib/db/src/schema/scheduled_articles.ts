@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, date, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, date, timestamp, jsonb, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { companiesTable } from "./companies";
@@ -26,6 +26,7 @@ export const scheduledArticlesTable = pgTable("scheduled_articles", {
   errorMessage: text("error_message"),
   // Enriched article metadata: citations, faqSection, jsonLdSchema, personaAlignment, etc.
   articleMetadata: jsonb("article_metadata"),
+  humanized: boolean("humanized").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

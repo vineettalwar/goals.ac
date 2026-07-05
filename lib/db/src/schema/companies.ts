@@ -15,6 +15,9 @@ export const companiesTable = pgTable("companies", {
   targetAudience: text("target_audience").notNull().default(""),
   competitorUrls: text("competitor_urls").array().notNull().default([]),
   onboardingComplete: boolean("onboarding_complete").notNull().default(false),
+  // Article humanization: off | light | strong
+  humanizationLevel: text("humanization_level").notNull().default("light"),
+  writingSample: text("writing_sample"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

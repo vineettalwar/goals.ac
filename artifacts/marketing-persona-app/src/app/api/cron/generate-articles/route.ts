@@ -8,6 +8,7 @@ import {
 } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { generateArticle } from "@/lib/ai/article-generator";
+import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
 import { publishToWordPress } from "@/lib/publishers/wordpress";
 import { decryptSecret } from "@/lib/encryption";
 import { getAiClientForUser } from "@/lib/ai/gemini-client";
@@ -53,7 +54,7 @@ export async function GET(req: Request) {
 
       const aiConfig = await getAiClientForUser(company.userId);
 
-      const generated = await generateArticle({
+      let generated = await generateArticle({
         company: {
           name: company.name,
           websiteUrl: company.websiteUrl,
@@ -67,6 +68,18 @@ export async function GET(req: Request) {
       }, {
         aiClient: aiConfig.client,
       });
+
+      // Second pass: humanize the article unless the company opted out.
+      let humanized = false;
+      if (company.humanizationLevel !== "off") {
+        const beforeHumanize = generated;
+        generated = await humanizeArticle(generated, {
+          level: company.humanizationLevel as HumanizationLevel,
+          writingSample: company.writingSample ?? undefined,
+          aiClient: aiConfig.client,
+        });
+        humanized = generated !== beforeHumanize;
+      }
 
       const { source } = aiConfig;
       const estimatedCostUsd = estimateCostUsd(generated.generationUsage?.totalTokens, generated.wordCount);
@@ -107,6 +120,7 @@ export async function GET(req: Request) {
           secondaryKeywords: generated.secondaryKeywords,
           wordCount: generated.wordCount,
           status,
+          humanized,
           publishedUrl: publishedUrl ?? null,
           wordpressPostId: wordpressPostId ?? null,
           articleMetadata: {

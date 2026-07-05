@@ -4,6 +4,7 @@ import { companiesTable, marketingPersonasTable, scheduledArticlesTable } from "
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateArticle } from "@/lib/ai/article-generator";
+import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
 import { getAiClientForUser } from "@/lib/ai/gemini-client";
 import { z } from "zod";
 
@@ -77,7 +78,7 @@ export async function POST(req: Request) {
   // Generate the article inline
   try {
     const { client, source } = await getAiClientForUser(userId!);
-    const generated = await generateArticle({
+    let generated = await generateArticle({
       company: {
         name: company.name,
         websiteUrl: company.websiteUrl,
@@ -100,6 +101,18 @@ export async function POST(req: Request) {
       tonePreference: parsed.data.tonePreference,
     }, { aiClient: client });
 
+    // Second pass: humanize the article unless the company opted out.
+    let humanized = false;
+    if (company.humanizationLevel !== "off") {
+      const beforeHumanize = generated;
+      generated = await humanizeArticle(generated, {
+        level: company.humanizationLevel as HumanizationLevel,
+        writingSample: company.writingSample ?? undefined,
+        aiClient: client,
+      });
+      humanized = generated !== beforeHumanize;
+    }
+
     const estimatedCostUsd = estimateCostUsd(generated.generationUsage?.totalTokens, generated.wordCount);
 
     // Append FAQ to body markdown
@@ -121,6 +134,7 @@ export async function POST(req: Request) {
         secondaryKeywords: generated.secondaryKeywords,
         wordCount: generated.wordCount,
         status: "ready",
+        humanized,
         articleMetadata: {
           citations: generated.citations ?? [],
           faqSection: generated.faqSection ?? [],
