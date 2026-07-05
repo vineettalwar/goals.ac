@@ -48,7 +48,7 @@ router.post("/roadmaps/:slug/chat", optionalAuth, async (req, res) => {
   }
 
   const { message, conversationId } = parsed.data;
-  const { slug } = req.params;
+  const slug = String(req.params.slug);
 
   try {
     const [roadmap] = await db

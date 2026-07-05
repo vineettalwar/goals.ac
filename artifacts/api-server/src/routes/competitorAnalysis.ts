@@ -47,7 +47,7 @@ router.post("/competitor-analysis", optionalAuth, async (req, res) => {
   const { competitorUrl, industry, location, stage } = parsed.data;
 
   try {
-    guardSsrf(competitorUrl);
+    assertPublicUrlSync(competitorUrl);
   } catch (err) {
     res.status(400).json({ error: err instanceof Error ? err.message : "Invalid URL" });
     return;
