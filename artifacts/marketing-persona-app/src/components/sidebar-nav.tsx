@@ -16,6 +16,7 @@ import {
   Layers,
   Search,
   Brain,
+  Plug,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ const NAV_ITEMS = [
   { label: "Content Engine", href: "/content-engine", icon: Layers },
   { label: "Competitor AI", href: "/competitor-analysis", icon: Search },
   { label: "Keywords", href: "/keyword-tracking", icon: BarChart2 },
+  { label: "Integrations", href: "/integrations", icon: Plug },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 

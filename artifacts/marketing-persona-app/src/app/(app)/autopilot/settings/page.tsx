@@ -10,6 +10,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea";
+
+const HUMANIZATION_LEVELS = [
+  { value: "off", label: "Off", description: "Publish the raw AI draft with no rewrite pass." },
+  { value: "light", label: "Light", description: "Polish rhythm and word choice so the draft reads naturally." },
+  { value: "strong", label: "Strong", description: "Fully rewrite the voice for a distinctly human read." },
+] as const;
+
+type HumanizationLevel = (typeof HUMANIZATION_LEVELS)[number]["value"];
 
 const schema = z.object({
   siteUrl: z.string().url("Enter a valid URL"),
@@ -24,6 +33,9 @@ export default function AutopilotSettingsPage() {
   const [testing, setTesting] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; siteName?: string; error?: string } | null>(null);
+  const [humanizationLevel, setHumanizationLevel] = useState<HumanizationLevel>("light");
+  const [writingSample, setWritingSample] = useState("");
+  const [savingHumanization, setSavingHumanization] = useState(false);
 
   const { register, handleSubmit, getValues, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -34,7 +46,11 @@ export default function AutopilotSettingsPage() {
     fetch("/api/companies")
       .then((r) => r.json())
       .then(({ companies }) => {
-        if (companies?.[0]) setCompanyId(companies[0].id);
+        if (companies?.[0]) {
+          setCompanyId(companies[0].id);
+          if (companies[0].humanizationLevel) setHumanizationLevel(companies[0].humanizationLevel);
+          setWritingSample(companies[0].writingSample ?? "");
+        }
       });
   }, []);
 
@@ -67,9 +83,76 @@ export default function AutopilotSettingsPage() {
     toast.success("WordPress connection saved");
   }
 
+  async function saveHumanization() {
+    if (!companyId) return;
+    setSavingHumanization(true);
+    const res = await fetch("/api/companies/humanization", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ companyId, humanizationLevel, writingSample: writingSample || null }),
+    });
+    setSavingHumanization(false);
+    if (!res.ok) {
+      toast.error("Failed to save humanization settings");
+      return;
+    }
+    toast.success("Humanization settings saved");
+  }
+
   return (
-    <div className="px-8 py-8 max-w-xl">
-      <h1 className="mb-6 text-2xl font-bold">Autopilot settings</h1>
+    <div className="px-8 py-8 max-w-xl space-y-6">
+      <h1 className="text-2xl font-bold">Autopilot settings</h1>
+
+      {/* Article humanization */}
+      <div className="paper-card p-8 space-y-5">
+        <div className="space-y-1">
+          <h2 className="font-semibold">Article humanization</h2>
+          <p className="text-sm text-muted-foreground">
+            A second AI pass rewrites each article so it reads like a human wrote it — headings, keywords, and citations are preserved.
+          </p>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label>Intensity</Label>
+          <div className="space-y-2">
+            {HUMANIZATION_LEVELS.map((level) => (
+              <label key={level.value} className="flex items-start gap-2 cursor-pointer text-sm">
+                <input
+                  type="radio"
+                  name="humanizationLevel"
+                  value={level.value}
+                  checked={humanizationLevel === level.value}
+                  onChange={() => setHumanizationLevel(level.value)}
+                  className="accent-primary mt-0.5"
+                />
+                <span>
+                  <span className="font-medium">{level.label}</span>
+                  <span className="text-muted-foreground"> — {level.description}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label htmlFor="writingSample">Writing sample (optional)</Label>
+          <Textarea
+            id="writingSample"
+            rows={6}
+            className="min-h-[140px]"
+            placeholder="Paste a few paragraphs you've written. The humanizer will mimic your cadence and word choice."
+            value={writingSample}
+            onChange={(e) => setWritingSample(e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Used only to match your voice — its content never appears in articles.
+          </p>
+        </div>
+
+        <Button onClick={saveHumanization} disabled={savingHumanization || !companyId}>
+          {savingHumanization ? "Saving..." : "Save humanization settings"}
+        </Button>
+      </div>
 
       <div className="paper-card p-8 space-y-5">
         <h2 className="font-semibold">WordPress connection</h2>

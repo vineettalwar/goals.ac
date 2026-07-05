@@ -11,6 +11,8 @@ export const usersTable = pgTable("users", {
   role: text("role").notNull().default("user"),
   avatarUrl: text("avatar_url"),
   encryptedGeminiKey: text("encrypted_gemini_key"),
+  // starter | growth | scale
+  plan: text("plan").notNull().default("starter"),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpires: timestamp("password_reset_expires", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

@@ -74,7 +74,10 @@ export default async function ArticlesPage() {
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{article.primaryKeyword ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <Badge variant={STATUS_BADGE[article.status] ?? "muted"} className="capitalize">{article.status}</Badge>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge variant={STATUS_BADGE[article.status] ?? "muted"} className="capitalize">{article.status}</Badge>
+                      {article.humanized && <Badge variant="secondary">Humanized</Badge>}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">{article.wordCount > 0 ? article.wordCount.toLocaleString() : "—"}</td>
                   <td className="px-4 py-3 text-muted-foreground text-xs">

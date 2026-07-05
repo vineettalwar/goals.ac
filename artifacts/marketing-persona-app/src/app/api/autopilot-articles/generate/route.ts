@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { companiesTable, marketingPersonasTable, scheduledArticlesTable } from "@workspace/db/schema";
+import { companiesTable, marketingPersonasTable, scheduledArticlesTable, usersTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateArticle } from "@/lib/ai/article-generator";
+import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
 import { getAiClientForUser } from "@/lib/ai/gemini-client";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";
 import { z } from "zod";
 
 const schema = z.object({
@@ -28,6 +31,13 @@ export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
   if (error) return error;
 
+  const limited = rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs
+  );
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "companyId required" }, { status: 400 });
@@ -39,6 +49,32 @@ export async function POST(req: Request) {
     .limit(1);
 
   if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });
+
+  const [owner] = await db
+    .select({ plan: usersTable.plan, encryptedGeminiKey: usersTable.encryptedGeminiKey })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId!))
+    .limit(1);
+
+  const usesByok = Boolean(owner?.encryptedGeminiKey);
+  if (!usesByok) {
+    const quota = getPlanQuota(owner?.plan);
+    if (quota !== null) {
+      const articlesThisMonth = await getMonthlyArticleCount(company.id);
+      if (articlesThisMonth >= quota) {
+        return NextResponse.json(
+          {
+            error: "quota_exhausted",
+            message: `You've used all ${quota} article generations included in your ${owner?.plan ?? "starter"} plan this month. Upgrade your plan or add your own Gemini API key for unlimited generations.`,
+            plan: owner?.plan ?? "starter",
+            quota,
+            articlesThisMonth,
+          },
+          { status: 402 }
+        );
+      }
+    }
+  }
 
   let persona = null;
   if (parsed.data.personaId) {
@@ -77,7 +113,7 @@ export async function POST(req: Request) {
   // Generate the article inline
   try {
     const { client, source } = await getAiClientForUser(userId!);
-    const generated = await generateArticle({
+    let generated = await generateArticle({
       company: {
         name: company.name,
         websiteUrl: company.websiteUrl,
@@ -100,6 +136,18 @@ export async function POST(req: Request) {
       tonePreference: parsed.data.tonePreference,
     }, { aiClient: client });
 
+    // Second pass: humanize the article unless the company opted out.
+    let humanized = false;
+    if (company.humanizationLevel !== "off") {
+      const beforeHumanize = generated;
+      generated = await humanizeArticle(generated, {
+        level: company.humanizationLevel as HumanizationLevel,
+        writingSample: company.writingSample ?? undefined,
+        aiClient: client,
+      });
+      humanized = generated !== beforeHumanize;
+    }
+
     const estimatedCostUsd = estimateCostUsd(generated.generationUsage?.totalTokens, generated.wordCount);
 
     // Append FAQ to body markdown
@@ -121,6 +169,7 @@ export async function POST(req: Request) {
         secondaryKeywords: generated.secondaryKeywords,
         wordCount: generated.wordCount,
         status: "ready",
+        humanized,
         articleMetadata: {
           citations: generated.citations ?? [],
           faqSection: generated.faqSection ?? [],
@@ -136,6 +185,16 @@ export async function POST(req: Request) {
       })
       .where(eq(scheduledArticlesTable.id, article.id))
       .returning();
+
+    await recordUsage({
+      userId: userId!,
+      companyId: company.id,
+      eventType: "article_generation",
+      promptTokens: generated.generationUsage?.promptTokens,
+      outputTokens: generated.generationUsage?.outputTokens,
+      totalTokens: generated.generationUsage?.totalTokens,
+      usedByok: source === "user-key",
+    });
 
     return NextResponse.json({
       article: updated,

@@ -4,6 +4,7 @@ import { roadmapsTable, conversations, messages } from "@workspace/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
 import { getAiClient } from "@/lib/ai/gemini-client";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const ChatBody = z.object({
   message: z.string().min(1).max(2000),
@@ -42,6 +43,13 @@ INSTRUCTIONS:
 }
 
 export async function POST(req: Request) {
+  const limited = rateLimitResponse(
+    `ai-gen:ip:${getClientIp(req)}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs
+  );
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
   const parsed = ChatBody.safeParse(body);
   if (!parsed.success) {

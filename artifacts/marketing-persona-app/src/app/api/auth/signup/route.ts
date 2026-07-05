@@ -4,6 +4,7 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const signupSchema = z.object({
   name: z.string().min(1),
@@ -12,6 +13,14 @@ const signupSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  const limited = rateLimitResponse(
+    `auth-signup:${ip}`,
+    RATE_LIMITS.AUTH_PER_IP.limit,
+    RATE_LIMITS.AUTH_PER_IP.windowMs
+  );
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
   const parsed = signupSchema.safeParse(body);
   if (!parsed.success) {

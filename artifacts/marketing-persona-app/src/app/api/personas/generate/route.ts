@@ -4,6 +4,7 @@ import { companiesTable, marketingPersonasTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generatePersonas } from "@/lib/ai/persona-generator";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({ companyId: z.number() });
@@ -11,6 +12,13 @@ const schema = z.object({ companyId: z.number() });
 export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
   if (error) return error;
+
+  const limited = rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs
+  );
+  if (limited) return limited;
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);

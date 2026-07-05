@@ -77,6 +77,23 @@
 - **Repurpose progress indicator** — Phase-by-phase step tracker matching roadmap pattern
 - **Repo documentation** — README, design docs, roadmap, memory, admin guide, local-dev guide
 
+### Phase 8 — Competitive Edge (vs BabyLoveGrowth.ai)
+*Humanized articles, integrations breadth, and production hardening. See [competitive-edge-prd.md](competitive-edge-prd.md).*
+
+- **Humanization pipeline** — Second-pass AI rewrite of every generated article for human rhythm and voice; per-company intensity setting (off/light/strong) with optional writing-sample voice matching; "Humanized" badge on articles
+- **Ghost publishing** — Ghost Admin API connector (JWT-signed, draft/live, tags, excerpt)
+- **Webhook publishing** — Generic HMAC-signed webhook connector (unlocks Zapier/Make/n8n and custom stacks)
+- **Integrations hub** — `/integrations` page listing WordPress, Notion, Webflow, Ghost, and Webhook connections with connect/test/status
+- **Publish-anywhere menu** — Per-article publish dropdown across all configured connections
+- **BYOK wired end-to-end** — marketing-persona-app generation uses the user's encrypted Gemini key when present
+- **Usage metering** — `usage_events` table records tokens + estimated cost per generation, BYOK-flagged
+- **Plan quotas** — starter/growth/scale plans with monthly article limits enforced server-side; BYOK bypasses quota
+- **Usage dashboard** — Articles this month, quota remaining, estimated BYOK spend, plan badge in settings
+- **Legal pages** — Substantive `/privacy` and `/terms`
+- **Rate limiting** — Per-user limits on AI routes, per-IP limits on auth routes
+- **Security headers** — HSTS, X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy
+- **Monorepo typecheck green** — Fixed pre-existing type errors in api-server and goals-ac
+
 ---
 
 ## In Progress

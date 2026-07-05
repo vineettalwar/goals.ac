@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { assertPublicUrlSync } from "@/lib/ssrf-guard";
 import { getAiClient } from "@/lib/ai/gemini-client";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const AnalyzeBody = z.object({
   competitorUrl: z.string().url("Must be a valid URL"),
@@ -33,6 +34,13 @@ async function scrapeCompetitorText(url: string): Promise<string> {
 }
 
 export async function POST(req: Request) {
+  const limited = rateLimitResponse(
+    `ai-gen:ip:${getClientIp(req)}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs
+  );
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
   const parsed = AnalyzeBody.safeParse(body);
   if (!parsed.success) {

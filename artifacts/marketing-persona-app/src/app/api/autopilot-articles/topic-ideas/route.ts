@@ -6,6 +6,7 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/require-auth";
 import { getAiClientForUser } from "@/lib/ai/gemini-client";
 import { cleanAndParse } from "@/lib/ai/utils";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const schema = z.object({
   companyId: z.number(),
@@ -32,6 +33,13 @@ type TopicIdeasResponse = {
 export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
   if (error) return error;
+
+  const limited = rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs
+  );
+  if (limited) return limited;
 
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);

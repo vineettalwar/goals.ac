@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -16,6 +17,92 @@ const profileSchema = z.object({
 const geminiSchema = z.object({
   geminiKey: z.string().min(1, "Enter a Gemini API key"),
 });
+
+interface UsageSummary {
+  plan: "starter" | "growth" | "scale";
+  articlesThisMonth: number;
+  quota: number | null;
+  quotaRemaining: number | null;
+  usesByok: boolean;
+  byokSpendThisMonthUsd: number;
+}
+
+const PLAN_LABELS: Record<UsageSummary["plan"], string> = {
+  starter: "Starter",
+  growth: "Growth",
+  scale: "Scale",
+};
+
+function UsageDashboard() {
+  const [usage, setUsage] = useState<UsageSummary | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/usage")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.usage) setUsage(data.usage);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      })
+      .catch(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="paper-card p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-semibold">Usage this month</h2>
+        {usage && (
+          <span className="text-xs font-medium bg-primary/10 text-primary px-2.5 py-1 rounded-full">
+            {PLAN_LABELS[usage.plan]} plan
+          </span>
+        )}
+      </div>
+
+      {loading && <p className="text-sm text-muted-foreground">Loading usage…</p>}
+
+      {!loading && usage && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Articles generated</p>
+            <p className="text-2xl font-bold">{usage.articlesThisMonth}</p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Quota remaining</p>
+            <p className="text-2xl font-bold">
+              {usage.usesByok
+                ? "Unlimited — your API key"
+                : usage.quotaRemaining === null
+                  ? "Unlimited"
+                  : usage.quotaRemaining}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Estimated BYOK spend</p>
+            <p className="text-2xl font-bold">
+              {usage.usesByok ? `~$${usage.byokSpendThisMonthUsd.toFixed(2)}` : "—"}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">Plan limit</p>
+            <p className="text-2xl font-bold">{usage.quota === null ? "Unlimited" : `${usage.quota}/mo`}</p>
+          </div>
+        </div>
+      )}
+
+      {!loading && !usage && (
+        <p className="text-sm text-muted-foreground">Unable to load usage right now.</p>
+      )}
+    </div>
+  );
+}
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
@@ -48,6 +135,9 @@ export default function SettingsPage() {
   return (
     <div className="px-8 py-8 max-w-xl space-y-6">
       <h1 className="text-2xl font-bold">Settings</h1>
+
+      {/* Usage dashboard */}
+      <UsageDashboard />
 
       {/* Profile */}
       <div className="paper-card p-6 space-y-4">
