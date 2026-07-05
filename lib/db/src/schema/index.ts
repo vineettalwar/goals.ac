@@ -16,3 +16,4 @@ export * from "./companies";
 export * from "./marketing_personas";
 export * from "./scheduled_articles";
 export * from "./wordpress_connections";
+export * from "./integration_connections";

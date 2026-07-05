@@ -123,6 +123,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
           status={article.status}
           hasWordPress={!!wp?.isVerified}
           publishedUrl={article.publishedUrl ?? undefined}
+          companyId={row.company.id}
         />
       </div>
 
