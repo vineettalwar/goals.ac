@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { roadmapsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { generateRoadmap, generateSlug } from "@/lib/ai/roadmap-generator";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const GenerateRoadmapBody = z.object({
@@ -12,6 +13,13 @@ const GenerateRoadmapBody = z.object({
 });
 
 export async function POST(req: Request) {
+  const limited = rateLimitResponse(
+    `ai-gen:ip:${getClientIp(req)}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs
+  );
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
   const parsed = GenerateRoadmapBody.safeParse(body);
   if (!parsed.success) {

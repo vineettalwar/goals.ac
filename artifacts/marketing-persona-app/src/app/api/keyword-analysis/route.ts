@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAiClient } from "@/lib/ai/gemini-client";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const KeywordAnalysisBody = z.object({
   keywords: z.array(z.string().min(1).max(200)).min(1).max(10),
@@ -8,6 +9,13 @@ const KeywordAnalysisBody = z.object({
 });
 
 export async function POST(req: Request) {
+  const limited = rateLimitResponse(
+    `ai-gen:ip:${getClientIp(req)}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs
+  );
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
   const parsed = KeywordAnalysisBody.safeParse(body);
   if (!parsed.success) {

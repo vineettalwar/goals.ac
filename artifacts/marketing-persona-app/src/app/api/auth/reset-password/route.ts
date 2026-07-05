@@ -4,6 +4,7 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const schema = z.object({
   token: z.string().min(1),
@@ -11,6 +12,14 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  const ip = getClientIp(req);
+  const limited = rateLimitResponse(
+    `auth-reset-password:${ip}`,
+    RATE_LIMITS.AUTH_PER_IP.limit,
+    RATE_LIMITS.AUTH_PER_IP.windowMs
+  );
+  if (limited) return limited;
+
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {

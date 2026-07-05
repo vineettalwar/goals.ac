@@ -4,6 +4,7 @@ import { companiesTable, scheduledArticlesTable, brandProfilesTable, websiteProj
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateTopicalMap } from "@/lib/ai/topical-map-generator";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const Body = z.object({
@@ -14,6 +15,13 @@ const Body = z.object({
 export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
   if (error) return error;
+
+  const limited = rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs
+  );
+  if (limited) return limited;
 
   const body = await req.json().catch(() => null);
   const parsed = Body.safeParse(body);

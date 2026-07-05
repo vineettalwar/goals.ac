@@ -4,6 +4,7 @@ import type { ContentStyle } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateContentStrategyWithProgress } from "@/lib/ai/content-strategy-generator";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
 const GenerateBody = z.object({
@@ -16,6 +17,13 @@ const GenerateBody = z.object({
 export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
   if (error) return error;
+
+  const limited = rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs
+  );
+  if (limited) return limited;
 
   const body = await req.json().catch(() => null);
   const parsed = GenerateBody.safeParse(body);

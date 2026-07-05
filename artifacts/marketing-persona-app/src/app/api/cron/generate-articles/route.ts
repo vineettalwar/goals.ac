@@ -5,6 +5,7 @@ import {
   marketingPersonasTable,
   scheduledArticlesTable,
   wordpressConnectionsTable,
+  usersTable,
 } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { generateArticle } from "@/lib/ai/article-generator";
@@ -12,6 +13,7 @@ import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
 import { publishToWordPress } from "@/lib/publishers/wordpress";
 import { decryptSecret } from "@/lib/encryption";
 import { getAiClientForUser } from "@/lib/ai/gemini-client";
+import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";
 
 function estimateCostUsd(totalTokens: number | undefined, wordCount: number): number {
   if (typeof totalTokens === "number" && totalTokens > 0) {
@@ -31,10 +33,31 @@ export async function GET(req: Request) {
     .from(companiesTable)
     .where(eq(companiesTable.onboardingComplete, true));
 
-  const results: { companyId: number; articleId?: number; error?: string }[] = [];
+  const results: { companyId: number; articleId?: number; error?: string; skipped?: string }[] = [];
 
   for (const company of companies) {
     try {
+      const [owner] = await db
+        .select({ plan: usersTable.plan, encryptedGeminiKey: usersTable.encryptedGeminiKey })
+        .from(usersTable)
+        .where(eq(usersTable.id, company.userId))
+        .limit(1);
+
+      const usesByok = Boolean(owner?.encryptedGeminiKey);
+      if (!usesByok) {
+        const quota = getPlanQuota(owner?.plan);
+        if (quota !== null) {
+          const articlesThisMonth = await getMonthlyArticleCount(company.id);
+          if (articlesThisMonth >= quota) {
+            console.log(
+              `[cron/generate-articles] Skipping company ${company.id}: quota exhausted (${articlesThisMonth}/${quota} on ${owner?.plan ?? "starter"} plan, no BYOK key configured)`
+            );
+            results.push({ companyId: company.id, skipped: "quota_exhausted" });
+            continue;
+          }
+        }
+      }
+
       const [wp] = await db
         .select()
         .from(wordpressConnectionsTable)
@@ -138,6 +161,16 @@ export async function GET(req: Request) {
         })
         .where(eq(scheduledArticlesTable.id, articleRecord.id))
         .returning();
+
+      await recordUsage({
+        userId: company.userId,
+        companyId: company.id,
+        eventType: "article_generation",
+        promptTokens: generated.generationUsage?.promptTokens,
+        outputTokens: generated.generationUsage?.outputTokens,
+        totalTokens: generated.generationUsage?.totalTokens,
+        usedByok: source === "user-key",
+      });
 
       results.push({ companyId: company.id, articleId: updated.id });
     } catch (err) {
