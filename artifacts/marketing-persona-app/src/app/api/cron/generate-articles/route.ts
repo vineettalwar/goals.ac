@@ -10,7 +10,7 @@ import {
 import { eq, and } from "drizzle-orm";
 import { generateArticle } from "@/lib/ai/article-generator";
 import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
-import { publishToWordPress } from "@/lib/publishers/wordpress";
+import { publishToWordPress } from "@workspace/connectors/wordpress";
 import { decryptSecret } from "@workspace/security/encryption";
 import { getAiClientForUser } from "@workspace/ai-providers";
 import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";

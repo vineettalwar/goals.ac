@@ -23,6 +23,7 @@
     "@radix-ui/react-toast": "^1.2.7",
     "@tanstack/react-query": "catalog:",
     "@workspace/ai-providers": "workspace:*",
+    "@workspace/connectors": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/integrations-gemini-ai": "workspace:*",
     "@workspace/security": "workspace:*",

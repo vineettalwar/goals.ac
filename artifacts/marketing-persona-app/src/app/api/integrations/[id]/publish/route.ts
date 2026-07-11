@@ -5,8 +5,8 @@ import { integrationConnectionsTable, companiesTable, scheduledArticlesTable } f
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { decryptSecret } from "@workspace/security/encryption";
-import { publishToGhost } from "@/lib/publishers/ghost";
-import { publishToWebhook, type WebhookArticlePayload } from "@/lib/publishers/webhook";
+import { publishToGhost } from "@workspace/connectors/ghost";
+import { publishToWebhook, type WebhookArticlePayload } from "@workspace/connectors/webhook";
 import { z } from "zod";
 
 interface ArticleMetadata {

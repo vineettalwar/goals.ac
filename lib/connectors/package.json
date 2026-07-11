@@ -1,0 +1,21 @@
+{
+  "name": "@workspace/connectors",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./notion": "./src/notion.ts",
+    "./webflow": "./src/webflow.ts",
+    "./wordpress": "./src/wordpress.ts",
+    "./ghost": "./src/ghost.ts",
+    "./webhook": "./src/webhook.ts"
+  },
+  "dependencies": {
+    "@workspace/security": "workspace:*",
+    "marked": "^18.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

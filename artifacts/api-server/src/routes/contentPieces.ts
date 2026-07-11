@@ -16,8 +16,8 @@ import { generateContentPiece, generateContentPieceStream, repurposeContentPiece
 import { logger } from "../lib/logger";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
-import { publishToNotion } from "../services/notionPublisher";
-import { publishToWebflow } from "../services/webflowPublisher";
+import { publishToNotion } from "@workspace/connectors/notion";
+import { publishToWebflow } from "@workspace/connectors/webflow";
 
 interface CmsIntegrationCredentials {
   notion?: {

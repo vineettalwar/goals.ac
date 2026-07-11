@@ -4,8 +4,8 @@ import { integrationConnectionsTable, companiesTable } from "@workspace/db/schem
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { encryptSecret } from "@workspace/security/encryption";
-import { testGhostConnection } from "@/lib/publishers/ghost";
-import { testWebhookConnection } from "@/lib/publishers/webhook";
+import { testGhostConnection } from "@workspace/connectors/ghost";
+import { testWebhookConnection } from "@workspace/connectors/webhook";
 import { z } from "zod";
 
 const createSchema = z.discriminatedUnion("provider", [

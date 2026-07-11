@@ -25,6 +25,9 @@
     },
     {
       "path": "../../lib/ai-providers"
+    },
+    {
+      "path": "../../lib/connectors"
     }
   ]
 }

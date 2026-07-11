@@ -179,6 +179,9 @@ importers:
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
+      '@workspace/connectors':
+        specifier: workspace:*
+        version: link:../../lib/connectors
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
@@ -502,6 +505,9 @@ importers:
       '@workspace/ai-providers':
         specifier: workspace:*
         version: link:../../lib/ai-providers
+      '@workspace/connectors':
+        specifier: workspace:*
+        version: link:../../lib/connectors
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
@@ -813,6 +819,19 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 3.25.76
+
+  lib/connectors:
+    dependencies:
+      '@workspace/security':
+        specifier: workspace:*
+        version: link:../security
+      marked:
+        specifier: ^18.0.3
+        version: 18.0.3
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.3.5
 
   lib/db:
     dependencies:
