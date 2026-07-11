@@ -17,6 +17,11 @@ export const usageEventsTable = pgTable("usage_events", {
   totalTokens: integer("total_tokens").notNull().default(0),
   estimatedCostUsd: numeric("estimated_cost_usd", { precision: 12, scale: 6 }).notNull().default("0"),
   usedByok: boolean("used_byok").notNull().default(false),
+  // strategy | planning | execution | rapid
+  tier: text("tier"),
+  // anthropic | gemini | openai
+  provider: text("provider"),
+  model: text("model"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

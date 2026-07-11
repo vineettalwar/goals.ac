@@ -2,6 +2,7 @@ import { pgTable, serial, text, integer, timestamp, date } from "drizzle-orm/pg-
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { websiteProjectsTable } from "./website_projects";
+import { briefsTable } from "./briefs";
 
 export const CONTENT_FORMAT_TYPES = [
   "blog_post",
@@ -30,6 +31,7 @@ export const contentPiecesTable = pgTable("content_pieces", {
   websiteProjectId: integer("website_project_id")
     .notNull()
     .references(() => websiteProjectsTable.id, { onDelete: "cascade" }),
+  briefId: integer("brief_id").references(() => briefsTable.id, { onDelete: "set null" }),
   formatType: text("format_type").notNull().$type<ContentFormatType>(),
   title: text("title").notNull(),
   targetKeyword: text("target_keyword").notNull().default(""),
