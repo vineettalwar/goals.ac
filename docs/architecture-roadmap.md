@@ -76,12 +76,12 @@ artifacts/
 
 ### Sprint backlog (2–3 sprints, in order)
 
-1. **Extract `lib/security`, `lib/ai-providers`, `lib/connectors`** from the duplicated code. This extraction is mechanical and low-risk *because it changes no ciphertext format, key derivation, or env var* — the envelope-encryption upgrade in §7 is a separate, carefully-migrated step, not part of this move.
-2. **Auth hardening — scoped to the JWT-based `goals-ac`/`api-server` surface** (`marketing-persona-app` already uses NextAuth sessions): move its JWT from localStorage to httpOnly cookies, add refresh-token rotation and server-side revocation (a `sessions` table — the "cannot invalidate on password change" trade-off documented in `docs/memory.md` is not acceptable for a product that stores third-party CMS credentials). As consolidation retires the Vite app, its users migrate onto the Next app's NextAuth sessions; the Express server keeps token auth only for the future public API (API keys, not user JWTs).
-3. **Account hierarchy**: formalize `workspace → project → goal → brief → content piece`. Today `users → website_projects → content` exists; add `goals` and `briefs` tables (schema in §4) and a `workspaces` table even if v1 is 1:1 with users — retrofitting teams later is far more painful.
-4. **Finish the onboarding wizard** (already in progress, Task #43) but re-anchor it on goal definition: *"What are you trying to achieve?"* before *"connect your CMS."*
-5. **Billing skeleton**: Stripe subscriptions + a `credit_ledger` table (append-only: grants, consumption referencing `usage_events`, expiry). Quotas already enforce server-side; wire them to real plans.
-6. **Job queue (pg-boss)** running in the Express worker; move autopilot generation off the cron route onto it. This is the load-bearing wall for Phases 2 and 3 — pull it forward.
+1. **Extract `lib/security`, `lib/ai-providers`, `lib/connectors`** from the duplicated code. This extraction is mechanical and low-risk *because it changes no ciphertext format, key derivation, or env var* — the envelope-encryption upgrade in §7 is a separate, carefully-migrated step, not part of this move. — **done**
+2. **Auth hardening — scoped to the JWT-based `goals-ac`/`api-server` surface** (`marketing-persona-app` already uses NextAuth sessions): move its JWT from localStorage to httpOnly cookies, add refresh-token rotation and server-side revocation (a `sessions` table — the "cannot invalidate on password change" trade-off documented in `docs/memory.md` is not acceptable for a product that stores third-party CMS credentials). As consolidation retires the Vite app, its users migrate onto the Next app's NextAuth sessions; the Express server keeps token auth only for the future public API (API keys, not user JWTs). — **done**
+3. **Account hierarchy**: formalize `workspace → project → goal → brief → content piece`. Today `users → website_projects → content` exists; add `goals` and `briefs` tables (schema in §4) and a `workspaces` table even if v1 is 1:1 with users — retrofitting teams later is far more painful. — **done**
+4. **Finish the onboarding wizard** (already in progress, Task #43) but re-anchor it on goal definition: *"What are you trying to achieve?"* before *"connect your CMS."* — **not started**
+5. **Billing skeleton**: Stripe subscriptions + a `credit_ledger` table (append-only: grants, consumption referencing `usage_events`, expiry). Quotas already enforce server-side; wire them to real plans. — **schema landed, service lib pending**
+6. **Job queue (pg-boss)** running in the Express worker; move autopilot generation off the cron route onto it. This is the load-bearing wall for Phases 2 and 3 — pull it forward. — **done**
 
 ---
 
