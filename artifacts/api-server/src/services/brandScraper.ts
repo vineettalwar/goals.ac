@@ -1,4 +1,4 @@
-import type { GoogleGenAI } from "@google/genai";
+import { getAiProviderClient, type AiProviderClient } from "@workspace/ai-providers/client";
 import { logger } from "../lib/logger";
 
 type Confidence = "high" | "medium" | "low";
@@ -22,31 +22,8 @@ export interface BrandExtract {
 
 const SYSTEM_PROMPT = `You are an expert brand analyst. Given raw text scraped from a company's website, extract brand information and rate your confidence for each field. You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation — only raw JSON.`;
 
-let aiClient: GoogleGenAI | null = null;
-
-async function getAiClient(): Promise<GoogleGenAI | null> {
-  if (aiClient) return aiClient;
-
-  const integrationBaseUrl = process.env.AI_INTEGRATIONS_GEMINI_BASE_URL;
-  const integrationApiKey = process.env.AI_INTEGRATIONS_GEMINI_API_KEY;
-  const userApiKey = process.env.GEMINI_API_KEY;
-
-  const { GoogleGenAI: GenAI } = await import("@google/genai");
-
-  if (integrationBaseUrl && integrationApiKey) {
-    aiClient = new GenAI({
-      apiKey: integrationApiKey,
-      httpOptions: { apiVersion: "", baseUrl: integrationBaseUrl },
-    });
-    return aiClient;
-  }
-
-  if (userApiKey) {
-    aiClient = new GenAI({ apiKey: userApiKey });
-    return aiClient;
-  }
-
-  return null;
+async function getAiClient(): Promise<AiProviderClient> {
+  return getAiProviderClient();
 }
 
 async function fetchPageText(url: string): Promise<string | null> {
@@ -159,9 +136,6 @@ export async function scrapeBrandProfile(websiteUrl: string): Promise<BrandExtra
     .slice(0, 12000);
 
   const ai = await getAiClient();
-  if (!ai) {
-    throw new Error("AI not configured");
-  }
 
   const prompt = `Analyze this website text and extract brand information. Rate your confidence for each field based on how clearly it was found in the content. The website URL is: ${websiteUrl}
 
@@ -196,15 +170,13 @@ Rules:
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          temperature: 0.2,
-          maxOutputTokens: 1200,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
+      const response = await ai.generate({
+        prompt,
+        systemInstruction: SYSTEM_PROMPT,
+        temperature: 0.2,
+        maxOutputTokens: 1200,
+        thinkingBudget: 0,
+        responseMimeType: "application/json",
       });
 
       const raw = response.text ?? "";

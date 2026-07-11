@@ -8,21 +8,30 @@ const PRIVATE_IP_RANGES = [
   /^169\.254\./,
   /^0\./,
   /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,
+];
+
+const PRIVATE_IPV6 = [
   /^::1$/,
   /^::$/,
   /^fc[0-9a-f]{2}:/i,
   /^fd[0-9a-f]{2}:/i,
   /^fe80:/i,
-  /^::ffff:/i,
   /^2002:0*a/i,
   /^2002:0*ac1[0-9a-f]/i,
   /^2002:0*c0a8/i,
 ];
 
+const IPV4_MAPPED_V6 = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i;
+
 const PRIVATE_HOSTNAME = /^(localhost|.*\.local|.*\.internal|.*\.corp|.*\.example\.com)$/i;
 
 function isPrivateIp(ip: string): boolean {
-  return PRIVATE_IP_RANGES.some((r) => r.test(ip));
+  if (PRIVATE_IP_RANGES.some((r) => r.test(ip))) return true;
+
+  const v4Match = ip.match(IPV4_MAPPED_V6);
+  if (v4Match) return PRIVATE_IP_RANGES.some((r) => r.test(v4Match[1]));
+
+  return PRIVATE_IPV6.some((r) => r.test(ip));
 }
 
 export function assertPublicUrlSync(rawUrl: string): void {

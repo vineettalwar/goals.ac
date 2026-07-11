@@ -6,13 +6,19 @@
   "exports": {
     ".": "./src/index.ts",
     "./gemini": "./src/gemini.ts",
-    "./tiers": "./src/tiers.ts"
+    "./tiers": "./src/tiers.ts",
+    "./client": "./src/client.ts",
+    "./bedrock": "./src/bedrock.ts",
+    "./ollama": "./src/ollama.ts"
   },
   "dependencies": {
     "@google/genai": "^1.44.0",
     "@workspace/db": "workspace:*",
     "@workspace/security": "workspace:*",
     "drizzle-orm": "catalog:"
+  },
+  "optionalDependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.812.0"
   },
   "devDependencies": {
     "@types/node": "catalog:"

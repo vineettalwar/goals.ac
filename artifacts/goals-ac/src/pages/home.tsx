@@ -67,7 +67,7 @@ export default function Home() {
     defaultValues: {
       industry: "",
       location: "",
-      stage: undefined,
+      stage: stageValues.length > 0 ? stageValues[0] : "",
     },
   });
 
@@ -234,11 +234,11 @@ export default function Home() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {industries?.map((ind) => (
-                                  <SelectItem key={ind.id} value={ind.name}>
-                                    {ind.name}
-                                  </SelectItem>
-                                ))}
+{(Array.isArray(industries) ? industries : []).map((ind) => (
+                                   <SelectItem key={ind.id} value={ind.name}>
+                                     {ind.name}
+                                   </SelectItem>
+                                 ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -259,11 +259,11 @@ export default function Home() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                {locations?.map((loc) => (
-                                  <SelectItem key={loc.id} value={loc.name}>
-                                    {loc.name}, {loc.country}
-                                  </SelectItem>
-                                ))}
+{(Array.isArray(locations) ? locations : []).map((loc) => (
+                                   <SelectItem key={loc.id} value={loc.name}>
+                                     {loc.name}, {loc.country}
+                                   </SelectItem>
+                                 ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />

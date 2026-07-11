@@ -8,7 +8,6 @@ import {
   useGetContentStrategy,
   getGetContentStrategyQueryKey,
   useUpdateContentItem,
-  getListContentStrategiesQueryKey,
 } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
