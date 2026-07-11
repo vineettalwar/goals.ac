@@ -45,6 +45,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const token = user ? SESSION_TOKEN_PLACEHOLDER : null;
 
+  const safeJson = async <T,>(r: Response): Promise<T | null> => {
+    try { return await r.json(); } catch { return null; }
+  };
+
   const fetchMe = useCallback(async () => {
     try {
       const res = await fetch(`${API_BASE}/api/auth/me`, { credentials: "include" });
@@ -52,8 +56,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         return;
       }
-      const data = await res.json();
-      setUser(data);
+      const data = await safeJson<any>(res);
+      if (data) setUser(data);
     } catch {
       setUser(null);
     }
@@ -78,9 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: "include",
       body: JSON.stringify({ email, password }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Login failed");
-    setUser(data.user);
+    const data = await safeJson<{ error?: string; user?: any }>(res);
+    if (!res.ok) throw new Error(data?.error ?? "Login failed");
+    setUser(data?.user ?? null);
   };
 
   const signup = async (name: string, email: string, password: string) => {
@@ -90,9 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       credentials: "include",
       body: JSON.stringify({ name, email, password }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error ?? "Signup failed");
-    setUser(data.user);
+    const data = await safeJson<{ error?: string; user?: any }>(res);
+    if (!res.ok) throw new Error(data?.error ?? "Signup failed");
+    setUser(data?.user ?? null);
   };
 
   const logout = () => {

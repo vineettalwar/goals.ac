@@ -1,6 +1,6 @@
 import { logger } from "../lib/logger";
-import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
-import type { GoogleGenAI } from "@google/genai";
+import { getAiProviderClient, wrapGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
+import type { AiProviderClient } from "@workspace/ai-providers/client";
 import type { ContentStyle } from "@workspace/db";
 
 export interface SeoArticleContent {
@@ -85,7 +85,7 @@ Requirements:
 }
 
 async function generateWithClient(
-  ai: GoogleGenAI,
+  ai: AiProviderClient,
   brandName: string,
   websiteUrl: string,
   industry: string,
@@ -98,25 +98,22 @@ async function generateWithClient(
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: "application/json",
-          maxOutputTokens: 8192,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
+      const response = await ai.generate({
+        prompt,
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+        maxOutputTokens: 8192,
+        thinkingBudget: 0,
       });
 
       const rawText = response.text;
-      if (!rawText) throw new Error("Empty response from Gemini");
+      if (!rawText) throw new Error("Empty AI response");
 
       const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
       const result = JSON.parse(cleaned) as SeoArticleContent;
 
       if (!result.title || !result.content || result.content.length < 500) {
-        throw new Error("Invalid article structure from Gemini");
+        throw new Error("Invalid article structure from AI");
       }
 
       return result;
@@ -141,7 +138,7 @@ export async function generateSeoArticleContent(
 ): Promise<SeoArticleContent> {
   if (userApiKey) {
     try {
-      const userClient = await createUserGeminiClient(userApiKey);
+      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
       return await generateWithClient(userClient, brandName, websiteUrl, industry, location, stage, contentStyle);
     } catch (err) {
       if (isUserKeyError(err)) {
@@ -152,18 +149,12 @@ export async function generateSeoArticleContent(
     }
   }
 
-  const platformClient = await getPlatformGeminiClient();
-  if (!platformClient) {
-    throw new Error(
-      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
-    );
-  }
-
-  return generateWithClient(platformClient, brandName, websiteUrl, industry, location, stage, contentStyle);
+  const client = await getAiProviderClient();
+  return generateWithClient(client, brandName, websiteUrl, industry, location, stage, contentStyle);
 }
 
 async function generateStreamWithClient(
-  ai: GoogleGenAI,
+  ai: AiProviderClient,
   brandName: string,
   websiteUrl: string,
   industry: string,
@@ -175,27 +166,34 @@ async function generateStreamWithClient(
   const prompt = buildPrompt(brandName, websiteUrl, industry, location, stage, contentStyle);
   let accumulated = "";
 
-  const stream = await ai.models.generateContentStream({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
+  if (ai.generateStream) {
+    const stream = ai.generateStream({
+      prompt,
       systemInstruction: SYSTEM_PROMPT,
       responseMimeType: "application/json",
       maxOutputTokens: 8192,
-      thinkingConfig: { thinkingBudget: 0 },
-    },
-  });
-
-  for await (const chunk of stream) {
-    const text = chunk.text ?? "";
-    accumulated += text;
-    if (text) onChunk(text);
+      thinkingBudget: 0,
+    });
+    for await (const text of stream) {
+      accumulated += text;
+      if (text) onChunk(text);
+    }
+  } else {
+    const result = await ai.generate({
+      prompt,
+      systemInstruction: SYSTEM_PROMPT,
+      responseMimeType: "application/json",
+      maxOutputTokens: 8192,
+      thinkingBudget: 0,
+    });
+    accumulated = result.text;
+    onChunk(result.text);
   }
 
   const cleaned = accumulated.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
   const result = JSON.parse(cleaned) as SeoArticleContent;
   if (!result.title || !result.content || result.content.length < 500) {
-    throw new Error("Invalid article structure from Gemini stream");
+    throw new Error("Invalid article structure from AI stream");
   }
   return result;
 }
@@ -212,7 +210,7 @@ export async function generateSeoArticleContentStream(
 ): Promise<SeoArticleContent> {
   if (userApiKey) {
     try {
-      const userClient = await createUserGeminiClient(userApiKey);
+      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
       return await generateStreamWithClient(userClient, brandName, websiteUrl, industry, location, stage, onChunk, contentStyle);
     } catch (err) {
       if (isUserKeyError(err)) {
@@ -223,12 +221,6 @@ export async function generateSeoArticleContentStream(
     }
   }
 
-  const platformClient = await getPlatformGeminiClient();
-  if (!platformClient) {
-    throw new Error(
-      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
-    );
-  }
-
-  return generateStreamWithClient(platformClient, brandName, websiteUrl, industry, location, stage, onChunk, contentStyle);
+  const client = await getAiProviderClient();
+  return generateStreamWithClient(client, brandName, websiteUrl, industry, location, stage, onChunk, contentStyle);
 }

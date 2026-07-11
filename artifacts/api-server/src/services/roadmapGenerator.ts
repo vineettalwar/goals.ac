@@ -1,7 +1,7 @@
 import { generateRoadmapSlug } from "@workspace/db";
 import { logger } from "../lib/logger";
-import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
-import type { GoogleGenAI } from "@google/genai";
+import { getAiProviderClient, wrapGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
+import type { AiProviderClient } from "@workspace/ai-providers/client";
 
 export interface RoadmapPhase {
   title: string;
@@ -114,7 +114,7 @@ function validateRoadmapContent(content: unknown): asserts content is RoadmapCon
 }
 
 async function generateSummaryWithRetry(
-  ai: GoogleGenAI,
+  ai: AiProviderClient,
   industry: string,
   location: string,
   stage: string,
@@ -123,18 +123,15 @@ async function generateSummaryWithRetry(
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: "application/json",
-          maxOutputTokens: 512,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
+      const response = await ai.generate({
+        prompt,
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+        maxOutputTokens: 512,
+        thinkingBudget: 0,
       });
       const rawText = response.text;
-      if (!rawText) throw new Error("Empty response from Gemini");
+      if (!rawText) throw new Error("Empty AI response");
       const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
       const parsed = JSON.parse(cleaned) as { executiveSummary: string };
       if (typeof parsed.executiveSummary !== "string" || parsed.executiveSummary.trim().length === 0) {
@@ -151,7 +148,7 @@ async function generateSummaryWithRetry(
 }
 
 async function generatePhaseWithRetry(
-  ai: GoogleGenAI,
+  ai: AiProviderClient,
   industry: string,
   location: string,
   stage: string,
@@ -161,18 +158,15 @@ async function generatePhaseWithRetry(
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: "application/json",
-          maxOutputTokens: 2048,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
+      const response = await ai.generate({
+        prompt,
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+        maxOutputTokens: 2048,
+        thinkingBudget: 0,
       });
       const rawText = response.text;
-      if (!rawText) throw new Error("Empty response from Gemini");
+      if (!rawText) throw new Error("Empty AI response");
       const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
       const parsed = JSON.parse(cleaned) as RoadmapPhase;
       if (!parsed.title || !Array.isArray(parsed.objectives) || !Array.isArray(parsed.tactics) || !Array.isArray(parsed.kpis)) {
@@ -189,7 +183,7 @@ async function generatePhaseWithRetry(
 }
 
 async function generateWithClient(
-  ai: GoogleGenAI,
+  ai: AiProviderClient,
   industry: string,
   location: string,
   stage: string,
@@ -234,7 +228,7 @@ export async function generateRoadmapContent(
 ): Promise<RoadmapContent> {
   if (userApiKey) {
     try {
-      const userClient = await createUserGeminiClient(userApiKey);
+      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
       return await generateWithClient(userClient, industry, location, stage, onPhaseReady);
     } catch (err) {
       if (isUserKeyError(err)) {
@@ -245,14 +239,8 @@ export async function generateRoadmapContent(
     }
   }
 
-  const platformClient = await getPlatformGeminiClient();
-  if (!platformClient) {
-    throw new Error(
-      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
-    );
-  }
-
-  return generateWithClient(platformClient, industry, location, stage, onPhaseReady);
+  const client = await getAiProviderClient();
+  return generateWithClient(client, industry, location, stage, onPhaseReady);
 }
 
 export { generateRoadmapSlug as generateSlug } from "@workspace/db";

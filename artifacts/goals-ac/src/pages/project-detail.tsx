@@ -215,13 +215,17 @@ export default function ProjectDetail() {
     });
   }, [styleForm]);
 
+  const safeJson = async <T,>(r: Response): Promise<T | null> => {
+    try { return await r.json(); } catch { return null; }
+  };
+
   const fetchProject = useCallback(async (): Promise<WebsiteProject | null> => {
     if (!token || !id) return null;
     const res = await fetch(`${API_BASE}/api/website-projects/${id}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) return null;
-    return res.json() as Promise<WebsiteProject>;
+    return safeJson<WebsiteProject>(res);
   }, [token, id]);
 
   const loadCmsIntegrations = useCallback(async () => {

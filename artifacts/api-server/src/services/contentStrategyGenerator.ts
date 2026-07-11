@@ -1,6 +1,6 @@
 import { logger } from "../lib/logger";
-import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
-import type { GoogleGenAI } from "@google/genai";
+import { getAiProviderClient, wrapGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
+import type { AiProviderClient } from "@workspace/ai-providers/client";
 import type { ContentStyle } from "@workspace/db";
 
 export interface ContentItem {
@@ -83,7 +83,7 @@ function validateContentItems(items: unknown): asserts items is ContentItem[] {
 }
 
 async function generateBatch(
-  ai: GoogleGenAI,
+  ai: AiProviderClient,
   industry: string,
   location: string,
   stage: string,
@@ -95,18 +95,15 @@ async function generateBatch(
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: "application/json",
-          maxOutputTokens: 4096,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
+      const response = await ai.generate({
+        prompt,
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+        maxOutputTokens: 4096,
+        thinkingBudget: 0,
       });
       const rawText = response.text;
-      if (!rawText) throw new Error("Empty response from Gemini");
+      if (!rawText) throw new Error("Empty AI response");
       const cleaned = rawText.trim().replace(/^```json\s*/, "").replace(/```\s*$/, "");
       const parsed = JSON.parse(cleaned) as ContentItem[];
       if (!Array.isArray(parsed) || parsed.length === 0) throw new Error("Invalid batch response");
@@ -121,7 +118,7 @@ async function generateBatch(
 }
 
 async function generateWithClient(
-  ai: GoogleGenAI,
+  ai: AiProviderClient,
   industry: string,
   location: string,
   stage: string,
@@ -146,7 +143,7 @@ export async function generateContentStrategy(
 ): Promise<ContentItem[]> {
   if (userApiKey) {
     try {
-      const userClient = await createUserGeminiClient(userApiKey);
+      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
       return await generateWithClient(userClient, industry, location, stage, contentStyle);
     } catch (err) {
       if (isUserKeyError(err)) {
@@ -157,20 +154,14 @@ export async function generateContentStrategy(
     }
   }
 
-  const platformClient = await getPlatformGeminiClient();
-  if (!platformClient) {
-    throw new Error(
-      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
-    );
-  }
-
-  return generateWithClient(platformClient, industry, location, stage, contentStyle);
+  const client = await getAiProviderClient();
+  return generateWithClient(client, industry, location, stage, contentStyle);
 }
 
 const BATCH_RANGES: [number, number][] = [[1, 10], [11, 20], [21, 30]];
 
 async function generateWithClientProgress(
-  ai: GoogleGenAI,
+  ai: AiProviderClient,
   industry: string,
   location: string,
   stage: string,
@@ -201,7 +192,7 @@ export async function generateContentStrategyWithProgress(
 ): Promise<ContentItem[]> {
   if (userApiKey) {
     try {
-      const userClient = await createUserGeminiClient(userApiKey);
+      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
       return await generateWithClientProgress(userClient, industry, location, stage, onBatch, contentStyle);
     } catch (err) {
       if (isUserKeyError(err)) {
@@ -212,12 +203,6 @@ export async function generateContentStrategyWithProgress(
     }
   }
 
-  const platformClient = await getPlatformGeminiClient();
-  if (!platformClient) {
-    throw new Error(
-      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
-    );
-  }
-
-  return generateWithClientProgress(platformClient, industry, location, stage, onBatch, contentStyle);
+  const client = await getAiProviderClient();
+  return generateWithClientProgress(client, industry, location, stage, onBatch, contentStyle);
 }

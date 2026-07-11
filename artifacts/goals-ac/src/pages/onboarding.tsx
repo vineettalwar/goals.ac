@@ -94,6 +94,10 @@ export default function Onboarding() {
     defaultValues: { name: "", url: "" },
   });
 
+  const safeJson = async <T,>(r: Response): Promise<T | null> => {
+    try { return await r.json(); } catch { return null; }
+  };
+
   const pollProject = useCallback(async (id: number) => {
     if (!token) return;
     try {
@@ -101,7 +105,8 @@ export default function Onboarding() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) return;
-      const data: Project = await res.json();
+      const data = await safeJson<Project>(res);
+      if (!data) return;
       setProject(data);
       if (data.scrapeStatus === "done" || data.scrapeStatus === "failed") {
         if (data.brandProfile) {

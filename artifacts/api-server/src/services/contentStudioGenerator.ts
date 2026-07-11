@@ -1,8 +1,8 @@
 import { createHash } from "node:crypto";
 import { logger } from "../lib/logger";
-import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
+import { getAiProviderClient, wrapGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
+import type { AiProviderClient } from "@workspace/ai-providers/client";
 import { getCache } from "../lib/cache";
-import type { GoogleGenAI } from "@google/genai";
 import type { ContentFormatType, ContentStyle } from "@workspace/db";
 
 export interface ContentPieceResult {
@@ -393,7 +393,7 @@ function validateResult(result: unknown): asserts result is ContentPieceResult {
 }
 
 async function generateWithClient(
-  ai: GoogleGenAI,
+  ai: AiProviderClient,
   format: ContentFormatType,
   brand: BrandContext,
   keyword: string,
@@ -404,19 +404,16 @@ async function generateWithClient(
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
-          systemInstruction: SYSTEM_PROMPT,
-          responseMimeType: "application/json",
-          maxOutputTokens: 8192,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
+      const response = await ai.generate({
+        prompt,
+        systemInstruction: SYSTEM_PROMPT,
+        responseMimeType: "application/json",
+        maxOutputTokens: 8192,
+        thinkingBudget: 0,
       });
 
       const rawText = response.text;
-      if (!rawText) throw new Error("Empty response from Gemini");
+      if (!rawText) throw new Error("Empty AI response");
 
       const parsed = cleanAndParse(rawText);
       validateResult(parsed);
@@ -432,7 +429,7 @@ async function generateWithClient(
 }
 
 async function generateWithClientStream(
-  ai: GoogleGenAI,
+  ai: AiProviderClient,
   format: ContentFormatType,
   brand: BrandContext,
   keyword: string,
@@ -449,21 +446,29 @@ async function generateWithClientStream(
       // duplicate/garbled text is written to an already-open SSE connection.
       const emit = attempt === 1 ? onChunk : () => {};
 
-      const stream = await ai.models.generateContentStream({
-        model: "gemini-2.5-flash",
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        config: {
+      if (ai.generateStream) {
+        const stream = ai.generateStream({
+          prompt,
           systemInstruction: SYSTEM_PROMPT,
           responseMimeType: "application/json",
           maxOutputTokens: 8192,
-          thinkingConfig: { thinkingBudget: 0 },
-        },
-      });
-
-      for await (const chunk of stream) {
-        const text = chunk.text ?? "";
-        accumulated += text;
-        if (text) emit(text);
+          thinkingBudget: 0,
+        });
+        for await (const text of stream) {
+          accumulated += text;
+          if (text) emit(text);
+        }
+      } else {
+        // Fallback: non-streaming generate
+        const result = await ai.generate({
+          prompt,
+          systemInstruction: SYSTEM_PROMPT,
+          responseMimeType: "application/json",
+          maxOutputTokens: 8192,
+          thinkingBudget: 0,
+        });
+        accumulated = result.text;
+        emit(result.text);
       }
 
       const parsed = cleanAndParse(accumulated);
@@ -491,7 +496,7 @@ export async function generateContentPieceStream(
   if (userApiKey) {
     let chunksEmitted = 0;
     try {
-      const userClient = await createUserGeminiClient(userApiKey);
+      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
       return await generateWithClientStream(
         userClient, format, brand, keyword,
         (chunk) => { chunksEmitted++; onChunk(chunk); },
@@ -506,9 +511,8 @@ export async function generateContentPieceStream(
     }
   }
 
-  const platformClient = await getPlatformGeminiClient();
-  if (!platformClient) throw new Error("AI generation is not configured.");
-  return generateWithClientStream(platformClient, format, brand, keyword, onChunk, angleHint);
+  const client = await getAiProviderClient();
+  return generateWithClientStream(client, format, brand, keyword, onChunk, angleHint);
 }
 
 export async function generateContentPiece(
@@ -527,7 +531,7 @@ export async function generateContentPiece(
 
   if (userApiKey) {
     try {
-      const userClient = await createUserGeminiClient(userApiKey);
+      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
       const result = await generateWithClient(userClient, format, brand, keyword, angleHint);
       await cacheSet(key, result);
       return result;
@@ -540,14 +544,8 @@ export async function generateContentPiece(
     }
   }
 
-  const platformClient = await getPlatformGeminiClient();
-  if (!platformClient) {
-    throw new Error(
-      "AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.",
-    );
-  }
-
-  const result = await generateWithClient(platformClient, format, brand, keyword, angleHint);
+  const client = await getAiProviderClient();
+  const result = await generateWithClient(client, format, brand, keyword, angleHint);
   await cacheSet(key, result);
   return result;
 }
@@ -601,22 +599,19 @@ export async function repurposeContentPiece(
 ): Promise<ContentPieceResult> {
   const prompt = buildRepurposePrompt(targetFormat, brand, existingContent, existingKeyword);
 
-  async function attemptGeneration(ai: GoogleGenAI): Promise<ContentPieceResult> {
+  async function attemptGeneration(ai: AiProviderClient): Promise<ContentPieceResult> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: [{ role: "user", parts: [{ text: prompt }] }],
-          config: {
-            systemInstruction: REPURPOSE_SYSTEM_PROMPT,
-            responseMimeType: "application/json",
-            maxOutputTokens: 8192,
-            thinkingConfig: { thinkingBudget: 0 },
-          },
+        const response = await ai.generate({
+          prompt,
+          systemInstruction: REPURPOSE_SYSTEM_PROMPT,
+          responseMimeType: "application/json",
+          maxOutputTokens: 8192,
+          thinkingBudget: 0,
         });
         const rawText = response.text;
-        if (!rawText) throw new Error("Empty response from Gemini");
+        if (!rawText) throw new Error("Empty AI response");
         const parsed = cleanAndParse(rawText);
         validateResult(parsed);
         return parsed;
@@ -631,7 +626,7 @@ export async function repurposeContentPiece(
 
   if (userApiKey) {
     try {
-      const userClient = await createUserGeminiClient(userApiKey);
+      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
       return await attemptGeneration(userClient);
     } catch (err) {
       if (isUserKeyError(err)) {
@@ -642,11 +637,8 @@ export async function repurposeContentPiece(
     }
   }
 
-  const platformClient = await getPlatformGeminiClient();
-  if (!platformClient) {
-    throw new Error("AI generation is not configured. Set GEMINI_API_KEY or provision the Replit AI Integrations.");
-  }
-  return attemptGeneration(platformClient);
+  const client = await getAiProviderClient();
+  return attemptGeneration(client);
 }
 
 export { type BrandContext };

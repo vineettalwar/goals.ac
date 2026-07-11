@@ -362,6 +362,10 @@ function CreateModal({
     onClose();
   };
 
+  const safeJson = async <T,>(r: Response): Promise<T | null> => {
+    try { return await r.json(); } catch { return null; }
+  };
+
   const handleGenerateFallback = async (useBypass = false): Promise<void> => {
     const headers: Record<string, string> = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
     if (useBypass) headers["x-bypass-cache"] = "true";
@@ -370,11 +374,12 @@ function CreateModal({
       headers,
       body: JSON.stringify({ formatType: selectedFormat, targetKeyword: keyword.trim(), angleHint: angleHint.trim() || undefined }),
     });
-    if (!res.ok) {
-      const data = await res.json() as { error?: string };
-      throw new Error(data.error ?? "Generation failed");
-    }
-    const newPiece = await res.json() as Omit<ContentPiece, "source">;
+      if (!res.ok) {
+        const data = await safeJson<{ error?: string }>(res);
+        throw new Error(data?.error ?? "Failed to generate content piece");
+      }
+      const newPiece = await safeJson<Omit<ContentPiece, "source">>(res);
+      if (!newPiece) throw new Error("Failed to generate content piece");
     onCreated({ ...newPiece, source: "studio" });
     handleClose();
   };
@@ -499,11 +504,12 @@ function CreateModal({
           targetKeyword: repurposeKeyword.trim(),
         }),
       });
-      if (!res.ok) {
-        const data = await res.json() as { error?: string };
-        throw new Error(data.error ?? "Repurpose failed");
-      }
-      const newPiece = await res.json() as Omit<ContentPiece, "source">;
+        if (!res.ok) {
+          const data = await safeJson<{ error?: string }>(res);
+          throw new Error(data?.error ?? "Generation failed");
+        }
+        const newPiece = await safeJson<Omit<ContentPiece, "source">>(res);
+        if (!newPiece) throw new Error("Generation failed");
       onCreated({ ...newPiece, source: "studio" });
       handleClose();
     } catch (err) {
@@ -1059,24 +1065,24 @@ export default function ContentStudio() {
       ]);
 
       if (!projRes.ok) { setError("Project not found"); return; }
-      const proj = await projRes.json() as { name: string };
-      setProjectName(proj.name);
+      const proj = await safeJson<{ name: string }>(projRes);
+      if (proj) setProjectName(proj.name);
 
       if (piecesRes.ok) {
-        const raw = await piecesRes.json() as Omit<ContentPiece, "source">[];
-        setPieces(raw.map((p) => ({ ...p, source: "studio" as const })));
+        const raw = await safeJson<Omit<ContentPiece, "source">[]>(piecesRes);
+        if (raw) setPieces(raw.map((p) => ({ ...p, source: "studio" as const })));
       }
 
       if (legacyRes.ok) {
-        const legacy = await legacyRes.json() as {
+        const legacy = await safeJson<{
           seoArticles: Array<{ id: number; title: string; primaryKeyword: string; wordCount: number; status: string; createdAt: string }>;
           contentStrategies: Array<{ id: number; industry: string; location: string; stage: string; createdAt: string }>;
           contentItems: Array<{ id: number; strategyId: number; day: number; title: string; format: string; topicAngle: string; primaryKeyword: string; status: string; createdAt: string }>;
           geoAudits: Array<{ id: number; url: string; geoScore: number; status: string; createdAt: string }>;
           roadmaps: Array<{ id: number; slug: string; industry: string; location: string; stage: string; createdAt: string }>;
-        };
-
-        const strategyMap = new Map((legacy.contentStrategies ?? []).map((s) => [s.id, s]));
+        }>(legacyRes);
+        if (legacy) {
+          const strategyMap = new Map((legacy.contentStrategies ?? []).map((s) => [s.id, s]));
 
         const items: LegacyItem[] = [
           ...(legacy.seoArticles ?? []).map((a) => ({
@@ -1125,6 +1131,7 @@ export default function ContentStudio() {
           })),
         ];
         setLegacyItems(items);
+        }
       }
     } catch {
       setError("Failed to load content studio");
@@ -1185,8 +1192,8 @@ export default function ContentStudio() {
         body: JSON.stringify({ plannedDate: newDate }),
       });
       if (res.ok) {
-        const updated = await res.json() as Omit<ContentPiece, "source">;
-        setPieces((prev) => prev.map((p) => p.id === pieceId ? { ...updated, source: "studio" as const } : p));
+        const updated = await safeJson<Omit<ContentPiece, "source">>(res);
+        if (updated) setPieces((prev) => prev.map((p) => p.id === pieceId ? { ...updated, source: "studio" as const } : p));
       } else {
         setPieces(prevPieces);
         setRescheduleError("Failed to reschedule — please try again.");
