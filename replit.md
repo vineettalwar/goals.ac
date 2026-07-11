@@ -1,4 +1,4 @@
-# Workspace — Replit Developer Reference
+# Workspace — Developer Reference
 
 ## Overview
 
@@ -24,6 +24,42 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 ### TypeScript & Build
 - `pnpm run typecheck` — full typecheck across all packages (uses project references)
 - `pnpm run build` — typecheck + build all packages
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from OpenAPI spec
+- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `pnpm --filter @workspace/db run seed` — insert reference **industries** and **locations** (required for dropdowns; safe to re-run)
+- `pnpm --filter @workspace/api-server run dev` — run API server locally
+- `pnpm --filter @workspace/goals-ac run dev` — run Vite dev server for the web app
+
+## Local development
+
+The workspace `pnpm-workspace.yaml` overrides trim unused platform binaries for smaller Linux deploys; **darwin** targets are kept for **Rollup**, **Lightning CSS**, and **Tailwind Oxide** so Vite and Tailwind run on macOS.
+
+1. Use **Node.js 24** and **pnpm** (npm/yarn are blocked at install by the root `preinstall` script).
+2. From the repo root: `pnpm install`
+3. Run **PostgreSQL** locally and set **`DATABASE_URL`** (for example `postgresql://user:pass@127.0.0.1:5432/dbname`). You can put it in **`.env`** or **`.env.local`** at the **repository root**; `migrate`, `seed`, and `drizzle-kit` load those files automatically. The API still needs `DATABASE_URL` in its environment (shell or deployment config).
+4. Apply schema: `pnpm --filter @workspace/db run migrate`
+5. Load reference data (industry/location pickers read from the DB; migrations do not insert rows): `pnpm --filter @workspace/db run seed`
+6. Start the API (defaults to **port 8080** when `NODE_ENV` is not `production` and neither **`PORT`** nor **`API_PORT`** is set):
+
+   ```bash
+   export DATABASE_URL=postgresql://...
+   export PORT=8080          # or API_PORT=8080
+   pnpm --filter @workspace/api-server run dev
+   ```
+
+7. In another terminal, start the web app:
+
+   ```bash
+   pnpm --filter @workspace/goals-ac run dev
+   ```
+
+   **Ports:** Vite picks the dev/preview port in this order: **`VITE_DEV_SERVER_PORT`**, **`WEB_DEV_PORT`**, then **`PORT`**, then **5173**. That way a shared `.env` can set `PORT` for the API while **`VITE_DEV_SERVER_PORT=5173`** keeps the UI on 5173. **`strictPort: false`** — if the chosen port is in use, Vite tries the next free one.
+
+   **API proxy:** `/api` is proxied to **`http://127.0.0.1:8080`** by default. Set a full URL with **`VITE_DEV_API_PROXY`** or **`API_PROXY_TARGET`**, or set only the API port with **`VITE_API_PORT`** / **`API_SERVER_PORT`** (optional **`VITE_API_HOST`**, default `127.0.0.1`).
+
+**AI features** (roadmaps, content strategy, SEO article generation, etc.) need a Gemini key. Set **`GEMINI_API_KEY`** in your environment.
+
+**Admin UI** expects **`VITE_ADMIN_SECRET`** in the goals-ac app when calling admin endpoints (see `artifacts/goals-ac`).
 
 ### Database
 - `pnpm --filter @workspace/db run generate` — generate a new migration + snapshot after schema changes (**always run this; never write migrations by hand**)
@@ -45,11 +81,11 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ## Environment Variables
 
-All secrets are set in **Replit Secrets** (not `.env` — Replit auto-injects them). For local dev, use `.env.example` as a template.
+Use `.env` or `.env.local` at the repository root. See `.env.example` as a template.
 
 | Variable | Required | Purpose |
 |---|---|---|
-| `DATABASE_URL` | Yes | PostgreSQL connection string (auto-set by Replit DB) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `JWT_SECRET` | Yes | Signs JWT tokens — 30-day expiry; changing it logs everyone out |
 | `GEMINI_KEY_ENCRYPTION_SECRET` | Yes | AES-256-GCM key for encrypting user Gemini keys + CMS tokens |
 | `GEMINI_API_KEY` | Optional | Platform-level Gemini fallback |
@@ -58,23 +94,7 @@ All secrets are set in **Replit Secrets** (not `.env` — Replit auto-injects th
 | `RESEND_API_KEY` | Optional | Resend email API for password reset |
 | `LEADSH_WEBHOOK_URL` | Optional | Webhook for lead capture events |
 | `REDIS_URL` | Optional | Redis for AI output caching (falls back to in-memory LRU) |
-| `AI_INTEGRATIONS_GEMINI_API_KEY` | Auto | Replit AI Integrations proxy key (auto-injected) |
-| `AI_INTEGRATIONS_GEMINI_BASE_URL` | Auto | Replit AI Integrations proxy URL (auto-injected) |
 | `RESEND_FROM_EMAIL` | Optional | From address for emails (default: noreply@goals.ac) |
-
----
-
-## Workflows
-
-Replit workflows auto-start on every session. Each workflow maps a name to a shell command:
-
-| Workflow Name | Command | Port |
-|---|---|---|
-| `artifacts/api-server: API Server` | `pnpm --filter @workspace/api-server run dev` | 8080 |
-| `artifacts/goals-ac: web` | `pnpm --filter @workspace/goals-ac run dev` | env `PORT` |
-| `artifacts/mockup-sandbox: Component Preview Server` | `pnpm --filter @workspace/mockup-sandbox run dev` | env `PORT` |
-
-The API server workflow runs `pnpm run build` (esbuild) then `node ./dist/index.mjs` and **automatically runs migrations** on every start via `src/run-migrate.ts`.
 
 ---
 
@@ -94,7 +114,7 @@ The API server workflow runs `pnpm run build` (esbuild) then `node ./dist/index.
 
 ### AI Generation
 - Model: `gemini-2.5-flash` with `thinkingConfig: { thinkingBudget: 0 }` (no extended thinking, low latency)
-- Key priority: user's encrypted key → Replit AI Integrations proxy → `GEMINI_API_KEY`
+- Key priority: user's encrypted key → `GEMINI_API_KEY`
 - Streaming: Server-Sent Events (SSE) — `event: chunk`, `event: done`, `event: cached`, `event: error`
 - AI output cache: 24h TTL, Redis or in-memory LRU (max 500 entries)
 - DB-level content cache: `cache_key` on `content_pieces` — same inputs → return existing row instantly
@@ -199,7 +219,7 @@ This regenerates:
 ## Troubleshooting
 
 ### API server won't start
-Check the workflow log. Common causes:
+Check the logs. Common causes:
 - `DATABASE_URL` not set
 - `JWT_SECRET` not set
 - `GEMINI_KEY_ENCRYPTION_SECRET` not set
@@ -212,7 +232,7 @@ cd lib/db && npx tsc --build
 ```
 
 ### Frontend shows blank page / can't connect to API
-1. Check the API server workflow is running (green in Replit)
+1. Check the API server is running
 2. Verify `BASE_URL` is correct — frontend uses `import.meta.env.BASE_URL.replace(/\/$/, "")` as API prefix
 3. Check browser console for CORS errors
 4. Hard refresh: Ctrl+Shift+R (or Cmd+Shift+R)
@@ -221,10 +241,10 @@ cd lib/db && npx tsc --build
 Usually means a migration file references a column that already exists (or was dropped). Check the error in the API server log. For "column already exists" errors, the migration file may need `IF NOT EXISTS`.
 
 ### Google OAuth redirect mismatch
-Add the Replit preview URL to your Google OAuth app's authorized redirect URIs. Format: `https://<your-repl-domain>/api/auth/google/callback`
+Add your domain to your Google OAuth app's authorized redirect URIs. Format: `https://<your-domain>/api/auth/google/callback`
 
 ### Content generation fails immediately
-- Check if `GEMINI_API_KEY` or Replit AI Integration is configured
+- Check if `GEMINI_API_KEY` is configured
 - Check the API server log for `AI generation failed` errors
 - User can add their own Gemini key in Account Settings as a fallback
 

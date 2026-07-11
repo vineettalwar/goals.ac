@@ -8,6 +8,7 @@ import {
   useGetContentStrategy,
   getGetContentStrategyQueryKey,
   useUpdateContentItem,
+  getListContentStrategiesQueryKey,
 } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -115,7 +116,10 @@ export default function AdminContentStrategies() {
   const isAuthorized = useAdminGuard();
 
   const { data: strategies, isLoading } = useListContentStrategies({
-    query: { enabled: isAuthorized, queryKey: getListContentStrategiesQueryKey() },
+    query: {
+      enabled: isAuthorized,
+      queryKey: getListContentStrategiesQueryKey(),
+    },
   });
 
   if (authLoading) return null;

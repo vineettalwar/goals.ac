@@ -4,7 +4,10 @@ import { runMigrations } from "@workspace/db/migrate";
 import app from "./app";
 import { logger } from "./lib/logger";
 
-const rawPort = process.env["PORT"];
+const rawPort =
+  process.env["PORT"] ??
+  process.env["API_PORT"] ??
+  (process.env.NODE_ENV === "production" ? undefined : "8080");
 
 if (!rawPort) {
   throw new Error(

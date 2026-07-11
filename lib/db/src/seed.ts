@@ -1,3 +1,4 @@
+import "./load-workspace-env";
 import { db, industriesTable, locationsTable } from "./index";
 
 const industries = [
