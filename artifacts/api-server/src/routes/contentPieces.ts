@@ -4,6 +4,8 @@ import {
   contentPiecesTable,
   websiteProjectsTable,
   brandProfilesTable,
+  wordpressConnectionsTable,
+  companiesTable,
   CONTENT_FORMAT_TYPES,
   type ContentFormatType,
 } from "@workspace/db";
@@ -18,6 +20,7 @@ import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import { publishToNotion } from "@workspace/connectors/notion";
 import { publishToWebflow } from "@workspace/connectors/webflow";
+import { publishToWordPress } from "@workspace/connectors/wordpress";
 
 interface CmsIntegrationCredentials {
   notion?: {
@@ -507,11 +510,24 @@ router.delete("/content-pieces/:id", requireAuth, async (req, res) => {
   }
 });
 
-const PublishBody = z.object({
-  wpSiteUrl: z.string().url("Must be a valid WordPress site URL"),
-  wpUsername: z.string().min(1, "WordPress username is required"),
-  wpAppPassword: z.string().min(1, "WordPress application password is required"),
-});
+const PublishBody = z
+  .object({
+    wpSiteUrl: z.string().url("Must be a valid WordPress site URL").optional(),
+    wpUsername: z.string().min(1, "WordPress username is required").optional(),
+    wpAppPassword: z.string().min(1, "WordPress application password is required").optional(),
+    wordpressConnectionId: z.number().int().positive().optional(),
+  })
+  .refine(
+    (data) =>
+      data.wordpressConnectionId !== undefined ||
+      (data.wpSiteUrl !== undefined && data.wpUsername !== undefined && data.wpAppPassword !== undefined),
+    { message: "Provide either wordpressConnectionId or wpSiteUrl, wpUsername, and wpAppPassword" }
+  );
+
+// SSRF-guard failures surfaced by @workspace/connectors/wordpress (via assertPublicUrl) so we can
+// map them back to 400s without re-running the DNS/host checks ourselves.
+const SSRF_ERROR_PATTERN = /^Invalid URL$|^Only http\/https URLs are allowed$|private\/reserved address|Could not resolve hostname/;
+const AUTH_ERROR_PATTERN = /authentication failed|does not have permission/i;
 
 router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
@@ -526,7 +542,12 @@ router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
     return;
   }
 
-  const { wpSiteUrl, wpUsername, wpAppPassword } = parsed.data;
+  const { wordpressConnectionId } = parsed.data;
+  let wpSiteUrl = parsed.data.wpSiteUrl;
+  let wpUsername = parsed.data.wpUsername;
+  let wpAppPassword = parsed.data.wpAppPassword;
+  let publishStatus: "draft" | "publish" = "publish";
+  let categoryIds: number[] | undefined;
 
   try {
     const [piece] = await db
@@ -551,56 +572,63 @@ router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
       return;
     }
 
-    const siteBase = wpSiteUrl.replace(/\/$/, "");
-    const wpApiUrl = `${siteBase}/wp-json/wp/v2/posts`;
+    if (wordpressConnectionId !== undefined) {
+      const [row] = await db
+        .select({ connection: wordpressConnectionsTable })
+        .from(wordpressConnectionsTable)
+        .innerJoin(companiesTable, eq(companiesTable.id, wordpressConnectionsTable.companyId))
+        .where(and(eq(wordpressConnectionsTable.id, wordpressConnectionId), eq(companiesTable.userId, req.user!.userId)))
+        .limit(1);
 
-    try {
-      await assertPublicUrl(siteBase);
-    } catch (ssrfErr) {
-      res.status(400).json({ error: ssrfErr instanceof Error ? ssrfErr.message : "Invalid WordPress site URL" });
-      return;
-    }
-
-    const htmlContent = await marked(piece.bodyMarkdown);
-    const basicAuth = Buffer.from(`${wpUsername}:${wpAppPassword}`).toString("base64");
-
-    let wpRes: Response;
-    try {
-      wpRes = await fetch(wpApiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Basic ${basicAuth}`,
-        },
-        body: JSON.stringify({
-          title: piece.title,
-          content: htmlContent,
-          status: "publish",
-        }),
-      });
-    } catch (fetchErr) {
-      req.log.error({ fetchErr }, "Network error reaching WordPress API");
-      res.status(502).json({ error: "Could not reach your WordPress site. Check the URL and try again." });
-      return;
-    }
-
-    if (!wpRes.ok) {
-      const wpBody = await wpRes.json().catch(() => ({})) as { message?: string; code?: string };
-      req.log.warn({ status: wpRes.status, wpBody }, "WordPress API returned error");
-      if (wpRes.status === 401 || wpRes.status === 403) {
-        res.status(401).json({ error: "WordPress authentication failed. Check your username and application password." });
-      } else {
-        res.status(502).json({ error: wpBody.message ?? "WordPress rejected the publish request." });
+      if (!row) {
+        res.status(404).json({ error: "WordPress connection not found" });
+        return;
       }
-      return;
+
+      const { connection } = row;
+      wpSiteUrl = connection.siteUrl;
+      wpUsername = connection.username;
+      wpAppPassword = decryptSecret(connection.encryptedAppPassword);
+      publishStatus = connection.defaultStatus === "draft" ? "draft" : "publish";
+      categoryIds = connection.defaultCategoryId ? [connection.defaultCategoryId] : undefined;
     }
 
-    const wpPost = await wpRes.json() as { link?: string; id?: number };
-    const publishedUrl = wpPost.link ?? `${siteBase}/?p=${wpPost.id}`;
+    // Guaranteed non-undefined by the zod refine (either a connection id, resolved above, or all
+    // three fields were supplied directly).
+    const siteUrl = wpSiteUrl!;
+    const username = wpUsername!;
+    const appPassword = wpAppPassword!;
+
+    let result: Awaited<ReturnType<typeof publishToWordPress>>;
+    try {
+      result = await publishToWordPress(
+        { siteUrl, username, appPassword },
+        piece.title,
+        piece.bodyMarkdown,
+        publishStatus,
+        undefined,
+        categoryIds
+      );
+    } catch (wpErr) {
+      const message = wpErr instanceof Error ? wpErr.message : "WordPress publish failed";
+      if (SSRF_ERROR_PATTERN.test(message)) {
+        req.log.warn({ wpErr }, "WordPress publish blocked by SSRF guard");
+        res.status(400).json({ error: message });
+        return;
+      }
+      if (AUTH_ERROR_PATTERN.test(message)) {
+        req.log.warn({ wpErr }, "WordPress authentication failed");
+        res.status(401).json({ error: "WordPress authentication failed. Check your username and application password." });
+        return;
+      }
+      req.log.error({ wpErr }, "Failed to reach or publish to WordPress");
+      res.status(502).json({ error: message || "Could not reach your WordPress site. Check the URL and try again." });
+      return;
+    }
 
     const [updated] = await db
       .update(contentPiecesTable)
-      .set({ status: "published", publishedUrl })
+      .set({ status: "published", publishedUrl: result.url })
       .where(eq(contentPiecesTable.id, id))
       .returning();
 
