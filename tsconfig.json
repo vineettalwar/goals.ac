@@ -26,6 +26,9 @@
     },
     {
       "path": "./lib/jobs"
+    },
+    {
+      "path": "./lib/billing"
     }
   ]
 }
