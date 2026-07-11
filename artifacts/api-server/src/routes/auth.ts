@@ -3,7 +3,8 @@ import { db } from "@workspace/db";
 import { usersTable, websiteProjectsTable, contentStrategiesTable, contentItemsTable, seoArticlesTable, geoAuditsTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
-import { hashPassword, comparePassword, signToken, requireAuth } from "../lib/auth";
+import { hashPassword, comparePassword, signToken, requireAuth, setAuthCookies, clearAuthCookies, REFRESH_TOKEN_COOKIE } from "../lib/auth";
+import { createSession, rotateSession, revokeAllUserSessions, revokeSessionByRefreshToken, REFRESH_TOKEN_TTL_MS } from "../lib/sessions";
 import { sendEmail, buildPasswordResetEmail } from "../services/emailService";
 import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import { createUserGeminiClient } from "@workspace/ai-providers";
@@ -66,6 +67,8 @@ router.post("/auth/signup", async (req, res) => {
       .returning({ id: usersTable.id, email: usersTable.email, name: usersTable.name, role: usersTable.role });
 
     const token = signToken({ userId: user.id, email: user.email, role: user.role });
+    const { refreshToken } = await createSession(user.id, req);
+    setAuthCookies(res, token, refreshToken, REFRESH_TOKEN_TTL_MS);
 
     res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {
@@ -98,6 +101,8 @@ router.post("/auth/login", async (req, res) => {
     }
 
     const token = signToken({ userId: user.id, email: user.email, role: user.role });
+    const { refreshToken } = await createSession(user.id, req);
+    setAuthCookies(res, token, refreshToken, REFRESH_TOKEN_TTL_MS);
 
     res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {
@@ -200,6 +205,13 @@ router.post("/auth/change-password", requireAuth, async (req, res) => {
 
     const newHash = await hashPassword(parsed.data.newPassword);
     await db.update(usersTable).set({ passwordHash: newHash }).where(eq(usersTable.id, user.id));
+
+    // Password changed: kill every other session, then re-establish one for
+    // the request that just proved it knows the new password.
+    await revokeAllUserSessions(user.id);
+    const freshAccessToken = signToken({ userId: user.id, email: user.email, role: user.role });
+    const { refreshToken } = await createSession(user.id, req);
+    setAuthCookies(res, freshAccessToken, refreshToken, REFRESH_TOKEN_TTL_MS);
 
     res.json({ ok: true });
   } catch (err) {
@@ -437,6 +449,9 @@ router.get("/auth/google/callback", async (req, res) => {
     }
 
     const jwtToken = signToken({ userId: user.id, email: user.email, role: user.role });
+    const { refreshToken } = await createSession(user.id, req);
+    setAuthCookies(res, jwtToken, refreshToken, REFRESH_TOKEN_TTL_MS);
+
     const params = new URLSearchParams({
       token: jwtToken,
       id: String(user.id),
@@ -535,13 +550,74 @@ router.post("/auth/reset-password", async (req, res) => {
       .set({ passwordHash, passwordResetToken: null, passwordResetExpires: null })
       .where(eq(usersTable.id, user.id));
 
+    // A password reset means anyone still holding an old session (including
+    // a possible attacker) is fully logged out; the person who just proved
+    // control of the reset link gets a clean, fresh session.
+    await revokeAllUserSessions(user.id);
+
     const jwtToken = signToken({ userId: user.id, email: user.email, role: user.role });
+    const { refreshToken } = await createSession(user.id, req);
+    setAuthCookies(res, jwtToken, refreshToken, REFRESH_TOKEN_TTL_MS);
 
     res.json({ token: jwtToken, user: { id: user.id, email: user.email, name: user.name, role: user.role } });
   } catch (err) {
     req.log.error(err, "Failed to reset password");
     res.status(500).json({ error: "Internal server error" });
   }
+});
+
+router.post("/auth/refresh", async (req, res) => {
+  const rawToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+
+  if (!rawToken || typeof rawToken !== "string") {
+    res.status(401).json({ error: "No active session" });
+    return;
+  }
+
+  try {
+    const result = await rotateSession(rawToken, req);
+
+    if (result.status !== "ok") {
+      clearAuthCookies(res);
+      res.status(401).json({ error: "Session expired or revoked. Please log in again." });
+      return;
+    }
+
+    const [user] = await db
+      .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.id, result.userId))
+      .limit(1);
+
+    if (!user) {
+      clearAuthCookies(res);
+      res.status(401).json({ error: "Session expired or revoked. Please log in again." });
+      return;
+    }
+
+    const accessToken = signToken({ userId: user.id, email: user.email, role: user.role });
+    setAuthCookies(res, accessToken, result.refreshToken, REFRESH_TOKEN_TTL_MS);
+
+    res.json({ token: accessToken, user });
+  } catch (err) {
+    req.log.error(err, "Failed to refresh session");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/logout", async (req, res) => {
+  const rawToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+
+  try {
+    if (rawToken && typeof rawToken === "string") {
+      await revokeSessionByRefreshToken(rawToken);
+    }
+  } catch (err) {
+    req.log.error(err, "Failed to revoke session on logout");
+  }
+
+  clearAuthCookies(res);
+  res.status(204).end();
 });
 
 export default router;
