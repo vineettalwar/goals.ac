@@ -170,6 +170,9 @@ export async function GET(req: Request) {
         outputTokens: generated.generationUsage?.outputTokens,
         totalTokens: generated.generationUsage?.totalTokens,
         usedByok: source === "user-key",
+        provider: "gemini",
+        model: "gemini-2.5-flash",
+        tier: "execution",
       });
 
       results.push({ companyId: company.id, articleId: updated.id });
