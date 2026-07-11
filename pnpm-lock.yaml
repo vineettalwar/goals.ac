@@ -173,6 +173,9 @@ importers:
       '@google/genai':
         specifier: ^1.44.0
         version: 1.48.0
+      '@workspace/ai-providers':
+        specifier: workspace:*
+        version: link:../../lib/ai-providers
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -496,6 +499,9 @@ importers:
       '@tanstack/react-query':
         specifier: 'catalog:'
         version: 5.90.21(react@19.1.0)
+      '@workspace/ai-providers':
+        specifier: workspace:*
+        version: link:../../lib/ai-providers
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
@@ -770,6 +776,25 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 3.25.76
+
+  lib/ai-providers:
+    dependencies:
+      '@google/genai':
+        specifier: ^1.44.0
+        version: 1.48.0
+      '@workspace/db':
+        specifier: workspace:*
+        version: link:../db
+      '@workspace/security':
+        specifier: workspace:*
+        version: link:../security
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.3.5
 
   lib/api-client-react:
     dependencies:

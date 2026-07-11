@@ -1,4 +1,4 @@
-import { getAiClient } from "./gemini-client";
+import { getAiClient } from "@workspace/ai-providers";
 import { cleanAndParse } from "./utils";
 import type { GoogleGenAI } from "@google/genai";
 

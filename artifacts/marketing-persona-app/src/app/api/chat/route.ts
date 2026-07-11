@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { roadmapsTable, conversations, messages } from "@workspace/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
-import { getAiClient } from "@/lib/ai/gemini-client";
+import { getAiClient } from "@workspace/ai-providers";
 import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const ChatBody = z.object({

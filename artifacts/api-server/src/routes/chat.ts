@@ -4,7 +4,7 @@ import { roadmapsTable, conversations, messages } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { optionalAuth } from "../lib/auth";
-import { getGeminiClientWithFallback } from "../lib/geminiClient";
+import { getGeminiClientWithFallback } from "@workspace/ai-providers";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 
 const router: IRouter = Router();

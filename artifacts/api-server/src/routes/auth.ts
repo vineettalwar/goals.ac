@@ -6,7 +6,7 @@ import { z } from "zod";
 import { hashPassword, comparePassword, signToken, requireAuth } from "../lib/auth";
 import { sendEmail, buildPasswordResetEmail } from "../services/emailService";
 import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
-import { createUserGeminiClient } from "../lib/geminiClient";
+import { createUserGeminiClient } from "@workspace/ai-providers";
 import crypto from "crypto";
 
 const router: IRouter = Router();

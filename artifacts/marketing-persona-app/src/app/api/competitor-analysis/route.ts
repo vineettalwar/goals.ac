@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";
-import { getAiClient } from "@/lib/ai/gemini-client";
+import { getAiClient } from "@workspace/ai-providers";
 import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const AnalyzeBody = z.object({

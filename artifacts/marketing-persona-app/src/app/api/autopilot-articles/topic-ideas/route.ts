@@ -4,7 +4,7 @@ import { companiesTable, marketingPersonasTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "@/lib/require-auth";
-import { getAiClientForUser } from "@/lib/ai/gemini-client";
+import { getAiClientForUser } from "@workspace/ai-providers";
 import { cleanAndParse } from "@/lib/ai/utils";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 

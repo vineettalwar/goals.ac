@@ -22,6 +22,9 @@
     },
     {
       "path": "../../lib/security"
+    },
+    {
+      "path": "../../lib/ai-providers"
     }
   ]
 }

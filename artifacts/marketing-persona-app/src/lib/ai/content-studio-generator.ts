@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { getAiClient } from "@/lib/ai/gemini-client";
+import { getAiClient } from "@workspace/ai-providers";
 import type { GoogleGenAI } from "@google/genai";
 import type { ContentFormatType, ContentStyle } from "@workspace/db/schema";
 

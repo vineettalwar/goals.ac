@@ -12,7 +12,7 @@ import { generateArticle } from "@/lib/ai/article-generator";
 import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
 import { publishToWordPress } from "@/lib/publishers/wordpress";
 import { decryptSecret } from "@workspace/security/encryption";
-import { getAiClientForUser } from "@/lib/ai/gemini-client";
+import { getAiClientForUser } from "@workspace/ai-providers";
 import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";
 
 function estimateCostUsd(totalTokens: number | undefined, wordCount: number): number {

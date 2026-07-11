@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { z } from "zod/v4";
 import { optionalAuth } from "../lib/auth";
-import { getGeminiClientWithFallback } from "../lib/geminiClient";
+import { getGeminiClientWithFallback } from "@workspace/ai-providers";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";
 

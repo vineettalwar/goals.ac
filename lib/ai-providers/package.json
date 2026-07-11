@@ -1,0 +1,20 @@
+{
+  "name": "@workspace/ai-providers",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./gemini": "./src/gemini.ts",
+    "./tiers": "./src/tiers.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^1.44.0",
+    "@workspace/db": "workspace:*",
+    "@workspace/security": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}
