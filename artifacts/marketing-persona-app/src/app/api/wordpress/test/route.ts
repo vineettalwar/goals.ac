@@ -3,8 +3,8 @@ import { db } from "@workspace/db";
 import { wordpressConnectionsTable, companiesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { testWordPressConnection, publishToWordPress } from "@/lib/publishers/wordpress";
-import { encryptSecret, decryptSecret } from "@/lib/encryption";
+import { testWordPressConnection, publishToWordPress } from "@workspace/connectors/wordpress";
+import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import { z } from "zod";
 
 const testSchema = z.object({

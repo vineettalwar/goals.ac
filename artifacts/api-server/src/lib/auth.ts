@@ -1,9 +1,6 @@
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import type { Request, Response, NextFunction } from "express";
-import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import type { Request, Response, NextFunction, CookieOptions } from "express";
 
 const jwtSecretEnv = process.env["JWT_SECRET"];
 if (!jwtSecretEnv && process.env["NODE_ENV"] === "production") {
@@ -26,8 +23,21 @@ export interface JwtPayload {
   role: string;
 }
 
+// Access tokens are short-lived and verified without a DB round-trip (see
+// requireAuth below) — the 15-minute expiry is what bounds staleness (e.g. a
+// since-revoked session or deleted user), not a per-request revocation check.
+// Long-lived sessions are tracked separately via the refresh-token cookie
+// and the `sessions` table.
+export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
+export const ACCESS_TOKEN_COOKIE = "access_token";
+export const REFRESH_TOKEN_COOKIE = "refresh_token";
+// Cookie `path` for the refresh token — restricts the browser to sending it
+// only to auth endpoints (refresh + logout live under /api/auth), so it
+// never rides along on ordinary API requests.
+export const REFRESH_TOKEN_COOKIE_PATH = "/api/auth";
+
 export function signToken(payload: JwtPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: ACCESS_TOKEN_TTL_SECONDS });
 }
 
 export function verifyToken(token: string): JwtPayload {
@@ -42,36 +52,82 @@ declare global {
   }
 }
 
-export async function requireAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
+function baseCookieOptions(): CookieOptions {
+  return {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env["NODE_ENV"] === "production",
+  };
+}
+
+export function setAccessTokenCookie(res: Response, accessToken: string): void {
+  res.cookie(ACCESS_TOKEN_COOKIE, accessToken, {
+    ...baseCookieOptions(),
+    maxAge: ACCESS_TOKEN_TTL_SECONDS * 1000,
+    path: "/",
+  });
+}
+
+export function setRefreshTokenCookie(res: Response, refreshToken: string, maxAgeMs: number): void {
+  res.cookie(REFRESH_TOKEN_COOKIE, refreshToken, {
+    ...baseCookieOptions(),
+    maxAge: maxAgeMs,
+    path: REFRESH_TOKEN_COOKIE_PATH,
+  });
+}
+
+/** Sets both the short-lived access-token cookie and the rotating refresh-token cookie. */
+export function setAuthCookies(
+  res: Response,
+  accessToken: string,
+  refreshToken: string,
+  refreshMaxAgeMs: number,
+): void {
+  setAccessTokenCookie(res, accessToken);
+  setRefreshTokenCookie(res, refreshToken, refreshMaxAgeMs);
+}
+
+export function clearAuthCookies(res: Response): void {
+  res.clearCookie(ACCESS_TOKEN_COOKIE, { ...baseCookieOptions(), path: "/" });
+  res.clearCookie(REFRESH_TOKEN_COOKIE, { ...baseCookieOptions(), path: REFRESH_TOKEN_COOKIE_PATH });
+}
+
+function extractCandidateTokens(req: Request): string[] {
+  const candidates: string[] = [];
+
   const authHeader = req.headers["authorization"];
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-  if (!token) {
-    res.status(401).json({ error: "Authentication required" });
-    return;
+  if (authHeader?.startsWith("Bearer ")) {
+    candidates.push(authHeader.slice(7));
   }
 
-  let payload: JwtPayload;
-  try {
-    payload = verifyToken(token);
-  } catch {
-    res.status(401).json({ error: "Invalid or expired token" });
-    return;
+  const cookieToken = req.cookies?.[ACCESS_TOKEN_COOKIE];
+  if (typeof cookieToken === "string" && cookieToken) {
+    candidates.push(cookieToken);
   }
 
-  try {
-    const [user] = await db
-      .select({ id: usersTable.id })
-      .from(usersTable)
-      .where(eq(usersTable.id, payload.userId))
-      .limit(1);
+  return candidates;
+}
 
-    if (!user) {
-      res.status(401).json({ error: "Invalid or expired token" });
-      return;
+// Tries the Authorization header first, then the access_token cookie —
+// whichever verifies successfully wins. Trying both (rather than only the
+// header when present) means a stale/placeholder Authorization header sent
+// by an older client doesn't shadow a perfectly valid cookie.
+function resolvePayload(req: Request): JwtPayload | null {
+  for (const candidate of extractCandidateTokens(req)) {
+    try {
+      return verifyToken(candidate);
+    } catch {
+      // try the next candidate
     }
-  } catch {
-    res.status(500).json({ error: "Internal server error" });
+  }
+  return null;
+}
+
+export function requireAuth(req: Request, res: Response, next: NextFunction): void {
+  const payload = resolvePayload(req);
+
+  if (!payload) {
+    res.status(401).json({ error: "Authentication required" });
     return;
   }
 
@@ -92,15 +148,9 @@ export function requireSuperAdmin(req: Request, res: Response, next: NextFunctio
 }
 
 export function optionalAuth(req: Request, _res: Response, next: NextFunction): void {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
-
-  if (token) {
-    try {
-      req.user = verifyToken(token);
-    } catch {
-      // ignore invalid token for optional auth
-    }
+  const payload = resolvePayload(req);
+  if (payload) {
+    req.user = payload;
   }
   next();
 }

@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { logger } from "../lib/logger";
-import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "../lib/geminiClient";
+import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
 import { getCache } from "../lib/cache";
 import type { GoogleGenAI } from "@google/genai";
 import type { ContentFormatType, ContentStyle } from "@workspace/db";

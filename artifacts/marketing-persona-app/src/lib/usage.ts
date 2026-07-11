@@ -32,6 +32,9 @@ export interface RecordUsageInput {
   totalTokens?: number;
   estimatedCostUsd?: number;
   usedByok: boolean;
+  provider?: string;
+  model?: string;
+  tier?: string;
 }
 
 export async function recordUsage(input: RecordUsageInput): Promise<void> {
@@ -50,6 +53,9 @@ export async function recordUsage(input: RecordUsageInput): Promise<void> {
     totalTokens,
     estimatedCostUsd: estimatedCostUsd.toFixed(6),
     usedByok: input.usedByok,
+    provider: input.provider ?? null,
+    model: input.model ?? null,
+    tier: input.tier ?? null,
   });
 }
 

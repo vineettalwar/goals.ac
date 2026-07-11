@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateArticle } from "@/lib/ai/article-generator";
 import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
-import { getAiClientForUser } from "@/lib/ai/gemini-client";
+import { getAiClientForUser } from "@workspace/ai-providers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";
 import { z } from "zod";
@@ -194,6 +194,9 @@ export async function POST(req: Request) {
       outputTokens: generated.generationUsage?.outputTokens,
       totalTokens: generated.generationUsage?.totalTokens,
       usedByok: source === "user-key",
+      provider: "gemini",
+      model: "gemini-2.5-flash",
+      tier: "execution",
     });
 
     return NextResponse.json({

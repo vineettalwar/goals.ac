@@ -3,9 +3,9 @@ import { db } from "@workspace/db";
 import { contentPiecesTable, websiteProjectsTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { decryptSecret } from "@/lib/encryption";
-import { publishToNotion } from "@/lib/publishers/notion";
-import { publishToWebflow } from "@/lib/publishers/webflow";
+import { decryptSecret } from "@workspace/security/encryption";
+import { publishToNotion } from "@workspace/connectors/notion";
+import { publishToWebflow } from "@workspace/connectors/webflow";
 import { z } from "zod";
 
 interface CmsIntegrationCredentials {

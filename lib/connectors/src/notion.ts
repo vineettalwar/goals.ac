@@ -1,4 +1,4 @@
-import { assertPublicUrl } from "@/lib/ssrf-guard";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 
 const NOTION_VERSION = "2022-06-28";
 const NOTION_API = "https://api.notion.com/v1";

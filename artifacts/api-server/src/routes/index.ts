@@ -11,6 +11,8 @@ import contentPiecesRouter from "./contentPieces";
 import chatRouter from "./chat";
 import competitorAnalysisRouter from "./competitorAnalysis";
 import keywordAnalysisRouter from "./keywordAnalysis";
+import goalsRouter from "./goals";
+import briefsRouter from "./briefs";
 
 const router: IRouter = Router();
 
@@ -26,5 +28,7 @@ router.use(contentPiecesRouter);
 router.use(chatRouter);
 router.use(competitorAnalysisRouter);
 router.use(keywordAnalysisRouter);
+router.use(goalsRouter);
+router.use(briefsRouter);
 
 export default router;

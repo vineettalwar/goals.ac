@@ -5,15 +5,21 @@
   "type": "module",
   "scripts": {
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
+    "dev:worker": "export NODE_ENV=development && pnpm run build && pnpm run start:worker",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
+    "start:worker": "node --enable-source-maps ./dist/worker.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@google/genai": "^1.44.0",
+    "@workspace/ai-providers": "workspace:*",
     "@workspace/api-zod": "workspace:*",
+    "@workspace/connectors": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/integrations-gemini-ai": "workspace:*",
+    "@workspace/jobs": "workspace:*",
+    "@workspace/security": "workspace:*",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",
     "cors": "^2",

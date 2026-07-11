@@ -1,5 +1,5 @@
 import { marked } from "marked";
-import { assertPublicUrl } from "@/lib/ssrf-guard";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 
 const WEBFLOW_API = "https://api.webflow.com/v2";
 

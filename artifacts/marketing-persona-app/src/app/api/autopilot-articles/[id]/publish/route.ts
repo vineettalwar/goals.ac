@@ -3,8 +3,8 @@ import { db } from "@workspace/db";
 import { scheduledArticlesTable, companiesTable, wordpressConnectionsTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { publishToWordPress } from "@/lib/publishers/wordpress";
-import { decryptSecret } from "@/lib/encryption";
+import { publishToWordPress } from "@workspace/connectors/wordpress";
+import { decryptSecret } from "@workspace/security/encryption";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { userId, error } = await requireAuth();

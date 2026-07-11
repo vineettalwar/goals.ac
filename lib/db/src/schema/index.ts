@@ -18,3 +18,8 @@ export * from "./scheduled_articles";
 export * from "./wordpress_connections";
 export * from "./integration_connections";
 export * from "./usage_events";
+export * from "./sessions";
+export * from "./workspaces";
+export * from "./goals";
+export * from "./briefs";
+export * from "./credit_ledger";

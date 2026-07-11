@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { auditUrl } from "../services/geoAuditor";
 import { optionalAuth } from "../lib/auth";
-import { assertPublicUrl } from "../lib/ssrf-guard";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 
 const router: IRouter = Router();
 

@@ -3,9 +3,9 @@ import { db } from "@workspace/db";
 import { integrationConnectionsTable, companiesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { decryptSecret } from "@/lib/encryption";
-import { testGhostConnection } from "@/lib/publishers/ghost";
-import { testWebhookConnection } from "@/lib/publishers/webhook";
+import { decryptSecret } from "@workspace/security/encryption";
+import { testGhostConnection } from "@workspace/connectors/ghost";
+import { testWebhookConnection } from "@workspace/connectors/webhook";
 
 async function getOwnedConnection(userId: number, connectionId: number) {
   const rows = await db

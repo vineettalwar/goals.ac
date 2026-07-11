@@ -1,0 +1,17 @@
+{
+  "name": "@workspace/jobs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./queues": "./src/queues.ts",
+    "./boss": "./src/boss.ts"
+  },
+  "dependencies": {
+    "pg-boss": "^10.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

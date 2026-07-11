@@ -1,4 +1,4 @@
-import { getAiClient } from "@/lib/ai/gemini-client";
+import { getAiClient } from "@workspace/ai-providers";
 
 type Confidence = "high" | "medium" | "low";
 

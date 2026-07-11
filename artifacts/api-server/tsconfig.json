@@ -3,9 +3,13 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": "src",
-    "types": ["node"]
+    "types": [
+      "node"
+    ]
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
     {
       "path": "../../lib/db"
@@ -15,6 +19,18 @@
     },
     {
       "path": "../../lib/integrations-gemini-ai"
+    },
+    {
+      "path": "../../lib/security"
+    },
+    {
+      "path": "../../lib/ai-providers"
+    },
+    {
+      "path": "../../lib/connectors"
+    },
+    {
+      "path": "../../lib/jobs"
     }
   ]
 }

@@ -3,9 +3,9 @@ import { db } from "@workspace/db";
 import { integrationConnectionsTable, companiesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { encryptSecret, decryptSecret } from "@/lib/encryption";
-import { testGhostConnection } from "@/lib/publishers/ghost";
-import { testWebhookConnection } from "@/lib/publishers/webhook";
+import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
+import { testGhostConnection } from "@workspace/connectors/ghost";
+import { testWebhookConnection } from "@workspace/connectors/webhook";
 import { z } from "zod";
 
 const updateSchema = z.object({

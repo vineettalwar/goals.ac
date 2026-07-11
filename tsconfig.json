@@ -14,6 +14,21 @@
     },
     {
       "path": "./lib/integrations-gemini-ai"
+    },
+    {
+      "path": "./lib/security"
+    },
+    {
+      "path": "./lib/ai-providers"
+    },
+    {
+      "path": "./lib/connectors"
+    },
+    {
+      "path": "./lib/jobs"
+    },
+    {
+      "path": "./lib/billing"
     }
   ]
 }

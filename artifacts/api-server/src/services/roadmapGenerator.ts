@@ -1,6 +1,6 @@
 import { generateRoadmapSlug } from "@workspace/db";
 import { logger } from "../lib/logger";
-import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "../lib/geminiClient";
+import { getPlatformGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
 import type { GoogleGenAI } from "@google/genai";
 
 export interface RoadmapPhase {

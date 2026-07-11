@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getAiClient } from "@/lib/ai/gemini-client";
+import { getAiClient } from "@workspace/ai-providers";
 import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const KeywordAnalysisBody = z.object({
