@@ -28,6 +28,9 @@
     },
     {
       "path": "../../lib/connectors"
+    },
+    {
+      "path": "../../lib/jobs"
     }
   ]
 }
