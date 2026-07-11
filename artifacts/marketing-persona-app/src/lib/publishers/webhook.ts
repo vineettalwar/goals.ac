@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { assertPublicUrl } from "@/lib/ssrf-guard";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 
 export interface WebhookCredentials {
   url: string;

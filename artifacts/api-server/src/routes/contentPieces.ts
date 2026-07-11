@@ -11,11 +11,11 @@ import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
 import { marked } from "marked";
 import { requireAuth } from "../lib/auth";
-import { assertPublicUrl } from "../lib/ssrf-guard";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { generateContentPiece, generateContentPieceStream, repurposeContentPiece, buildCacheKey, cacheGet, cacheSet, type BrandContext } from "../services/contentStudioGenerator";
 import { logger } from "../lib/logger";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
-import { encryptApiKey, decryptApiKey } from "../lib/encryption";
+import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import { publishToNotion } from "../services/notionPublisher";
 import { publishToWebflow } from "../services/webflowPublisher";
 
@@ -35,13 +35,13 @@ function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsIntegration
   const result: CmsIntegrationCredentials = {};
   if (creds.notion) {
     result.notion = {
-      integrationToken: encryptApiKey(creds.notion.integrationToken),
+      integrationToken: encryptSecret(creds.notion.integrationToken),
       databaseId: creds.notion.databaseId,
     };
   }
   if (creds.webflow) {
     result.webflow = {
-      apiToken: encryptApiKey(creds.webflow.apiToken),
+      apiToken: encryptSecret(creds.webflow.apiToken),
       collectionId: creds.webflow.collectionId,
       bodyFieldSlug: creds.webflow.bodyFieldSlug,
     };
@@ -54,7 +54,7 @@ function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsIntegratio
   if (stored.notion) {
     try {
       result.notion = {
-        integrationToken: decryptApiKey(stored.notion.integrationToken),
+        integrationToken: decryptSecret(stored.notion.integrationToken),
         databaseId: stored.notion.databaseId,
       };
     } catch {
@@ -64,7 +64,7 @@ function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsIntegratio
   if (stored.webflow) {
     try {
       result.webflow = {
-        apiToken: decryptApiKey(stored.webflow.apiToken),
+        apiToken: decryptSecret(stored.webflow.apiToken),
         collectionId: stored.webflow.collectionId,
         bodyFieldSlug: stored.webflow.bodyFieldSlug,
       };

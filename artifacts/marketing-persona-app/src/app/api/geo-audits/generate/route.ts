@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { geoAuditsTable, websiteProjectsTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { assertPublicUrl } from "@/lib/ssrf-guard";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { auditUrl } from "@/lib/ai/geo-auditor";
 import { z } from "zod";
 

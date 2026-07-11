@@ -2,7 +2,7 @@ import { GoogleGenAI } from "@google/genai";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { decryptSecret } from "@/lib/encryption";
+import { decryptSecret } from "@workspace/security/encryption";
 
 let _client: GoogleGenAI | null = null;
 

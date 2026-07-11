@@ -24,6 +24,7 @@
     "@tanstack/react-query": "catalog:",
     "@workspace/db": "workspace:*",
     "@workspace/integrations-gemini-ai": "workspace:*",
+    "@workspace/security": "workspace:*",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",

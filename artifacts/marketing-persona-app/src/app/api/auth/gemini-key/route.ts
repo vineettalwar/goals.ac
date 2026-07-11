@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { encryptSecret } from "@/lib/encryption";
+import { encryptSecret } from "@workspace/security/encryption";
 import { z } from "zod";
 
 const schema = z.object({ key: z.string().min(1) });

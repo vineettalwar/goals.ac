@@ -4,7 +4,7 @@ import { websiteProjectsTable, brandProfilesTable, projectRoadmapsTable, roadmap
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../lib/auth";
-import { assertPublicUrl } from "../lib/ssrf-guard";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { scrapeBrandProfile } from "../services/brandScraper";
 
 const router: IRouter = Router();

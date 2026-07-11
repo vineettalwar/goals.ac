@@ -4,7 +4,7 @@ import { scheduledArticlesTable, companiesTable, wordpressConnectionsTable } fro
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { publishToWordPress } from "@/lib/publishers/wordpress";
-import { decryptSecret } from "@/lib/encryption";
+import { decryptSecret } from "@workspace/security/encryption";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { userId, error } = await requireAuth();

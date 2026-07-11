@@ -5,7 +5,7 @@ import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { hashPassword, comparePassword, signToken, requireAuth } from "../lib/auth";
 import { sendEmail, buildPasswordResetEmail } from "../services/emailService";
-import { encryptApiKey, decryptApiKey } from "../lib/encryption";
+import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import { createUserGeminiClient } from "../lib/geminiClient";
 import crypto from "crypto";
 
@@ -266,7 +266,7 @@ router.get("/auth/api-key", requireAuth, async (req, res) => {
 
     let lastFour = "••••";
     try {
-      const decrypted = decryptApiKey(user.encryptedGeminiKey);
+      const decrypted = decryptSecret(user.encryptedGeminiKey);
       lastFour = decrypted.slice(-4);
     } catch {
       // if decryption fails, just show placeholder
@@ -312,7 +312,7 @@ router.patch("/auth/api-key", requireAuth, async (req, res) => {
   }
 
   try {
-    const encrypted = encryptApiKey(parsed.data.key);
+    const encrypted = encryptSecret(parsed.data.key);
     await db.update(usersTable).set({ encryptedGeminiKey: encrypted }).where(eq(usersTable.id, req.user!.userId));
     const lastFour = parsed.data.key.slice(-4);
     res.json({ ok: true, hasKey: true, lastFour });

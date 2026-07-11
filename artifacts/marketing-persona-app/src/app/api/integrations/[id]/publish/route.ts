@@ -4,7 +4,7 @@ import { db } from "@workspace/db";
 import { integrationConnectionsTable, companiesTable, scheduledArticlesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { decryptSecret } from "@/lib/encryption";
+import { decryptSecret } from "@workspace/security/encryption";
 import { publishToGhost } from "@/lib/publishers/ghost";
 import { publishToWebhook, type WebhookArticlePayload } from "@/lib/publishers/webhook";
 import { z } from "zod";

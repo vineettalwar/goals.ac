@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import { marked } from "marked";
-import { assertPublicUrl } from "@/lib/ssrf-guard";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 
 export interface GhostCredentials {
   apiUrl: string;

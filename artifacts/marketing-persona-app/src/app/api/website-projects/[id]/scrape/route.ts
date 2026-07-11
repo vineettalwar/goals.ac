@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable, brandProfilesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { assertPublicUrl } from "@/lib/ssrf-guard";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { scrapeBrandProfile } from "@/lib/ai/brand-scraper";
 
 async function runBrandScrape(projectId: number, url: string): Promise<void> {

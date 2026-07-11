@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { integrationConnectionsTable, companiesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { encryptSecret, decryptSecret } from "@/lib/encryption";
+import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import { testGhostConnection } from "@/lib/publishers/ghost";
 import { testWebhookConnection } from "@/lib/publishers/webhook";
 import { z } from "zod";

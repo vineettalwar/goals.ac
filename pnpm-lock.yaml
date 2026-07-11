@@ -182,6 +182,9 @@ importers:
       '@workspace/integrations-gemini-ai':
         specifier: workspace:*
         version: link:../../lib/integrations-gemini-ai
+      '@workspace/security':
+        specifier: workspace:*
+        version: link:../../lib/security
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -499,6 +502,9 @@ importers:
       '@workspace/integrations-gemini-ai':
         specifier: workspace:*
         version: link:../../lib/integrations-gemini-ai
+      '@workspace/security':
+        specifier: workspace:*
+        version: link:../../lib/security
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -828,6 +834,12 @@ importers:
       p-retry:
         specifier: ^7.1.1
         version: 7.1.1
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.3.5
+
+  lib/security:
     devDependencies:
       '@types/node':
         specifier: 'catalog:'

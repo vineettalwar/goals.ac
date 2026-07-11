@@ -11,7 +11,7 @@ import { eq, and } from "drizzle-orm";
 import { generateArticle } from "@/lib/ai/article-generator";
 import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
 import { publishToWordPress } from "@/lib/publishers/wordpress";
-import { decryptSecret } from "@/lib/encryption";
+import { decryptSecret } from "@workspace/security/encryption";
 import { getAiClientForUser } from "@/lib/ai/gemini-client";
 import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";
 

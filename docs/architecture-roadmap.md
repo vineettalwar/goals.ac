@@ -62,7 +62,7 @@ lib/
 ├── content-engine/        NEW — all AI generators, humanizer, brief compiler (pure, app-agnostic)
 ├── ai-providers/          NEW — provider abstraction: Anthropic | Gemini | OpenAI, BYOK resolution
 ├── connectors/            NEW — CMSAdapter interface + wordpress/notion/webflow/ghost/webhook/typo3...
-├── crypto/                NEW — envelope encryption, key versioning (single implementation)
+├── security/              NEW — encryption + SSRF guard today; envelope encryption, key versioning next
 └── jobs/                  NEW — queue contracts (pg-boss: no new infra, Postgres-backed)
 
 artifacts/
@@ -76,7 +76,7 @@ artifacts/
 
 ### Sprint backlog (2–3 sprints, in order)
 
-1. **Extract `lib/crypto`, `lib/ai-providers`, `lib/connectors`** from the duplicated code. Mechanical, low-risk, immediately halves maintenance surface.
+1. **Extract `lib/security`, `lib/ai-providers`, `lib/connectors`** from the duplicated code. Mechanical, low-risk, immediately halves maintenance surface.
 2. **Auth hardening in the Next app**: move JWT from localStorage to httpOnly cookies, add refresh-token rotation and server-side revocation (a `sessions` table — the "cannot invalidate on password change" trade-off documented in `docs/memory.md` is not acceptable for a product that stores third-party CMS credentials).
 3. **Account hierarchy**: formalize `workspace → project → goal → brief → content piece`. Today `users → website_projects → content` exists; add `goals` and `briefs` tables (schema in §4) and a `workspaces` table even if v1 is 1:1 with users — retrofitting teams later is far more painful.
 4. **Finish the onboarding wizard** (already in progress, Task #43) but re-anchor it on goal definition: *"What are you trying to achieve?"* before *"connect your CMS."*
@@ -255,7 +255,7 @@ Today: one env-var secret, SHA-256-derived key, encrypts every credential class;
    - DEKs are wrapped by a **KEK** held in a KMS (AWS KMS / GCP KMS; on Replit, a versioned-secrets shim until migration). Ciphertext gains a `v{n}:` prefix.
    - Rotation = re-wrap DEKs (cheap, no data re-encryption); compromise blast radius = one workspace. Fixes the documented "if this secret changes, everything is unreadable" cliff.
 2. **Separate key classes.** AI provider keys, CMS credentials, and webhook signing secrets get distinct DEK derivation contexts (AAD = `workspace_id:credential_class:credential_id`), so a bug in one path can't decrypt another's ciphertext.
-3. **Decryption only at the point of egress.** One module (`lib/crypto` + the connector/provider layer) is allowed to decrypt, and it runs in the **worker process**, not the web tier. The web tier handles only ciphertext + metadata (`last4`, provider, status). Decrypted keys live in function scope, are never cached, never logged (pino redaction paths enforced), never serialized into job payloads — jobs carry `credential_id`, workers resolve it.
+3. **Decryption only at the point of egress.** One module (`lib/security` + the connector/provider layer) is allowed to decrypt, and it runs in the **worker process**, not the web tier. The web tier handles only ciphertext + metadata (`last4`, provider, status). Decrypted keys live in function scope, are never cached, never logged (pino redaction paths enforced), never serialized into job payloads — jobs carry `credential_id`, workers resolve it.
 4. **Verify-on-save + continuous health.** Every stored key is exercised immediately (1-token completion / API ping) and on a schedule; status shown in the UI. Invalid keys fail fast at save time, not mid-generation.
 5. **Spend protection for BYOK.** Per-key monthly caps (user-set), anomaly alerts (10× normal burn), and hard concurrency limits — protecting the user's wallet is part of the BYOK trust story.
 6. **Audit trail.** Append-only `credential_events` (created, rotated, used-by-job-N, failed, deleted) visible to the user. Deleting a key hard-deletes ciphertext and tombstones the audit row.
