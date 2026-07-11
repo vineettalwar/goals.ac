@@ -43,7 +43,7 @@ Generate tailored 12-month growth roadmaps, SEO content strategies, article draf
 | Database | PostgreSQL + Drizzle ORM + Zod validation |
 | AI | Google Gemini 2.5 Flash (streaming + thinking budget) |
 | Auth | JWT (30-day), bcrypt, Google OAuth 2.0 |
-| CMS | Notion API, Webflow CMS API, WordPress XML-RPC |
+| CMS | Notion API, Webflow CMS API, WordPress REST API (Application Passwords) |
 | Monorepo | pnpm workspaces |
 
 ## Quick Start

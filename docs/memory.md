@@ -113,7 +113,7 @@ All three CMS platforms are supported from the same `PublishDialog` in `content-
 
 | Platform | Credential storage | Publish mechanism |
 |---|---|---|
-| WordPress | Per-publish (not stored) | XML-RPC `metaWeblog.newPost` |
+| WordPress | Per-publish (api-server); encrypted in `wordpress_connections` (marketing-persona-app) | REST API `POST /wp-json/wp/v2/posts` |
 | Notion | Encrypted in `website_projects.cms_integrations` JSONB | Markdown → Notion blocks |
 | Webflow | Encrypted in `website_projects.cms_integrations` JSONB | Markdown → HTML → CMS item |
 

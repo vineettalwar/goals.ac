@@ -59,7 +59,7 @@
 ### Phase 6 — Integrations & Publishing
 *Push content to external CMS platforms.*
 
-- **WordPress publishing** — XML-RPC push (credentials entered per-publish)
+- **WordPress publishing** — REST API with Application Passwords (credentials entered per-publish)
 - **Notion publishing** — Markdown → Notion blocks; credentials stored encrypted per project
 - **Webflow publishing** — Markdown → HTML → Webflow CMS item; encrypted per project
 - **CMS health check** — Real-time status check for Notion and Webflow connections
