@@ -13,11 +13,13 @@ import competitorAnalysisRouter from "./competitorAnalysis";
 import keywordAnalysisRouter from "./keywordAnalysis";
 import goalsRouter from "./goals";
 import briefsRouter from "./briefs";
+import aiProvidersRouter from "./aiProviders";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(aiProvidersRouter);
 router.use(websiteProjectsRouter);
 router.use(roadmapsRouter);
 router.use(industriesRouter);
