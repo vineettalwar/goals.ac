@@ -143,7 +143,7 @@ export function RoadmapGenerator({ sectionRef }: RoadmapGeneratorProps) {
     <section
       ref={ref}
       id="roadmap-generator"
-      className="py-0 bg-background relative z-20 -mt-8 sm:-mt-12"
+      className="py-0 bg-background relative z-20"
     >
       <div className="max-w-3xl mx-auto px-6">
         <motion.div

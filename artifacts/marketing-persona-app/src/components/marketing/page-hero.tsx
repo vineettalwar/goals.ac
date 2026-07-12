@@ -84,6 +84,29 @@ export function PageHero({
       ? "border border-white/30 bg-white/10 text-white hover:bg-white/20 text-sm font-medium px-7 py-3 rounded-full transition-all"
       : "bg-[var(--accent-warm)] hover:bg-[var(--accent-warm-hover)] text-white text-sm font-medium px-7 py-3 rounded-full transition-all hover:scale-[1.03] active:scale-95 hover:shadow-lg hover:shadow-[var(--accent-warm)]/30";
 
+  const renderCta = (cta: HeroCta, key: string) => {
+    const className = ctaButtonClass(cta.variant ?? "primary");
+    if (cta.onClick) {
+      return (
+        <button key={key} type="button" onClick={cta.onClick} className={className}>
+          {cta.label}
+        </button>
+      );
+    }
+    if (cta.href?.startsWith("#")) {
+      return (
+        <a key={key} href={cta.href} className={className}>
+          {cta.label}
+        </a>
+      );
+    }
+    return (
+      <Link key={key} href={cta.href ?? "#"} className={className}>
+        {cta.label}
+      </Link>
+    );
+  };
+
   return (
     <section
       className="relative w-full overflow-hidden h-screen bg-black font-sans"
@@ -147,26 +170,7 @@ export function PageHero({
                 {description}
               </p>
             )}
-            {ctas.map((cta) =>
-              cta.onClick ? (
-                <button
-                  key={cta.label}
-                  type="button"
-                  onClick={cta.onClick}
-                  className={ctaButtonClass(cta.variant ?? "primary")}
-                >
-                  {cta.label}
-                </button>
-              ) : (
-                <Link
-                  key={cta.label}
-                  href={cta.href ?? "#"}
-                  className={ctaButtonClass(cta.variant ?? "primary")}
-                >
-                  {cta.label}
-                </Link>
-              ),
-            )}
+            {ctas.map((cta) => renderCta(cta, cta.label))}
           </div>
         </>
       ) : (
@@ -213,26 +217,7 @@ export function PageHero({
               className="mt-8 flex flex-col sm:flex-row items-center gap-3 hero-anim hero-fade"
               style={{ animationDelay: "0.6s" }}
             >
-              {ctas.map((cta) =>
-                cta.onClick ? (
-                  <button
-                    key={cta.label}
-                    type="button"
-                    onClick={cta.onClick}
-                    className={ctaButtonClass(cta.variant ?? "primary")}
-                  >
-                    {cta.label}
-                  </button>
-                ) : (
-                  <Link
-                    key={cta.label}
-                    href={cta.href ?? "#"}
-                    className={ctaButtonClass(cta.variant ?? "primary")}
-                  >
-                    {cta.label}
-                  </Link>
-                ),
-              )}
+              {ctas.map((cta) => renderCta(cta, cta.label))}
             </div>
           )}
           {children}
