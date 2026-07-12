@@ -1,3 +1,4 @@
+import { cache } from "react";
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
@@ -6,6 +7,8 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
+import { authConfig } from "@/auth.config";
+import { getCompanyIdForUser } from "@/lib/user-company";
 
 declare module "next-auth" {
   interface Session {
@@ -15,6 +18,7 @@ declare module "next-auth" {
       name: string;
       image?: string;
       role: string;
+      companyId: number | null;
     };
   }
   interface User {
@@ -27,12 +31,8 @@ const credentialsSchema = z.object({
   password: z.string().min(1),
 });
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-    newUser: "/onboarding",
-  },
+const nextAuth = NextAuth({
+  ...authConfig,
   providers: [
     Credentials({
       credentials: {
@@ -73,29 +73,55 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       : []),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
+    async jwt({ token, user, account, trigger, session }) {
+      const authToken = token as typeof token & {
+        id?: string;
+        role?: string;
+        companyId?: number | null;
+      };
+
       if (user) {
-        token.id = user.id;
-        token.role = user.role ?? "user";
+        authToken.id = user.id;
+        authToken.role = user.role ?? "user";
       }
+
+      if (trigger === "update") {
+        const update = session as { companyId?: number | null } | undefined;
+        if (update?.companyId !== undefined) {
+          authToken.companyId = update.companyId;
+        }
+      } else if (user || authToken.companyId === undefined) {
+        const userId = user?.id ?? authToken.id;
+        if (userId) {
+          authToken.companyId = await getCompanyIdForUser(parseInt(String(userId), 10));
+        }
+      }
+
       // For Google OAuth, look up or create the user
-      if (account?.provider === "google" && token.email) {
+      if (account?.provider === "google" && authToken.email) {
         const [existingUser] = await db
           .select()
           .from(usersTable)
-          .where(eq(usersTable.email, token.email as string))
+          .where(eq(usersTable.email, authToken.email as string))
           .limit(1);
         if (existingUser) {
-          token.id = String(existingUser.id);
-          token.role = existingUser.role;
+          authToken.id = String(existingUser.id);
+          authToken.role = existingUser.role;
         }
       }
-      return token;
+      return authToken;
     },
     session({ session, token }) {
+      const authToken = token as typeof token & { companyId?: number | null };
       session.user.id = token.id as string;
       session.user.role = token.role as string;
+      session.user.companyId = authToken.companyId ?? null;
       return session;
     },
   },
 });
+
+export const { handlers, auth, signIn, signOut } = nextAuth;
+
+/** Dedupes session lookup within a single RSC request (layout + page). */
+export const getSession = cache(async () => auth());
