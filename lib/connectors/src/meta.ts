@@ -138,6 +138,24 @@ export interface MetaPageInfo {
   instagramUsername?: string;
 }
 
+/** Exchange a short-lived user token for a long-lived token (~60 days). */
+export async function exchangeMetaLongLivedToken(
+  shortLivedToken: string,
+  appId: string,
+  appSecret: string,
+): Promise<{ accessToken: string; expiresIn?: number }> {
+  const url = `${GRAPH_API}/oauth/access_token?grant_type=fb_exchange_token&client_id=${encodeURIComponent(appId)}&client_secret=${encodeURIComponent(appSecret)}&fb_exchange_token=${encodeURIComponent(shortLivedToken)}`;
+  await assertPublicUrl(url);
+  const res = await fetch(url);
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
+    throw new Error(err.error?.message ?? "Failed to exchange Meta token");
+  }
+  const data = (await res.json()) as { access_token?: string; expires_in?: number };
+  if (!data.access_token) throw new Error("Meta token exchange returned no access token");
+  return { accessToken: data.access_token, expiresIn: data.expires_in };
+}
+
 export async function fetchMetaPages(userAccessToken: string): Promise<MetaPageInfo[]> {
   const url = `${GRAPH_API}/me/accounts?fields=id,name,access_token,instagram_business_account{id,username}&access_token=${encodeURIComponent(userAccessToken)}`;
   await assertPublicUrl(url);
