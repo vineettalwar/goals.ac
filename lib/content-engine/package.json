@@ -1,0 +1,46 @@
+{
+  "name": "@workspace/content-engine",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./content-studio-generator": "./src/content-studio-generator.ts",
+    "./seo-content-generator": "./src/seo-content-generator.ts",
+    "./content-strategy-generator": "./src/content-strategy-generator.ts",
+    "./roadmap-generator": "./src/roadmap-generator.ts",
+    "./brand-scraper": "./src/brand-scraper.ts",
+    "./autopilot-orchestrator": "./src/autopilot-orchestrator.ts",
+    "./keyword-opportunity-service": "./src/keyword-opportunity-service.ts",
+    "./llm-visibility-service": "./src/llm-visibility-service.ts",
+    "./persona-generator": "./src/persona-generator.ts",
+    "./article-generator": "./src/article-generator.ts",
+    "./humanizer": "./src/humanizer.ts",
+    "./topical-map-generator": "./src/topical-map-generator.ts",
+    "./utils": "./src/utils.ts",
+    "./support/cms-integrations": "./src/support/cms-integrations.ts",
+    "./support/cms-publish": "./src/support/cms-publish.ts",
+    "./support/autopilot-scheduler": "./src/support/autopilot-scheduler.ts",
+    "./support/visibility-settings": "./src/support/visibility-settings.ts",
+    "./support/user-api-key": "./src/support/user-api-key.ts",
+    "./support/social-tokens": "./src/support/social-tokens.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^1.44.0",
+    "@workspace/ai-providers": "workspace:*",
+    "@workspace/connectors": "workspace:*",
+    "@workspace/db": "workspace:*",
+    "@workspace/security": "workspace:*",
+    "@workspace/seo-tools": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "marked": "^18.0.3",
+    "node-html-parser": "^7.1.0",
+    "pino": "^9",
+    "redis": "^5.12.1",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "pino-pretty": "^13"
+  }
+}
