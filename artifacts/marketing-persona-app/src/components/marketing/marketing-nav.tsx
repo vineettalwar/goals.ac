@@ -1,19 +1,26 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
-const NAV_ITEMS: { label: string; href: string; active?: boolean }[] = [
+const NAV_ITEMS = [
   { label: "Content Engine", href: "/content-engine" },
   { label: "Features", href: "/features" },
   { label: "Roadmaps", href: "/roadmaps" },
   { label: "GEO Audit", href: "/geo-audit" },
   { label: "Pricing", href: "/pricing" },
   { label: "About", href: "/about" },
-];
+] as const;
+
+function isActive(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
 
 export function MarketingNav() {
+  const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -27,27 +34,38 @@ export function MarketingNav() {
         </Link>
 
         <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-2 py-2 items-center gap-1">
-          {NAV_ITEMS.map(({ label, href, active }) => (
-            <Link
-              key={label}
-              href={href}
-              className={
-                active
-                  ? "px-4 py-1.5 rounded-full text-sm font-medium text-white"
-                  : "px-4 py-1.5 rounded-full text-sm font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors"
-              }
-            >
-              {label}
-            </Link>
-          ))}
+          {NAV_ITEMS.map(({ label, href }) => {
+            const active = isActive(pathname, href);
+            return (
+              <Link
+                key={label}
+                href={href}
+                className={
+                  active
+                    ? "px-4 py-1.5 rounded-full text-sm font-medium text-white bg-white/20"
+                    : "px-4 py-1.5 rounded-full text-sm font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+                }
+              >
+                {label}
+              </Link>
+            );
+          })}
         </div>
 
-        <Link
-          href="/signup"
-          className="hidden md:block bg-white text-gray-900 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-gray-100 transition-colors"
-        >
-          Get started
-        </Link>
+        <div className="hidden md:flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-sm text-white/80 hover:text-white transition-colors"
+          >
+            Sign in
+          </Link>
+          <Link
+            href="/signup"
+            className="bg-white text-gray-900 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            Get started
+          </Link>
+        </div>
 
         <button
           type="button"
@@ -73,7 +91,11 @@ export function MarketingNav() {
               <Link
                 key={label}
                 href={href}
-                className="px-4 py-3 rounded-xl text-sm font-medium text-white/90 hover:bg-white/10 hover:text-white transition-colors"
+                className={
+                  isActive(pathname, href)
+                    ? "px-4 py-3 rounded-xl text-sm font-medium text-white bg-white/15"
+                    : "px-4 py-3 rounded-xl text-sm font-medium text-white/90 hover:bg-white/10 hover:text-white transition-colors"
+                }
                 onClick={() => setMobileOpen(false)}
               >
                 {label}

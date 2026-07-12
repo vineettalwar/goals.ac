@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { HeroSection } from "@/components/marketing/hero-section";
 import { RoadmapGenerator } from "@/components/marketing/roadmap-generator";
 import { HomeMarketingSections } from "@/components/marketing/home-marketing-sections";
@@ -13,12 +14,9 @@ export function HomePageClient() {
   };
 
   return (
-    <div className="min-h-screen bg-background tracking-[-0.02em]">
-      <HeroSection onCtaClick={scrollToGenerator} />
-      <div className="relative bg-background">
-        <RoadmapGenerator sectionRef={generatorRef} />
-        <HomeMarketingSections />
-      </div>
-    </div>
+    <MarketingPageShell hero={<HeroSection onCtaClick={scrollToGenerator} />}>
+      <RoadmapGenerator sectionRef={generatorRef} />
+      <HomeMarketingSections />
+    </MarketingPageShell>
   );
 }
