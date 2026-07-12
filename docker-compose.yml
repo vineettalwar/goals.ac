@@ -15,7 +15,31 @@ services:
       timeout: 5s
       retries: 10
 
+  # Next.js product app (canonical target during migration)
+  app:
+    build:
+      context: .
+      dockerfile: artifacts/marketing-persona-app/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/goalsac
+      AUTH_SECRET: local-compose-auth-secret-not-for-shared-use-1234567890ab
+      NEXTAUTH_URL: http://localhost:3001
+      GEMINI_KEY_ENCRYPTION_SECRET: local-compose-encryption-secret-not-shared-1234
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+
+  # Legacy Express API — opt-in via `docker compose --profile legacy up`
   api-server:
+    profiles: ["legacy"]
     build:
       context: .
       dockerfile: artifacts/api-server/Dockerfile
@@ -26,8 +50,6 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/goalsac
       APP_ORIGIN: http://localhost:5173,http://localhost:3001
-      # Dev-only placeholder secrets — replace with real values for any shared/production use.
-      # Generate your own: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
       JWT_SECRET: local-compose-jwt-secret-not-for-shared-use-1234
       GEMINI_KEY_ENCRYPTION_SECRET: local-compose-encryption-secret-not-shared-1234
     env_file:
@@ -45,7 +67,9 @@ services:
       retries: 10
       start_period: 15s
 
+  # Legacy Vite product app — redirects to Next; opt-in via `--profile legacy`
   goals-ac:
+    profiles: ["legacy"]
     build:
       context: .
       dockerfile: artifacts/goals-ac/Dockerfile
@@ -61,23 +85,20 @@ services:
       timeout: 5s
       retries: 5
 
-  api-worker:
+  # New standalone pg-boss worker (preferred for background jobs)
+  worker:
     build:
       context: .
-      dockerfile: artifacts/api-server/Dockerfile
-    command: ["node", "--enable-source-maps", "./dist/worker.mjs"]
+      dockerfile: artifacts/worker/Dockerfile
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/goalsac
-      JWT_SECRET: local-compose-jwt-secret-not-for-shared-use-1234
       GEMINI_KEY_ENCRYPTION_SECRET: local-compose-encryption-secret-not-shared-1234
     env_file:
       - path: .env
         required: false
     depends_on:
       postgres:
-        condition: service_healthy
-      api-server:
         condition: service_healthy
     init: true
     restart: unless-stopped
