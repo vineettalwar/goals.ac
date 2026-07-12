@@ -55,6 +55,10 @@
   --destructive:             #C0392B;
   --destructive-foreground:  #FFFFFF;
 
+  --accent-warm:             #e8702a;
+  --accent-warm-hover:       #d2611f;
+  --surface-dark:            #1A1A1A;
+
   --sidebar-bg:              #FFFFFF;
   --sidebar-border:          #E8E5E0;
 }

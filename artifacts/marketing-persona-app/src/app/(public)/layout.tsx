@@ -18,8 +18,10 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
             {
               title: "Product",
               links: [
+                ["Content Engine", "/content-engine"],
                 ["Features", "/features"],
                 ["Roadmaps", "/roadmaps"],
+                ["GEO Audit", "/geo-audit"],
                 ["Pricing", "/pricing"],
               ],
             },
