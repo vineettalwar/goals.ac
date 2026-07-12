@@ -9,6 +9,7 @@
     "./tiers": "./src/tiers.ts",
     "./client": "./src/client.ts",
     "./config": "./src/config.ts",
+    "./resolve-client": "./src/resolve-client.ts",
     "./bedrock": "./src/bedrock.ts",
     "./ollama": "./src/ollama.ts"
   },

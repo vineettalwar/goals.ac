@@ -30,7 +30,10 @@ export async function getPlatformGeminiClient(): Promise<GoogleGenAI | null> {
   return _platformClient;
 }
 
-/** Platform credentials only; throws when none are configured. */
+/**
+ * Platform credentials only; throws when none are configured.
+ * @deprecated Use `getAiProviderClient()` or `resolveAiClient()` from `@workspace/ai-providers/resolve-client`.
+ */
 export function getAiClient(): GoogleGenAI {
   if (_platformClient) return _platformClient;
   _platformClient = buildPlatformClient();
@@ -71,7 +74,10 @@ export function isUserKeyError(err: unknown): boolean {
   );
 }
 
-/** BYOK resolution by user id: encrypted user key → Replit proxy → platform env key. */
+/**
+ * BYOK resolution by user id: encrypted user key → Replit proxy → platform env key.
+ * @deprecated Use `resolveAiClientForUser()` from `@workspace/content-engine/support/resolve-ai-client-for-user`.
+ */
 export async function getAiClientForUser(userId: number): Promise<{ client: GoogleGenAI; source: AiClientSource }> {
   const [user] = await db
     .select({ encryptedGeminiKey: usersTable.encryptedGeminiKey })

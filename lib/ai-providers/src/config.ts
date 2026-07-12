@@ -21,6 +21,19 @@ function normalizeProviderId(value: string | null | undefined): AiProviderId | n
   return null;
 }
 
+/** True when backend env suggests Bedrock credentials are available. */
+export function isBedrockEnvConfigured(): boolean {
+  if (env("AI_PROVIDER") === "bedrock") return true;
+  return !!(
+    (env("AWS_ACCESS_KEY_ID") && env("AWS_SECRET_ACCESS_KEY")) ||
+    env("AWS_PROFILE") ||
+    env("AWS_ROLE_ARN") ||
+    env("AWS_WEB_IDENTITY_TOKEN_FILE") ||
+    env("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI") ||
+    env("AWS_CONTAINER_CREDENTIALS_FULL_URI")
+  );
+}
+
 /** App preference first, then AI_PROVIDER env, then auto-detect. */
 export function resolveProviderId(options?: AiProviderOptions): AiProviderId {
   const fromApp = normalizeProviderId(options?.providerId ?? undefined);
@@ -32,7 +45,7 @@ export function resolveProviderId(options?: AiProviderOptions): AiProviderId {
   if (env("GEMINI_API_KEY") || env("AI_INTEGRATIONS_GEMINI_API_KEY")) {
     return "gemini";
   }
-  if (env("AWS_ACCESS_KEY_ID") || env("AWS_PROFILE")) {
+  if (isBedrockEnvConfigured()) {
     return "bedrock";
   }
   return "ollama";
