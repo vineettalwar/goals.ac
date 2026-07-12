@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { EditorialHeading } from "./editorial-heading";
+import { AnimatedDarkBg } from "./animated-dark-bg";
 import { fadeUp, fadeUpTransition } from "@/lib/motion";
 
 export type MarketingSectionVariant = "paper" | "image" | "dark";
@@ -19,6 +20,7 @@ type MarketingSectionProps = {
   animate?: boolean;
   variant?: MarketingSectionVariant;
   backgroundImage?: string;
+  animatedBackground?: boolean;
   bridgeTop?: boolean;
   bridgeBottom?: boolean;
   id?: string;
@@ -42,6 +44,7 @@ export function MarketingSection({
   animate = true,
   variant = "paper",
   backgroundImage,
+  animatedBackground = false,
   bridgeTop = false,
   bridgeBottom = false,
   id,
@@ -97,7 +100,9 @@ export function MarketingSection({
       id={id}
       className={`${resolvedClassName}${bordered && variant === "paper" ? " border-t border-[--border]" : ""}`}
     >
-      {(variant === "image" || (variant === "dark" && backgroundImage)) && backgroundImage && (
+      {animatedBackground && <AnimatedDarkBg />}
+
+      {(variant === "image" || (variant === "dark" && backgroundImage)) && backgroundImage && !animatedBackground && (
         <>
           <div
             className="absolute inset-0 bg-center bg-cover bg-no-repeat z-0"

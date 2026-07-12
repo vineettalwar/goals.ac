@@ -38,7 +38,7 @@ export function HomeMarketingSections() {
     <>
       <MarketingSection
         variant="image"
-        backgroundImage={HERO_IMAGES.home.spotlight}
+        backgroundImage={HERO_IMAGES.home.workflow}
         bridgeTop
         badge="What you can do"
         titleLine1="One place to"
@@ -179,7 +179,7 @@ export function HomeMarketingSections() {
         titleLine1="Continue from roadmap"
         titleLine2="to execution"
         description="Save your roadmap, inspect competitors, track search queries, and turn priorities into briefs and drafts."
-        backgroundImage={HERO_IMAGES.home.base}
+        animatedBackground
         primaryCta={{ label: "Create free account", href: "/signup" }}
         secondaryCta={{ label: "Sign in", href: "/login" }}
       >
@@ -217,7 +217,7 @@ export function HomeMarketingSections() {
         titleLine2="decision in writing"
         description="Start with a roadmap you can inspect, edit, and turn into work—not another dashboard full of suggestions."
         variant="image"
-        backgroundImage={HERO_IMAGES.home.spotlight}
+        backgroundImage={HERO_IMAGES.home.cta}
         secondaryHref="/geo-audit"
         secondaryLabel="Or run a free GEO audit →"
       />

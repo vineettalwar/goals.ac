@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
+import { AnimatedDarkBg } from "./animated-dark-bg";
 import { fadeUp, fadeUpTransition, staggerContainer } from "@/lib/motion";
 
 type DarkCTABandProps = {
@@ -13,6 +14,7 @@ type DarkCTABandProps = {
   titleLine2?: string;
   description?: string;
   backgroundImage?: string;
+  animatedBackground?: boolean;
   primaryCta?: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
   children?: React.ReactNode;
@@ -25,6 +27,7 @@ export function DarkCTABand({
   titleLine2,
   description,
   backgroundImage,
+  animatedBackground = false,
   primaryCta,
   secondaryCta,
   children,
@@ -33,7 +36,9 @@ export function DarkCTABand({
 
   return (
     <section className="py-24 relative overflow-hidden text-white bg-[var(--surface-dark)] border-t border-white/10">
-      {backgroundImage && (
+      {animatedBackground && <AnimatedDarkBg />}
+
+      {backgroundImage && !animatedBackground && (
         <>
           <div
             className="absolute inset-0 bg-center bg-cover bg-no-repeat z-0"

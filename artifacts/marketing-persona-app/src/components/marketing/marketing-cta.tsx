@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
+import { AnimatedDarkBg } from "./animated-dark-bg";
 import { fadeUp, fadeUpTransition } from "@/lib/motion";
 
 type MarketingCTAProps = {
@@ -12,7 +13,7 @@ type MarketingCTAProps = {
   titleLine1?: string;
   titleLine2?: string;
   description: string;
-  variant?: "paper" | "image";
+  variant?: "paper" | "image" | "animated";
   backgroundImage?: string;
   primaryHref?: string;
   primaryLabel?: string;
@@ -34,15 +35,17 @@ export function MarketingCTA({
   secondaryLabel,
 }: MarketingCTAProps) {
   const line1 = titleLine1 ?? title ?? "Put the next decision in writing";
-  const isImage = variant === "image";
+  const isDark = variant === "image" || variant === "animated";
 
   return (
     <section
       className={`py-28 relative overflow-hidden border-t ${
-        isImage ? "text-white" : "bg-background text-foreground border-[--border]"
+        isDark ? "text-white" : "bg-background text-foreground border-[--border]"
       }`}
     >
-      {isImage && backgroundImage && (
+      {variant === "animated" && <AnimatedDarkBg />}
+
+      {variant === "image" && backgroundImage && (
         <>
           <div
             className="absolute inset-0 bg-center bg-cover bg-no-repeat z-0"
@@ -66,7 +69,7 @@ export function MarketingCTA({
             line2={titleLine2}
             description={description}
             badge={badge}
-            theme={isImage ? "dark" : "light"}
+            theme={isDark ? "dark" : "light"}
             animate={false}
             className="mb-10"
           />
@@ -79,7 +82,7 @@ export function MarketingCTA({
               <Link
                 href={secondaryHref}
                 className={`text-sm font-medium px-7 py-3 rounded-full transition-all inline-flex items-center ${
-                  isImage
+                  isDark
                     ? "border border-white/30 bg-white/10 text-white hover:bg-white/20"
                     : "text-muted-foreground hover:text-foreground"
                 }`}

@@ -1,20 +1,27 @@
-const IMG = (id: string) =>
-  `https://images.higgs.ai/?default=1&output=webp&url=https%3A%2F%2Fd8j0ntlcm91z4.cloudfront.net%2Fuser_38xzZboKViGWJOttwIXH07lWA1P%2F${id}&w=1280&q=85`;
+/** Unsplash hero backgrounds — one distinct image per page/section. */
+const unsplash = (path: string, w = 1600) =>
+  `https://images.unsplash.com/${path}?auto=format&fit=crop&w=${w}&q=85`;
 
 export const HERO_IMAGES = {
   home: {
-    base: IMG("hf_20260609_195923_b0ba8ace-1d1d-4f2c-9a28-1ab84b330680.png"),
-    spotlight: IMG("hf_20260609_201152_bba90a12-bf12-459f-91f0-51f237dbaf3b.png"),
+    /** Hero base — misty mountain peaks */
+    base: unsplash("photo-1510134659073-54f147c0afc2"),
+    /** Spotlight reveal — deep forest */
+    spotlight: unsplash("photo-1448375240586-882707db888b"),
+    /** Workflow section — late-night planning desk */
+    workflow: unsplash("photo-1703969083653-da62f9ea70af"),
+    /** Bottom CTA — ocean at night */
+    cta: unsplash("photo-1580659986392-440ea995857c"),
   },
-  features: IMG("hf_20260609_195923_b0ba8ace-1d1d-4f2c-9a28-1ab84b330680.png"),
-  pricing: IMG("hf_20260609_201152_bba90a12-bf12-459f-91f0-51f237dbaf3b.png"),
-  geoAudit: IMG("hf_20260609_195923_b0ba8ace-1d1d-4f2c-9a28-1ab84b330680.png"),
-  about: IMG("hf_20260609_201152_bba90a12-bf12-459f-91f0-51f237dbaf3b.png"),
-  roadmaps: IMG("hf_20260609_195923_b0ba8ace-1d1d-4f2c-9a28-1ab84b330680.png"),
-  contentEngine: IMG("hf_20260609_201152_bba90a12-bf12-459f-91f0-51f237dbaf3b.png"),
-  roadmapDetail: IMG("hf_20260609_195923_b0ba8ace-1d1d-4f2c-9a28-1ab84b330680.png"),
-  geoAuditResult: IMG("hf_20260609_201152_bba90a12-bf12-459f-91f0-51f237dbaf3b.png"),
-  seoArticle: IMG("hf_20260609_195923_b0ba8ace-1d1d-4f2c-9a28-1ab84b330680.png"),
-  contentStrategy: IMG("hf_20260609_201152_bba90a12-bf12-459f-91f0-51f237dbaf3b.png"),
-  legal: IMG("hf_20260609_195923_b0ba8ace-1d1d-4f2c-9a28-1ab84b330680.png"),
+  features: unsplash("photo-1719400471588-575b23e27bd7"),
+  pricing: unsplash("photo-1551288049-bebda4e38f71"),
+  geoAudit: unsplash("photo-1486184885347-1464b5f10296"),
+  about: unsplash("photo-1502252430442-aac78f397426"),
+  roadmaps: unsplash("photo-1485470733090-0aae1788d5af"),
+  contentEngine: unsplash("photo-1631755218195-8d8e7b2c04d6"),
+  roadmapDetail: unsplash("photo-1506452305024-9d3f02d1c9b5"),
+  geoAuditResult: unsplash("photo-1566410824233-a8011929225c"),
+  seoArticle: unsplash("photo-1512018611669-583e87835849"),
+  contentStrategy: unsplash("photo-1616266126575-1471ec059439"),
+  legal: unsplash("photo-1478760329108-5c3ed9d495a0"),
 } as const;
