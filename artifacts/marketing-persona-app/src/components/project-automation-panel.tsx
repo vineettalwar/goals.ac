@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Zap, Sparkles, Save, CheckCircle2 } from "lucide-react";
+import { Zap, Save, CheckCircle2 } from "lucide-react";
 import type { AutopilotSettings, VisibilitySettings } from "@workspace/db/schema";
 import { DEFAULT_AUTOPILOT_SETTINGS, DEFAULT_VISIBILITY_SETTINGS } from "@workspace/db/schema";
 import { Button } from "@/components/ui/button";
@@ -254,10 +254,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
       </div>
 
       <div className="paper-card p-6 space-y-4">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-violet-500" />
-          <h3 className="font-semibold">AI Visibility & GEO</h3>
-        </div>
+        <h3 className="font-semibold">AI Visibility & GEO</h3>
         <p className="text-sm text-muted-foreground">
           Weekly LLM citation tracking and GEO re-audits.{" "}
           <Link href="/search/visibility" className="text-primary hover:underline">View full dashboard</Link>

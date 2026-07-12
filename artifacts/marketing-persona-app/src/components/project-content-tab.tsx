@@ -137,7 +137,7 @@ export function ProjectContentTab({ projectId, initialContent }: Props) {
                   </p>
                 </div>
                 <Button size="sm" variant="ghost" asChild>
-                  <Link href={`/geo-audit/${audit.id}`}>View</Link>
+                  <Link href={`/audit/${audit.id}`}>View</Link>
                 </Button>
               </div>
             ))}

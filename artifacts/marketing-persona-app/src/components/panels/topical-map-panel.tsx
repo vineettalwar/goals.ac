@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Map, TrendingUp, Zap, CircleCheck, CircleDashed, ChevronDown, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { useActiveProject } from "@/context/active-project";
 
 interface SupportingTopic {
   title: string;
@@ -32,8 +34,6 @@ interface TopicalMap {
   contentGaps: string[];
   recommendedNextArticle: string;
 }
-
-interface Company { id: number; name: string }
 
 const DIFF_COLOR = {
   low: "success" as const,
@@ -63,42 +63,48 @@ function ScoreRing({ score }: { score: number }) {
 }
 
 export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
-  const [companies, setCompanies] = useState<Company[]>([]);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<number | null>(null);
+  const { activeProjectId, activeProject, isLoading: projectLoading } = useActiveProject();
   const [map, setMap] = useState<TopicalMap | null>(null);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true);
   const [expandedCluster, setExpandedCluster] = useState<number | null>(0);
 
   useEffect(() => {
-    fetch("/api/companies")
-      .then((r) => r.json())
-      .then((data) => {
-        const list = data.companies ?? [];
-        setCompanies(list);
-        if (list[0]) setSelectedCompanyId(list[0].id);
-      })
-      .finally(() => setFetching(false));
-  }, []);
+    setMap(null);
+    setExpandedCluster(0);
+  }, [activeProjectId]);
 
   async function handleGenerate() {
-    if (!selectedCompanyId) { toast.error("Select a company first"); return; }
+    if (!activeProjectId) {
+      toast.error("Select a project first");
+      return;
+    }
     setLoading(true);
     setMap(null);
     const res = await fetch("/api/topical-map", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ companyId: selectedCompanyId }),
+      body: JSON.stringify({ websiteProjectId: activeProjectId }),
     });
     setLoading(false);
-    if (!res.ok) { toast.error("Failed to generate topical map"); return; }
+    if (!res.ok) {
+      toast.error("Failed to generate topical map");
+      return;
+    }
     const data = await res.json();
     setMap(data.map);
   }
 
   const containerClass = embedded ? "space-y-6" : "px-8 py-8 max-w-5xl space-y-6";
 
-  if (fetching) return <div className="flex items-center justify-center p-16"><Spinner size="lg" /></div>;
+  if (projectLoading && !activeProjectId) {
+    return (
+      <div className={containerClass}>
+        <div className="flex items-center justify-center p-16">
+          <Spinner size="lg" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={containerClass}>
@@ -110,48 +116,51 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
               See your keyword coverage, find gaps, and get a priority order for next articles
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            {companies.length > 1 && (
-              <select
-                className="h-10 rounded-lg border border-(--border) bg-white px-3 text-sm"
-                value={selectedCompanyId ?? ""}
-                onChange={(e) => setSelectedCompanyId(Number(e.target.value))}
-              >
-                {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            )}
-            <Button onClick={handleGenerate} disabled={loading || !selectedCompanyId}>
+          {activeProjectId ? (
+            <Button onClick={handleGenerate} disabled={loading}>
               {loading ? <><Spinner size="sm" /> Analyzing…</> : <><Map className="h-4 w-4" /> Generate map</>}
             </Button>
-          </div>
+          ) : null}
         </div>
       ) : (
-        <div className="flex items-center justify-end gap-3 flex-wrap">
-          {companies.length > 1 && (
-            <select
-              className="h-10 rounded-lg border border-(--border) bg-white px-3 text-sm"
-              value={selectedCompanyId ?? ""}
-              onChange={(e) => setSelectedCompanyId(Number(e.target.value))}
-            >
-              {companies.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+        <div className="flex items-center justify-between gap-3 flex-wrap">
+          {activeProject ? (
+            <p className="text-sm text-muted-foreground">
+              Project: <span className="font-medium text-foreground">{activeProject.name}</span>
+            </p>
+          ) : (
+            <span />
           )}
-          <Button onClick={handleGenerate} disabled={loading || !selectedCompanyId}>
-            {loading ? <><Spinner size="sm" /> Analyzing…</> : <><Map className="h-4 w-4" /> Generate map</>}
-          </Button>
+          {activeProjectId ? (
+            <Button onClick={handleGenerate} disabled={loading}>
+              {loading ? <><Spinner size="sm" /> Analyzing…</> : <><Map className="h-4 w-4" /> Generate map</>}
+            </Button>
+          ) : null}
         </div>
       )}
 
-      {loading && (
+      {!activeProjectId ? (
+        <div className="paper-card rounded-xl flex flex-col items-center justify-center p-16 text-center">
+          <Map className="h-10 w-10 text-muted-foreground mb-3" />
+          <p className="font-medium">No project selected</p>
+          <p className="text-sm text-muted-foreground mt-1 mb-4">
+            Choose a project in the sidebar to analyze topical authority for its site.
+          </p>
+          <Link href="/projects">
+            <Button variant="outline">Manage projects</Button>
+          </Link>
+        </div>
+      ) : null}
+
+      {activeProjectId && loading && (
         <div className="paper-card rounded-xl p-12 flex flex-col items-center gap-4">
           <Spinner size="lg" />
           <p className="text-sm text-muted-foreground">Analyzing your niche and building keyword clusters…</p>
         </div>
       )}
 
-      {map && (
+      {activeProjectId && map && (
         <div className="space-y-5">
-          {/* Score row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="paper-card rounded-xl p-5 flex items-center gap-5">
               <ScoreRing score={map.topicalAuthority} />
@@ -184,7 +193,6 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
             </div>
           </div>
 
-          {/* Content gaps */}
           {map.contentGaps.length > 0 && (
             <div className="paper-card rounded-xl p-5">
               <h2 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Top content gaps</h2>
@@ -198,7 +206,6 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
             </div>
           )}
 
-          {/* Clusters */}
           <div className="space-y-3">
             {map.clusters.map((cluster, ci) => (
               <div key={ci} className="paper-card rounded-xl overflow-hidden">
@@ -251,14 +258,14 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
         </div>
       )}
 
-      {!map && !loading && (
+      {activeProjectId && !map && !loading && (
         <div className="paper-card rounded-xl flex flex-col items-center justify-center p-16 text-center">
           <Map className="h-10 w-10 text-muted-foreground mb-3" />
           <p className="font-medium">No topical map yet</p>
           <p className="text-sm text-muted-foreground mt-1 mb-4">
             Generate a map to see your keyword coverage and find content gaps
           </p>
-          <Button onClick={handleGenerate} disabled={!selectedCompanyId}>
+          <Button onClick={handleGenerate}>
             <Map className="h-4 w-4" /> Generate topical map
           </Button>
         </div>

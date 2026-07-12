@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "@workspace/db";
 import {
   contentPiecesTable,
@@ -27,12 +28,19 @@ export interface ContentPieceRecord {
   wordCount: number;
   websiteProjectId: number;
   createdAt: string;
+  pieceMetadata?: {
+    metaDescription?: string;
+    faqSection?: { question: string; answer: string }[];
+    citations?: { text: string; url: string; source: string }[];
+    internalLinkSuggestions?: { anchorText: string; suggestedSlug: string; rationale?: string }[];
+    jsonLdSchema?: object;
+  } | null;
 }
 
-export async function loadContentPieceForUser(
+export const loadContentPieceForUser = cache(async (
   pieceId: number,
   userId: number,
-): Promise<ContentPieceRecord | null> {
+): Promise<ContentPieceRecord | null> => {
   const [piece] = await db
     .select()
     .from(contentPiecesTable)
@@ -61,13 +69,14 @@ export async function loadContentPieceForUser(
     wordCount: piece.wordCount,
     websiteProjectId: piece.websiteProjectId,
     createdAt: piece.createdAt.toISOString(),
+    pieceMetadata: piece.pieceMetadata ?? null,
   };
-}
+});
 
-export async function loadCmsConnectionsForProject(
+export const loadCmsConnectionsForProject = cache(async (
   projectId: number,
   userId: number,
-): Promise<CmsConnectionSnapshot> {
+): Promise<CmsConnectionSnapshot> => {
   const [project] = await db
     .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
     .from(websiteProjectsTable)
@@ -78,12 +87,12 @@ export async function loadCmsConnectionsForProject(
 
   const decrypted = decryptCmsCredentials(project.cmsIntegrations as CmsIntegrationCredentials);
   return maskCmsCredentials(decrypted);
-}
+});
 
-export async function loadWebsiteProjectForUser(
+export const loadWebsiteProjectForUser = cache(async (
   projectId: number,
   userId: number,
-): Promise<WebsiteProject | null> {
+): Promise<WebsiteProject | null> => {
   const [project] = await db
     .select()
     .from(websiteProjectsTable)
@@ -127,7 +136,7 @@ export async function loadWebsiteProjectForUser(
         }
       : null,
   };
-}
+});
 
 export interface SettingsInitialData {
   usage: Awaited<ReturnType<typeof getUsageSummaryForUser>> | null;
@@ -140,21 +149,21 @@ export interface SettingsInitialData {
   aiStatus: Awaited<ReturnType<typeof buildAiProviderStatus>> | null;
 }
 
-export async function loadSettingsInitialData(userId: number): Promise<SettingsInitialData> {
-  const [user] = await db
-    .select({
-      encryptedGeminiKey: usersTable.encryptedGeminiKey,
-      googleId: usersTable.googleId,
-      passwordHash: usersTable.passwordHash,
-      aiProvider: usersTable.aiProvider,
-      ollamaBaseUrl: usersTable.ollamaBaseUrl,
-      ollamaModel: usersTable.ollamaModel,
-    })
-    .from(usersTable)
-    .where(eq(usersTable.id, userId))
-    .limit(1);
-
-  const [usage] = await Promise.all([
+export const loadSettingsInitialData = cache(async (userId: number): Promise<SettingsInitialData> => {
+  const [user, usage] = await Promise.all([
+    db
+      .select({
+        encryptedGeminiKey: usersTable.encryptedGeminiKey,
+        googleId: usersTable.googleId,
+        passwordHash: usersTable.passwordHash,
+        aiProvider: usersTable.aiProvider,
+        ollamaBaseUrl: usersTable.ollamaBaseUrl,
+        ollamaModel: usersTable.ollamaModel,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1)
+      .then((rows) => rows[0]),
     getUsageSummaryForUser(userId),
   ]);
 
@@ -184,4 +193,4 @@ export async function loadSettingsInitialData(userId: number): Promise<SettingsI
     apiKey: { hasKey, lastFour },
     aiStatus,
   };
-}
+});

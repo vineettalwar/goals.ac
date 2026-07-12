@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { LegalPageClient } from "@/components/marketing/legal-page-client";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description: "How goals.ac collects, uses, and protects your data — including encrypted API keys and AI processing.",
+  robots: { index: true, follow: true },
+};
 
 export default function PrivacyPage() {
   return (

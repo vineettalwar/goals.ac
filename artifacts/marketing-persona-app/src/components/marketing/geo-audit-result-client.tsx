@@ -5,13 +5,9 @@ import { MarketingPageShell } from "@/components/marketing/marketing-page-shell"
 import { PageHero } from "@/components/marketing/page-hero";
 import { DarkCTABand } from "@/components/marketing/dark-cta-band";
 import { HERO_IMAGES } from "@/lib/marketing-hero-images";
-
-interface GeoIssue {
-  check: string;
-  status: "pass" | "fail" | "warn";
-  detail: string;
-  fix: string;
-}
+import { GeoAuditWriteNext } from "@/components/geo-audit-write-next";
+import { geoAuditContentRecommendations } from "@/lib/geo-audit-content-recommendations";
+import type { GeoIssue } from "@/components/geo-audit-result-view";
 
 const STATUS_ICONS = {
   pass: <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />,
@@ -26,11 +22,27 @@ type GeoAuditResultClientProps = {
   url: string;
   geoScore: number;
   issues: GeoIssue[];
+  pageTitle?: string | null;
+  schemaTypes?: string[];
+  projectId?: number | null;
 };
 
-export function GeoAuditResultClient({ url, geoScore, issues }: GeoAuditResultClientProps) {
+export function GeoAuditResultClient({
+  url,
+  geoScore,
+  issues,
+  pageTitle,
+  schemaTypes,
+  projectId,
+}: GeoAuditResultClientProps) {
   const passCount = issues.filter((i) => i.status === "pass").length;
   const failCount = issues.filter((i) => i.status === "fail").length;
+  const recommendations = geoAuditContentRecommendations({
+    url,
+    pageTitle,
+    schemaTypes,
+    issues,
+  });
 
   return (
     <MarketingPageShell
@@ -74,6 +86,8 @@ export function GeoAuditResultClient({ url, geoScore, issues }: GeoAuditResultCl
             </div>
           </div>
         </div>
+
+        <GeoAuditWriteNext recommendations={recommendations} projectId={projectId} />
 
         <div className="space-y-3">
           {issues.map((issue, i) => (

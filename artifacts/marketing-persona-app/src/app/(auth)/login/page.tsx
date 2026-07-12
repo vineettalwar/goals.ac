@@ -75,7 +75,7 @@ function LoginPageContent() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="you@company.com" {...register("email")} />
+          <Input id="email" type="email" autoComplete="email" placeholder="you@company.com" {...register("email")} />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
 
@@ -86,12 +86,19 @@ function LoginPageContent() {
               Forgot password?
             </Link>
           </div>
-          <Input id="password" type="password" placeholder="••••••••" {...register("password")} />
+          <Input id="password" type="password" autoComplete="current-password" placeholder="••••••••" {...register("password")} />
           {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? <Spinner size="sm" className="border-white/30 border-t-white" /> : "Sign in"}
+        <Button type="submit" className="w-full" disabled={loading} aria-busy={loading}>
+          {loading ? (
+            <>
+              <Spinner size="sm" className="border-white/30 border-t-white" />
+              <span className="sr-only">Signing in…</span>
+            </>
+          ) : (
+            "Sign in"
+          )}
         </Button>
       </form>
 

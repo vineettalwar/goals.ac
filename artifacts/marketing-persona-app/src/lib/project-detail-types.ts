@@ -1,17 +1,12 @@
-export type Confidence = "high" | "medium" | "low";
+import type { BrandExtract, Confidence } from "@workspace/content-engine/brand-extract-types";
 
-export interface ScrapeConfidence {
-  companyName: Confidence;
-  industry: Confidence;
-  targetAudience: Confidence;
-  voiceTone: Confidence;
-  primaryKeywords: Confidence;
-  competitorUrls: Confidence;
-}
+export type { Confidence };
 
-export interface ScrapeData {
+export type ScrapeConfidence = BrandExtract["confidence"];
+
+export type ScrapeData = Partial<Omit<BrandExtract, "confidence">> & {
   confidence?: ScrapeConfidence;
-}
+};
 
 export interface ContentStyle {
   tonePreset?: "professional" | "casual" | "technical" | "conversational";
@@ -20,6 +15,8 @@ export interface ContentStyle {
   primaryLanguage?: string;
   forbiddenWords?: string[];
   readingLevel?: "general" | "intermediate" | "expert";
+  humanizationLevel?: "off" | "light" | "strong";
+  writingSample?: string | null;
 }
 
 export interface BrandProfile {

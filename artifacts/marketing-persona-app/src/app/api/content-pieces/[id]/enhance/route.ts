@@ -1,0 +1,91 @@
+import { NextResponse } from "next/server";
+import { db } from "@workspace/db";
+import { contentPiecesTable } from "@workspace/db/schema";
+import type { ContentFormatType } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
+import { requireAuth } from "@/lib/require-auth";
+import { enhanceContentPiece } from "@workspace/content-engine/content-piece-enhance";
+import { isSeoLongformFormat } from "@workspace/content-engine/content-piece-seo";
+import {
+  assertPieceOwner,
+  loadProjectBrand,
+  loadUserAiSettings,
+  loadExistingPieceTitles,
+  wordCountFromMarkdown,
+} from "@/lib/content-pieces-helpers";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+
+export async function POST(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { userId, error } = await requireAuth();
+  if (error) return error;
+
+  const limited = rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs,
+  );
+  if (limited) return limited;
+
+  const { id: idStr } = await params;
+  const id = Number(idStr);
+  if (isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+
+  const { piece, error: ownerError } = await assertPieceOwner(id, userId!);
+  if (ownerError === "not_found") {
+    return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
+  }
+  if (ownerError === "forbidden") {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
+  const formatType = piece!.formatType as ContentFormatType;
+  if (!isSeoLongformFormat(formatType)) {
+    return NextResponse.json(
+      { error: "Enhance quality is available for blog posts, guides, and other long-form SEO formats" },
+      { status: 400 },
+    );
+  }
+
+  const ctx = await loadProjectBrand(piece!.websiteProjectId, userId!);
+  if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+  const existingPieceTitles = await loadExistingPieceTitles(piece!.websiteProjectId);
+
+  try {
+    const result = await enhanceContentPiece(
+      {
+        title: piece!.title,
+        targetKeyword: piece!.targetKeyword ?? "",
+        bodyMarkdown: piece!.bodyMarkdown ?? "",
+        formatType,
+        brand: ctx.brand,
+        metaDescription: piece!.pieceMetadata?.metaDescription ?? null,
+      },
+      existingPieceTitles.filter((title) => title !== piece!.title),
+      userApiKey,
+      aiProviderOptions,
+    );
+
+    const [updated] = await db
+      .update(contentPiecesTable)
+      .set({
+        title: result.title,
+        targetKeyword: result.target_keyword,
+        bodyMarkdown: result.body_markdown,
+        wordCount: wordCountFromMarkdown(result.body_markdown),
+        pieceMetadata: result.pieceMetadata ?? null,
+        status: "draft",
+      })
+      .where(eq(contentPiecesTable.id, id))
+      .returning();
+
+    return NextResponse.json(updated);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Enhancement failed";
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
+}

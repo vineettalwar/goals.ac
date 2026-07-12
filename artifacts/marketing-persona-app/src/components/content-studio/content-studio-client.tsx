@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Plus,
@@ -32,11 +33,31 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { aiProviderUnavailableMessage } from "@/lib/ai-providers-status";
 import type { AiProviderId } from "@workspace/ai-providers/config";
-import { CreateContentModal } from "./create-content-modal";
-import { FormatBadge, StatusBadge } from "./content-studio-format-meta";
+import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
+import { FormatBadge, StatusBadge, type ContentFormatType } from "./content-studio-format-meta";
 import { FORMAT_OPTIONS } from "@/lib/content-format-options";
 
 export { FORMAT_OPTIONS };
+
+function draftFromCreateParams(searchParams: URLSearchParams): BriefContentDraft | null {
+  if (searchParams.get("create") !== "1") return null;
+
+  const keyword = searchParams.get("keyword")?.trim() ?? "";
+  const title = searchParams.get("title")?.trim() ?? "";
+  const angle = searchParams.get("angle")?.trim() ?? "";
+  const format = searchParams.get("format")?.trim();
+  const validFormats = new Set<string>(FORMAT_OPTIONS.map((option) => option.value));
+
+  if (!keyword && !title) return null;
+
+  return {
+    keyword: keyword || title,
+    workingTitle: title || undefined,
+    angleHint: angle || undefined,
+    formatType:
+      format && validFormats.has(format) ? (format as ContentFormatType) : "blog_post",
+  };
+}
 
 export interface ContentPieceRow {
   id: number;
@@ -112,7 +133,34 @@ interface Props {
   projectId: string;
 }
 
+function briefToDraft(brief: {
+  id: number;
+  workingTitle: string;
+  targetKeywordCluster: string | null;
+  angle: string | null;
+  format: string | null;
+}): BriefContentDraft {
+  const parts = [`Title: ${brief.workingTitle}`];
+  if (brief.targetKeywordCluster) parts.push(`Keywords: ${brief.targetKeywordCluster}`);
+  if (brief.angle) parts.push(brief.angle);
+
+  const formatType =
+    brief.format && FORMAT_OPTIONS.some((f) => f.value === brief.format)
+      ? (brief.format as ContentFormatType)
+      : "blog_post";
+
+  return {
+    briefId: brief.id,
+    keyword: brief.targetKeywordCluster?.trim() || brief.workingTitle,
+    angleHint: parts.join("\n"),
+    formatType,
+    workingTitle: brief.workingTitle,
+  };
+}
+
 export function ContentStudioClient({ projectId }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [projectName, setProjectName] = useState("");
   const [aiReady, setAiReady] = useState<boolean | null>(null);
   const [activeProvider, setActiveProvider] = useState<AiProviderId>("gemini");
@@ -121,6 +169,7 @@ export function ContentStudioClient({ projectId }: Props) {
   const [legacyItems, setLegacyItems] = useState<LegacyItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
+  const [briefDraft, setBriefDraft] = useState<BriefContentDraft | null>(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterSource, setFilterSource] = useState("all");
   const [filterFormat, setFilterFormat] = useState("all");
@@ -189,7 +238,7 @@ export function ContentStudioClient({ projectId }: Props) {
           status: g.status ?? "ready",
           createdAt: g.createdAt,
           source: "geo_audit" as const,
-          linkTo: `/geo-audit/${g.id}`,
+          linkTo: `/audit/${g.id}`,
         })),
         ...(legacy.roadmaps ?? []).map((r: { id: number; slug: string; industry: string; location: string; createdAt: string }) => ({
           id: r.id,
@@ -209,6 +258,38 @@ export function ContentStudioClient({ projectId }: Props) {
   useEffect(() => {
     loadData().finally(() => setLoading(false));
   }, [loadData]);
+
+  useEffect(() => {
+    const briefIdParam = searchParams.get("briefId");
+    const geoDraft = draftFromCreateParams(searchParams);
+
+    if (geoDraft) {
+      setBriefDraft(geoDraft);
+      setCreateOpen(true);
+      router.replace(`/projects/${projectId}/content-studio`, { scroll: false });
+      return;
+    }
+
+    if (!briefIdParam) return;
+
+    const briefId = Number(briefIdParam);
+    if (Number.isNaN(briefId)) return;
+
+    let cancelled = false;
+    void (async () => {
+      const res = await fetch(`/api/briefs/${briefId}`);
+      if (!res.ok || cancelled) return;
+      const brief = await res.json();
+      if (cancelled) return;
+      setBriefDraft(briefToDraft(brief));
+      setCreateOpen(true);
+      router.replace(`/projects/${projectId}/content-studio`, { scroll: false });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams, projectId, router]);
 
   async function handleDelete(pieceId: number) {
     if (!confirm("Delete this content piece?")) return;
@@ -444,11 +525,16 @@ export function ContentStudioClient({ projectId }: Props) {
 
       <CreateContentModal
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        onClose={() => {
+          setCreateOpen(false);
+          setBriefDraft(null);
+        }}
         projectId={projectId}
         existingPieces={pieces}
+        initialDraft={briefDraft}
         onCreated={(piece) => {
           setPieces((prev) => [{ ...piece, source: "studio" }, ...prev.filter((p) => p.id !== piece.id)]);
+          setBriefDraft(null);
           loadData();
         }}
       />

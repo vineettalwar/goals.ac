@@ -9,7 +9,12 @@ import {
 } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { generateArticle } from "@/lib/ai/article-generator";
-import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
+import { humanizeArticle } from "@/lib/ai/humanizer";
+import { loadBrandContextForCompany } from "@workspace/content-engine/support/brand-context-loader";
+import {
+  resolveHumanizationLevel,
+  resolveWritingSample,
+} from "@workspace/content-engine/brand-voice";
 import { publishToWordPress } from "@workspace/connectors/wordpress";
 import { decryptSecret } from "@workspace/security/encryption";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
@@ -76,6 +81,7 @@ export async function GET(req: Request) {
         .returning();
 
       const aiConfig = await resolveAiClientForUser(company.userId);
+      const brandVoice = await loadBrandContextForCompany(company.userId, company);
 
       let generated = await generateArticle({
         company: {
@@ -88,17 +94,20 @@ export async function GET(req: Request) {
         persona: persona
           ? { name: persona.name, jobTitle: persona.jobTitle, painPoints: persona.painPoints, goals: persona.goals, preferredContent: persona.preferredContent }
           : null,
+        brandVoice,
       }, {
         aiClient: aiConfig.client,
       });
 
-      // Second pass: humanize the article unless the company opted out.
+      // Second pass: humanize the article unless opted out.
       let humanized = false;
-      if (company.humanizationLevel !== "off") {
+      const humanizationLevel = resolveHumanizationLevel(brandVoice);
+      if (humanizationLevel !== "off") {
         const beforeHumanize = generated;
         generated = await humanizeArticle(generated, {
-          level: company.humanizationLevel as HumanizationLevel,
-          writingSample: company.writingSample ?? undefined,
+          level: humanizationLevel,
+          writingSample: resolveWritingSample(brandVoice),
+          brandVoice,
           aiClient: aiConfig.client,
         });
         humanized = generated !== beforeHumanize;

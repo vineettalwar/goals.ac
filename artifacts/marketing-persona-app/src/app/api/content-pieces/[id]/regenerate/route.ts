@@ -13,6 +13,7 @@ import {
   loadProjectBrand,
   loadUserAiSettings,
   wordCountFromMarkdown,
+  loadExistingPieceTitles,
 } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
@@ -53,6 +54,7 @@ export async function POST(
   const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
 
   try {
+    const existingPieceTitles = await loadExistingPieceTitles(piece!.websiteProjectId);
     const result = await generateContentPiece(
       piece!.formatType as ContentFormatType,
       ctx.brand,
@@ -61,6 +63,7 @@ export async function POST(
       true,
       userApiKey,
       aiProviderOptions,
+      { existingPieceTitles },
     );
 
     const cacheKeyStr = buildCacheKey(piece!.formatType, piece!.targetKeyword ?? "", ctx.brand, angleHint);
@@ -74,6 +77,7 @@ export async function POST(
         wordCount: wordCountFromMarkdown(result.body_markdown),
         cacheKey: cacheKeyStr,
         status: "draft",
+        pieceMetadata: result.pieceMetadata ?? null,
       })
       .where(eq(contentPiecesTable.id, id))
       .returning();

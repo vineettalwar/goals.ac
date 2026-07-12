@@ -89,24 +89,31 @@ function SignupPageContent() {
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
           <Label htmlFor="name">Full name</Label>
-          <Input id="name" placeholder="Alex Johnson" {...register("name")} />
+          <Input id="name" autoComplete="name" placeholder="Alex Johnson" {...register("name")} />
           {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="you@company.com" {...register("email")} />
+          <Input id="email" type="email" autoComplete="email" placeholder="you@company.com" {...register("email")} />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" placeholder="Min. 8 characters" {...register("password")} />
+          <Input id="password" type="password" autoComplete="new-password" placeholder="Min. 8 characters" {...register("password")} />
           {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
         </div>
 
-        <Button type="submit" className="w-full" disabled={loading}>
-          {loading ? <Spinner size="sm" className="border-white/30 border-t-white" /> : "Create account"}
+        <Button type="submit" className="w-full" disabled={loading} aria-busy={loading}>
+          {loading ? (
+            <>
+              <Spinner size="sm" className="border-white/30 border-t-white" />
+              <span className="sr-only">Creating account…</span>
+            </>
+          ) : (
+            "Create account"
+          )}
         </Button>
       </form>
 

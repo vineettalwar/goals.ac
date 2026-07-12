@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "@workspace/db";
 import {
   llmVisibilityPromptsTable,
@@ -12,9 +13,9 @@ export interface ProjectVisibilitySummary {
   latestGeoScore: number | null;
 }
 
-export async function loadProjectVisibilitySummary(
+export const loadProjectVisibilitySummary = cache(async (
   projectId: number,
-): Promise<ProjectVisibilitySummary> {
+): Promise<ProjectVisibilitySummary> => {
   const since = new Date();
   since.setDate(since.getDate() - 90);
 
@@ -58,4 +59,4 @@ export async function loadProjectVisibilitySummary(
     visibilityScore,
     latestGeoScore: geoAudits[0]?.geoScore ?? null,
   };
-}
+});

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { companiesTable, scheduledArticlesTable, brandProfilesTable, websiteProjectsTable } from "@workspace/db/schema";
+import { companiesTable, scheduledArticlesTable, brandProfilesTable, websiteProjectsTable, contentPiecesTable, seoArticlesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateTopicalMap } from "@/lib/ai/topical-map-generator";
 import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
+import { logger } from "@/lib/logger";
+import type { ScrapeData } from "@/lib/project-detail-types";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -75,7 +77,7 @@ export async function POST(req: Request) {
         .where(eq(brandProfilesTable.websiteProjectId, websiteProjectId))
         .limit(1);
 
-      const scrapeData = project.scrapeData as { companyName?: string; industry?: string; targetAudience?: string } | null;
+      const scrapeData = project.scrapeData as ScrapeData | null;
 
       companyData = {
         name: brand?.companyName ?? scrapeData?.companyName ?? project.name,
@@ -84,6 +86,21 @@ export async function POST(req: Request) {
         targetAudience: brand?.targetAudience ?? scrapeData?.targetAudience ?? "",
         websiteUrl: project.url,
       };
+
+      const [pieces, seoArticles] = await Promise.all([
+        db
+          .select({ title: contentPiecesTable.title })
+          .from(contentPiecesTable)
+          .where(eq(contentPiecesTable.websiteProjectId, websiteProjectId)),
+        db
+          .select({ title: seoArticlesTable.title })
+          .from(seoArticlesTable)
+          .where(eq(seoArticlesTable.websiteProjectId, websiteProjectId)),
+      ]);
+
+      existingTitles = [...pieces, ...seoArticles]
+        .map((row) => row.title)
+        .filter((title): title is string => Boolean(title));
     } else {
       return NextResponse.json({ error: "Either companyId or websiteProjectId is required" }, { status: 400 });
     }
@@ -99,7 +116,8 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({ map: result });
-  } catch {
+  } catch (err) {
+    logger.error({ err, companyId, websiteProjectId }, "Topical map generation failed");
     return NextResponse.json({ error: "Failed to generate topical map" }, { status: 500 });
   }
 }

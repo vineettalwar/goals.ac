@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Globe, Plus } from "lucide-react";
 import { useActiveProject } from "@/context/active-project";
+import { navigationTargetForActiveProject } from "@/lib/active-project-routing";
 import { NewProjectDialog } from "@/components/new-project-dialog";
 import {
   Select,
@@ -35,7 +37,25 @@ export function ProjectSwitcher({ className }: { className?: string }) {
     refreshProjects,
     isLoading,
   } = useActiveProject();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+
+  function selectProject(projectId: number) {
+    setActiveProjectId(projectId);
+
+    const target = navigationTargetForActiveProject(pathname, projectId);
+    if (target) {
+      const query = searchParams.toString();
+      router.push(query ? `${target}?${query}` : target);
+      return;
+    }
+
+    if (pathname === "/dashboard") {
+      router.refresh();
+    }
+  }
 
   if (isLoading) {
     return (
@@ -73,7 +93,7 @@ export function ProjectSwitcher({ className }: { className?: string }) {
             setAddDialogOpen(true);
             return;
           }
-          setActiveProjectId(Number.parseInt(value, 10));
+          selectProject(Number.parseInt(value, 10));
         }}
       >
         <SelectTrigger className="h-auto w-full gap-2 border-border bg-secondary/50 px-2.5 py-2 text-left shadow-none [&>svg:last-child]:hidden">
@@ -92,7 +112,7 @@ export function ProjectSwitcher({ className }: { className?: string }) {
           </div>
         </SelectTrigger>
         <SelectContent
-          side="top"
+          side="bottom"
           align="start"
           sideOffset={6}
           className="w-[var(--radix-select-trigger-width)]"
@@ -125,7 +145,7 @@ export function ProjectSwitcher({ className }: { className?: string }) {
         onOpenChange={setAddDialogOpen}
         onCreated={async (project) => {
           await refreshProjects();
-          setActiveProjectId(project.id);
+          selectProject(project.id);
         }}
       />
     </div>

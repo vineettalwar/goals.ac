@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Search, AlertTriangle, TrendingUp, Target, Zap, Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { useActiveProject } from "@/context/active-project";
 
 interface Analysis {
   competitorName: string;
@@ -27,9 +28,14 @@ const THREAT_COLORS = {
 };
 
 export function CompetitorAnalysisPanel({ embedded = false }: { embedded?: boolean }) {
+  const { activeProjectId } = useActiveProject();
   const [form, setForm] = useState({ competitorUrl: "", industry: "", location: "", stage: "early" });
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+
+  useEffect(() => {
+    setAnalysis(null);
+  }, [activeProjectId]);
 
   async function handleAnalyze() {
     if (!form.competitorUrl || !form.industry || !form.location) {
@@ -41,7 +47,10 @@ export function CompetitorAnalysisPanel({ embedded = false }: { embedded?: boole
     const res = await fetch("/api/competitor-analysis", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        websiteProjectId: activeProjectId ?? undefined,
+      }),
     });
     setLoading(false);
     if (!res.ok) { toast.error("Analysis failed"); return; }

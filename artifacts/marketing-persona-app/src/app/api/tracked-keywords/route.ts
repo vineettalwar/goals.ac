@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, trackedKeywordsTable, keywordRankSnapshotsTable } from "@workspace/db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, inArray } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { requireProjectAccess } from "@/lib/project-access";
 import { isSerpConfigured } from "@workspace/serp-provider";
@@ -39,17 +39,27 @@ export async function GET(req: Request) {
     )
     .orderBy(desc(trackedKeywordsTable.createdAt));
 
-  const withLatest = await Promise.all(
-    keywords.map(async (kw) => {
-      const [latest] = await db
-        .select()
-        .from(keywordRankSnapshotsTable)
-        .where(eq(keywordRankSnapshotsTable.trackedKeywordId, kw.id))
-        .orderBy(desc(keywordRankSnapshotsTable.checkedAt))
-        .limit(1);
-      return { ...kw, latestSnapshot: latest ?? null };
-    }),
-  );
+  const keywordIds = keywords.map((kw) => kw.id);
+  const latestByKeywordId = new Map<number, (typeof keywordRankSnapshotsTable.$inferSelect)>();
+
+  if (keywordIds.length > 0) {
+    const snapshots = await db
+      .select()
+      .from(keywordRankSnapshotsTable)
+      .where(inArray(keywordRankSnapshotsTable.trackedKeywordId, keywordIds))
+      .orderBy(desc(keywordRankSnapshotsTable.checkedAt));
+
+    for (const snapshot of snapshots) {
+      if (!latestByKeywordId.has(snapshot.trackedKeywordId)) {
+        latestByKeywordId.set(snapshot.trackedKeywordId, snapshot);
+      }
+    }
+  }
+
+  const withLatest = keywords.map((kw) => ({
+    ...kw,
+    latestSnapshot: latestByKeywordId.get(kw.id) ?? null,
+  }));
 
   return NextResponse.json({ keywords: withLatest, trackedKeywords: withLatest });
 }

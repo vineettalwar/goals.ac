@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth";
-import { Loader2, Plus, Globe, ExternalLink, Trash2, Clock, CheckCircle2, XCircle, FileText, ArrowRight, Sparkles } from "lucide-react";
+import { Loader2, Plus, Globe, ExternalLink, Trash2, Clock, CheckCircle2, XCircle, FileText, ArrowRight } from "lucide-react";
 import { WIZARD_DONE_KEY } from "@/pages/onboarding";
 
 interface DraftPiece {
@@ -235,8 +235,8 @@ export default function Dashboard() {
         {!isLoadingProjects && projects.length > 0 && (visibilityScore != null || geoScore != null) && (
           <div className="mb-8 grid gap-4 sm:grid-cols-2">
             <Link to="/ai-visibility" className="block rounded-xl border border-violet-200 dark:border-violet-500/20 bg-violet-50/50 dark:bg-violet-500/5 p-4 hover:border-violet-300 transition-colors">
-              <div className="flex items-center gap-2 text-sm font-semibold text-violet-800 dark:text-violet-300">
-                <Sparkles className="w-4 h-4" /> AI Visibility
+              <div className="text-sm font-semibold text-violet-800 dark:text-violet-300">
+                AI Visibility
               </div>
               <p className="text-2xl font-bold mt-1">{visibilityScore ?? "—"}%</p>
               <p className="text-xs text-muted-foreground mt-1">Brand citation rate across AI engines</p>

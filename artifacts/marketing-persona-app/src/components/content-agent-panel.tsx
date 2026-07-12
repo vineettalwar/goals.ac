@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Brain, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -126,9 +125,7 @@ export function ContentAgentPanel({ companyId }: ContentAgentPanelProps) {
     <div className="paper-card p-5 space-y-4 mb-8">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-sm font-semibold flex items-center gap-2">
-            <Brain className="h-4 w-4 text-primary" /> Content Agent
-          </h2>
+          <h2 className="text-sm font-semibold">Content Agent</h2>
           <p className="text-xs text-muted-foreground mt-1">
             Tell the agent your goals, get researched topic ideas, refine them, then click build.
           </p>
@@ -178,9 +175,7 @@ export function ContentAgentPanel({ companyId }: ContentAgentPanelProps) {
                 <Spinner size="sm" className="border-white/30 border-t-white" /> Researching...
               </>
             ) : (
-              <>
-                <Sparkles className="h-4 w-4" /> Generate topic ideas
-              </>
+              "Generate topic ideas"
             )}
           </Button>
         </div>
@@ -225,9 +220,7 @@ export function ContentAgentPanel({ companyId }: ContentAgentPanelProps) {
                       <Spinner size="sm" className="border-white/30 border-t-white" /> Building...
                     </>
                   ) : (
-                    <>
-                      <Wand2 className="h-4 w-4" /> Build article
-                    </>
+                    "Build article"
                   )}
                 </Button>
               </div>

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@workspace/db";
 import { roadmapsTable } from "@workspace/db/schema";
@@ -13,6 +14,50 @@ interface RoadmapContent {
     tactics: string[];
     kpis: string[];
   }[];
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+
+  try {
+    const [roadmap] = await db
+      .select({
+        industry: roadmapsTable.industry,
+        location: roadmapsTable.location,
+        stage: roadmapsTable.stage,
+        content: roadmapsTable.content,
+      })
+      .from(roadmapsTable)
+      .where(eq(roadmapsTable.slug, slug))
+      .limit(1);
+
+    if (!roadmap) {
+      return { title: "Roadmap not found" };
+    }
+
+    const content = roadmap.content as RoadmapContent;
+    const summary = content.executiveSummary?.slice(0, 155);
+
+    return {
+      title: `${roadmap.industry} Growth Roadmap — ${roadmap.location}`,
+      description:
+        summary ??
+        `Free 12-month SEO and content roadmap for ${roadmap.industry} in ${roadmap.location} (${roadmap.stage} stage).`,
+      alternates: { canonical: `/roadmap/${slug}` },
+      openGraph: {
+        title: `${roadmap.industry} Growth Roadmap — ${roadmap.location}`,
+        description:
+          summary ??
+          `Free 12-month SEO and content roadmap for ${roadmap.industry} in ${roadmap.location}.`,
+      },
+    };
+  } catch {
+    return { title: "Growth Roadmap" };
+  }
 }
 
 export default async function PublicRoadmapPage({ params }: { params: Promise<{ slug: string }> }) {

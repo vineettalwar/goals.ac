@@ -11,15 +11,17 @@ import {
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queries/keys";
+import { fetchWebsiteProjects } from "@/lib/queries/fetchers";
+import type { ProjectSummary } from "@/lib/queries/types";
+import {
+  clearActiveProjectCookie,
+  setActiveProjectCookie,
+} from "@/lib/active-project-cookie";
+import { removeProjectScopedQueries } from "@/lib/queries/invalidate-project-queries";
 
 const STORAGE_KEY = "activeProjectId";
 
-export interface ProjectSummary {
-  id: number;
-  name: string;
-  url: string;
-  crawlStatus: string;
-}
+export type { ProjectSummary };
 
 interface ActiveProjectContextValue {
   projects: ProjectSummary[];
@@ -31,13 +33,6 @@ interface ActiveProjectContextValue {
 }
 
 const ActiveProjectContext = createContext<ActiveProjectContextValue | null>(null);
-
-async function fetchWebsiteProjects(): Promise<ProjectSummary[]> {
-  const res = await fetch("/api/website-projects");
-  if (!res.ok) return [];
-  const data = await res.json();
-  return Array.isArray(data) ? data : data.projects ?? [];
-}
 
 export function ActiveProjectProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
@@ -63,24 +58,43 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
     const storedId = stored ? Number.parseInt(stored, 10) : NaN;
     const validStored = projects.find((p) => p.id === storedId);
 
+    let nextId: number | null = null;
     setActiveProjectIdState((current) => {
-      if (validStored) return validStored.id;
-      if (current && projects.some((p) => p.id === current)) return current;
-      return projects[0]?.id ?? null;
+      nextId = validStored
+        ? validStored.id
+        : current && projects.some((p) => p.id === current)
+          ? current
+          : projects[0]?.id ?? null;
+      return nextId;
     });
+
+    if (nextId != null) {
+      setActiveProjectCookie(nextId);
+    }
     setInitialized(true);
   }, [initialized, queryLoading, projects]);
 
-  const isLoading = !hydrated || queryLoading;
+  const isLoading = !hydrated || queryLoading || !initialized;
 
-  const setActiveProjectId = useCallback((id: number | null) => {
-    setActiveProjectIdState(id);
-    if (id != null) {
-      localStorage.setItem(STORAGE_KEY, String(id));
-    } else {
-      localStorage.removeItem(STORAGE_KEY);
-    }
-  }, []);
+  const setActiveProjectId = useCallback(
+    (id: number | null) => {
+      setActiveProjectIdState((previous) => {
+        if (previous !== id) {
+          removeProjectScopedQueries(queryClient);
+        }
+        return id;
+      });
+
+      if (id != null) {
+        localStorage.setItem(STORAGE_KEY, String(id));
+        setActiveProjectCookie(id);
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+        clearActiveProjectCookie();
+      }
+    },
+    [queryClient],
+  );
 
   const refreshProjects = useCallback(async () => {
     await queryClient.invalidateQueries({ queryKey: queryKeys.websiteProjects });

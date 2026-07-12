@@ -4,7 +4,12 @@ import { companiesTable, marketingPersonasTable, scheduledArticlesTable, usersTa
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateArticle } from "@/lib/ai/article-generator";
-import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
+import { humanizeArticle } from "@/lib/ai/humanizer";
+import { loadBrandContextForCompany } from "@workspace/content-engine/support/brand-context-loader";
+import {
+  resolveHumanizationLevel,
+  resolveWritingSample,
+} from "@workspace/content-engine/brand-voice";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";
@@ -113,6 +118,7 @@ export async function POST(req: Request) {
   // Generate the article inline
   try {
     const { client, source, providerId } = await resolveAiClientForUser(userId!);
+    const brandVoice = await loadBrandContextForCompany(userId!, company);
     let generated = await generateArticle({
       company: {
         name: company.name,
@@ -134,15 +140,18 @@ export async function POST(req: Request) {
       angle: parsed.data.angle,
       contentGoal: parsed.data.contentGoal,
       tonePreference: parsed.data.tonePreference,
+      brandVoice,
     }, { aiClient: client });
 
-    // Second pass: humanize the article unless the company opted out.
+    // Second pass: humanize the article unless opted out.
     let humanized = false;
-    if (company.humanizationLevel !== "off") {
+    const humanizationLevel = resolveHumanizationLevel(brandVoice);
+    if (humanizationLevel !== "off") {
       const beforeHumanize = generated;
       generated = await humanizeArticle(generated, {
-        level: company.humanizationLevel as HumanizationLevel,
-        writingSample: company.writingSample ?? undefined,
+        level: humanizationLevel,
+        writingSample: resolveWritingSample(brandVoice),
+        brandVoice,
         aiClient: client,
       });
       humanized = generated !== beforeHumanize;

@@ -1,14 +1,37 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@workspace/db";
 import { geoAuditsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { GeoAuditResultClient } from "@/components/marketing/geo-audit-result-client";
+import type { GeoIssue } from "@/components/geo-audit-result-view";
 
-interface GeoIssue {
-  check: string;
-  status: "pass" | "fail" | "warn";
-  detail: string;
-  fix: string;
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const numericId = parseInt(id, 10);
+  if (isNaN(numericId)) return { title: "GEO Audit" };
+
+  try {
+    const [audit] = await db
+      .select({ url: geoAuditsTable.url, geoScore: geoAuditsTable.geoScore })
+      .from(geoAuditsTable)
+      .where(eq(geoAuditsTable.id, numericId))
+      .limit(1);
+
+    if (!audit) return { title: "GEO Audit not found" };
+
+    return {
+      title: `GEO Audit — ${audit.geoScore}/100`,
+      description: `Generative engine optimization audit results for ${audit.url}.`,
+      robots: { index: false, follow: false },
+    };
+  } catch {
+    return { title: "GEO Audit Results" };
+  }
 }
 
 export default async function GeoAuditResultPage({ params }: { params: Promise<{ id: string }> }) {
@@ -16,7 +39,16 @@ export default async function GeoAuditResultPage({ params }: { params: Promise<{
   const numericId = parseInt(id, 10);
   if (isNaN(numericId)) notFound();
 
-  let audit: { url: string; geoScore: number; issues: unknown; createdAt: Date } | undefined;
+  let audit:
+    | {
+        url: string;
+        geoScore: number;
+        issues: unknown;
+        pageTitle: string | null;
+        schemaTypes: string[];
+        websiteProjectId: number | null;
+      }
+    | undefined;
 
   try {
     [audit] = await db
@@ -24,7 +56,9 @@ export default async function GeoAuditResultPage({ params }: { params: Promise<{
         url: geoAuditsTable.url,
         geoScore: geoAuditsTable.geoScore,
         issues: geoAuditsTable.issues,
-        createdAt: geoAuditsTable.createdAt,
+        pageTitle: geoAuditsTable.pageTitle,
+        schemaTypes: geoAuditsTable.schemaTypes,
+        websiteProjectId: geoAuditsTable.websiteProjectId,
       })
       .from(geoAuditsTable)
       .where(eq(geoAuditsTable.id, numericId))
@@ -38,6 +72,13 @@ export default async function GeoAuditResultPage({ params }: { params: Promise<{
   const issues = (audit.issues ?? []) as GeoIssue[];
 
   return (
-    <GeoAuditResultClient url={audit.url} geoScore={audit.geoScore} issues={issues} />
+    <GeoAuditResultClient
+      url={audit.url}
+      geoScore={audit.geoScore}
+      issues={issues}
+      pageTitle={audit.pageTitle}
+      schemaTypes={audit.schemaTypes}
+      projectId={audit.websiteProjectId}
+    />
   );
 }

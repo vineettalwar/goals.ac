@@ -42,10 +42,10 @@ function EditableText({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
-          className="flex-1 rounded border border-ring bg-card px-2 py-0.5 text-sm focus:outline-hidden"
+          className="flex-1 rounded border border-ring bg-card px-2 py-0.5 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
         />
-        <button onClick={save} className="text-primary hover:text-primary/80"><Check className="h-3.5 w-3.5" /></button>
-        <button onClick={() => setEditing(false)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
+        <button type="button" onClick={save} aria-label="Save" className="text-primary hover:text-primary/80"><Check className="h-3.5 w-3.5" aria-hidden /></button>
+        <button type="button" onClick={() => setEditing(false)} aria-label="Cancel" className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" aria-hidden /></button>
       </div>
     );
   }
@@ -99,24 +99,27 @@ function EditableList({
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") saveItem(i); if (e.key === "Escape") setEditingIdx(null); }}
-                className="flex-1 rounded border border-ring bg-card px-2 py-0.5 text-sm focus:outline-hidden"
+                className="flex-1 rounded border border-ring bg-card px-2 py-0.5 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
               />
-              <button onClick={() => saveItem(i)} className="text-primary"><Check className="h-3.5 w-3.5" /></button>
-              <button onClick={() => setEditingIdx(null)} className="text-muted-foreground"><X className="h-3.5 w-3.5" /></button>
+              <button type="button" onClick={() => saveItem(i)} aria-label="Save item" className="text-primary"><Check className="h-3.5 w-3.5" aria-hidden /></button>
+              <button type="button" onClick={() => setEditingIdx(null)} aria-label="Cancel edit" className="text-muted-foreground"><X className="h-3.5 w-3.5" aria-hidden /></button>
             </div>
           ) : (
-            <span
+            <button
+              type="button"
               onClick={() => { setDraft(item); setEditingIdx(i); }}
-              className="flex-1 cursor-text hover:text-primary transition-colors"
+              className="flex-1 text-left hover:text-primary transition-colors"
             >
               {item}
-            </span>
+            </button>
           )}
           <button
+            type="button"
             onClick={() => removeItem(i)}
+            aria-label={`Remove item ${i + 1}`}
             className="mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-destructive"
           >
-            <Trash2 className="h-3 w-3" />
+            <Trash2 className="h-3 w-3" aria-hidden />
           </button>
         </li>
       ))}

@@ -13,7 +13,7 @@ import {
   Search,
   BarChart3,
   FolderOpen,
-  Sparkles,
+  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -33,7 +33,7 @@ const NAV_ITEMS: Array<{
   { label: "Projects", icon: FolderOpen, to: "/dashboard", matchPaths: ["/projects"] },
   { label: "Competitor Analysis", icon: Search, to: "/competitor-analysis" },
   { label: "Keyword Tracking", icon: BarChart3, to: "/keyword-tracking" },
-  { label: "AI Visibility", icon: Sparkles, to: "/ai-visibility" },
+  { label: "AI Visibility", icon: Eye, to: "/ai-visibility" },
 ];
 
 const EXTERNAL_LINKS = [

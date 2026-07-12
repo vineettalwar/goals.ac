@@ -50,31 +50,6 @@ interface Analysis {
   summary: string;
 }
 
-interface TrackedKeyword {
-  id: number;
-  keyword: string;
-  targetUrl: string | null;
-  latestSnapshot: { position: number | null; checkedAt: string } | null;
-}
-
-interface KeywordOpportunity {
-  id: number;
-  keyword: string;
-  opportunityScore: number;
-  difficulty: string | null;
-  suggestedTitle: string;
-  status: string;
-}
-
-interface KeywordAlert {
-  id: number;
-  keyword: string;
-  previousPosition: number | null;
-  currentPosition: number | null;
-  severity: string;
-  message: string;
-}
-
 const DIFFICULTY_COLORS = {
   low: "success" as const,
   medium: "warning" as const,
@@ -83,7 +58,7 @@ const DIFFICULTY_COLORS = {
 
 export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
-  const { activeProjectId, activeProject } = useActiveProject();
+  const { activeProjectId, activeProject, isLoading: projectLoading } = useActiveProject();
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
   const [keywordInput, setKeywordInput] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -103,10 +78,14 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
   const { data: snapshots = [] } = useKeywordSnapshots(selectedTrackedId);
 
   useEffect(() => {
-    if (activeProject?.url && !websiteUrl) {
+    if (activeProject?.url) {
       setWebsiteUrl(activeProject.url);
     }
-  }, [activeProject?.url, websiteUrl]);
+    setAnalysis(null);
+    setSelectedTrackedId(null);
+    setKeywordInput("");
+    setTrackInput("");
+  }, [activeProjectId, activeProject?.url]);
 
   async function handleAnalyze() {
     const keywords = keywordInput
@@ -123,7 +102,11 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
     const res = await fetch("/api/keyword-analysis", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keywords, websiteUrl: websiteUrl || undefined }),
+      body: JSON.stringify({
+        keywords,
+        websiteUrl: websiteUrl || undefined,
+        websiteProjectId: activeProjectId ?? undefined,
+      }),
     });
     setLoading(false);
     if (!res.ok) {
@@ -201,9 +184,13 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
       ) : null}
 
       {!projectId ? (
-        <div className="paper-card p-6 rounded-xl text-sm text-muted-foreground">
-          Choose a project in the sidebar to track keywords.
-        </div>
+        projectLoading ? (
+          <PageSkeleton />
+        ) : (
+          <div className="paper-card p-6 rounded-xl text-sm text-muted-foreground">
+            Choose a project in the sidebar to track keywords.
+          </div>
+        )
       ) : showInitialLoad ? (
         <PageSkeleton />
       ) : (
@@ -290,7 +277,7 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
               </Button>
             </div>
             <div className="space-y-2">
-              {(tracked as TrackedKeyword[]).map((kw) => (
+              {tracked.map((kw) => (
                 <div
                   key={kw.id}
                   className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border"
@@ -315,7 +302,7 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
             </div>
             {selectedTrackedId && (
               <KeywordRankChart
-                snapshots={snapshots as Array<{ checkedAt: string; position: number | null }>}
+                snapshots={snapshots}
               />
             )}
           </div>
@@ -330,7 +317,7 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
                 Discover gaps
               </Button>
             </div>
-            {(opportunities as KeywordOpportunity[]).map((opp) => (
+            {opportunities.map((opp) => (
               <div
                 key={opp.id}
                 className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border"
@@ -351,12 +338,12 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
             )}
           </div>
 
-          {(alerts as KeywordAlert[]).length > 0 && (
+          {alerts.length > 0 && (
             <div className="paper-card p-6 rounded-xl space-y-3">
               <h2 className="font-semibold flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 text-amber-500" /> Rank alerts
               </h2>
-              {(alerts as KeywordAlert[]).map((a) => (
+              {alerts.map((a) => (
                 <div
                   key={a.id}
                   className="text-sm p-3 rounded-lg bg-amber-500/5 border border-amber-500/20"

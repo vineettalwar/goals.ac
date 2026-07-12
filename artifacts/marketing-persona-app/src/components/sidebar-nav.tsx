@@ -18,6 +18,7 @@ import {
   Plug,
   Users,
   BookOpen,
+  ScanSearch,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -56,7 +57,10 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItemDef[] }> = [
   },
   {
     label: "Measure",
-    items: [{ label: "Search", href: "/search", icon: BarChart2, matchPrefix: "/search" }],
+    items: [
+      { label: "Search", href: "/search", icon: BarChart2, matchPrefix: "/search" },
+      { label: "GEO Audit", href: "/audit", icon: ScanSearch, matchPrefix: "/audit" },
+    ],
   },
   {
     label: "Research",
@@ -130,6 +134,12 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
           pathname.startsWith("/content-strategy")
         );
       }
+      if (item.matchPrefix === "/search") {
+        return (
+          (pathname === "/search" || pathname.startsWith("/search/")) &&
+          !pathname.startsWith("/search/geo-audit")
+        );
+      }
       return pathname === item.matchPrefix || pathname.startsWith(`${item.matchPrefix}/`);
     }
     if (item.label === "Projects") {
@@ -175,6 +185,11 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
           queryKey: queryKeys.visibilitySummary(projectId),
           queryFn: () => fetchVisibilitySummary(projectId),
         });
+      } else if (href.startsWith("/audit")) {
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.projectContent(projectId),
+          queryFn: () => fetchProjectContent(projectId),
+        });
       } else if (href.startsWith("/strategy/calendar")) {
         void queryClient.prefetchQuery({
           queryKey: queryKeys.projectContent(projectId),
@@ -200,6 +215,9 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3">
+        <div className="mb-4 border-b border-border pb-3">
+          <ProjectSwitcher />
+        </div>
         {NAV_SECTIONS.map((section) => (
           <div key={section.label} className="mb-4 last:mb-0">
             <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -224,9 +242,6 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
         ))}
       </nav>
 
-      <div className="border-t border-border">
-        <ProjectSwitcher />
-      </div>
       <div className="border-t border-border px-2 py-2">
         <ul className="space-y-0.5">
           {FOOTER_ITEMS.map((item) => {

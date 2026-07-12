@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import { PageSkeleton } from "@/components/page-skeleton";
 
 const ContentStudioClient = dynamic(
@@ -13,5 +14,9 @@ export default async function ContentStudioPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <ContentStudioClient projectId={id} />;
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <ContentStudioClient projectId={id} />
+    </Suspense>
+  );
 }

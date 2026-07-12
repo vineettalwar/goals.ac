@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/auth";
 import {
-  Loader2, Globe, CheckCircle2, ArrowRight, Sparkles, FileText,
-  Map, ChevronRight, Check,
+  Loader2, Globe, CheckCircle2, ArrowRight, Map, FileText,
+  ChevronRight, Check,
 } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -480,7 +480,7 @@ export default function Onboarding() {
                 {/* Roadmap card */}
                 <div className="rounded-xl border border-border p-4 flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                    <Sparkles className="w-5 h-5 text-blue-500" />
+                    <Map className="w-5 h-5 text-blue-500" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">Growth roadmap</div>

@@ -32,12 +32,12 @@ export default auth((req) => {
     pathname.startsWith("/projects") ||
     pathname.startsWith("/strategy") ||
     pathname.startsWith("/search") ||
+    pathname.startsWith("/audit") ||
     pathname.startsWith("/research") ||
     pathname.startsWith("/growth-roadmaps") ||
     pathname.startsWith("/integrations") ||
     pathname.startsWith("/settings") ||
     pathname.startsWith("/content-piece") ||
-    pathname.startsWith("/content-strategy") ||
     pathname.startsWith("/studio") ||
     pathname.startsWith("/onboarding") ||
     pathname.startsWith("/admin");

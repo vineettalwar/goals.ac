@@ -15,6 +15,7 @@ import { HeroOverlapShell } from "@/components/marketing/hero-overlap-shell";
 import { EditorialHeading } from "@/components/marketing/editorial-heading";
 import { cardSurfaceClass } from "@/lib/marketing-surfaces";
 import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { normalizeHttpUrl } from "@/lib/normalize-url";
 
 const CHECKS = ["Title & Meta", "Schema.org", "H1/H2 structure", "Open Graph"];
 
@@ -34,22 +35,30 @@ export function GeoAuditPageClient() {
 
   async function handleAudit(e: React.FormEvent) {
     e.preventDefault();
-    if (!url) return;
+    const auditUrl = normalizeHttpUrl(url);
+    if (!auditUrl) return;
     setLoading(true);
 
-    const res = await fetch("/api/geo-audits/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
+    try {
+      const res = await fetch("/api/geo-audits/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: auditUrl }),
+      });
 
-    setLoading(false);
-    if (!res.ok) {
-      toast.error("Audit failed — please check the URL and try again");
-      return;
+      const data = (await res.json().catch(() => null)) as { id?: number; audit?: { id?: number }; error?: string } | null;
+
+      if (!res.ok) {
+        toast.error(data?.error ?? "Audit failed — please check the URL and try again");
+        return;
+      }
+
+      router.push(`/geo-audit/${data?.id ?? data?.audit?.id}`);
+    } catch {
+      toast.error("Audit failed — network error, please try again");
+    } finally {
+      setLoading(false);
     }
-    const data = await res.json();
-    router.push(`/geo-audit/${data.id ?? data.audit?.id}`);
   }
 
   return (

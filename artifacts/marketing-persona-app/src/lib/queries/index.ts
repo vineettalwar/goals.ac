@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "./keys";
 import {
   fetchBriefs,
@@ -30,7 +30,6 @@ export function useGoals(projectId: string) {
     queryKey: queryKeys.goals(projectId),
     queryFn: () => fetchGoals(projectId),
     enabled: Boolean(projectId),
-    placeholderData: keepPreviousData,
   });
 }
 
@@ -39,7 +38,6 @@ export function useBriefs(projectId: string) {
     queryKey: queryKeys.briefs(projectId),
     queryFn: () => fetchBriefs(projectId),
     enabled: Boolean(projectId),
-    placeholderData: keepPreviousData,
   });
 }
 
@@ -48,7 +46,6 @@ export function useTrackedKeywords(projectId: string) {
     queryKey: queryKeys.trackedKeywords(projectId),
     queryFn: () => fetchTrackedKeywords(projectId),
     enabled: Boolean(projectId),
-    placeholderData: keepPreviousData,
   });
 }
 
@@ -57,14 +54,12 @@ export function useKeywordIntelligence(projectId: string) {
     queryKey: queryKeys.keywordOpportunities(projectId),
     queryFn: () => fetchKeywordOpportunities(projectId),
     enabled: Boolean(projectId),
-    placeholderData: keepPreviousData,
   });
 
   const alerts = useQuery({
     queryKey: queryKeys.keywordAlerts(projectId),
     queryFn: () => fetchKeywordAlerts(projectId),
     enabled: Boolean(projectId),
-    placeholderData: keepPreviousData,
   });
 
   return {
@@ -81,7 +76,6 @@ export function useKeywordSnapshots(trackedId: number | null) {
     queryKey: queryKeys.keywordSnapshots(trackedId ?? 0),
     queryFn: () => fetchKeywordSnapshots(trackedId!),
     enabled: trackedId != null,
-    placeholderData: keepPreviousData,
   });
 }
 
@@ -91,7 +85,6 @@ export function useProjectContent(projectId: string | number | null) {
     queryKey: queryKeys.projectContent(id),
     queryFn: () => fetchProjectContent(id),
     enabled: Boolean(id),
-    placeholderData: keepPreviousData,
   });
 }
 
@@ -100,14 +93,12 @@ export function useVisibilityData(projectId: string) {
     queryKey: queryKeys.visibilitySettings(projectId),
     queryFn: () => fetchVisibilitySettings(projectId),
     enabled: Boolean(projectId),
-    placeholderData: keepPreviousData,
   });
 
   const summary = useQuery({
     queryKey: queryKeys.visibilitySummary(projectId),
     queryFn: () => fetchVisibilitySummary(projectId),
     enabled: Boolean(projectId),
-    placeholderData: keepPreviousData,
   });
 
   return { settings, summary };
@@ -128,6 +119,5 @@ export function useWebsiteProject(projectId: string | number | null) {
     queryKey: queryKeys.websiteProject(id),
     queryFn: () => fetchWebsiteProject(id),
     enabled: Boolean(id),
-    placeholderData: keepPreviousData,
   });
 }

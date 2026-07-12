@@ -12,6 +12,8 @@ const ContentStyleBody = z.object({
   primaryLanguage: z.string().optional(),
   forbiddenWords: z.array(z.string()).optional(),
   readingLevel: z.enum(["general", "intermediate", "expert"]).optional(),
+  humanizationLevel: z.enum(["off", "light", "strong"]).optional(),
+  writingSample: z.string().max(10000).nullable().optional(),
 });
 
 const PatchBody = z.object({

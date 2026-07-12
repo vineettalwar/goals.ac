@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
-import type { ContentFormatType } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import {
@@ -11,9 +10,12 @@ import {
   GenerateBody,
   loadProjectBrand,
   loadUserAiSettings,
-  buildPieceCacheKey,
-  wordCountFromMarkdown,
+  buildCacheKey,
+  insertGeneratedContentPiece,
+  loadBriefForProject,
+  loadExistingPieceTitles,
 } from "@/lib/content-pieces-helpers";
+import { logger } from "@/lib/logger";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const ALLOWED_STATUSES = ["draft", "ready", "published"] as const;
@@ -76,12 +78,17 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const { formatType, targetKeyword, angleHint, plannedDate } = parsed.data;
+  const { formatType, targetKeyword, angleHint, plannedDate, briefId } = parsed.data;
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
+  if (briefId) {
+    const brief = await loadBriefForProject(briefId, projectId, userId!);
+    if (!brief) return NextResponse.json({ error: "Brief not found" }, { status: 404 });
+  }
+
   const bypassCache = req.headers.get("x-bypass-cache") === "true";
-  const cacheKeyStr = buildPieceCacheKey(formatType, targetKeyword, ctx.brand, angleHint);
+  const cacheKeyStr = buildCacheKey(formatType, targetKeyword, ctx.brand, angleHint);
 
   if (!bypassCache) {
     const [existing] = await db
@@ -96,34 +103,30 @@ export async function POST(
 
   try {
     const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+    const existingPieceTitles = await loadExistingPieceTitles(projectId);
     const result = await generateContentPiece(
-      formatType as ContentFormatType,
+      formatType,
       ctx.brand,
       targetKeyword,
       angleHint,
       bypassCache,
       userApiKey,
       aiProviderOptions,
+      { existingPieceTitles },
     );
 
-    const [inserted] = await db
-      .insert(contentPiecesTable)
-      .values({
-        websiteProjectId: projectId,
-        formatType: formatType as ContentFormatType,
-        title: result.title,
-        targetKeyword: result.target_keyword,
-        bodyMarkdown: result.body_markdown,
-        wordCount: wordCountFromMarkdown(result.body_markdown),
-        status: "draft",
-        cacheKey: cacheKeyStr,
-        plannedDate: plannedDate ?? null,
-      })
-      .returning();
+    const inserted = await insertGeneratedContentPiece({
+      projectId,
+      briefId,
+      formatType,
+      result,
+      cacheKey: cacheKeyStr,
+      plannedDate,
+    });
 
     return NextResponse.json(inserted, { status: 201 });
   } catch (err) {
-    console.error("Content piece generation failed:", err);
+    logger.error({ err, projectId, formatType, targetKeyword }, "Content piece generation failed");
     const message =
       err instanceof Error && err.message
         ? err.message

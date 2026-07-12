@@ -7,6 +7,7 @@ import { Link2, ExternalLink, Network } from "lucide-react";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { useActiveProject } from "@/context/active-project";
 
 type LinkData = {
@@ -18,7 +19,7 @@ type LinkData = {
 };
 
 export function InternalLinksPanel({ embedded = false }: { embedded?: boolean }) {
-  const { activeProjectId } = useActiveProject();
+  const { activeProjectId, isLoading: projectLoading } = useActiveProject();
   const [data, setData] = useState<LinkData | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +37,10 @@ export function InternalLinksPanel({ embedded = false }: { embedded?: boolean })
   }, [activeProjectId]);
 
   if (!activeProjectId) {
+    if (projectLoading) {
+      return <PageSkeleton />;
+    }
+
     return (
       <div className={embedded ? "max-w-3xl" : "px-8 py-8 max-w-3xl"}>
         {!embedded ? <h1 className="text-2xl font-bold mb-2">Internal Link Hub</h1> : null}

@@ -3,36 +3,6 @@
 import { AlertCircle, Globe, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import type { Confidence } from "@/lib/project-detail-types";
-
-export function ConfidenceBadge({ level }: { level: Confidence | undefined }) {
-  if (!level) return null;
-  const config = {
-    high: {
-      label: "High confidence",
-      className:
-        "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/25",
-    },
-    medium: {
-      label: "Medium confidence",
-      className:
-        "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/25",
-    },
-    low: {
-      label: "Low confidence",
-      className:
-        "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-500/15 dark:text-zinc-400 dark:border-zinc-500/25",
-    },
-  }[level];
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium leading-none ${config.className}`}
-    >
-      {config.label}
-    </span>
-  );
-}
 
 export function ScrapeFormSkeleton() {
   return (
@@ -111,7 +81,7 @@ export function ScrapeStatusHeader({
         <div className="mt-3 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/7 px-4 py-3">
           <Globe className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
           <p className="text-sm text-emerald-600 dark:text-emerald-400">
-            Auto-filled from your website — review and save to confirm.
+            Review each field, add competitor URLs manually, then save.
           </p>
         </div>
       )}

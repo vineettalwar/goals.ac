@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { scrapeBrandProfile } from "@/lib/ai/brand-scraper";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 
 const CreateProjectBody = z.object({
@@ -70,7 +71,8 @@ async function runBrandScrape(projectId: number, url: string, overwrite = false)
       .update(websiteProjectsTable)
       .set({ scrapeStatus: "done", scrapeData: extract })
       .where(eq(websiteProjectsTable.id, projectId));
-  } catch {
+  } catch (err) {
+    logger.error({ err, projectId, url }, "Brand scrape failed");
     await db
       .update(websiteProjectsTable)
       .set({ scrapeStatus: "failed" })
@@ -90,6 +92,7 @@ export async function GET() {
 
     return NextResponse.json(projects);
   } catch (err) {
+    logger.error({ err, userId }, "Failed to list website projects");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -118,11 +121,13 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    // Fire-and-forget brand scrape
-    runBrandScrape(project.id, url).catch(() => {});
+    runBrandScrape(project.id, url).catch((err) => {
+      logger.error({ err, projectId: project.id, url }, "Background brand scrape failed");
+    });
 
     return NextResponse.json(project, { status: 201 });
   } catch (err) {
+    logger.error({ err, userId, url }, "Failed to create website project");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

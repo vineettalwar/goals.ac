@@ -12,6 +12,7 @@ export const queryKeys = {
   visibilitySettings: (projectId: string | number) =>
     ["visibility-settings", String(projectId)] as const,
   visibilitySummary: (projectId: string | number) => ["visibility-summary", String(projectId)] as const,
+  searchProperties: (projectId: string | number) => ["search-properties", String(projectId)] as const,
   roadmapsCatalog: ["roadmaps-catalog"] as const,
   websiteProject: (projectId: string | number) => ["website-project", String(projectId)] as const,
 };

@@ -1,4 +1,11 @@
+import type { Metadata } from "next";
 import { LegalPageClient } from "@/components/marketing/legal-page-client";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description: "Terms of service for goals.ac — AI content generation, autopilot publishing, and growth tooling.",
+  robots: { index: true, follow: true },
+};
 
 export default function TermsPage() {
   return (

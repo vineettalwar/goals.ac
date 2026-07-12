@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { companiesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { syncCompanyHumanizationToProject } from "@workspace/content-engine/support/brand-context-loader";
 import { z } from "zod";
 
 const schema = z.object({
@@ -31,6 +32,8 @@ export async function POST(req: Request) {
     .returning();
 
   if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });
+
+  await syncCompanyHumanizationToProject(userId!, company, parsed.data.humanizationLevel, parsed.data.writingSample?.trim() ? parsed.data.writingSample.trim() : null);
 
   return NextResponse.json({
     company: {

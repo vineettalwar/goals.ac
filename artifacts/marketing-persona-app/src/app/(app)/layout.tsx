@@ -1,7 +1,12 @@
+import type { Metadata } from "next";
 import { getSession } from "@/auth";
 import { redirect } from "next/navigation";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { ActiveProjectProvider } from "@/context/active-project";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();

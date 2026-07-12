@@ -11,7 +11,6 @@ import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/context/active-project";
 import {
   Loader2,
-  Sparkles,
   RefreshCw,
   TrendingUp,
   AlertCircle,
@@ -203,10 +202,7 @@ export default function AiVisibility() {
       <div className="p-6 md:p-8 max-w-5xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-violet-500" />
-              AI Visibility
-            </h1>
+            <h1 className="text-2xl font-bold">AI Visibility</h1>
             <p className="text-muted-foreground mt-1 text-sm max-w-xl">
               Track whether AI engines cite your brand when users ask questions in your niche.
               Runs weekly when enabled — or check now.

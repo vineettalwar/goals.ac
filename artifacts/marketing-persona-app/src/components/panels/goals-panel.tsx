@@ -2,8 +2,9 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Target } from "lucide-react";
+import { Plus, Target, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,21 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useActiveProject } from "@/context/active-project";
 import { useBriefs, useGoals } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
-
-interface Goal {
-  id: number;
-  objective: string;
-  targetMetric: string;
-  status: string;
-  deadline: string | null;
-}
-
-interface Brief {
-  id: number;
-  workingTitle: string;
-  targetKeywordCluster: string;
-  status: string;
-}
+import type { Brief, Goal } from "@/lib/queries/types";
 
 export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
@@ -135,7 +122,7 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
               <Plus className="h-4 w-4" /> Add goal
             </Button>
             <ul className="space-y-2 mt-4">
-              {(goals as Goal[]).map((g) => (
+              {goals.map((g) => (
                 <li
                   key={g.id}
                   className="flex items-center justify-between p-3 rounded-lg border border-border text-sm"
@@ -171,16 +158,24 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
               <Plus className="h-4 w-4" /> Add brief
             </Button>
             <ul className="space-y-2 mt-4">
-              {(briefs as Brief[]).map((b) => (
+              {briefs.map((b) => (
                 <li
                   key={b.id}
-                  className="flex items-center justify-between p-3 rounded-lg border border-border text-sm"
+                  className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border text-sm"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium">{b.workingTitle}</p>
                     <p className="text-xs text-muted-foreground">{b.targetKeywordCluster}</p>
                   </div>
-                  <Badge variant="muted">{b.status}</Badge>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Badge variant="muted">{b.status}</Badge>
+                    <Button variant="outline" size="sm" asChild>
+                      <Link href={`/projects/${projectId}/content-studio?briefId=${b.id}`}>
+                        <Layers className="h-3.5 w-3.5" />
+                        Create in Studio
+                      </Link>
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>

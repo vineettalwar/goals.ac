@@ -3,10 +3,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
 import {
   RefreshCw,
-  TrendingUp,
   AlertCircle,
   CheckCircle2,
   ExternalLink,
@@ -22,6 +20,7 @@ import { PageSkeleton } from "@/components/page-skeleton";
 import { useActiveProject } from "@/context/active-project";
 import { useVisibilityData } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
+import { SearchPropertyConnectionsPanel } from "@/components/search-property-connections-panel";
 
 const VisibilityTrendChart = dynamic(
   () => import("@/components/ai-visibility-charts").then((m) => m.VisibilityTrendChart),
@@ -66,28 +65,120 @@ const ENGINE_LABELS: Record<string, string> = {
   gemini: "Gemini",
 };
 
-function ScoreRing({ score }: { score: number }) {
-  const color =
-    score >= 60 ? "text-emerald-500" : score >= 30 ? "text-amber-500" : "text-red-500";
+function visibilityTone(score: number) {
+  if (score >= 60) return "text-emerald-600 dark:text-emerald-400";
+  if (score >= 30) return "text-amber-600 dark:text-amber-400";
+  return "text-foreground";
+}
+
+function TrackingSettings({
+  settings,
+  saving,
+  onChange,
+}: {
+  settings: VisibilitySettings;
+  saving: boolean;
+  onChange: (next: VisibilitySettings) => void;
+}) {
   return (
-    <div className="relative w-28 h-28 flex items-center justify-center">
-      <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-        <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted/30" />
-        <circle
-          cx="18"
-          cy="18"
-          r="15.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeDasharray={`${score} 100`}
-          className={color}
+    <div className="rounded-xl border border-border/80 p-4 space-y-3">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <Label className="text-sm">Weekly citation checks</Label>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            ChatGPT, Perplexity, Claude, and Gemini
+          </p>
+        </div>
+        <Switch
+          checked={settings.llmTrackingEnabled}
+          disabled={saving}
+          onCheckedChange={(checked) => onChange({ ...settings, llmTrackingEnabled: checked })}
         />
-      </svg>
-      <div className="absolute text-center">
-        <span className={`text-2xl font-bold ${color}`}>{score}</span>
-        <p className="text-[10px] text-muted-foreground">visibility</p>
       </div>
+      <div className="flex items-center justify-between gap-4 border-t border-border/60 pt-3">
+        <div>
+          <Label className="text-sm">Weekly GEO re-audit</Label>
+          <p className="text-xs text-muted-foreground mt-0.5">Homepage scan every Sunday</p>
+        </div>
+        <Switch
+          checked={settings.geoReauditEnabled}
+          disabled={saving}
+          onCheckedChange={(checked) => onChange({ ...settings, geoReauditEnabled: checked })}
+        />
+      </div>
+      {settings.lastVisibilityCheckAt ? (
+        <p className="text-xs text-muted-foreground border-t border-border/60 pt-3">
+          Last check {new Date(settings.lastVisibilityCheckAt).toLocaleString()}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function SetupEmptyState({
+  projectId,
+  settings,
+  saving,
+  onSettingsChange,
+}: {
+  projectId: string;
+  settings: VisibilitySettings;
+  saving: boolean;
+  onSettingsChange: (next: VisibilitySettings) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-dashed p-8 sm:p-10 text-center">
+        <h2 className="text-lg font-semibold">Start tracking AI citations</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
+          Add competitors and target keywords in your brand profile. We&apos;ll generate prompts and
+          check whether each engine cites your brand.
+        </p>
+        <ol className="mx-auto mt-6 max-w-sm space-y-2 text-left text-sm text-muted-foreground">
+          <li className="flex gap-2">
+            <span className="font-medium text-foreground">1.</span>
+            Add competitors and keywords in brand profile
+          </li>
+          <li className="flex gap-2">
+            <span className="font-medium text-foreground">2.</span>
+            Turn on weekly citation checks below
+          </li>
+          <li className="flex gap-2">
+            <span className="font-medium text-foreground">3.</span>
+            Run your first check from the button above
+          </li>
+        </ol>
+        <Button asChild className="mt-6">
+          <Link href={`/projects/${projectId}?tab=brand`}>Set up brand profile</Link>
+        </Button>
+      </div>
+      <TrackingSettings settings={settings} saving={saving} onChange={onSettingsChange} />
+    </div>
+  );
+}
+
+function PendingCheckState({
+  promptCount,
+  settings,
+  saving,
+  onSettingsChange,
+}: {
+  promptCount: number;
+  settings: VisibilitySettings;
+  saving: boolean;
+  onSettingsChange: (next: VisibilitySettings) => void;
+}) {
+  return (
+    <div className="space-y-6">
+      <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-6 dark:border-violet-500/20 dark:bg-violet-500/5">
+        <p className="text-sm font-medium text-violet-900 dark:text-violet-200">Ready to measure</p>
+        <p className="mt-1 text-2xl font-bold">{promptCount} prompts queued</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Run a check now to see citation rates across engines. Results usually appear within a few
+          minutes.
+        </p>
+      </div>
+      <TrackingSettings settings={settings} saving={saving} onChange={onSettingsChange} />
     </div>
   );
 }
@@ -117,6 +208,7 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
   const { settings: settingsQuery, summary: summaryQuery } = useVisibilityData(projectId);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [checkQueued, setCheckQueued] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const settings = useMemo(
@@ -192,41 +284,52 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
         setError("Failed to queue visibility check");
         return;
       }
-      toast.success("Visibility check queued");
+      setCheckQueued(true);
       setTimeout(() => {
         void invalidateVisibility();
+        setCheckQueued(false);
       }, 3000);
     } finally {
       setChecking(false);
     }
   }
 
+  const hasSnapshots = (summary?.recentSnapshots.length ?? 0) > 0;
+  const hasPrompts = (summary?.promptCount ?? 0) > 0;
+
   return (
     <div className={embedded ? "space-y-6" : "px-8 py-8 max-w-5xl space-y-6"}>
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         {!embedded ? (
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Eye className="w-6 h-6 text-primary" />
-              Visibility
-            </h1>
+            <h1 className="text-2xl font-bold">Visibility</h1>
             <p className="text-muted-foreground mt-1 text-sm max-w-xl">
-              Track whether search engines cite your brand when users ask questions in your niche.
+              See whether AI engines cite your brand for niche questions.
               {activeProject ? (
                 <span className="block mt-1 text-foreground/80">{activeProject.name}</span>
               ) : null}
             </p>
           </div>
-        ) : activeProject ? (
-          <p className="text-sm text-muted-foreground">Project: {activeProject.name}</p>
-        ) : null}
-        {projectId && (
-          <Button onClick={runCheckNow} disabled={checking || loading} variant="outline" className="shrink-0">
-            {checking ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
-            Check now
-          </Button>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Citation rates across ChatGPT, Perplexity, Claude, and Gemini
+            {activeProject ? ` · ${activeProject.name}` : ""}
+          </p>
         )}
+        {projectId ? (
+          <div className="flex flex-col items-stretch gap-2 sm:items-end">
+            <Button onClick={runCheckNow} disabled={checking || loading || !hasPrompts} variant="outline" className="shrink-0">
+              {checking ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
+              {checking ? "Queuing…" : "Run check"}
+            </Button>
+            {checkQueued ? (
+              <p className="text-xs text-emerald-600 dark:text-emerald-400">Check queued — results refresh shortly</p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
+
+      {!projectId && projectsLoading && <PageSkeleton />}
 
       {!projectId && !projectsLoading && (
         <div className="paper-card p-8 text-center text-muted-foreground text-sm">
@@ -236,6 +339,8 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
 
       {projectId && (
         <>
+          <SearchPropertyConnectionsPanel projectId={projectId} embedded />
+
           {error && (
             <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-4 py-3">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -243,128 +348,108 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
             </div>
           )}
 
-          <div className="paper-card p-6 space-y-4">
-            <h2 className="font-semibold">Tracking settings</h2>
-            <p className="text-sm text-muted-foreground">Enable weekly automated checks for this project</p>
-            <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
-              <div>
-                <Label>LLM citation tracking</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Weekly checks across ChatGPT, Perplexity, Claude, and Gemini
-                </p>
-              </div>
-              <Switch
-                checked={settings.llmTrackingEnabled}
-                disabled={saving}
-                onCheckedChange={(checked) => {
-                  saveSettings({ ...settings, llmTrackingEnabled: checked });
-                }}
-              />
-            </div>
-            <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
-              <div>
-                <Label>Weekly GEO re-audit</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Re-run technical GEO audit on your homepage every Sunday
-                </p>
-              </div>
-              <Switch
-                checked={settings.geoReauditEnabled}
-                disabled={saving}
-                onCheckedChange={(checked) => {
-                  saveSettings({ ...settings, geoReauditEnabled: checked });
-                }}
-              />
-            </div>
-            {settings.lastVisibilityCheckAt && (
-              <p className="text-xs text-muted-foreground">
-                Last visibility check: {new Date(settings.lastVisibilityCheckAt).toLocaleString()}
-              </p>
-            )}
-          </div>
-
           {loading ? (
             <PageSkeleton />
           ) : summary ? (
-            <>
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="paper-card p-6 flex flex-col items-center">
-                  <ScoreRing score={summary.visibilityScore} />
-                  <p className="text-sm text-muted-foreground mt-2 text-center">
-                    {summary.promptCount} prompts tracked
-                  </p>
-                </div>
-                <div className="paper-card p-6">
-                  <p className="text-sm font-medium flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-4 h-4" /> GEO score
-                  </p>
-                  <p className="text-3xl font-bold">
-                    {summary.latestGeoScore ?? "—"}
-                    {summary.latestGeoScore != null && (
-                      <span className="text-base font-normal text-muted-foreground">/100</span>
-                    )}
-                  </p>
-                  <Link href="/geo-audit" className="text-xs text-primary hover:underline mt-2 inline-flex items-center gap-1">
-                    Run manual audit <ExternalLink className="w-3 h-3" />
-                  </Link>
-                </div>
-                <div className="paper-card p-6 space-y-2">
-                  <p className="text-sm font-medium mb-2">By engine</p>
-                  {summary.byEngine.map((e) => (
-                    <div key={e.engine} className="flex items-center justify-between text-sm">
-                      <span>{ENGINE_LABELS[e.engine] ?? e.engine}</span>
-                      <Badge variant="muted">{e.score}% cited</Badge>
+            !hasPrompts ? (
+              <SetupEmptyState
+                projectId={projectId}
+                settings={settings}
+                saving={saving}
+                onSettingsChange={saveSettings}
+              />
+            ) : !hasSnapshots ? (
+              <PendingCheckState
+                promptCount={summary.promptCount}
+                settings={settings}
+                saving={saving}
+                onSettingsChange={saveSettings}
+              />
+            ) : (
+              <div className="space-y-6">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-5 dark:border-violet-500/20 dark:bg-violet-500/5">
+                    <div className="flex items-center gap-2 text-sm font-semibold text-violet-800 dark:text-violet-300">
+                      <Eye className="h-4 w-4" />
+                      Citation rate
                     </div>
-                  ))}
+                    <p className={`mt-1 text-3xl font-bold ${visibilityTone(summary.visibilityScore)}`}>
+                      {summary.visibilityScore}%
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {summary.promptCount} prompts · latest batch
+                    </p>
+                  </div>
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/5">
+                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">GEO score</p>
+                    <p className="mt-1 text-3xl font-bold">
+                      {summary.latestGeoScore ?? "—"}
+                      {summary.latestGeoScore != null ? (
+                        <span className="text-base font-normal text-muted-foreground">/100</span>
+                      ) : null}
+                    </p>
+                    <Link
+                      href="/audit"
+                      className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                    >
+                      Run technical audit <ExternalLink className="w-3 h-3" />
+                    </Link>
+                  </div>
                 </div>
-              </div>
 
-              {summary.trend.length > 1 && <VisibilityTrendChart data={summary.trend} />}
+                {summary.byEngine.some((e) => e.total > 0) ? (
+                  <div className="flex flex-wrap gap-2">
+                    {summary.byEngine
+                      .filter((e) => e.total > 0)
+                      .map((e) => (
+                        <div
+                          key={e.engine}
+                          className="rounded-lg border border-border/80 px-3 py-2 text-sm"
+                        >
+                          <span className="text-muted-foreground">{ENGINE_LABELS[e.engine] ?? e.engine}</span>
+                          <span className="ml-2 font-medium">{e.score}% cited</span>
+                        </div>
+                      ))}
+                  </div>
+                ) : null}
 
-              {summary.competitorMentions.length > 0 && (
-                <CompetitorMentionsChart data={summary.competitorMentions} />
-              )}
+                {summary.trend.length > 1 ? <VisibilityTrendChart data={summary.trend} /> : null}
 
-              {summary.recentSnapshots.length > 0 && (
-                <div className="paper-card p-6 space-y-3">
-                  <h2 className="font-semibold">Recent checks</h2>
-                  {summary.recentSnapshots.map((snap) => (
-                    <div key={snap.id} className="rounded-lg border px-4 py-3 text-sm space-y-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-medium line-clamp-2">{snap.prompt}</p>
-                        {snap.cited ? (
-                          <Badge className="shrink-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
-                            <CheckCircle2 className="w-3 h-3 mr-1" /> Cited
-                          </Badge>
-                        ) : (
-                          <Badge variant="muted" className="shrink-0">
-                            Not cited
-                          </Badge>
-                        )}
+                {summary.competitorMentions.length > 0 ? (
+                  <CompetitorMentionsChart data={summary.competitorMentions} />
+                ) : null}
+
+                {summary.recentSnapshots.length > 0 ? (
+                  <div className="space-y-3">
+                    <h2 className="font-semibold text-sm">Recent checks</h2>
+                    {summary.recentSnapshots.map((snap) => (
+                      <div key={snap.id} className="rounded-lg border px-4 py-3 text-sm space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="font-medium line-clamp-2">{snap.prompt}</p>
+                          {snap.cited ? (
+                            <Badge className="shrink-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                              <CheckCircle2 className="w-3 h-3 mr-1" /> Cited
+                            </Badge>
+                          ) : (
+                            <Badge variant="muted" className="shrink-0">
+                              Not cited
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {ENGINE_LABELS[snap.engine] ?? snap.engine} ·{" "}
+                          {new Date(snap.checkedAt).toLocaleString()}
+                          {snap.competitorsMentioned?.length > 0 &&
+                            ` · Competitors: ${snap.competitorsMentioned.join(", ")}`}
+                        </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {ENGINE_LABELS[snap.engine] ?? snap.engine} ·{" "}
-                        {new Date(snap.checkedAt).toLocaleString()}
-                        {snap.competitorsMentioned?.length > 0 &&
-                          ` · Competitors: ${snap.competitorsMentioned.join(", ")}`}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                ) : null}
 
-              {summary.promptCount === 0 && (
-                <div className="paper-card p-8 text-center space-y-3">
-                  <p className="text-sm text-muted-foreground">
-                    No prompts yet. Add competitor URLs and keywords in your brand profile, then enable
-                    tracking.
-                  </p>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={`/projects/${projectId}?tab=brand`}>Edit brand profile</Link>
-                  </Button>
-                </div>
-              )}
-            </>
+                <TrackingSettings settings={settings} saving={saving} onChange={saveSettings} />
+              </div>
+            )
           ) : null}
         </>
       )}

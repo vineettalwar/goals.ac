@@ -166,11 +166,17 @@ export async function DashboardStats({ userId }: { userId: number }) {
   );
 }
 
-export async function DashboardAutopilotLink({ userId }: { userId: number }) {
+export async function DashboardAutopilotLink({
+  userId,
+  projectId,
+}: {
+  userId: number;
+  projectId: number;
+}) {
   const [project] = await db
     .select({ autopilotSettings: websiteProjectsTable.autopilotSettings })
     .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.userId, userId))
+    .where(and(eq(websiteProjectsTable.userId, userId), eq(websiteProjectsTable.id, projectId)))
     .limit(1);
 
   if (!project) return null;
@@ -199,11 +205,17 @@ export async function DashboardAutopilotLink({ userId }: { userId: number }) {
   );
 }
 
-export async function DashboardVisibility({ userId }: { userId: number }) {
+export async function DashboardVisibility({
+  userId,
+  projectId,
+}: {
+  userId: number;
+  projectId: number;
+}) {
   const [project] = await db
     .select({ id: websiteProjectsTable.id })
     .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.userId, userId))
+    .where(and(eq(websiteProjectsTable.userId, userId), eq(websiteProjectsTable.id, projectId)))
     .limit(1);
 
   if (!project) return null;
@@ -227,7 +239,7 @@ export async function DashboardVisibility({ userId }: { userId: number }) {
         </p>
       </Link>
       <Link
-        href="/search/visibility"
+        href="/audit"
         className="block rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-500/5 p-4 hover:border-emerald-300 transition-colors"
       >
         <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
@@ -245,7 +257,13 @@ export async function DashboardVisibility({ userId }: { userId: number }) {
   );
 }
 
-export async function DashboardDrafts({ userId }: { userId: number }) {
+export async function DashboardDrafts({
+  userId,
+  projectId,
+}: {
+  userId: number;
+  projectId: number;
+}) {
   const drafts = await db
     .select({
       id: contentPiecesTable.id,
@@ -260,6 +278,7 @@ export async function DashboardDrafts({ userId }: { userId: number }) {
     .where(
       and(
         eq(websiteProjectsTable.userId, userId),
+        eq(websiteProjectsTable.id, projectId),
         eq(contentPiecesTable.status, "draft"),
       ),
     )
@@ -373,16 +392,25 @@ export async function DashboardRecentArticles({ userId }: { userId: number }) {
   );
 }
 
-export async function DashboardProjects({ userId }: { userId: number }) {
-  const projects = await db
+export async function DashboardProjects({
+  userId,
+  projectId,
+}: {
+  userId: number;
+  projectId: number;
+}) {
+  const [project] = await db
     .select()
     .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.userId, userId));
+    .where(and(eq(websiteProjectsTable.userId, userId), eq(websiteProjectsTable.id, projectId)))
+    .limit(1);
+
+  const projects = project ? [project] : [];
 
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Website projects</h2>
+        <h2 className="text-sm font-semibold">Active project</h2>
         <Link
           href="/projects"
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
@@ -403,7 +431,7 @@ export async function DashboardProjects({ userId }: { userId: number }) {
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3">
-          {projects.slice(0, 4).map((project) => (
+          {projects.map((project) => (
             <Link key={project.id} href={`/projects/${project.id}`}>
               <div className="paper-card p-4 flex items-center gap-3 hover:bg-secondary/30 transition-colors">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary">

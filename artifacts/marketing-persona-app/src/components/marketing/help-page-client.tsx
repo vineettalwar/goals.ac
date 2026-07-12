@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, BookOpen, Server, Share2 } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
@@ -9,8 +9,15 @@ import { FAQAccordion } from "@/components/marketing/faq-accordion";
 import {
   HELP_CATEGORIES,
   getHelpArticlesByCategory,
+  type HelpCategory,
 } from "@/lib/help-articles";
 import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+
+const CATEGORY_ICONS: Record<HelpCategory, typeof BookOpen> = {
+  "Getting started": BookOpen,
+  "Social publishing": Share2,
+  "Self-hosted admin": Server,
+};
 
 export function HelpPageClient() {
   return (
@@ -52,9 +59,15 @@ export function HelpPageClient() {
         {HELP_CATEGORIES.map((category) => {
           const articles = getHelpArticlesByCategory(category);
           if (articles.length === 0) return null;
+          const CategoryIcon = CATEGORY_ICONS[category];
           return (
             <div key={category} className="mb-12 last:mb-0">
-              <h2 className="text-lg font-bold mb-4">{category}</h2>
+              <div className="flex items-center gap-2.5 mb-5">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <CategoryIcon className="h-4 w-4" />
+                </div>
+                <h2 className="text-xl font-bold tracking-tight">{category}</h2>
+              </div>
               <div className="grid gap-4">
                 {articles.map((article) => (
                   <Link

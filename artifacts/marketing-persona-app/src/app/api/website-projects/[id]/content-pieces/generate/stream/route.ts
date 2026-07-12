@@ -1,6 +1,5 @@
 import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
-import type { ContentFormatType } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import {
@@ -13,9 +12,12 @@ import {
   GenerateBody,
   loadProjectBrand,
   loadUserAiSettings,
-  buildPieceCacheKey,
-  wordCountFromMarkdown,
+  buildCacheKey,
+  insertGeneratedContentPiece,
+  loadBriefForProject,
+  loadExistingPieceTitles,
 } from "@/lib/content-pieces-helpers";
+import { logger } from "@/lib/logger";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function POST(
@@ -47,10 +49,17 @@ export async function POST(
     });
   }
 
-  const { formatType, targetKeyword, angleHint, plannedDate } = parsed.data;
+  const { formatType, targetKeyword, angleHint, plannedDate, briefId } = parsed.data;
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) {
     return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
+  }
+
+  if (briefId) {
+    const brief = await loadBriefForProject(briefId, projectId, userId!);
+    if (!brief) {
+      return new Response(JSON.stringify({ error: "Brief not found" }), { status: 404 });
+    }
   }
 
   const encoder = new TextEncoder();
@@ -63,7 +72,9 @@ export async function POST(
       try {
         const bypassCache = req.headers.get("x-bypass-cache") === "true";
         const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-        const cacheKeyStr = buildPieceCacheKey(formatType, targetKeyword, ctx.brand, angleHint);
+        const cacheKeyStr = buildCacheKey(formatType, targetKeyword, ctx.brand, angleHint);
+        const existingPieceTitles = await loadExistingPieceTitles(projectId);
+        const generationContext = { existingPieceTitles };
 
         if (!bypassCache) {
           const [existing] = await db
@@ -80,20 +91,14 @@ export async function POST(
           const aiCached = await cacheGet(cacheKeyStr);
           if (aiCached) {
             send("chunk", { text: aiCached.body_markdown });
-            const [inserted] = await db
-              .insert(contentPiecesTable)
-              .values({
-                websiteProjectId: projectId,
-                formatType: formatType as ContentFormatType,
-                title: aiCached.title,
-                targetKeyword: aiCached.target_keyword,
-                bodyMarkdown: aiCached.body_markdown,
-                wordCount: wordCountFromMarkdown(aiCached.body_markdown),
-                status: "draft",
-                cacheKey: cacheKeyStr,
-                plannedDate: plannedDate ?? null,
-              })
-              .returning();
+            const inserted = await insertGeneratedContentPiece({
+              projectId,
+              briefId,
+              formatType,
+              result: aiCached,
+              cacheKey: cacheKeyStr,
+              plannedDate,
+            });
             send("done", inserted);
             controller.close();
             return;
@@ -103,47 +108,44 @@ export async function POST(
         let result;
         try {
           result = await generateContentPieceStream(
-            formatType as ContentFormatType,
+            formatType,
             ctx.brand,
             targetKeyword,
             (chunk) => send("chunk", { text: chunk }),
             angleHint,
             userApiKey,
             aiProviderOptions,
+            generationContext,
           );
-        } catch {
+        } catch (streamErr) {
+          logger.warn({ err: streamErr, projectId, formatType }, "Stream generation failed, falling back");
           result = await generateContentPiece(
-            formatType as ContentFormatType,
+            formatType,
             ctx.brand,
             targetKeyword,
             angleHint,
             true,
             userApiKey,
             aiProviderOptions,
+            generationContext,
           );
         }
 
         await cacheSet(cacheKeyStr, result);
 
-        const [inserted] = await db
-          .insert(contentPiecesTable)
-          .values({
-            websiteProjectId: projectId,
-            formatType: formatType as ContentFormatType,
-            title: result.title,
-            targetKeyword: result.target_keyword,
-            bodyMarkdown: result.body_markdown,
-            wordCount: wordCountFromMarkdown(result.body_markdown),
-            status: "draft",
-            cacheKey: cacheKeyStr,
-            plannedDate: plannedDate ?? null,
-          })
-          .returning();
+        const inserted = await insertGeneratedContentPiece({
+          projectId,
+          briefId,
+          formatType,
+          result,
+          cacheKey: cacheKeyStr,
+          plannedDate,
+        });
 
         send("done", inserted);
         controller.close();
       } catch (err) {
-        console.error("Content piece generation failed:", err);
+        logger.error({ err, projectId, formatType, targetKeyword }, "Content piece generation failed");
         const message =
           err instanceof Error && err.message
             ? err.message

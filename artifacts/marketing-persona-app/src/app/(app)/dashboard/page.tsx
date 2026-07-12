@@ -14,12 +14,14 @@ import {
   DashboardVisibility,
   DashboardVisibilitySkeleton,
 } from "@/components/dashboard/dashboard-sections";
+import { resolveActiveProjectId } from "@/lib/active-project-server";
 
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session) return null;
 
   const userId = parseInt(session.user.id, 10);
+  const activeProjectId = await resolveActiveProjectId(userId);
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -39,25 +41,31 @@ export default async function DashboardPage() {
         <DashboardStats userId={userId} />
       </Suspense>
 
-      <Suspense fallback={null}>
-        <DashboardAutopilotLink userId={userId} />
-      </Suspense>
+      {activeProjectId ? (
+        <>
+          <Suspense fallback={null}>
+            <DashboardAutopilotLink userId={userId} projectId={activeProjectId} />
+          </Suspense>
 
-      <Suspense fallback={<DashboardVisibilitySkeleton />}>
-        <DashboardVisibility userId={userId} />
-      </Suspense>
+          <Suspense fallback={<DashboardVisibilitySkeleton />}>
+            <DashboardVisibility userId={userId} projectId={activeProjectId} />
+          </Suspense>
 
-      <Suspense fallback={<DashboardDraftsSkeleton />}>
-        <DashboardDrafts userId={userId} />
-      </Suspense>
+          <Suspense fallback={<DashboardDraftsSkeleton />}>
+            <DashboardDrafts userId={userId} projectId={activeProjectId} />
+          </Suspense>
+        </>
+      ) : null}
 
       <Suspense fallback={<DashboardArticlesSkeleton />}>
         <DashboardRecentArticles userId={userId} />
       </Suspense>
 
-      <Suspense fallback={<DashboardProjectsSkeleton />}>
-        <DashboardProjects userId={userId} />
-      </Suspense>
+      {activeProjectId ? (
+        <Suspense fallback={<DashboardProjectsSkeleton />}>
+          <DashboardProjects userId={userId} projectId={activeProjectId} />
+        </Suspense>
+      ) : null}
     </div>
   );
 }

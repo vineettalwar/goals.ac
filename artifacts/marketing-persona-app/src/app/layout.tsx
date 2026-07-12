@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
+import { getSiteUrl } from "@/lib/site-url";
 
 const jakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -28,9 +29,24 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const siteUrl = getSiteUrl();
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "goals.ac",
+    url: siteUrl,
+    description:
+      "AI-powered B2B content growth engine — persona-driven SEO articles, roadmaps, GEO audits, and CMS publishing.",
+    sameAs: [],
+  };
+
   return (
     <html lang="en" className={`${jakartaSans.variable} ${playfairDisplay.variable}`}>
       <body>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
         <Providers>{children}</Providers>
       </body>
     </html>

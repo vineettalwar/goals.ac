@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Circle, Loader2, Sparkles } from "lucide-react";
+import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -184,10 +184,7 @@ export function RoadmapGeneratorApp({
   return (
     <div className="paper-card rounded-xl p-6 space-y-6">
       <div>
-        <h2 className="font-semibold flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          Generate growth roadmap
-        </h2>
+        <h2 className="font-semibold">Generate growth roadmap</h2>
         <p className="text-sm text-muted-foreground mt-1">
           AI-generated 12-month strategy for your market and stage. Saved to this project automatically.
         </p>

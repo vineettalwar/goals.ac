@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { contentPiecesTable, websiteProjectsTable, brandProfilesTable, CONTENT_FORMAT_TYPES } from "@workspace/db/schema";
+import { contentPiecesTable, CONTENT_FORMAT_TYPES } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { generateContentPiece, buildCacheKey, type BrandContext } from "@/lib/ai/content-studio-generator";
+import { generateContentPiece, buildCacheKey } from "@/lib/ai/content-studio-generator";
+import { loadProjectBrand } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -36,30 +37,10 @@ export async function POST(req: Request) {
   const { websiteProjectId, formatType, targetKeyword, plannedDate, angleHint } = parsed.data;
 
   try {
-    const [project] = await db
-      .select()
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
+    const ctx = await loadProjectBrand(websiteProjectId, userId!);
+    if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-    if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
-
-    const [brandProfile] = await db
-      .select()
-      .from(brandProfilesTable)
-      .where(eq(brandProfilesTable.websiteProjectId, websiteProjectId))
-      .limit(1);
-
-    const brand: BrandContext = {
-      companyName: brandProfile?.companyName ?? project.name,
-      websiteUrl: project.url,
-      industry: brandProfile?.industry ?? "",
-      targetAudience: brandProfile?.targetAudience ?? "",
-      voiceTone: brandProfile?.voiceTone ?? "",
-      primaryKeywords: brandProfile?.primaryKeywords ?? [],
-      contentStyle: project.contentStyle ?? null,
-    };
-
+    const brand = ctx.brand;
     const cacheKeyStr = buildCacheKey(formatType, targetKeyword, brand, angleHint);
 
     // Check DB cache
@@ -88,6 +69,7 @@ export async function POST(req: Request) {
         status: "draft",
         cacheKey: cacheKeyStr,
         plannedDate: plannedDate ?? null,
+        pieceMetadata: result.pieceMetadata ?? null,
       })
       .returning();
 

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Palette, Save } from "lucide-react";
+import { isPlaceholderUrl, sanitizeBrandExtract } from "@workspace/content-engine/brand-extract-sanitize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,8 +16,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ConfidenceBadge, ScrapeFormSkeleton, ScrapeStatusHeader } from "@/components/project-scrape-status";
-import type { ContentStyle, ScrapeConfidence, WebsiteProject } from "@/lib/project-detail-types";
+import { ScrapeFormSkeleton, ScrapeStatusHeader } from "@/components/project-scrape-status";
+import type { ContentStyle, WebsiteProject } from "@/lib/project-detail-types";
 import { SUPPORTED_LANGUAGES } from "@/lib/supported-languages";
 
 const TONE_PRESETS = [
@@ -40,6 +41,49 @@ const WORD_COUNT_PRESETS = [
   { label: "Long", value: 1500 },
 ];
 
+const HUMANIZATION_LEVELS = [
+  { value: "off", label: "Off", description: "Publish the first AI draft as-is." },
+  { value: "light", label: "Light", description: "Polish rhythm and remove AI-tell phrases." },
+  { value: "strong", label: "Strong", description: "Full editorial rewrite while preserving SEO structure." },
+] as const;
+
+function profileToBrandForm(
+  bp: WebsiteProject["brandProfile"],
+  scrapeData?: WebsiteProject["scrapeData"],
+): BrandForm {
+  const raw = {
+    companyName: bp?.companyName ?? scrapeData?.companyName ?? "",
+    industry: bp?.industry ?? scrapeData?.industry ?? "",
+    targetAudience: bp?.targetAudience ?? scrapeData?.targetAudience ?? "",
+    voiceTone: bp?.voiceTone ?? scrapeData?.voiceTone ?? "",
+    primaryKeywords: bp?.primaryKeywords ?? scrapeData?.primaryKeywords ?? [],
+    competitorUrls: bp?.competitorUrls ?? scrapeData?.competitorUrls ?? [],
+  };
+
+  const sanitized = sanitizeBrandExtract({
+    ...raw,
+    confidence: scrapeData?.confidence ?? {
+      companyName: "medium",
+      industry: "medium",
+      targetAudience: "medium",
+      voiceTone: "medium",
+      primaryKeywords: "medium",
+      competitorUrls: "low",
+    },
+  });
+
+  return {
+    companyName: sanitized.companyName,
+    industry: sanitized.industry,
+    targetAudience: sanitized.targetAudience,
+    voiceTone: sanitized.voiceTone,
+    primaryKeywords: sanitized.primaryKeywords.join(", "),
+    competitorUrls: sanitized.competitorUrls.join("\n"),
+    brandColors: (bp?.brandColors ?? []).join(", "),
+    productOfferings: (bp?.productOfferings ?? []).join("\n"),
+  };
+}
+
 interface BrandForm {
   companyName: string;
   industry: string;
@@ -57,7 +101,6 @@ interface Props {
   isScraping: boolean;
   wasAutoFilled: boolean;
   scrapeFailed: boolean;
-  confidence?: ScrapeConfidence;
   onRescan: () => void;
   rescraping: boolean;
   onProjectUpdate: (project: WebsiteProject) => void;
@@ -69,22 +112,14 @@ export function ProjectBrandTab({
   isScraping,
   wasAutoFilled,
   scrapeFailed,
-  confidence,
   onRescan,
   rescraping,
   onProjectUpdate,
 }: Props) {
   const bp = project.brandProfile;
-  const [brandForm, setBrandForm] = useState<BrandForm>({
-    companyName: bp?.companyName ?? "",
-    industry: bp?.industry ?? "",
-    targetAudience: bp?.targetAudience ?? "",
-    voiceTone: bp?.voiceTone ?? "",
-    primaryKeywords: (bp?.primaryKeywords ?? []).join(", "),
-    competitorUrls: (bp?.competitorUrls ?? []).join("\n"),
-    brandColors: (bp?.brandColors ?? []).join(", "),
-    productOfferings: (bp?.productOfferings ?? []).join("\n"),
-  });
+  const [brandForm, setBrandForm] = useState<BrandForm>(() =>
+    profileToBrandForm(project.brandProfile, project.scrapeData),
+  );
   const [styleForm, setStyleForm] = useState({
     tonePreset: project.contentStyle?.tonePreset ?? "professional",
     personaName: project.contentStyle?.personaName ?? "",
@@ -92,6 +127,8 @@ export function ProjectBrandTab({
     primaryLanguage: project.contentStyle?.primaryLanguage ?? "en",
     forbiddenWords: (project.contentStyle?.forbiddenWords ?? []).join(", "),
     readingLevel: project.contentStyle?.readingLevel ?? "general",
+    humanizationLevel: project.contentStyle?.humanizationLevel ?? "light",
+    writingSample: project.contentStyle?.writingSample ?? "",
   });
   const [savingBrand, setSavingBrand] = useState(false);
   const [savingStyle, setSavingStyle] = useState(false);
@@ -99,19 +136,7 @@ export function ProjectBrandTab({
   const [styleSaved, setStyleSaved] = useState(false);
 
   useEffect(() => {
-    const profile = project.brandProfile;
-    if (profile) {
-      setBrandForm({
-        companyName: profile.companyName ?? "",
-        industry: profile.industry ?? "",
-        targetAudience: profile.targetAudience ?? "",
-        voiceTone: profile.voiceTone ?? "",
-        primaryKeywords: (profile.primaryKeywords ?? []).join(", "),
-        competitorUrls: (profile.competitorUrls ?? []).join("\n"),
-        brandColors: (profile.brandColors ?? []).join(", "),
-        productOfferings: (profile.productOfferings ?? []).join("\n"),
-      });
-    }
+    setBrandForm(profileToBrandForm(project.brandProfile, project.scrapeData));
     if (project.contentStyle) {
       setStyleForm({
         tonePreset: project.contentStyle.tonePreset ?? "professional",
@@ -120,9 +145,21 @@ export function ProjectBrandTab({
         primaryLanguage: project.contentStyle.primaryLanguage ?? "en",
         forbiddenWords: (project.contentStyle.forbiddenWords ?? []).join(", "),
         readingLevel: project.contentStyle.readingLevel ?? "general",
+        humanizationLevel: project.contentStyle.humanizationLevel ?? "light",
+        writingSample: project.contentStyle.writingSample ?? "",
       });
     }
-  }, [project.brandProfile, project.contentStyle]);
+  }, [project.brandProfile, project.contentStyle, project.scrapeData]);
+
+  const hasPlaceholderCompetitors = useMemo(
+    () =>
+      brandForm.competitorUrls
+        .split("\n")
+        .map((u) => u.trim())
+        .filter(Boolean)
+        .some(isPlaceholderUrl),
+    [brandForm.competitorUrls],
+  );
 
   const lastUpdated = bp?.updatedAt
     ? new Date(bp.updatedAt).toLocaleDateString(undefined, {
@@ -152,7 +189,8 @@ export function ProjectBrandTab({
         competitorUrls: brandForm.competitorUrls
           .split("\n")
           .map((u) => u.trim())
-          .filter(Boolean),
+          .filter(Boolean)
+          .filter((u) => !isPlaceholderUrl(u)),
         brandColors: brandForm.brandColors
           .split(",")
           .map((c) => c.trim())
@@ -200,6 +238,8 @@ export function ProjectBrandTab({
         .map((w) => w.trim())
         .filter(Boolean),
       readingLevel: styleForm.readingLevel as ContentStyle["readingLevel"],
+      humanizationLevel: styleForm.humanizationLevel as ContentStyle["humanizationLevel"],
+      writingSample: styleForm.writingSample.trim() || null,
     };
     const res = await fetch(`/api/website-projects/${projectId}`, {
       method: "PATCH",
@@ -238,10 +278,7 @@ export function ProjectBrandTab({
           <div className="space-y-6">
             <div className="grid gap-6 md:grid-cols-2">
               <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Label>Company name</Label>
-                  {wasAutoFilled && <ConfidenceBadge level={confidence?.companyName} />}
-                </div>
+                <Label>Company name</Label>
                 <Input
                   value={brandForm.companyName}
                   onChange={(e) => setBrandForm((p) => ({ ...p, companyName: e.target.value }))}
@@ -249,23 +286,19 @@ export function ProjectBrandTab({
                 />
               </div>
               <div className="space-y-1.5">
-                <div className="flex items-center gap-2">
-                  <Label>Industry</Label>
-                  {wasAutoFilled && <ConfidenceBadge level={confidence?.industry} />}
-                </div>
-                <Input
+                <Label>Industry</Label>
+                <Textarea
                   value={brandForm.industry}
                   onChange={(e) => setBrandForm((p) => ({ ...p, industry: e.target.value }))}
-                  placeholder="B2B SaaS, E-commerce, etc."
+                  placeholder="B2B SaaS for HR teams"
+                  rows={2}
+                  className="resize-none"
                 />
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Label>Target audience</Label>
-                {wasAutoFilled && <ConfidenceBadge level={confidence?.targetAudience} />}
-              </div>
+              <Label>Target audience</Label>
               <Textarea
                 value={brandForm.targetAudience}
                 onChange={(e) => setBrandForm((p) => ({ ...p, targetAudience: e.target.value }))}
@@ -274,10 +307,7 @@ export function ProjectBrandTab({
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Label>Brand voice &amp; tone</Label>
-                {wasAutoFilled && <ConfidenceBadge level={confidence?.voiceTone} />}
-              </div>
+              <Label>Brand voice &amp; tone</Label>
               <Textarea
                 value={brandForm.voiceTone}
                 onChange={(e) => setBrandForm((p) => ({ ...p, voiceTone: e.target.value }))}
@@ -286,10 +316,7 @@ export function ProjectBrandTab({
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Label>Primary keywords</Label>
-                {wasAutoFilled && <ConfidenceBadge level={confidence?.primaryKeywords} />}
-              </div>
+              <Label>Primary keywords</Label>
               <Input
                 value={brandForm.primaryKeywords}
                 onChange={(e) => setBrandForm((p) => ({ ...p, primaryKeywords: e.target.value }))}
@@ -299,18 +326,22 @@ export function ProjectBrandTab({
             </div>
 
             <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Label>Competitor URLs</Label>
-                {wasAutoFilled && <ConfidenceBadge level={confidence?.competitorUrls} />}
-              </div>
+              <Label>Competitor URLs</Label>
               <Textarea
                 value={brandForm.competitorUrls}
                 onChange={(e) => setBrandForm((p) => ({ ...p, competitorUrls: e.target.value }))}
-                placeholder={"https://competitor1.com\nhttps://competitor2.com"}
+                placeholder="https://rival.co"
                 className="resize-none font-mono text-sm"
                 rows={3}
               />
-              <p className="text-xs text-muted-foreground">One URL per line</p>
+              <p className="text-xs text-muted-foreground">
+                One URL per line — add competitors manually if the scan didn&apos;t find any
+              </p>
+              {hasPlaceholderCompetitors && (
+                <p className="text-xs text-amber-600 dark:text-amber-400">
+                  Remove placeholder URLs — only add real competitor sites.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">
@@ -502,6 +533,48 @@ export function ProjectBrandTab({
             <p className="text-xs text-muted-foreground">
               Comma-separated — the AI will avoid these in all generated content
             </p>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <Label>Article humanization</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Second-pass editorial rewrite for long-form articles in Content Studio and Autopilot.
+              </p>
+            </div>
+            <div className="space-y-2">
+              {HUMANIZATION_LEVELS.map((level) => (
+                <label
+                  key={level.value}
+                  className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/40"
+                >
+                  <input
+                    type="radio"
+                    name="humanizationLevel"
+                    value={level.value}
+                    checked={styleForm.humanizationLevel === level.value}
+                    onChange={() =>
+                      setStyleForm((p) => ({ ...p, humanizationLevel: level.value }))
+                    }
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="text-sm font-medium">{level.label}</span>
+                    <span className="block text-xs text-muted-foreground">{level.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Humanizer writing sample (optional)</Label>
+              <Textarea
+                value={styleForm.writingSample}
+                onChange={(e) => setStyleForm((p) => ({ ...p, writingSample: e.target.value }))}
+                placeholder="Paste a few paragraphs you've written. Overrides Brand Voice examples for the humanizer pass only."
+                rows={4}
+                className="resize-none"
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-3">

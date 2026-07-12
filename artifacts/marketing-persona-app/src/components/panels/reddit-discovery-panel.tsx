@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Copy, ExternalLink, MessageSquare } from "lucide-react";
@@ -21,6 +21,10 @@ export function RedditDiscoveryPanel({ embedded = false }: { embedded?: boolean 
   const { activeProjectId } = useActiveProject();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setThreads([]);
+  }, [activeProjectId]);
 
   async function discover() {
     if (!activeProjectId) return;

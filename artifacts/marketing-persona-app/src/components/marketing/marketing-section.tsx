@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 import { EditorialHeading } from "./editorial-heading";
 import { HeroPhotoBg } from "./hero-photo-bg";
@@ -47,6 +47,7 @@ export function MarketingSection({
   bridgeBottom = false,
   id,
 }: MarketingSectionProps) {
+  const prefersReducedMotion = useReducedMotion();
   const isDarkTheme = variant === "image" || variant === "dark";
   const resolvedClassName = className ?? variantClasses[variant];
   const useEditorial = Boolean(titleLine1 || titleLine2);
@@ -108,7 +109,7 @@ export function MarketingSection({
       )}
 
       <div className="relative z-20 max-w-5xl mx-auto px-6">
-        {animate && !useEditorial ? (
+        {animate && !useEditorial && !prefersReducedMotion ? (
           <motion.div
             initial="hidden"
             whileInView="visible"

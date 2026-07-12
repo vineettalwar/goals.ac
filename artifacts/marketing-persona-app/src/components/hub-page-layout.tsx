@@ -18,6 +18,8 @@ export function HubPageLayout({ title, description, tabs, basePath, children }: 
 
   function isTabActive(href: string) {
     if (pathname === href) return true;
+    // `/search` renders the Keywords panel directly.
+    if (pathname === basePath && href === `${basePath}/keywords`) return true;
     if (href === basePath && pathname === basePath) return true;
     return pathname.startsWith(`${href}/`);
   }

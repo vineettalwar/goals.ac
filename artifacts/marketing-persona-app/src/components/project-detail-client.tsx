@@ -148,7 +148,6 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
   const isScraping = project.scrapeStatus === "pending" || rescraping;
   const wasAutoFilled = project.scrapeStatus === "done";
   const scrapeFailed = project.scrapeStatus === "failed" && !rescraping;
-  const confidence = project.scrapeData?.confidence;
 
   return (
     <div className="px-8 py-8 max-w-5xl space-y-6">
@@ -230,7 +229,6 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
           isScraping={isScraping}
           wasAutoFilled={wasAutoFilled}
           scrapeFailed={scrapeFailed}
-          confidence={confidence}
           onRescan={handleRescrape}
           rescraping={rescraping}
           onProjectUpdate={setProject}
@@ -273,7 +271,7 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
             href: `/projects/${projectId}/content-studio#seo`,
             icon: <FileText className="h-5 w-5" />,
           },
-          { label: "GEO Audit", href: `/geo-audit`, icon: <Search className="h-5 w-5" /> },
+          { label: "GEO Audit", href: `/audit`, icon: <Search className="h-5 w-5" /> },
           {
             label: "Analytics",
             href: `/search/keywords`,

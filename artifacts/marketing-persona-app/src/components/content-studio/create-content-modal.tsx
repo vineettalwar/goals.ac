@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { ArrowLeft, Shuffle, Loader2 } from "lucide-react";
+import { ArrowLeft, Shuffle, Loader2, CheckCircle2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +33,30 @@ import {
 } from "./content-studio-format-meta";
 import type { ContentPieceRow } from "./content-studio-client";
 
+export type BriefContentDraft = {
+  briefId?: number;
+  keyword: string;
+  angleHint?: string;
+  formatType: ContentFormatType;
+  workingTitle?: string;
+};
+
 type Step = "format" | "details" | "repurpose";
+
+function extractSections(jsonAccumulated: string): string[] {
+  const bodyIdx = jsonAccumulated.indexOf('"body_markdown"');
+  if (bodyIdx === -1) return [];
+  const afterKey = jsonAccumulated.slice(bodyIdx + '"body_markdown"'.length);
+  const valueMatch = afterKey.match(/:\s*"([\s\S]*)/);
+  if (!valueMatch) return [];
+  const rawValue = valueMatch[1];
+  const lines = rawValue.split("\\n");
+  return lines
+    .map((l) => l.replace(/\\"/g, '"').trim())
+    .filter((l) => /^#{1,3}\s/.test(l))
+    .map((l) => l.replace(/^#+\s*/, "").trim())
+    .filter(Boolean);
+}
 
 interface Props {
   open: boolean;
@@ -41,19 +64,21 @@ interface Props {
   projectId: string;
   existingPieces: ContentPieceRow[];
   onCreated: (piece: ContentPieceRow) => void;
+  initialDraft?: BriefContentDraft | null;
 }
 
-export function CreateContentModal({ open, onClose, projectId, existingPieces, onCreated }: Props) {
+export function CreateContentModal({ open, onClose, projectId, existingPieces, onCreated, initialDraft }: Props) {
   const [step, setStep] = useState<Step>("format");
   const [selectedFormat, setSelectedFormat] = useState<ContentFormatType | null>(null);
   const [keyword, setKeyword] = useState("");
   const [angleHint, setAngleHint] = useState("");
   const [plannedDate, setPlannedDate] = useState("");
+  const [briefId, setBriefId] = useState<number | null>(null);
   const [linkedinArchetype, setLinkedinArchetype] = useState<LinkedInArchetypeId | "">("");
   const [linkedinHook, setLinkedinHook] = useState<LinkedInHookId | "">("");
   const [bypassCache, setBypassCache] = useState(false);
   const [generating, setGenerating] = useState(false);
-  const [streamPreview, setStreamPreview] = useState("");
+  const [detectedSections, setDetectedSections] = useState<string[]>([]);
 
   const [repurposeFormat, setRepurposeFormat] = useState<ContentFormatType>("linkedin_post");
   const [repurposeKeyword, setRepurposeKeyword] = useState("");
@@ -69,12 +94,22 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
     setLinkedinArchetype("");
     setLinkedinHook("");
     setBypassCache(false);
-    setStreamPreview("");
+    setDetectedSections([]);
     setRepurposeFormat("linkedin_post");
     setRepurposeKeyword("");
     setRepurposeContent("");
     setSourcePieceId("");
+    setBriefId(null);
   }
+
+  useEffect(() => {
+    if (!open || !initialDraft) return;
+    setSelectedFormat(initialDraft.formatType);
+    setKeyword(initialDraft.keyword);
+    setAngleHint(initialDraft.angleHint ?? "");
+    setBriefId(initialDraft.briefId ?? null);
+    setStep("details");
+  }, [open, initialDraft]);
 
   function handleClose() {
     if (generating) return;
@@ -101,6 +136,7 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
         targetKeyword: keyword.trim(),
         angleHint: buildAngleHint(selectedFormat!),
         plannedDate: plannedDate || undefined,
+        briefId: briefId ?? undefined,
       }),
     });
 
@@ -119,7 +155,7 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
       return;
     }
     setGenerating(true);
-    setStreamPreview("");
+    setDetectedSections([]);
 
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (bypassCache) headers["x-bypass-cache"] = "true";
@@ -129,6 +165,7 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
       targetKeyword: keyword.trim(),
       angleHint: buildAngleHint(selectedFormat),
       plannedDate: plannedDate || undefined,
+      briefId: briefId ?? undefined,
     };
 
     try {
@@ -158,6 +195,7 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let jsonAccumulated = "";
       let finalPiece: ContentPieceRow | null = null;
       let fromCache = false;
       let pendingEvent: string | null = null;
@@ -203,7 +241,13 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
           try {
             const parsed = JSON.parse(payload) as { text?: string } | ContentPieceRow;
             if ("text" in parsed && parsed.text) {
-              setStreamPreview((p) => p + parsed.text);
+              jsonAccumulated += parsed.text;
+              const sections = extractSections(jsonAccumulated);
+              if (sections.length > 0) {
+                setDetectedSections(sections);
+              } else if (jsonAccumulated.length > 30) {
+                setDetectedSections(["Crafting title\u2026"]);
+              }
             } else if ("id" in parsed) {
               finalPiece = parsed as ContentPieceRow;
             }
@@ -343,6 +387,11 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
 
         {step === "details" && selectedFormat && (
           <div className="space-y-5 mt-2">
+            {initialDraft?.workingTitle ? (
+              <p className="text-sm text-muted-foreground rounded-lg border border-border px-3 py-2">
+                From brief: <span className="font-medium text-foreground">{initialDraft.workingTitle}</span>
+              </p>
+            ) : null}
             <button
               type="button"
               onClick={() => setStep("format")}
@@ -418,15 +467,52 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
               Bypass cache (force fresh generation)
             </label>
 
-            {generating && streamPreview && (
-              <div className="rounded-lg border bg-secondary/30 p-4 max-h-48 overflow-y-auto text-sm whitespace-pre-wrap font-mono">
-                {streamPreview}
-                <Loader2 className="inline h-3 w-3 ml-1 animate-spin" />
+            {generating && (
+              <div className="rounded-lg border border-border overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2 bg-muted/50 border-b border-border">
+                  <span className="text-xs font-medium text-muted-foreground">
+                    Writing your {FORMAT_META[selectedFormat].label}…
+                  </span>
+                  <span className="text-xs text-muted-foreground/60">
+                    {FORMAT_META[selectedFormat].wordRange} words
+                  </span>
+                </div>
+                <div className="px-3 py-2.5 space-y-1.5 max-h-40 overflow-y-auto">
+                  {detectedSections.length === 0 ? (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="w-3 h-3 animate-spin shrink-0" />
+                      Starting…
+                    </div>
+                  ) : (
+                    <>
+                      {detectedSections.slice(0, -1).map((sec, i) => (
+                        <div
+                          key={i}
+                          className="flex items-center gap-2 text-xs text-muted-foreground"
+                        >
+                          <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
+                          {sec}
+                        </div>
+                      ))}
+                      <div className="flex items-center gap-2 text-xs font-medium text-foreground">
+                        <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
+                        {detectedSections[detectedSections.length - 1]}
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             )}
 
-            <Button onClick={handleGenerate} disabled={generating || !keyword.trim()} className="w-full sm:w-auto">
-              {generating ? <Spinner size="sm" /> : "Generate"}
+            <Button onClick={handleGenerate} disabled={generating || !keyword.trim()} className="w-full">
+              {generating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Generating…
+                </>
+              ) : (
+                <>Generate {FORMAT_META[selectedFormat].label}</>
+              )}
             </Button>
           </div>
         )}

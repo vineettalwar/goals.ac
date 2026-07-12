@@ -14,6 +14,8 @@ import { ProjectAutomationPanel } from "@/components/project-automation-panel";
 
 interface Props {
   projectId: string;
+  /** Hide autopilot / visibility automation controls (e.g. on the Integrations hub). */
+  showAutomation?: boolean;
 }
 
 type MetaPage = {
@@ -23,7 +25,7 @@ type MetaPage = {
   instagramUsername?: string;
 };
 
-export function ProjectPublishingTab({ projectId }: Props) {
+export function ProjectPublishingTab({ projectId, showAutomation = true }: Props) {
   const searchParams = useSearchParams();
   const [cmsIntegrations, setCmsIntegrations] = useState<CmsIntegrationStatus>({});
   const [healthStatus, setHealthStatus] = useState<Record<string, { ok: boolean; error?: string }> | null>(null);
@@ -131,7 +133,7 @@ export function ProjectPublishingTab({ projectId }: Props) {
 
   return (
     <div className="space-y-8">
-      <ProjectAutomationPanel projectId={projectId} />
+      {showAutomation ? <ProjectAutomationPanel projectId={projectId} /> : null}
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">

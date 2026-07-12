@@ -4,12 +4,13 @@ import { auditUrl } from "@workspace/seo-tools/geoAuditor";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { requireAuth } from "@/lib/require-auth";
 import { requireProjectAccess } from "@/lib/project-access";
+import { normalizeHttpUrl } from "@/lib/normalize-url";
 import { z } from "zod";
 
 const CreateBody = z.object({
-  url: z.string().url(),
-  roadmapId: z.number().int().positive().optional(),
-  websiteProjectId: z.number().int().positive().optional(),
+  url: z.string().min(1).transform(normalizeHttpUrl).pipe(z.string().url()),
+  roadmapId: z.coerce.number().int().positive().optional(),
+  websiteProjectId: z.coerce.number().int().positive().optional(),
 });
 
 export async function POST(req: Request) {
