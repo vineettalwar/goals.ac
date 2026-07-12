@@ -1,11 +1,13 @@
 import { Router, type IRouter } from "express";
 import { db, industriesTable, locationsTable } from "@workspace/db";
+import { ensureReferenceData } from "@workspace/db/reference-data";
 import { asc } from "drizzle-orm";
 
 const router: IRouter = Router();
 
 router.get("/industries", async (req, res) => {
   try {
+    await ensureReferenceData();
     const industries = await db
       .select()
       .from(industriesTable)
@@ -19,6 +21,7 @@ router.get("/industries", async (req, res) => {
 
 router.get("/locations", async (req, res) => {
   try {
+    await ensureReferenceData();
     const locations = await db
       .select()
       .from(locationsTable)

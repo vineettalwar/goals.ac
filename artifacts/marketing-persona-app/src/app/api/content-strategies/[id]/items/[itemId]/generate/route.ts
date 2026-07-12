@@ -5,6 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateFromContentItem } from "@workspace/content-engine/autopilot-orchestrator";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
 import { enqueue, QUEUES } from "@workspace/jobs";
 
 export async function POST(
@@ -54,12 +55,15 @@ export async function POST(
   }
 
   try {
-    const userApiKey = await getDecryptedUserGeminiKey(userId!);
+    const [userApiKey, aiProviderOptions] = await Promise.all([
+      getDecryptedUserGeminiKey(userId!),
+      getUserAiProviderOptions(userId!),
+    ]);
     const result = await generateFromContentItem(
       itemId,
       strategy.websiteProjectId,
       userId!,
-      { generateVariants, userApiKey },
+      { generateVariants, userApiKey, aiProviderOptions },
     );
     return NextResponse.json(result, { status: 201 });
   } catch (err) {

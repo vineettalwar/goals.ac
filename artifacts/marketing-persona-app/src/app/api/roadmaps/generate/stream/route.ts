@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { roadmapsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { generateRoadmapStream, generateSlug } from "@/lib/ai/roadmap-generator";
+import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
 import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { requireAuth } from "@/lib/require-auth";
 import {
@@ -37,9 +38,12 @@ export async function POST(req: Request) {
   const { industry, location, stage, projectId } = parsed.data;
 
   let validatedProjectId: number | null = null;
+  let userAiSettings: Awaited<ReturnType<typeof loadUserAiSettings>> | null = null;
   if (projectId != null) {
     const { userId, error } = await requireAuth();
     if (error) return error;
+
+    userAiSettings = await loadUserAiSettings(userId!);
 
     const project = await verifyProjectOwnership(projectId, userId!);
     if (!project) {
@@ -104,9 +108,16 @@ export async function POST(req: Request) {
         try {
           let content;
           try {
-            content = await generateRoadmapStream(industry, location, stage, (event, data) => {
-              send(event, data as object);
-            });
+            content = await generateRoadmapStream(
+              industry,
+              location,
+              stage,
+              (event, data) => {
+                send(event, data as object);
+              },
+              userAiSettings?.userApiKey,
+              userAiSettings?.aiProviderOptions,
+            );
           } catch {
             send("error", {
               error: "Roadmap generation temporarily unavailable. Please try again shortly.",

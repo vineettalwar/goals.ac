@@ -5,6 +5,7 @@ import type { ContentStyle } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateContentStrategy } from "@/lib/ai/content-strategy-generator";
+import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -65,7 +66,15 @@ export async function POST(req: Request) {
   const year = parsed.data.year ?? now.getFullYear();
 
   try {
-    const items = await generateContentStrategy(industry, location, stage, null, projectContentStyle);
+    const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+    const items = await generateContentStrategy(
+      industry,
+      location,
+      stage,
+      userApiKey,
+      projectContentStyle,
+      aiProviderOptions,
+    );
 
     const [strategy] = await db
       .insert(contentStrategiesTable)

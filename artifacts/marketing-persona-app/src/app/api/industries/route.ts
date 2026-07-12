@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
+import { ensureReferenceData } from "@workspace/db/reference-data";
 import { industriesTable } from "@workspace/db/schema";
 import { asc } from "drizzle-orm";
 
 export async function GET() {
   try {
+    await ensureReferenceData();
     const industries = await db
       .select()
       .from(industriesTable)

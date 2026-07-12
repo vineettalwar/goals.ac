@@ -5,6 +5,7 @@ import type { ContentStyle } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateSeoArticleContent } from "@/lib/ai/seo-content-generator";
+import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -55,14 +56,16 @@ export async function POST(req: Request) {
   }
 
   try {
+    const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
     const articleContent = await generateSeoArticleContent(
       brandName,
       websiteUrl,
       industry,
       location,
       stage,
-      null,
+      userApiKey,
       projectContentStyle,
+      aiProviderOptions,
     );
 
     const wordCount = articleContent.content.split(/\s+/).filter(Boolean).length;

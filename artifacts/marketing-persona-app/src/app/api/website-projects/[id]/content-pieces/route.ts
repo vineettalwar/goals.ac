@@ -10,7 +10,7 @@ import {
 import {
   GenerateBody,
   loadProjectBrand,
-  loadUserApiKey,
+  loadUserAiSettings,
   buildPieceCacheKey,
   wordCountFromMarkdown,
 } from "@/lib/content-pieces-helpers";
@@ -95,7 +95,7 @@ export async function POST(
   }
 
   try {
-    const userApiKey = await loadUserApiKey(userId!);
+    const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
     const result = await generateContentPiece(
       formatType as ContentFormatType,
       ctx.brand,
@@ -103,6 +103,7 @@ export async function POST(
       angleHint,
       bypassCache,
       userApiKey,
+      aiProviderOptions,
     );
 
     const [inserted] = await db

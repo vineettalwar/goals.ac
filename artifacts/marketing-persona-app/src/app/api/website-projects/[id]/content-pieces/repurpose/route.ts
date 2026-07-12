@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/require-auth";
 import { repurposeContentPiece } from "@workspace/content-engine/content-studio-generator";
 import {
   loadProjectBrand,
-  loadUserApiKey,
+  loadUserAiSettings,
   wordCountFromMarkdown,
 } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
@@ -46,13 +46,14 @@ export async function POST(
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   try {
-    const userApiKey = await loadUserApiKey(userId!);
+    const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
     const result = await repurposeContentPiece(
       parsed.data.targetFormat as ContentFormatType,
       ctx.brand,
       parsed.data.existingContent,
       parsed.data.targetKeyword,
       userApiKey,
+      aiProviderOptions,
     );
 
     const [inserted] = await db

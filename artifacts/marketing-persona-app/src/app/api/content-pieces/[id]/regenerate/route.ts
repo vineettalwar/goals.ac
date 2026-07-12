@@ -11,7 +11,7 @@ import {
 import {
   assertPieceOwner,
   loadProjectBrand,
-  loadUserApiKey,
+  loadUserAiSettings,
   wordCountFromMarkdown,
 } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
@@ -50,7 +50,7 @@ export async function POST(
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   const angleHint = parsed.success ? parsed.data.angleHint : undefined;
-  const userApiKey = await loadUserApiKey(userId!);
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
 
   try {
     const result = await generateContentPiece(
@@ -60,6 +60,7 @@ export async function POST(
       angleHint,
       true,
       userApiKey,
+      aiProviderOptions,
     );
 
     const cacheKeyStr = buildCacheKey(piece!.formatType, piece!.targetKeyword ?? "", ctx.brand, angleHint);

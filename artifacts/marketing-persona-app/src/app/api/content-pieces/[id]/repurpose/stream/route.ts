@@ -7,7 +7,7 @@ import { repurposeContentPiece } from "@workspace/content-engine/content-studio-
 import {
   assertPieceOwner,
   loadProjectBrand,
-  loadUserApiKey,
+  loadUserAiSettings,
   wordCountFromMarkdown,
 } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
@@ -49,7 +49,7 @@ export async function POST(
   const projectCtx = await loadProjectBrand(piece!.websiteProjectId, userId!);
   if (!projectCtx) return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
 
-  const userApiKey = await loadUserApiKey(userId!);
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
   const sourceContent = parsed.data.existingContent ?? piece!.bodyMarkdown ?? "";
 
   const encoder = new TextEncoder();
@@ -69,6 +69,7 @@ export async function POST(
           sourceContent,
           piece!.targetKeyword ?? "",
           userApiKey,
+          aiProviderOptions,
         );
 
         send("step", { step: "saving", label: "Saving new piece" });

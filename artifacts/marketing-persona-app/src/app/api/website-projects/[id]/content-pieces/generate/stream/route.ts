@@ -12,7 +12,7 @@ import {
 import {
   GenerateBody,
   loadProjectBrand,
-  loadUserApiKey,
+  loadUserAiSettings,
   buildPieceCacheKey,
   wordCountFromMarkdown,
 } from "@/lib/content-pieces-helpers";
@@ -62,7 +62,7 @@ export async function POST(
 
       try {
         const bypassCache = req.headers.get("x-bypass-cache") === "true";
-        const userApiKey = await loadUserApiKey(userId!);
+        const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
         const cacheKeyStr = buildPieceCacheKey(formatType, targetKeyword, ctx.brand, angleHint);
 
         if (!bypassCache) {
@@ -109,6 +109,7 @@ export async function POST(
             (chunk) => send("chunk", { text: chunk }),
             angleHint,
             userApiKey,
+            aiProviderOptions,
           );
         } catch {
           result = await generateContentPiece(
@@ -118,6 +119,7 @@ export async function POST(
             angleHint,
             true,
             userApiKey,
+            aiProviderOptions,
           );
         }
 
