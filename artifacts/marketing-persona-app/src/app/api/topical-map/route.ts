@@ -4,6 +4,7 @@ import { companiesTable, scheduledArticlesTable, brandProfilesTable, websiteProj
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateTopicalMap } from "@/lib/ai/topical-map-generator";
+import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -87,10 +88,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Either companyId or websiteProjectId is required" }, { status: 400 });
     }
 
-    const result = await generateTopicalMap({
-      company: companyData,
-      existingArticleTitles: existingTitles,
-    });
+    const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+
+    const result = await generateTopicalMap(
+      {
+        company: companyData,
+        existingArticleTitles: existingTitles,
+      },
+      { userApiKey, aiProviderOptions },
+    );
 
     return NextResponse.json({ map: result });
   } catch {

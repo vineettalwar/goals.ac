@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { buildAuthRedirectParams, saveRoadmapIntent } from "@/lib/roadmap-intent";
 
 export function GenerateRoadmapButton() {
   const router = useRouter();
@@ -24,9 +25,22 @@ export function GenerateRoadmapButton() {
       body: JSON.stringify(form),
     });
     setGenerating(false);
-    if (res.status === 401) { router.push("/login"); return; }
-    if (!res.ok) { toast.error("Failed to generate roadmap"); return; }
-    const { roadmap } = await res.json();
+    if (res.status === 401) {
+      saveRoadmapIntent({
+        industry: form.industry,
+        location: form.location,
+        stage: form.stage,
+        referrer: "roadmaps-catalog",
+      });
+      router.push(`/signup?${buildAuthRedirectParams("roadmaps-catalog").toString()}`);
+      return;
+    }
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: "Failed to generate roadmap" }));
+      toast.error(err.message ?? err.error ?? "Failed to generate roadmap");
+      return;
+    }
+    const roadmap = await res.json();
     router.push(`/roadmap/${roadmap.slug}`);
   }
 

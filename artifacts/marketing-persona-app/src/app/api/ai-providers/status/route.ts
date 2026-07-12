@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { buildAiProviderStatus, probeOllama } from "@/lib/ai-providers-status";
+import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/ai-providers-status";
 
 export async function GET() {
   const { userId, error } = await requireAuth();
@@ -14,13 +14,16 @@ export async function GET() {
       aiProvider: usersTable.aiProvider,
       ollamaBaseUrl: usersTable.ollamaBaseUrl,
       ollamaModel: usersTable.ollamaModel,
+      encryptedGeminiKey: usersTable.encryptedGeminiKey,
     })
     .from(usersTable)
     .where(eq(usersTable.id, userId!))
     .limit(1);
 
   const payload = buildAiProviderStatus(user);
-  payload.ollama.reachable = await probeOllama(payload.ollama.baseUrl);
+  await enrichOllamaStatus(payload, toAiProviderOptions(user));
 
-  return NextResponse.json(payload);
+  return NextResponse.json(
+    finalizeAiProviderStatus(payload, { hasUserGeminiKey: Boolean(user?.encryptedGeminiKey) }),
+  );
 }

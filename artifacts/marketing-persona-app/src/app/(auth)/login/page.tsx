@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import { buildAuthRedirectParams, resolvePostLoginRedirect } from "@/lib/roadmap-intent";
+import { useRoadmapIntent } from "@/hooks/use-roadmap-intent";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -20,7 +22,20 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="paper-card p-8 animate-pulse h-80 rounded-xl bg-secondary/40" />}>
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next");
+  const roadmapIntent = useRoadmapIntent();
+  const signupReferrer = searchParams.get("from")?.trim() || roadmapIntent?.referrer;
+  const signupHref = `/signup?${buildAuthRedirectParams(signupReferrer).toString()}`;
   const [loading, setLoading] = useState(false);
   const {
     register,
@@ -39,7 +54,9 @@ export default function LoginPage() {
     if (result?.error) {
       toast.error("Invalid email or password");
     } else {
-      router.push("/dashboard");
+      const destination = resolvePostLoginRedirect(next);
+      router.prefetch(destination);
+      router.push(destination);
       router.refresh();
     }
   }
@@ -48,7 +65,11 @@ export default function LoginPage() {
     <div className="paper-card p-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Sign in</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Welcome back</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {roadmapIntent
+            ? `Sign in to generate your ${roadmapIntent.industry} roadmap for ${roadmapIntent.location}.`
+            : "Welcome back"}
+        </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -76,7 +97,7 @@ export default function LoginPage() {
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
         No account?{" "}
-        <Link href="/signup" className="font-medium text-foreground hover:underline">
+        <Link href={signupHref} className="font-medium text-foreground hover:underline">
           Create one
         </Link>
       </p>

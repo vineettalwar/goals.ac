@@ -25,6 +25,8 @@ export async function GET() {
   let hasLinkedin = false;
   let hasTwitter = false;
   let hasMeta = false;
+  let hasBluesky = false;
+  let hasMastodon = false;
 
   for (const p of projects) {
     const stored = (p.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
@@ -39,6 +41,8 @@ export async function GET() {
     if (stored.linkedin) hasLinkedin = true;
     if (stored.twitter) hasTwitter = true;
     if (stored.meta) hasMeta = true;
+    if (stored.bluesky) hasBluesky = true;
+    if (stored.mastodon) hasMastodon = true;
   }
 
   return NextResponse.json({
@@ -53,5 +57,7 @@ export async function GET() {
     linkedin: hasLinkedin,
     twitter: hasTwitter,
     meta: hasMeta,
+    bluesky: hasBluesky,
+    mastodon: hasMastodon,
   });
 }

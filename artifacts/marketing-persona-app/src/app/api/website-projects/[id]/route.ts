@@ -28,6 +28,8 @@ const PatchBody = z.object({
   voiceTone: z.string().optional(),
   primaryKeywords: z.array(z.string()).optional(),
   competitorUrls: z.array(z.string()).optional(),
+  brandColors: z.array(z.string()).optional(),
+  productOfferings: z.array(z.string()).optional(),
   // CMS integrations
   cmsIntegrations: z.unknown().optional(),
 });
@@ -112,6 +114,8 @@ export async function PATCH(
     if (parsed.data.voiceTone !== undefined) brandUpdates.voiceTone = parsed.data.voiceTone;
     if (parsed.data.primaryKeywords !== undefined) brandUpdates.primaryKeywords = parsed.data.primaryKeywords;
     if (parsed.data.competitorUrls !== undefined) brandUpdates.competitorUrls = parsed.data.competitorUrls;
+    if (parsed.data.brandColors !== undefined) brandUpdates.brandColors = parsed.data.brandColors;
+    if (parsed.data.productOfferings !== undefined) brandUpdates.productOfferings = parsed.data.productOfferings;
 
     if (Object.keys(brandUpdates).length > 0) {
       const existing = await db

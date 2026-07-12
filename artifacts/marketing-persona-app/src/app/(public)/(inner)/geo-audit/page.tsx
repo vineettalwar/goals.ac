@@ -1,5 +1,5 @@
-import { GeoAuditPageClient } from "@/components/marketing/geo-audit-page-client";
+import { GeoAuditPageDynamic } from "@/components/marketing/marketing-client-dynamic";
 
 export default function GeoAuditFormPage() {
-  return <GeoAuditPageClient />;
+  return <GeoAuditPageDynamic />;
 }

@@ -13,7 +13,7 @@ import {
 } from "@workspace/content-engine/support/cms-integrations";
 import { decryptSecret } from "@workspace/security/encryption";
 import { getUsageSummaryForUser } from "@/lib/usage";
-import { buildAiProviderStatus, finalizeAiProviderStatus, probeOllama } from "@/lib/ai-providers-status";
+import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/ai-providers-status";
 import type { CmsConnectionSnapshot } from "@/lib/publishing-destinations";
 import type { WebsiteProject } from "@/lib/project-detail-types";
 
@@ -154,9 +154,8 @@ export async function loadSettingsInitialData(userId: number): Promise<SettingsI
     .where(eq(usersTable.id, userId))
     .limit(1);
 
-  const [usage, aiStatusBase] = await Promise.all([
+  const [usage] = await Promise.all([
     getUsageSummaryForUser(userId),
-    Promise.resolve(buildAiProviderStatus(user ?? undefined)),
   ]);
 
   let lastFour: string | null = null;
@@ -169,10 +168,9 @@ export async function loadSettingsInitialData(userId: number): Promise<SettingsI
     }
   }
 
-  const aiStatus = finalizeAiProviderStatus(
-    { ...aiStatusBase, ollama: { ...aiStatusBase.ollama, reachable: await probeOllama(aiStatusBase.ollama.baseUrl) } },
-    { hasUserGeminiKey: hasKey },
-  );
+  const aiStatusPayload = buildAiProviderStatus(user ?? undefined);
+  await enrichOllamaStatus(aiStatusPayload, toAiProviderOptions(user ?? undefined));
+  const aiStatus = finalizeAiProviderStatus(aiStatusPayload, { hasUserGeminiKey: hasKey });
 
   return {
     usage,

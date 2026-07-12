@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { roadmapsTable } from "@workspace/db/schema";
+import { roadmapsTable, usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { generateRoadmapStream, generateSlug } from "@/lib/ai/roadmap-generator";
 import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
@@ -9,7 +9,15 @@ import {
   pinRoadmapToProject,
   verifyProjectOwnership,
 } from "@/lib/pin-roadmap-to-project";
+import {
+  getMonthlyRoadmapCountForUser,
+  getRoadmapQuota,
+  recordUsage,
+} from "@/lib/usage";
 import { z } from "zod";
+
+const AUTH_REQUIRED_MESSAGE =
+  "Sign in to generate a custom roadmap. Browse our free catalog for existing roadmaps.";
 
 const GenerateRoadmapBody = z.object({
   industry: z.string().min(1),
@@ -38,11 +46,13 @@ export async function POST(req: Request) {
   const { industry, location, stage, projectId } = parsed.data;
 
   let validatedProjectId: number | null = null;
+  let authenticatedUserId: number | null = null;
   let userAiSettings: Awaited<ReturnType<typeof loadUserAiSettings>> | null = null;
   if (projectId != null) {
     const { userId, error } = await requireAuth();
     if (error) return error;
 
+    authenticatedUserId = userId!;
     userAiSettings = await loadUserAiSettings(userId!);
 
     const project = await verifyProjectOwnership(projectId, userId!);
@@ -95,6 +105,39 @@ export async function POST(req: Request) {
     return new Response(stream, { headers: sseHeaders });
   }
 
+  if (validatedProjectId == null) {
+    return new Response(
+      JSON.stringify({ error: "auth_required", message: AUTH_REQUIRED_MESSAGE }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const usesByok = Boolean(userAiSettings?.userApiKey);
+  if (!usesByok && authenticatedUserId != null) {
+    const [owner] = await db
+      .select({ plan: usersTable.plan })
+      .from(usersTable)
+      .where(eq(usersTable.id, authenticatedUserId))
+      .limit(1);
+
+    const quota = getRoadmapQuota(owner?.plan);
+    if (quota !== null) {
+      const roadmapsThisMonth = await getMonthlyRoadmapCountForUser(authenticatedUserId);
+      if (roadmapsThisMonth >= quota) {
+        return new Response(
+          JSON.stringify({
+            error: "quota_exhausted",
+            message: `You've used all ${quota} roadmap generations included in your ${owner?.plan ?? "starter"} plan this month. Upgrade your plan or add your own Gemini API key for unlimited generations.`,
+            plan: owner?.plan ?? "starter",
+            quota,
+            roadmapsThisMonth,
+          }),
+          { status: 402, headers: { "Content-Type": "application/json" } },
+        );
+      }
+    }
+  }
+
   return new Response(
     new ReadableStream({
       async start(controller) {
@@ -137,6 +180,15 @@ export async function POST(req: Request) {
             (await db.select().from(roadmapsTable).where(eq(roadmapsTable.slug, slug)).limit(1))[0];
 
           const pinned = finalRoadmap ? await maybePin(finalRoadmap.id) : false;
+
+          if (inserted && authenticatedUserId != null) {
+            await recordUsage({
+              userId: authenticatedUserId,
+              eventType: "roadmap_generation",
+              usedByok: usesByok,
+            });
+          }
+
           send("done", { ...finalRoadmap, pinned });
           controller.close();
         } catch {

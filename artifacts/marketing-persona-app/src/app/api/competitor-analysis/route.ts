@@ -4,7 +4,7 @@ import { analyzeCompetitor } from "@workspace/seo-tools/competitorAnalyzer";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";
 import { requireAuth } from "@/lib/require-auth";
 import { requireProjectAccess } from "@/lib/project-access";
-import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
+import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
 import { z } from "zod";
 
 const AnalyzeBody = z.object({
@@ -36,13 +36,14 @@ export async function POST(req: Request) {
     if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  const userApiKey = await getDecryptedUserGeminiKey(userId!);
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
   const analysis = await analyzeCompetitor({
     competitorUrl: parsed.data.competitorUrl,
     industry: parsed.data.industry,
     location: parsed.data.location,
     stage: parsed.data.stage,
     userApiKey,
+    aiProviderOptions,
   });
 
   const [saved] = await db

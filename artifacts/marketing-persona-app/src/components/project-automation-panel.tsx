@@ -260,7 +260,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
         </div>
         <p className="text-sm text-muted-foreground">
           Weekly LLM citation tracking and GEO re-audits.{" "}
-          <Link href="/ai-visibility" className="text-primary hover:underline">View full dashboard</Link>
+          <Link href="/search/visibility" className="text-primary hover:underline">View full dashboard</Link>
         </p>
 
         {visibilitySaved && (

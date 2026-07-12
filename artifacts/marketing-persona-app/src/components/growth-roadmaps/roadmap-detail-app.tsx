@@ -123,7 +123,7 @@ export function RoadmapDetailApp({
   return (
     <div className="px-8 py-8 max-w-4xl space-y-6 pb-32">
       <Link
-        href="/growth-roadmaps"
+        href="/strategy/roadmaps"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> Growth roadmaps

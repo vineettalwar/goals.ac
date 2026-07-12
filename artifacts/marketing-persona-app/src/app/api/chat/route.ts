@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { roadmapsTable, conversations, messages } from "@workspace/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
-import { getAiClient } from "@workspace/ai-providers";
+import { getAiProviderClient } from "@workspace/ai-providers";
 import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 const ChatBody = z.object({
@@ -42,6 +42,16 @@ INSTRUCTIONS:
 - Do not use excessive markdown; plain prose is preferred`;
 }
 
+function buildChatPrompt(history: { role: string; content: string }[], message: string): string {
+  if (history.length === 0) return message;
+
+  const transcript = history
+    .map((m) => `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content}`)
+    .join("\n\n");
+
+  return `Previous conversation:\n${transcript}\n\nUser: ${message}\n\nAssistant:`;
+}
+
 export async function POST(req: Request) {
   const limited = rateLimitResponse(
     `ai-gen:ip:${getClientIp(req)}`,
@@ -69,7 +79,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Roadmap not found" }, { status: 404 });
     }
 
-    const client = getAiClient();
+    const client = await getAiProviderClient();
 
     let convId = conversationId;
     let history: { role: string; content: string }[] = [];
@@ -91,19 +101,13 @@ export async function POST(req: Request) {
 
     await db.insert(messages).values({ conversationId: convId, role: "user", content: message });
 
-    const geminiHistory = history.map((m) => ({
-      role: m.role === "assistant" ? ("model" as const) : ("user" as const),
-      parts: [{ text: m.content }],
-    }));
-
-    const chat = client.chats.create({
-      model: "gemini-2.0-flash",
-      config: { systemInstruction: buildSystemPrompt(roadmap) },
-      history: geminiHistory,
+    const response = await client.generate({
+      prompt: buildChatPrompt(history, message),
+      systemInstruction: buildSystemPrompt(roadmap),
+      maxOutputTokens: 2048,
     });
 
-    const geminiRes = await chat.sendMessage({ message });
-    const reply = geminiRes.text ?? "";
+    const reply = response.text?.trim() ?? "";
 
     await db.insert(messages).values({ conversationId: convId, role: "assistant", content: reply });
 

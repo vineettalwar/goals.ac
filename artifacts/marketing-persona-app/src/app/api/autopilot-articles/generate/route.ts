@@ -5,7 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generateArticle } from "@/lib/ai/article-generator";
 import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
-import { getAiClientForUser } from "@workspace/ai-providers";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";
 import { z } from "zod";
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
 
   // Generate the article inline
   try {
-    const { client, source } = await getAiClientForUser(userId!);
+    const { client, source, providerId } = await resolveAiClientForUser(userId!);
     let generated = await generateArticle({
       company: {
         name: company.name,
@@ -194,8 +194,8 @@ export async function POST(req: Request) {
       outputTokens: generated.generationUsage?.outputTokens,
       totalTokens: generated.generationUsage?.totalTokens,
       usedByok: source === "user-key",
-      provider: "gemini",
-      model: "gemini-2.5-flash",
+      provider: providerId,
+      model: providerId === "gemini" ? "gemini-2.5-flash" : undefined,
       tier: "execution",
     });
 
@@ -203,6 +203,7 @@ export async function POST(req: Request) {
       article: updated,
       generation: {
         source,
+        providerId,
         estimatedCostUsd,
       },
     }, { status: 201 });

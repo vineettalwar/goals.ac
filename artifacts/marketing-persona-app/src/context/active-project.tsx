@@ -43,8 +43,9 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [activeProjectId, setActiveProjectIdState] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
 
-  const { data: projects = [], isLoading } = useQuery({
+  const { data: projects = [], isLoading: queryLoading } = useQuery({
     queryKey: queryKeys.websiteProjects,
     queryFn: fetchWebsiteProjects,
     staleTime: 60_000,
@@ -52,7 +53,11 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    if (initialized || isLoading) return;
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (initialized || queryLoading) return;
 
     const stored = localStorage.getItem(STORAGE_KEY);
     const storedId = stored ? Number.parseInt(stored, 10) : NaN;
@@ -64,7 +69,9 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
       return projects[0]?.id ?? null;
     });
     setInitialized(true);
-  }, [initialized, isLoading, projects]);
+  }, [initialized, queryLoading, projects]);
+
+  const isLoading = !hydrated || queryLoading;
 
   const setActiveProjectId = useCallback((id: number | null) => {
     setActiveProjectIdState(id);

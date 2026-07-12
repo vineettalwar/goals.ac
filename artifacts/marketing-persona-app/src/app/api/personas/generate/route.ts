@@ -4,6 +4,7 @@ import { companiesTable, marketingPersonasTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { generatePersonas } from "@/lib/ai/persona-generator";
+import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 import { z } from "zod";
 
@@ -32,13 +33,18 @@ export async function POST(req: Request) {
 
   if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });
 
-  const generated = await generatePersonas({
-    companyName: company.name,
-    websiteUrl: company.websiteUrl,
-    industry: company.industry,
-    description: company.description,
-    targetAudience: company.targetAudience,
-  });
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+
+  const generated = await generatePersonas(
+    {
+      companyName: company.name,
+      websiteUrl: company.websiteUrl,
+      industry: company.industry,
+      description: company.description,
+      targetAudience: company.targetAudience,
+    },
+    { userApiKey, aiProviderOptions },
+  );
 
   const rows = await db
     .insert(marketingPersonasTable)

@@ -142,8 +142,13 @@ export async function POST(
 
         send("done", inserted);
         controller.close();
-      } catch {
-        send("error", { error: "Generation failed. Please try again." });
+      } catch (err) {
+        console.error("Content piece generation failed:", err);
+        const message =
+          err instanceof Error && err.message
+            ? err.message
+            : "Generation failed. Please try again.";
+        send("error", { error: message });
         controller.close();
       }
     },

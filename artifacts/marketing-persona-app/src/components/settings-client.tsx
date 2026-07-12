@@ -77,24 +77,42 @@ const PLAN_LABELS: Record<UsageSummary["plan"], string> = {
   scale: "Scale",
 };
 
-export function SettingsClient() {
+interface SettingsClientProps {
+  initialData?: import("@/lib/server/loaders").SettingsInitialData;
+}
+
+export function SettingsClient({ initialData }: SettingsClientProps) {
   const { data: session, update } = useSession();
   const [activeTab, setActiveTab] = useState("profile");
-  const [usage, setUsage] = useState<UsageSummary | null>(null);
-  const [usageLoading, setUsageLoading] = useState(true);
-  const [hasGeminiKey, setHasGeminiKey] = useState(false);
-  const [geminiLastFour, setGeminiLastFour] = useState<string | null>(null);
-  const [hasGoogleId, setHasGoogleId] = useState(false);
-  const [hasPassword, setHasPassword] = useState(false);
-  const [aiStatus, setAiStatus] = useState<AiProviderStatus | null>(null);
+  const [usage, setUsage] = useState<UsageSummary | null>(initialData?.usage ?? null);
+  const [usageLoading, setUsageLoading] = useState(!initialData);
+  const [hasGeminiKey, setHasGeminiKey] = useState(initialData?.me?.hasGeminiKey ?? false);
+  const [geminiLastFour, setGeminiLastFour] = useState<string | null>(
+    initialData?.apiKey.lastFour ?? null,
+  );
+  const [hasGoogleId, setHasGoogleId] = useState(initialData?.me?.hasGoogleId ?? false);
+  const [hasPassword, setHasPassword] = useState(initialData?.me?.hasPassword ?? false);
+  const [aiStatus, setAiStatus] = useState<AiProviderStatus | null>(initialData?.aiStatus ?? null);
   const [geminiDialogOpen, setGeminiDialogOpen] = useState(false);
   const [geminiKeyInput, setGeminiKeyInput] = useState("");
   const [geminiTesting, setGeminiTesting] = useState(false);
   const [geminiTestResult, setGeminiTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [geminiSaving, setGeminiSaving] = useState(false);
-  const [selectedProvider, setSelectedProvider] = useState<AiProviderChoice>("gemini");
-  const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://localhost:11434");
-  const [ollamaModel, setOllamaModel] = useState("llama3.1");
+  const [selectedProvider, setSelectedProvider] = useState<AiProviderChoice>(() => {
+    if (!initialData?.aiStatus) return "gemini";
+    const saved = initialData.aiStatus.settings?.provider as AiProviderChoice | null;
+    return saved ?? (initialData.aiStatus.activeProvider as AiProviderChoice);
+  });
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState(
+    initialData?.aiStatus?.settings?.ollamaBaseUrl ??
+      initialData?.aiStatus?.envFallback?.ollamaBaseUrl ??
+      "http://localhost:11434",
+  );
+  const [ollamaModel, setOllamaModel] = useState(
+    initialData?.aiStatus?.settings?.ollamaModel ??
+      initialData?.aiStatus?.envFallback?.ollamaModel ??
+      "",
+  );
   const [providerSaving, setProviderSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletingKey, setDeletingKey] = useState(false);
@@ -109,6 +127,7 @@ export function SettingsClient() {
   });
 
   useEffect(() => {
+    if (initialData) return;
     Promise.all([
       fetch("/api/usage").then((r) => (r.ok ? r.json() : null)),
       fetch("/api/auth/me").then((r) => (r.ok ? r.json() : null)),
@@ -129,12 +148,18 @@ export function SettingsClient() {
         setAiStatus(aiData);
         const savedProvider = aiData.settings?.provider as AiProviderChoice | null;
         setSelectedProvider(savedProvider ?? (aiData.activeProvider as AiProviderChoice));
-        setOllamaBaseUrl(aiData.ollama.baseUrl ?? "http://localhost:11434");
-        setOllamaModel(aiData.ollama.model ?? "llama3.1");
+        setOllamaBaseUrl(
+          aiData.settings?.ollamaBaseUrl ??
+            aiData.envFallback?.ollamaBaseUrl ??
+            "http://localhost:11434",
+        );
+        setOllamaModel(
+          aiData.settings?.ollamaModel ?? aiData.envFallback?.ollamaModel ?? "",
+        );
       }
       setUsageLoading(false);
     });
-  }, []);
+  }, [initialData]);
 
   async function saveProfile(data: { name: string }) {
     const res = await fetch("/api/auth/me", {
@@ -334,7 +359,7 @@ export function SettingsClient() {
                         id="ollama-model"
                         value={ollamaModel}
                         onChange={(e) => setOllamaModel(e.target.value)}
-                        placeholder="llama3.1"
+                        placeholder={aiStatus?.envFallback?.ollamaModel ?? "gemma4:e2b"}
                       />
                     </div>
                   </div>

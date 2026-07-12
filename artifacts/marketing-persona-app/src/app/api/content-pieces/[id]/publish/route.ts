@@ -7,9 +7,15 @@ import { assertPieceOwner } from "@/lib/content-pieces-helpers";
 import {
   decryptCmsCredentials,
   CMS_PUBLISH_PLATFORMS,
+  SOCIAL_PLATFORMS,
   type CmsPublishPlatform,
   type CmsIntegrationCredentials,
+  type SocialPlatform,
 } from "@workspace/content-engine/support/cms-integrations";
+import {
+  isSocialPlatform,
+  publishPieceToSocial,
+} from "@workspace/content-engine/support/social-publish";
 import {
   publishPieceToCms,
   publishPieceToWordPress,
@@ -21,8 +27,16 @@ import { decryptSecret } from "@workspace/security/encryption";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { z } from "zod";
 
+const ALL_PUBLISH_PLATFORMS = [
+  ...CMS_PUBLISH_PLATFORMS,
+  "notion",
+  "webflow",
+  "wordpress",
+  ...SOCIAL_PLATFORMS,
+] as const;
+
 const PublishBody = z.object({
-  platform: z.enum(CMS_PUBLISH_PLATFORMS as unknown as [string, ...string[]]).optional(),
+  platform: z.enum(ALL_PUBLISH_PLATFORMS as unknown as [string, ...string[]]).optional(),
   wordpressConnectionId: z.number().int().positive().optional(),
   wpSiteUrl: z.string().url().optional(),
   wpUsername: z.string().optional(),
@@ -69,6 +83,7 @@ export async function POST(
 
   try {
     let publishedUrl: string;
+    let publishPlatform = parsed.data.platform ?? "wordpress";
     const publishable = {
       id: piece!.id,
       title: piece!.title,
@@ -77,7 +92,16 @@ export async function POST(
       formatType: piece!.formatType,
     };
 
-    if (parsed.data.wordpressConnectionId) {
+    if (parsed.data.platform && isSocialPlatform(parsed.data.platform)) {
+      const socialResult = await publishPieceToSocial(
+        parsed.data.platform as SocialPlatform,
+        { ...publishable, websiteProjectId: piece!.websiteProjectId },
+        userId!,
+        creds,
+      );
+      publishedUrl = socialResult.publishedUrl;
+      publishPlatform = socialResult.publishPlatform;
+    } else if (parsed.data.wordpressConnectionId) {
       const [row] = await db
         .select({ connection: wordpressConnectionsTable })
         .from(wordpressConnectionsTable)
@@ -148,7 +172,8 @@ export async function POST(
       .set({
         status: "published",
         publishedUrl,
-        publishPlatform: parsed.data.platform ?? "wordpress",
+        publishPlatform,
+        publishError: null,
       })
       .where(eq(contentPiecesTable.id, id))
       .returning();

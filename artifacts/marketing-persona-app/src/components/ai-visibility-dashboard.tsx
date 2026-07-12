@@ -12,17 +12,7 @@ import {
   ExternalLink,
   Eye,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -32,6 +22,16 @@ import { PageSkeleton } from "@/components/page-skeleton";
 import { useActiveProject } from "@/context/active-project";
 import { useVisibilityData } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
+
+const VisibilityTrendChart = dynamic(
+  () => import("@/components/ai-visibility-charts").then((m) => m.VisibilityTrendChart),
+  { loading: () => <div className="paper-card p-6 h-80 animate-pulse rounded-xl bg-secondary/40" /> },
+);
+
+const CompetitorMentionsChart = dynamic(
+  () => import("@/components/ai-visibility-charts").then((m) => m.CompetitorMentionsChart),
+  { loading: () => <div className="paper-card p-6 h-72 animate-pulse rounded-xl bg-secondary/40" /> },
+);
 
 interface VisibilitySettings {
   llmTrackingEnabled: boolean;
@@ -110,7 +110,7 @@ function parseSummary(data: Record<string, unknown> | undefined, settings: Visib
   };
 }
 
-export function AiVisibilityDashboard() {
+export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
   const { activeProjectId, activeProject, isLoading: projectsLoading } = useActiveProject();
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
@@ -202,20 +202,24 @@ export function AiVisibilityDashboard() {
   }
 
   return (
-    <div className="px-8 py-8 max-w-5xl space-y-6">
+    <div className={embedded ? "space-y-6" : "px-8 py-8 max-w-5xl space-y-6"}>
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Eye className="w-6 h-6 text-primary" />
-            Visibility
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm max-w-xl">
-            Track whether search engines cite your brand when users ask questions in your niche.
-            {activeProject ? (
-              <span className="block mt-1 text-foreground/80">{activeProject.name}</span>
-            ) : null}
-          </p>
-        </div>
+        {!embedded ? (
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Eye className="w-6 h-6 text-primary" />
+              Visibility
+            </h1>
+            <p className="text-muted-foreground mt-1 text-sm max-w-xl">
+              Track whether search engines cite your brand when users ask questions in your niche.
+              {activeProject ? (
+                <span className="block mt-1 text-foreground/80">{activeProject.name}</span>
+              ) : null}
+            </p>
+          </div>
+        ) : activeProject ? (
+          <p className="text-sm text-muted-foreground">Project: {activeProject.name}</p>
+        ) : null}
         {projectId && (
           <Button onClick={runCheckNow} disabled={checking || loading} variant="outline" className="shrink-0">
             {checking ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
@@ -315,41 +319,10 @@ export function AiVisibilityDashboard() {
                 </div>
               </div>
 
-              {summary.trend.length > 1 && (
-                <div className="paper-card p-6">
-                  <h2 className="font-semibold mb-4">Visibility over time</h2>
-                  <div className="h-64">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={summary.trend}>
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                        <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                        <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Line type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
+              {summary.trend.length > 1 && <VisibilityTrendChart data={summary.trend} />}
 
               {summary.competitorMentions.length > 0 && (
-                <div className="paper-card p-6">
-                  <h2 className="font-semibold">Competitor mentions in AI answers</h2>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    How often competitors appear when your brand does not
-                  </p>
-                  <div className="h-56">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={summary.competitorMentions.slice(0, 8)} layout="vertical">
-                        <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                        <XAxis type="number" tick={{ fontSize: 11 }} />
-                        <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
-                        <Tooltip />
-                        <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
+                <CompetitorMentionsChart data={summary.competitorMentions} />
               )}
 
               {summary.recentSnapshots.length > 0 && (

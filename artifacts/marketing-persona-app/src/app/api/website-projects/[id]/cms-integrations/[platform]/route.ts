@@ -9,7 +9,7 @@ import {
   encryptCmsCredentials,
 } from "@workspace/content-engine/support/cms-integrations";
 
-const PLATFORMS = ["notion", "webflow", "wordpress", "ghost", "webhook", "shopify", "drupal", "joomla", "linkedin", "twitter", "meta"] as const;
+const PLATFORMS = ["notion", "webflow", "wordpress", "ghost", "webhook", "shopify", "drupal", "joomla", "linkedin", "twitter", "meta", "bluesky", "mastodon"] as const;
 
 export async function DELETE(
   _req: Request,

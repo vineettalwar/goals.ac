@@ -36,6 +36,8 @@ export interface BrandProfile {
   typicalStructure?: string;
   doWords?: string[];
   dontWords?: string[];
+  brandColors?: string[];
+  productOfferings?: string[];
   updatedAt?: string;
 }
 

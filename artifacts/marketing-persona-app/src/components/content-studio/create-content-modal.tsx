@@ -160,6 +160,7 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
       let buffer = "";
       let finalPiece: ContentPieceRow | null = null;
       let fromCache = false;
+      let pendingEvent: string | null = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -169,17 +170,38 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
         buffer = lines.pop() ?? "";
 
         for (const line of lines) {
-          if (line.startsWith("event: cached")) {
-            fromCache = true;
+          if (line.startsWith("event: ")) {
+            pendingEvent = line.slice(7).trim();
             continue;
-          }
-          if (line.startsWith("event: error")) {
-            throw new Error("Generation failed");
           }
           if (!line.startsWith("data: ")) continue;
 
+          const payload = line.slice(6);
+          if (pendingEvent === "cached") {
+            fromCache = true;
+            try {
+              const cached = JSON.parse(payload) as ContentPieceRow;
+              if ("id" in cached) finalPiece = cached;
+            } catch {
+              // ignore malformed cached payload
+            }
+            pendingEvent = null;
+            continue;
+          }
+          if (pendingEvent === "error") {
+            let message = "Generation failed";
+            try {
+              const errData = JSON.parse(payload) as { error?: string };
+              if (errData.error) message = errData.error;
+            } catch {
+              // keep default
+            }
+            throw new Error(message);
+          }
+          pendingEvent = null;
+
           try {
-            const parsed = JSON.parse(line.slice(6)) as { text?: string } | ContentPieceRow;
+            const parsed = JSON.parse(payload) as { text?: string } | ContentPieceRow;
             if ("text" in parsed && parsed.text) {
               setStreamPreview((p) => p + parsed.text);
             } else if ("id" in parsed) {

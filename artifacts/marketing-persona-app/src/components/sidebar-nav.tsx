@@ -1,44 +1,72 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { memo } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { memo, useCallback, useEffect } from "react";
 import { signOut } from "next-auth/react";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
-  Target,
   Zap,
   FolderOpen,
   Map,
-  Network,
   BarChart2,
   Settings,
   LogOut,
   Leaf,
   Layers,
-  MessageSquare,
   Plug,
-  Eye,
   Users,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { useActiveProject } from "@/context/active-project";
+import { queryKeys } from "@/lib/queries/keys";
+import {
+  fetchGoals,
+  fetchProjectContent,
+  fetchRoadmapsCatalog,
+  fetchTrackedKeywords,
+  fetchVisibilitySummary,
+  fetchWebsiteProject,
+} from "@/lib/queries/fetchers";
 
-const NAV_ITEMS: Array<{ label: string; href: string; icon: LucideIcon }> = [
-  { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Autopilot", href: "/autopilot", icon: Zap },
-  { label: "Agent", href: "/agent", icon: MessageSquare },
-  { label: "Projects", href: "/projects", icon: FolderOpen },
-  { label: "Roadmaps", href: "/growth-roadmaps", icon: Map },
-  { label: "Topical Map", href: "/topical-map", icon: Network },
-  { label: "Content Studio", href: "__content_studio__", icon: Layers },
-  { label: "Competitor Analysis", href: "/competitor-analysis", icon: Users },
-  { label: "Goals", href: "/goals", icon: Target },
-  { label: "Keywords", href: "/keyword-tracking", icon: BarChart2 },
-  { label: "Visibility", href: "/ai-visibility", icon: Eye },
+type NavItemDef = { label: string; href: string; icon: LucideIcon; matchPrefix?: string };
+
+const NAV_SECTIONS: Array<{ label: string; items: NavItemDef[] }> = [
+  {
+    label: "Overview",
+    items: [
+      { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Projects", href: "/projects", icon: FolderOpen },
+    ],
+  },
+  {
+    label: "Create",
+    items: [
+      { label: "Content Studio", href: "__content_studio__", icon: Layers },
+      { label: "Autopilot", href: "/autopilot", icon: Zap },
+    ],
+  },
+  {
+    label: "Plan",
+    items: [{ label: "Strategy", href: "/strategy", icon: Map, matchPrefix: "/strategy" }],
+  },
+  {
+    label: "Measure",
+    items: [{ label: "Search", href: "/search", icon: BarChart2, matchPrefix: "/search" }],
+  },
+  {
+    label: "Research",
+    items: [{ label: "Research", href: "/research", icon: Users, matchPrefix: "/research" }],
+  },
+];
+
+const FOOTER_ITEMS: NavItemDef[] = [
   { label: "Integrations", href: "/integrations", icon: Plug },
+  { label: "Help", href: "/help", icon: BookOpen },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
 
@@ -47,13 +75,16 @@ interface NavItemProps {
   href: string;
   icon: LucideIcon;
   active: boolean;
+  onIntent?: () => void;
 }
 
-const NavItem = memo(function NavItem({ label, href, icon: Icon, active }: NavItemProps) {
+const NavItem = memo(function NavItem({ label, href, icon: Icon, active, onIntent }: NavItemProps) {
   return (
     <li>
       <Link
         href={href}
+        onMouseEnter={onIntent}
+        onFocus={onIntent}
         className={cn(
           "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
           active
@@ -75,6 +106,8 @@ interface SidebarNavProps {
 
 export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
   const { activeProjectId } = useActiveProject();
 
   function resolveHref(href: string) {
@@ -84,12 +117,78 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
     return href;
   }
 
-  function isActive(label: string, href: string) {
-    if (label === "Content Studio") {
+  function isActive(item: NavItemDef, resolvedHref: string) {
+    if (item.label === "Content Studio") {
       return pathname.includes("/content-studio");
     }
-    return pathname === href || pathname.startsWith(href + "/");
+    if (item.matchPrefix) {
+      if (item.matchPrefix === "/strategy") {
+        return (
+          pathname === item.matchPrefix ||
+          pathname.startsWith(`${item.matchPrefix}/`) ||
+          pathname.startsWith("/growth-roadmaps") ||
+          pathname.startsWith("/content-strategy")
+        );
+      }
+      return pathname === item.matchPrefix || pathname.startsWith(`${item.matchPrefix}/`);
+    }
+    if (item.label === "Projects") {
+      return pathname === resolvedHref || pathname.startsWith("/projects/");
+    }
+    return pathname === resolvedHref || pathname.startsWith(`${resolvedHref}/`);
   }
+
+  useEffect(() => {
+    if (activeProjectId) {
+      router.prefetch(`/projects/${activeProjectId}/content-studio`);
+    }
+  }, [activeProjectId, router]);
+
+  const prefetchRouteData = useCallback(
+    (href: string) => {
+      router.prefetch(href);
+
+      if (!activeProjectId) return;
+      const projectId = String(activeProjectId);
+
+      if (href.startsWith("/strategy/goals")) {
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.goals(projectId),
+          queryFn: () => fetchGoals(projectId),
+        });
+      } else if (href.startsWith("/search/keywords") || href === "/search") {
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.trackedKeywords(projectId),
+          queryFn: () => fetchTrackedKeywords(projectId),
+        });
+      } else if (href.startsWith("/strategy/roadmaps") || href === "/strategy") {
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.projectContent(projectId),
+          queryFn: () => fetchProjectContent(projectId),
+        });
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.websiteProject(projectId),
+          queryFn: () => fetchWebsiteProject(projectId),
+        });
+      } else if (href.startsWith("/search/visibility")) {
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.visibilitySummary(projectId),
+          queryFn: () => fetchVisibilitySummary(projectId),
+        });
+      } else if (href.startsWith("/strategy/calendar")) {
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.projectContent(projectId),
+          queryFn: () => fetchProjectContent(projectId),
+        });
+      } else if (href.startsWith("/strategy/topical-map")) {
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.roadmapsCatalog,
+          queryFn: fetchRoadmapsCatalog,
+        });
+      }
+    },
+    [activeProjectId, queryClient, router],
+  );
 
   return (
     <aside className="flex h-full w-[220px] shrink-0 flex-col border-r border-border bg-card">
@@ -101,24 +200,49 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-3">
-        <ul className="space-y-0.5">
-          {NAV_ITEMS.map(({ label, href, icon }) => {
-            const resolvedHref = resolveHref(href);
-            return (
-              <NavItem
-                key={label}
-                label={label}
-                href={resolvedHref}
-                icon={icon}
-                active={isActive(label, resolvedHref)}
-              />
-            );
-          })}
-        </ul>
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.label} className="mb-4 last:mb-0">
+            <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+              {section.label}
+            </p>
+            <ul className="space-y-0.5">
+              {section.items.map((item) => {
+                const resolvedHref = resolveHref(item.href);
+                return (
+                  <NavItem
+                    key={item.label}
+                    label={item.label}
+                    href={resolvedHref}
+                    icon={item.icon}
+                    active={isActive(item, resolvedHref)}
+                    onIntent={() => prefetchRouteData(resolvedHref)}
+                  />
+                );
+              })}
+            </ul>
+          </div>
+        ))}
       </nav>
 
       <div className="border-t border-border">
         <ProjectSwitcher />
+      </div>
+      <div className="border-t border-border px-2 py-2">
+        <ul className="space-y-0.5">
+          {FOOTER_ITEMS.map((item) => {
+            const resolvedHref = resolveHref(item.href);
+            return (
+              <NavItem
+                key={item.label}
+                label={item.label}
+                href={resolvedHref}
+                icon={item.icon}
+                active={isActive(item, resolvedHref)}
+                onIntent={() => prefetchRouteData(resolvedHref)}
+              />
+            );
+          })}
+        </ul>
       </div>
       <div className="border-t border-border p-3">
         <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">

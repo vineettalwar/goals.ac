@@ -36,12 +36,16 @@ type Location = { id: number; name: string; country: string };
 type RoadmapGeneratorAppProps = {
   projectId: number;
   defaultIndustry?: string;
+  defaultLocation?: string;
+  defaultStage?: string;
   onGenerated?: () => void;
 };
 
 export function RoadmapGeneratorApp({
   projectId,
   defaultIndustry,
+  defaultLocation,
+  defaultStage,
   onGenerated,
 }: RoadmapGeneratorAppProps) {
   const router = useRouter();
@@ -51,8 +55,8 @@ export function RoadmapGeneratorApp({
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [optionsError, setOptionsError] = useState<string | null>(null);
   const [industry, setIndustry] = useState(defaultIndustry ?? "");
-  const [location, setLocation] = useState("");
-  const [stage, setStage] = useState<string>(STAGES[1].value);
+  const [location, setLocation] = useState(defaultLocation ?? "");
+  const [stage, setStage] = useState<string>(defaultStage ?? STAGES[1].value);
   const [isPending, setIsPending] = useState(false);
   const [completedPhases, setCompletedPhases] = useState<Set<GenerationPhase>>(new Set());
   const [generationError, setGenerationError] = useState<string | null>(null);
@@ -61,6 +65,14 @@ export function RoadmapGeneratorApp({
   useEffect(() => {
     if (defaultIndustry) setIndustry(defaultIndustry);
   }, [defaultIndustry]);
+
+  useEffect(() => {
+    if (defaultLocation) setLocation(defaultLocation);
+  }, [defaultLocation]);
+
+  useEffect(() => {
+    if (defaultStage) setStage(defaultStage);
+  }, [defaultStage]);
 
   useEffect(() => {
     Promise.all([fetch("/api/industries"), fetch("/api/locations")])
@@ -105,8 +117,18 @@ export function RoadmapGeneratorApp({
       });
 
       if (!response.ok || !response.body) {
-        const errJson = await response.json().catch(() => ({ error: "Generation failed" }));
-        setGenerationError(errJson.error ?? "Generation failed");
+        const errJson = (await response.json().catch(() => ({ error: "Generation failed" }))) as {
+          error?: string;
+          message?: string;
+        };
+        if (errJson.error === "quota_exhausted") {
+          setGenerationError(
+            errJson.message ??
+              "You've reached your monthly roadmap limit. Upgrade your plan or add your Gemini API key in Settings.",
+          );
+        } else {
+          setGenerationError(errJson.message ?? errJson.error ?? "Generation failed");
+        }
         setIsPending(false);
         return;
       }

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/select";
 import { ConfidenceBadge, ScrapeFormSkeleton, ScrapeStatusHeader } from "@/components/project-scrape-status";
 import type { ContentStyle, ScrapeConfidence, WebsiteProject } from "@/lib/project-detail-types";
+import { SUPPORTED_LANGUAGES } from "@/lib/supported-languages";
 
 const TONE_PRESETS = [
   { value: "professional", label: "Professional" },
@@ -31,23 +32,7 @@ const READING_LEVELS = [
   { value: "expert", label: "Expert (deep technical audience)" },
 ] as const;
 
-const LANGUAGES = [
-  "English",
-  "Spanish",
-  "French",
-  "German",
-  "Portuguese",
-  "Italian",
-  "Dutch",
-  "Swedish",
-  "Norwegian",
-  "Danish",
-  "Polish",
-  "Japanese",
-  "Korean",
-  "Chinese (Simplified)",
-  "Chinese (Traditional)",
-];
+const LANGUAGES = SUPPORTED_LANGUAGES;
 
 const WORD_COUNT_PRESETS = [
   { label: "Short", value: 400 },
@@ -62,6 +47,8 @@ interface BrandForm {
   voiceTone: string;
   primaryKeywords: string;
   competitorUrls: string;
+  brandColors: string;
+  productOfferings: string;
 }
 
 interface Props {
@@ -95,12 +82,14 @@ export function ProjectBrandTab({
     voiceTone: bp?.voiceTone ?? "",
     primaryKeywords: (bp?.primaryKeywords ?? []).join(", "),
     competitorUrls: (bp?.competitorUrls ?? []).join("\n"),
+    brandColors: (bp?.brandColors ?? []).join(", "),
+    productOfferings: (bp?.productOfferings ?? []).join("\n"),
   });
   const [styleForm, setStyleForm] = useState({
     tonePreset: project.contentStyle?.tonePreset ?? "professional",
     personaName: project.contentStyle?.personaName ?? "",
     defaultWordCount: project.contentStyle?.defaultWordCount ?? 800,
-    primaryLanguage: project.contentStyle?.primaryLanguage ?? "English",
+    primaryLanguage: project.contentStyle?.primaryLanguage ?? "en",
     forbiddenWords: (project.contentStyle?.forbiddenWords ?? []).join(", "),
     readingLevel: project.contentStyle?.readingLevel ?? "general",
   });
@@ -119,6 +108,8 @@ export function ProjectBrandTab({
         voiceTone: profile.voiceTone ?? "",
         primaryKeywords: (profile.primaryKeywords ?? []).join(", "),
         competitorUrls: (profile.competitorUrls ?? []).join("\n"),
+        brandColors: (profile.brandColors ?? []).join(", "),
+        productOfferings: (profile.productOfferings ?? []).join("\n"),
       });
     }
     if (project.contentStyle) {
@@ -126,7 +117,7 @@ export function ProjectBrandTab({
         tonePreset: project.contentStyle.tonePreset ?? "professional",
         personaName: project.contentStyle.personaName ?? "",
         defaultWordCount: project.contentStyle.defaultWordCount ?? 800,
-        primaryLanguage: project.contentStyle.primaryLanguage ?? "English",
+        primaryLanguage: project.contentStyle.primaryLanguage ?? "en",
         forbiddenWords: (project.contentStyle.forbiddenWords ?? []).join(", "),
         readingLevel: project.contentStyle.readingLevel ?? "general",
       });
@@ -162,6 +153,14 @@ export function ProjectBrandTab({
           .split("\n")
           .map((u) => u.trim())
           .filter(Boolean),
+        brandColors: brandForm.brandColors
+          .split(",")
+          .map((c) => c.trim())
+          .filter(Boolean),
+        productOfferings: brandForm.productOfferings
+          .split("\n")
+          .map((o) => o.trim())
+          .filter(Boolean),
       }),
     });
     setSavingBrand(false);
@@ -179,6 +178,8 @@ export function ProjectBrandTab({
         voiceTone: data.brandProfile.voiceTone,
         primaryKeywords: (data.brandProfile.primaryKeywords ?? []).join(", "),
         competitorUrls: (data.brandProfile.competitorUrls ?? []).join("\n"),
+        brandColors: (data.brandProfile.brandColors ?? []).join(", "),
+        productOfferings: (data.brandProfile.productOfferings ?? []).join("\n"),
       });
     }
     setBrandSaved(true);
@@ -312,6 +313,27 @@ export function ProjectBrandTab({
               <p className="text-xs text-muted-foreground">One URL per line</p>
             </div>
 
+            <div className="space-y-1.5">
+              <Label>Brand colors</Label>
+              <Input
+                value={brandForm.brandColors}
+                onChange={(e) => setBrandForm((p) => ({ ...p, brandColors: e.target.value }))}
+                placeholder="#085CFB, #6B9DFA, #C8E5FF"
+              />
+              <p className="text-xs text-muted-foreground">Comma-separated hex codes for article styling</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Product offerings to cross-link</Label>
+              <Textarea
+                value={brandForm.productOfferings}
+                onChange={(e) => setBrandForm((p) => ({ ...p, productOfferings: e.target.value }))}
+                placeholder={"AI consultation\nDensity tracking\nTreatment plan"}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">One offering per line — woven into generated articles</p>
+            </div>
+
             <div className="flex items-center gap-3">
               <Button onClick={saveBrand} disabled={savingBrand}>
                 {savingBrand ? (
@@ -438,8 +460,8 @@ export function ProjectBrandTab({
                 </SelectTrigger>
                 <SelectContent>
                   {LANGUAGES.map((lang) => (
-                    <SelectItem key={lang} value={lang}>
-                      {lang}
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

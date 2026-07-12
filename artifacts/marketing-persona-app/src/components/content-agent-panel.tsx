@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Brain, Sparkles, Wand2 } from "lucide-react";
@@ -8,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
+import { aiProviderUnavailableMessage } from "@/lib/ai-providers-status";
+import type { AiProviderId } from "@workspace/ai-providers/config";
 
 type Idea = {
   title: string;
@@ -32,13 +35,29 @@ export function ContentAgentPanel({ companyId }: ContentAgentPanelProps) {
   const [loadingBuildKeyword, setLoadingBuildKeyword] = useState<string | null>(null);
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [sourceLabel, setSourceLabel] = useState<string>("platform");
+  const [activeProvider, setActiveProvider] = useState<AiProviderId>("gemini");
+  const [aiReady, setAiReady] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/ai-providers/status")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((status) => {
+        if (cancelled || !status) return;
+        setActiveProvider(status.activeProvider ?? "gemini");
+        setAiReady(Boolean(status.ready));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const hasIdeas = ideas.length > 0;
   const helperText = useMemo(() => {
-    if (sourceLabel === "user-key") return "Research powered by your API key";
-    if (sourceLabel === "replit-proxy") return "Research powered by shared platform key";
-    return "Research powered by platform key";
-  }, [sourceLabel]);
+    const provider = activeProvider.charAt(0).toUpperCase() + activeProvider.slice(1);
+    if (sourceLabel === "user-key") return `Research powered by your ${provider} key`;
+    return `Research powered by ${provider}`;
+  }, [sourceLabel, activeProvider]);
 
   async function generateIdeas() {
     setLoadingIdeas(true);
@@ -55,16 +74,20 @@ export function ContentAgentPanel({ companyId }: ContentAgentPanelProps) {
     setLoadingIdeas(false);
 
     if (!res.ok) {
-      toast.error("Topic research failed. Please try again.");
+      const err = (await res.json().catch(() => null)) as { message?: string; error?: string } | null;
+      toast.error(err?.message ?? "Topic research failed. Please try again.");
       return;
     }
 
     const data = (await res.json()) as {
       ideas?: Idea[];
-      generation?: { source?: string };
+      generation?: { source?: string; providerId?: string };
     };
     setIdeas(Array.isArray(data.ideas) ? data.ideas : []);
-    setSourceLabel(data.generation?.source ?? "platform-key");
+    setSourceLabel(data.generation?.source ?? "platform");
+    if (data.generation?.providerId) {
+      setActiveProvider(data.generation.providerId as AiProviderId);
+    }
     toast.success("Topic ideas generated.");
   }
 
@@ -113,6 +136,15 @@ export function ContentAgentPanel({ companyId }: ContentAgentPanelProps) {
         <span className="text-xs text-muted-foreground">{helperText}</span>
       </div>
 
+      {aiReady === false && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
+          {aiProviderUnavailableMessage(activeProvider)}{" "}
+          <Link href="/settings" className="text-primary hover:underline">
+            Open AI settings
+          </Link>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <div className="lg:col-span-2 space-y-2">
           <label className="text-xs font-medium text-muted-foreground">What do you want to achieve with these articles?</label>
@@ -140,7 +172,7 @@ export function ContentAgentPanel({ companyId }: ContentAgentPanelProps) {
               placeholder="WordPress SEO automation"
             />
           </div>
-          <Button onClick={generateIdeas} disabled={loadingIdeas} className="w-full">
+          <Button onClick={generateIdeas} disabled={loadingIdeas || aiReady === false} className="w-full">
             {loadingIdeas ? (
               <>
                 <Spinner size="sm" className="border-white/30 border-t-white" /> Researching...

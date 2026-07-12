@@ -1,5 +1,5 @@
-import { AboutPageClient } from "@/components/marketing/about-page-client";
+import { AboutPageDynamic } from "@/components/marketing/marketing-client-dynamic";
 
 export default function AboutPage() {
-  return <AboutPageClient />;
+  return <AboutPageDynamic />;
 }

@@ -18,19 +18,9 @@ export async function loadProjectVisibilitySummary(
   const since = new Date();
   since.setDate(since.getDate() - 90);
 
-  const [snapshots, prompts, geoAudits] = await Promise.all([
+  const [prompts, geoAudits] = await Promise.all([
     db
-      .select()
-      .from(llmVisibilitySnapshotsTable)
-      .where(
-        and(
-          eq(llmVisibilitySnapshotsTable.websiteProjectId, projectId),
-          gte(llmVisibilitySnapshotsTable.checkedAt, since),
-        ),
-      )
-      .orderBy(desc(llmVisibilitySnapshotsTable.checkedAt)),
-    db
-      .select()
+      .select({ id: llmVisibilityPromptsTable.id })
       .from(llmVisibilityPromptsTable)
       .where(eq(llmVisibilityPromptsTable.websiteProjectId, projectId)),
     db
@@ -45,7 +35,22 @@ export async function loadProjectVisibilitySummary(
       .limit(1),
   ]);
 
-  const latestBatch = snapshots.slice(0, prompts.length * 4);
+  const promptCount = prompts.length;
+  const snapshotLimit = Math.max(promptCount * 4, 4);
+
+  const snapshots = await db
+    .select()
+    .from(llmVisibilitySnapshotsTable)
+    .where(
+      and(
+        eq(llmVisibilitySnapshotsTable.websiteProjectId, projectId),
+        gte(llmVisibilitySnapshotsTable.checkedAt, since),
+      ),
+    )
+    .orderBy(desc(llmVisibilitySnapshotsTable.checkedAt))
+    .limit(snapshotLimit);
+
+  const latestBatch = snapshots;
   const citedLatest = latestBatch.filter((s) => s.cited).length;
   const visibilityScore = computeVisibilityScore(citedLatest, latestBatch.length || 1);
 

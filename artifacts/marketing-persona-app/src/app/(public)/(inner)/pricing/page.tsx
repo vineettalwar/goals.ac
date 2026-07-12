@@ -1,5 +1,5 @@
-import { PricingPageClient } from "@/components/marketing/pricing-page-client";
+import { PricingPageDynamic } from "@/components/marketing/marketing-client-dynamic";
 
 export default function PricingPage() {
-  return <PricingPageClient />;
+  return <PricingPageDynamic />;
 }

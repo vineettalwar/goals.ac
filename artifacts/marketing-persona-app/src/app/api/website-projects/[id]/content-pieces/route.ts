@@ -122,7 +122,12 @@ export async function POST(
       .returning();
 
     return NextResponse.json(inserted, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Failed to generate content. Please try again." }, { status: 503 });
+  } catch (err) {
+    console.error("Content piece generation failed:", err);
+    const message =
+      err instanceof Error && err.message
+        ? err.message
+        : "Failed to generate content. Please try again.";
+    return NextResponse.json({ error: message }, { status: 503 });
   }
 }

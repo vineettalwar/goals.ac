@@ -50,10 +50,17 @@ export function ProjectPublishingTab({ projectId }: Props) {
     const linkedin = searchParams.get("linkedin");
     const twitter = searchParams.get("twitter");
 
+    const bluesky = searchParams.get("bluesky");
+    const mastodon = searchParams.get("mastodon");
+
     if (linkedin === "connected") toast.success("LinkedIn connected");
     if (linkedin === "error") toast.error("LinkedIn connection failed");
     if (twitter === "connected") toast.success("X connected");
     if (twitter === "error") toast.error("X connection failed");
+    if (bluesky === "connected") toast.success("Bluesky connected");
+    if (bluesky === "error") toast.error("Bluesky connection failed");
+    if (mastodon === "connected") toast.success("Mastodon connected");
+    if (mastodon === "error") toast.error("Mastodon connection failed");
     if (meta === "error") toast.error("Meta connection failed");
     if (meta === "no_pages") toast.error("No Facebook pages found on this account");
 
@@ -82,7 +89,19 @@ export function ProjectPublishingTab({ projectId }: Props) {
     }
   }
 
-  function onConnectOAuth(path: string) {
+  function onConnectOAuth(path: string, params?: { handle?: string; instance?: string }) {
+    if (path === "bluesky") {
+      const handle = params?.handle?.trim();
+      if (!handle) return;
+      window.location.href = `/api/auth/bluesky?projectId=${projectId}&handle=${encodeURIComponent(handle)}`;
+      return;
+    }
+    if (path === "mastodon") {
+      const instance = params?.instance?.trim();
+      if (!instance) return;
+      window.location.href = `/api/auth/mastodon?projectId=${projectId}&instance=${encodeURIComponent(instance)}`;
+      return;
+    }
     window.location.href = `/api/auth/${path}?projectId=${projectId}`;
   }
 
@@ -164,8 +183,7 @@ export function ProjectPublishingTab({ projectId }: Props) {
         onTestHealth={onTestHealth}
         onConnectOAuth={onConnectOAuth}
         onDisconnectSocial={async (platform) => {
-          const key = platform === "meta" ? "meta" : platform;
-          await fetch(`/api/website-projects/${projectId}/cms-integrations/${key}`, { method: "DELETE" });
+          await fetch(`/api/website-projects/${projectId}/cms-integrations/${platform}`, { method: "DELETE" });
           await loadIntegrations();
           toast.success("Disconnected");
         }}

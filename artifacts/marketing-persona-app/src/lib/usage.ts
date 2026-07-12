@@ -15,6 +15,17 @@ export function getPlanQuota(plan: string | null | undefined): number | null {
   return PLAN_QUOTAS[(plan as PlanId) ?? "starter"] ?? PLAN_QUOTAS.starter;
 }
 
+// Monthly roadmap generation quotas per plan. `null` means unlimited.
+export const ROADMAP_QUOTAS: Record<PlanId, number | null> = {
+  starter: 3,
+  growth: null,
+  scale: null,
+};
+
+export function getRoadmapQuota(plan: string | null | undefined): number | null {
+  return ROADMAP_QUOTAS[(plan as PlanId) ?? "starter"] ?? ROADMAP_QUOTAS.starter;
+}
+
 // Gemini 2.5 Flash blended pricing estimate: $0.30/M input tokens, $2.50/M output tokens.
 const INPUT_COST_PER_TOKEN = 0.3 / 1_000_000;
 const OUTPUT_COST_PER_TOKEN = 2.5 / 1_000_000;
@@ -78,6 +89,25 @@ export async function getMonthlyArticleCount(companyId: number): Promise<number>
       and(
         eq(usageEventsTable.companyId, companyId),
         eq(usageEventsTable.eventType, "article_generation"),
+        gte(usageEventsTable.createdAt, monthStart)
+      )
+    );
+  return row?.count ?? 0;
+}
+
+/**
+ * Count of `roadmap_generation` usage events recorded this calendar month for a user.
+ * Only platform-key generations are recorded; BYOK generations skip quota checks entirely.
+ */
+export async function getMonthlyRoadmapCountForUser(userId: number): Promise<number> {
+  const monthStart = startOfCurrentMonth();
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(usageEventsTable)
+    .where(
+      and(
+        eq(usageEventsTable.userId, userId),
+        eq(usageEventsTable.eventType, "roadmap_generation"),
         gte(usageEventsTable.createdAt, monthStart)
       )
     );

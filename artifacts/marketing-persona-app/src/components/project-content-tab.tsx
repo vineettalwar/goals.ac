@@ -9,19 +9,21 @@ import type { ProjectContent } from "@/lib/project-detail-types";
 
 interface Props {
   projectId: string;
+  initialContent?: ProjectContent;
 }
 
-export function ProjectContentTab({ projectId }: Props) {
-  const [content, setContent] = useState<ProjectContent | null>(null);
-  const [loading, setLoading] = useState(true);
+export function ProjectContentTab({ projectId, initialContent }: Props) {
+  const [content, setContent] = useState<ProjectContent | null>(initialContent ?? null);
+  const [loading, setLoading] = useState(!initialContent);
 
   useEffect(() => {
+    if (initialContent) return;
     fetch(`/api/website-projects/${projectId}/content`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => setContent(data))
       .catch(() => setContent(null))
       .finally(() => setLoading(false));
-  }, [projectId]);
+  }, [projectId, initialContent]);
 
   if (loading) {
     return (
@@ -53,7 +55,7 @@ export function ProjectContentTab({ projectId }: Props) {
           here automatically.
         </p>
         <div className="flex flex-wrap gap-2 justify-center">
-          <Link href="/growth-roadmaps">
+          <Link href="/strategy/roadmaps">
             <Button>Growth Roadmaps</Button>
           </Link>
           <Link href={`/projects/${projectId}/content-studio`}>

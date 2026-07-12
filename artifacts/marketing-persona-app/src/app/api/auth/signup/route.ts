@@ -10,6 +10,7 @@ const signupSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8),
+  referrer: z.string().max(100).optional(),
 });
 
 export async function POST(req: Request) {
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const { name, email, password } = parsed.data;
+  const { name, email, password, referrer } = parsed.data;
 
   const [existing] = await db
     .select({ id: usersTable.id })
@@ -42,7 +43,7 @@ export async function POST(req: Request) {
   const passwordHash = await bcrypt.hash(password, 10);
   const [user] = await db
     .insert(usersTable)
-    .values({ name, email, passwordHash })
+    .values({ name, email, passwordHash, signupReferrer: referrer ?? null })
     .returning({ id: usersTable.id, email: usersTable.email, name: usersTable.name });
 
   return NextResponse.json({ user }, { status: 201 });

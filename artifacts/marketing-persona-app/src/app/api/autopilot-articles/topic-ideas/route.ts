@@ -4,9 +4,12 @@ import { companiesTable, marketingPersonasTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "@/lib/require-auth";
-import { getAiClientForUser } from "@workspace/ai-providers";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
+import { resolveProviderId } from "@workspace/ai-providers";
 import { cleanAndParse } from "@/lib/ai/utils";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { aiProviderUnavailableMessage } from "@/lib/ai-providers-status";
 
 const schema = z.object({
   companyId: z.number(),
@@ -64,7 +67,24 @@ export async function POST(req: Request) {
     .limit(1);
 
   const count = parsed.data.count ?? 6;
-  const { client, source } = await getAiClientForUser(userId!);
+  const aiProviderOptions = await getUserAiProviderOptions(userId!);
+  const resolvedProviderId = resolveProviderId(aiProviderOptions);
+
+  let clientConfig;
+  try {
+    clientConfig = await resolveAiClientForUser(userId!);
+  } catch {
+    return NextResponse.json(
+      {
+        error: "ai_unavailable",
+        message: aiProviderUnavailableMessage(resolvedProviderId),
+        provider: resolvedProviderId,
+      },
+      { status: 503 },
+    );
+  }
+
+  const { client, source, providerId } = clientConfig;
 
   const prompt = `You are a senior SEO content strategist for ${company.name} (${company.industry}).
 Company URL: ${company.websiteUrl}
@@ -103,22 +123,29 @@ Constraints:
 - Prioritize topics that can convert within 3-6 months.
 - refinementPointers must be actionable and concise.`;
 
-  const response = await client.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
+  try {
+    const response = await client.generate({
+      prompt,
       responseMimeType: "application/json",
       maxOutputTokens: 4096,
-      thinkingConfig: { thinkingBudget: 1024 },
-    },
-  });
+      thinkingBudget: 1024,
+    });
 
-  const raw = response.text ?? "";
-  const parsedIdeas = cleanAndParse<TopicIdeasResponse>(raw);
-  const ideas = Array.isArray(parsedIdeas.ideas) ? parsedIdeas.ideas.slice(0, count) : [];
+    const parsedIdeas = cleanAndParse<TopicIdeasResponse>(response.text);
+    const ideas = Array.isArray(parsedIdeas.ideas) ? parsedIdeas.ideas.slice(0, count) : [];
 
-  return NextResponse.json({
-    ideas,
-    generation: { source },
-  });
+    return NextResponse.json({
+      ideas,
+      generation: { source, provider: providerId },
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        error: "generation_failed",
+        message: aiProviderUnavailableMessage(providerId),
+        provider: providerId,
+      },
+      { status: 503 },
+    );
+  }
 }

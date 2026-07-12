@@ -1,5 +1,5 @@
-import { FeaturesPageClient } from "@/components/marketing/features-page-client";
+import { FeaturesPageDynamic } from "@/components/marketing/marketing-client-dynamic";
 
 export default function FeaturesPage() {
-  return <FeaturesPageClient />;
+  return <FeaturesPageDynamic />;
 }

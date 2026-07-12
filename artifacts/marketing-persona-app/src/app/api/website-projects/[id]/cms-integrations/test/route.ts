@@ -217,6 +217,22 @@ export async function POST(
         : { ok: false, error: result.error };
     }
 
+    if (creds.bluesky) {
+      const { testBlueskyConnection } = await import("@workspace/connectors/bluesky");
+      const result = await testBlueskyConnection(creds.bluesky);
+      health.bluesky = result.ok
+        ? { ok: true, siteName: result.handle ? `@${result.handle}` : undefined }
+        : { ok: false, error: result.error };
+    }
+
+    if (creds.mastodon) {
+      const { testMastodonConnection } = await import("@workspace/connectors/mastodon");
+      const result = await testMastodonConnection(creds.mastodon);
+      health.mastodon = result.ok
+        ? { ok: true, siteName: result.username ? `@${result.username}` : undefined }
+        : { ok: false, error: result.error };
+    }
+
     return NextResponse.json(health);
   } catch (err) {
     console.error("Failed to test CMS integrations", err);

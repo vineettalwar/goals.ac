@@ -5,7 +5,7 @@ import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { resetAiProviderClient } from "@workspace/ai-providers";
 import { requireAuth } from "@/lib/require-auth";
-import { buildAiProviderStatus, probeOllama } from "@/lib/ai-providers-status";
+import { buildAiProviderStatus, enrichOllamaStatus, toAiProviderOptions } from "@/lib/ai-providers-status";
 
 const PatchBody = z.object({
   provider: z.enum(["gemini", "bedrock", "ollama"]),
@@ -28,7 +28,7 @@ export async function GET() {
     .limit(1);
 
   const payload = buildAiProviderStatus(user);
-  payload.ollama.reachable = await probeOllama(payload.ollama.baseUrl);
+  await enrichOllamaStatus(payload, toAiProviderOptions(user));
 
   return NextResponse.json(payload);
 }
@@ -70,7 +70,7 @@ export async function PATCH(req: Request) {
     .limit(1);
 
   const payload = buildAiProviderStatus(user);
-  payload.ollama.reachable = await probeOllama(payload.ollama.baseUrl);
+  await enrichOllamaStatus(payload, toAiProviderOptions(user));
 
   return NextResponse.json(payload);
 }

@@ -12,7 +12,7 @@ import { generateArticle } from "@/lib/ai/article-generator";
 import { humanizeArticle, type HumanizationLevel } from "@/lib/ai/humanizer";
 import { publishToWordPress } from "@workspace/connectors/wordpress";
 import { decryptSecret } from "@workspace/security/encryption";
-import { getAiClientForUser } from "@workspace/ai-providers";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
 import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";
 
 function estimateCostUsd(totalTokens: number | undefined, wordCount: number): number {
@@ -75,7 +75,7 @@ export async function GET(req: Request) {
         .values({ companyId: company.id, personaId: persona?.id ?? null, status: "generating" })
         .returning();
 
-      const aiConfig = await getAiClientForUser(company.userId);
+      const aiConfig = await resolveAiClientForUser(company.userId);
 
       let generated = await generateArticle({
         company: {
@@ -104,7 +104,7 @@ export async function GET(req: Request) {
         humanized = generated !== beforeHumanize;
       }
 
-      const { source } = aiConfig;
+      const { source, providerId } = aiConfig;
       const estimatedCostUsd = estimateCostUsd(generated.generationUsage?.totalTokens, generated.wordCount);
 
       let status: string = "ready";
@@ -170,8 +170,8 @@ export async function GET(req: Request) {
         outputTokens: generated.generationUsage?.outputTokens,
         totalTokens: generated.generationUsage?.totalTokens,
         usedByok: source === "user-key",
-        provider: "gemini",
-        model: "gemini-2.5-flash",
+        provider: providerId,
+        model: providerId === "gemini" ? "gemini-2.5-flash" : undefined,
         tier: "execution",
       });
 

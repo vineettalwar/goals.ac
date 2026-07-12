@@ -30,29 +30,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+import { aiProviderUnavailableMessage } from "@/lib/ai-providers-status";
+import type { AiProviderId } from "@workspace/ai-providers/config";
 import { CreateContentModal } from "./create-content-modal";
 import { FormatBadge, StatusBadge } from "./content-studio-format-meta";
+import { FORMAT_OPTIONS } from "@/lib/content-format-options";
 
-export const FORMAT_OPTIONS = [
-  { value: "blog_post", label: "Blog Post", category: "Long-form" },
-  { value: "news_article", label: "News Article", category: "Long-form" },
-  { value: "tutorial", label: "Tutorial", category: "Long-form" },
-  { value: "guide", label: "Guide", category: "Long-form" },
-  { value: "whitepaper", label: "Whitepaper", category: "Long-form" },
-  { value: "pillar_page", label: "Pillar Page", category: "Long-form" },
-  { value: "location_page", label: "Location Page", category: "Long-form" },
-  { value: "infographic_outline", label: "Infographic Outline", category: "Long-form" },
-  { value: "linkedin_post", label: "LinkedIn Post", category: "Social" },
-  { value: "twitter_thread", label: "Twitter Thread", category: "Social" },
-  { value: "instagram_post", label: "Instagram Post", category: "Social" },
-  { value: "facebook_post", label: "Facebook Post", category: "Social" },
-  { value: "email_sequence", label: "Email Sequence", category: "Marketing" },
-  { value: "ad_copy", label: "Ad Copy", category: "Marketing" },
-  { value: "landing_page_copy", label: "Landing Page", category: "Marketing" },
-  { value: "product_description", label: "Product Description", category: "Marketing" },
-  { value: "press_release", label: "Press Release", category: "Marketing" },
-  { value: "faq_article", label: "FAQ Article", category: "Long-form" },
-] as const;
+export { FORMAT_OPTIONS };
 
 export interface ContentPieceRow {
   id: number;
@@ -130,7 +114,8 @@ interface Props {
 
 export function ContentStudioClient({ projectId }: Props) {
   const [projectName, setProjectName] = useState("");
-  const [hasGeminiKey, setHasGeminiKey] = useState<boolean | null>(null);
+  const [aiReady, setAiReady] = useState<boolean | null>(null);
+  const [activeProvider, setActiveProvider] = useState<AiProviderId>("gemini");
   const [tab, setTab] = useState<"hub" | "calendar">("hub");
   const [pieces, setPieces] = useState<StudioPiece[]>([]);
   const [legacyItems, setLegacyItems] = useState<LegacyItem[]>([]);
@@ -145,11 +130,11 @@ export function ContentStudioClient({ projectId }: Props) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const loadData = useCallback(async () => {
-    const [projRes, piecesRes, legacyRes, keyRes] = await Promise.all([
+    const [projRes, piecesRes, legacyRes, aiStatusRes] = await Promise.all([
       fetch(`/api/website-projects/${projectId}`),
       fetch(`/api/website-projects/${projectId}/content-pieces`),
       fetch(`/api/website-projects/${projectId}/content`),
-      fetch("/api/auth/api-key"),
+      fetch("/api/ai-providers/status"),
     ]);
 
     if (projRes.ok) {
@@ -157,9 +142,10 @@ export function ContentStudioClient({ projectId }: Props) {
       setProjectName(proj.name ?? "");
     }
 
-    if (keyRes.ok) {
-      const keyData = await keyRes.json();
-      setHasGeminiKey(Boolean(keyData.hasKey));
+    if (aiStatusRes.ok) {
+      const status = await aiStatusRes.json();
+      setActiveProvider(status.activeProvider ?? "gemini");
+      setAiReady(Boolean(status.ready));
     }
 
     if (piecesRes.ok) {
@@ -327,11 +313,10 @@ export function ContentStudioClient({ projectId }: Props) {
         </div>
       </div>
 
-      {hasGeminiKey === false && (
+      {aiReady === false && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
-          No Gemini API key connected.{" "}
-          <Link href="/settings" className="text-primary hover:underline">Add your key in Settings</Link>{" "}
-          to use your own quota, or continue with platform credits if available.
+          {aiProviderUnavailableMessage(activeProvider)}{" "}
+          <Link href="/settings" className="text-primary hover:underline">Open AI settings</Link>
         </div>
       )}
 
