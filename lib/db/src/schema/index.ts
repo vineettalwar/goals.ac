@@ -31,3 +31,4 @@ export * from "./workspaces";
 export * from "./goals";
 export * from "./briefs";
 export * from "./credit_ledger";
+export * from "./waitlist_signups";

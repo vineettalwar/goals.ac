@@ -18,6 +18,8 @@ export const CONTENT_FORMAT_TYPES = [
   "twitter_thread",
   "instagram_post",
   "facebook_post",
+  "bluesky_post",
+  "mastodon_post",
   "email_sequence",
   "ad_copy",
   "landing_page_copy",

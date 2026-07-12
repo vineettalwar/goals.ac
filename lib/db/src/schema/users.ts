@@ -17,6 +17,8 @@ export const usersTable = pgTable("users", {
   ollamaModel: text("ollama_model"),
   // starter | growth | scale
   plan: text("plan").notNull().default("starter"),
+  /** e.g. home-roadmap-generator — where the user started signup */
+  signupReferrer: text("signup_referrer"),
   passwordResetToken: text("password_reset_token"),
   passwordResetExpires: timestamp("password_reset_expires", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

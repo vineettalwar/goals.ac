@@ -22,6 +22,8 @@ export const brandProfilesTable = pgTable("brand_profiles", {
   typicalStructure: text("typical_structure").notNull().default(""),
   doWords: text("do_words").array().notNull().default([]),
   dontWords: text("dont_words").array().notNull().default([]),
+  brandColors: text("brand_colors").array().notNull().default([]),
+  productOfferings: text("product_offerings").array().notNull().default([]),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
