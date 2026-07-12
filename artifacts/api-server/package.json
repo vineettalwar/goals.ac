@@ -16,6 +16,7 @@
     "@workspace/ai-providers": "workspace:*",
     "@workspace/api-zod": "workspace:*",
     "@workspace/connectors": "workspace:*",
+    "@workspace/content-engine": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/integrations-gemini-ai": "workspace:*",
     "@workspace/jobs": "workspace:*",
