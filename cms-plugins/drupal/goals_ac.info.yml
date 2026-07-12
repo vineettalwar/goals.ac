@@ -1,0 +1,13 @@
+name: goals_ac
+type: module
+description: 'goals.ac integration — AI content publishing, schema injection, and site graph export.'
+core_version_requirement: ^10 || ^11
+package: Custom
+version: 0.1.0
+
+dependencies:
+  - drupal:rest
+  - drupal:jsonapi
+  - drupal:basic_auth
+
+configure: goals_ac.settings

@@ -1,0 +1,21 @@
+goals_ac.settings:
+  type: config_object
+  label: 'goals.ac settings'
+  mapping:
+    site_key:
+      type: string
+      label: 'Site key'
+    target_content_type:
+      type: string
+      label: 'Target content type'
+    allowed_content_types:
+      type: sequence
+      label: 'Allowed content types for site graph export'
+      sequence:
+        type: string
+    schema_injection_enabled:
+      type: boolean
+      label: 'Enable schema injection'
+    llms_txt_injection_enabled:
+      type: boolean
+      label: 'Enable llms.txt injection'

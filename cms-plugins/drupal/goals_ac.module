@@ -1,0 +1,64 @@
+<?php
+
+/**
+ * @file
+ * goals.ac module — hook implementations.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+
+/**
+ * Implements hook_page_attachments().
+ *
+ * Injects llms.txt content into the page head on front-facing routes
+ * when schema injection is enabled.
+ */
+function goals_ac_page_attachments(array &$attachments): void {
+  $request = \Drupal::request();
+  $route_name = '';
+
+  $current_route = \Drupal::service('current_route_match');
+  if ($current_route) {
+    $route_name = $current_route->getRouteName();
+  }
+
+  // Skip injection on admin routes, JSON:API, and the goals-ac endpoints themselves.
+  if (
+    str_starts_with($route_name, 'goals_ac.') ||
+    str_starts_with($route_name, 'jsonapi.') ||
+    str_starts_with($route_name, 'system.') ||
+    str_starts_with($route_name, 'admin.')
+  ) {
+    return;
+  }
+
+  $state = \Drupal::state();
+  $llms_txt = $state->get('goals_ac.llms_txt');
+
+  if (empty($llms_txt)) {
+    return;
+  }
+
+  $attachments['#attached']['html_head'][] = [
+    [
+      '#type' => 'html_tag',
+      '#tag' => 'meta',
+      '#attributes' => [
+        'name' => 'llms-txt',
+        'content' => mb_strimwidth($llms_txt, 0, 500, '...'),
+      ],
+    ],
+    'goals_ac_llms_txt_meta',
+  ];
+}
+
+/**
+ * Implements hook_theme().
+ */
+function goals_ac_theme(): array {
+  return [
+    'goals_ac_health' => [
+      'variables' => ['version' => NULL, 'cms_version' => NULL, 'capabilities' => []],
+    ],
+  ];
+}

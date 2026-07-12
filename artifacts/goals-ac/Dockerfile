@@ -10,6 +10,6 @@ COPY tsconfig.json ./
 COPY lib/ ./lib/
 COPY artifacts/goals-ac/ ./artifacts/goals-ac/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 CMD ["pnpm", "--filter", "@workspace/goals-ac", "run", "dev"]

@@ -176,6 +176,13 @@
       "when": 1783785396749,
       "tag": "0024_burly_black_bolt",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1783839535305,
+      "tag": "0025_tan_talos",
+      "breakpoints": true
     }
   ]
 }

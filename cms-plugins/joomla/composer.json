@@ -1,0 +1,33 @@
+{
+  "name": "goals-ac/joomla-plugin",
+  "description": "Joomla Web Services plugin for goals.ac — HMAC-authenticated site graph export, content publishing, and schema injection.",
+  "type": "joomla-plugin",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.1",
+    "ext-json": "*",
+    "ext-openssl": "*",
+    "joomla/application": "^3.0 || ^4.0 || ^5.0",
+    "joomla/database": "^1.0 || ^2.0 || ^3.0",
+    "goals-ac/shared-contract": "*"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../shared",
+      "options": {
+        "symlink": true
+      }
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "GoalsAC\\Joomla\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "GoalsAC\\Joomla\\Tests\\": "tests/"
+    }
+  }
+}

@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension type="plugin" group="webservices" method="upgrade">
+    <name>PLG_WEBSERVICES_GOALSAC</name>
+    <author>goals.ac</author>
+    <creationDate>2024-01-01</creationDate>
+    <copyright>Copyright (c) 2024 goals.ac</copyright>
+    <license>GNU General Public License version 2 or later</license>
+    <authorEmail>hello@goals.ac</authorEmail>
+    <authorUrl>https://goals.ac</authorUrl>
+    <version>0.1.0</version>
+    <description>PLG_WEBSERVICES_GOALSAC_DESC</description>
+    <targetPlatform version="5.0" />
+
+    <namespace path="src">GoalsAC\Joomla</namespace>
+
+    <files>
+        <filename plugin="goalsac">goalsac.php</filename>
+        <folder>services</folder>
+        <folder>src</folder>
+        <folder>language</folder>
+    </files>
+
+    <languages folder="language">
+        <language tag="en-GB">en-GB/plg_webservices_goalsac.ini</language>
+        <language tag="en-GB">en-GB/plg_webservices_goalsac.sys.ini</language>
+    </languages>
+
+    <config>
+        <fields name="params">
+            <fieldset name="basic">
+                <field
+                    name="site_key"
+                    type="password"
+                    label="PLG_WEBSERVICES_GOALSAC_SITE_KEY"
+                    description="PLG_WEBSERVICES_GOALSAC_SITE_KEY_DESC"
+                    filter="string"
+                    default=""
+                    size="64"
+                />
+                <field
+                    name="hmac_enabled"
+                    type="radio"
+                    label="PLG_WEBSERVICES_GOALSAC_HMAC_ENABLED"
+                    description="PLG_WEBSERVICES_GOALSAC_HMAC_ENABLED_DESC"
+                    default="1"
+                    class="btn-group"
+                >
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+                <field
+                    name="schema_enabled"
+                    type="radio"
+                    label="PLG_WEBSERVICES_GOALSAC_SCHEMA_ENABLED"
+                    description="PLG_WEBSERVICES_GOALSAC_SCHEMA_ENABLED_DESC"
+                    default="1"
+                    class="btn-group"
+                >
+                    <option value="1">JYES</option>
+                    <option value="0">JNO</option>
+                </field>
+            </fieldset>
+        </fields>
+    </config>
+</extension>

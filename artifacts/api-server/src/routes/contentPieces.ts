@@ -14,7 +14,15 @@ import { z } from "zod";
 import { marked } from "marked";
 import { requireAuth } from "../lib/auth";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
-import { generateContentPiece, generateContentPieceStream, repurposeContentPiece, buildCacheKey, cacheGet, cacheSet, type BrandContext } from "../services/contentStudioGenerator";
+import {
+  generateContentPiece,
+  generateContentPieceStream,
+  repurposeContentPiece,
+  buildCacheKey,
+  cacheGet,
+  cacheSet,
+  type BrandContext,
+} from "../services/contentStudioGenerator";
 import { logger } from "../lib/logger";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
@@ -32,9 +40,16 @@ interface CmsIntegrationCredentials {
     collectionId: string;
     bodyFieldSlug: string;
   };
+  wordpress?: {
+    siteUrl: string;
+    username: string;
+    appPassword: string;
+  };
 }
 
-function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsIntegrationCredentials {
+function encryptCmsCredentials(
+  creds: CmsIntegrationCredentials,
+): CmsIntegrationCredentials {
   const result: CmsIntegrationCredentials = {};
   if (creds.notion) {
     result.notion = {
@@ -49,10 +64,19 @@ function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsIntegration
       bodyFieldSlug: creds.webflow.bodyFieldSlug,
     };
   }
+  if (creds.wordpress) {
+    result.wordpress = {
+      siteUrl: creds.wordpress.siteUrl,
+      username: encryptSecret(creds.wordpress.username),
+      appPassword: encryptSecret(creds.wordpress.appPassword),
+    };
+  }
   return result;
 }
 
-function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsIntegrationCredentials {
+function decryptCmsCredentials(
+  stored: CmsIntegrationCredentials,
+): CmsIntegrationCredentials {
   const result: CmsIntegrationCredentials = {};
   if (stored.notion) {
     try {
@@ -73,6 +97,17 @@ function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsIntegratio
       };
     } catch {
       result.webflow = stored.webflow;
+    }
+  }
+  if (stored.wordpress) {
+    try {
+      result.wordpress = {
+        siteUrl: stored.wordpress.siteUrl,
+        username: decryptSecret(stored.wordpress.username),
+        appPassword: decryptSecret(stored.wordpress.appPassword),
+      };
+    } catch {
+      result.wordpress = stored.wordpress;
     }
   }
   return result;
@@ -97,6 +132,14 @@ function maskCmsCredentials(decrypted: CmsIntegrationCredentials): object {
       apiTokenHint: tok.length > 8 ? `...${tok.slice(-4)}` : "****",
     };
   }
+  if (decrypted.wordpress) {
+    const tok = decrypted.wordpress.username;
+    result.wordpress = {
+      connected: true,
+      siteUrl: decrypted.wordpress.siteUrl,
+      usernameHint: tok.length > 8 ? `...${tok.slice(-4)}` : "****",
+    };
+  }
   return result;
 }
 
@@ -114,268 +157,379 @@ const PATCH_STATUSES = ["draft", "ready"] as const;
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const UpdateBody = z.object({
-  title: z.string().optional(),
-  bodyMarkdown: z.string().optional(),
-  status: z.enum(PATCH_STATUSES).optional(),
-  plannedDate: z.string().regex(ISO_DATE_RE, "plannedDate must be a valid ISO date (YYYY-MM-DD)").nullable().optional(),
-}).refine(
-  (data) => Object.values(data).some((v) => v !== undefined),
-  { message: "Request body must include at least one field to update" },
-);
+const UpdateBody = z
+  .object({
+    title: z.string().optional(),
+    bodyMarkdown: z.string().optional(),
+    status: z.enum(PATCH_STATUSES).optional(),
+    plannedDate: z
+      .string()
+      .regex(ISO_DATE_RE, "plannedDate must be a valid ISO date (YYYY-MM-DD)")
+      .nullable()
+      .optional(),
+  })
+  .refine((data) => Object.values(data).some((v) => v !== undefined), {
+    message: "Request body must include at least one field to update",
+  });
 
-router.post("/website-projects/:id/content-pieces/generate", requireAuth, async (req, res) => {
-  const projectId = Number(req.params.id);
-  if (isNaN(projectId)) {
-    res.status(400).json({ error: "Invalid project id" });
-    return;
-  }
-
-  const parsed = GenerateBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
-    return;
-  }
-
-  const { formatType, targetKeyword, angleHint } = parsed.data;
-
-  try {
-    const [project] = await db
-      .select()
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
-
-    if (!project) {
-      res.status(404).json({ error: "Project not found" });
+router.post(
+  "/website-projects/:id/content-pieces/generate",
+  requireAuth,
+  async (req, res) => {
+    const projectId = Number(req.params.id);
+    if (isNaN(projectId)) {
+      res.status(400).json({ error: "Invalid project id" });
       return;
     }
 
-    const [brandProfile] = await db
-      .select()
-      .from(brandProfilesTable)
-      .where(eq(brandProfilesTable.websiteProjectId, projectId))
-      .limit(1);
-
-    const brand = {
-      companyName: brandProfile?.companyName ?? project.name,
-      websiteUrl: project.url,
-      industry: brandProfile?.industry ?? "",
-      targetAudience: brandProfile?.targetAudience ?? "",
-      voiceTone: brandProfile?.voiceTone ?? "",
-      primaryKeywords: brandProfile?.primaryKeywords ?? [],
-      contentStyle: project.contentStyle ?? null,
-    };
-
-    const bypassCache = req.headers["x-bypass-cache"] === "true";
-    const cacheKeyStr = buildCacheKey(formatType, targetKeyword, brand, angleHint);
-
-    if (!bypassCache) {
-      const [existing] = await db
-        .select()
-        .from(contentPiecesTable)
-        .where(and(eq(contentPiecesTable.websiteProjectId, projectId), eq(contentPiecesTable.cacheKey, cacheKeyStr)))
-        .limit(1);
-      if (existing) {
-        logger.info({ formatType, targetKeyword }, "Content piece served from DB cache");
-        res.setHeader("X-Cache", "HIT");
-        res.status(200).json(existing);
-        return;
-      }
+    const parsed = GenerateBody.safeParse(req.body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+      return;
     }
 
-    const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
-    const result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint, bypassCache, userApiKey);
-    const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
+    const { formatType, targetKeyword, angleHint } = parsed.data;
 
-    const [inserted] = await db
-      .insert(contentPiecesTable)
-      .values({
-        websiteProjectId: projectId,
-        formatType: formatType as ContentFormatType,
-        title: result.title,
-        targetKeyword: result.target_keyword,
-        bodyMarkdown: result.body_markdown,
-        wordCount,
-        status: "draft",
-        cacheKey: cacheKeyStr,
-      })
-      .returning();
-
-    res.status(201).json(inserted);
-  } catch (err) {
-    logger.error({ err }, "Failed to generate content piece");
-    res.status(503).json({ error: "Failed to generate content. Please try again." });
-  }
-});
-
-router.post("/website-projects/:id/content-pieces/generate/stream", requireAuth, async (req, res) => {
-  const projectId = Number(req.params.id);
-  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
-
-  const parsed = GenerateBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
-
-  const { formatType, targetKeyword, angleHint } = parsed.data;
-
-  try {
-    const [project] = await db
-      .select()
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
-
-    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
-
-    const [brandProfile] = await db
-      .select()
-      .from(brandProfilesTable)
-      .where(eq(brandProfilesTable.websiteProjectId, projectId))
-      .limit(1);
-
-    const brand: BrandContext = {
-      companyName: brandProfile?.companyName ?? project.name,
-      websiteUrl: project.url,
-      industry: brandProfile?.industry ?? "",
-      targetAudience: brandProfile?.targetAudience ?? "",
-      voiceTone: brandProfile?.voiceTone ?? "",
-      primaryKeywords: brandProfile?.primaryKeywords ?? [],
-      contentStyle: project.contentStyle ?? null,
-    };
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders();
-
-    const sendEvent = (event: string, data: unknown) => {
-      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    };
-
-    const bypassCache = req.headers["x-bypass-cache"] === "true";
-    const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
-    const cacheKeyStr = buildCacheKey(formatType, targetKeyword, brand, angleHint);
-
-    if (!bypassCache) {
-      const [existing] = await db
-        .select()
-        .from(contentPiecesTable)
-        .where(and(eq(contentPiecesTable.websiteProjectId, projectId), eq(contentPiecesTable.cacheKey, cacheKeyStr)))
-        .limit(1);
-      if (existing) {
-        logger.info({ formatType, targetKeyword }, "Content piece streaming served from DB cache");
-        sendEvent("cached", existing);
-        res.end();
-        return;
-      }
-    }
-
-    if (!bypassCache) {
-      const aiCached = await cacheGet(cacheKeyStr);
-      if (aiCached) {
-        logger.info({ formatType, targetKeyword }, "Content piece streaming served from AI cache");
-        sendEvent("chunk", { text: aiCached.body_markdown });
-        const wordCount = aiCached.body_markdown.split(/\s+/).filter(Boolean).length;
-        const [inserted] = await db
-          .insert(contentPiecesTable)
-          .values({
-            websiteProjectId: projectId,
-            formatType: formatType as ContentFormatType,
-            title: aiCached.title,
-            targetKeyword: aiCached.target_keyword,
-            bodyMarkdown: aiCached.body_markdown,
-            wordCount,
-            status: "draft",
-            cacheKey: cacheKeyStr,
-          })
-          .returning();
-        sendEvent("done", inserted);
-        res.end();
-        return;
-      }
-    }
-
-    let result;
     try {
-      result = await generateContentPieceStream(
+      const [project] = await db
+        .select()
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, projectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      const [brandProfile] = await db
+        .select()
+        .from(brandProfilesTable)
+        .where(eq(brandProfilesTable.websiteProjectId, projectId))
+        .limit(1);
+
+      const brand = {
+        companyName: brandProfile?.companyName ?? project.name,
+        websiteUrl: project.url,
+        industry: brandProfile?.industry ?? "",
+        targetAudience: brandProfile?.targetAudience ?? "",
+        voiceTone: brandProfile?.voiceTone ?? "",
+        primaryKeywords: brandProfile?.primaryKeywords ?? [],
+        contentStyle: project.contentStyle ?? null,
+      };
+
+      const bypassCache = req.headers["x-bypass-cache"] === "true";
+      const cacheKeyStr = buildCacheKey(
+        formatType,
+        targetKeyword,
+        brand,
+        angleHint,
+      );
+
+      if (!bypassCache) {
+        const [existing] = await db
+          .select()
+          .from(contentPiecesTable)
+          .where(
+            and(
+              eq(contentPiecesTable.websiteProjectId, projectId),
+              eq(contentPiecesTable.cacheKey, cacheKeyStr),
+            ),
+          )
+          .limit(1);
+        if (existing) {
+          logger.info(
+            { formatType, targetKeyword },
+            "Content piece served from DB cache",
+          );
+          res.setHeader("X-Cache", "HIT");
+          res.status(200).json(existing);
+          return;
+        }
+      }
+
+      const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+      const result = await generateContentPiece(
         formatType as ContentFormatType,
         brand,
         targetKeyword,
-        (chunk) => sendEvent("chunk", { text: chunk }),
         angleHint,
+        bypassCache,
         userApiKey,
       );
-    } catch (streamErr) {
-      logger.warn({ streamErr }, "Streaming generation exhausted retries, falling back to non-streaming");
-      result = await generateContentPiece(
-        formatType as ContentFormatType, brand, targetKeyword, angleHint, true, userApiKey,
-      );
+      const wordCount = result.body_markdown
+        .split(/\s+/)
+        .filter(Boolean).length;
+
+      const [inserted] = await db
+        .insert(contentPiecesTable)
+        .values({
+          websiteProjectId: projectId,
+          formatType: formatType as ContentFormatType,
+          title: result.title,
+          targetKeyword: result.target_keyword,
+          bodyMarkdown: result.body_markdown,
+          wordCount,
+          status: "draft",
+          cacheKey: cacheKeyStr,
+        })
+        .returning();
+
+      res.status(201).json(inserted);
+    } catch (err) {
+      logger.error({ err }, "Failed to generate content piece");
+      res
+        .status(503)
+        .json({ error: "Failed to generate content. Please try again." });
     }
+  },
+);
 
-    await cacheSet(cacheKeyStr, result);
-
-    const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
-    const [inserted] = await db
-      .insert(contentPiecesTable)
-      .values({
-        websiteProjectId: projectId,
-        formatType: formatType as ContentFormatType,
-        title: result.title,
-        targetKeyword: result.target_keyword,
-        bodyMarkdown: result.body_markdown,
-        wordCount,
-        status: "draft",
-        cacheKey: cacheKeyStr,
-      })
-      .returning();
-
-    sendEvent("done", inserted);
-    res.end();
-  } catch (err) {
-    logger.error({ err }, "Failed to stream content piece");
-    try { res.write(`event: error\ndata: ${JSON.stringify({ error: "Generation failed. Please try again." })}\n\n`); res.end(); } catch { /* already closed */ }
-  }
-});
-
-router.get("/website-projects/:id/content-pieces", requireAuth, async (req, res) => {
-  const projectId = Number(req.params.id);
-  if (isNaN(projectId)) {
-    res.status(400).json({ error: "Invalid project id" });
-    return;
-  }
-
-  const statusFilter = typeof req.query.status === "string" && ALLOWED_STATUSES.includes(req.query.status as typeof ALLOWED_STATUSES[number])
-    ? req.query.status as typeof ALLOWED_STATUSES[number]
-    : null;
-
-  try {
-    const [project] = await db
-      .select({ id: websiteProjectsTable.id })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
-
-    if (!project) {
-      res.status(404).json({ error: "Project not found" });
+router.post(
+  "/website-projects/:id/content-pieces/generate/stream",
+  requireAuth,
+  async (req, res) => {
+    const projectId = Number(req.params.id);
+    if (isNaN(projectId)) {
+      res.status(400).json({ error: "Invalid project id" });
       return;
     }
 
-    const whereClause = statusFilter
-      ? and(eq(contentPiecesTable.websiteProjectId, projectId), eq(contentPiecesTable.status, statusFilter))
-      : eq(contentPiecesTable.websiteProjectId, projectId);
+    const parsed = GenerateBody.safeParse(req.body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+      return;
+    }
 
-    const pieces = await db
-      .select()
-      .from(contentPiecesTable)
-      .where(whereClause)
-      .orderBy(desc(contentPiecesTable.createdAt));
+    const { formatType, targetKeyword, angleHint } = parsed.data;
 
-    res.json(pieces);
-  } catch (err) {
-    logger.error({ err }, "Failed to list content pieces");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
+    try {
+      const [project] = await db
+        .select()
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, projectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      const [brandProfile] = await db
+        .select()
+        .from(brandProfilesTable)
+        .where(eq(brandProfilesTable.websiteProjectId, projectId))
+        .limit(1);
+
+      const brand: BrandContext = {
+        companyName: brandProfile?.companyName ?? project.name,
+        websiteUrl: project.url,
+        industry: brandProfile?.industry ?? "",
+        targetAudience: brandProfile?.targetAudience ?? "",
+        voiceTone: brandProfile?.voiceTone ?? "",
+        primaryKeywords: brandProfile?.primaryKeywords ?? [],
+        contentStyle: project.contentStyle ?? null,
+      };
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+
+      const sendEvent = (event: string, data: unknown) => {
+        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      };
+
+      const bypassCache = req.headers["x-bypass-cache"] === "true";
+      const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+      const cacheKeyStr = buildCacheKey(
+        formatType,
+        targetKeyword,
+        brand,
+        angleHint,
+      );
+
+      if (!bypassCache) {
+        const [existing] = await db
+          .select()
+          .from(contentPiecesTable)
+          .where(
+            and(
+              eq(contentPiecesTable.websiteProjectId, projectId),
+              eq(contentPiecesTable.cacheKey, cacheKeyStr),
+            ),
+          )
+          .limit(1);
+        if (existing) {
+          logger.info(
+            { formatType, targetKeyword },
+            "Content piece streaming served from DB cache",
+          );
+          sendEvent("cached", existing);
+          res.end();
+          return;
+        }
+      }
+
+      if (!bypassCache) {
+        const aiCached = await cacheGet(cacheKeyStr);
+        if (aiCached) {
+          logger.info(
+            { formatType, targetKeyword },
+            "Content piece streaming served from AI cache",
+          );
+          sendEvent("chunk", { text: aiCached.body_markdown });
+          const wordCount = aiCached.body_markdown
+            .split(/\s+/)
+            .filter(Boolean).length;
+          const [inserted] = await db
+            .insert(contentPiecesTable)
+            .values({
+              websiteProjectId: projectId,
+              formatType: formatType as ContentFormatType,
+              title: aiCached.title,
+              targetKeyword: aiCached.target_keyword,
+              bodyMarkdown: aiCached.body_markdown,
+              wordCount,
+              status: "draft",
+              cacheKey: cacheKeyStr,
+            })
+            .returning();
+          sendEvent("done", inserted);
+          res.end();
+          return;
+        }
+      }
+
+      let result;
+      try {
+        result = await generateContentPieceStream(
+          formatType as ContentFormatType,
+          brand,
+          targetKeyword,
+          (chunk) => sendEvent("chunk", { text: chunk }),
+          angleHint,
+          userApiKey,
+        );
+      } catch (streamErr) {
+        logger.warn(
+          { streamErr },
+          "Streaming generation exhausted retries, falling back to non-streaming",
+        );
+        result = await generateContentPiece(
+          formatType as ContentFormatType,
+          brand,
+          targetKeyword,
+          angleHint,
+          true,
+          userApiKey,
+        );
+      }
+
+      await cacheSet(cacheKeyStr, result);
+
+      const wordCount = result.body_markdown
+        .split(/\s+/)
+        .filter(Boolean).length;
+      const [inserted] = await db
+        .insert(contentPiecesTable)
+        .values({
+          websiteProjectId: projectId,
+          formatType: formatType as ContentFormatType,
+          title: result.title,
+          targetKeyword: result.target_keyword,
+          bodyMarkdown: result.body_markdown,
+          wordCount,
+          status: "draft",
+          cacheKey: cacheKeyStr,
+        })
+        .returning();
+
+      sendEvent("done", inserted);
+      res.end();
+    } catch (err) {
+      logger.error({ err }, "Failed to stream content piece");
+      try {
+        res.write(
+          `event: error\ndata: ${JSON.stringify({ error: "Generation failed. Please try again." })}\n\n`,
+        );
+        res.end();
+      } catch {
+        /* already closed */
+      }
+    }
+  },
+);
+
+router.get(
+  "/website-projects/:id/content-pieces",
+  requireAuth,
+  async (req, res) => {
+    const projectId = Number(req.params.id);
+    if (isNaN(projectId)) {
+      res.status(400).json({ error: "Invalid project id" });
+      return;
+    }
+
+    const statusFilter =
+      typeof req.query.status === "string" &&
+      ALLOWED_STATUSES.includes(
+        req.query.status as (typeof ALLOWED_STATUSES)[number],
+      )
+        ? (req.query.status as (typeof ALLOWED_STATUSES)[number])
+        : null;
+
+    try {
+      const [project] = await db
+        .select({ id: websiteProjectsTable.id })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, projectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      const whereClause = statusFilter
+        ? and(
+            eq(contentPiecesTable.websiteProjectId, projectId),
+            eq(contentPiecesTable.status, statusFilter),
+          )
+        : eq(contentPiecesTable.websiteProjectId, projectId);
+
+      const pieces = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(whereClause)
+        .orderBy(desc(contentPiecesTable.createdAt));
+
+      res.json(pieces);
+    } catch (err) {
+      logger.error({ err }, "Failed to list content pieces");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
 
 router.get("/content-pieces/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
@@ -399,7 +553,12 @@ router.get("/content-pieces/:id", requireAuth, async (req, res) => {
     const [project] = await db
       .select({ id: websiteProjectsTable.id })
       .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .where(
+        and(
+          eq(websiteProjectsTable.id, piece.websiteProjectId),
+          eq(websiteProjectsTable.userId, req.user!.userId),
+        ),
+      )
       .limit(1);
 
     if (!project) {
@@ -423,7 +582,9 @@ router.patch("/content-pieces/:id", requireAuth, async (req, res) => {
 
   const parsed = UpdateBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    res
+      .status(400)
+      .json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
     return;
   }
 
@@ -442,7 +603,12 @@ router.patch("/content-pieces/:id", requireAuth, async (req, res) => {
     const [project] = await db
       .select({ id: websiteProjectsTable.id })
       .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .where(
+        and(
+          eq(websiteProjectsTable.id, piece.websiteProjectId),
+          eq(websiteProjectsTable.userId, req.user!.userId),
+        ),
+      )
       .limit(1);
 
     if (!project) {
@@ -454,10 +620,13 @@ router.patch("/content-pieces/:id", requireAuth, async (req, res) => {
     if (parsed.data.title !== undefined) updates.title = parsed.data.title;
     if (parsed.data.bodyMarkdown !== undefined) {
       updates.bodyMarkdown = parsed.data.bodyMarkdown;
-      updates.wordCount = parsed.data.bodyMarkdown.split(/\s+/).filter(Boolean).length;
+      updates.wordCount = parsed.data.bodyMarkdown
+        .split(/\s+/)
+        .filter(Boolean).length;
     }
     if (parsed.data.status !== undefined) updates.status = parsed.data.status;
-    if (parsed.data.plannedDate !== undefined) updates.plannedDate = parsed.data.plannedDate;
+    if (parsed.data.plannedDate !== undefined)
+      updates.plannedDate = parsed.data.plannedDate;
 
     const [updated] = await db
       .update(contentPiecesTable)
@@ -494,7 +663,12 @@ router.delete("/content-pieces/:id", requireAuth, async (req, res) => {
     const [project] = await db
       .select({ id: websiteProjectsTable.id })
       .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .where(
+        and(
+          eq(websiteProjectsTable.id, piece.websiteProjectId),
+          eq(websiteProjectsTable.userId, req.user!.userId),
+        ),
+      )
       .limit(1);
 
     if (!project) {
@@ -514,19 +688,28 @@ const PublishBody = z
   .object({
     wpSiteUrl: z.string().url("Must be a valid WordPress site URL").optional(),
     wpUsername: z.string().min(1, "WordPress username is required").optional(),
-    wpAppPassword: z.string().min(1, "WordPress application password is required").optional(),
+    wpAppPassword: z
+      .string()
+      .min(1, "WordPress application password is required")
+      .optional(),
     wordpressConnectionId: z.number().int().positive().optional(),
   })
   .refine(
     (data) =>
       data.wordpressConnectionId !== undefined ||
-      (data.wpSiteUrl !== undefined && data.wpUsername !== undefined && data.wpAppPassword !== undefined),
-    { message: "Provide either wordpressConnectionId or wpSiteUrl, wpUsername, and wpAppPassword" }
+      (data.wpSiteUrl !== undefined &&
+        data.wpUsername !== undefined &&
+        data.wpAppPassword !== undefined),
+    {
+      message:
+        "Provide either wordpressConnectionId or wpSiteUrl, wpUsername, and wpAppPassword",
+    },
   );
 
 // SSRF-guard failures surfaced by @workspace/connectors/wordpress (via assertPublicUrl) so we can
 // map them back to 400s without re-running the DNS/host checks ourselves.
-const SSRF_ERROR_PATTERN = /^Invalid URL$|^Only http\/https URLs are allowed$|private\/reserved address|Could not resolve hostname/;
+const SSRF_ERROR_PATTERN =
+  /^Invalid URL$|^Only http\/https URLs are allowed$|private\/reserved address|Could not resolve hostname/;
 const AUTH_ERROR_PATTERN = /authentication failed|does not have permission/i;
 
 router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
@@ -538,7 +721,9 @@ router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
 
   const parsed = PublishBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    res
+      .status(400)
+      .json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
     return;
   }
 
@@ -564,7 +749,12 @@ router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
     const [project] = await db
       .select({ id: websiteProjectsTable.id })
       .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .where(
+        and(
+          eq(websiteProjectsTable.id, piece.websiteProjectId),
+          eq(websiteProjectsTable.userId, req.user!.userId),
+        ),
+      )
       .limit(1);
 
     if (!project) {
@@ -576,8 +766,16 @@ router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
       const [row] = await db
         .select({ connection: wordpressConnectionsTable })
         .from(wordpressConnectionsTable)
-        .innerJoin(companiesTable, eq(companiesTable.id, wordpressConnectionsTable.companyId))
-        .where(and(eq(wordpressConnectionsTable.id, wordpressConnectionId), eq(companiesTable.userId, req.user!.userId)))
+        .innerJoin(
+          companiesTable,
+          eq(companiesTable.id, wordpressConnectionsTable.companyId),
+        )
+        .where(
+          and(
+            eq(wordpressConnectionsTable.id, wordpressConnectionId),
+            eq(companiesTable.userId, req.user!.userId),
+          ),
+        )
         .limit(1);
 
       if (!row) {
@@ -589,8 +787,11 @@ router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
       wpSiteUrl = connection.siteUrl;
       wpUsername = connection.username;
       wpAppPassword = decryptSecret(connection.encryptedAppPassword);
-      publishStatus = connection.defaultStatus === "draft" ? "draft" : "publish";
-      categoryIds = connection.defaultCategoryId ? [connection.defaultCategoryId] : undefined;
+      publishStatus =
+        connection.defaultStatus === "draft" ? "draft" : "publish";
+      categoryIds = connection.defaultCategoryId
+        ? [connection.defaultCategoryId]
+        : undefined;
     }
 
     // Guaranteed non-undefined by the zod refine (either a connection id, resolved above, or all
@@ -607,10 +808,11 @@ router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
         piece.bodyMarkdown,
         publishStatus,
         undefined,
-        categoryIds
+        categoryIds,
       );
     } catch (wpErr) {
-      const message = wpErr instanceof Error ? wpErr.message : "WordPress publish failed";
+      const message =
+        wpErr instanceof Error ? wpErr.message : "WordPress publish failed";
       if (SSRF_ERROR_PATTERN.test(message)) {
         req.log.warn({ wpErr }, "WordPress publish blocked by SSRF guard");
         res.status(400).json({ error: message });
@@ -618,11 +820,22 @@ router.post("/content-pieces/:id/publish", requireAuth, async (req, res) => {
       }
       if (AUTH_ERROR_PATTERN.test(message)) {
         req.log.warn({ wpErr }, "WordPress authentication failed");
-        res.status(401).json({ error: "WordPress authentication failed. Check your username and application password." });
+        res
+          .status(401)
+          .json({
+            error:
+              "WordPress authentication failed. Check your username and application password.",
+          });
         return;
       }
       req.log.error({ wpErr }, "Failed to reach or publish to WordPress");
-      res.status(502).json({ error: message || "Could not reach your WordPress site. Check the URL and try again." });
+      res
+        .status(502)
+        .json({
+          error:
+            message ||
+            "Could not reach your WordPress site. Check the URL and try again.",
+        });
       return;
     }
 
@@ -661,7 +874,12 @@ router.post("/content-pieces/:id/regenerate", requireAuth, async (req, res) => {
     const [project] = await db
       .select()
       .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .where(
+        and(
+          eq(websiteProjectsTable.id, piece.websiteProjectId),
+          eq(websiteProjectsTable.userId, req.user!.userId),
+        ),
+      )
       .limit(1);
 
     if (!project) {
@@ -685,7 +903,13 @@ router.post("/content-pieces/:id/regenerate", requireAuth, async (req, res) => {
       contentStyle: project.contentStyle ?? null,
     };
 
-    const result = await generateContentPiece(piece.formatType as ContentFormatType, brand, piece.targetKeyword, undefined, true);
+    const result = await generateContentPiece(
+      piece.formatType as ContentFormatType,
+      brand,
+      piece.targetKeyword,
+      undefined,
+      true,
+    );
     const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
 
     const [updated] = await db
@@ -702,176 +926,246 @@ router.post("/content-pieces/:id/regenerate", requireAuth, async (req, res) => {
     res.json(updated);
   } catch (err) {
     logger.error({ err }, "Failed to regenerate content piece");
-    res.status(503).json({ error: "Failed to regenerate content. Please try again." });
+    res
+      .status(503)
+      .json({ error: "Failed to regenerate content. Please try again." });
   }
 });
 
 const RepurposeFromTextBody = z.object({
-  targetFormat: z.enum(CONTENT_FORMAT_TYPES as unknown as [string, ...string[]]),
-  existingContent: z.string().min(50, "Existing content must be at least 50 characters"),
+  targetFormat: z.enum(
+    CONTENT_FORMAT_TYPES as unknown as [string, ...string[]],
+  ),
+  existingContent: z
+    .string()
+    .min(50, "Existing content must be at least 50 characters"),
   targetKeyword: z.string().min(1, "Target keyword is required"),
 });
 
-router.post("/website-projects/:id/content-pieces/repurpose", requireAuth, async (req, res) => {
-  const projectId = Number(req.params.id);
-  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
+router.post(
+  "/website-projects/:id/content-pieces/repurpose",
+  requireAuth,
+  async (req, res) => {
+    const projectId = Number(req.params.id);
+    if (isNaN(projectId)) {
+      res.status(400).json({ error: "Invalid project id" });
+      return;
+    }
 
-  const parsed = RepurposeFromTextBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
+    const parsed = RepurposeFromTextBody.safeParse(req.body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+      return;
+    }
 
-  const { targetFormat, existingContent, targetKeyword } = parsed.data;
+    const { targetFormat, existingContent, targetKeyword } = parsed.data;
 
-  try {
-    const [project] = await db
-      .select()
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
+    try {
+      const [project] = await db
+        .select()
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, projectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
 
-    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
 
-    const [brandProfile] = await db
-      .select()
-      .from(brandProfilesTable)
-      .where(eq(brandProfilesTable.websiteProjectId, projectId))
-      .limit(1);
+      const [brandProfile] = await db
+        .select()
+        .from(brandProfilesTable)
+        .where(eq(brandProfilesTable.websiteProjectId, projectId))
+        .limit(1);
 
-    const brand: BrandContext = {
-      companyName: brandProfile?.companyName ?? project.name,
-      websiteUrl: project.url,
-      industry: brandProfile?.industry ?? "",
-      targetAudience: brandProfile?.targetAudience ?? "",
-      voiceTone: brandProfile?.voiceTone ?? "",
-      primaryKeywords: brandProfile?.primaryKeywords ?? [],
-      contentStyle: project.contentStyle ?? null,
-    };
+      const brand: BrandContext = {
+        companyName: brandProfile?.companyName ?? project.name,
+        websiteUrl: project.url,
+        industry: brandProfile?.industry ?? "",
+        targetAudience: brandProfile?.targetAudience ?? "",
+        voiceTone: brandProfile?.voiceTone ?? "",
+        primaryKeywords: brandProfile?.primaryKeywords ?? [],
+        contentStyle: project.contentStyle ?? null,
+      };
 
-    const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
-    const result = await repurposeContentPiece(
-      targetFormat as ContentFormatType,
-      brand,
-      existingContent,
-      targetKeyword,
-      userApiKey,
-    );
+      const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+      const result = await repurposeContentPiece(
+        targetFormat as ContentFormatType,
+        brand,
+        existingContent,
+        targetKeyword,
+        userApiKey,
+      );
 
-    const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
-    const [inserted] = await db
-      .insert(contentPiecesTable)
-      .values({
-        websiteProjectId: projectId,
-        formatType: targetFormat as ContentFormatType,
-        title: result.title,
-        targetKeyword: result.target_keyword,
-        bodyMarkdown: result.body_markdown,
-        wordCount,
-        status: "draft",
-      })
-      .returning();
+      const wordCount = result.body_markdown
+        .split(/\s+/)
+        .filter(Boolean).length;
+      const [inserted] = await db
+        .insert(contentPiecesTable)
+        .values({
+          websiteProjectId: projectId,
+          formatType: targetFormat as ContentFormatType,
+          title: result.title,
+          targetKeyword: result.target_keyword,
+          bodyMarkdown: result.body_markdown,
+          wordCount,
+          status: "draft",
+        })
+        .returning();
 
-    res.status(201).json(inserted);
-  } catch (err) {
-    logger.error({ err }, "Failed to repurpose content from text");
-    res.status(503).json({ error: "Failed to repurpose content. Please try again." });
-  }
-});
+      res.status(201).json(inserted);
+    } catch (err) {
+      logger.error({ err }, "Failed to repurpose content from text");
+      res
+        .status(503)
+        .json({ error: "Failed to repurpose content. Please try again." });
+    }
+  },
+);
 
 const RepurposeBody = z.object({
-  targetFormat: z.enum(CONTENT_FORMAT_TYPES as unknown as [string, ...string[]]),
-  existingContent: z.string().min(50, "Existing content must be at least 50 characters").optional(),
+  targetFormat: z.enum(
+    CONTENT_FORMAT_TYPES as unknown as [string, ...string[]],
+  ),
+  existingContent: z
+    .string()
+    .min(50, "Existing content must be at least 50 characters")
+    .optional(),
 });
 
-router.post("/content-pieces/:id/repurpose/stream", requireAuth, async (req, res) => {
-  const id = Number(req.params.id);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+router.post(
+  "/content-pieces/:id/repurpose/stream",
+  requireAuth,
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
 
-  const parsed = RepurposeBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
+    const parsed = RepurposeBody.safeParse(req.body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+      return;
+    }
 
-  const { targetFormat, existingContent: bodyOverride } = parsed.data;
+    const { targetFormat, existingContent: bodyOverride } = parsed.data;
 
-  try {
-    const [piece] = await db
-      .select()
-      .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.id, id))
-      .limit(1);
-
-    if (!piece) { res.status(404).json({ error: "Content piece not found" }); return; }
-
-    const [project] = await db
-      .select()
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
-
-    if (!project) { res.status(403).json({ error: "Access denied" }); return; }
-
-    const [brandProfile] = await db
-      .select()
-      .from(brandProfilesTable)
-      .where(eq(brandProfilesTable.websiteProjectId, piece.websiteProjectId))
-      .limit(1);
-
-    const brand: BrandContext = {
-      companyName: brandProfile?.companyName ?? project.name,
-      websiteUrl: project.url,
-      industry: brandProfile?.industry ?? "",
-      targetAudience: brandProfile?.targetAudience ?? "",
-      voiceTone: brandProfile?.voiceTone ?? "",
-      primaryKeywords: brandProfile?.primaryKeywords ?? [],
-    };
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders();
-
-    const sendEvent = (event: string, data: unknown) => {
-      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    };
-
-    sendEvent("step", { step: "analyzing", label: "Analyzing source content" });
-
-    const sourceContent = bodyOverride ?? piece.bodyMarkdown;
-    const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
-
-    sendEvent("step", { step: "generating", label: "Generating repurposed content" });
-
-    const result = await repurposeContentPiece(
-      targetFormat as ContentFormatType,
-      brand,
-      sourceContent,
-      piece.targetKeyword,
-      userApiKey,
-    );
-
-    sendEvent("step", { step: "saving", label: "Saving new piece" });
-
-    const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
-    const [inserted] = await db
-      .insert(contentPiecesTable)
-      .values({
-        websiteProjectId: piece.websiteProjectId,
-        formatType: targetFormat as ContentFormatType,
-        title: result.title,
-        targetKeyword: result.target_keyword,
-        bodyMarkdown: result.body_markdown,
-        wordCount,
-        status: "draft",
-      })
-      .returning();
-
-    sendEvent("done", inserted);
-    res.end();
-  } catch (err) {
-    logger.error({ err }, "Failed to stream repurpose content piece");
     try {
-      res.write(`event: error\ndata: ${JSON.stringify({ error: err instanceof Error ? err.message : "Failed to repurpose content" })}\n\n`);
+      const [piece] = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(eq(contentPiecesTable.id, id))
+        .limit(1);
+
+      if (!piece) {
+        res.status(404).json({ error: "Content piece not found" });
+        return;
+      }
+
+      const [project] = await db
+        .select()
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, piece.websiteProjectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+
+      if (!project) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const [brandProfile] = await db
+        .select()
+        .from(brandProfilesTable)
+        .where(eq(brandProfilesTable.websiteProjectId, piece.websiteProjectId))
+        .limit(1);
+
+      const brand: BrandContext = {
+        companyName: brandProfile?.companyName ?? project.name,
+        websiteUrl: project.url,
+        industry: brandProfile?.industry ?? "",
+        targetAudience: brandProfile?.targetAudience ?? "",
+        voiceTone: brandProfile?.voiceTone ?? "",
+        primaryKeywords: brandProfile?.primaryKeywords ?? [],
+      };
+
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
+      res.flushHeaders();
+
+      const sendEvent = (event: string, data: unknown) => {
+        res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      };
+
+      sendEvent("step", {
+        step: "analyzing",
+        label: "Analyzing source content",
+      });
+
+      const sourceContent = bodyOverride ?? piece.bodyMarkdown;
+      const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+
+      sendEvent("step", {
+        step: "generating",
+        label: "Generating repurposed content",
+      });
+
+      const result = await repurposeContentPiece(
+        targetFormat as ContentFormatType,
+        brand,
+        sourceContent,
+        piece.targetKeyword,
+        userApiKey,
+      );
+
+      sendEvent("step", { step: "saving", label: "Saving new piece" });
+
+      const wordCount = result.body_markdown
+        .split(/\s+/)
+        .filter(Boolean).length;
+      const [inserted] = await db
+        .insert(contentPiecesTable)
+        .values({
+          websiteProjectId: piece.websiteProjectId,
+          formatType: targetFormat as ContentFormatType,
+          title: result.title,
+          targetKeyword: result.target_keyword,
+          bodyMarkdown: result.body_markdown,
+          wordCount,
+          status: "draft",
+        })
+        .returning();
+
+      sendEvent("done", inserted);
       res.end();
-    } catch { /* already ended */ }
-  }
-});
+    } catch (err) {
+      logger.error({ err }, "Failed to stream repurpose content piece");
+      try {
+        res.write(
+          `event: error\ndata: ${JSON.stringify({ error: err instanceof Error ? err.message : "Failed to repurpose content" })}\n\n`,
+        );
+        res.end();
+      } catch {
+        /* already ended */
+      }
+    }
+  },
+);
 
 router.post("/content-pieces/:id/repurpose", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
@@ -882,7 +1176,9 @@ router.post("/content-pieces/:id/repurpose", requireAuth, async (req, res) => {
 
   const parsed = RepurposeBody.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
+    res
+      .status(400)
+      .json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
     return;
   }
 
@@ -903,7 +1199,12 @@ router.post("/content-pieces/:id/repurpose", requireAuth, async (req, res) => {
     const [project] = await db
       .select()
       .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .where(
+        and(
+          eq(websiteProjectsTable.id, piece.websiteProjectId),
+          eq(websiteProjectsTable.userId, req.user!.userId),
+        ),
+      )
       .limit(1);
 
     if (!project) {
@@ -956,7 +1257,9 @@ router.post("/content-pieces/:id/repurpose", requireAuth, async (req, res) => {
     res.status(201).json(inserted);
   } catch (err) {
     logger.error({ err }, "Failed to repurpose content piece");
-    res.status(503).json({ error: "Failed to repurpose content. Please try again." });
+    res
+      .status(503)
+      .json({ error: "Failed to repurpose content. Please try again." });
   }
 });
 
@@ -969,309 +1272,550 @@ router.get("/user/cms-summary", requireAuth, async (req, res) => {
 
     let hasNotion = false;
     let hasWebflow = false;
+    let hasWordpress = false;
 
     for (const p of projects) {
       const stored = (p.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
       if (stored.notion) hasNotion = true;
       if (stored.webflow) hasWebflow = true;
-      if (hasNotion && hasWebflow) break;
+      if (stored.wordpress) hasWordpress = true;
+      if (hasNotion && hasWebflow && hasWordpress) break;
     }
 
-    res.json({ notion: hasNotion, webflow: hasWebflow });
+    res.json({
+      notion: hasNotion,
+      webflow: hasWebflow,
+      wordpress: hasWordpress,
+    });
   } catch (err) {
     req.log.error({ err }, "Failed to fetch CMS summary");
     res.status(500).json({ error: "Internal server error" });
   }
 });
 
-router.post("/website-projects/:id/cms-integrations/test", requireAuth, async (req, res) => {
-  const projectId = Number(req.params.id);
-  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
-
-  try {
-    const [project] = await db
-      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
-
-    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
-
-    const stored = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
-    const creds = decryptCmsCredentials(stored);
-
-    const health: Record<string, { ok: boolean; error?: string }> = {};
-
-    if (creds.notion) {
-      try {
-        await assertPublicUrl("https://api.notion.com");
-        const testRes = await fetch(`https://api.notion.com/v1/databases/${creds.notion.databaseId}`, {
-          headers: {
-            Authorization: `Bearer ${creds.notion.integrationToken}`,
-            "Notion-Version": "2022-06-28",
-          },
-        });
-        if (testRes.ok) {
-          health.notion = { ok: true };
-        } else if (testRes.status === 401) {
-          health.notion = { ok: false, error: "Invalid integration token" };
-        } else if (testRes.status === 404) {
-          health.notion = { ok: false, error: "Database not found or not shared with integration" };
-        } else {
-          health.notion = { ok: false, error: `Notion API error: ${testRes.status}` };
-        }
-      } catch (err) {
-        health.notion = { ok: false, error: err instanceof Error ? err.message : "Connection failed" };
-      }
+router.post(
+  "/website-projects/:id/cms-integrations/test",
+  requireAuth,
+  async (req, res) => {
+    const projectId = Number(req.params.id);
+    if (isNaN(projectId)) {
+      res.status(400).json({ error: "Invalid project id" });
+      return;
     }
 
-    if (creds.webflow) {
-      try {
-        await assertPublicUrl("https://api.webflow.com");
-        const testRes = await fetch(`https://api.webflow.com/v2/collections/${creds.webflow.collectionId}`, {
-          headers: {
-            Authorization: `Bearer ${creds.webflow.apiToken}`,
-            accept: "application/json",
-          },
-        });
-        if (testRes.ok) {
-          health.webflow = { ok: true };
-        } else if (testRes.status === 401 || testRes.status === 403) {
-          health.webflow = { ok: false, error: "Invalid API token" };
-        } else if (testRes.status === 404) {
-          health.webflow = { ok: false, error: "Collection not found" };
-        } else {
-          health.webflow = { ok: false, error: `Webflow API error: ${testRes.status}` };
-        }
-      } catch (err) {
-        health.webflow = { ok: false, error: err instanceof Error ? err.message : "Connection failed" };
-      }
-    }
+    try {
+      const [project] = await db
+        .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, projectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
 
-    res.json(health);
-  } catch (err) {
-    req.log.error({ err }, "Failed to test CMS integrations");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      const stored = (project.cmsIntegrations ??
+        {}) as CmsIntegrationCredentials;
+      const creds = decryptCmsCredentials(stored);
+
+      const health: Record<
+        string,
+        { ok: boolean; error?: string; siteName?: string }
+      > = {};
+
+      if (creds.notion) {
+        try {
+          await assertPublicUrl("https://api.notion.com");
+          const testRes = await fetch(
+            `https://api.notion.com/v1/databases/${creds.notion.databaseId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${creds.notion.integrationToken}`,
+                "Notion-Version": "2022-06-28",
+              },
+            },
+          );
+          if (testRes.ok) {
+            health.notion = { ok: true };
+          } else if (testRes.status === 401) {
+            health.notion = { ok: false, error: "Invalid integration token" };
+          } else if (testRes.status === 404) {
+            health.notion = {
+              ok: false,
+              error: "Database not found or not shared with integration",
+            };
+          } else {
+            health.notion = {
+              ok: false,
+              error: `Notion API error: ${testRes.status}`,
+            };
+          }
+        } catch (err) {
+          health.notion = {
+            ok: false,
+            error: err instanceof Error ? err.message : "Connection failed",
+          };
+        }
+      }
+
+      if (creds.webflow) {
+        try {
+          await assertPublicUrl("https://api.webflow.com");
+          const testRes = await fetch(
+            `https://api.webflow.com/v2/collections/${creds.webflow.collectionId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${creds.webflow.apiToken}`,
+                accept: "application/json",
+              },
+            },
+          );
+          if (testRes.ok) {
+            health.webflow = { ok: true };
+          } else if (testRes.status === 401 || testRes.status === 403) {
+            health.webflow = { ok: false, error: "Invalid API token" };
+          } else if (testRes.status === 404) {
+            health.webflow = { ok: false, error: "Collection not found" };
+          } else {
+            health.webflow = {
+              ok: false,
+              error: `Webflow API error: ${testRes.status}`,
+            };
+          }
+        } catch (err) {
+          health.webflow = {
+            ok: false,
+            error: err instanceof Error ? err.message : "Connection failed",
+          };
+        }
+      }
+
+      if (creds.wordpress) {
+        try {
+          await assertPublicUrl(creds.wordpress.siteUrl);
+          const testRes = await fetch(
+            `${creds.wordpress.siteUrl.replace(/\/$/, "")}/wp-json/wp/v2/users/me`,
+            {
+              headers: {
+                Authorization: `Basic ${Buffer.from(`${creds.wordpress.username}:${creds.wordpress.appPassword}`).toString("base64")}`,
+              },
+            },
+          );
+
+          if (testRes.ok) {
+            const user = (await testRes.json()) as {
+              name?: string;
+              capabilities?: Record<string, boolean>;
+            };
+            const canPublish = user.capabilities?.["publish_posts"] ?? true;
+            if (!canPublish) {
+              health.wordpress = {
+                ok: false,
+                error: "This user does not have permission to create posts.",
+              };
+            } else {
+              health.wordpress = { ok: true, siteName: user.name };
+            }
+          } else if (testRes.status === 401) {
+            health.wordpress = {
+              ok: false,
+              error:
+                "WordPress authentication failed. Check your application password.",
+            };
+          } else if (testRes.status === 403) {
+            health.wordpress = {
+              ok: false,
+              error: "WordPress user does not have permission to create posts.",
+            };
+          } else {
+            health.wordpress = {
+              ok: false,
+              error: `WordPress API error: ${testRes.status}`,
+            };
+          }
+        } catch (err) {
+          health.wordpress = {
+            ok: false,
+            error: err instanceof Error ? err.message : "Connection failed",
+          };
+        }
+      }
+
+      res.json(health);
+    } catch (err) {
+      req.log.error({ err }, "Failed to test CMS integrations");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
 
 const CmsIntegrationsBody = z.object({
-  notion: z.object({
-    integrationToken: z.string().min(1, "Notion integration token is required"),
-    databaseId: z.string().min(1, "Notion database ID is required"),
-  }).optional(),
-  webflow: z.object({
-    apiToken: z.string().min(1, "Webflow API token is required"),
-    collectionId: z.string().min(1, "Webflow collection ID is required"),
-    bodyFieldSlug: z.string().min(1, "Body field slug is required").default("post-body"),
-  }).optional(),
+  notion: z
+    .object({
+      integrationToken: z
+        .string()
+        .min(1, "Notion integration token is required"),
+      databaseId: z.string().min(1, "Notion database ID is required"),
+    })
+    .optional(),
+  webflow: z
+    .object({
+      apiToken: z.string().min(1, "Webflow API token is required"),
+      collectionId: z.string().min(1, "Webflow collection ID is required"),
+      bodyFieldSlug: z
+        .string()
+        .min(1, "Body field slug is required")
+        .default("post-body"),
+    })
+    .optional(),
+  wordpress: z
+    .object({
+      siteUrl: z.string().url("Must be a valid WordPress site URL"),
+      username: z.string().min(1, "WordPress username is required"),
+      appPassword: z
+        .string()
+        .min(1, "WordPress application password is required"),
+    })
+    .optional(),
 });
 
-router.get("/website-projects/:id/cms-integrations", requireAuth, async (req, res) => {
-  const projectId = Number(req.params.id);
-  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
-
-  try {
-    const [project] = await db
-      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
-
-    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
-
-    if (!project.cmsIntegrations) {
-      res.json({});
+router.get(
+  "/website-projects/:id/cms-integrations",
+  requireAuth,
+  async (req, res) => {
+    const projectId = Number(req.params.id);
+    if (isNaN(projectId)) {
+      res.status(400).json({ error: "Invalid project id" });
       return;
     }
 
-    const stored = project.cmsIntegrations as CmsIntegrationCredentials;
-    const decrypted = decryptCmsCredentials(stored);
-    res.json(maskCmsCredentials(decrypted));
-  } catch (err) {
-    req.log.error({ err }, "Failed to get CMS integrations");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
+    try {
+      const [project] = await db
+        .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, projectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
 
-router.patch("/website-projects/:id/cms-integrations", requireAuth, async (req, res) => {
-  const projectId = Number(req.params.id);
-  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
 
-  const parsed = CmsIntegrationsBody.safeParse(req.body);
-  if (!parsed.success) { res.status(400).json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }); return; }
+      if (!project.cmsIntegrations) {
+        res.json({});
+        return;
+      }
 
-  try {
-    const [project] = await db
-      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
-
-    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
-
-    const existing = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
-    const existingDecrypted = decryptCmsCredentials(existing);
-
-    const merged: CmsIntegrationCredentials = { ...existingDecrypted };
-
-    if (parsed.data.notion) {
-      merged.notion = parsed.data.notion;
+      const stored = project.cmsIntegrations as CmsIntegrationCredentials;
+      const decrypted = decryptCmsCredentials(stored);
+      res.json(maskCmsCredentials(decrypted));
+    } catch (err) {
+      req.log.error({ err }, "Failed to get CMS integrations");
+      res.status(500).json({ error: "Internal server error" });
     }
-    if (parsed.data.webflow) {
-      merged.webflow = {
-        ...parsed.data.webflow,
-        bodyFieldSlug: parsed.data.webflow.bodyFieldSlug ?? "post-body",
-      };
-    }
+  },
+);
 
-    const encrypted = encryptCmsCredentials(merged);
-
-    await db
-      .update(websiteProjectsTable)
-      .set({ cmsIntegrations: encrypted })
-      .where(eq(websiteProjectsTable.id, projectId));
-
-    res.json(maskCmsCredentials(merged));
-  } catch (err) {
-    req.log.error({ err }, "Failed to save CMS integrations");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-router.delete("/website-projects/:id/cms-integrations/:platform", requireAuth, async (req, res) => {
-  const projectId = Number(req.params.id);
-  const platform = req.params.platform;
-  if (isNaN(projectId)) { res.status(400).json({ error: "Invalid project id" }); return; }
-  if (platform !== "notion" && platform !== "webflow") { res.status(400).json({ error: "Invalid platform" }); return; }
-
-  try {
-    const [project] = await db
-      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
-
-    if (!project) { res.status(404).json({ error: "Project not found" }); return; }
-
-    const existing = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
-    const updated = { ...existing };
-    delete updated[platform];
-
-    await db
-      .update(websiteProjectsTable)
-      .set({ cmsIntegrations: updated })
-      .where(eq(websiteProjectsTable.id, projectId));
-
-    res.status(204).send();
-  } catch (err) {
-    req.log.error({ err }, "Failed to disconnect CMS integration");
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-router.post("/content-pieces/:id/publish/notion", requireAuth, async (req, res) => {
-  const id = Number(req.params.id);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  try {
-    const [piece] = await db
-      .select()
-      .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.id, id))
-      .limit(1);
-
-    if (!piece) { res.status(404).json({ error: "Content piece not found" }); return; }
-
-    const [project] = await db
-      .select({ id: websiteProjectsTable.id, cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
-
-    if (!project) { res.status(403).json({ error: "Access denied" }); return; }
-
-    const stored = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
-    const creds = decryptCmsCredentials(stored);
-
-    if (!creds.notion) {
-      res.status(400).json({ error: "Notion is not connected. Configure it in Project Settings → Publishing." });
+router.patch(
+  "/website-projects/:id/cms-integrations",
+  requireAuth,
+  async (req, res) => {
+    const projectId = Number(req.params.id);
+    if (isNaN(projectId)) {
+      res.status(400).json({ error: "Invalid project id" });
       return;
     }
 
-    const tags: string[] = [];
-    if (piece.targetKeyword) tags.push(piece.targetKeyword);
-    if (piece.formatType) tags.push(piece.formatType.replace(/_/g, " "));
-
-    const notionPageUrl = await publishToNotion(
-      creds.notion.integrationToken,
-      creds.notion.databaseId,
-      piece.title,
-      piece.bodyMarkdown,
-      { status: piece.status ?? "draft", tags },
-    );
-
-    const [updated] = await db
-      .update(contentPiecesTable)
-      .set({ status: "published", publishedUrl: notionPageUrl })
-      .where(eq(contentPiecesTable.id, id))
-      .returning();
-
-    res.json(updated);
-  } catch (err) {
-    req.log.error({ err }, "Failed to publish to Notion");
-    res.status(502).json({ error: err instanceof Error ? err.message : "Failed to publish to Notion" });
-  }
-});
-
-router.post("/content-pieces/:id/publish/webflow", requireAuth, async (req, res) => {
-  const id = Number(req.params.id);
-  if (isNaN(id)) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  try {
-    const [piece] = await db
-      .select()
-      .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.id, id))
-      .limit(1);
-
-    if (!piece) { res.status(404).json({ error: "Content piece not found" }); return; }
-
-    const [project] = await db
-      .select({ id: websiteProjectsTable.id, cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
-      .limit(1);
-
-    if (!project) { res.status(403).json({ error: "Access denied" }); return; }
-
-    const stored = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
-    const creds = decryptCmsCredentials(stored);
-
-    if (!creds.webflow) {
-      res.status(400).json({ error: "Webflow is not connected. Configure it in Project Settings → Publishing." });
+    const parsed = CmsIntegrationsBody.safeParse(req.body);
+    if (!parsed.success) {
+      res
+        .status(400)
+        .json({ error: parsed.error.errors[0]?.message ?? "Invalid request" });
       return;
     }
 
-    const webflowItemUrl = await publishToWebflow(
-      creds.webflow.apiToken,
-      creds.webflow.collectionId,
-      creds.webflow.bodyFieldSlug,
-      piece.title,
-      piece.bodyMarkdown,
-    );
+    try {
+      const [project] = await db
+        .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, projectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
 
-    const [updated] = await db
-      .update(contentPiecesTable)
-      .set({ status: "published", publishedUrl: webflowItemUrl })
-      .where(eq(contentPiecesTable.id, id))
-      .returning();
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
 
-    res.json(updated);
-  } catch (err) {
-    req.log.error({ err }, "Failed to publish to Webflow");
-    res.status(502).json({ error: err instanceof Error ? err.message : "Failed to publish to Webflow" });
-  }
-});
+      const existing = (project.cmsIntegrations ??
+        {}) as CmsIntegrationCredentials;
+      const existingDecrypted = decryptCmsCredentials(existing);
+
+      const merged: CmsIntegrationCredentials = { ...existingDecrypted };
+
+      if (parsed.data.notion) {
+        merged.notion = parsed.data.notion;
+      }
+      if (parsed.data.webflow) {
+        merged.webflow = {
+          ...parsed.data.webflow,
+          bodyFieldSlug: parsed.data.webflow.bodyFieldSlug ?? "post-body",
+        };
+      }
+      if (parsed.data.wordpress) {
+        merged.wordpress = parsed.data.wordpress;
+      }
+
+      const encrypted = encryptCmsCredentials(merged);
+
+      await db
+        .update(websiteProjectsTable)
+        .set({ cmsIntegrations: encrypted })
+        .where(eq(websiteProjectsTable.id, projectId));
+
+      res.json(maskCmsCredentials(merged));
+    } catch (err) {
+      req.log.error({ err }, "Failed to save CMS integrations");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+router.delete(
+  "/website-projects/:id/cms-integrations/:platform",
+  requireAuth,
+  async (req, res) => {
+    const projectId = Number(req.params.id);
+    const platform = req.params.platform;
+    if (isNaN(projectId)) {
+      res.status(400).json({ error: "Invalid project id" });
+      return;
+    }
+    if (
+      platform !== "notion" &&
+      platform !== "webflow" &&
+      platform !== "wordpress"
+    ) {
+      res.status(400).json({ error: "Invalid platform" });
+      return;
+    }
+
+    try {
+      const [project] = await db
+        .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, projectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+
+      if (!project) {
+        res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      const existing = (project.cmsIntegrations ??
+        {}) as CmsIntegrationCredentials;
+      const updated = { ...existing };
+      delete updated[platform];
+
+      await db
+        .update(websiteProjectsTable)
+        .set({ cmsIntegrations: updated })
+        .where(eq(websiteProjectsTable.id, projectId));
+
+      res.status(204).send();
+    } catch (err) {
+      req.log.error({ err }, "Failed to disconnect CMS integration");
+      res.status(500).json({ error: "Internal server error" });
+    }
+  },
+);
+
+router.post(
+  "/content-pieces/:id/publish/notion",
+  requireAuth,
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    try {
+      const [piece] = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(eq(contentPiecesTable.id, id))
+        .limit(1);
+
+      if (!piece) {
+        res.status(404).json({ error: "Content piece not found" });
+        return;
+      }
+
+      const [project] = await db
+        .select({
+          id: websiteProjectsTable.id,
+          cmsIntegrations: websiteProjectsTable.cmsIntegrations,
+        })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, piece.websiteProjectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+
+      if (!project) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const stored = (project.cmsIntegrations ??
+        {}) as CmsIntegrationCredentials;
+      const creds = decryptCmsCredentials(stored);
+
+      if (!creds.notion) {
+        res
+          .status(400)
+          .json({
+            error:
+              "Notion is not connected. Configure it in Project Settings → Publishing.",
+          });
+        return;
+      }
+
+      const tags: string[] = [];
+      if (piece.targetKeyword) tags.push(piece.targetKeyword);
+      if (piece.formatType) tags.push(piece.formatType.replace(/_/g, " "));
+
+      const notionPageUrl = await publishToNotion(
+        creds.notion.integrationToken,
+        creds.notion.databaseId,
+        piece.title,
+        piece.bodyMarkdown,
+        { status: piece.status ?? "draft", tags },
+      );
+
+      const [updated] = await db
+        .update(contentPiecesTable)
+        .set({ status: "published", publishedUrl: notionPageUrl })
+        .where(eq(contentPiecesTable.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (err) {
+      req.log.error({ err }, "Failed to publish to Notion");
+      res
+        .status(502)
+        .json({
+          error:
+            err instanceof Error ? err.message : "Failed to publish to Notion",
+        });
+    }
+  },
+);
+
+router.post(
+  "/content-pieces/:id/publish/webflow",
+  requireAuth,
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    try {
+      const [piece] = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(eq(contentPiecesTable.id, id))
+        .limit(1);
+
+      if (!piece) {
+        res.status(404).json({ error: "Content piece not found" });
+        return;
+      }
+
+      const [project] = await db
+        .select({
+          id: websiteProjectsTable.id,
+          cmsIntegrations: websiteProjectsTable.cmsIntegrations,
+        })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, piece.websiteProjectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+
+      if (!project) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const stored = (project.cmsIntegrations ??
+        {}) as CmsIntegrationCredentials;
+      const creds = decryptCmsCredentials(stored);
+
+      if (!creds.webflow) {
+        res
+          .status(400)
+          .json({
+            error:
+              "Webflow is not connected. Configure it in Project Settings → Publishing.",
+          });
+        return;
+      }
+
+      const webflowItemUrl = await publishToWebflow(
+        creds.webflow.apiToken,
+        creds.webflow.collectionId,
+        creds.webflow.bodyFieldSlug,
+        piece.title,
+        piece.bodyMarkdown,
+      );
+
+      const [updated] = await db
+        .update(contentPiecesTable)
+        .set({ status: "published", publishedUrl: webflowItemUrl })
+        .where(eq(contentPiecesTable.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (err) {
+      req.log.error({ err }, "Failed to publish to Webflow");
+      res
+        .status(502)
+        .json({
+          error:
+            err instanceof Error ? err.message : "Failed to publish to Webflow",
+        });
+    }
+  },
+);
 
 export default router;

@@ -1,0 +1,21 @@
+# goals.ac Drupal module configuration.
+# This file provides default values installed with the module.
+
+# Shared secret for HMAC authentication. Generate with:
+#   php -r "echo bin2hex(random_bytes(32));"
+site_key: ''
+
+# The target content type for incoming content.
+# Must match a machine name from admin/structure/types.
+target_content_type: article
+
+# Content types allowed in the site graph export.
+allowed_content_types:
+  - article
+  - page
+
+# Enable schema injection (JSON-LD + llms.txt).
+schema_injection_enabled: true
+
+# Enable llms.txt meta tag injection in page head.
+llms_txt_injection_enabled: true

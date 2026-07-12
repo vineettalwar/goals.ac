@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  drupal:
+    image: drupal:11
+    container_name: goals-ac-drupal
+    ports:
+      - "8080:80"
+    volumes:
+      - drupal_data:/var/www/html
+      - .:/var/www/html/modules/custom/goals_ac
+      - ../shared:/var/www/html/modules/custom/goals_ac/vendor/goals-ac/shared-contract
+    environment:
+      MYSQL_HOST: mariadb
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: drupal
+      MYSQL_USER: drupal
+      MYSQL_PASSWORD: drupal
+      DRUPAL_DATABASE_HOST: mariadb
+      DRUPAL_DATABASE_PORT: 3306
+      DRUPAL_DATABASE_NAME: drupal
+      DRUPAL_DATABASE_USER: drupal
+      DRUPAL_DATABASE_PASSWORD: drupal
+    depends_on:
+      - mariadb
+    restart: unless-stopped
+
+  mariadb:
+    image: mariadb:11
+    container_name: goals-ac-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: drupal
+      MYSQL_USER: drupal
+      MYSQL_PASSWORD: drupal
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    restart: unless-stopped
+
+  drush:
+    image: drupal:11
+    container_name: goals-ac-drush
+    working_dir: /var/www/html
+    volumes:
+      - drupal_data:/var/www/html
+      - .:/var/www/html/modules/custom/goals_ac
+      - ../shared:/var/www/html/modules/custom/goals_ac/vendor/goals-ac/shared-contract
+    environment:
+      DRUPAL_DATABASE_HOST: mariadb
+      DRUPAL_DATABASE_PORT: 3306
+      DRUPAL_DATABASE_NAME: drupal
+      DRUPAL_DATABASE_USER: drupal
+      DRUPAL_DATABASE_PASSWORD: drupal
+    depends_on:
+      - mariadb
+      - drupal
+    command: >
+      bash -c "
+        until drush status bootstrap 2>/dev/null; do
+          echo 'Waiting for Drupal to be ready...'
+          sleep 5
+        done
+        echo 'Drupal is ready. Running Drush commands...'
+        drush en goals_ac -y
+        drush cr
+        echo 'Module enabled and cache cleared.'
+      "
+    restart: "no"
+
+volumes:
+  drupal_data:
+  mariadb_data:

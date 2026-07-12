@@ -15,11 +15,25 @@ export const brandProfilesTable = pgTable("brand_profiles", {
   voiceTone: text("voice_tone").notNull().default(""),
   primaryKeywords: text("primary_keywords").array().notNull().default([]),
   competitorUrls: text("competitor_urls").array().notNull().default([]),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
+  // Brand Voice Storage Fields (Phase 1)
+  writingExamples: text("writing_examples").array().notNull().default([]),
+  brandGlossary: text("brand_glossary").array().notNull().default([]),
+  antiPatterns: text("anti_patterns").array().notNull().default([]),
+  typicalStructure: text("typical_structure").notNull().default(""),
+  doWords: text("do_words").array().notNull().default([]),
+  dontWords: text("dont_words").array().notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
 });
 
-export const insertBrandProfileSchema = createInsertSchema(brandProfilesTable).omit({
+export const insertBrandProfileSchema = createInsertSchema(
+  brandProfilesTable,
+).omit({
   id: true,
   createdAt: true,
   updatedAt: true,

@@ -1,9 +1,95 @@
 import { createHash } from "node:crypto";
 import { logger } from "../lib/logger";
-import { getAiProviderClient, wrapGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
+import {
+  getAiProviderClient,
+  wrapGeminiClient,
+  createUserGeminiClient,
+  isUserKeyError,
+} from "@workspace/ai-providers";
 import type { AiProviderClient } from "@workspace/ai-providers/client";
 import { getCache } from "../lib/cache";
 import type { ContentFormatType, ContentStyle } from "@workspace/db";
+import { z } from "zod";
+
+// LinkedIn Post Enhancement Constants (Phase 2)
+const LINKEDIN_ARCHETYPES = [
+  {
+    id: "listicle",
+    label: "Listicle",
+    description: "Numbered insights",
+    exampleHook: "3 things I learned about X...",
+  },
+  {
+    id: "case-study",
+    label: "Mini Case Study",
+    description: "Client/success story",
+    exampleHook: "Last week we helped a client Y...",
+  },
+  {
+    id: "hot-take",
+    label: "Hot Take",
+    description: "Contrarian viewpoint",
+    exampleHook: "Unpopular opinion: X is actually...",
+  },
+  {
+    id: "personal-story",
+    label: "Personal Story",
+    description: "Journey/confession",
+    exampleHook: "5 years ago I was X, then Y happened...",
+  },
+  {
+    id: "educational",
+    label: "Educational",
+    description: "How-to insight",
+    exampleHook: "Here's the exact framework we use for Y...",
+  },
+] as const;
+
+const LINKEDIN_HOOK_TYPES = [
+  {
+    id: "bold-question",
+    label: "Bold Question",
+    template: "What if [statement]?",
+    strengthScore: 8,
+  },
+  {
+    id: "contrarian-take",
+    label: "Contrarian Take",
+    template: "Most [audience] get [topic] wrong.",
+    strengthScore: 9,
+  },
+  {
+    id: "surprising-stat",
+    label: "Surprising Stat",
+    template: "83% of [audience] fail because of [reason].",
+    strengthScore: 8,
+  },
+  {
+    id: "personal-confession",
+    label: "Personal Confession",
+    template: "I used to do X. Here's why I stopped.",
+    strengthScore: 6,
+  },
+  {
+    id: "controversial",
+    label: "Controversial",
+    template: "Hot take: [statement]",
+    strengthScore: 7,
+  },
+] as const;
+
+const LINKEDIN_ARCHETYPE_STRUCTURES: Record<string, string> = {
+  listicle:
+    "- Opening hook\n- Brief context on why this matters\n- Numbered list of insights (3-7 items)\n- Brief explanation for each insight\n- Closing thought or question to engage readers",
+  "case-study":
+    "- Opening hook\n- Introduction to the client/challenge\n- The problem or situation faced\n- The solution implemented\n- Results and measurable outcomes\n- Lessons learned and closing insight",
+  "hot-take":
+    "- Opening hook that states the contrarian viewpoint\n- Explanation of why the common belief is wrong\n- Evidence or reasoning supporting your view\n- Who might disagree and why they're mistaken\n- Closing thought that reinforces your perspective",
+  "personal-story":
+    "- Opening hook that draws readers in\n- The beginning of your journey or situation\n- The challenge or turning point\n- How you overcame it or what you learned\n- Where you are now and what it means\n- Closing reflection or advice for others",
+  educational:
+    "- Opening hook that highlights the value of the knowledge\n- The problem or gap in understanding\n- The framework, method, or approach explained\n- How to apply it with concrete examples\n- Common mistakes to avoid\n- Closing summary and next steps",
+} as const;
 
 export interface ContentPieceResult {
   title: string;
@@ -25,7 +111,10 @@ const SYSTEM_PROMPT = `You are a world-class SEO content strategist and writer. 
 
 Your content is brand-aligned, audience-specific, and actionable. You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation — only raw JSON.`;
 
-const FORMAT_CONFIGS: Record<ContentFormatType, { label: string; wordRange: string; structure: string }> = {
+const FORMAT_CONFIGS: Record<
+  ContentFormatType,
+  { label: string; wordRange: string; structure: string }
+> = {
   blog_post: {
     label: "Blog Post",
     wordRange: "900-1200",
@@ -124,12 +213,15 @@ const FORMAT_CONFIGS: Record<ContentFormatType, { label: string; wordRange: stri
   },
   linkedin_post: {
     label: "LinkedIn Post",
-    wordRange: "200-400",
-    structure: `- Opening hook: a bold statement, surprising stat, or provocative question (1-2 lines, no fluff)
-- ## The Core Insight — 3-4 short paragraphs sharing a genuine perspective or lesson
-- ## Practical Takeaways — 3-5 bullet points the reader can act on today
-- Closing line: a thought-provoking question or call-to-reflect that invites comments
-- Use short paragraphs (1-3 sentences each). No corporate language. Write like a founder speaking to peers.`,
+    wordRange: "1300-1800",
+    structure: `- Hook: A scroll-stopping opening line (question, bold statement, or surprising fact)
+ - Context: Brief explanation of why this matters to the reader
+ - Main Insight: Your core perspective, lesson, or story
+ - Supporting Details: Evidence, examples, or data points that back up your insight
+ - Practical Takeaway: How readers can apply this information
+ - Engaging Close: Question or invitation for comments to boost engagement
+ - Optimal length: 1300-1800 characters for maximum engagement
+ - Format: Short paragraphs (2-3 sentences max), no hashtags in body`,
   },
   twitter_thread: {
     label: "Twitter / X Thread",
@@ -243,23 +335,97 @@ function buildContentStyleContext(style?: ContentStyle | null): string {
   const lines: string[] = [];
   if (style.personaName) lines.push(`WRITING PERSONA: ${style.personaName}`);
   if (style.tonePreset) lines.push(`TONE: ${style.tonePreset}`);
-  if (style.defaultWordCount) lines.push(`TARGET WORD COUNT: ~${style.defaultWordCount} words (override format default if instructed)`);
+  if (style.defaultWordCount)
+    lines.push(
+      `TARGET WORD COUNT: ~${style.defaultWordCount} words (override format default if instructed)`,
+    );
   if (style.primaryLanguage) lines.push(`LANGUAGE: ${style.primaryLanguage}`);
   if (style.readingLevel) lines.push(`READING LEVEL: ${style.readingLevel}`);
   if (style.forbiddenWords && style.forbiddenWords.length > 0) {
-    lines.push(`DO NOT USE THESE WORDS/PHRASES: ${style.forbiddenWords.join(", ")}`);
+    lines.push(
+      `DO NOT USE THESE WORDS/PHRASES: ${style.forbiddenWords.join(", ")}`,
+    );
   }
   if (lines.length === 0) return "";
-  return "\nCONTENT STYLE GUIDELINES:\n" + lines.map((l) => `- ${l}`).join("\n");
+  return (
+    "\nCONTENT STYLE GUIDELINES:\n" + lines.map((l) => `- ${l}`).join("\n")
+  );
 }
 
-function buildPrompt(format: ContentFormatType, brand: BrandContext, keyword: string, angleHint?: string): string {
+function buildPrompt(
+  format: ContentFormatType,
+  brand: BrandContext,
+  keyword: string,
+  angleHint?: string,
+): string {
   const config = FORMAT_CONFIGS[format];
-  const kwList = brand.primaryKeywords.length > 0 ? brand.primaryKeywords.slice(0, 5).join(", ") : keyword;
+  const kwList =
+    brand.primaryKeywords.length > 0
+      ? brand.primaryKeywords.slice(0, 5).join(", ")
+      : keyword;
   const wordRange = brand.contentStyle?.defaultWordCount
     ? `~${brand.contentStyle.defaultWordCount}`
     : config.wordRange;
   const styleContext = buildContentStyleContext(brand.contentStyle);
+
+  // Special handling for LinkedIn posts with archetypes and hooks
+  if (format === "linkedin_post") {
+    // For LinkedIn, we expect angleHint to contain archetype and hook info
+    // Format: "archetype:${archetypeId}|hook:${hookId}"
+    let archetypeInfo = "";
+    let hookInfo = "";
+
+    if (angleHint) {
+      const parts = angleHint.split("|");
+      for (const part of parts) {
+        if (part.startsWith("archetype:")) {
+          const archetypeId = part.split(":")[1];
+          const archetype = LINKEDIN_ARCHETYPES.find(
+            (a) => a.id === archetypeId,
+          );
+          if (archetype) {
+            archetypeInfo = `
+SELECTED ARCHETYPE: ${archetype.label} - ${archetype.description}
+EXAMPLE HOOK: "${archetype.exampleHook}"
+STRUCTURE GUIDELINE: ${LINKEDIN_ARCHETYPE_STRUCTURES[archetypeId]}`;
+          }
+        } else if (part.startsWith("hook:")) {
+          const hookId = part.split(":")[1];
+          const hook = LINKEDIN_HOOK_TYPES.find((h) => h.id === hookId);
+          if (hook) {
+            hookInfo = `
+SELECTED HOOK TYPE: ${hook.label}
+HOOK TEMPLATE: "${hook.template}"
+STRENGTH SCORE: ${hook.strengthScore}/10`;
+          }
+        }
+      }
+    }
+
+    return `Create a ${config.label} for ${brand.companyName} (${brand.websiteUrl}), a company in the ${brand.industry} industry.
+
+TARGET KEYWORD: "${keyword}"
+BRAND VOICE: ${brand.voiceTone || "Professional, clear, and authoritative"}
+TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
+RELATED KEYWORDS TO WEAVE IN: ${kwList}
+${styleContext}
+${archetypeInfo}
+${hookInfo}
+
+Requirements:
+- Write entirely in the brand voice described above
+- Target the keyword "${keyword}" naturally throughout
+- Reference ${brand.companyName} 2-3 times without being promotional
+- Use specific data points, named frameworks, and concrete examples
+- Content must be original, authoritative, and citation-worthy
+- For LinkedIn posts: optimal length is 1300-1800 characters
+- Start with a strong hook that stops scroll
+- Use short paragraphs (2-3 sentences maximum)
+- Include specific insights or examples
+- End with an engagement question or thought-provoking insight
+- Do NOT include hashtags in the body text (they go in the comments)
+- Write like a founder speaking to peers - authentic and direct`;
+  }
 
   return `Create a ${config.label} for ${brand.companyName} (${brand.websiteUrl}), a company in the ${brand.industry} industry.
 
@@ -289,7 +455,12 @@ Requirements:
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
-export function buildCacheKey(format: string, keyword: string, brand: BrandContext, angleHint?: string): string {
+export function buildCacheKey(
+  format: string,
+  keyword: string,
+  brand: BrandContext,
+  angleHint?: string,
+): string {
   const style = brand.contentStyle;
   const raw = [
     format,
@@ -311,7 +482,9 @@ export function buildCacheKey(format: string, keyword: string, brand: BrandConte
   return createHash("sha256").update(raw).digest("hex").slice(0, 16);
 }
 
-export async function cacheGet(key: string): Promise<ContentPieceResult | null> {
+export async function cacheGet(
+  key: string,
+): Promise<ContentPieceResult | null> {
   try {
     const cache = await getCache();
     const raw = await cache.get(key);
@@ -322,7 +495,10 @@ export async function cacheGet(key: string): Promise<ContentPieceResult | null> 
   }
 }
 
-export async function cacheSet(key: string, result: ContentPieceResult): Promise<void> {
+export async function cacheSet(
+  key: string,
+  result: ContentPieceResult,
+): Promise<void> {
   try {
     const cache = await getCache();
     await cache.set(key, JSON.stringify(result), CACHE_TTL_MS);
@@ -379,17 +555,27 @@ function sanitizeJsonControlChars(raw: string): string {
 }
 
 function cleanAndParse(raw: string): ContentPieceResult {
-  const stripped = raw.trim().replace(/^```json\s*/i, "").replace(/```\s*$/, "");
+  const stripped = raw
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/```\s*$/, "");
   const sanitized = sanitizeJsonControlChars(stripped);
   return JSON.parse(sanitized) as ContentPieceResult;
 }
 
 function validateResult(result: unknown): asserts result is ContentPieceResult {
-  if (typeof result !== "object" || result === null) throw new Error("Result must be an object");
+  if (typeof result !== "object" || result === null)
+    throw new Error("Result must be an object");
   const r = result as Record<string, unknown>;
-  if (typeof r.title !== "string" || r.title.trim().length === 0) throw new Error("Missing title");
-  if (typeof r.target_keyword !== "string") throw new Error("Missing target_keyword");
-  if (typeof r.body_markdown !== "string" || r.body_markdown.trim().length < 200) throw new Error("body_markdown too short");
+  if (typeof r.title !== "string" || r.title.trim().length === 0)
+    throw new Error("Missing title");
+  if (typeof r.target_keyword !== "string")
+    throw new Error("Missing target_keyword");
+  if (
+    typeof r.body_markdown !== "string" ||
+    r.body_markdown.trim().length < 200
+  )
+    throw new Error("body_markdown too short");
 }
 
 async function generateWithClient(
@@ -420,8 +606,12 @@ async function generateWithClient(
       return parsed;
     } catch (err) {
       lastError = err;
-      logger.warn({ err, attempt, format, keyword }, "Content studio generation attempt failed");
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      logger.warn(
+        { err, attempt, format, keyword },
+        "Content studio generation attempt failed",
+      );
+      if (attempt < 3)
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
   }
 
@@ -476,14 +666,17 @@ async function generateWithClientStream(
       return parsed;
     } catch (err) {
       lastError = err;
-      logger.warn({ err, attempt, format, keyword }, "Content studio stream attempt failed");
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      logger.warn(
+        { err, attempt, format, keyword },
+        "Content studio stream attempt failed",
+      );
+      if (attempt < 3)
+        await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
     }
   }
 
   throw lastError;
 }
-
 
 export async function generateContentPieceStream(
   format: ContentFormatType,
@@ -496,15 +689,26 @@ export async function generateContentPieceStream(
   if (userApiKey) {
     let chunksEmitted = 0;
     try {
-      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
+      const userClient = wrapGeminiClient(
+        await createUserGeminiClient(userApiKey),
+      );
       return await generateWithClientStream(
-        userClient, format, brand, keyword,
-        (chunk) => { chunksEmitted++; onChunk(chunk); },
+        userClient,
+        format,
+        brand,
+        keyword,
+        (chunk) => {
+          chunksEmitted++;
+          onChunk(chunk);
+        },
         angleHint,
       );
     } catch (err) {
       if (isUserKeyError(err) && chunksEmitted === 0) {
-        logger.warn({ err }, "User Gemini key failed for content stream before first chunk, falling back to platform key");
+        logger.warn(
+          { err },
+          "User Gemini key failed for content stream before first chunk, falling back to platform key",
+        );
       } else {
         throw err;
       }
@@ -512,7 +716,14 @@ export async function generateContentPieceStream(
   }
 
   const client = await getAiProviderClient();
-  return generateWithClientStream(client, format, brand, keyword, onChunk, angleHint);
+  return generateWithClientStream(
+    client,
+    format,
+    brand,
+    keyword,
+    onChunk,
+    angleHint,
+  );
 }
 
 export async function generateContentPiece(
@@ -526,18 +737,32 @@ export async function generateContentPiece(
   const key = buildCacheKey(format, keyword, brand, angleHint);
   if (!bypassCache) {
     const cached = await cacheGet(key);
-    if (cached) { logger.info({ format, keyword }, "Content piece served from cache"); return cached; }
+    if (cached) {
+      logger.info({ format, keyword }, "Content piece served from cache");
+      return cached;
+    }
   }
 
   if (userApiKey) {
     try {
-      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
-      const result = await generateWithClient(userClient, format, brand, keyword, angleHint);
+      const userClient = wrapGeminiClient(
+        await createUserGeminiClient(userApiKey),
+      );
+      const result = await generateWithClient(
+        userClient,
+        format,
+        brand,
+        keyword,
+        angleHint,
+      );
       await cacheSet(key, result);
       return result;
     } catch (err) {
       if (isUserKeyError(err)) {
-        logger.warn({ err }, "User Gemini key failed for content piece, falling back to platform key");
+        logger.warn(
+          { err },
+          "User Gemini key failed for content piece, falling back to platform key",
+        );
       } else {
         throw err;
       }
@@ -545,7 +770,13 @@ export async function generateContentPiece(
   }
 
   const client = await getAiProviderClient();
-  const result = await generateWithClient(client, format, brand, keyword, angleHint);
+  const result = await generateWithClient(
+    client,
+    format,
+    brand,
+    keyword,
+    angleHint,
+  );
   await cacheSet(key, result);
   return result;
 }
@@ -597,9 +828,16 @@ export async function repurposeContentPiece(
   existingKeyword: string,
   userApiKey?: string | null,
 ): Promise<ContentPieceResult> {
-  const prompt = buildRepurposePrompt(targetFormat, brand, existingContent, existingKeyword);
+  const prompt = buildRepurposePrompt(
+    targetFormat,
+    brand,
+    existingContent,
+    existingKeyword,
+  );
 
-  async function attemptGeneration(ai: AiProviderClient): Promise<ContentPieceResult> {
+  async function attemptGeneration(
+    ai: AiProviderClient,
+  ): Promise<ContentPieceResult> {
     let lastError: unknown;
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
@@ -617,8 +855,12 @@ export async function repurposeContentPiece(
         return parsed;
       } catch (err) {
         lastError = err;
-        logger.warn({ err, attempt, targetFormat }, "Repurpose generation attempt failed");
-        if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+        logger.warn(
+          { err, attempt, targetFormat },
+          "Repurpose generation attempt failed",
+        );
+        if (attempt < 3)
+          await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
       }
     }
     throw lastError;
@@ -626,11 +868,16 @@ export async function repurposeContentPiece(
 
   if (userApiKey) {
     try {
-      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
+      const userClient = wrapGeminiClient(
+        await createUserGeminiClient(userApiKey),
+      );
       return await attemptGeneration(userClient);
     } catch (err) {
       if (isUserKeyError(err)) {
-        logger.warn({ err }, "User Gemini key failed for repurpose generation, falling back to platform key");
+        logger.warn(
+          { err },
+          "User Gemini key failed for repurpose generation, falling back to platform key",
+        );
       } else {
         throw err;
       }

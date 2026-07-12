@@ -1,0 +1,6 @@
+{
+  "core": "WordPress/WordPress#latest",
+  "phpVersion": "8.1",
+  "port": 8889,
+  "plugins": ["./"]
+}

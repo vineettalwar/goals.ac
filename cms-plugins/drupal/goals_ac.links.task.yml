@@ -1,0 +1,4 @@
+goals_ac.settings:
+  route_name: goals_ac.settings
+  title: 'goals.ac'
+  base_route: goals_ac.settings

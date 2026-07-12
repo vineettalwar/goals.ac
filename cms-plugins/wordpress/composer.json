@@ -1,0 +1,40 @@
+{
+  "name": "goals-ac/goals-ac-wp",
+  "description": "WordPress plugin for goals.ac — receive AI content, inject schema/llms.txt, export site graph.",
+  "type": "project",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.1",
+    "ext-json": "*",
+    "goals-ac/shared-contract": "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^9.6|^10.0",
+    "wp-coding-standards/wpcs": "^3.0",
+    "dealerdirect/phpcodesniffer-composer-installer": "^1.0",
+    "phpcompatibility/phpcompatibility-wp": "^2.1"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../shared",
+      "options": {
+        "symlink": true
+      }
+    }
+  ],
+  "autoload": {
+    "classmap": ["includes/"]
+  },
+  "config": {
+    "allow-plugins": {
+      "dealerdirect/phpcodesniffer-composer-installer": true
+    },
+    "sort-packages": true
+  },
+  "scripts": {
+    "test": "phpunit",
+    "lint": "phpcs",
+    "lint:fix": "phpcbf"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "goals-ac/drupal-module",
+  "description": "Drupal module for goals.ac — receive AI content, inject schema/llms.txt, export site graph.",
+  "type": "drupal-module",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": ">=8.1",
+    "ext-json": "*",
+    "goals-ac/shared-contract": "*"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../shared",
+      "options": {
+        "symlink": true
+      }
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "GoalsAC\\Drupal\\": "src/"
+    }
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

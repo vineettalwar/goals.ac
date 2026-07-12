@@ -1,0 +1,128 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions for the goals.ac module.
+ */
+
+use Drupal\Core\Database\Database;
+
+/**
+ * Implements hook_schema().
+ */
+function goals_ac_schema() {
+  $schema['goals_ac_nonces'] = [
+    'description' => 'Stores HMAC nonces for replay protection.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'nonce' => [
+        'type' => 'varchar',
+        'length' => 64,
+        'not null' => TRUE,
+        'default' => '',
+      ],
+      'expires_at' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp when this nonce expires.',
+      ],
+      'created_at' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp when this nonce was created.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'indexes' => [
+      'nonce_lookup' => ['nonce', 'expires_at'],
+      'expires_at' => ['expires_at'],
+    ],
+    'description' => 'HMAC nonce storage for replay protection.',
+  ];
+
+  $schema['goals_ac_idempotency_keys'] = [
+    'description' => 'Stores idempotency keys for the 24-hour replay window.',
+    'fields' => [
+      'id' => [
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ],
+      'idempotency_hash' => [
+        'type' => 'varchar',
+        'length' => 32,
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'MD5 hash of the idempotency key.',
+      ],
+      'data' => [
+        'type' => 'text',
+        'size' => 'big',
+        'not null' => TRUE,
+        'default' => '',
+        'description' => 'JSON-encoded result data.',
+      ],
+      'created_at' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+        'description' => 'Unix timestamp when this key was stored.',
+      ],
+    ],
+    'primary key' => ['id'],
+    'unique keys' => [
+      'idempotency_hash' => ['idempotency_hash'],
+    ],
+    'indexes' => [
+      'created_at' => ['created_at'],
+    ],
+    'description' => 'Idempotency key storage for content publish requests.',
+  ];
+
+  return $schema;
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function goals_ac_uninstall() {
+  // Remove state values.
+  \Drupal::state()->deleteMultiple([
+    'goals_ac.json_ld',
+    'goals_ac.json_ld_path',
+    'goals_ac.llms_txt',
+    'goals_ac.llms_txt_path',
+  ]);
+
+  // Remove configuration.
+  \Drupal::configFactory()->getEditable('goals_ac.settings')->delete()->save();
+
+  // Drop tables.
+  $schema = Database::getConnection()->schema();
+  $schema->dropTable('goals_ac_nonces');
+  $schema->dropTable('goals_ac_idempotency_keys');
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * Periodically clean up expired nonces and old idempotency keys.
+ */
+function goals_ac_cron() {
+  // Clean nonces older than 10 minutes.
+  $now = \Drupal::time()->getRequestTime();
+  Database::getConnection()->delete('goals_ac_nonces')
+    ->condition('expires_at', $now, '<=')
+    ->execute();
+
+  // Clean idempotency keys older than 48 hours (2x the 24h TTL).
+  Database::getConnection()->delete('goals_ac_idempotency_keys')
+    ->condition('created_at', $now - 172800, '<=')
+    ->execute();
+}

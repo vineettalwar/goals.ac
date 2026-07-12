@@ -9,7 +9,10 @@
     "./webflow": "./src/webflow.ts",
     "./wordpress": "./src/wordpress.ts",
     "./ghost": "./src/ghost.ts",
-    "./webhook": "./src/webhook.ts"
+    "./webhook": "./src/webhook.ts",
+    "./shopify": "./src/shopify.ts",
+    "./joomla": "./src/joomla.ts",
+    "./drupal": "./src/drupal.ts"
   },
   "dependencies": {
     "@workspace/security": "workspace:*",

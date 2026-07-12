@@ -1,0 +1,39 @@
+goals_ac.health:
+  path: '/goals-ac/health'
+  defaults:
+    _controller: '\GoalsAC\Drupal\Controller\GoalsAcController::health'
+  requirements:
+    _permission: 'access goals_ac health'
+  methods: [GET]
+
+goals_ac.site_graph:
+  path: '/goals-ac/site-graph'
+  defaults:
+    _controller: '\GoalsAC\Drupal\Controller\GoalsAcController::siteGraph'
+  requirements:
+    _permission: 'access goals_ac endpoints'
+  methods: [GET]
+
+goals_ac.content:
+  path: '/goals-ac/content'
+  defaults:
+    _controller: '\GoalsAC\Drupal\Controller\GoalsAcController::content'
+  requirements:
+    _permission: 'access goals_ac endpoints'
+  methods: [POST]
+
+goals_ac.schema:
+  path: '/goals-ac/schema'
+  defaults:
+    _controller: '\GoalsAC\Drupal\Controller\GoalsAcController::schema'
+  requirements:
+    _permission: 'access goals_ac endpoints'
+  methods: [POST]
+
+goals_ac.settings:
+  path: '/admin/config/system/goals-ac'
+  defaults:
+    _form: '\GoalsAC\Drupal\Form\SettingsForm'
+    _title: 'goals.ac Settings'
+  requirements:
+    _permission: 'administer goals_ac'

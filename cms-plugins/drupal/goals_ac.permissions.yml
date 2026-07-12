@@ -1,0 +1,14 @@
+access goals_ac health:
+  title: 'Access goals.ac health endpoint'
+  description: 'Allows access to the public health check endpoint.'
+  restrict access: false
+
+access goals_ac endpoints:
+  title: 'Access goals.ac authenticated endpoints'
+  description: 'Allows access to the site graph, content, and schema endpoints via HMAC authentication.'
+  restrict access: true
+
+administer goals_ac:
+  title: 'Administer goals.ac settings'
+  description: 'Configure site key, content types, and schema injection settings.'
+  restrict access: true

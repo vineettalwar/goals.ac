@@ -7,12 +7,51 @@ import * as z from "zod";
 import { SEO } from "@/components/seo";
 import { Layout } from "@/components/layout";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useListIndustries, useListLocations, GenerateRoadmapRequestStage } from "@workspace/api-client-react";
-import { Loader2, Target, Pencil, LayoutGrid, Bookmark, GitBranch, CheckCircle2, Circle, KeyRound, Key, Search, BarChart3, MessageSquare, Sparkles, ArrowRight, Lock } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+  useListIndustries,
+  useListLocations,
+  GenerateRoadmapRequestStage,
+} from "@workspace/api-client-react";
+import {
+  Loader2,
+  Target,
+  Pencil,
+  LayoutGrid,
+  Bookmark,
+  GitBranch,
+  CheckCircle2,
+  Circle,
+  KeyRound,
+  Key,
+  Search,
+  BarChart3,
+  MessageSquare,
+  Sparkles,
+  ArrowRight,
+  Lock,
+} from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/auth";
 
@@ -29,7 +68,7 @@ const PHASE_LABELS: Record<GenerationPhase, string> = {
 
 const stageValues = Object.values(GenerateRoadmapRequestStage) as [
   GenerateRoadmapRequestStage,
-  ...GenerateRoadmapRequestStage[]
+  ...GenerateRoadmapRequestStage[],
 ];
 
 const formSchema = z.object({
@@ -45,18 +84,26 @@ type FormValues = z.infer<typeof formSchema>;
 export default function Home() {
   const navigate = useNavigate();
   const { user, token } = useAuth();
-  const { data: industries, isLoading: isLoadingIndustries } = useListIndustries();
+  const { data: industries, isLoading: isLoadingIndustries } =
+    useListIndustries();
   const { data: locations, isLoading: isLoadingLocations } = useListLocations();
 
   const [isPending, setIsPending] = useState(false);
-  const [completedPhases, setCompletedPhases] = useState<Set<GenerationPhase>>(new Set());
+  const [completedPhases, setCompletedPhases] = useState<Set<GenerationPhase>>(
+    new Set(),
+  );
   const [generationError, setGenerationError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const [cmsSummary, setCmsSummary] = useState<{ notion: boolean; webflow: boolean } | null>(null);
+  const [cmsSummary, setCmsSummary] = useState<{
+    notion: boolean;
+    webflow: boolean;
+  } | null>(null);
 
   useEffect(() => {
     if (!token) return;
-    fetch(`${API_BASE}/api/user/cms-summary`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${API_BASE}/api/user/cms-summary`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then((r) => r.json())
       .then((d: { notion: boolean; webflow: boolean }) => setCmsSummary(d))
       .catch(() => {});
@@ -67,7 +114,7 @@ export default function Home() {
     defaultValues: {
       industry: "",
       location: "",
-      stage: stageValues.length > 0 ? stageValues[0] : "",
+      stage: stageValues[0],
     },
   });
 
@@ -86,12 +133,18 @@ export default function Home() {
       const response = await fetch(`${API_BASE}/api/roadmaps/generate/stream`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...authHeaders },
-        body: JSON.stringify({ industry: data.industry, location: data.location, stage: data.stage }),
+        body: JSON.stringify({
+          industry: data.industry,
+          location: data.location,
+          stage: data.stage,
+        }),
         signal: ac.signal,
       });
 
       if (!response.ok || !response.body) {
-        const errJson = await response.json().catch(() => ({ error: "Generation failed" }));
+        const errJson = await response
+          .json()
+          .catch(() => ({ error: "Generation failed" }));
         setGenerationError(errJson.error ?? "Generation failed");
         setIsPending(false);
         return;
@@ -120,7 +173,10 @@ export default function Home() {
 
           if (eventType === "summary") {
             setCompletedPhases((prev) => new Set([...prev, "summary"]));
-          } else if (eventType === "phase" && typeof payload.phaseIndex === "number") {
+          } else if (
+            eventType === "phase" &&
+            typeof payload.phaseIndex === "number"
+          ) {
             const key = `phase${payload.phaseIndex}` as GenerationPhase;
             setCompletedPhases((prev) => new Set([...prev, key]));
           } else if (eventType === "cached" || eventType === "done") {
@@ -189,7 +245,9 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.18, ease: "easeOut" }}
               className="text-xl md:text-2xl text-zinc-400 mb-10 max-w-3xl mx-auto leading-relaxed"
             >
-              goals.ac generates brand-aligned SEO articles, GEO-optimized content, and growth playbooks — tailored to your industry, stage, and audience. Ship content that ranks, every week.
+              goals.ac generates brand-aligned SEO articles, GEO-optimized
+              content, and growth playbooks — tailored to your industry, stage,
+              and audience. Ship content that ranks, every week.
             </motion.p>
 
             <motion.p
@@ -209,36 +267,137 @@ export default function Home() {
             <motion.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.55, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
+              transition={{
+                duration: 0.55,
+                delay: 0.15,
+                ease: [0.25, 0.1, 0.25, 1],
+              }}
             >
-            <Card className="border-border glass-card overflow-hidden">
-              <CardContent className="p-8 md:p-12">
-                <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mb-3 uppercase tracking-wide">
-                  Free starter tool
-                </div>
-                <h2 className="text-2xl font-bold tracking-tight mb-2">Generate your 2026 Growth Roadmap</h2>
-                <p className="text-muted-foreground text-sm mb-8">A taste of what goals.ac can do — instant, no sign-up. Unlock the full content engine after.</p>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                    <div className="grid gap-6 md:grid-cols-2">
+              <Card className="border-border glass-card overflow-hidden">
+                <CardContent className="p-8 md:p-12">
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 mb-3 uppercase tracking-wide">
+                    Free starter tool
+                  </div>
+                  <h2 className="text-2xl font-bold tracking-tight mb-2">
+                    Generate your 2026 Growth Roadmap
+                  </h2>
+                  <p className="text-muted-foreground text-sm mb-8">
+                    A taste of what goals.ac can do — instant, no sign-up.
+                    Unlock the full content engine after.
+                  </p>
+                  <Form {...form}>
+                    <form
+                      onSubmit={form.handleSubmit(onSubmit)}
+                      className="space-y-8"
+                    >
+                      <div className="grid gap-6 md:grid-cols-2">
+                        <FormField
+                          control={form.control}
+                          name="industry"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm font-semibold">
+                                Industry
+                              </FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                disabled={isLoadingIndustries}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-11 text-sm">
+                                    <SelectValue
+                                      placeholder={
+                                        isLoadingIndustries
+                                          ? "Loading..."
+                                          : "Select industry"
+                                      }
+                                    />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {(Array.isArray(industries)
+                                    ? industries
+                                    : []
+                                  ).map((ind) => (
+                                    <SelectItem key={ind.id} value={ind.name}>
+                                      {ind.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="location"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-sm font-semibold">
+                                Location
+                              </FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                                disabled={isLoadingLocations}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="h-11 text-sm">
+                                    <SelectValue
+                                      placeholder={
+                                        isLoadingLocations
+                                          ? "Loading..."
+                                          : "Select location"
+                                      }
+                                    />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {(Array.isArray(locations)
+                                    ? locations
+                                    : []
+                                  ).map((loc) => (
+                                    <SelectItem key={loc.id} value={loc.name}>
+                                      {loc.name}, {loc.country}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
                       <FormField
                         control={form.control}
-                        name="industry"
+                        name="stage"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-sm font-semibold">Industry</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingIndustries}>
+                            <FormLabel className="text-sm font-semibold">
+                              Company Stage
+                            </FormLabel>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                            >
                               <FormControl>
                                 <SelectTrigger className="h-11 text-sm">
-                                  <SelectValue placeholder={isLoadingIndustries ? "Loading..." : "Select industry"} />
+                                  <SelectValue placeholder="Select current funding stage" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-{(Array.isArray(industries) ? industries : []).map((ind) => (
-                                   <SelectItem key={ind.id} value={ind.name}>
-                                     {ind.name}
-                                   </SelectItem>
-                                 ))}
+                                {stages.map((stage) => (
+                                  <SelectItem
+                                    key={stage.value}
+                                    value={stage.value}
+                                  >
+                                    {stage.label}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -246,109 +405,77 @@ export default function Home() {
                         )}
                       />
 
-                      <FormField
-                        control={form.control}
-                        name="location"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-sm font-semibold">Location</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingLocations}>
-                              <FormControl>
-                                <SelectTrigger className="h-11 text-sm">
-                                  <SelectValue placeholder={isLoadingLocations ? "Loading..." : "Select location"} />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-{(Array.isArray(locations) ? locations : []).map((loc) => (
-                                   <SelectItem key={loc.id} value={loc.name}>
-                                     {loc.name}, {loc.country}
-                                   </SelectItem>
-                                 ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <FormField
-                      control={form.control}
-                      name="stage"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-sm font-semibold">Company Stage</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger className="h-11 text-sm">
-                                <SelectValue placeholder="Select current funding stage" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {stages.map((stage) => (
-                                <SelectItem key={stage.value} value={stage.value}>
-                                  {stage.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <div className="pt-2 space-y-4">
-                      <Button
-                        type="submit"
-                        size="lg"
-                        className="w-full h-12 text-base font-semibold glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
-                        disabled={isPending || isLoadingIndustries || isLoadingLocations}
-                      >
-                        {isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Generating roadmap…
-                            {user?.hasGeminiKey && (
-                              <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium">
-                                <KeyRound className="h-3 w-3" />
-                                Using your API key
-                              </span>
-                            )}
-                          </>
-                        ) : (
-                          "Generate Growth Strategy →"
-                        )}
-                      </Button>
-
-                      {isPending && (
-                        <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 space-y-2">
-                          <p className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase tracking-wide mb-2">Generating in parallel…</p>
-                          {(Object.keys(PHASE_LABELS) as GenerationPhase[]).map((key) => {
-                            const done = completedPhases.has(key);
-                            return (
-                              <div key={key} className="flex items-center gap-2 text-sm">
-                                {done ? (
-                                  <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                                ) : (
-                                  <Circle className="h-4 w-4 text-muted-foreground shrink-0 animate-pulse" />
-                                )}
-                                <span className={done ? "text-foreground" : "text-muted-foreground"}>
-                                  {PHASE_LABELS[key]}
+                      <div className="pt-2 space-y-4">
+                        <Button
+                          type="submit"
+                          size="lg"
+                          className="w-full h-12 text-base font-semibold glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
+                          disabled={
+                            isPending ||
+                            isLoadingIndustries ||
+                            isLoadingLocations
+                          }
+                        >
+                          {isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                              Generating roadmap…
+                              {user?.hasGeminiKey && (
+                                <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-xs font-medium">
+                                  <KeyRound className="h-3 w-3" />
+                                  Using your API key
                                 </span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      )}
+                              )}
+                            </>
+                          ) : (
+                            "Generate Growth Strategy →"
+                          )}
+                        </Button>
 
-                      {generationError && (
-                        <p className="text-sm text-red-600 dark:text-red-400 text-center">{generationError}</p>
-                      )}
-                    </div>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
+                        {isPending && (
+                          <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 space-y-2">
+                            <p className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase tracking-wide mb-2">
+                              Generating in parallel…
+                            </p>
+                            {(
+                              Object.keys(PHASE_LABELS) as GenerationPhase[]
+                            ).map((key) => {
+                              const done = completedPhases.has(key);
+                              return (
+                                <div
+                                  key={key}
+                                  className="flex items-center gap-2 text-sm"
+                                >
+                                  {done ? (
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                  ) : (
+                                    <Circle className="h-4 w-4 text-muted-foreground shrink-0 animate-pulse" />
+                                  )}
+                                  <span
+                                    className={
+                                      done
+                                        ? "text-foreground"
+                                        : "text-muted-foreground"
+                                    }
+                                  >
+                                    {PHASE_LABELS[key]}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {generationError && (
+                          <p className="text-sm text-red-600 dark:text-red-400 text-center">
+                            {generationError}
+                          </p>
+                        )}
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
             </motion.div>
           </div>
         </section>
@@ -360,9 +487,13 @@ export default function Home() {
               <div className="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-4">
                 Platform Features
               </div>
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">An AI content engine, not just a tool.</h2>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+                An AI content engine, not just a tool.
+              </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Generate, optimize, and publish content that ranks in Google and gets cited by AI. Plus the strategy tools to know what to write next.
+                Generate, optimize, and publish content that ranks in Google and
+                gets cited by AI. Plus the strategy tools to know what to write
+                next.
               </p>
             </div>
 
@@ -371,28 +502,46 @@ export default function Home() {
               {/* Card 1: Branded SEO Content */}
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-bold text-foreground">Branded SEO Content</h3>
+                  <h3 className="text-lg font-bold text-foreground">
+                    Branded SEO Content
+                  </h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-3 border-blue-400/20">
                     <Pencil className="h-4 w-4 text-blue-400" />
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">Generates brand-aligned articles optimized for search and AI visibility. Structured to rank, attract traffic, and build authority.</p>
+                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                  Generates brand-aligned articles optimized for search and AI
+                  visibility. Structured to rank, attract traffic, and build
+                  authority.
+                </p>
                 <div className="mt-auto glass-inner p-4">
                   <div className="space-y-2.5">
-                    {["Introduction", "Key Insights", "Implementation", "Conclusion"].map((section, i) => (
+                    {[
+                      "Introduction",
+                      "Key Insights",
+                      "Implementation",
+                      "Conclusion",
+                    ].map((section, i) => (
                       <div key={i} className="flex items-center gap-3">
                         <div className="w-1.5 h-1.5 rounded-full bg-blue-400/70 flex-shrink-0" />
-                        <div className="h-1.5 rounded bg-white/10 flex-grow" style={{ width: `${70 + i * 5}%` }} />
+                        <div
+                          className="h-1.5 rounded bg-white/10 flex-grow"
+                          style={{ width: `${70 + i * 5}%` }}
+                        />
                         <span className="text-xs text-zinc-500">{section}</span>
                       </div>
                     ))}
                   </div>
                   <div className="mt-4 pt-3 border-t border-white/[0.06] flex items-center gap-2">
-                    <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">SEO Score</div>
+                    <div className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                      SEO Score
+                    </div>
                     <div className="flex-1 h-1.5 rounded bg-white/10">
                       <div className="h-full w-4/5 rounded bg-gradient-to-r from-blue-500 to-blue-600" />
                     </div>
-                    <span className="text-xs text-zinc-400 font-mono">94/100</span>
+                    <span className="text-xs text-zinc-400 font-mono">
+                      94/100
+                    </span>
                   </div>
                 </div>
               </div>
@@ -400,17 +549,33 @@ export default function Home() {
               {/* Card 2: 30-Day Content Strategy */}
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-bold text-foreground">30-Day Content Strategy</h3>
+                  <h3 className="text-lg font-bold text-foreground">
+                    30-Day Content Strategy
+                  </h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-3 border-blue-400/20">
                     <LayoutGrid className="h-4 w-4 text-blue-400" />
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">Plans a full month of content based on ranking and citation trends. Topics and formats chosen to maximize discoverability.</p>
+                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                  Plans a full month of content based on ranking and citation
+                  trends. Topics and formats chosen to maximize discoverability.
+                </p>
                 <div className="mt-auto glass-inner p-4">
-                  <div className="text-xs text-zinc-500 mb-3 font-semibold tracking-wide uppercase">AI Tool Coverage</div>
+                  <div className="text-xs text-zinc-500 mb-3 font-semibold tracking-wide uppercase">
+                    AI Tool Coverage
+                  </div>
                   <div className="flex flex-wrap gap-2 mb-4">
-                    {["ChatGPT", "Google AI", "Claude", "Perplexity", "Gemini"].map((tool) => (
-                      <span key={tool} className="inline-flex items-center rounded-full bg-muted border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+                    {[
+                      "ChatGPT",
+                      "Google AI",
+                      "Claude",
+                      "Perplexity",
+                      "Gemini",
+                    ].map((tool) => (
+                      <span
+                        key={tool}
+                        className="inline-flex items-center rounded-full bg-muted border border-border px-2.5 py-0.5 text-xs font-medium text-muted-foreground"
+                      >
                         {tool}
                       </span>
                     ))}
@@ -438,31 +603,56 @@ export default function Home() {
               {/* Card 3: Automated Publishing */}
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-base font-bold text-foreground">Automated Publishing</h3>
+                  <h3 className="text-base font-bold text-foreground">
+                    Automated Publishing
+                  </h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-2 border-emerald-400/20">
                     <Bookmark className="h-4 w-4 text-emerald-400" />
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-5 leading-relaxed">Publishes content directly to your CMS across platforms without manual workflows.</p>
+                <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
+                  Publishes content directly to your CMS across platforms
+                  without manual workflows.
+                </p>
                 <div className="mt-auto glass-inner p-3">
                   <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">
                     {cmsSummary ? "Connected Platforms" : "Supported Platforms"}
                   </div>
                   <div className="space-y-2">
                     {[
-                      { name: "WordPress", color: "bg-blue-400", connected: cmsSummary ? true : false },
-                      { name: "Notion", color: "bg-zinc-400", connected: cmsSummary ? cmsSummary.notion : false },
-                      { name: "Webflow", color: "bg-purple-400", connected: cmsSummary ? cmsSummary.webflow : false },
+                      {
+                        name: "WordPress",
+                        color: "bg-blue-400",
+                        connected: cmsSummary ? true : false,
+                      },
+                      {
+                        name: "Notion",
+                        color: "bg-zinc-400",
+                        connected: cmsSummary ? cmsSummary.notion : false,
+                      },
+                      {
+                        name: "Webflow",
+                        color: "bg-purple-400",
+                        connected: cmsSummary ? cmsSummary.webflow : false,
+                      },
                     ].map((cms) => (
                       <div key={cms.name} className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${cms.color} flex-shrink-0`} />
-                        <span className="text-xs text-muted-foreground">{cms.name}</span>
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full ${cms.color} flex-shrink-0`}
+                        />
+                        <span className="text-xs text-muted-foreground">
+                          {cms.name}
+                        </span>
                         {cmsSummary ? (
-                          <span className={`ml-auto text-xs font-medium ${cms.connected ? "text-emerald-400" : "text-zinc-500"}`}>
+                          <span
+                            className={`ml-auto text-xs font-medium ${cms.connected ? "text-emerald-400" : "text-zinc-500"}`}
+                          >
                             {cms.connected ? "Connected" : "Not connected"}
                           </span>
                         ) : (
-                          <span className="ml-auto text-xs text-zinc-500 font-medium">Available</span>
+                          <span className="ml-auto text-xs text-zinc-500 font-medium">
+                            Available
+                          </span>
                         )}
                       </div>
                     ))}
@@ -473,20 +663,36 @@ export default function Home() {
               {/* Card 4: Multi-CMS Publishing */}
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-base font-bold text-foreground">Multi-CMS Publishing</h3>
+                  <h3 className="text-base font-bold text-foreground">
+                    Multi-CMS Publishing
+                  </h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-2 border-amber-400/20">
                     <GitBranch className="h-4 w-4 text-amber-400" />
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-5 leading-relaxed">Connect Notion and Webflow to publish directly from your Content Studio — no copy-pasting.</p>
+                <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
+                  Connect Notion and Webflow to publish directly from your
+                  Content Studio — no copy-pasting.
+                </p>
                 <div className="mt-auto glass-inner p-3">
-                  <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">One-click publish to</div>
+                  <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">
+                    One-click publish to
+                  </div>
                   <div className="space-y-2">
-                    {[{ label: "Notion Databases", pct: 100 }, { label: "Webflow CMS", pct: 100 }, { label: "WordPress REST", pct: 100 }].map((row) => (
+                    {[
+                      { label: "Notion Databases", pct: 100 },
+                      { label: "Webflow CMS", pct: 100 },
+                      { label: "WordPress REST", pct: 100 },
+                    ].map((row) => (
                       <div key={row.label} className="flex items-center gap-2">
-                        <span className="text-xs text-zinc-500 w-28">{row.label}</span>
+                        <span className="text-xs text-zinc-500 w-28">
+                          {row.label}
+                        </span>
                         <div className="flex-1 h-1.5 rounded bg-white/10">
-                          <div className="h-full rounded bg-gradient-to-r from-amber-500/60 to-amber-400/60" style={{ width: `${row.pct}%` }} />
+                          <div
+                            className="h-full rounded bg-gradient-to-r from-amber-500/60 to-amber-400/60"
+                            style={{ width: `${row.pct}%` }}
+                          />
                         </div>
                       </div>
                     ))}
@@ -497,25 +703,40 @@ export default function Home() {
               {/* Card 5: Technical GEO Audit */}
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-base font-bold text-foreground">Technical GEO Audit</h3>
+                  <h3 className="text-base font-bold text-foreground">
+                    Technical GEO Audit
+                  </h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-2 border-sky-400/20">
                     <Key className="h-4 w-4 text-sky-400" />
                   </div>
                 </div>
-                <p className="text-sm text-muted-foreground mb-5 leading-relaxed">Scans your site for technical gaps in schema, metadata, and structure impacting AI rankings.</p>
+                <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
+                  Scans your site for technical gaps in schema, metadata, and
+                  structure impacting AI rankings.
+                </p>
                 <div className="mt-auto glass-inner p-3">
-                  <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">GEO Score</div>
+                  <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">
+                    GEO Score
+                  </div>
                   <div className="space-y-2">
-                    {[{ label: "Schema", score: 92 }, { label: "Metadata", score: 78 }, { label: "Structure", score: 85 }].map((item) => (
+                    {[
+                      { label: "Schema", score: 92 },
+                      { label: "Metadata", score: 78 },
+                      { label: "Structure", score: 85 },
+                    ].map((item) => (
                       <div key={item.label} className="flex items-center gap-2">
-                        <span className="text-xs text-zinc-500 w-16">{item.label}</span>
+                        <span className="text-xs text-zinc-500 w-16">
+                          {item.label}
+                        </span>
                         <div className="flex-1 h-1.5 rounded bg-white/10">
                           <div
                             className={`h-full rounded ${item.score >= 85 ? "bg-emerald-400/70" : "bg-amber-400/70"}`}
                             style={{ width: `${item.score}%` }}
                           />
                         </div>
-                        <span className="text-xs text-zinc-500 font-mono">{item.score}</span>
+                        <span className="text-xs text-zinc-500 font-mono">
+                          {item.score}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -532,9 +753,12 @@ export default function Home() {
               <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/[0.08] px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-4">
                 How it works
               </div>
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">From zero to published content in days, not months.</h2>
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
+                From zero to published content in days, not months.
+              </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                No agency retainers. No 6-month content plans. Just AI-generated, brand-aligned content that ships continuously.
+                No agency retainers. No 6-month content plans. Just
+                AI-generated, brand-aligned content that ships continuously.
               </p>
             </div>
 
@@ -558,9 +782,13 @@ export default function Home() {
               ].map((item, i) => (
                 <div key={item.step} className="relative">
                   <div className="rounded-2xl border border-border bg-card p-6 h-full">
-                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-3">{item.step}</div>
+                    <div className="text-3xl font-bold text-blue-600 dark:text-blue-400 mb-3">
+                      {item.step}
+                    </div>
                     <h3 className="text-lg font-bold mb-2">{item.title}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {item.desc}
+                    </p>
                   </div>
                   {i < 2 && (
                     <div className="hidden md:block absolute top-1/2 -right-3 -translate-y-1/2 text-muted-foreground/30">
@@ -577,8 +805,12 @@ export default function Home() {
         <section className="py-24 bg-background border-t border-border">
           <div className="container mx-auto px-4 md:px-8 max-w-3xl">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Common questions</h2>
-              <p className="text-lg text-muted-foreground">Everything you need to know before starting.</p>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+                Common questions
+              </h2>
+              <p className="text-lg text-muted-foreground">
+                Everything you need to know before starting.
+              </p>
             </div>
             <Accordion type="single" collapsible className="w-full space-y-3">
               {[
@@ -631,9 +863,13 @@ export default function Home() {
                 <Sparkles className="h-3 w-3" />
                 Free with signup
               </div>
-              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">Unlock the full growth stack.</h2>
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
+                Unlock the full growth stack.
+              </h2>
               <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
-                Create a free account to access AI-powered competitor intelligence, keyword tracking, and your personal growth dashboard.
+                Create a free account to access AI-powered competitor
+                intelligence, keyword tracking, and your personal growth
+                dashboard.
               </p>
             </div>
 
@@ -661,27 +897,45 @@ export default function Home() {
                   border: "border-blue-400/20",
                 },
               ].map((feat) => (
-                <div key={feat.title} className={`rounded-2xl glass-card p-6 flex flex-col card-hover-glow relative ${feat.border}`}>
+                <div
+                  key={feat.title}
+                  className={`rounded-2xl glass-card p-6 flex flex-col card-hover-glow relative ${feat.border}`}
+                >
                   <div className="absolute top-4 right-4">
                     <Lock className="h-3.5 w-3.5 text-zinc-500" />
                   </div>
-                  <div className={`rounded-xl glass-card-md w-10 h-10 flex items-center justify-center mb-4 ${feat.border}`}>
+                  <div
+                    className={`rounded-xl glass-card-md w-10 h-10 flex items-center justify-center mb-4 ${feat.border}`}
+                  >
                     <feat.icon className={`h-5 w-5 ${feat.color}`} />
                   </div>
-                  <h3 className="text-lg font-bold text-foreground mb-2">{feat.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{feat.desc}</p>
+                  <h3 className="text-lg font-bold text-foreground mb-2">
+                    {feat.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {feat.desc}
+                  </p>
                 </div>
               ))}
             </div>
 
             {!user && (
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Button asChild size="lg" className="h-12 px-8 text-base font-semibold glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white">
+                <Button
+                  asChild
+                  size="lg"
+                  className="h-12 px-8 text-base font-semibold glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
+                >
                   <Link to="/signup">
                     Create free account <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
-                <Button asChild variant="outline" size="lg" className="h-12 px-8 text-base font-semibold border-white/15 bg-white/[0.04] text-zinc-100 hover:bg-white/[0.08] hover:text-white">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="lg"
+                  className="h-12 px-8 text-base font-semibold border-white/15 bg-white/[0.04] text-zinc-100 hover:bg-white/[0.08] hover:text-white"
+                >
                   <Link to="/login">Sign in</Link>
                 </Button>
               </div>
@@ -707,23 +961,32 @@ export default function Home() {
                   Stop guessing your next move.
                 </h2>
                 <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-                  Join hundreds of founders building data-driven growth engines instead of running on gut feel.
-                  Free forever for the core platform.
+                  Join hundreds of founders building data-driven growth engines
+                  instead of running on gut feel. Free forever for the core
+                  platform.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <Button asChild size="lg" className="h-12 px-8 text-base font-semibold glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white">
+                  <Button
+                    asChild
+                    size="lg"
+                    className="h-12 px-8 text-base font-semibold glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
+                  >
                     <Link to="/signup">
                       Start for free <ArrowRight className="ml-2 h-4 w-4" />
                     </Link>
                   </Button>
-                  <Button asChild variant="ghost" size="lg" className="h-12 px-8 text-base font-semibold">
-                    <Link to="/geo-audit">
-                      Or run a free GEO audit →
-                    </Link>
+                  <Button
+                    asChild
+                    variant="ghost"
+                    size="lg"
+                    className="h-12 px-8 text-base font-semibold"
+                  >
+                    <Link to="/geo-audit">Or run a free GEO audit →</Link>
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-6">
-                  No credit card required · Build a roadmap or audit before you sign up
+                  No credit card required · Build a roadmap or audit before you
+                  sign up
                 </p>
               </motion.div>
             </div>

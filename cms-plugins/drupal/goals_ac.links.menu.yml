@@ -1,0 +1,6 @@
+goals_ac.settings:
+  title: 'goals.ac Settings'
+  description: 'Configure the goals.ac integration: site key, content types, and schema injection.'
+  route_name: goals_ac.settings
+  parent: system.admin_config_system
+  weight: 100
