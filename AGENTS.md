@@ -150,7 +150,9 @@ pnpm --filter @workspace/goals-ac run dev                          # Product :51
 
 1. Schema changes: edit `lib/db/src/schema/`, run `pnpm --filter @workspace/db run generate`, review SQL, run `pnpm --filter @workspace/db run migrate`, then `cd lib/db && npx tsc --build` to refresh types
 2. API spec changes: edit `lib/api-spec/openapi.yaml`, run `pnpm --filter @workspace/api-spec run codegen`
-3. Always run `pnpm run typecheck` before pushing
+3. Always run `pnpm run typecheck` locally before pushing
+
+**No GitHub CI** — this repo does not use GitHub Actions. Do not add `.github/workflows/`, CI pipelines, or GitHub Actions config unless the user explicitly asks. Validate changes locally (`pnpm run typecheck`, package builds, `docker compose config`) instead.
 
 ## Env Variables
 
