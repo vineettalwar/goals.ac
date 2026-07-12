@@ -11,6 +11,10 @@ export const usersTable = pgTable("users", {
   role: text("role").notNull().default("user"),
   avatarUrl: text("avatar_url"),
   encryptedGeminiKey: text("encrypted_gemini_key"),
+  /** gemini | bedrock | ollama — in-app preference; env AI_PROVIDER is fallback */
+  aiProvider: text("ai_provider"),
+  ollamaBaseUrl: text("ollama_base_url"),
+  ollamaModel: text("ollama_model"),
   // starter | growth | scale
   plan: text("plan").notNull().default("starter"),
   passwordResetToken: text("password_reset_token"),

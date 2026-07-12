@@ -22,6 +22,11 @@ export async function runMigrations(migrationsFolder: string = defaultMigrations
     console.log("Running migrations...");
     await migrate(db, { migrationsFolder });
     console.log("Migrations complete.");
+
+    const { seedReferenceData } = await import("./seed-reference-data.js");
+    console.log("Seeding reference data (industries, locations)...");
+    await seedReferenceData();
+    console.log("Reference data seed complete.");
   } finally {
     await pool.end();
   }
