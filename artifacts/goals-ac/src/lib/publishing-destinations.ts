@@ -438,24 +438,6 @@ export function getConnectionSummary(
       const webhook = record as { url?: string };
       return webhook.url ?? null;
     }
-    case "shopify": {
-      const shopify = record as {
-        connectionType?: string;
-        siteUrl?: string;
-        shopDomain?: string;
-      };
-      const method = resolveStoredConnectionMethod("shopify", shopify);
-      const modeLabel = getConnectionMethodLabel("shopify", method);
-      const site = shopify.siteUrl ?? shopify.shopDomain;
-      return site ? `${modeLabel}: ${site}` : null;
-    }
-    case "drupal":
-    case "joomla": {
-      const cms = record as { connectionType?: string; siteUrl?: string };
-      const method = resolveStoredConnectionMethod(destinationId, cms);
-      const modeLabel = getConnectionMethodLabel(destinationId, method);
-      return cms.siteUrl ? `${modeLabel}: ${cms.siteUrl}` : null;
-    }
     case "linkedin": {
       const linkedin = record as { displayName?: string };
       return linkedin.displayName ?? "Connected account";
