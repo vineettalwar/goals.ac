@@ -34,6 +34,9 @@
       "path": "./lib/seo-tools"
     },
     {
+      "path": "./lib/content-engine"
+    },
+    {
       "path": "./lib/serp-provider"
     }
   ]

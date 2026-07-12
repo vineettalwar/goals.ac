@@ -4,7 +4,7 @@ Step-by-step instructions for running the full goals.ac stack outside of Replit.
 
 ## Quick Start (Docker Compose) — Recommended
 
-The fastest way to get the full stack running. No manual Postgres setup or environment configuration required.
+The fastest way to get the stack running. No manual Postgres setup or environment configuration required.
 
 **Prerequisites:** [Docker](https://docs.docker.com/get-docker/) with the Compose plugin (included in Docker Desktop).
 
@@ -14,15 +14,28 @@ cd goals.ac
 docker compose up --build
 ```
 
-This starts three services:
+This starts the **default** services:
 
 | Service | URL | Description |
 |---|---|---|
-| Frontend | <http://localhost:5173> | Vite dev server (goals-ac) |
-| API | <http://localhost:8080/api> | Express API server |
-| Postgres | localhost:5432 | PostgreSQL 17 (`goalsac` database) |
+| **Next.js app** | <http://localhost:3001> | Canonical product app (`marketing-persona-app`) |
+| **Worker** | — | pg-boss background job consumer |
+| **Postgres** | localhost:5432 | PostgreSQL 17 (`goalsac` database) |
 
-The API server runs database migrations automatically on startup. Open <http://localhost:5173> once all three services are healthy.
+Open <http://localhost:3001> once the app container is healthy.
+
+### Legacy stack (optional)
+
+The old Vite frontend and Express API are still in the repo for debugging but are **not** started by default:
+
+```sh
+docker compose --profile legacy up --build
+```
+
+| Service | URL | Description |
+|---|---|---|
+| Legacy Vite | <http://localhost:5173> | Redirect shell → Next.js |
+| Legacy API | <http://localhost:8080/api> | Express REST (routes ported to Next) |
 
 **Optional env vars** — create a `.env` file in the repo root to add keys for AI generation, Google OAuth, or email:
 
@@ -31,7 +44,7 @@ cp .env.example .env
 # Edit .env and fill in GEMINI_API_KEY, GOOGLE_CLIENT_ID, etc.
 ```
 
-The `DATABASE_URL`, `JWT_SECRET`, and `GEMINI_KEY_ENCRYPTION_SECRET` are pre-configured with safe development defaults in `docker-compose.yml`; you only need to override them if you want custom values.
+The `DATABASE_URL`, `AUTH_SECRET`, `NEXTAUTH_URL`, and `GEMINI_KEY_ENCRYPTION_SECRET` are pre-configured with safe development defaults in `docker-compose.yml`; you only need to override them if you want custom values.
 
 To stop and remove containers:
 ```sh
@@ -105,7 +118,8 @@ Edit `.env`:
 ```env
 # Required
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/goalsac
-JWT_SECRET=your-random-32-char-secret-here
+AUTH_SECRET=your-random-32-char-secret-here
+NEXTAUTH_URL=http://localhost:3001
 GEMINI_KEY_ENCRYPTION_SECRET=another-random-32-char-secret
 
 # Optional — AI generation
@@ -120,6 +134,9 @@ RESEND_API_KEY=re_your_key_here
 
 # Optional — Redis caching
 REDIS_URL=redis://localhost:6379
+
+# Legacy Express only (if you still run api-server manually)
+JWT_SECRET=your-random-32-char-secret-here
 ```
 
 To generate a secure random secret:
@@ -133,7 +150,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 pnpm --filter @workspace/db run migrate
 ```
 
-This creates all tables. On first run it will apply all 20 migrations (0000–0019).
+This creates all tables. On first run it will apply all migrations.
 
 ### 6. Seed Reference Data (Optional)
 
@@ -143,54 +160,39 @@ pnpm --filter @workspace/db run seed
 
 Seeds industries and locations. Skip this if you're connecting to an existing database.
 
-### 7. Start the API Server
+### 7. Start the Next.js App (canonical)
 
 In one terminal:
 
 ```sh
-PORT=8080 pnpm --filter @workspace/api-server run dev
+pnpm --filter @workspace/marketing-persona-app run dev
 ```
 
-The API server will be available at `http://localhost:8080/api`.
+The app will be available at `http://localhost:3001`.
 
-Verify it's running:
-```sh
-curl http://localhost:8080/api/healthz
-# → {"status":"ok"}
-```
-
-### 8. Start the Frontend
+### 8. Start the Background Worker
 
 In a second terminal:
 
 ```sh
-PORT=5173 BASE_PATH=/ pnpm --filter @workspace/goals-ac run dev
+pnpm --filter @workspace/worker run dev
 ```
 
-Open `http://localhost:5173` in your browser.
+### 9. Legacy stack (optional)
 
-**Important**: The frontend proxies `/api` requests to the API server via Vite. If the API is on a different port, update the `proxy` config in `artifacts/goals-ac/vite.config.ts`.
-
-### 9. Running Both Together (Optional)
-
-Add a root-level dev script if you want to run both simultaneously:
+Only needed for debugging the old Express/Vite artifacts:
 
 ```sh
-# In package.json root (not currently set up — run in separate terminals)
-pnpm run dev:api &
-pnpm run dev:web
-```
+# Terminal 3 — legacy API
+PORT=8080 pnpm --filter @workspace/api-server run dev
 
-Or use `concurrently`:
-```sh
-npx concurrently \
-  "PORT=8080 pnpm --filter @workspace/api-server run dev" \
-  "PORT=5173 pnpm --filter @workspace/goals-ac run dev"
+# Terminal 4 — legacy Vite (redirects to Next)
+pnpm --filter @workspace/goals-ac run dev
 ```
 
 ### 10. Verify the Setup
 
-1. Open `http://localhost:5173`
+1. Open `http://localhost:3001`
 2. Click "Sign up" and create an account
 3. Generate a roadmap — if AI is configured, it should stream back a result
 4. Navigate to the Dashboard and create a website project
@@ -203,8 +205,8 @@ The DB lib's compiled declarations are stale. Rebuild them:
 cd lib/db && npx tsc --build
 ```
 
-### `JWT_SECRET is not set`
-Make sure `.env` is in the repo root and the API server is started from the project root (or exports the env).
+### `AUTH_SECRET is not set`
+Make sure `.env` is in the repo root and includes `AUTH_SECRET` and `NEXTAUTH_URL=http://localhost:3001`.
 
 ### `GEMINI_KEY_ENCRYPTION_SECRET environment variable is not set`
 Required even if you're not using user-provided Gemini keys. Set a random 32-char string.
@@ -213,10 +215,10 @@ Required even if you're not using user-provided Gemini keys. Set a random 32-cha
 Check PostgreSQL is running: `pg_isready -h localhost -p 5432`
 
 ### Port already in use
-Change the PORT for either service. If you change the API port, update the Vite proxy config.
+Change the port for the service you're running (e.g. `PORT=3002` for Next).
 
 ### Google OAuth redirect mismatch
-Add `http://localhost:5173/auth/callback/google` (or whichever port) to your Google OAuth app's authorized redirect URIs.
+Add `http://localhost:3001/api/auth/callback/google` to your Google OAuth app's authorized redirect URIs.
 
 ## Development Workflow
 

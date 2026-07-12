@@ -124,26 +124,33 @@ Each stage is a pure function, can be executed as a pg-boss job. The canonical c
 
 ## Running Locally
 
-Two frontends share the same API and database:
+The **Next.js app** (`marketing-persona-app` on :3001) is the canonical product. Legacy Vite + Express remain available for opt-in local testing but are no longer started by default in Docker.
 
 | App | URL | Purpose |
 |---|---|---|
-| **Marketing** (`marketing-persona-app`) | http://localhost:3001 | Public site, signup, roadmaps, GEO audit, content-engine marketing |
-| **Product** (`goals-ac`) | http://localhost:5173 | Login, dashboard, projects, content studio, internal tools |
-| **API** (`api-server`) | http://localhost:8080/api | Shared REST API |
+| **Product (Next.js)** (`marketing-persona-app`) | http://localhost:3001 | Canonical app — login, dashboard, content studio, autopilot, projects |
+| **Worker** (`artifacts/worker`) | — | pg-boss background jobs (`pnpm --filter @workspace/worker run dev`) |
+| **Legacy Vite** (`goals-ac`) | http://localhost:5173 | Redirect shell to Next (opt-in) |
+| **Legacy API** (`api-server`) | http://localhost:8080/api | Express REST (opt-in; routes ported to Next) |
 
 ```sh
-# Docker (API + Vite product app only)
+# Docker — default stack (Next + Postgres + worker)
 docker compose up --build
-# Product app: http://localhost:5173, API: http://localhost:8080/api
+# Next app: http://localhost:3001
 
-# Manual — run all three for full local dev
+# Docker — include legacy Vite + Express (redirect / debugging only)
+docker compose --profile legacy up --build
+
+# Manual — canonical local dev
 pnpm install
-cp .env.example .env  # fill in values; set VITE_MARKETING_URL and NEXT_PUBLIC_APP_URL
+cp .env.example .env  # fill in values; set AUTH_SECRET and NEXTAUTH_URL for :3001
 pnpm --filter @workspace/db run migrate
-PORT=8080 pnpm --filter @workspace/api-server run dev              # API
-pnpm --filter @workspace/marketing-persona-app run dev             # Marketing :3001
-pnpm --filter @workspace/goals-ac run dev                          # Product :5173
+pnpm --filter @workspace/marketing-persona-app run dev   # Next product :3001
+pnpm --filter @workspace/worker run dev                 # Background jobs
+
+# Manual — legacy stack (optional)
+PORT=8080 pnpm --filter @workspace/api-server run dev  # Legacy Express API
+pnpm --filter @workspace/goals-ac run dev               # Legacy Vite redirect :5173
 ```
 
 ## Development Workflow
