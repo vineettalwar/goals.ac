@@ -220,9 +220,7 @@ function PublishDialog({
                   </p>
                 )}
                 <p className="text-muted-foreground text-xs mt-1">
-                  {selectedDestination.category === "social"
-                    ? "Posts to your connected social account."
-                    : "Creates a new post in your connected CMS."}
+                  {selectedDestination.description}
                 </p>
               </div>
             )}
