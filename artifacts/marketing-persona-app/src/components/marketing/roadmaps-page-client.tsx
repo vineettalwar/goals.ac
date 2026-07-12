@@ -7,6 +7,7 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { RoadmapGenerator } from "@/components/marketing/roadmap-generator";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { ROADMAPS_PAGE_REFERRER } from "@/lib/roadmap-intent";
 
 type RoadmapItem = {
   id: number;
@@ -31,11 +32,11 @@ export function RoadmapsPageClient({ roadmaps }: RoadmapsPageClientProps) {
           titleLine2="for every market"
           description="AI-generated 12-month B2B growth strategies. Free to browse, share, and build on."
           backgroundImage={HERO_IMAGES.roadmaps.hero}
-          ctas={[{ label: "Generate yours", href: "#roadmap-generator", variant: "primary" }]}
+          ctas={[{ label: "Browse roadmaps", href: "#roadmap-generator", variant: "primary" }]}
         />
       }
     >
-      <RoadmapGenerator />
+      <RoadmapGenerator referrer={ROADMAPS_PAGE_REFERRER} />
 
       <MarketingSection
         variant="paper"
@@ -50,7 +51,7 @@ export function RoadmapsPageClient({ roadmaps }: RoadmapsPageClientProps) {
             <Map className="h-10 w-10 text-muted-foreground mb-3" />
             <p className="font-medium">No roadmaps yet</p>
             <p className="text-sm text-muted-foreground mt-1">
-              Generate your first growth roadmap above
+              Browse the catalog above or sign in to generate a custom roadmap
             </p>
           </div>
         ) : (

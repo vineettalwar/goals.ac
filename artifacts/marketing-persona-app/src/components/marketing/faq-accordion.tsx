@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { EditorialHeading } from "./editorial-heading";
 
 export type FAQItem = {
   question: string;
   answer: string;
+  helpHref?: string;
 };
 
 type FAQAccordionProps = {
@@ -40,6 +42,14 @@ export function FAQAccordion({
               <p className="text-sm text-muted-foreground leading-relaxed mt-3 pb-1">
                 {faq.answer}
               </p>
+              {faq.helpHref ? (
+                <Link
+                  href={faq.helpHref}
+                  className="inline-block text-sm text-primary hover:underline mt-2 mb-1"
+                >
+                  Read setup guide →
+                </Link>
+              ) : null}
             </details>
           ))}
         </div>

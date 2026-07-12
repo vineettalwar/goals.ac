@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
-import { HomePageClient } from "@/components/marketing/home-page-client";
+import dynamic from "next/dynamic";
+
+const HomePageClient = dynamic(
+  () => import("@/components/marketing/home-page-client").then((m) => m.HomePageClient),
+  {
+    loading: () => (
+      <div className="min-h-screen animate-pulse bg-background">
+        <div className="h-[70vh] bg-secondary/30" />
+        <div className="mx-auto max-w-5xl px-6 py-16 space-y-6">
+          <div className="h-8 w-64 rounded bg-secondary/50" />
+          <div className="h-4 w-full max-w-xl rounded bg-secondary/40" />
+        </div>
+      </div>
+    ),
+  },
+);
 
 export const metadata: Metadata = {
-  title: "goals.ac — AI-powered B2B content growth engine",
+  title: "goals.ac — Rank on Google and get cited by ChatGPT",
   description:
-    "Generate custom 12-month growth roadmaps, create SEO-optimised articles tailored to your audience personas, and auto-publish to WordPress — no agency required.",
+    "AI-powered B2B content growth: 12-month roadmaps, GEO-ready articles, AI visibility tracking, and CMS publishing with editorial control.",
 };
 
 export default function HomePage() {

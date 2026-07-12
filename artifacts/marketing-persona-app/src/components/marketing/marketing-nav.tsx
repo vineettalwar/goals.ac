@@ -2,26 +2,149 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
-import { useState } from "react";
+import { ChevronDown, Menu, X } from "lucide-react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  isNavActive,
+  PRODUCT_NAV,
+  RESOURCES_NAV,
+  SOLUTIONS_NAV,
+  SOLUTION_GROUP_LABELS,
+  type NavLink,
+  type SolutionGroup,
+  type SolutionNavItem,
+} from "@/lib/site-nav";
 
-const NAV_ITEMS = [
-  { label: "Content Engine", href: "/content-engine" },
-  { label: "Features", href: "/features" },
-  { label: "Roadmaps", href: "/roadmaps" },
-  { label: "GEO Audit", href: "/geo-audit" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "About", href: "/about" },
-] as const;
+type DropdownProps = {
+  label: string;
+  children: ReactNode;
+  pathname: string;
+  activePrefixes: string[];
+};
 
-function isActive(pathname: string, href: string) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
+function NavDropdown({ label, children, pathname, activePrefixes }: DropdownProps) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const active = activePrefixes.some((prefix) => isNavActive(pathname, prefix));
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(e: PointerEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={
+          active
+            ? "px-3 py-1.5 rounded-full text-sm font-medium text-white bg-white/20 inline-flex items-center gap-1"
+            : "px-3 py-1.5 rounded-full text-sm font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors inline-flex items-center gap-1"
+        }
+        aria-expanded={open}
+      >
+        {label}
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && (
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-[240px] max-w-[320px] rounded-xl bg-white/95 backdrop-blur-md border border-white/40 shadow-xl p-2 z-200">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function DropdownLink({ item, onNavigate }: { item: NavLink; onNavigate?: () => void }) {
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      className="block rounded-lg px-3 py-2 hover:bg-black/5 transition-colors"
+    >
+      <span className="text-sm font-medium text-gray-900">{item.label}</span>
+      {item.description && (
+        <span className="block text-xs text-gray-500 mt-0.5 leading-snug">{item.description}</span>
+      )}
+    </Link>
+  );
+}
+
+function SolutionsDropdownContent({ onNavigate }: { onNavigate?: () => void }) {
+  const groups = SOLUTIONS_NAV.reduce(
+    (acc, item) => {
+      acc[item.group] ??= [];
+      acc[item.group].push(item);
+      return acc;
+    },
+    {} as Record<SolutionGroup, SolutionNavItem[]>,
+  );
+
+  return (
+    <div className="max-h-[70vh] overflow-y-auto">
+      {(Object.keys(SOLUTION_GROUP_LABELS) as SolutionGroup[]).map((group) => {
+        const items = groups[group];
+        if (!items?.length) return null;
+        return (
+          <div key={group} className="mb-1 last:mb-0">
+            <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+              {SOLUTION_GROUP_LABELS[group]}
+            </p>
+            {items.map((item) => (
+              <DropdownLink key={item.href} item={item} onNavigate={onNavigate} />
+            ))}
+          </div>
+        );
+      })}
+      <div className="border-t border-gray-100 mt-1 pt-1">
+        <DropdownLink item={{ label: "View all solutions", href: "/solutions" }} onNavigate={onNavigate} />
+      </div>
+    </div>
+  );
+}
+
+function MobileSection({
+  title,
+  items,
+  onNavigate,
+}: {
+  title: string;
+  items: NavLink[];
+  onNavigate: () => void;
+}) {
+  return (
+    <div>
+      <p className="text-xs text-white/50 uppercase tracking-wide mb-2">{title}</p>
+      <div className="flex flex-col gap-1">
+        {items.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className="text-white text-lg py-2 border-b border-white/10"
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 export function MarketingNav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const productPrefixes = PRODUCT_NAV.map((i) => i.href);
+  const solutionsPrefixes = [...SOLUTIONS_NAV.map((i) => i.href), "/solutions"];
+  const resourcesPrefixes = RESOURCES_NAV.map((i) => i.href);
 
   return (
     <>
@@ -33,30 +156,48 @@ export function MarketingNav() {
           <span className="text-white text-2xl font-playfair italic">goals.ac</span>
         </Link>
 
-        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-2 py-2 items-center gap-1">
-          {NAV_ITEMS.map(({ label, href }) => {
-            const active = isActive(pathname, href);
-            return (
-              <Link
-                key={label}
-                href={href}
-                className={
-                  active
-                    ? "px-4 py-1.5 rounded-full text-sm font-medium text-white bg-white/20"
-                    : "px-4 py-1.5 rounded-full text-sm font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors"
-                }
-              >
-                {label}
-              </Link>
-            );
-          })}
+        <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-2 py-2 items-center gap-1">
+          <NavDropdown label="Product" pathname={pathname} activePrefixes={productPrefixes}>
+            {PRODUCT_NAV.map((item) => (
+              <DropdownLink key={item.href} item={item} />
+            ))}
+          </NavDropdown>
+
+          <NavDropdown label="Solutions" pathname={pathname} activePrefixes={solutionsPrefixes}>
+            <SolutionsDropdownContent />
+          </NavDropdown>
+
+          <Link
+            href="/pricing"
+            className={
+              isNavActive(pathname, "/pricing")
+                ? "px-3 py-1.5 rounded-full text-sm font-medium text-white bg-white/20"
+                : "px-3 py-1.5 rounded-full text-sm font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+            }
+          >
+            Pricing
+          </Link>
+
+          <NavDropdown label="Resources" pathname={pathname} activePrefixes={resourcesPrefixes}>
+            {RESOURCES_NAV.map((item) => (
+              <DropdownLink key={item.href} item={item} />
+            ))}
+          </NavDropdown>
+
+          <Link
+            href="/contact"
+            className={
+              isNavActive(pathname, "/contact")
+                ? "px-3 py-1.5 rounded-full text-sm font-medium text-white bg-white/20"
+                : "px-3 py-1.5 rounded-full text-sm font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+            }
+          >
+            Contact
+          </Link>
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link
-            href="/login"
-            className="text-sm text-white/80 hover:text-white transition-colors"
-          >
+          <Link href="/login" className="text-sm text-white/80 hover:text-white transition-colors">
             Sign in
           </Link>
           <Link
@@ -69,7 +210,7 @@ export function MarketingNav() {
 
         <button
           type="button"
-          className="md:hidden text-white p-2 -mr-2"
+          className="lg:hidden text-white p-2 -mr-2"
           onClick={() => setMobileOpen((open) => !open)}
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
@@ -79,42 +220,30 @@ export function MarketingNav() {
       </nav>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-99 md:hidden">
-          <button
-            type="button"
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setMobileOpen(false)}
-            aria-label="Close menu"
-          />
-          <div className="absolute top-16 left-4 right-4 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-4 flex flex-col gap-1 font-sans">
-            {NAV_ITEMS.map(({ label, href }) => (
-              <Link
-                key={label}
-                href={href}
-                className={
-                  isActive(pathname, href)
-                    ? "px-4 py-3 rounded-xl text-sm font-medium text-white bg-white/15"
-                    : "px-4 py-3 rounded-xl text-sm font-medium text-white/90 hover:bg-white/10 hover:text-white transition-colors"
-                }
-                onClick={() => setMobileOpen(false)}
-              >
-                {label}
+        <div className="fixed inset-0 z-90 bg-black/80 backdrop-blur-sm lg:hidden pt-20 px-6 pb-8 overflow-y-auto">
+          <div className="space-y-6">
+            <MobileSection title="Product" items={PRODUCT_NAV} onNavigate={() => setMobileOpen(false)} />
+            <MobileSection title="Solutions" items={[...SOLUTIONS_NAV, { label: "All solutions", href: "/solutions" }]} onNavigate={() => setMobileOpen(false)} />
+            <MobileSection title="Resources" items={RESOURCES_NAV} onNavigate={() => setMobileOpen(false)} />
+            <div>
+              <p className="text-xs text-white/50 uppercase tracking-wide mb-2">More</p>
+              <div className="flex flex-col gap-1">
+                <Link href="/pricing" onClick={() => setMobileOpen(false)} className="text-white text-lg py-2 border-b border-white/10">
+                  Pricing
+                </Link>
+                <Link href="/contact" onClick={() => setMobileOpen(false)} className="text-white text-lg py-2 border-b border-white/10">
+                  Contact
+                </Link>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 pt-4">
+              <Link href="/signup" onClick={() => setMobileOpen(false)} className="bg-white text-gray-900 text-center font-semibold py-3 rounded-full">
+                Get started
               </Link>
-            ))}
-            <Link
-              href="/signup"
-              className="mt-2 px-4 py-3 rounded-xl text-sm font-semibold bg-white text-gray-900 text-center hover:bg-gray-100 transition-colors"
-              onClick={() => setMobileOpen(false)}
-            >
-              Get started
-            </Link>
-            <Link
-              href="/login"
-              className="px-4 py-3 rounded-xl text-sm font-medium text-white/70 hover:bg-white/10 hover:text-white transition-colors text-center"
-              onClick={() => setMobileOpen(false)}
-            >
-              Sign in
-            </Link>
+              <Link href="/login" onClick={() => setMobileOpen(false)} className="text-white/80 text-center py-2">
+                Sign in
+              </Link>
+            </div>
           </div>
         </div>
       )}

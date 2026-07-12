@@ -1,20 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Circle, Loader2 } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { ArrowRight } from "lucide-react";
 import { Label } from "@/components/ui/label";
 import { HeroOverlapShell } from "./hero-overlap-shell";
 import { EditorialHeading } from "./editorial-heading";
-
-type GenerationPhase = "summary" | "phase0" | "phase1" | "phase2";
-
-const PHASE_LABELS: Record<GenerationPhase, string> = {
-  summary: "Executive Summary",
-  phase0: "Phase 1: Foundation & Quick Wins (Months 1–3)",
-  phase1: "Phase 2: Scaling & Automation (Months 4–6)",
-  phase2: "Phase 3: Expansion (Months 7–12)",
-};
+import {
+  buildAuthRedirectParams,
+  GROWTH_ROADMAPS_PATH,
+  saveRoadmapIntent,
+} from "@/lib/roadmap-intent";
 
 const STAGES = [
   { value: "pre-seed", label: "Pre-Seed" },
@@ -29,10 +27,24 @@ type Location = { id: number; name: string; country: string };
 
 type RoadmapGeneratorProps = {
   sectionRef?: React.RefObject<HTMLElement | null>;
+  referrer?: string;
 };
 
-export function RoadmapGenerator({ sectionRef }: RoadmapGeneratorProps) {
+function saveIntentAndGetDestination(
+  industry: string,
+  location: string,
+  stage: string,
+  isAuthenticated: boolean,
+  referrer?: string,
+): string {
+  saveRoadmapIntent({ industry, location, stage, referrer });
+  if (isAuthenticated) return GROWTH_ROADMAPS_PATH;
+  return `/signup?${buildAuthRedirectParams(referrer).toString()}`;
+}
+
+export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps) {
   const router = useRouter();
+  const { status } = useSession();
   const internalRef = useRef<HTMLElement>(null);
   const ref = sectionRef ?? internalRef;
 
@@ -42,10 +54,7 @@ export function RoadmapGenerator({ sectionRef }: RoadmapGeneratorProps) {
   const [industry, setIndustry] = useState("");
   const [location, setLocation] = useState("");
   const [stage, setStage] = useState<string>(STAGES[0].value);
-  const [isPending, setIsPending] = useState(false);
-  const [completedPhases, setCompletedPhases] = useState<Set<GenerationPhase>>(new Set());
-  const [generationError, setGenerationError] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([fetch("/api/industries"), fetch("/api/locations")])
@@ -58,81 +67,23 @@ export function RoadmapGenerator({ sectionRef }: RoadmapGeneratorProps) {
       .finally(() => setLoadingOptions(false));
   }, []);
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!industry || !location || !stage) {
-      setGenerationError("Please select industry, location, and stage.");
+      setFormError("Please select industry, location, and stage.");
       return;
     }
 
-    setIsPending(true);
-    setCompletedPhases(new Set());
-    setGenerationError(null);
-
-    abortRef.current?.abort();
-    const ac = new AbortController();
-    abortRef.current = ac;
-
-    try {
-      const response = await fetch("/api/roadmaps/generate/stream", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ industry, location, stage }),
-        signal: ac.signal,
-      });
-
-      if (!response.ok || !response.body) {
-        const errJson = await response.json().catch(() => ({ error: "Generation failed" }));
-        setGenerationError(errJson.error ?? "Generation failed");
-        setIsPending(false);
-        return;
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const chunks = buffer.split("\n\n");
-        buffer = chunks.pop() ?? "";
-
-        for (const chunk of chunks) {
-          const dataLine = chunk.split("\n").find((l) => l.startsWith("data:"));
-          if (!dataLine) continue;
-
-          const payload = JSON.parse(dataLine.replace("data:", "").trim()) as {
-            event?: string;
-            slug?: string;
-            phaseIndex?: number;
-            error?: string;
-          };
-
-          if (payload.event === "summary") {
-            setCompletedPhases((prev) => new Set([...prev, "summary"]));
-          } else if (payload.event === "phase" && typeof payload.phaseIndex === "number") {
-            const key = `phase${payload.phaseIndex}` as GenerationPhase;
-            setCompletedPhases((prev) => new Set([...prev, key]));
-          } else if ((payload.event === "cached" || payload.event === "done") && payload.slug) {
-            router.push(`/roadmap/${payload.slug}`);
-            return;
-          } else if (payload.event === "error") {
-            setGenerationError(payload.error ?? "Generation failed");
-            setIsPending(false);
-            return;
-          }
-        }
-      }
-      setIsPending(false);
-    } catch (err: unknown) {
-      if ((err as { name?: string }).name !== "AbortError") {
-        setGenerationError("Roadmap generation failed. Please try again.");
-        setIsPending(false);
-      }
-    }
+    setFormError(null);
+    router.push(
+      saveIntentAndGetDestination(
+        industry,
+        location,
+        stage,
+        status === "authenticated",
+        referrer,
+      ),
+    );
   };
 
   const selectClass =
@@ -147,7 +98,7 @@ export function RoadmapGenerator({ sectionRef }: RoadmapGeneratorProps) {
         <EditorialHeading
           line1="Generate your"
           line2="2026 Growth Roadmap"
-          description="Choose your market and stage. We'll return a sequenced plan with priorities for the next 12 months. No account required."
+          description="Choose your market and stage, then create a free account to build a custom 12-month plan. Browse sample roadmaps in our catalog anytime — no signup required."
           align="left"
           size="card"
           animate={false}
@@ -212,44 +163,22 @@ export function RoadmapGenerator({ sectionRef }: RoadmapGeneratorProps) {
           <div className="pt-2 space-y-4">
             <button
               type="submit"
-              className="w-full h-12 text-base font-semibold hero-cta-primary disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isPending || loadingOptions}
+              className="w-full h-12 text-base font-semibold hero-cta-primary disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+              disabled={loadingOptions}
             >
-              {isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Generating roadmap…
-                </>
-              ) : (
-                "Build my roadmap"
-              )}
+              Generate my roadmap
+              <ArrowRight className="h-5 w-5" />
             </button>
 
-            {isPending && (
-              <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 space-y-2">
-                <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-2">
-                  Building your roadmap…
-                </p>
-                {(Object.keys(PHASE_LABELS) as GenerationPhase[]).map((key) => {
-                  const done = completedPhases.has(key);
-                  return (
-                    <div key={key} className="flex items-center gap-2 text-sm">
-                      {done ? (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                      ) : (
-                        <Circle className="h-4 w-4 text-muted-foreground shrink-0 animate-pulse" />
-                      )}
-                      <span className={done ? "text-foreground" : "text-muted-foreground"}>
-                        {PHASE_LABELS[key]}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            <p className="text-center text-sm text-muted-foreground">
+              Want a sample first?{" "}
+              <Link href="/roadmaps" className="text-primary font-medium hover:underline">
+                Browse free roadmaps
+              </Link>
+            </p>
 
-            {generationError && (
-              <p className="text-sm text-destructive text-center">{generationError}</p>
+            {formError && (
+              <p className="text-sm text-destructive text-center">{formError}</p>
             )}
           </div>
         </form>

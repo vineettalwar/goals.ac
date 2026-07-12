@@ -1,30 +1,53 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 type RevealLayerProps = {
   image: string;
   cursorX: number;
   cursorY: number;
   radius?: number;
+  enhance?: boolean;
+  containerRef?: RefObject<HTMLElement | null>;
 };
 
-export function RevealLayer({ image, cursorX, cursorY, radius = 260 }: RevealLayerProps) {
+const ENHANCE_FILTER = "brightness(1.15) saturate(1.35) contrast(1.08)";
+
+export function RevealLayer({
+  image,
+  cursorX,
+  cursorY,
+  radius = 260,
+  enhance = false,
+  containerRef,
+}: RevealLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const revealRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
     const resize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      const container = containerRef?.current;
+      const width = container?.clientWidth ?? window.innerWidth;
+      const height = container?.clientHeight ?? window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
     };
 
     resize();
     window.addEventListener("resize", resize);
-    return () => window.removeEventListener("resize", resize);
-  }, []);
+
+    const container = containerRef?.current;
+    const observer = container ? new ResizeObserver(resize) : null;
+    if (container && observer) observer.observe(container);
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      observer?.disconnect();
+    };
+  }, [containerRef]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -67,7 +90,10 @@ export function RevealLayer({ image, cursorX, cursorY, radius = 260 }: RevealLay
       <div
         ref={revealRef}
         className="absolute inset-0 bg-center bg-cover bg-no-repeat z-30 pointer-events-none"
-        style={{ backgroundImage: `url(${image})` }}
+        style={{
+          backgroundImage: `url(${image})`,
+          filter: enhance ? ENHANCE_FILTER : undefined,
+        }}
         aria-hidden
       />
     </>

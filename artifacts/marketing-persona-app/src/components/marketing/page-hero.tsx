@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { useSpotlightCursor } from "@/hooks/use-spotlight-cursor";
 import { MarketingNav } from "./marketing-nav";
 import { RevealLayer } from "./reveal-layer";
 
@@ -38,46 +39,16 @@ export function PageHero({
   ctas = [],
   backgroundImage,
   spotlightImage,
-  enableSpotlight = false,
+  enableSpotlight,
   layout = "centered",
   overlay,
   children,
 }: PageHeroProps) {
-  const mouse = useRef({ x: -999, y: -999 });
-  const smooth = useRef({ x: -999, y: -999 });
-  const rafRef = useRef<number | null>(null);
-  const [cursorPos, setCursorPos] = useState({ x: -999, y: -999 });
-
-  useEffect(() => {
-    if (!enableSpotlight) return;
-
-    const updatePosition = (clientX: number, clientY: number) => {
-      mouse.current = { x: clientX, y: clientY };
-    };
-
-    const onMouseMove = (e: MouseEvent) => updatePosition(e.clientX, e.clientY);
-    const onTouchMove = (e: TouchEvent) => {
-      const touch = e.touches[0];
-      if (touch) updatePosition(touch.clientX, touch.clientY);
-    };
-
-    const tick = () => {
-      smooth.current.x += (mouse.current.x - smooth.current.x) * 0.1;
-      smooth.current.y += (mouse.current.y - smooth.current.y) * 0.1;
-      setCursorPos({ x: smooth.current.x, y: smooth.current.y });
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("touchmove", onTouchMove, { passive: true });
-    rafRef.current = requestAnimationFrame(tick);
-
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("touchmove", onTouchMove);
-      if (rafRef.current !== null) cancelAnimationFrame(rafRef.current);
-    };
-  }, [enableSpotlight]);
+  const sectionRef = useRef<HTMLElement>(null);
+  const spotlightEnabled = enableSpotlight ?? Boolean(backgroundImage);
+  const resolvedSpotlightImage = spotlightImage ?? backgroundImage;
+  const useEnhance = Boolean(backgroundImage && !spotlightImage);
+  const { cursorPos, enabled: spotlightActive } = useSpotlightCursor(sectionRef, spotlightEnabled);
 
   const ctaButtonClass = (variant: HeroCta["variant"]) =>
     variant === "ghost"
@@ -109,6 +80,7 @@ export function PageHero({
 
   return (
     <section
+      ref={sectionRef}
       className="relative w-full overflow-hidden h-screen bg-black font-sans"
       style={{ height: "100dvh" }}
     >
@@ -120,12 +92,14 @@ export function PageHero({
         />
       )}
 
-      {enableSpotlight && spotlightImage && (
+      {spotlightActive && resolvedSpotlightImage && (
         <RevealLayer
-          image={spotlightImage}
+          image={resolvedSpotlightImage}
           cursorX={cursorPos.x}
           cursorY={cursorPos.y}
           radius={SPOTLIGHT_R}
+          enhance={useEnhance}
+          containerRef={sectionRef}
         />
       )}
 

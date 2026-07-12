@@ -38,6 +38,9 @@ const PLANS = [
       "Marketing personas (unlimited)",
       "WordPress auto-publish",
       "Full GEO audit",
+      "AI visibility tracking",
+      "Competitor analysis",
+      "Content Autopilot",
       "Priority support",
     ],
     cta: "Start Growth",
@@ -56,6 +59,8 @@ const PLANS = [
       "Multi-site WordPress",
       "Competitor analysis (unlimited)",
       "Keyword tracking",
+      "Internal Link Hub (Beta)",
+      "Reddit Discovery (Beta)",
       "Admin dashboard",
       "Dedicated support",
     ],
@@ -141,11 +146,40 @@ export function PricingPageClient() {
             ))}
           </div>
           <p className="text-center text-sm text-muted-foreground mt-10">
-            All plans include a 14-day free trial on paid features. Questions?{" "}
-            <a href="mailto:hello@goals.ac" className="text-primary hover:underline">
+            14-day free trial on paid features · cancel anytime · no link schemes. Questions?{" "}
+            <Link href="/contact" className="text-primary hover:underline">
               Contact us
-            </a>
+            </Link>
           </p>
+
+          <div className="mt-16 paper-card rounded-2xl p-8 overflow-x-auto">
+            <h3 className="text-lg font-bold mb-6 text-center">vs typical AI SEO autopilot tools</h3>
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-left">
+                  <th className="py-3 pr-4 font-medium text-muted-foreground">Capability</th>
+                  <th className="py-3 px-4 font-medium">goals.ac Growth</th>
+                  <th className="py-3 pl-4 font-medium text-muted-foreground">Typical autopilot SEO</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {[
+                  ["12-month strategy roadmaps", "✓ Free", "✗"],
+                  ["Editorial review before publish", "✓ Always", "Limited"],
+                  ["AI visibility tracking", "✓", "✓"],
+                  ["Backlink exchange network", "✗ White-hat only", "✓"],
+                  ["CMS integrations (8+)", "✓", "4–5"],
+                  ["Monthly price", "$49", "$99+"],
+                ].map(([cap, us, them]) => (
+                  <tr key={cap}>
+                    <td className="py-3 pr-4">{cap}</td>
+                    <td className="py-3 px-4 font-medium text-primary">{us}</td>
+                    <td className="py-3 pl-4 text-muted-foreground">{them}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </section>
 
@@ -156,7 +190,7 @@ export function PricingPageClient() {
           {
             question: "Is the roadmap generator free?",
             answer:
-              "Yes — fully free with no signup. Paid plans unlock the full content engine and publishing.",
+              "Browsing our public roadmap catalog is free with no signup. Signed-in users can generate custom roadmaps — Starter includes 3 per month; Growth and Scale plans include unlimited.",
           },
           {
             question: "Can I change plans later?",
@@ -166,6 +200,12 @@ export function PricingPageClient() {
             question: "What happens if I exceed my content limit?",
             answer:
               "You'll be prompted to upgrade. We never charge overage fees without your consent.",
+          },
+          {
+            question: "Which platforms can I publish to?",
+            answer:
+              "WordPress, Shopify, Notion, Webflow, Ghost, webhooks, plus LinkedIn, X, Facebook, Instagram, Bluesky, and Mastodon.",
+            helpHref: "/help/publish-social-content",
           },
         ]}
       />
