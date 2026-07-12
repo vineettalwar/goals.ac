@@ -109,8 +109,8 @@ export default function ContentEngine() {
   return (
     <Layout>
       <SEO
-        title="AI Content Engine — goals.ac"
-        description="Generate brand-aligned SEO articles, GEO-optimized content, and growth playbooks on autopilot. The AI content engine for B2B startups."
+        title="Content Engine | goals.ac"
+        description="Draft blog posts, guides, social posts, and web copy in your brand voice. Review, schedule, and publish to WordPress, Notion, Webflow, and social platforms."
       />
 
       <div className="flex-1 flex flex-col">
@@ -128,7 +128,7 @@ export default function ContentEngine() {
               className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.06] px-4 py-1.5 text-xs font-semibold text-zinc-300 mb-8 tracking-wide uppercase"
             >
               <Sparkles className="h-3 w-3" />
-              The Content Engine
+              Content Studio
             </motion.div>
             <motion.h1
               initial={{ opacity: 0, y: 16 }}
@@ -136,7 +136,7 @@ export default function ContentEngine() {
               transition={{ duration: 0.5, delay: 0.08 }}
               className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.05]"
             >
-              Ship a year of content in a weekend.
+              Draft, review, and publish from one workspace.
             </motion.h1>
             <motion.p
               initial={{ opacity: 0, y: 14 }}
@@ -144,8 +144,8 @@ export default function ContentEngine() {
               transition={{ duration: 0.5, delay: 0.18 }}
               className="text-lg md:text-2xl text-zinc-400 max-w-3xl mx-auto leading-relaxed mb-10"
             >
-              SEO articles, GEO pages, social posts, growth playbooks. All brand-aligned. All built to rank.
-              All published from one calendar.
+              Blog posts, guides, social posts, and landing page copy. Set your brand voice once,
+              generate drafts, and send approved pieces to your CMS.
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 14 }}
@@ -174,13 +174,14 @@ export default function ContentEngine() {
           <div className="container mx-auto px-4 md:px-8 max-w-6xl">
             <div className="text-center mb-12">
               <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground mb-4 tracking-wide uppercase">
-                Full platform content suite
+                Content formats
               </div>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-                18 formats. Four categories. One studio.
+                18 formats across four categories
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                From pillar pages to LinkedIn threads — generate, repurpose, schedule, and publish every format your funnel needs from a single content calendar.
+                Long-form articles, social posts, email sequences, and web copy. Repurpose any piece
+                into another format from the same project.
               </p>
             </div>
 
@@ -218,7 +219,7 @@ export default function ContentEngine() {
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                Brand voice injected on every generation
+                Brand voice applied to every draft
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
@@ -233,10 +234,11 @@ export default function ContentEngine() {
           <div className="container mx-auto px-4 md:px-8 max-w-6xl">
             <div className="text-center mb-12">
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-                Publish to every platform you use.
+                Publish to the platforms you already use
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Connect your CMS once. Push long-form to WordPress, Shopify, or Notion. Ship social posts to LinkedIn, X, Instagram, and Facebook — all from the same publish dialog.
+                Connect WordPress, Notion, Webflow, Shopify, Ghost, Drupal, Joomla, or a webhook.
+                Post to LinkedIn, X, Instagram, and Facebook from the same publish dialog.
               </p>
             </div>
 
@@ -278,7 +280,7 @@ export default function ContentEngine() {
                 <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 flex items-start gap-2">
                   <Webhook className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    Webhook connector sends HMAC-signed JSON to Zapier, Make, n8n, or any custom stack — a destination most competitors don&apos;t offer.
+                    Webhook connector sends HMAC-signed JSON to Zapier, Make, n8n, or your own endpoint.
                   </p>
                 </div>
               </div>
@@ -297,13 +299,13 @@ export default function ContentEngine() {
                     Step 1
                   </div>
                   <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 leading-tight">
-                    Capture your brand once.
+                    Set up your brand profile once.
                   </h2>
                   <p className="text-lg text-muted-foreground leading-relaxed mb-5">
-                    Tell us your industry, audience, voice, and POV in 90 seconds. The engine learns your brand so every piece sounds like you wrote it.
+                    Add your industry, audience, voice, and sample writing. Every draft uses these settings.
                   </p>
                   <ul className="space-y-2.5">
-                    {["Brand voice & tone profile", "Target audience personas", "Banned words & phrases", "Sample writing samples"].map((item) => (
+                    {["Brand voice and tone", "Target audience", "Banned words and phrases", "Writing samples"].map((item) => (
                       <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
                         <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                         {item}
@@ -332,19 +334,19 @@ export default function ContentEngine() {
               {/* Step 2 */}
               <div className="grid md:grid-cols-2 gap-12 items-center">
                 <div className="order-2 md:order-1 rounded-2xl border border-border bg-card p-6 shadow-lg">
-                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Generated draft · 2 min ago</div>
-                  <h3 className="font-bold text-lg mb-2">Why most B2B SaaS founders waste their first $50K on content</h3>
+                  <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Generated draft</div>
+                  <h3 className="font-bold text-lg mb-2">How early-stage SaaS teams plan content without an agency</h3>
                   <div className="flex gap-2 flex-wrap mb-4">
-                    {["SEO-optimized", "1,847 words", "12 H2s", "Reading: 7min"].map((tag) => (
+                    {["1,847 words", "12 H2s", "7 min read"].map((tag) => (
                       <span key={tag} className="text-[11px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">{tag}</span>
                     ))}
                   </div>
                   <div className="space-y-1.5 mb-4">
                     {[
-                      "Introduction: The $50K mistake",
-                      "Why agency retainers fail at this stage",
-                      "The 'content factory' myth — and what works",
-                      "Building an in-house engine on AI rails",
+                      "Introduction: Planning content on a small team",
+                      "Why agency retainers stall at this stage",
+                      "The content factory myth and what works instead",
+                      "Building a repeatable in-house workflow",
                       "Conclusion: Ship, measure, iterate",
                     ].map((heading, i) => (
                       <div key={i} className="flex items-center gap-2.5 text-sm">
@@ -363,13 +365,14 @@ export default function ContentEngine() {
                     Step 2
                   </div>
                   <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 leading-tight">
-                    Generate. Edit. Approve.
+                    Generate, edit, and approve.
                   </h2>
                   <p className="text-lg text-muted-foreground leading-relaxed mb-5">
-                    Pick a topic — or let the engine pull from your keyword tracker — and get a brand-aligned draft in under 2 minutes. Edit inline, regenerate sections, or approve.
+                    Enter a topic or pull from your keyword list. Edit inline, regenerate a section,
+                    or mark the piece ready to publish.
                   </p>
                   <ul className="space-y-2.5">
-                    {["Pulls from your keyword tracker", "Inline AI editor with regenerate-section", "Approval workflow for teams", "Version history & rollback"].map((item) => (
+                    {["Keyword list integration", "Inline editor with section regenerate", "Draft and ready status", "Repurpose into other formats"].map((item) => (
                       <li key={item} className="flex items-center gap-2 text-sm text-muted-foreground">
                         <CheckCircle2 className="h-4 w-4 text-emerald-500 flex-shrink-0" />
                         {item}
@@ -386,10 +389,10 @@ export default function ContentEngine() {
                     Step 3
                   </div>
                   <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 leading-tight">
-                    Publish anywhere. Track everywhere.
+                    Publish and track from one place.
                   </h2>
                   <p className="text-lg text-muted-foreground leading-relaxed mb-5">
-                    Push approved pieces to WordPress, Shopify, Notion, Webflow, Ghost, or a custom webhook. Schedule social posts to LinkedIn, X, Instagram, and Facebook from the same calendar.
+                    Send approved pieces to your CMS or social accounts. See what is scheduled on the content calendar.
                   </p>
                   <div className="flex flex-wrap gap-2 mb-2">
                     {["WordPress", "Shopify", "Notion", "Webflow", "Ghost", "LinkedIn", "X", "Webhook"].map((cms) => (
@@ -406,10 +409,10 @@ export default function ContentEngine() {
                   </div>
                   <div className="space-y-2">
                     {[
-                      { day: "Mon", title: "Why most B2B founders waste their first $50K on content", status: "Published", badge: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
-                      { day: "Wed", title: "The case against content agencies in 2026", status: "Scheduled", badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
-                      { day: "Thu", title: "vs Clearscope: which works for early-stage SaaS", status: "Draft", badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
-                      { day: "Fri", title: "How we got cited 47 times in ChatGPT (case study)", status: "Generating", badge: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
+                      { day: "Mon", title: "How early-stage SaaS teams plan content without an agency", status: "Published", badge: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" },
+                      { day: "Wed", title: "What to publish before you hire a content lead", status: "Scheduled", badge: "bg-blue-500/10 text-blue-600 dark:text-blue-400" },
+                      { day: "Thu", title: "Building a weekly content review workflow", status: "Draft", badge: "bg-amber-500/10 text-amber-600 dark:text-amber-400" },
+                      { day: "Fri", title: "LinkedIn post: three lessons from our first 90 days", status: "Generating", badge: "bg-violet-500/10 text-violet-600 dark:text-violet-400" },
                     ].map((row) => (
                       <div key={row.title} className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50">
                         <div className="text-xs font-bold text-muted-foreground w-9">{row.day}</div>
@@ -437,10 +440,11 @@ export default function ContentEngine() {
                   GEO ready
                 </div>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4 leading-tight">
-                  Optimized for AI tools, not just Google.
+                  Built for search engines and AI citations.
                 </h2>
                 <p className="text-lg text-zinc-400 leading-relaxed mb-6">
-                  Your audience is asking ChatGPT, Perplexity, and Gemini for recommendations. We make sure your content is what they cite.
+                  Drafts include structured headings, schema markup, and clear answers to common questions.
+                  Run a GEO audit to see what your site is missing.
                 </p>
                 <Button asChild variant="outline" className="border-white/15 bg-white/[0.04] text-zinc-200 hover:bg-white/[0.08] hover:text-white">
                   <Link to="/geo-audit">
@@ -450,12 +454,12 @@ export default function ContentEngine() {
               </div>
               <div className="space-y-3">
                 {[
-                  { stat: "47%", label: "of B2B buying research now happens in AI tools" },
-                  { stat: "12x", label: "more leads from AI-cited pages vs uncited" },
-                  { stat: "6 mo", label: "average head start vs competitors not optimizing" },
+                  { label: "Structured headings and FAQ blocks in every long-form draft" },
+                  { label: "Schema.org JSON-LD generated with each article" },
+                  { label: "GEO audit checks for meta tags, schema, and llms.txt" },
                 ].map((row) => (
-                  <div key={row.stat} className="rounded-2xl glass-card p-5 flex items-center gap-5">
-                    <div className="text-4xl font-bold text-blue-400 flex-shrink-0">{row.stat}</div>
+                  <div key={row.label} className="rounded-2xl glass-card p-5 flex items-start gap-4">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0 mt-0.5" />
                     <div className="text-sm text-zinc-400 leading-relaxed">{row.label}</div>
                   </div>
                 ))}
@@ -469,11 +473,10 @@ export default function ContentEngine() {
           <div className="container mx-auto px-4 md:px-8 max-w-3xl text-center">
             <Zap className="h-10 w-10 text-blue-500 mx-auto mb-5" />
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
-              Stop renting an agency.<br />
-              Own your content engine.
+              Plan topics, draft content, and publish without switching tools.
             </h2>
             <p className="text-lg text-muted-foreground mb-8 max-w-xl mx-auto">
-              Free forever for the core platform. Sign up to start generating brand-aligned content in minutes.
+              Free to start. Connect a project, set your brand voice, and generate your first draft in minutes.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button asChild size="lg" className="h-12 px-8 text-base font-semibold glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 text-white border-0">
