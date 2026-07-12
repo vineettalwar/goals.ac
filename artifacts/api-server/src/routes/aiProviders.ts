@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../lib/auth";
-import { isBedrockEnvConfigured } from "@workspace/ai-providers";
+import { isBedrockEnvConfigured, resolveOllamaConfigAsync } from "@workspace/ai-providers";
 
 const router = Router();
 
@@ -23,7 +23,7 @@ router.get("/ai-providers/status", requireAuth, async (_req, res) => {
 
   let ollamaReachable = false;
   const ollamaBaseUrl = env("OLLAMA_BASE_URL") ?? "http://localhost:11434";
-  const ollamaModel = env("OLLAMA_MODEL") ?? "llama3.1";
+  let ollamaModel = env("OLLAMA_MODEL") ?? "";
 
   if (activeProvider === "ollama" || env("OLLAMA_BASE_URL")) {
     try {
@@ -32,6 +32,10 @@ router.get("/ai-providers/status", requireAuth, async (_req, res) => {
       const resp = await fetch(`${ollamaBaseUrl}/api/tags`, { signal: controller.signal });
       clearTimeout(timeout);
       ollamaReachable = resp.ok;
+      if (ollamaReachable) {
+        const resolved = await resolveOllamaConfigAsync();
+        ollamaModel = resolved.model;
+      }
     } catch {
       ollamaReachable = false;
     }

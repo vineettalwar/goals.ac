@@ -2,13 +2,14 @@ import type { GoogleGenAI } from "@google/genai";
 import {
   buildAiProviderCacheKey,
   resolveProviderId,
-  resolveOllamaConfig,
+  resolveOllamaConfigAsync,
   type AiProviderId,
   type AiProviderOptions,
+  type ResolvedOllamaConfig,
 } from "./config";
 
 export type { AiProviderId, AiProviderOptions } from "./config";
-export { resolveProviderId, resolveOllamaConfig } from "./config";
+export { resolveProviderId, resolveOllamaConfig, resolveOllamaConfigAsync } from "./config";
 
 export interface GenerateParams {
   prompt: string;
@@ -81,7 +82,11 @@ class GeminiClient implements AiProviderClient {
 
 const _cache = new Map<string, AiProviderClient>();
 
-async function buildClient(providerId: AiProviderId, options?: AiProviderOptions): Promise<AiProviderClient> {
+async function buildClient(
+  providerId: AiProviderId,
+  options?: AiProviderOptions,
+  resolvedOllama?: ResolvedOllamaConfig,
+): Promise<AiProviderClient> {
   switch (providerId) {
     case "gemini": {
       const { getPlatformGeminiClient } = await import("./gemini");
@@ -108,7 +113,12 @@ async function buildClient(providerId: AiProviderId, options?: AiProviderOptions
 
     case "ollama": {
       const { OllamaClient } = await import("./ollama");
-      const ollama = resolveOllamaConfig(options);
+      const ollama = resolvedOllama ?? (await resolveOllamaConfigAsync(options));
+      if (!ollama.model) {
+        throw new Error(
+          "No Ollama model configured. Set OLLAMA_MODEL in .env.local, choose a model in Settings, or run `ollama pull <model>`.",
+        );
+      }
       return OllamaClient.create(ollama);
     }
   }
@@ -119,12 +129,17 @@ async function buildClient(providerId: AiProviderId, options?: AiProviderOptions
  * Resolution order: in-app options → AI_PROVIDER env → auto-detect.
  */
 export async function getAiProviderClient(options?: AiProviderOptions): Promise<AiProviderClient> {
-  const cacheKey = buildAiProviderCacheKey(options);
+  const id = resolveProviderId(options);
+  const resolvedOllama = id === "ollama" ? await resolveOllamaConfigAsync(options) : undefined;
+  const cacheKey =
+    id === "ollama" && resolvedOllama
+      ? `ollama:${resolvedOllama.baseUrl}:${resolvedOllama.model}`
+      : buildAiProviderCacheKey(options);
+
   const cached = _cache.get(cacheKey);
   if (cached) return cached;
 
-  const id = resolveProviderId(options);
-  const client = await buildClient(id, options);
+  const client = await buildClient(id, options, resolvedOllama);
   _cache.set(cacheKey, client);
   return client;
 }

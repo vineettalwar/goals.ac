@@ -583,10 +583,10 @@ BEDROCK_MODEL=anthropic.claude-3-5-haiku-20241022-v1:0`}</code></pre>
                       <p>To enable Ollama, add these env vars:</p>
                       <pre className="p-2 rounded bg-muted text-xs overflow-x-auto"><code>{`AI_PROVIDER=ollama
 OLLAMA_BASE_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.1`}</code></pre>
+OLLAMA_MODEL=gemma4:e2b`}</code></pre>
                       <p>Then install Ollama from{" "}
                         <a href="https://ollama.com" target="_blank" rel="noopener noreferrer" className="text-blue-500 dark:text-blue-400 hover:underline">ollama.com</a>
-                        {" "}and pull a model: <code className="px-1 py-0.5 rounded bg-muted">ollama pull llama3.1</code></p>
+                        {" "}and pull a model: <code className="px-1 py-0.5 rounded bg-muted">ollama pull gemma4:e2b</code></p>
                     </div>
                   </div>
                 )}

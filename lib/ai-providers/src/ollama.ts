@@ -35,7 +35,7 @@ export class OllamaClient implements AiProviderClient {
 
   static create(config?: Partial<ResolvedOllamaConfig>): OllamaClient {
     const baseUrl = config?.baseUrl ?? "http://localhost:11434";
-    const model = config?.model ?? "llama3.1";
+    const model = config?.model ?? "";
     return new OllamaClient(baseUrl, model);
   }
 
