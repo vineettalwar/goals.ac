@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
@@ -10,6 +10,10 @@ export interface ContentStyle {
   primaryLanguage?: string;
   forbiddenWords?: string[];
   readingLevel?: "general" | "intermediate" | "expert";
+  /** Article humanization: off | light | strong */
+  humanizationLevel?: "off" | "light" | "strong";
+  /** Optional writing sample override for humanizer voice matching */
+  writingSample?: string | null;
 }
 
 export type AutopilotCadence = "daily" | "weekly";
@@ -72,7 +76,9 @@ export const websiteProjectsTable = pgTable("website_projects", {
   visibilitySettings: jsonb("visibility_settings"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => [
+  index("website_projects_user_id_idx").on(table.userId),
+]);
 
 export const insertWebsiteProjectSchema = createInsertSchema(websiteProjectsTable).omit({
   id: true,

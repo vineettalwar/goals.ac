@@ -32,3 +32,5 @@ export * from "./goals";
 export * from "./briefs";
 export * from "./credit_ledger";
 export * from "./waitlist_signups";
+export * from "./search_property_connections";
+export * from "./relations";

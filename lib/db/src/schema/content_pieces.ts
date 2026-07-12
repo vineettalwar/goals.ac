@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, date } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, timestamp, date, index, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { websiteProjectsTable } from "./website_projects";
@@ -30,6 +30,15 @@ export const CONTENT_FORMAT_TYPES = [
 
 export type ContentFormatType = (typeof CONTENT_FORMAT_TYPES)[number];
 
+export type ContentPieceMetadata = {
+  metaDescription?: string;
+  faqSection?: { question: string; answer: string }[];
+  citations?: { text: string; url: string; source: string }[];
+  internalLinkSuggestions?: { anchorText: string; suggestedSlug: string; rationale?: string }[];
+  jsonLdSchema?: object;
+  humanized?: boolean;
+};
+
 export const contentPiecesTable = pgTable("content_pieces", {
   id: serial("id").primaryKey(),
   websiteProjectId: integer("website_project_id")
@@ -49,9 +58,14 @@ export const contentPiecesTable = pgTable("content_pieces", {
   publishPlatform: text("publish_platform"),
   publishError: text("publish_error"),
   cacheKey: text("cache_key"),
+  pieceMetadata: jsonb("piece_metadata").$type<ContentPieceMetadata | null>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
-});
+}, (table) => [
+  index("content_pieces_website_project_id_idx").on(table.websiteProjectId),
+  index("content_pieces_brief_id_idx").on(table.briefId),
+  index("content_pieces_content_item_id_idx").on(table.contentItemId),
+]);
 
 export const insertContentPieceSchema = createInsertSchema(contentPiecesTable).omit({
   id: true,

@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, boolean, timestamp, index } from "drizzle-orm/pg-core";
 import { websiteProjectsTable } from "./website_projects";
 
 export const trackedKeywordsTable = pgTable("tracked_keywords", {
@@ -15,7 +15,9 @@ export const trackedKeywordsTable = pgTable("tracked_keywords", {
   lastCheckedAt: timestamp("last_checked_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (table) => [
+  index("tracked_keywords_website_project_id_idx").on(table.websiteProjectId),
+]);
 
 export type TrackedKeyword = typeof trackedKeywordsTable.$inferSelect;
 export type NewTrackedKeyword = typeof trackedKeywordsTable.$inferInsert;
