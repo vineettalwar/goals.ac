@@ -99,6 +99,7 @@ type ContentFormatType =
   | "linkedin_post"
   | "twitter_thread"
   | "instagram_post"
+  | "facebook_post"
   | "email_sequence"
   | "ad_copy"
   | "landing_page_copy"
@@ -181,6 +182,7 @@ interface ContentPiece {
   status: string;
   wordCount: number;
   plannedDate: string | null;
+  publishPlatform?: string | null;
   createdAt: string;
   source: "studio";
 }
@@ -318,6 +320,14 @@ const FORMAT_META: Record<
       "Hook-driven caption with hashtag block — optimised for saves and shares.",
     example: "e.g. 'The one thing we changed that 3x'd our inbound leads'",
     wordRange: "150–300 words",
+  },
+  facebook_post: {
+    label: "Facebook Post",
+    icon: Globe,
+    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    description: "Community-friendly posts for your Facebook Page.",
+    example: "e.g. '3 lessons from our first year of growth'",
+    wordRange: "150–400 words",
   },
   email_sequence: {
     label: "Email Sequence",
@@ -486,7 +496,7 @@ const FORMAT_CATEGORIES: { label: string; formats: ContentFormatType[] }[] = [
   },
   {
     label: "Social Media",
-    formats: ["linkedin_post", "twitter_thread", "instagram_post"],
+    formats: ["linkedin_post", "twitter_thread", "instagram_post", "facebook_post"],
   },
   {
     label: "Email & Ads",
@@ -1813,7 +1823,7 @@ export default function ContentStudio() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ plannedDate: newDate }),
+        body: JSON.stringify({ plannedDate: newDate, status: "ready" }),
       });
       if (res.ok) {
         const updated = await safeJson<Omit<ContentPiece, "source">>(res);

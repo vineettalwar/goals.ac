@@ -253,142 +253,204 @@ export const UpdateContentItemResponse = zod.object({
 });
 
 /**
- * All supported content format types for the Content Studio
+ * @summary Run a GEO audit on a URL
  */
-export const ContentFormatType = zod.enum([
-  "blog_post",
-  "news_article",
-  "tutorial",
-  "guide",
-  "whitepaper",
-  "pillar_page",
-  "location_page",
-  "infographic_outline",
-  "linkedin_post",
-  "twitter_thread",
-  "instagram_post",
-  "email_sequence",
-  "ad_copy",
-  "landing_page_copy",
-  "product_description",
-  "press_release",
-  "faq_article",
-]);
-
-/**
- * Response shape for a generated content piece (non-streaming)
- * @summary Generate a content piece
- */
-export const GenerateContentPieceParams = zod.object({
-  id: zod.coerce.number(),
-});
-
-export const GenerateContentPieceBody = zod.object({
-  formatType: ContentFormatType,
-  targetKeyword: zod.string().min(1),
-  angleHint: zod.string().optional(),
-});
-
-export const GenerateContentPieceResponse = zod.object({
-  id: zod.number(),
-  websiteProjectId: zod.number(),
-  formatType: ContentFormatType,
-  title: zod.string(),
-  targetKeyword: zod.string(),
-  bodyMarkdown: zod.string(),
-  wordCount: zod.number(),
-  status: zod.string(),
-  plannedDate: zod.string().nullable().optional(),
-  publishedUrl: zod.string().nullable().optional(),
-  createdAt: zod.coerce.date(),
-  updatedAt: zod.coerce.date(),
-});
-
-/**
- * SSE streaming endpoint for content piece generation
- * @summary Stream a generated content piece
- */
-export const GenerateContentPieceStreamBody = zod.object({
-  formatType: ContentFormatType,
-  targetKeyword: zod.string().min(1),
-  angleHint: zod.string().optional(),
-});
-
-export const ContentPieceStreamChunkEvent = zod.object({
-  text: zod.string(),
-});
-
-export const ContentPieceStreamDoneEvent = zod.object({
-  id: zod.number(),
-  title: zod.string(),
-  targetKeyword: zod.string(),
-  wordCount: zod.number(),
-});
-
-/**
- * SEO article generation endpoint (non-streaming)
- * @summary Generate an SEO article
- */
-export const GenerateSeoArticleBody = zod.object({
-  brand_name: zod.string(),
-  website_url: zod.string(),
-  industry: zod.string(),
-  location: zod.string(),
-  stage: zod.string(),
+export const CreateGeoAuditBody = zod.object({
+  url: zod.string().url(),
   roadmap_id: zod.number().optional(),
   website_project_id: zod.number().optional(),
 });
 
-export const GenerateSeoArticleResponse = zod.object({
+/**
+ * @summary Get a GEO audit by id
+ */
+export const GetGeoAuditParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetGeoAuditResponse = zod.object({
   id: zod.number(),
-  roadmapId: zod.number().nullable(),
-  websiteProjectId: zod.number().nullable(),
-  brandName: zod.string(),
-  websiteUrl: zod.string(),
-  industry: zod.string(),
-  location: zod.string(),
-  stage: zod.string(),
-  title: zod.string(),
-  metaDescription: zod.string(),
-  primaryKeyword: zod.string(),
-  secondaryKeywords: zod.array(zod.string()),
-  content: zod.string(),
-  wordCount: zod.number(),
-  status: zod.string(),
+  roadmapId: zod.number().nullish(),
+  websiteProjectId: zod.number().nullish(),
+  url: zod.string(),
+  geoScore: zod.number(),
+  issues: zod.array(
+    zod.object({
+      check: zod.string(),
+      status: zod.enum(["pass", "fail", "warn"]),
+      detail: zod.string(),
+      fix: zod.string(),
+    }),
+  ),
+  pageTitle: zod.string().nullish(),
+  metaDescription: zod.string().nullish(),
+  hasSchemaOrg: zod.boolean(),
+  schemaTypes: zod.array(zod.string()),
+  h1Count: zod.number(),
+  imageCount: zod.number(),
+  imagesMissingAlt: zod.number(),
   createdAt: zod.coerce.date(),
 });
 
 /**
- * SSE streaming endpoint for SEO article generation
- * @summary Stream an SEO article
+ * @summary Analyze a competitor URL
  */
-export const GenerateSeoArticleStreamBody = GenerateSeoArticleBody;
-
-export const SeoArticleStreamChunkEvent = zod.object({
-  text: zod.string(),
-});
-
-export const SeoArticleStreamDoneEvent = zod.object({
-  id: zod.number(),
-  title: zod.string(),
-  wordCount: zod.number(),
-});
-
-/**
- * SSE streaming endpoint for content strategy generation with batch progress
- * @summary Stream a content strategy with batch progress events
- */
-export const GenerateContentStrategyStreamBody = zod.object({
-  roadmap_id: zod.number(),
+export const CreateCompetitorAnalysisBody = zod.object({
+  competitorUrl: zod.string().url(),
   industry: zod.string(),
   location: zod.string(),
   stage: zod.string(),
+  website_project_id: zod.number().optional(),
 });
 
-export const ContentStrategyStreamProgressEvent = zod.object({
-  batchNum: zod.number(),
-  totalBatches: zod.number(),
-  itemCount: zod.number(),
+/**
+ * @summary Get a saved competitor analysis
+ */
+export const GetCompetitorAnalysisParams = zod.object({
+  id: zod.coerce.number(),
 });
 
-export const ContentStrategyStreamDoneEvent = GenerateContentStrategyResponse;
+export const GetCompetitorAnalysisResponse = zod.object({
+  id: zod.number().optional(),
+  competitorName: zod.string(),
+  summary: zod.string(),
+  strengths: zod.array(zod.string()),
+  weaknesses: zod.array(zod.string()),
+  contentGaps: zod.array(zod.string()),
+  geoGaps: zod.array(zod.string()),
+  quickWins: zod.array(zod.string()),
+  threatLevel: zod.enum(["low", "medium", "high"]),
+  createdAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary Analyze keywords with AI
+ */
+export const createKeywordAnalysisBodyKeywordsMax = 10;
+
+export const CreateKeywordAnalysisBody = zod.object({
+  keywords: zod
+    .array(zod.string())
+    .min(1)
+    .max(createKeywordAnalysisBodyKeywordsMax),
+  websiteUrl: zod.string().url().optional(),
+  website_project_id: zod.number().optional(),
+});
+
+/**
+ * @summary Get a saved keyword analysis
+ */
+export const GetKeywordAnalysisParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetKeywordAnalysisResponse = zod.object({
+  id: zod.number().optional(),
+  keywords: zod.array(
+    zod.object({
+      keyword: zod.string(),
+      estimatedVolume: zod.string(),
+      difficulty: zod.enum(["low", "medium", "high"]),
+      aiVisibility: zod.number(),
+      opportunities: zod.array(zod.string()),
+      suggestedContent: zod.string(),
+    }),
+  ),
+  topOpportunity: zod.string(),
+  summary: zod.string(),
+  createdAt: zod.coerce.date().optional(),
+});
+
+/**
+ * @summary List tracked keywords for a project
+ */
+export const ListTrackedKeywordsQueryParams = zod.object({
+  projectId: zod.coerce.number(),
+});
+
+export const ListTrackedKeywordsResponse = zod.object({
+  trackedKeywords: zod.array(
+    zod
+      .object({
+        id: zod.number(),
+        websiteProjectId: zod.number(),
+        keyword: zod.string(),
+        targetUrl: zod.string().nullish(),
+        location: zod.string(),
+        language: zod.string(),
+        device: zod.string(),
+        isActive: zod.boolean(),
+        lastCheckedAt: zod.coerce.date().nullish(),
+        createdAt: zod.coerce.date(),
+        updatedAt: zod.coerce.date(),
+      })
+      .and(
+        zod.object({
+          latestSnapshot: zod
+            .object({
+              id: zod.number(),
+              trackedKeywordId: zod.number(),
+              position: zod.number().nullish(),
+              rankingUrl: zod.string().nullish(),
+              serpFeatures: zod.record(zod.string(), zod.unknown()),
+              provider: zod.string(),
+              checkedAt: zod.coerce.date(),
+            })
+            .nullish(),
+        }),
+      ),
+  ),
+});
+
+/**
+ * @summary Add a keyword to rank tracking
+ */
+export const CreateTrackedKeywordBody = zod.object({
+  website_project_id: zod.number(),
+  keyword: zod.string(),
+  target_url: zod.string().url().optional(),
+  location: zod.string().optional(),
+  language: zod.string().optional(),
+  device: zod.enum(["desktop", "mobile"]).optional(),
+});
+
+/**
+ * @summary Get rank history for a tracked keyword
+ */
+export const GetTrackedKeywordSnapshotsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetTrackedKeywordSnapshotsResponse = zod.object({
+  trackedKeyword: zod.object({
+    id: zod.number(),
+    websiteProjectId: zod.number(),
+    keyword: zod.string(),
+    targetUrl: zod.string().nullish(),
+    location: zod.string(),
+    language: zod.string(),
+    device: zod.string(),
+    isActive: zod.boolean(),
+    lastCheckedAt: zod.coerce.date().nullish(),
+    createdAt: zod.coerce.date(),
+    updatedAt: zod.coerce.date(),
+  }),
+  snapshots: zod.array(
+    zod.object({
+      id: zod.number(),
+      trackedKeywordId: zod.number(),
+      position: zod.number().nullish(),
+      rankingUrl: zod.string().nullish(),
+      serpFeatures: zod.record(zod.string(), zod.unknown()),
+      provider: zod.string(),
+      checkedAt: zod.coerce.date(),
+    }),
+  ),
+});
+
+/**
+ * @summary Deactivate a tracked keyword
+ */
+export const DeleteTrackedKeywordParams = zod.object({
+  id: zod.coerce.number(),
+});

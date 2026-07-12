@@ -5,8 +5,11 @@ import type { ContentStyle } from "@workspace/db";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { generateContentStrategy, generateContentStrategyWithProgress } from "../services/contentStrategyGenerator";
+import { generateFromContentItem } from "../services/autopilotOrchestrator";
 import { requireAuth, requireSuperAdmin, optionalAuth } from "../lib/auth";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
+import { enqueue, QUEUES } from "@workspace/jobs";
+import { parseAutopilotSettings, shouldAutoPublish } from "../lib/autopilotScheduler";
 
 const router: IRouter = Router();
 
@@ -312,6 +315,116 @@ router.patch("/content-strategies/:id/items/:itemId", requireAuth, requireSuperA
     res.json(updated);
   } catch (err) {
     req.log.error(err, "Failed to update content item status");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/content-strategies/:id/items/:itemId/generate", requireAuth, async (req, res) => {
+  try {
+    const strategyId = Number(req.params.id);
+    const itemId = Number(req.params.itemId);
+    if (isNaN(strategyId) || isNaN(itemId)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    const [strategy] = await db
+      .select()
+      .from(contentStrategiesTable)
+      .where(eq(contentStrategiesTable.id, strategyId))
+      .limit(1);
+    if (!strategy) {
+      res.status(404).json({ error: "Content strategy not found" });
+      return;
+    }
+    if (!strategy.websiteProjectId) {
+      res.status(400).json({ error: "Strategy is not linked to a project" });
+      return;
+    }
+
+    const [proj] = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, strategy.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+    if (!proj) {
+      res.status(403).json({ error: "You do not have access to this content strategy" });
+      return;
+    }
+
+    const generateVariants = req.body?.generateVariants !== false;
+    const asyncMode = req.body?.async === true;
+
+    if (asyncMode) {
+      await enqueue(QUEUES.contentGenerate, {
+        contentItemId: itemId,
+        projectId: strategy.websiteProjectId,
+        userId: req.user!.userId,
+        generateVariants,
+      });
+      res.status(202).json({ queued: true, contentItemId: itemId });
+      return;
+    }
+
+    const userApiKey = await getDecryptedUserGeminiKey(req.user!.userId);
+    const result = await generateFromContentItem(
+      itemId,
+      strategy.websiteProjectId,
+      req.user!.userId,
+      { generateVariants, userApiKey },
+    );
+    res.status(201).json(result);
+  } catch (err) {
+    req.log.error(err, "Failed to generate from content item");
+    res.status(502).json({ error: err instanceof Error ? err.message : "Generation failed" });
+  }
+});
+
+router.post("/content-strategies/:id/items/:itemId/schedule", requireAuth, async (req, res) => {
+  try {
+    const strategyId = Number(req.params.id);
+    const itemId = Number(req.params.itemId);
+    if (isNaN(strategyId) || isNaN(itemId)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    const [strategy] = await db
+      .select()
+      .from(contentStrategiesTable)
+      .where(eq(contentStrategiesTable.id, strategyId))
+      .limit(1);
+    if (!strategy?.websiteProjectId) {
+      res.status(400).json({ error: "Strategy is not linked to a project" });
+      return;
+    }
+
+    const [proj] = await db
+      .select({
+        id: websiteProjectsTable.id,
+        autopilotSettings: websiteProjectsTable.autopilotSettings,
+      })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, strategy.websiteProjectId), eq(websiteProjectsTable.userId, req.user!.userId)))
+      .limit(1);
+    if (!proj) {
+      res.status(403).json({ error: "Access denied" });
+      return;
+    }
+
+    const settings = parseAutopilotSettings(proj.autopilotSettings);
+
+    await enqueue(QUEUES.contentGenerate, {
+      contentItemId: itemId,
+      projectId: strategy.websiteProjectId,
+      userId: req.user!.userId,
+      generateVariants: true,
+      schedulePublish: shouldAutoPublish(settings),
+    });
+
+    res.status(202).json({ queued: true, contentItemId: itemId });
+  } catch (err) {
+    req.log.error(err, "Failed to schedule content item");
     res.status(500).json({ error: "Internal server error" });
   }
 });

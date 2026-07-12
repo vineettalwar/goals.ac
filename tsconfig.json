@@ -29,6 +29,12 @@
     },
     {
       "path": "./lib/billing"
+    },
+    {
+      "path": "./lib/seo-tools"
+    },
+    {
+      "path": "./lib/serp-provider"
     }
   ]
 }

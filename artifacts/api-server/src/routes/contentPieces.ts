@@ -29,119 +29,16 @@ import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import { publishToNotion } from "@workspace/connectors/notion";
 import { publishToWebflow } from "@workspace/connectors/webflow";
 import { publishToWordPress } from "@workspace/connectors/wordpress";
-
-interface CmsIntegrationCredentials {
-  notion?: {
-    integrationToken: string;
-    databaseId: string;
-  };
-  webflow?: {
-    apiToken: string;
-    collectionId: string;
-    bodyFieldSlug: string;
-  };
-  wordpress?: {
-    siteUrl: string;
-    username: string;
-    appPassword: string;
-  };
-}
-
-function encryptCmsCredentials(
-  creds: CmsIntegrationCredentials,
-): CmsIntegrationCredentials {
-  const result: CmsIntegrationCredentials = {};
-  if (creds.notion) {
-    result.notion = {
-      integrationToken: encryptSecret(creds.notion.integrationToken),
-      databaseId: creds.notion.databaseId,
-    };
-  }
-  if (creds.webflow) {
-    result.webflow = {
-      apiToken: encryptSecret(creds.webflow.apiToken),
-      collectionId: creds.webflow.collectionId,
-      bodyFieldSlug: creds.webflow.bodyFieldSlug,
-    };
-  }
-  if (creds.wordpress) {
-    result.wordpress = {
-      siteUrl: creds.wordpress.siteUrl,
-      username: encryptSecret(creds.wordpress.username),
-      appPassword: encryptSecret(creds.wordpress.appPassword),
-    };
-  }
-  return result;
-}
-
-function decryptCmsCredentials(
-  stored: CmsIntegrationCredentials,
-): CmsIntegrationCredentials {
-  const result: CmsIntegrationCredentials = {};
-  if (stored.notion) {
-    try {
-      result.notion = {
-        integrationToken: decryptSecret(stored.notion.integrationToken),
-        databaseId: stored.notion.databaseId,
-      };
-    } catch {
-      result.notion = stored.notion;
-    }
-  }
-  if (stored.webflow) {
-    try {
-      result.webflow = {
-        apiToken: decryptSecret(stored.webflow.apiToken),
-        collectionId: stored.webflow.collectionId,
-        bodyFieldSlug: stored.webflow.bodyFieldSlug,
-      };
-    } catch {
-      result.webflow = stored.webflow;
-    }
-  }
-  if (stored.wordpress) {
-    try {
-      result.wordpress = {
-        siteUrl: stored.wordpress.siteUrl,
-        username: decryptSecret(stored.wordpress.username),
-        appPassword: decryptSecret(stored.wordpress.appPassword),
-      };
-    } catch {
-      result.wordpress = stored.wordpress;
-    }
-  }
-  return result;
-}
-
-function maskCmsCredentials(decrypted: CmsIntegrationCredentials): object {
-  const result: Record<string, unknown> = {};
-  if (decrypted.notion) {
-    const tok = decrypted.notion.integrationToken;
-    result.notion = {
-      connected: true,
-      databaseId: decrypted.notion.databaseId,
-      integrationTokenHint: tok.length > 8 ? `...${tok.slice(-4)}` : "****",
-    };
-  }
-  if (decrypted.webflow) {
-    const tok = decrypted.webflow.apiToken;
-    result.webflow = {
-      connected: true,
-      collectionId: decrypted.webflow.collectionId,
-      bodyFieldSlug: decrypted.webflow.bodyFieldSlug,
-      apiTokenHint: tok.length > 8 ? `...${tok.slice(-4)}` : "****",
-    };
-  }
-  if (decrypted.wordpress) {
-    const tok = decrypted.wordpress.username;
-    result.wordpress = {
-      connected: true,
-      siteUrl: decrypted.wordpress.siteUrl,
-      usernameHint: tok.length > 8 ? `...${tok.slice(-4)}` : "****",
-    };
-  }
-  return result;
-}
+import { publishToLinkedIn } from "@workspace/connectors/linkedin";
+import { publishThreadToTwitter, splitTwitterThread } from "@workspace/connectors/twitter";
+import { publishToFacebookPage, publishToInstagram } from "@workspace/connectors/meta";
+import {
+  type CmsIntegrationCredentials,
+  encryptCmsCredentials,
+  decryptCmsCredentials,
+  maskCmsCredentials,
+} from "../lib/cmsIntegrations";
+import { getSocialAccessToken } from "../lib/socialTokens";
 
 const router: IRouter = Router();
 
@@ -1273,19 +1170,27 @@ router.get("/user/cms-summary", requireAuth, async (req, res) => {
     let hasNotion = false;
     let hasWebflow = false;
     let hasWordpress = false;
+    let hasLinkedin = false;
+    let hasTwitter = false;
+    let hasMeta = false;
 
     for (const p of projects) {
       const stored = (p.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
       if (stored.notion) hasNotion = true;
       if (stored.webflow) hasWebflow = true;
       if (stored.wordpress) hasWordpress = true;
-      if (hasNotion && hasWebflow && hasWordpress) break;
+      if (stored.linkedin) hasLinkedin = true;
+      if (stored.twitter) hasTwitter = true;
+      if (stored.meta) hasMeta = true;
     }
 
     res.json({
       notion: hasNotion,
       webflow: hasWebflow,
       wordpress: hasWordpress,
+      linkedin: hasLinkedin,
+      twitter: hasTwitter,
+      meta: hasMeta,
     });
   } catch (err) {
     req.log.error({ err }, "Failed to fetch CMS summary");
@@ -1445,6 +1350,37 @@ router.post(
             error: err instanceof Error ? err.message : "Connection failed",
           };
         }
+      }
+
+      if (creds.linkedin) {
+        const { testLinkedInConnection } = await import("@workspace/connectors/linkedin");
+        const result = await testLinkedInConnection({
+          accessToken: creds.linkedin.accessToken,
+          authorUrn: creds.linkedin.authorUrn,
+        });
+        health.linkedin = result.ok
+          ? { ok: true, siteName: result.displayName }
+          : { ok: false, error: result.error };
+      }
+
+      if (creds.twitter) {
+        const { testTwitterConnection } = await import("@workspace/connectors/twitter");
+        const result = await testTwitterConnection({ accessToken: creds.twitter.accessToken });
+        health.twitter = result.ok
+          ? { ok: true, siteName: result.screenName ? `@${result.screenName}` : undefined }
+          : { ok: false, error: result.error };
+      }
+
+      if (creds.meta) {
+        const { testMetaConnection } = await import("@workspace/connectors/meta");
+        const result = await testMetaConnection({
+          accessToken: creds.meta.accessToken,
+          pageId: creds.meta.pageId,
+          instagramAccountId: creds.meta.instagramAccountId,
+        });
+        health.meta = result.ok
+          ? { ok: true, siteName: result.pageName ?? result.instagramUsername }
+          : { ok: false, error: result.error };
       }
 
       res.json(health);
@@ -1609,7 +1545,10 @@ router.delete(
     if (
       platform !== "notion" &&
       platform !== "webflow" &&
-      platform !== "wordpress"
+      platform !== "wordpress" &&
+      platform !== "linkedin" &&
+      platform !== "twitter" &&
+      platform !== "meta"
     ) {
       res.status(400).json({ error: "Invalid platform" });
       return;
@@ -1737,6 +1676,112 @@ router.post(
 );
 
 router.post(
+  "/content-pieces/:id/publish/wordpress",
+  requireAuth,
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    try {
+      const [piece] = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(eq(contentPiecesTable.id, id))
+        .limit(1);
+
+      if (!piece) {
+        res.status(404).json({ error: "Content piece not found" });
+        return;
+      }
+
+      const [project] = await db
+        .select({
+          id: websiteProjectsTable.id,
+          cmsIntegrations: websiteProjectsTable.cmsIntegrations,
+        })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, piece.websiteProjectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+
+      if (!project) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const stored = (project.cmsIntegrations ??
+        {}) as CmsIntegrationCredentials;
+      const creds = decryptCmsCredentials(stored);
+
+      if (!creds.wordpress) {
+        res.status(400).json({
+          error:
+            "WordPress is not connected. Configure it in Project Settings → Publishing.",
+        });
+        return;
+      }
+
+      let result: Awaited<ReturnType<typeof publishToWordPress>>;
+      try {
+        result = await publishToWordPress(
+          {
+            siteUrl: creds.wordpress.siteUrl,
+            username: creds.wordpress.username,
+            appPassword: creds.wordpress.appPassword,
+          },
+          piece.title,
+          piece.bodyMarkdown,
+        );
+      } catch (wpErr) {
+        const message =
+          wpErr instanceof Error ? wpErr.message : "WordPress publish failed";
+        if (SSRF_ERROR_PATTERN.test(message)) {
+          req.log.warn({ wpErr }, "WordPress publish blocked by SSRF guard");
+          res.status(400).json({ error: message });
+          return;
+        }
+        if (AUTH_ERROR_PATTERN.test(message)) {
+          req.log.warn({ wpErr }, "WordPress authentication failed");
+          res.status(401).json({
+            error:
+              "WordPress authentication failed. Check your username and application password.",
+          });
+          return;
+        }
+        req.log.error({ wpErr }, "Failed to reach or publish to WordPress");
+        res.status(502).json({
+          error:
+            message ||
+            "Could not reach your WordPress site. Check the URL and try again.",
+        });
+        return;
+      }
+
+      const [updated] = await db
+        .update(contentPiecesTable)
+        .set({ status: "published", publishedUrl: result.url })
+        .where(eq(contentPiecesTable.id, id))
+        .returning();
+
+      res.json(updated);
+    } catch (err) {
+      req.log.error({ err }, "Failed to publish to WordPress");
+      res.status(502).json({
+        error:
+          err instanceof Error ? err.message : "Failed to publish to WordPress",
+      });
+    }
+  },
+);
+
+router.post(
   "/content-pieces/:id/publish/webflow",
   requireAuth,
   async (req, res) => {
@@ -1814,6 +1859,258 @@ router.post(
           error:
             err instanceof Error ? err.message : "Failed to publish to Webflow",
         });
+    }
+  },
+);
+
+router.post(
+  "/content-pieces/:id/publish/linkedin",
+  requireAuth,
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    try {
+      const [piece] = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(eq(contentPiecesTable.id, id))
+        .limit(1);
+      if (!piece) {
+        res.status(404).json({ error: "Content piece not found" });
+        return;
+      }
+
+      const [project] = await db
+        .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, piece.websiteProjectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+      if (!project) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
+      if (!creds.linkedin) {
+        res.status(400).json({ error: "LinkedIn is not connected. Configure it in Project Settings → Publishing." });
+        return;
+      }
+
+      const accessToken = await getSocialAccessToken(piece.websiteProjectId, req.user!.userId, "linkedin");
+      const result = await publishToLinkedIn(
+        { accessToken, authorUrn: creds.linkedin.authorUrn },
+        piece.title,
+        piece.bodyMarkdown,
+      );
+
+      const [updated] = await db
+        .update(contentPiecesTable)
+        .set({ status: "published", publishedUrl: result.postUrl, publishPlatform: "linkedin", publishError: null })
+        .where(eq(contentPiecesTable.id, id))
+        .returning();
+      res.json(updated);
+    } catch (err) {
+      req.log.error({ err }, "Failed to publish to LinkedIn");
+      res.status(502).json({ error: err instanceof Error ? err.message : "Failed to publish to LinkedIn" });
+    }
+  },
+);
+
+router.post(
+  "/content-pieces/:id/publish/twitter",
+  requireAuth,
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    try {
+      const [piece] = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(eq(contentPiecesTable.id, id))
+        .limit(1);
+      if (!piece) {
+        res.status(404).json({ error: "Content piece not found" });
+        return;
+      }
+
+      const [project] = await db
+        .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, piece.websiteProjectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+      if (!project) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
+      if (!creds.twitter) {
+        res.status(400).json({ error: "X is not connected. Configure it in Project Settings → Publishing." });
+        return;
+      }
+
+      const accessToken = await getSocialAccessToken(piece.websiteProjectId, req.user!.userId, "twitter");
+      const tweets = splitTwitterThread(piece.bodyMarkdown);
+      const result = await publishThreadToTwitter({ accessToken }, tweets);
+
+      const [updated] = await db
+        .update(contentPiecesTable)
+        .set({
+          status: "published",
+          publishedUrl: result.postUrls[0] ?? null,
+          publishPlatform: "twitter",
+          publishError: null,
+        })
+        .where(eq(contentPiecesTable.id, id))
+        .returning();
+      res.json(updated);
+    } catch (err) {
+      req.log.error({ err }, "Failed to publish to X");
+      res.status(502).json({ error: err instanceof Error ? err.message : "Failed to publish to X" });
+    }
+  },
+);
+
+router.post(
+  "/content-pieces/:id/publish/instagram",
+  requireAuth,
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    try {
+      const [piece] = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(eq(contentPiecesTable.id, id))
+        .limit(1);
+      if (!piece) {
+        res.status(404).json({ error: "Content piece not found" });
+        return;
+      }
+
+      const [project] = await db
+        .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, piece.websiteProjectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+      if (!project) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
+      if (!creds.meta?.instagramAccountId) {
+        res.status(400).json({ error: "Instagram is not connected. Connect Meta and link an Instagram Business account." });
+        return;
+      }
+
+      const accessToken = await getSocialAccessToken(piece.websiteProjectId, req.user!.userId, "meta");
+      const result = await publishToInstagram(
+        {
+          accessToken,
+          pageId: creds.meta.pageId,
+          instagramAccountId: creds.meta.instagramAccountId,
+        },
+        piece.bodyMarkdown,
+      );
+
+      const [updated] = await db
+        .update(contentPiecesTable)
+        .set({ status: "published", publishedUrl: result.postUrl, publishPlatform: "instagram", publishError: null })
+        .where(eq(contentPiecesTable.id, id))
+        .returning();
+      res.json(updated);
+    } catch (err) {
+      req.log.error({ err }, "Failed to publish to Instagram");
+      res.status(502).json({ error: err instanceof Error ? err.message : "Failed to publish to Instagram" });
+    }
+  },
+);
+
+router.post(
+  "/content-pieces/:id/publish/facebook",
+  requireAuth,
+  async (req, res) => {
+    const id = Number(req.params.id);
+    if (isNaN(id)) {
+      res.status(400).json({ error: "Invalid id" });
+      return;
+    }
+
+    try {
+      const [piece] = await db
+        .select()
+        .from(contentPiecesTable)
+        .where(eq(contentPiecesTable.id, id))
+        .limit(1);
+      if (!piece) {
+        res.status(404).json({ error: "Content piece not found" });
+        return;
+      }
+
+      const [project] = await db
+        .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+        .from(websiteProjectsTable)
+        .where(
+          and(
+            eq(websiteProjectsTable.id, piece.websiteProjectId),
+            eq(websiteProjectsTable.userId, req.user!.userId),
+          ),
+        )
+        .limit(1);
+      if (!project) {
+        res.status(403).json({ error: "Access denied" });
+        return;
+      }
+
+      const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
+      if (!creds.meta?.pageId) {
+        res.status(400).json({ error: "Facebook is not connected. Connect Meta in Project Settings → Publishing." });
+        return;
+      }
+
+      const accessToken = await getSocialAccessToken(piece.websiteProjectId, req.user!.userId, "meta");
+      const result = await publishToFacebookPage(
+        { accessToken, pageId: creds.meta.pageId, instagramAccountId: creds.meta.instagramAccountId },
+        piece.bodyMarkdown,
+      );
+
+      const [updated] = await db
+        .update(contentPiecesTable)
+        .set({ status: "published", publishedUrl: result.postUrl, publishPlatform: "facebook", publishError: null })
+        .where(eq(contentPiecesTable.id, id))
+        .returning();
+      res.json(updated);
+    } catch (err) {
+      req.log.error({ err }, "Failed to publish to Facebook");
+      res.status(502).json({ error: err instanceof Error ? err.message : "Failed to publish to Facebook" });
     }
   },
 );

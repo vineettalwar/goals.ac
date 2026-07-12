@@ -46,7 +46,6 @@ function mapArticle(article: Article): SiteGraphArticle {
 }
 
 router.get("/site-graph", hmacAuth, async (req, res) => {
-  try {
     const blogId = req.query.blog_id as string | undefined;
     const limit = Math.min(parseInt(req.query.limit as string, 10) || 50, 250);
 
@@ -72,10 +71,6 @@ router.get("/site-graph", hmacAuth, async (req, res) => {
     };
 
     res.json(response);
-  } catch (error) {
-    console.error("[site-graph] Error:", error instanceof Error ? error.message : error);
-    res.status(500).json({ error: "Unable to export site graph" });
-  }
 });
 
 export default router;

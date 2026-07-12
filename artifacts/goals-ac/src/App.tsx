@@ -30,6 +30,7 @@ import Settings from "@/pages/settings";
 import Onboarding from "@/pages/onboarding";
 import CompetitorAnalysis from "@/pages/competitor-analysis";
 import KeywordTracking from "@/pages/keyword-tracking";
+import AiVisibility from "@/pages/ai-visibility";
 import About from "@/pages/about";
 import Pricing from "@/pages/pricing";
 import ContentEngine from "@/pages/content-engine";
@@ -72,8 +73,9 @@ function App() {
                 <Route path="/onboarding" element={<RequireAuth><Onboarding /></RequireAuth>} />
                 <Route path="/dashboard" element={<RequireAuth><Dashboard /></RequireAuth>} />
                 <Route path="/settings" element={<RequireAuth><Settings /></RequireAuth>} />
-                <Route path="/projects/:id" element={<RequireAuth><ProjectDetail /></RequireAuth>} />
                 <Route path="/projects/:id/content-studio" element={<RequireAuth><ContentStudio /></RequireAuth>} />
+                <Route path="/projects/:id/:tab" element={<RequireAuth><ProjectDetail /></RequireAuth>} />
+                <Route path="/projects/:id" element={<RequireAuth><ProjectDetail /></RequireAuth>} />
                 <Route path="/content-piece/:id" element={<RequireAuth><ContentPiecePage /></RequireAuth>} />
                 <Route path="/roadmaps" element={<RequireAuth><RoadmapDirectory /></RequireAuth>} />
                 <Route path="/roadmap/:slug" element={<RequireAuth><RoadmapDetail /></RequireAuth>} />
@@ -84,6 +86,7 @@ function App() {
                 <Route path="/geo-audit/:id" element={<GeoAuditDetail />} />
                 <Route path="/competitor-analysis" element={<RequireAuth><CompetitorAnalysis /></RequireAuth>} />
                 <Route path="/keyword-tracking" element={<RequireAuth><KeywordTracking /></RequireAuth>} />
+                <Route path="/ai-visibility" element={<RequireAuth><AiVisibility /></RequireAuth>} />
                 <Route path="/about" element={<About />} />
                 <Route path="/pricing" element={<Pricing />} />
                 <Route path="/content-engine" element={<ContentEngine />} />

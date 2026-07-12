@@ -102,7 +102,6 @@ async function buildAll() {
       "wrangler",
       "zeromq",
       "zeromq-prebuilt",
-      "redis",
       "playwright",
       "puppeteer",
       "puppeteer-core",

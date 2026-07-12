@@ -43,6 +43,8 @@ goals.ac/
 │   ├── security/                # AES-256-GCM encryption, SSRF guard
 │   ├── jobs/                    # pg-boss queue contracts
 │   ├── billing/                 # Credit ledger reserve/settle/release
+│   ├── seo-tools/               # GEO auditor, competitor analyzer, keyword analyzer
+│   ├── serp-provider/           # DataForSEO rank tracking abstraction
 │   └── integrations-gemini-ai/  # Legacy Gemini integration
 ├── cms-plugins/                 # CMS-specific plugins (server-side, run on user sites)
 │   ├── shared/                  # Shared PHP library (HMAC auth, idempotency, contract types)
@@ -72,7 +74,7 @@ goals.ac/
 
 ## Database
 
-PostgreSQL with Drizzle ORM. 20+ tables covering: users, workspaces, projects (website_projects), brand_profiles, goals, briefs, content_pieces, roadmaps, geo_audits, keyword_analysis, competitor_analysis, content_strategies, usage_events, credit_ledger, sessions, integration_connections, and more.
+PostgreSQL with Drizzle ORM. 20+ tables covering: users, workspaces, projects (website_projects), brand_profiles, goals, briefs, content_pieces, roadmaps, geo_audits, competitor_analyses, keyword_analyses, tracked_keywords, keyword_rank_snapshots, content_strategies, usage_events, credit_ledger, sessions, integration_connections, and more.
 
 Migrations: `pnpm --filter @workspace/db run generate` → `pnpm --filter @workspace/db run migrate`. Seed: `pnpm --filter @workspace/db run seed`.
 

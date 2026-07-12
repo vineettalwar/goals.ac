@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { SEO } from "@/components/seo";
 import { Layout } from "@/components/layout";
@@ -7,14 +8,20 @@ import {
 } from "@workspace/api-client-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Loader2, Sparkles, Calendar } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/context/auth";
+
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 const FORMAT_COLORS: Record<string, string> = {
   "LinkedIn post": "bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25",
   "Blog article": "bg-emerald-100 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25",
   "Twitter thread": "bg-sky-100 text-sky-700 border border-sky-200 dark:bg-sky-500/15 dark:text-sky-300 dark:border-sky-500/25",
+  "Instagram post": "bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200 dark:bg-fuchsia-500/15 dark:text-fuchsia-300 dark:border-fuchsia-500/25",
+  "Facebook post": "bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25",
   "Case study": "bg-blue-100 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/25",
   "Video script": "bg-red-100 text-red-700 border border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/25",
   "Newsletter": "bg-orange-100 text-orange-700 border border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/25",
@@ -28,13 +35,48 @@ function formatBadgeColor(fmt: string): string {
 export default function ContentStrategy() {
   const { id = "" } = useParams<{ id: string }>();
   const strategyId = Number(id);
+  const { token } = useAuth();
+  const [generatingId, setGeneratingId] = useState<number | null>(null);
+  const [schedulingId, setSchedulingId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const { data: strategy, isLoading, isError } = useGetContentStrategy(strategyId, {
+  const { data: strategy, isLoading, isError, refetch } = useGetContentStrategy(strategyId, {
     query: {
       enabled: !!strategyId && !isNaN(strategyId),
       queryKey: getGetContentStrategyQueryKey(strategyId),
     },
   });
+
+  const handleGenerate = async (itemId: number, schedule = false) => {
+    if (!token) return;
+    setActionError(null);
+    if (schedule) setSchedulingId(itemId);
+    else setGeneratingId(itemId);
+    try {
+      const endpoint = schedule
+        ? `${API_BASE}/api/content-strategies/${strategyId}/items/${itemId}/schedule`
+        : `${API_BASE}/api/content-strategies/${strategyId}/items/${itemId}/generate`;
+      const res = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({ generateVariants: true, async: schedule }),
+      });
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed");
+      }
+      await refetch();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : "Action failed");
+    } finally {
+      setGeneratingId(null);
+      setSchedulingId(null);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -64,6 +106,7 @@ export default function ContentStrategy() {
   }
 
   const monthName = format(new Date(strategy.year, strategy.month - 1, 1), "MMMM yyyy");
+  const projectId = (strategy as { websiteProjectId?: number | null }).websiteProjectId;
 
   return (
     <Layout>
@@ -72,7 +115,6 @@ export default function ContentStrategy() {
         description={`A 30-day SEO and thought-leadership content plan for a ${strategy.industry} startup at ${strategy.stage} stage based in ${strategy.location}.`}
       />
 
-      {/* Header */}
       <div className="relative bg-mesh-dark text-zinc-50 py-12 md:py-16 border-b border-white/[0.06] overflow-hidden">
         <div className="orb orb-primary w-[400px] h-[350px] top-[-20%] left-[30%]" />
         <div className="orb orb-violet w-[250px] h-[250px] bottom-[-10%] right-[10%]" />
@@ -90,9 +132,7 @@ export default function ContentStrategy() {
             <Badge className="bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30">
               {strategy.industry}
             </Badge>
-            <Badge variant="outline">
-              {strategy.location}
-            </Badge>
+            <Badge variant="outline">{strategy.location}</Badge>
             <Badge variant="outline">
               {strategy.stage.split("-").map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")} Stage
             </Badge>
@@ -104,11 +144,18 @@ export default function ContentStrategy() {
           <p className="text-zinc-400 text-sm font-medium">
             {monthName} · <span className="text-blue-400">{strategy.items?.length ?? 0} pieces of content</span>
           </p>
+          {projectId && (
+            <p className="text-zinc-500 text-xs mt-2">
+              Linked to project #{projectId} — generate content for all connected platforms.
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Calendar Grid */}
       <div className="container mx-auto px-4 md:px-8 py-12 max-w-5xl">
+        {actionError && (
+          <p className="text-sm text-destructive mb-4">{actionError}</p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
           {(strategy.items ?? []).sort((a, b) => a.day - b.day).map((item) => (
             <Card
@@ -120,6 +167,9 @@ export default function ContentStrategy() {
                   <span className="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">
                     Day {item.day}
                   </span>
+                  {item.status === "prepared" && (
+                    <Badge variant="secondary" className="text-[10px]">Generated</Badge>
+                  )}
                 </div>
 
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full w-fit ${formatBadgeColor(item.format)}`}>
@@ -130,7 +180,7 @@ export default function ContentStrategy() {
                   {item.title}
                 </h3>
 
-                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3 mt-auto">
+                <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
                   {item.topicAngle}
                 </p>
 
@@ -139,6 +189,38 @@ export default function ContentStrategy() {
                     🔑 {item.primaryKeyword}
                   </span>
                 </div>
+
+                {projectId && token && item.status !== "prepared" && (
+                  <div className="flex flex-col gap-1.5 mt-2 pt-2 border-t border-border/50">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      disabled={generatingId === item.id || schedulingId === item.id}
+                      onClick={() => handleGenerate(item.id)}
+                    >
+                      {generatingId === item.id ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3 h-3 mr-1" />
+                      )}
+                      Generate
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={generatingId === item.id || schedulingId === item.id}
+                      onClick={() => handleGenerate(item.id, true)}
+                    >
+                      {schedulingId === item.id ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : (
+                        <Calendar className="w-3 h-3 mr-1" />
+                      )}
+                      Schedule
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

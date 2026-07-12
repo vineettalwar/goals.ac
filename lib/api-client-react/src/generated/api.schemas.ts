@@ -149,6 +149,167 @@ export interface ContentStrategyWithItems {
   items: ContentItem[];
 }
 
+export type GeoIssueStatus =
+  (typeof GeoIssueStatus)[keyof typeof GeoIssueStatus];
+
+export const GeoIssueStatus = {
+  pass: "pass",
+  fail: "fail",
+  warn: "warn",
+} as const;
+
+export interface GeoIssue {
+  check: string;
+  status: GeoIssueStatus;
+  detail: string;
+  fix: string;
+}
+
+export interface CreateGeoAuditRequest {
+  url: string;
+  roadmap_id?: number;
+  website_project_id?: number;
+}
+
+export interface GeoAudit {
+  id: number;
+  roadmapId?: number | null;
+  websiteProjectId?: number | null;
+  url: string;
+  geoScore: number;
+  issues: GeoIssue[];
+  pageTitle?: string | null;
+  metaDescription?: string | null;
+  hasSchemaOrg: boolean;
+  schemaTypes: string[];
+  h1Count: number;
+  imageCount: number;
+  imagesMissingAlt: number;
+  createdAt: string;
+}
+
+export interface CreateCompetitorAnalysisRequest {
+  competitorUrl: string;
+  industry: string;
+  location: string;
+  stage: string;
+  website_project_id?: number;
+}
+
+export type CompetitorAnalysisResponseThreatLevel =
+  (typeof CompetitorAnalysisResponseThreatLevel)[keyof typeof CompetitorAnalysisResponseThreatLevel];
+
+export const CompetitorAnalysisResponseThreatLevel = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface CompetitorAnalysisResponse {
+  id?: number;
+  competitorName: string;
+  summary: string;
+  strengths: string[];
+  weaknesses: string[];
+  contentGaps: string[];
+  geoGaps: string[];
+  quickWins: string[];
+  threatLevel: CompetitorAnalysisResponseThreatLevel;
+  createdAt?: string;
+}
+
+export interface CreateKeywordAnalysisRequest {
+  /**
+   * @minItems 1
+   * @maxItems 10
+   */
+  keywords: string[];
+  websiteUrl?: string;
+  website_project_id?: number;
+}
+
+export type KeywordResultDifficulty =
+  (typeof KeywordResultDifficulty)[keyof typeof KeywordResultDifficulty];
+
+export const KeywordResultDifficulty = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+} as const;
+
+export interface KeywordResult {
+  keyword: string;
+  estimatedVolume: string;
+  difficulty: KeywordResultDifficulty;
+  aiVisibility: number;
+  opportunities: string[];
+  suggestedContent: string;
+}
+
+export interface KeywordAnalysisResponse {
+  id?: number;
+  keywords: KeywordResult[];
+  topOpportunity: string;
+  summary: string;
+  createdAt?: string;
+}
+
+export type CreateTrackedKeywordRequestDevice =
+  (typeof CreateTrackedKeywordRequestDevice)[keyof typeof CreateTrackedKeywordRequestDevice];
+
+export const CreateTrackedKeywordRequestDevice = {
+  desktop: "desktop",
+  mobile: "mobile",
+} as const;
+
+export interface CreateTrackedKeywordRequest {
+  website_project_id: number;
+  keyword: string;
+  target_url?: string;
+  location?: string;
+  language?: string;
+  device?: CreateTrackedKeywordRequestDevice;
+}
+
+export interface TrackedKeyword {
+  id: number;
+  websiteProjectId: number;
+  keyword: string;
+  targetUrl?: string | null;
+  location: string;
+  language: string;
+  device: string;
+  isActive: boolean;
+  lastCheckedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type KeywordRankSnapshotSerpFeatures = { [key: string]: unknown };
+
+export interface KeywordRankSnapshot {
+  id: number;
+  trackedKeywordId: number;
+  position?: number | null;
+  rankingUrl?: string | null;
+  serpFeatures: KeywordRankSnapshotSerpFeatures;
+  provider: string;
+  checkedAt: string;
+}
+
+export type TrackedKeywordWithSnapshot = TrackedKeyword & {
+  latestSnapshot?: KeywordRankSnapshot | null;
+};
+
+export interface TrackedKeywordListResponse {
+  trackedKeywords: TrackedKeywordWithSnapshot[];
+}
+
+export interface TrackedKeywordSnapshotsResponse {
+  trackedKeyword: TrackedKeyword;
+  snapshots: KeywordRankSnapshot[];
+}
+
 export type ListRoadmapsParams = {
   limit?: number;
   offset?: number;
@@ -156,84 +317,6 @@ export type ListRoadmapsParams = {
   location?: string;
 };
 
-export type ContentFormatType =
-  | "blog_post"
-  | "news_article"
-  | "tutorial"
-  | "guide"
-  | "whitepaper"
-  | "pillar_page"
-  | "location_page"
-  | "infographic_outline"
-  | "linkedin_post"
-  | "twitter_thread"
-  | "instagram_post"
-  | "email_sequence"
-  | "ad_copy"
-  | "landing_page_copy"
-  | "product_description"
-  | "press_release"
-  | "faq_article";
-
-export interface GenerateContentPieceRequest {
-  formatType: ContentFormatType;
-  targetKeyword: string;
-  angleHint?: string;
-}
-
-export interface ContentPiece {
-  id: number;
-  websiteProjectId: number;
-  formatType: ContentFormatType;
-  title: string;
-  targetKeyword: string;
-  bodyMarkdown: string;
-  wordCount: number;
-  status: string;
-  plannedDate?: string | null;
-  publishedUrl?: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface GenerateSeoArticleRequest {
-  brand_name: string;
-  website_url: string;
-  industry: string;
-  location: string;
-  stage: string;
-  roadmap_id?: number;
-  website_project_id?: number;
-}
-
-export interface SeoArticle {
-  id: number;
-  roadmapId: number | null;
-  websiteProjectId: number | null;
-  brandName: string;
-  websiteUrl: string;
-  industry: string;
-  location: string;
-  stage: string;
-  title: string;
-  metaDescription: string;
-  primaryKeyword: string;
-  secondaryKeywords: string[];
-  content: string;
-  wordCount: number;
-  status: string;
-  createdAt: string;
-}
-
-export interface GenerateContentStrategyStreamRequest {
-  roadmap_id: number;
-  industry: string;
-  location: string;
-  stage: string;
-}
-
-export interface ContentStrategyStreamProgressEvent {
-  batchNum: number;
-  totalBatches: number;
-  itemCount: number;
-}
+export type ListTrackedKeywordsParams = {
+  projectId: number;
+};

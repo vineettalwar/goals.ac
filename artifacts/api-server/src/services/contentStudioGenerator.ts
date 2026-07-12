@@ -246,6 +246,15 @@ const FORMAT_CONFIGS: Record<
 - ## Alt Text: one sentence describing the visual for accessibility
 - Write in first-person, conversational tone. Short sentences. High energy. No corporate speak.`,
   },
+  facebook_post: {
+    label: "Facebook Post",
+    wordRange: "150-400",
+    structure: `- Hook: one engaging opening line that stops the scroll
+- 2-4 short paragraphs with the core insight, story, or tip
+- End with a question or CTA to drive comments
+- Optional: 3-5 relevant hashtags at the end (separate line)
+- Conversational, community-friendly tone. No corporate jargon.`,
+  },
   email_sequence: {
     label: "Email Sequence",
     wordRange: "800-1200",

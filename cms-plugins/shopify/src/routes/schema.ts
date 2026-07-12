@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { hmacAuth } from "../lib/hmac.js";
 import { setMetafield, graphqlRequest } from "../lib/shopify-graphql.js";
+import { badRequest } from "../lib/errors.js";
 
 const router = Router();
 
@@ -22,12 +23,10 @@ async function getShopId(): Promise<string> {
 }
 
 router.post("/schema", hmacAuth, async (req, res) => {
-  try {
     const body = req.body as SchemaRequest;
 
     if (!body.type || !body.content) {
-      res.status(400).json({ error: "type and content are required" });
-      return;
+      throw badRequest("MISSING_FIELDS", "type and content are required");
     }
 
     const shopId = await getShopId();
@@ -44,8 +43,7 @@ router.post("/schema", hmacAuth, async (req, res) => {
         try {
           JSON.parse(body.content);
         } catch {
-          res.status(400).json({ error: "content must be valid JSON for jsonld type" });
-          return;
+          throw badRequest("INVALID_JSON_LD", "content must be valid JSON for jsonld type");
         }
         value = body.content;
         break;
@@ -63,8 +61,7 @@ router.post("/schema", hmacAuth, async (req, res) => {
         break;
 
       default:
-        res.status(400).json({ error: `Unknown schema type: ${body.type}` });
-        return;
+        throw badRequest("INVALID_SCHEMA_TYPE", `Unknown schema type: ${String(body.type)}`);
     }
 
     // Store on the shop level (global) or on a specific article
@@ -80,10 +77,6 @@ router.post("/schema", hmacAuth, async (req, res) => {
       key,
       scope: body.articleId ? "article" : "shop",
     });
-  } catch (error) {
-    console.error("[schema] Error:", error instanceof Error ? error.message : error);
-    res.status(500).json({ error: "Unable to store schema configuration" });
-  }
 });
 
 export default router;

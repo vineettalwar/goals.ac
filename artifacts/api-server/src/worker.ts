@@ -9,9 +9,35 @@
 import { getBoss, stopBoss, scheduleCron, QUEUES } from "@workspace/jobs";
 import { logger } from "./lib/logger";
 import { registerConnectionHealthCheckHandler } from "./jobs/connectionHealthCheck";
+import {
+  registerKeywordRankCheckHandler,
+  KEYWORD_RANK_SWEEP_CRON,
+} from "./jobs/keywordRankCheck";
+import { registerContentGenerateHandler } from "./jobs/contentGenerate";
+import {
+  registerContentGenerateSweepHandler,
+  CONTENT_GENERATE_SWEEP_CRON,
+} from "./jobs/contentGenerateSweep";
+import {
+  registerContentPublishHandler,
+  registerScheduledPublishSweepHandler,
+} from "./jobs/contentPublish";
+import {
+  registerLlmVisibilityCheckHandler,
+  LLM_VISIBILITY_SWEEP_CRON,
+} from "./jobs/llmVisibilityCheck";
+import {
+  registerGeoReauditSweepHandler,
+  GEO_REAUDIT_SWEEP_CRON,
+} from "./jobs/geoReauditSweep";
+import {
+  registerKeywordOpportunitySweepHandler,
+  KEYWORD_OPPORTUNITY_SWEEP_CRON,
+} from "./jobs/keywordOpportunitySweep";
 
 // Daily at 04:00 UTC.
 const CONNECTION_HEALTH_CHECK_CRON = "0 4 * * *";
+const SCHEDULED_PUBLISH_SWEEP_CRON = "0 5 * * *";
 
 async function main(): Promise<void> {
   const boss = await getBoss();
@@ -27,10 +53,24 @@ async function main(): Promise<void> {
   }
 
   await registerConnectionHealthCheckHandler(boss);
+  await registerKeywordRankCheckHandler(boss);
+  await registerContentGenerateHandler(boss);
+  await registerContentGenerateSweepHandler(boss);
+  await registerContentPublishHandler(boss);
+  await registerScheduledPublishSweepHandler(boss);
+  await registerLlmVisibilityCheckHandler(boss);
+  await registerGeoReauditSweepHandler(boss);
+  await registerKeywordOpportunitySweepHandler(boss);
 
   // The cron payload is an empty sweep job — the handler enumerates every
   // connection and fans out one per-row health-check job.
   await scheduleCron(QUEUES.connectionHealthCheck, CONNECTION_HEALTH_CHECK_CRON, {});
+  await scheduleCron(QUEUES.keywordRankCheck, KEYWORD_RANK_SWEEP_CRON, {});
+  await scheduleCron(QUEUES.contentGenerateSweep, CONTENT_GENERATE_SWEEP_CRON, {});
+  await scheduleCron(QUEUES.scheduledPublishSweep, SCHEDULED_PUBLISH_SWEEP_CRON, {});
+  await scheduleCron(QUEUES.llmVisibilityCheck, LLM_VISIBILITY_SWEEP_CRON, {});
+  await scheduleCron(QUEUES.geoReauditSweep, GEO_REAUDIT_SWEEP_CRON, {});
+  await scheduleCron(QUEUES.keywordOpportunitySweep, KEYWORD_OPPORTUNITY_SWEEP_CRON, {});
 
   logger.info({ queues: Object.values(QUEUES) }, "Job worker started");
 

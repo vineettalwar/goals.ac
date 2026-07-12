@@ -13,6 +13,7 @@ import {
   Search,
   BarChart3,
   FolderOpen,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { label: "GEO Audit", icon: Zap, to: "/geo-audit" },
   { label: "Competitor Analysis", icon: Search, to: "/competitor-analysis" },
   { label: "Keyword Tracking", icon: BarChart3, to: "/keyword-tracking" },
+  { label: "AI Visibility", icon: Sparkles, to: "/ai-visibility" },
 ];
 
 function NavItem({ label, icon: Icon, to, active }: { label: string; icon: React.ElementType; to: string; active: boolean }) {

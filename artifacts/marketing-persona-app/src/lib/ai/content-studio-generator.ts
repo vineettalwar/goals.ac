@@ -152,6 +152,14 @@ const FORMAT_CONFIGS: Record<ContentFormatType, { label: string; wordRange: stri
 - ## Alt Text: one sentence describing the visual for accessibility
 - Write in first-person, conversational tone. Short sentences. High energy. No corporate speak.`,
   },
+  facebook_post: {
+    label: "Facebook Post",
+    wordRange: "150-400",
+    structure: `- Hook: one engaging opening line
+- 2-4 short paragraphs with core insight
+- End with a question or CTA
+- Conversational, community-friendly tone`,
+  },
   email_sequence: {
     label: "Email Sequence",
     wordRange: "800-1200",

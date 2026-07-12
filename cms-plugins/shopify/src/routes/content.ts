@@ -2,6 +2,7 @@ import { Router } from "express";
 import { hmacAuth } from "../lib/hmac.js";
 import { createArticle, updateArticle, type Article } from "../lib/shopify-graphql.js";
 import { getCachedResponse, setCachedResponse } from "../lib/idempotency.js";
+import { badRequest } from "../lib/errors.js";
 
 const router = Router();
 
@@ -25,7 +26,6 @@ interface ContentResponse {
 }
 
 router.post("/content", hmacAuth, async (req, res) => {
-  try {
     const idempotencyKey = req.headers["x-idempotency-key"] as string | undefined;
 
     // Check idempotency cache
@@ -41,14 +41,12 @@ router.post("/content", hmacAuth, async (req, res) => {
 
     // Validate required fields
     if (!body.title || !body.content) {
-      res.status(400).json({ error: "title and content are required" });
-      return;
+      throw badRequest("MISSING_FIELDS", "title and content are required");
     }
 
     const blogId = body.blogId ?? process.env.SHOPIFY_DEFAULT_BLOG_ID;
     if (!blogId) {
-      res.status(400).json({ error: "blogId is required (provide in body or SHOPIFY_DEFAULT_BLOG_ID env)" });
-      return;
+      throw badRequest("MISSING_BLOG_ID", "blogId is required (provide in body or SHOPIFY_DEFAULT_BLOG_ID env)");
     }
 
     // Determine publish status
@@ -102,10 +100,6 @@ router.post("/content", hmacAuth, async (req, res) => {
     }
 
     res.status(statusCode).json(response);
-  } catch (error) {
-    console.error("[content] Error:", error instanceof Error ? error.message : error);
-    res.status(500).json({ error: "Unable to publish content" });
-  }
 });
 
 export default router;

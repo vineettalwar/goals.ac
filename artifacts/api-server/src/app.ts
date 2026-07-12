@@ -1,15 +1,36 @@
-import express, { type Express } from "express";
+import express, {
+  type Express,
+  type RequestHandler,
+} from "express";
+import { randomUUID } from "node:crypto";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import helmet from "helmet";
+import { rateLimit } from "express-rate-limit";
 import pinoHttp from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { httpErrorHandler, notFoundHandler } from "./lib/httpError";
 
 const app: Express = express();
+
+app.disable("x-powered-by");
+if (process.env["NODE_ENV"] === "production") {
+  app.set("trust proxy", 1);
+}
 
 app.use(
   pinoHttp({
     logger,
+    genReqId(req, res) {
+      const incomingId = req.headers["x-request-id"];
+      const requestId =
+        typeof incomingId === "string" && /^[a-zA-Z0-9._-]{1,128}$/.test(incomingId)
+          ? incomingId
+          : randomUUID();
+      res.setHeader("x-request-id", requestId);
+      return requestId;
+    },
     serializers: {
       req(req) {
         return {
@@ -34,7 +55,14 @@ function resolveAllowedOrigins(): (string | RegExp)[] {
   const origins: (string | RegExp)[] = [/^https?:\/\/localhost:\d+$/, /^https?:\/\/127\.0\.0\.1:\d+$/];
 
   const explicitOrigin = process.env["APP_ORIGIN"];
-  if (explicitOrigin) origins.push(explicitOrigin);
+  if (explicitOrigin) {
+    for (const origin of explicitOrigin.split(",")) {
+      const normalizedOrigin = origin.trim().replace(/\/$/, "");
+      if (normalizedOrigin) origins.push(normalizedOrigin);
+    }
+  } else if (process.env["NODE_ENV"] === "production") {
+    throw new Error("APP_ORIGIN is required in production.");
+  }
 
   const devDomain = process.env["REPLIT_DEV_DOMAIN"];
   if (devDomain) origins.push(`https://${devDomain}`);
@@ -42,11 +70,28 @@ function resolveAllowedOrigins(): (string | RegExp)[] {
   return origins;
 }
 
+app.use(helmet());
 app.use(cors({ origin: resolveAllowedOrigins(), credentials: true }));
 app.use(cookieParser());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: process.env["REQUEST_BODY_LIMIT"] ?? "1mb" }));
+app.use(
+  express.urlencoded({
+    extended: true,
+    limit: process.env["REQUEST_BODY_LIMIT"] ?? "1mb",
+  }),
+);
 
-app.use("/api", router);
+const apiRateLimiter: RequestHandler = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: Number(process.env["RATE_LIMIT_MAX"] ?? 300),
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  skip: (req) => req.path === "/healthz" || req.path === "/readyz",
+});
+
+app.use("/api", apiRateLimiter, router);
+
+app.use(notFoundHandler);
+app.use(httpErrorHandler);
 
 export default app;

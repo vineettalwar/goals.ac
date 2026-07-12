@@ -33,6 +33,7 @@ type ContentFormatType =
   | "linkedin_post"
   | "twitter_thread"
   | "instagram_post"
+  | "facebook_post"
   | "email_sequence"
   | "ad_copy"
   | "landing_page_copy"
@@ -67,6 +68,7 @@ const FORMAT_META: Record<ContentFormatType, { label: string; icon: React.Elemen
   linkedin_post: { label: "LinkedIn Post", icon: Linkedin, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
   twitter_thread: { label: "Twitter / X Thread", icon: Twitter, color: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400" },
   instagram_post: { label: "Instagram Post", icon: Instagram, color: "bg-fuchsia-100 text-fuchsia-700 dark:bg-fuchsia-900/30 dark:text-fuchsia-400" },
+  facebook_post: { label: "Facebook Post", icon: Globe, color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
   email_sequence: { label: "Email Sequence", icon: Mail, color: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400" },
   ad_copy: { label: "Ad Copy", icon: Megaphone, color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400" },
   landing_page_copy: { label: "Landing Page Copy", icon: MonitorPlay, color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
@@ -89,12 +91,25 @@ const STATUS_LABELS: Record<string, string> = {
   published: "Published",
 };
 
-type PublishPlatform = "wordpress" | "notion" | "webflow";
+type PublishPlatform = "wordpress" | "notion" | "webflow" | "linkedin" | "twitter" | "instagram" | "facebook";
 
 type CmsConnectionStatus = {
   notion?: { databaseId: string; integrationTokenHint: string };
   webflow?: { collectionId: string; apiTokenHint: string; bodyFieldSlug: string };
+  wordpress?: { siteUrl: string; usernameHint: string };
+  linkedin?: { connected: boolean; displayName?: string };
+  twitter?: { connected: boolean; screenName?: string };
+  meta?: { connected: boolean; pageName?: string; instagramUsername?: string };
 };
+
+const SOCIAL_FORMAT_PLATFORMS: Partial<Record<ContentFormatType, PublishPlatform[]>> = {
+  linkedin_post: ["linkedin"],
+  twitter_thread: ["twitter"],
+  instagram_post: ["instagram"],
+  facebook_post: ["facebook"],
+};
+
+const CMS_FORMAT_PLATFORMS: PublishPlatform[] = ["wordpress", "notion", "webflow"];
 
 function PublishDialog({
   open,
@@ -103,6 +118,7 @@ function PublishDialog({
   pieceId,
   projectId,
   token,
+  formatType,
 }: {
   open: boolean;
   onClose: () => void;
@@ -110,11 +126,9 @@ function PublishDialog({
   pieceId: number;
   projectId: number;
   token: string | null;
+  formatType: ContentFormatType;
 }) {
   const [platform, setPlatform] = useState<PublishPlatform>("wordpress");
-  const [wpSiteUrl, setWpSiteUrl] = useState("");
-  const [wpUsername, setWpUsername] = useState("");
-  const [wpAppPassword, setWpAppPassword] = useState("");
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connections, setConnections] = useState<CmsConnectionStatus | null>(null);
@@ -129,18 +143,28 @@ function PublishDialog({
       .then((r) => r.json())
       .then((data: CmsConnectionStatus) => {
         setConnections(data);
-        if (!data.notion && !data.webflow) {
-          setPlatform("wordpress");
-        }
+        const social = SOCIAL_FORMAT_PLATFORMS[formatType] ?? [];
+        const cms = CMS_FORMAT_PLATFORMS.filter((p) => {
+          if (p === "wordpress") return !!data.wordpress;
+          if (p === "notion") return !!data.notion;
+          if (p === "webflow") return !!data.webflow;
+          return false;
+        });
+        const socialConnected = social.filter((p) => {
+          if (p === "linkedin") return !!data.linkedin;
+          if (p === "twitter") return !!data.twitter;
+          if (p === "instagram") return !!data.meta?.instagramUsername || !!data.meta;
+          if (p === "facebook") return !!data.meta;
+          return false;
+        });
+        const first = [...socialConnected, ...cms][0];
+        if (first) setPlatform(first);
       })
       .catch(() => setConnections({}))
       .finally(() => setIsLoadingConnections(false));
-  }, [open, token, projectId]);
+  }, [open, token, projectId, formatType]);
 
   const reset = () => {
-    setWpSiteUrl("");
-    setWpUsername("");
-    setWpAppPassword("");
     setError(null);
     setIsPublishing(false);
   };
@@ -151,26 +175,30 @@ function PublishDialog({
   };
 
   const handlePublish = async () => {
-    if (platform === "wordpress" && (!wpSiteUrl.trim() || !wpUsername.trim() || !wpAppPassword.trim())) return;
     setIsPublishing(true);
     setError(null);
     try {
       let endpoint = "";
-      let body: object | null = null;
 
       if (platform === "wordpress") {
-        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish`;
-        body = { wpSiteUrl: wpSiteUrl.trim(), wpUsername: wpUsername.trim(), wpAppPassword: wpAppPassword.trim() };
+        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/wordpress`;
       } else if (platform === "notion") {
         endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/notion`;
       } else if (platform === "webflow") {
         endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/webflow`;
+      } else if (platform === "linkedin") {
+        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/linkedin`;
+      } else if (platform === "twitter") {
+        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/twitter`;
+      } else if (platform === "instagram") {
+        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/instagram`;
+      } else if (platform === "facebook") {
+        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/facebook`;
       }
 
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        ...(body ? { body: JSON.stringify(body) } : {}),
       });
       if (!res.ok) {
         const data = await res.json() as { error?: string };
@@ -190,17 +218,26 @@ function PublishDialog({
     wordpress: "WordPress",
     notion: "Notion",
     webflow: "Webflow",
+    linkedin: "LinkedIn",
+    twitter: "X",
+    instagram: "Instagram",
+    facebook: "Facebook",
   };
 
-  const availablePlatforms: PublishPlatform[] = [
-    "wordpress",
-    ...(connections?.notion ? (["notion"] as PublishPlatform[]) : []),
-    ...(connections?.webflow ? (["webflow"] as PublishPlatform[]) : []),
-  ];
+  const formatPlatforms = SOCIAL_FORMAT_PLATFORMS[formatType] ?? CMS_FORMAT_PLATFORMS;
 
-  const canPublish = platform === "wordpress"
-    ? wpSiteUrl.trim() && wpUsername.trim() && wpAppPassword.trim()
-    : true;
+  const availablePlatforms: PublishPlatform[] = formatPlatforms.filter((p) => {
+    if (p === "wordpress") return !!connections?.wordpress;
+    if (p === "notion") return !!connections?.notion;
+    if (p === "webflow") return !!connections?.webflow;
+    if (p === "linkedin") return !!connections?.linkedin;
+    if (p === "twitter") return !!connections?.twitter;
+    if (p === "instagram") return !!connections?.meta;
+    if (p === "facebook") return !!connections?.meta;
+    return false;
+  });
+
+  const hasConnections = availablePlatforms.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -218,6 +255,14 @@ function PublishDialog({
         {isLoadingConnections ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+          </div>
+        ) : !hasConnections ? (
+          <div className="rounded-lg border border-border bg-muted/40 px-4 py-6 text-sm text-center space-y-2">
+            <p className="font-medium text-foreground">No publishing destinations connected</p>
+            <p className="text-muted-foreground">
+              Connect publishing destinations in{" "}
+              <strong>Project Settings → Publishing</strong> before publishing content.
+            </p>
           </div>
         ) : (
           <div className="space-y-4 mt-2">
@@ -240,51 +285,14 @@ function PublishDialog({
                   </button>
                 ))}
               </div>
-              {connections && !connections.notion && !connections.webflow && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  Connect Notion or Webflow in <strong>Project Settings → Publishing</strong> to publish there.
-                </p>
-              )}
             </div>
 
-            {platform === "wordpress" && (
-              <>
-                <div className="space-y-1.5">
-                  <Label htmlFor="wp-url">WordPress Site URL</Label>
-                  <Input
-                    id="wp-url"
-                    placeholder="https://yoursite.com"
-                    value={wpSiteUrl}
-                    onChange={(e) => setWpSiteUrl(e.target.value)}
-                    disabled={isPublishing}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="wp-user">WordPress Username</Label>
-                  <Input
-                    id="wp-user"
-                    placeholder="admin"
-                    value={wpUsername}
-                    onChange={(e) => setWpUsername(e.target.value)}
-                    disabled={isPublishing}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="wp-pass">Application Password</Label>
-                  <Input
-                    id="wp-pass"
-                    type="password"
-                    placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
-                    value={wpAppPassword}
-                    onChange={(e) => setWpAppPassword(e.target.value)}
-                    disabled={isPublishing}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Generate an Application Password in WordPress under{" "}
-                    <strong>Users → Profile → Application Passwords</strong>.
-                  </p>
-                </div>
-              </>
+            {platform === "wordpress" && connections?.wordpress && (
+              <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm space-y-1">
+                <p className="font-medium text-foreground">Connected WordPress site</p>
+                <p className="text-muted-foreground">Site URL: <code className="text-xs bg-muted px-1 rounded">{connections.wordpress.siteUrl}</code></p>
+                <p className="text-muted-foreground text-xs mt-1">The content will be published as a new post on this site.</p>
+              </div>
             )}
 
             {platform === "notion" && connections?.notion && (
@@ -313,7 +321,7 @@ function PublishDialog({
             <div className="flex items-center gap-3 pt-1">
               <Button
                 onClick={handlePublish}
-                disabled={!canPublish || isPublishing}
+                disabled={!hasConnections || isPublishing}
                 className="flex-1"
               >
                 {isPublishing ? (
@@ -954,6 +962,7 @@ export default function ContentPiecePage() {
         pieceId={piece.id}
         projectId={piece.websiteProjectId}
         token={token}
+        formatType={piece.formatType}
       />
 
       <RepurposeDialog

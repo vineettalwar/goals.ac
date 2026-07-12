@@ -20,6 +20,8 @@ tags:
     description: Location reference data
   - name: content-strategies
     description: 30-day content strategy generation and management
+  - name: seo-tools
+    description: GEO audit, competitor analysis, keyword tracking
 paths:
   /healthz:
     get:
@@ -309,6 +311,268 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /geo-audits:
+    post:
+      operationId: createGeoAudit
+      tags: [seo-tools]
+      summary: Run a GEO audit on a URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGeoAuditRequest"
+      responses:
+        "201":
+          description: GEO audit created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeoAudit"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: URL fetch failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /geo-audits/{id}:
+    get:
+      operationId: getGeoAudit
+      tags: [seo-tools]
+      summary: Get a GEO audit by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: GEO audit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeoAudit"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /competitor-analysis:
+    post:
+      operationId: createCompetitorAnalysis
+      tags: [seo-tools]
+      summary: Analyze a competitor URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCompetitorAnalysisRequest"
+      responses:
+        "201":
+          description: Competitor analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompetitorAnalysisResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: AI unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /competitor-analyses/{id}:
+    get:
+      operationId: getCompetitorAnalysis
+      tags: [seo-tools]
+      summary: Get a saved competitor analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Competitor analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompetitorAnalysisResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /keyword-analysis:
+    post:
+      operationId: createKeywordAnalysis
+      tags: [seo-tools]
+      summary: Analyze keywords with AI
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateKeywordAnalysisRequest"
+      responses:
+        "201":
+          description: Keyword analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeywordAnalysisResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: AI unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /keyword-analyses/{id}:
+    get:
+      operationId: getKeywordAnalysis
+      tags: [seo-tools]
+      summary: Get a saved keyword analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Keyword analysis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KeywordAnalysisResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tracked-keywords:
+    get:
+      operationId: listTrackedKeywords
+      tags: [seo-tools]
+      summary: List tracked keywords for a project
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Tracked keywords with latest snapshots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackedKeywordListResponse"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createTrackedKeyword
+      tags: [seo-tools]
+      summary: Add a keyword to rank tracking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTrackedKeywordRequest"
+      responses:
+        "201":
+          description: Tracked keyword created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackedKeyword"
+        "503":
+          description: SERP provider not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tracked-keywords/{id}/snapshots:
+    get:
+      operationId: getTrackedKeywordSnapshots
+      tags: [seo-tools]
+      summary: Get rank history for a tracked keyword
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rank snapshots
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TrackedKeywordSnapshotsResponse"
+        "404":
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /tracked-keywords/{id}:
+    delete:
+      operationId: deleteTrackedKeyword
+      tags: [seo-tools]
+      summary: Deactivate a tracked keyword
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deactivated
         "404":
           description: Not found
           content:
@@ -642,3 +906,322 @@ components:
         - year
         - createdAt
         - items
+
+    GeoIssue:
+      type: object
+      properties:
+        check:
+          type: string
+        status:
+          type: string
+          enum: [pass, fail, warn]
+        detail:
+          type: string
+        fix:
+          type: string
+      required: [check, status, detail, fix]
+
+    CreateGeoAuditRequest:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        roadmap_id:
+          type: integer
+        website_project_id:
+          type: integer
+      required: [url]
+
+    GeoAudit:
+      type: object
+      properties:
+        id:
+          type: integer
+        roadmapId:
+          type: integer
+          nullable: true
+        websiteProjectId:
+          type: integer
+          nullable: true
+        url:
+          type: string
+        geoScore:
+          type: integer
+        issues:
+          type: array
+          items:
+            $ref: "#/components/schemas/GeoIssue"
+        pageTitle:
+          type: string
+          nullable: true
+        metaDescription:
+          type: string
+          nullable: true
+        hasSchemaOrg:
+          type: boolean
+        schemaTypes:
+          type: array
+          items:
+            type: string
+        h1Count:
+          type: integer
+        imageCount:
+          type: integer
+        imagesMissingAlt:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - url
+        - geoScore
+        - issues
+        - hasSchemaOrg
+        - schemaTypes
+        - h1Count
+        - imageCount
+        - imagesMissingAlt
+        - createdAt
+
+    CreateCompetitorAnalysisRequest:
+      type: object
+      properties:
+        competitorUrl:
+          type: string
+          format: uri
+        industry:
+          type: string
+        location:
+          type: string
+        stage:
+          type: string
+        website_project_id:
+          type: integer
+      required: [competitorUrl, industry, location, stage]
+
+    CompetitorAnalysisResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        competitorName:
+          type: string
+        summary:
+          type: string
+        strengths:
+          type: array
+          items:
+            type: string
+        weaknesses:
+          type: array
+          items:
+            type: string
+        contentGaps:
+          type: array
+          items:
+            type: string
+        geoGaps:
+          type: array
+          items:
+            type: string
+        quickWins:
+          type: array
+          items:
+            type: string
+        threatLevel:
+          type: string
+          enum: [low, medium, high]
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - competitorName
+        - summary
+        - strengths
+        - weaknesses
+        - contentGaps
+        - geoGaps
+        - quickWins
+        - threatLevel
+
+    CreateKeywordAnalysisRequest:
+      type: object
+      properties:
+        keywords:
+          type: array
+          items:
+            type: string
+          minItems: 1
+          maxItems: 10
+        websiteUrl:
+          type: string
+          format: uri
+        website_project_id:
+          type: integer
+      required: [keywords]
+
+    KeywordResult:
+      type: object
+      properties:
+        keyword:
+          type: string
+        estimatedVolume:
+          type: string
+        difficulty:
+          type: string
+          enum: [low, medium, high]
+        aiVisibility:
+          type: integer
+        opportunities:
+          type: array
+          items:
+            type: string
+        suggestedContent:
+          type: string
+      required:
+        - keyword
+        - estimatedVolume
+        - difficulty
+        - aiVisibility
+        - opportunities
+        - suggestedContent
+
+    KeywordAnalysisResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+        keywords:
+          type: array
+          items:
+            $ref: "#/components/schemas/KeywordResult"
+        topOpportunity:
+          type: string
+        summary:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - keywords
+        - topOpportunity
+        - summary
+
+    CreateTrackedKeywordRequest:
+      type: object
+      properties:
+        website_project_id:
+          type: integer
+        keyword:
+          type: string
+        target_url:
+          type: string
+          format: uri
+        location:
+          type: string
+        language:
+          type: string
+        device:
+          type: string
+          enum: [desktop, mobile]
+      required: [website_project_id, keyword]
+
+    TrackedKeyword:
+      type: object
+      properties:
+        id:
+          type: integer
+        websiteProjectId:
+          type: integer
+        keyword:
+          type: string
+        targetUrl:
+          type: string
+          nullable: true
+        location:
+          type: string
+        language:
+          type: string
+        device:
+          type: string
+        isActive:
+          type: boolean
+        lastCheckedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - websiteProjectId
+        - keyword
+        - location
+        - language
+        - device
+        - isActive
+        - createdAt
+        - updatedAt
+
+    KeywordRankSnapshot:
+      type: object
+      properties:
+        id:
+          type: integer
+        trackedKeywordId:
+          type: integer
+        position:
+          type: integer
+          nullable: true
+        rankingUrl:
+          type: string
+          nullable: true
+        serpFeatures:
+          type: object
+          additionalProperties: true
+        provider:
+          type: string
+        checkedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - trackedKeywordId
+        - serpFeatures
+        - provider
+        - checkedAt
+
+    TrackedKeywordWithSnapshot:
+      allOf:
+        - $ref: "#/components/schemas/TrackedKeyword"
+        - type: object
+          properties:
+            latestSnapshot:
+              $ref: "#/components/schemas/KeywordRankSnapshot"
+              nullable: true
+
+    TrackedKeywordListResponse:
+      type: object
+      properties:
+        trackedKeywords:
+          type: array
+          items:
+            $ref: "#/components/schemas/TrackedKeywordWithSnapshot"
+      required: [trackedKeywords]
+
+    TrackedKeywordSnapshotsResponse:
+      type: object
+      properties:
+        trackedKeyword:
+          $ref: "#/components/schemas/TrackedKeyword"
+        snapshots:
+          type: array
+          items:
+            $ref: "#/components/schemas/KeywordRankSnapshot"
+      required: [trackedKeyword, snapshots]

@@ -13,7 +13,7 @@ import { Loader2, Search, Zap, ShieldCheck, BarChart2, FolderOpen, ArrowRight } 
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/context/active-project";
 
-const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+import { useCreateGeoAudit } from "@workspace/api-client-react";
 
 function fadeUp(delay: number = 0) {
   return {
@@ -28,12 +28,22 @@ export default function GeoAuditForm() {
   const [searchParams] = useSearchParams();
   const roadmapId = searchParams.get("roadmap_id");
 
-  const { user, token } = useAuth();
+  const { user } = useAuth();
   const { projects, activeProjectId, setActiveProjectId } = useActiveProject();
 
   const [url, setUrl] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const createAudit = useCreateGeoAudit({
+    mutation: {
+      onSuccess: (data) => {
+        navigate(`/geo-audit/${data.id}${roadmapId ? `?roadmap_id=${roadmapId}` : ""}`);
+      },
+      onError: (err) => {
+        setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
+      },
+    },
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,34 +58,13 @@ export default function GeoAuditForm() {
       normalizedUrl = "https://" + normalizedUrl;
     }
 
-    setIsLoading(true);
-    try {
-      const body: Record<string, unknown> = { url: normalizedUrl };
-      if (roadmapId) body.roadmap_id = Number(roadmapId);
-      if (activeProjectId && user) body.website_project_id = activeProjectId;
-
-      const headers: Record<string, string> = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const response = await fetch(`${BASE}/api/geo-audits`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || "Something went wrong. Please try again.");
-        return;
-      }
-
-      navigate(`/geo-audit/${data.id}${roadmapId ? `?roadmap_id=${roadmapId}` : ""}`);
-    } catch {
-      setError("Network error. Please check your connection and try again.");
-    } finally {
-      setIsLoading(false);
-    }
+    createAudit.mutate({
+      data: {
+        url: normalizedUrl,
+        roadmap_id: roadmapId ? Number(roadmapId) : undefined,
+        website_project_id: activeProjectId && user ? activeProjectId : undefined,
+      },
+    });
   };
 
   return (
@@ -145,7 +134,7 @@ export default function GeoAuditForm() {
                       value={url}
                       onChange={(e) => setUrl(e.target.value)}
                       className="pl-9 h-11"
-                      disabled={isLoading}
+                      disabled={createAudit.isPending}
                     />
                   </div>
                 </div>
@@ -179,10 +168,10 @@ export default function GeoAuditForm() {
 
                 <Button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={createAudit.isPending}
                   className="w-full h-11 gap-2 glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white font-medium"
                 >
-                  {isLoading ? (
+                  {createAudit.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Scanning your website…

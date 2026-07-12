@@ -183,6 +183,34 @@
       "when": 1783839535305,
       "tag": "0025_tan_talos",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1783840000000,
+      "tag": "0026_seo_tools_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1783843600000,
+      "tag": "0027_project_autopilot_settings",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1783847200000,
+      "tag": "0028_llm_visibility",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1783850800000,
+      "tag": "0029_keyword_intelligence",
+      "breakpoints": true
     }
   ]
 }

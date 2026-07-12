@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Layout } from "@/components/layout";
 import { SEO } from "@/components/seo";
 import { Button } from "@/components/ui/button";
@@ -10,22 +10,19 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Loader2, Search, ShieldAlert, TrendingUp, AlertTriangle,
-  FileText, Zap, Lightbulb, ChevronRight
+  FileText, Zap, Lightbulb, ChevronRight,
 } from "lucide-react";
-import { useListIndustries, useListLocations, GenerateRoadmapRequestStage } from "@workspace/api-client-react";
+import {
+  useListIndustries,
+  useListLocations,
+  useCreateCompetitorAnalysis,
+  GenerateRoadmapRequestStage,
+  type CompetitorAnalysisResponse,
+} from "@workspace/api-client-react";
+import { useAuth } from "@/context/auth";
+import { useActiveProject } from "@/context/active-project";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-interface AnalysisResult {
-  competitorName: string;
-  summary: string;
-  strengths: string[];
-  weaknesses: string[];
-  contentGaps: string[];
-  geoGaps: string[];
-  quickWins: string[];
-  threatLevel: "low" | "medium" | "high";
-}
 
 const threatColors: Record<string, string> = {
   low: "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/30",
@@ -42,16 +39,52 @@ function fadeUp(delay = 0) {
 }
 
 export default function CompetitorAnalysis() {
+  const { user, token } = useAuth();
+  const { activeProjectId } = useActiveProject();
+
   const [competitorUrl, setCompetitorUrl] = useState("");
   const [industry, setIndustry] = useState("");
   const [location, setLocation] = useState("");
   const [stage, setStage] = useState("");
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [result, setResult] = useState<CompetitorAnalysisResponse | null>(null);
+  const [savedCompetitorUrls, setSavedCompetitorUrls] = useState<string[]>([]);
 
   const { data: industries } = useListIndustries();
   const { data: locations } = useListLocations();
+
+  const analyzeMutation = useCreateCompetitorAnalysis({
+    mutation: {
+      onSuccess: (data) => {
+        setResult(data);
+        setError(null);
+      },
+      onError: (err) => {
+        setError(err instanceof Error ? err.message : "Analysis failed. Please try again.");
+      },
+    },
+  });
+
+  useEffect(() => {
+    if (!activeProjectId || !token) {
+      setSavedCompetitorUrls([]);
+      return;
+    }
+    fetch(`${API_BASE}/api/website-projects/${activeProjectId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data: { brandProfile?: { competitorUrls?: string[]; industry?: string } }) => {
+        if (data.brandProfile?.competitorUrls?.length) {
+          setSavedCompetitorUrls(data.brandProfile.competitorUrls);
+        }
+        if (data.brandProfile?.industry && !industry) {
+          setIndustry(data.brandProfile.industry);
+        }
+      })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeProjectId, token]);
 
   const stages = [
     { value: GenerateRoadmapRequestStage["pre-seed"], label: "Pre-Seed" },
@@ -61,28 +94,19 @@ export default function CompetitorAnalysis() {
     { value: GenerateRoadmapRequestStage.growth, label: "Growth / Late Stage" },
   ];
 
-  const handleAnalyze = async () => {
+  const handleAnalyze = () => {
     if (!competitorUrl || !industry || !location || !stage) return;
-    setLoading(true);
     setError(null);
     setResult(null);
-    try {
-      const res = await fetch(`${API_BASE}/api/competitor-analysis`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ competitorUrl, industry, location, stage }),
-      });
-      if (!res.ok) {
-        const data = await res.json() as { error?: string };
-        throw new Error(data.error ?? "Analysis failed");
-      }
-      const data = await res.json() as AnalysisResult;
-      setResult(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Analysis failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    analyzeMutation.mutate({
+      data: {
+        competitorUrl,
+        industry,
+        location,
+        stage,
+        website_project_id: user && activeProjectId ? activeProjectId : undefined,
+      },
+    });
   };
 
   return (
@@ -113,19 +137,38 @@ export default function CompetitorAnalysis() {
         <motion.div {...fadeUp(0.1)}>
           <Card className="shadow-none">
             <CardContent className="pt-6 space-y-5">
+              {savedCompetitorUrls.length > 0 && (
+                <div>
+                  <Label className="text-sm font-semibold mb-2 block">Saved Competitors</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {savedCompetitorUrls.map((url) => (
+                      <Button
+                        key={url}
+                        variant="outline"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => setCompetitorUrl(url)}
+                      >
+                        {url.replace(/^https?:\/\//, "").split("/")[0]}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label className="text-sm font-semibold mb-1.5 block">Competitor URL</Label>
                 <Input
                   placeholder="https://competitor.com"
                   value={competitorUrl}
                   onChange={(e) => setCompetitorUrl(e.target.value)}
-                  disabled={loading}
+                  disabled={analyzeMutation.isPending}
                 />
               </div>
               <div className="grid sm:grid-cols-3 gap-4">
                 <div>
                   <Label className="text-sm font-semibold mb-1.5 block">Your Industry</Label>
-                  <Select value={industry} onValueChange={setIndustry} disabled={loading}>
+                  <Select value={industry} onValueChange={setIndustry} disabled={analyzeMutation.isPending}>
                     <SelectTrigger><SelectValue placeholder="Select industry" /></SelectTrigger>
                     <SelectContent>
                       {industries?.map((ind) => (
@@ -136,7 +179,7 @@ export default function CompetitorAnalysis() {
                 </div>
                 <div>
                   <Label className="text-sm font-semibold mb-1.5 block">Your Location</Label>
-                  <Select value={location} onValueChange={setLocation} disabled={loading}>
+                  <Select value={location} onValueChange={setLocation} disabled={analyzeMutation.isPending}>
                     <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
                     <SelectContent>
                       {locations?.map((loc) => (
@@ -147,7 +190,7 @@ export default function CompetitorAnalysis() {
                 </div>
                 <div>
                   <Label className="text-sm font-semibold mb-1.5 block">Your Stage</Label>
-                  <Select value={stage} onValueChange={setStage} disabled={loading}>
+                  <Select value={stage} onValueChange={setStage} disabled={analyzeMutation.isPending}>
                     <SelectTrigger><SelectValue placeholder="Select stage" /></SelectTrigger>
                     <SelectContent>
                       {stages.map((s) => (
@@ -167,9 +210,9 @@ export default function CompetitorAnalysis() {
               <Button
                 className="w-full glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white"
                 onClick={handleAnalyze}
-                disabled={loading || !competitorUrl || !industry || !location || !stage}
+                disabled={analyzeMutation.isPending || !competitorUrl || !industry || !location || !stage}
               >
-                {loading ? (
+                {analyzeMutation.isPending ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Analyzing competitor…

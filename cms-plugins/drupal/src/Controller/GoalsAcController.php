@@ -92,13 +92,17 @@ class GoalsAcController extends ControllerBase implements ContainerInjectionInte
       $graph = $this->siteGraph->export();
       return new JsonResponse($graph);
     }
-    catch (\Exception $e) {
-      $this->getLogger('goals_ac')->error('Site graph export failed: @message', [
+    catch (\Throwable $e) {
+      $request_id = $this->requestId($request);
+      $this->getLogger('goals_ac')->error('Site graph export failed [request_id=@request_id, exception=@exception]: @message', [
+        '@request_id' => $request_id,
+        '@exception' => get_class($e),
         '@message' => $e->getMessage(),
       ]);
       return new JsonResponse([
         'error' => 'export_failed',
         'message' => 'Unable to export site graph.',
+        'requestId' => $request_id,
       ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
   }
@@ -137,13 +141,17 @@ class GoalsAcController extends ControllerBase implements ContainerInjectionInte
         'message' => $e->getMessage(),
       ], Response::HTTP_UNPROCESSABLE_ENTITY);
     }
-    catch (\Exception $e) {
-      $this->getLogger('goals_ac')->error('Content publish failed: @message', [
+    catch (\Throwable $e) {
+      $request_id = $this->requestId($request);
+      $this->getLogger('goals_ac')->error('Content publish failed [request_id=@request_id, exception=@exception]: @message', [
+        '@request_id' => $request_id,
+        '@exception' => get_class($e),
         '@message' => $e->getMessage(),
       ]);
       return new JsonResponse([
         'error' => 'publish_failed',
         'message' => 'Unable to publish content.',
+        'requestId' => $request_id,
       ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
   }
@@ -184,13 +192,17 @@ class GoalsAcController extends ControllerBase implements ContainerInjectionInte
         'path' => $result['path'] ?? NULL,
       ]);
     }
-    catch (\Exception $e) {
-      $this->getLogger('goals_ac')->error('Schema store failed: @message', [
+    catch (\Throwable $e) {
+      $request_id = $this->requestId($request);
+      $this->getLogger('goals_ac')->error('Schema store failed [request_id=@request_id, exception=@exception]: @message', [
+        '@request_id' => $request_id,
+        '@exception' => get_class($e),
         '@message' => $e->getMessage(),
       ]);
       return new JsonResponse([
         'error' => 'schema_store_failed',
         'message' => 'Unable to store schema configuration.',
+        'requestId' => $request_id,
       ], Response::HTTP_INTERNAL_SERVER_ERROR);
     }
   }
@@ -226,6 +238,17 @@ class GoalsAcController extends ControllerBase implements ContainerInjectionInte
       'error' => $result->code,
       'message' => $result->message,
     ], $result->status);
+  }
+
+  /**
+   * Return a safe correlation ID supplied by the caller or generated locally.
+   */
+  private function requestId(Request $request): string {
+    $supplied = $request->headers->get('X-Request-ID');
+    if (is_string($supplied) && preg_match('/^[a-zA-Z0-9._-]{1,128}$/', $supplied)) {
+      return $supplied;
+    }
+    return bin2hex(random_bytes(16));
   }
 
   /**

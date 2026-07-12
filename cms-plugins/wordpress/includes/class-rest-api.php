@@ -134,33 +134,77 @@ class Rest_API {
      * GET /goals-ac/v1/health
      */
     public function handle_health(\WP_REST_Request $request) {
-        return rest_ensure_response(\GoalsAC\Shared\Contract::healthResponse(
+        return $this->with_request_id(rest_ensure_response(\GoalsAC\Shared\Contract::healthResponse(
             get_bloginfo('version'),
             ['version' => GOALS_AC_VERSION]
-        ));
+        )), $request);
     }
 
     /**
      * GET /goals-ac/v1/site-graph
      */
     public function handle_site_graph(\WP_REST_Request $request) {
-        $site_graph = new Site_Graph();
-        return rest_ensure_response($site_graph->export());
+        try {
+            $site_graph = new Site_Graph();
+            return $this->with_request_id(rest_ensure_response($site_graph->export()), $request);
+        } catch (\Throwable $error) {
+            return $this->handle_error('SITE_GRAPH_FAILED', 'Unable to export site graph.', $error, $request);
+        }
     }
 
     /**
      * POST /goals-ac/v1/content
      */
     public function handle_content(\WP_REST_Request $request) {
-        $handler = new Publish_Handler($this->key_store);
-        return $handler->handle($request);
+        try {
+            $handler = new Publish_Handler($this->key_store);
+            return $this->with_request_id(rest_ensure_response($handler->handle($request)), $request);
+        } catch (\Throwable $error) {
+            return $this->handle_error('CONTENT_PUBLISH_FAILED', 'Unable to publish content.', $error, $request);
+        }
     }
 
     /**
      * POST /goals-ac/v1/schema
      */
     public function handle_schema(\WP_REST_Request $request) {
-        $injector = new Schema_Inject();
-        return $injector->handle($request);
+        try {
+            $injector = new Schema_Inject();
+            return $this->with_request_id(rest_ensure_response($injector->handle($request)), $request);
+        } catch (\Throwable $error) {
+            return $this->handle_error('SCHEMA_STORE_FAILED', 'Unable to store schema configuration.', $error, $request);
+        }
+    }
+
+    private function request_id(\WP_REST_Request $request): string {
+        $supplied = $request->get_header('X-Request-ID');
+        return is_string($supplied) && preg_match('/^[a-zA-Z0-9._-]{1,128}$/', $supplied)
+            ? $supplied
+            : wp_generate_uuid4();
+    }
+
+    private function with_request_id(\WP_REST_Response $response, \WP_REST_Request $request): \WP_REST_Response {
+        $response->header('X-Request-ID', $this->request_id($request));
+        return $response;
+    }
+
+    private function handle_error(string $code, string $message, \Throwable $error, \WP_REST_Request $request): \WP_REST_Response {
+        $request_id = $this->request_id($request);
+        error_log(wp_json_encode([
+            'service' => 'goals-ac-wordpress',
+            'level' => 'error',
+            'request_id' => $request_id,
+            'code' => $code,
+            'error_class' => get_class($error),
+            'error_message' => $error->getMessage(),
+        ]));
+
+        $response = new \WP_REST_Response([
+            'error' => $message,
+            'code' => $code,
+            'requestId' => $request_id,
+        ], 500);
+        $response->header('X-Request-ID', $request_id);
+        return $response;
     }
 }

@@ -19,22 +19,29 @@ import type {
 import type {
   CaptureLeadRequest,
   CaptureLeadResponse,
+  CompetitorAnalysisResponse,
   ContentItem,
-  ContentPiece,
   ContentStrategy,
   ContentStrategyWithItems,
+  CreateCompetitorAnalysisRequest,
+  CreateGeoAuditRequest,
+  CreateKeywordAnalysisRequest,
+  CreateTrackedKeywordRequest,
   ErrorResponse,
-  GenerateContentPieceRequest,
   GenerateContentStrategyRequest,
   GenerateRoadmapRequest,
-  GenerateSeoArticleRequest,
+  GeoAudit,
   HealthStatus,
   Industry,
+  KeywordAnalysisResponse,
   ListRoadmapsParams,
+  ListTrackedKeywordsParams,
   Location,
   Roadmap,
   RoadmapListResponse,
-  SeoArticle,
+  TrackedKeyword,
+  TrackedKeywordListResponse,
+  TrackedKeywordSnapshotsResponse,
   UpdateContentItemRequest,
 } from "./api.schemas";
 
@@ -975,44 +982,42 @@ export const useUpdateContentItem = <
 };
 
 /**
- * Generates a content piece using AI (non-streaming)
- * @summary Generate a content piece for a website project
+ * @summary Run a GEO audit on a URL
  */
-export const getGenerateContentPieceUrl = (id: number) => {
-  return `/api/website-projects/${id}/content-pieces/generate`;
+export const getCreateGeoAuditUrl = () => {
+  return `/api/geo-audits`;
 };
 
-export const generateContentPiece = async (
-  id: number,
-  generateContentPieceRequest: GenerateContentPieceRequest,
+export const createGeoAudit = async (
+  createGeoAuditRequest: CreateGeoAuditRequest,
   options?: RequestInit,
-): Promise<ContentPiece> => {
-  return customFetch<ContentPiece>(getGenerateContentPieceUrl(id), {
+): Promise<GeoAudit> => {
+  return customFetch<GeoAudit>(getCreateGeoAuditUrl(), {
     ...options,
     method: "POST",
     headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(generateContentPieceRequest),
+    body: JSON.stringify(createGeoAuditRequest),
   });
 };
 
-export const getGenerateContentPieceMutationOptions = <
+export const getCreateGeoAuditMutationOptions = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof generateContentPiece>>,
+    Awaited<ReturnType<typeof createGeoAudit>>,
     TError,
-    { id: number; data: BodyType<GenerateContentPieceRequest> },
+    { data: BodyType<CreateGeoAuditRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof generateContentPiece>>,
+  Awaited<ReturnType<typeof createGeoAudit>>,
   TError,
-  { id: number; data: BodyType<GenerateContentPieceRequest> },
+  { data: BodyType<CreateGeoAuditRequest> },
   TContext
 > => {
-  const mutationKey = ["generateContentPiece"];
+  const mutationKey = ["createGeoAudit"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -1022,83 +1027,173 @@ export const getGenerateContentPieceMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof generateContentPiece>>,
-    { id: number; data: BodyType<GenerateContentPieceRequest> }
+    Awaited<ReturnType<typeof createGeoAudit>>,
+    { data: BodyType<CreateGeoAuditRequest> }
   > = (props) => {
-    const { id, data } = props ?? {};
-    return generateContentPiece(id, data, requestOptions);
+    const { data } = props ?? {};
+
+    return createGeoAudit(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type GenerateContentPieceMutationResult = NonNullable<
-  Awaited<ReturnType<typeof generateContentPiece>>
+export type CreateGeoAuditMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createGeoAudit>>
 >;
-export type GenerateContentPieceMutationBody = BodyType<GenerateContentPieceRequest>;
-export type GenerateContentPieceMutationError = ErrorType<ErrorResponse>;
+export type CreateGeoAuditMutationBody = BodyType<CreateGeoAuditRequest>;
+export type CreateGeoAuditMutationError = ErrorType<ErrorResponse>;
 
 /**
- * @summary Generate a content piece for a website project
+ * @summary Run a GEO audit on a URL
  */
-export const useGenerateContentPiece = <
+export const useCreateGeoAudit = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof generateContentPiece>>,
+    Awaited<ReturnType<typeof createGeoAudit>>,
     TError,
-    { id: number; data: BodyType<GenerateContentPieceRequest> },
+    { data: BodyType<CreateGeoAuditRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationResult<
-  Awaited<ReturnType<typeof generateContentPiece>>,
+  Awaited<ReturnType<typeof createGeoAudit>>,
   TError,
-  { id: number; data: BodyType<GenerateContentPieceRequest> },
+  { data: BodyType<CreateGeoAuditRequest> },
   TContext
 > => {
-  return useMutation(getGenerateContentPieceMutationOptions(options));
+  return useMutation(getCreateGeoAuditMutationOptions(options));
 };
 
 /**
- * Generates an SEO article using AI (non-streaming)
- * @summary Generate an SEO article
+ * @summary Get a GEO audit by id
  */
-export const getGenerateSeoArticleUrl = () => {
-  return `/api/seo-articles/generate`;
+export const getGetGeoAuditUrl = (id: number) => {
+  return `/api/geo-audits/${id}`;
 };
 
-export const generateSeoArticle = async (
-  generateSeoArticleRequest: GenerateSeoArticleRequest,
+export const getGeoAudit = async (
+  id: number,
   options?: RequestInit,
-): Promise<SeoArticle> => {
-  return customFetch<SeoArticle>(getGenerateSeoArticleUrl(), {
+): Promise<GeoAudit> => {
+  return customFetch<GeoAudit>(getGetGeoAuditUrl(id), {
     ...options,
-    method: "POST",
-    headers: { "Content-Type": "application/json", ...options?.headers },
-    body: JSON.stringify(generateSeoArticleRequest),
+    method: "GET",
   });
 };
 
-export const getGenerateSeoArticleMutationOptions = <
+export const getGetGeoAuditQueryKey = (id: number) => {
+  return [`/api/geo-audits/${id}`] as const;
+};
+
+export const getGetGeoAuditQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGeoAudit>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGeoAudit>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGeoAuditQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getGeoAudit>>> = ({
+    signal,
+  }) => getGeoAudit(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGeoAudit>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGeoAuditQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGeoAudit>>
+>;
+export type GetGeoAuditQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a GEO audit by id
+ */
+
+export function useGetGeoAudit<
+  TData = Awaited<ReturnType<typeof getGeoAudit>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGeoAudit>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGeoAuditQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Analyze a competitor URL
+ */
+export const getCreateCompetitorAnalysisUrl = () => {
+  return `/api/competitor-analysis`;
+};
+
+export const createCompetitorAnalysis = async (
+  createCompetitorAnalysisRequest: CreateCompetitorAnalysisRequest,
+  options?: RequestInit,
+): Promise<CompetitorAnalysisResponse> => {
+  return customFetch<CompetitorAnalysisResponse>(
+    getCreateCompetitorAnalysisUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(createCompetitorAnalysisRequest),
+    },
+  );
+};
+
+export const getCreateCompetitorAnalysisMutationOptions = <
   TError = ErrorType<ErrorResponse>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
-    Awaited<ReturnType<typeof generateSeoArticle>>,
+    Awaited<ReturnType<typeof createCompetitorAnalysis>>,
     TError,
-    { data: BodyType<GenerateSeoArticleRequest> },
+    { data: BodyType<CreateCompetitorAnalysisRequest> },
     TContext
   >;
   request?: SecondParameter<typeof customFetch>;
 }): UseMutationOptions<
-  Awaited<ReturnType<typeof generateSeoArticle>>,
+  Awaited<ReturnType<typeof createCompetitorAnalysis>>,
   TError,
-  { data: BodyType<GenerateSeoArticleRequest> },
+  { data: BodyType<CreateCompetitorAnalysisRequest> },
   TContext
 > => {
-  const mutationKey = ["generateSeoArticle"];
+  const mutationKey = ["createCompetitorAnalysis"];
   const { mutation: mutationOptions, request: requestOptions } = options
     ? options.mutation &&
       "mutationKey" in options.mutation &&
@@ -1108,18 +1203,674 @@ export const getGenerateSeoArticleMutationOptions = <
     : { mutation: { mutationKey }, request: undefined };
 
   const mutationFn: MutationFunction<
-    Awaited<ReturnType<typeof generateSeoArticle>>,
-    { data: BodyType<GenerateSeoArticleRequest> }
+    Awaited<ReturnType<typeof createCompetitorAnalysis>>,
+    { data: BodyType<CreateCompetitorAnalysisRequest> }
   > = (props) => {
     const { data } = props ?? {};
-    return generateSeoArticle(data, requestOptions);
+
+    return createCompetitorAnalysis(data, requestOptions);
   };
 
   return { mutationFn, ...mutationOptions };
 };
 
-export type GenerateSeoArticleMutationResult = NonNullable<
-  Awaited<ReturnType<typeof generateSeoArticle>>
+export type CreateCompetitorAnalysisMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createCompetitorAnalysis>>
 >;
-export type GenerateSeoArticleMutationBody = BodyType<GenerateSeoArticleRequest>;
-export type GenerateSeoArticleMutationError = ErrorType<ErrorResponse>;
+export type CreateCompetitorAnalysisMutationBody =
+  BodyType<CreateCompetitorAnalysisRequest>;
+export type CreateCompetitorAnalysisMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Analyze a competitor URL
+ */
+export const useCreateCompetitorAnalysis = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createCompetitorAnalysis>>,
+    TError,
+    { data: BodyType<CreateCompetitorAnalysisRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createCompetitorAnalysis>>,
+  TError,
+  { data: BodyType<CreateCompetitorAnalysisRequest> },
+  TContext
+> => {
+  return useMutation(getCreateCompetitorAnalysisMutationOptions(options));
+};
+
+/**
+ * @summary Get a saved competitor analysis
+ */
+export const getGetCompetitorAnalysisUrl = (id: number) => {
+  return `/api/competitor-analyses/${id}`;
+};
+
+export const getCompetitorAnalysis = async (
+  id: number,
+  options?: RequestInit,
+): Promise<CompetitorAnalysisResponse> => {
+  return customFetch<CompetitorAnalysisResponse>(
+    getGetCompetitorAnalysisUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetCompetitorAnalysisQueryKey = (id: number) => {
+  return [`/api/competitor-analyses/${id}`] as const;
+};
+
+export const getGetCompetitorAnalysisQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCompetitorAnalysis>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCompetitorAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetCompetitorAnalysisQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getCompetitorAnalysis>>
+  > = ({ signal }) => getCompetitorAnalysis(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCompetitorAnalysis>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCompetitorAnalysisQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCompetitorAnalysis>>
+>;
+export type GetCompetitorAnalysisQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a saved competitor analysis
+ */
+
+export function useGetCompetitorAnalysis<
+  TData = Awaited<ReturnType<typeof getCompetitorAnalysis>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getCompetitorAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCompetitorAnalysisQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Analyze keywords with AI
+ */
+export const getCreateKeywordAnalysisUrl = () => {
+  return `/api/keyword-analysis`;
+};
+
+export const createKeywordAnalysis = async (
+  createKeywordAnalysisRequest: CreateKeywordAnalysisRequest,
+  options?: RequestInit,
+): Promise<KeywordAnalysisResponse> => {
+  return customFetch<KeywordAnalysisResponse>(getCreateKeywordAnalysisUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createKeywordAnalysisRequest),
+  });
+};
+
+export const getCreateKeywordAnalysisMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createKeywordAnalysis>>,
+    TError,
+    { data: BodyType<CreateKeywordAnalysisRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createKeywordAnalysis>>,
+  TError,
+  { data: BodyType<CreateKeywordAnalysisRequest> },
+  TContext
+> => {
+  const mutationKey = ["createKeywordAnalysis"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createKeywordAnalysis>>,
+    { data: BodyType<CreateKeywordAnalysisRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createKeywordAnalysis(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateKeywordAnalysisMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createKeywordAnalysis>>
+>;
+export type CreateKeywordAnalysisMutationBody =
+  BodyType<CreateKeywordAnalysisRequest>;
+export type CreateKeywordAnalysisMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Analyze keywords with AI
+ */
+export const useCreateKeywordAnalysis = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createKeywordAnalysis>>,
+    TError,
+    { data: BodyType<CreateKeywordAnalysisRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createKeywordAnalysis>>,
+  TError,
+  { data: BodyType<CreateKeywordAnalysisRequest> },
+  TContext
+> => {
+  return useMutation(getCreateKeywordAnalysisMutationOptions(options));
+};
+
+/**
+ * @summary Get a saved keyword analysis
+ */
+export const getGetKeywordAnalysisUrl = (id: number) => {
+  return `/api/keyword-analyses/${id}`;
+};
+
+export const getKeywordAnalysis = async (
+  id: number,
+  options?: RequestInit,
+): Promise<KeywordAnalysisResponse> => {
+  return customFetch<KeywordAnalysisResponse>(getGetKeywordAnalysisUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetKeywordAnalysisQueryKey = (id: number) => {
+  return [`/api/keyword-analyses/${id}`] as const;
+};
+
+export const getGetKeywordAnalysisQueryOptions = <
+  TData = Awaited<ReturnType<typeof getKeywordAnalysis>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getKeywordAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetKeywordAnalysisQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getKeywordAnalysis>>
+  > = ({ signal }) => getKeywordAnalysis(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getKeywordAnalysis>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetKeywordAnalysisQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getKeywordAnalysis>>
+>;
+export type GetKeywordAnalysisQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get a saved keyword analysis
+ */
+
+export function useGetKeywordAnalysis<
+  TData = Awaited<ReturnType<typeof getKeywordAnalysis>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getKeywordAnalysis>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetKeywordAnalysisQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary List tracked keywords for a project
+ */
+export const getListTrackedKeywordsUrl = (
+  params: ListTrackedKeywordsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/tracked-keywords?${stringifiedParams}`
+    : `/api/tracked-keywords`;
+};
+
+export const listTrackedKeywords = async (
+  params: ListTrackedKeywordsParams,
+  options?: RequestInit,
+): Promise<TrackedKeywordListResponse> => {
+  return customFetch<TrackedKeywordListResponse>(
+    getListTrackedKeywordsUrl(params),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getListTrackedKeywordsQueryKey = (
+  params?: ListTrackedKeywordsParams,
+) => {
+  return [`/api/tracked-keywords`, ...(params ? [params] : [])] as const;
+};
+
+export const getListTrackedKeywordsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listTrackedKeywords>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: ListTrackedKeywordsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listTrackedKeywords>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListTrackedKeywordsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listTrackedKeywords>>
+  > = ({ signal }) =>
+    listTrackedKeywords(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listTrackedKeywords>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListTrackedKeywordsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listTrackedKeywords>>
+>;
+export type ListTrackedKeywordsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary List tracked keywords for a project
+ */
+
+export function useListTrackedKeywords<
+  TData = Awaited<ReturnType<typeof listTrackedKeywords>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: ListTrackedKeywordsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listTrackedKeywords>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListTrackedKeywordsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Add a keyword to rank tracking
+ */
+export const getCreateTrackedKeywordUrl = () => {
+  return `/api/tracked-keywords`;
+};
+
+export const createTrackedKeyword = async (
+  createTrackedKeywordRequest: CreateTrackedKeywordRequest,
+  options?: RequestInit,
+): Promise<TrackedKeyword> => {
+  return customFetch<TrackedKeyword>(getCreateTrackedKeywordUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createTrackedKeywordRequest),
+  });
+};
+
+export const getCreateTrackedKeywordMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTrackedKeyword>>,
+    TError,
+    { data: BodyType<CreateTrackedKeywordRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createTrackedKeyword>>,
+  TError,
+  { data: BodyType<CreateTrackedKeywordRequest> },
+  TContext
+> => {
+  const mutationKey = ["createTrackedKeyword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createTrackedKeyword>>,
+    { data: BodyType<CreateTrackedKeywordRequest> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return createTrackedKeyword(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateTrackedKeywordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createTrackedKeyword>>
+>;
+export type CreateTrackedKeywordMutationBody =
+  BodyType<CreateTrackedKeywordRequest>;
+export type CreateTrackedKeywordMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Add a keyword to rank tracking
+ */
+export const useCreateTrackedKeyword = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createTrackedKeyword>>,
+    TError,
+    { data: BodyType<CreateTrackedKeywordRequest> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createTrackedKeyword>>,
+  TError,
+  { data: BodyType<CreateTrackedKeywordRequest> },
+  TContext
+> => {
+  return useMutation(getCreateTrackedKeywordMutationOptions(options));
+};
+
+/**
+ * @summary Get rank history for a tracked keyword
+ */
+export const getGetTrackedKeywordSnapshotsUrl = (id: number) => {
+  return `/api/tracked-keywords/${id}/snapshots`;
+};
+
+export const getTrackedKeywordSnapshots = async (
+  id: number,
+  options?: RequestInit,
+): Promise<TrackedKeywordSnapshotsResponse> => {
+  return customFetch<TrackedKeywordSnapshotsResponse>(
+    getGetTrackedKeywordSnapshotsUrl(id),
+    {
+      ...options,
+      method: "GET",
+    },
+  );
+};
+
+export const getGetTrackedKeywordSnapshotsQueryKey = (id: number) => {
+  return [`/api/tracked-keywords/${id}/snapshots`] as const;
+};
+
+export const getGetTrackedKeywordSnapshotsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getTrackedKeywordSnapshots>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTrackedKeywordSnapshots>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetTrackedKeywordSnapshotsQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getTrackedKeywordSnapshots>>
+  > = ({ signal }) =>
+    getTrackedKeywordSnapshots(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getTrackedKeywordSnapshots>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetTrackedKeywordSnapshotsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getTrackedKeywordSnapshots>>
+>;
+export type GetTrackedKeywordSnapshotsQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get rank history for a tracked keyword
+ */
+
+export function useGetTrackedKeywordSnapshots<
+  TData = Awaited<ReturnType<typeof getTrackedKeywordSnapshots>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getTrackedKeywordSnapshots>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetTrackedKeywordSnapshotsQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Deactivate a tracked keyword
+ */
+export const getDeleteTrackedKeywordUrl = (id: number) => {
+  return `/api/tracked-keywords/${id}`;
+};
+
+export const deleteTrackedKeyword = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteTrackedKeywordUrl(id), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteTrackedKeywordMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTrackedKeyword>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteTrackedKeyword>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["deleteTrackedKeyword"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteTrackedKeyword>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return deleteTrackedKeyword(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteTrackedKeywordMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteTrackedKeyword>>
+>;
+
+export type DeleteTrackedKeywordMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Deactivate a tracked keyword
+ */
+export const useDeleteTrackedKeyword = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteTrackedKeyword>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteTrackedKeyword>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDeleteTrackedKeywordMutationOptions(options));
+};

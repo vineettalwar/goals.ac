@@ -1,5 +1,5 @@
-import { parse, type HTMLElement } from "node-html-parser";
-import type { GeoIssue } from "@workspace/db/schema";
+import { parse } from "node-html-parser";
+import type { GeoIssue } from "@workspace/db";
 
 export type AuditResult = {
   url: string;
@@ -39,7 +39,6 @@ export async function auditUrl(url: string): Promise<AuditResult> {
   const root = parse(html);
   const issues: GeoIssue[] = [];
 
-  // 1. Page Title
   const titleEl = root.querySelector("title");
   const pageTitle = titleEl?.text?.trim() || null;
   const titleLen = pageTitle?.length ?? 0;
@@ -66,7 +65,6 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     });
   }
 
-  // 2. Meta Description
   const metaDescEl = root.querySelector('meta[name="description"]');
   const metaDescription = metaDescEl?.getAttribute("content")?.trim() || null;
   const metaLen = metaDescription?.length ?? 0;
@@ -82,7 +80,7 @@ export async function auditUrl(url: string): Promise<AuditResult> {
       check: "Meta Description",
       status: "fail",
       detail: `Meta description is ${metaLen} characters (ideal: 50–160).`,
-      fix: `Rewrite the meta description to be between 50–160 characters.`,
+      fix: "Rewrite the meta description to be between 50–160 characters.",
     });
   } else {
     issues.push({
@@ -93,7 +91,6 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     });
   }
 
-  // 3. Schema.org Markup
   const schemaScripts = root.querySelectorAll('script[type="application/ld+json"]');
   const hasSchemaOrg = schemaScripts.length > 0;
   const schemaTypes: string[] = [];
@@ -126,7 +123,6 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     });
   }
 
-  // 4. H1 Tag
   const h1Tags = root.querySelectorAll("h1");
   const h1Count = h1Tags.length;
   if (h1Count === 0) {
@@ -152,7 +148,6 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     });
   }
 
-  // 5. H2 Structure
   const h2Tags = root.querySelectorAll("h2");
   const h2Count = h2Tags.length;
   if (h2Count < 3) {
@@ -171,10 +166,9 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     });
   }
 
-  // 6. Image Alt Text
   const images = root.querySelectorAll("img");
   const imageCount = images.length;
-  const imagesMissingAlt = images.filter((img: HTMLElement) => {
+  const imagesMissingAlt = images.filter((img) => {
     const alt = img.getAttribute("alt");
     return alt === null || alt === undefined;
   }).length;
@@ -195,7 +189,6 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     });
   }
 
-  // 7. Canonical Tag
   const canonicalEl = root.querySelector('link[rel="canonical"]');
   if (!canonicalEl) {
     issues.push({
@@ -213,7 +206,6 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     });
   }
 
-  // 8. Open Graph Tags
   const ogTitle = root.querySelector('meta[property="og:title"]');
   const ogDescription = root.querySelector('meta[property="og:description"]');
   if (!ogTitle || !ogDescription) {
@@ -233,7 +225,6 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     });
   }
 
-  // 9. Twitter Card Tags
   const twitterCard = root.querySelector('meta[name="twitter:card"]');
   if (!twitterCard) {
     issues.push({
@@ -251,7 +242,6 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     });
   }
 
-  // 10. HTTPS
   const isHttps = url.startsWith("https://");
   if (!isHttps) {
     issues.push({
@@ -269,7 +259,6 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     });
   }
 
-  // Calculate GEO score
   const failCount = issues.filter((i) => i.status === "fail").length;
   const warnCount = issues.filter((i) => i.status === "warn").length;
   const geoScore = Math.max(0, Math.min(100, 100 - failCount * 12 - warnCount * 5));

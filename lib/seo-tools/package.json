@@ -1,0 +1,22 @@
+{
+  "name": "@workspace/seo-tools",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./geoAuditor": "./src/geoAuditor.ts",
+    "./competitorAnalyzer": "./src/competitorAnalyzer.ts",
+    "./keywordAnalyzer": "./src/keywordAnalyzer.ts",
+    "./llmVisibilityChecker": "./src/llmVisibilityChecker.ts",
+    "./keywordGapAnalyzer": "./src/keywordGapAnalyzer.ts"
+  },
+  "dependencies": {
+    "@workspace/ai-providers": "workspace:*",
+    "@workspace/db": "workspace:*",
+    "node-html-parser": "^7.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
+}

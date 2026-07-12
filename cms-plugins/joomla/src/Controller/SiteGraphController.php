@@ -51,10 +51,33 @@ class SiteGraphController extends BaseController
             }
         }
 
-        $helper   = new SiteGraph();
-        $graph    = $helper->export();
+        try {
+            $helper = new SiteGraph();
+            $graph = $helper->export();
+            $app->sendResponse((object) $graph);
+        } catch (\Throwable $e) {
+            $requestId = $this->requestId($app);
+            $app->getLogger()->error(sprintf(
+                'goals.ac site graph export failed [request_id=%s, exception=%s]: %s',
+                $requestId,
+                get_class($e),
+                $e->getMessage()
+            ));
+            $app->sendResponse((object) [
+                'error' => true,
+                'code' => 'site_graph_failed',
+                'message' => 'Unable to export site graph.',
+                'requestId' => $requestId,
+            ], 500);
+        }
+    }
 
-        $app->sendResponse((object) $graph);
+    private function requestId($app): string
+    {
+        $supplied = $app->input->server->getString('HTTP_X_REQUEST_ID', '');
+        return preg_match('/^[a-zA-Z0-9._-]{1,128}$/', $supplied)
+            ? $supplied
+            : bin2hex(random_bytes(16));
     }
 
     /**

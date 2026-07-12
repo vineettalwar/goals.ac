@@ -7,17 +7,101 @@ import { useAuth } from "@/context/auth";
 import {
   ArrowRight,
   Sparkles,
-  Pencil,
   Search,
   Calendar,
   Globe,
   Zap,
   CheckCircle2,
-  Bot,
-  Target,
-  TrendingUp,
-  Layers,
+  BookOpen,
+  Newspaper,
+  GraduationCap,
+  Map,
+  FileSearch,
+  LayoutTemplate,
+  ImageIcon,
+  Linkedin,
+  Twitter,
+  Instagram,
+  Mail,
+  Megaphone,
+  MonitorPlay,
+  Package,
+  Radio,
+  HelpCircle,
+  Share2,
+  Webhook,
 } from "lucide-react";
+
+const FORMAT_CATEGORIES = [
+  {
+    label: "Long-form Articles",
+    color: "text-blue-600 dark:text-blue-400",
+    border: "border-blue-500/20",
+    bg: "bg-blue-500/[0.06]",
+    formats: [
+      { icon: BookOpen, name: "Blog Post", range: "900–1,200 words" },
+      { icon: Newspaper, name: "News Article", range: "600–900 words" },
+      { icon: GraduationCap, name: "Tutorial", range: "1,200–1,600 words" },
+      { icon: Map, name: "Comprehensive Guide", range: "1,400–1,800 words" },
+      { icon: FileSearch, name: "Whitepaper", range: "1,800–2,500 words" },
+      { icon: LayoutTemplate, name: "Pillar Page", range: "2,000–3,000 words" },
+      { icon: Globe, name: "Location Page", range: "800–1,200 words" },
+      { icon: ImageIcon, name: "Infographic Outline", range: "400–600 words" },
+    ],
+  },
+  {
+    label: "Social Media",
+    color: "text-sky-600 dark:text-sky-400",
+    border: "border-sky-500/20",
+    bg: "bg-sky-500/[0.06]",
+    formats: [
+      { icon: Linkedin, name: "LinkedIn Post", range: "1,300–1,800 chars" },
+      { icon: Twitter, name: "Twitter / X Thread", range: "9 tweets" },
+      { icon: Instagram, name: "Instagram Post", range: "150–300 words" },
+      { icon: Globe, name: "Facebook Post", range: "150–400 words" },
+    ],
+  },
+  {
+    label: "Email & Ads",
+    color: "text-violet-600 dark:text-violet-400",
+    border: "border-violet-500/20",
+    bg: "bg-violet-500/[0.06]",
+    formats: [
+      { icon: Mail, name: "Email Sequence", range: "3 emails" },
+      { icon: Megaphone, name: "Ad Copy", range: "Google + Meta" },
+    ],
+  },
+  {
+    label: "Web Copy",
+    color: "text-amber-600 dark:text-amber-400",
+    border: "border-amber-500/20",
+    bg: "bg-amber-500/[0.06]",
+    formats: [
+      { icon: MonitorPlay, name: "Landing Page Copy", range: "600–900 words" },
+      { icon: Package, name: "Product Description", range: "300–500 words" },
+      { icon: Radio, name: "Press Release", range: "500–700 words" },
+      { icon: HelpCircle, name: "FAQ / Knowledge Base", range: "8–12 Q&As" },
+    ],
+  },
+] as const;
+
+const CMS_PLATFORMS = [
+  { name: "WordPress", desc: "REST API + goals.ac plugin" },
+  { name: "Shopify", desc: "Blog via goals.ac app" },
+  { name: "Drupal", desc: "JSON:API plugin" },
+  { name: "Joomla", desc: "Web Services plugin" },
+  { name: "Notion", desc: "Markdown → blocks" },
+  { name: "Webflow", desc: "CMS collection items" },
+  { name: "Ghost", desc: "Admin API publish" },
+  { name: "Webhook", desc: "HMAC-signed JSON to any URL" },
+] as const;
+
+const SOCIAL_PLATFORMS = [
+  { name: "LinkedIn", desc: "Long-form posts" },
+  { name: "X / Twitter", desc: "Threads" },
+  { name: "Instagram", desc: "Captions + hashtags" },
+  { name: "Facebook", desc: "Page posts" },
+] as const;
 
 export default function ContentEngine() {
   const { user } = useAuth();
@@ -85,32 +169,119 @@ export default function ContentEngine() {
           </div>
         </section>
 
-        {/* Content types row */}
+        {/* Full content suite */}
         <section className="py-20 bg-background border-b border-border">
           <div className="container mx-auto px-4 md:px-8 max-w-6xl">
             <div className="text-center mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Five content formats. One engine.</h2>
+              <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground mb-4 tracking-wide uppercase">
+                Full platform content suite
+              </div>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+                18 formats. Four categories. One studio.
+              </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Whatever your funnel needs — top-of-funnel SEO, mid-funnel comparison pages, bottom-funnel case studies — the engine handles it.
+                From pillar pages to LinkedIn threads — generate, repurpose, schedule, and publish every format your funnel needs from a single content calendar.
               </p>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-4">
-              {[
-                { icon: Pencil, label: "SEO Articles", desc: "Long-form, keyword-optimized, ready to rank.", iconBg: "bg-blue-500/10 border-blue-500/20", iconColor: "text-blue-600 dark:text-blue-400" },
-                { icon: Bot, label: "GEO Pages", desc: "Built for AI citation in ChatGPT, Perplexity, Google AI.", iconBg: "bg-violet-500/10 border-violet-500/20", iconColor: "text-violet-600 dark:text-violet-400" },
-                { icon: Layers, label: "Comparison Pages", desc: "vs-competitor pages that capture commercial intent.", iconBg: "bg-emerald-500/10 border-emerald-500/20", iconColor: "text-emerald-600 dark:text-emerald-400" },
-                { icon: TrendingUp, label: "Growth Playbooks", desc: "Tactical guides that convert readers to leads.", iconBg: "bg-amber-500/10 border-amber-500/20", iconColor: "text-amber-600 dark:text-amber-400" },
-                { icon: Target, label: "Landing Copy", desc: "Brand-aligned hero, feature, and CTA copy.", iconBg: "bg-rose-500/10 border-rose-500/20", iconColor: "text-rose-600 dark:text-rose-400" },
-              ].map((item) => (
-                <div key={item.label} className="rounded-xl border border-border bg-card p-5 card-hover-glow">
-                  <div className={`rounded-lg w-10 h-10 flex items-center justify-center mb-4 border ${item.iconBg}`}>
-                    <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+            <div className="grid md:grid-cols-2 gap-5">
+              {FORMAT_CATEGORIES.map((category) => (
+                <div
+                  key={category.label}
+                  className={`rounded-2xl border ${category.border} ${category.bg} p-5`}
+                >
+                  <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${category.color}`}>
+                    {category.label}
+                  </h3>
+                  <div className="grid sm:grid-cols-2 gap-2">
+                    {category.formats.map((format) => (
+                      <div
+                        key={format.name}
+                        className="flex items-start gap-2.5 rounded-lg border border-border/60 bg-card/80 px-3 py-2.5"
+                      >
+                        <format.icon className={`h-4 w-4 mt-0.5 flex-shrink-0 ${category.color}`} />
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold leading-tight">{format.name}</div>
+                          <div className="text-[11px] text-muted-foreground mt-0.5">{format.range}</div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <h3 className="font-bold mb-1.5">{item.label}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item.desc}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                Repurpose any piece into any other format
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                Brand voice injected on every generation
+              </span>
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                Drag-and-drop content calendar
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Publishing platforms */}
+        <section className="py-20 bg-muted/30 border-b border-border">
+          <div className="container mx-auto px-4 md:px-8 max-w-6xl">
+            <div className="text-center mb-12">
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
+                Publish to every platform you use.
+              </h2>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                Connect your CMS once. Push long-form to WordPress, Shopify, or Notion. Ship social posts to LinkedIn, X, Instagram, and Facebook — all from the same publish dialog.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <h3 className="font-bold text-lg">CMS &amp; site publishing</h3>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2">
+                  {CMS_PLATFORMS.map((platform) => (
+                    <div
+                      key={platform.name}
+                      className="rounded-lg border border-border bg-background px-3 py-2.5"
+                    >
+                      <div className="text-sm font-semibold">{platform.name}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{platform.desc}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-border bg-card p-6">
+                <div className="flex items-center gap-2 mb-5">
+                  <Share2 className="h-5 w-5 text-sky-600 dark:text-sky-400" />
+                  <h3 className="font-bold text-lg">Social publishing</h3>
+                </div>
+                <div className="grid sm:grid-cols-2 gap-2 mb-4">
+                  {SOCIAL_PLATFORMS.map((platform) => (
+                    <div
+                      key={platform.name}
+                      className="rounded-lg border border-border bg-background px-3 py-2.5"
+                    >
+                      <div className="text-sm font-semibold">{platform.name}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">{platform.desc}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 flex items-start gap-2">
+                  <Webhook className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Webhook connector sends HMAC-signed JSON to Zapier, Make, n8n, or any custom stack — a destination most competitors don&apos;t offer.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -218,10 +389,10 @@ export default function ContentEngine() {
                     Publish anywhere. Track everywhere.
                   </h2>
                   <p className="text-lg text-muted-foreground leading-relaxed mb-5">
-                    Push approved pieces to Notion, Webflow, or WordPress with one click. Schedule from a drag-and-drop calendar. Watch keyword rankings and AI citations improve.
+                    Push approved pieces to WordPress, Shopify, Notion, Webflow, Ghost, or a custom webhook. Schedule social posts to LinkedIn, X, Instagram, and Facebook from the same calendar.
                   </p>
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {["Notion", "Webflow", "WordPress", "Ghost", "Markdown export"].map((cms) => (
+                    {["WordPress", "Shopify", "Notion", "Webflow", "Ghost", "LinkedIn", "X", "Webhook"].map((cms) => (
                       <span key={cms} className="text-xs font-semibold px-3 py-1 rounded-full bg-muted text-foreground border border-border">
                         {cms}
                       </span>

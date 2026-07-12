@@ -3,9 +3,10 @@ import { db } from "@workspace/db";
 import { geoAuditsTable, websiteProjectsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { auditUrl } from "../services/geoAuditor";
+import { auditUrl } from "@workspace/seo-tools/geoAuditor";
 import { optionalAuth } from "../lib/auth";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
+import { requireProjectAccess } from "../lib/projectAccess";
 
 const router: IRouter = Router();
 
@@ -35,13 +36,9 @@ router.post("/geo-audits", optionalAuth, async (req, res) => {
   let validatedProjectId: number | null = null;
 
   if (website_project_id && req.user) {
-    const [proj] = await db
-      .select({ id: websiteProjectsTable.id })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, website_project_id), eq(websiteProjectsTable.userId, req.user.userId)))
-      .limit(1);
-    if (!proj) {
-      res.status(403).json({ error: "You do not have access to this project" });
+    const access = await requireProjectAccess(website_project_id, req.user.userId);
+    if (!access.ok) {
+      res.status(access.status).json({ error: access.error });
       return;
     }
     validatedProjectId = website_project_id;
@@ -114,13 +111,9 @@ router.get("/geo-audits/:id", optionalAuth, async (req, res) => {
         res.status(401).json({ error: "Authentication required" });
         return;
       }
-      const [proj] = await db
-        .select({ id: websiteProjectsTable.id })
-        .from(websiteProjectsTable)
-        .where(and(eq(websiteProjectsTable.id, audit.websiteProjectId), eq(websiteProjectsTable.userId, req.user.userId)))
-        .limit(1);
-      if (!proj) {
-        res.status(403).json({ error: "You do not have access to this audit" });
+      const access = await requireProjectAccess(audit.websiteProjectId, req.user.userId);
+      if (!access.ok) {
+        res.status(access.status).json({ error: access.error });
         return;
       }
     }

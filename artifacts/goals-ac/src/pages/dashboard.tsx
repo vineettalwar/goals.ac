@@ -12,7 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/context/auth";
-import { Loader2, Plus, Globe, ExternalLink, Trash2, Clock, CheckCircle2, XCircle, FileText, ArrowRight } from "lucide-react";
+import { Loader2, Plus, Globe, ExternalLink, Trash2, Clock, CheckCircle2, XCircle, FileText, ArrowRight, Sparkles } from "lucide-react";
 import { WIZARD_DONE_KEY } from "@/pages/onboarding";
 
 interface DraftPiece {
@@ -71,6 +71,8 @@ export default function Dashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [drafts, setDrafts] = useState<DraftPiece[]>([]);
   const [draftsExpanded, setDraftsExpanded] = useState(false);
+  const [visibilityScore, setVisibilityScore] = useState<number | null>(null);
+  const [geoScore, setGeoScore] = useState<number | null>(null);
 
   const form = useForm<AddProjectForm>({
     resolver: zodResolver(addProjectSchema),
@@ -105,6 +107,20 @@ export default function Dashboard() {
         );
         allDrafts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setDrafts(allDrafts);
+
+        if (data.length > 0) {
+          fetch(`${API_BASE}/api/website-projects/${data[0].id}/visibility`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+            .then((r) => (r.ok ? r.json() : null))
+            .then((v: { visibilityScore?: number; latestGeoScore?: number | null } | null) => {
+              if (v) {
+                setVisibilityScore(v.visibilityScore ?? null);
+                setGeoScore(v.latestGeoScore ?? null);
+              }
+            })
+            .catch(() => {});
+        }
       }
     } finally {
       setIsLoadingProjects(false);
@@ -149,19 +165,17 @@ export default function Dashboard() {
 
   return (
     <AppLayout>
-      <SEO title="Dashboard — goals.ac" description="Manage your website SEO projects." />
+      <SEO title="Projects — goals.ac" description="Manage content projects, drafts, and publishing." />
       {/* Dashboard hero */}
-      <div className="relative bg-muted/40 dark:bg-mesh-dark py-12 border-b border-border dark:border-white/[0.06] overflow-hidden">
-        <div className="orb orb-primary w-[500px] h-[350px] top-[-20%] left-[40%] -translate-x-1/2 hidden dark:block" />
-        <div className="orb orb-violet w-[250px] h-[250px] bottom-[-10%] right-[5%] hidden dark:block" />
+      <div className="relative bg-muted/30 py-10 border-b border-border overflow-hidden">
         <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Your Projects</h1>
-            <p className="text-muted-foreground mt-1">Welcome back, <span className="text-foreground font-medium">{user?.name}</span></p>
+            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+            <p className="text-muted-foreground mt-1">Choose a site to plan content, review drafts, or check performance{user?.name ? `, ${user.name}` : ""}.</p>
           </div>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white">
+              <Button className="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white">
                 <Plus className="w-4 h-4 mr-2" />
                 Add website
               </Button>
@@ -203,7 +217,7 @@ export default function Dashboard() {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full glow-primary bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white" disabled={form.formState.isSubmitting}>
+                  <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-400 border-0 text-white" disabled={form.formState.isSubmitting}>
                     {form.formState.isSubmitting ? (
                       <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Adding...</>
                     ) : (
@@ -218,6 +232,25 @@ export default function Dashboard() {
       </div>
 
       <div className="container mx-auto px-4 md:px-8 max-w-5xl py-10">
+        {!isLoadingProjects && projects.length > 0 && (visibilityScore != null || geoScore != null) && (
+          <div className="mb-8 grid gap-4 sm:grid-cols-2">
+            <Link to="/ai-visibility" className="block rounded-xl border border-violet-200 dark:border-violet-500/20 bg-violet-50/50 dark:bg-violet-500/5 p-4 hover:border-violet-300 transition-colors">
+              <div className="flex items-center gap-2 text-sm font-semibold text-violet-800 dark:text-violet-300">
+                <Sparkles className="w-4 h-4" /> AI Visibility
+              </div>
+              <p className="text-2xl font-bold mt-1">{visibilityScore ?? "—"}%</p>
+              <p className="text-xs text-muted-foreground mt-1">Brand citation rate across AI engines</p>
+            </Link>
+            <Link to="/ai-visibility" className="block rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-500/5 p-4 hover:border-emerald-300 transition-colors">
+              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                GEO Score
+              </div>
+              <p className="text-2xl font-bold mt-1">{geoScore ?? "—"}<span className="text-base font-normal text-muted-foreground">/100</span></p>
+              <p className="text-xs text-muted-foreground mt-1">Latest technical GEO audit</p>
+            </Link>
+          </div>
+        )}
+
         {drafts.length > 0 && !isLoadingProjects && (
           <div className="mb-8 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/10 p-4">
             <div className="flex items-center justify-between gap-3 mb-3">

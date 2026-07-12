@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { websiteProjectsTable } from "./website_projects";
 import { briefsTable } from "./briefs";
+import { contentItemsTable } from "./content_strategies";
 
 export const CONTENT_FORMAT_TYPES = [
   "blog_post",
@@ -16,6 +17,7 @@ export const CONTENT_FORMAT_TYPES = [
   "linkedin_post",
   "twitter_thread",
   "instagram_post",
+  "facebook_post",
   "email_sequence",
   "ad_copy",
   "landing_page_copy",
@@ -32,6 +34,8 @@ export const contentPiecesTable = pgTable("content_pieces", {
     .notNull()
     .references(() => websiteProjectsTable.id, { onDelete: "cascade" }),
   briefId: integer("brief_id").references(() => briefsTable.id, { onDelete: "set null" }),
+  contentItemId: integer("content_item_id").references(() => contentItemsTable.id, { onDelete: "set null" }),
+  parentPieceId: integer("parent_piece_id"),
   formatType: text("format_type").notNull().$type<ContentFormatType>(),
   title: text("title").notNull(),
   targetKeyword: text("target_keyword").notNull().default(""),
@@ -40,6 +44,8 @@ export const contentPiecesTable = pgTable("content_pieces", {
   wordCount: integer("word_count").notNull().default(0),
   plannedDate: date("planned_date"),
   publishedUrl: text("published_url"),
+  publishPlatform: text("publish_platform"),
+  publishError: text("publish_error"),
   cacheKey: text("cache_key"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useParams, Link } from "react-router-dom";
-import { useForm } from "react-hook-form";
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useForm, type Control } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SEO } from "@/components/seo";
@@ -22,8 +22,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -51,7 +58,16 @@ import {
   Unlink,
   Send,
   Palette,
+  Plus,
+  Trash2,
+  Linkedin,
+  Twitter,
+  Instagram,
+  Facebook,
+  Zap,
+  Sparkles,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -79,6 +95,24 @@ interface ContentStyle {
   readingLevel?: "general" | "intermediate" | "expert";
 }
 
+interface AutopilotSettings {
+  enabled: boolean;
+  cadence: "daily" | "weekly";
+  timezone: string;
+  publishMode: "manual" | "draft" | "live";
+  preferredRunHour: number;
+  lastRunAt?: string;
+  autoQueueOpportunities?: boolean;
+  opportunityScoreThreshold?: number;
+}
+
+interface VisibilitySettings {
+  llmTrackingEnabled: boolean;
+  geoReauditEnabled: boolean;
+  lastVisibilityCheckAt?: string;
+  lastGeoReauditAt?: string;
+}
+
 interface BrandProfile {
   id: number;
   companyName: string;
@@ -88,12 +122,12 @@ interface BrandProfile {
   primaryKeywords: string[];
   competitorUrls: string[];
   // Brand Voice Storage Fields (Phase 1)
-  writingExamples: string[];
-  brandGlossary: string[];
-  antiPatterns: string[];
-  typicalStructure: string;
-  doWords: string[];
-  dontWords: string[];
+  writingExamples?: string[];
+  brandGlossary?: string[];
+  antiPatterns?: string[];
+  typicalStructure?: string;
+  doWords?: string[];
+  dontWords?: string[];
   updatedAt?: string;
 }
 
@@ -109,6 +143,28 @@ interface CmsIntegrationStatus {
     bodyFieldSlug: string;
     apiTokenHint: string;
   };
+  wordpress?: {
+    connected: boolean;
+    siteUrl: string;
+    usernameHint: string;
+  };
+  linkedin?: {
+    connected: boolean;
+    displayName?: string;
+    authorUrn?: string;
+  };
+  twitter?: {
+    connected: boolean;
+    screenName?: string;
+    userId?: string;
+  };
+  meta?: {
+    connected: boolean;
+    pageId: string;
+    pageName?: string;
+    instagramAccountId?: string;
+    instagramUsername?: string;
+  };
 }
 
 interface WebsiteProject {
@@ -121,6 +177,8 @@ interface WebsiteProject {
   scrapeStatus: string | null;
   scrapeData: ScrapeData | null;
   contentStyle: ContentStyle | null;
+  autopilotSettings?: AutopilotSettings | null;
+  visibilitySettings?: VisibilitySettings | null;
   createdAt: string;
   brandProfile: BrandProfile | null;
 }
@@ -188,6 +246,110 @@ const brandVoiceSchema = z.object({
   dontWords: z.array(z.string()).optional().default([]),
 });
 type BrandVoiceForm = z.infer<typeof brandVoiceSchema>;
+
+type VoiceStringListName =
+  | "brandGlossary"
+  | "antiPatterns"
+  | "doWords"
+  | "dontWords";
+
+function VoiceStringListField({
+  label,
+  description,
+  emptyDescription,
+  placeholder,
+  addFirstLabel,
+  addAnotherLabel,
+  maxItems,
+  name,
+  control,
+  values,
+  onAppend,
+  onRemove,
+}: {
+  label: string;
+  description: string;
+  emptyDescription: string;
+  placeholder: string;
+  addFirstLabel: string;
+  addAnotherLabel: string;
+  maxItems: number;
+  name: VoiceStringListName;
+  control: Control<BrandVoiceForm>;
+  values: string[];
+  onAppend: () => void;
+  onRemove: (index: number) => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <label className="text-sm font-medium">{label}</label>
+          <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+        </div>
+        {values.length > 0 && (
+          <Badge variant="secondary" className="shrink-0">
+            {values.length}/{maxItems}
+          </Badge>
+        )}
+      </div>
+
+      {values.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 px-4 py-5 text-center">
+          <p className="text-sm text-muted-foreground mb-3 max-w-sm mx-auto">
+            {emptyDescription}
+          </p>
+          <Button type="button" variant="outline" size="sm" onClick={onAppend}>
+            <Plus className="w-4 h-4 mr-1.5" />
+            {addFirstLabel}
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {values.map((_, index) => (
+            <div key={`${name}-${index}`} className="flex items-center gap-2">
+              <FormField
+                control={control}
+                name={`${name}.${index}`}
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormControl>
+                      <Input {...field} placeholder={placeholder} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => onRemove(index)}
+                aria-label={`Remove ${label.toLowerCase()} ${index + 1}`}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {values.length > 0 && values.length < maxItems && (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="w-full border-dashed"
+          onClick={onAppend}
+        >
+          <Plus className="w-4 h-4 mr-1.5" />
+          {addAnotherLabel}
+        </Button>
+      )}
+    </div>
+  );
+}
 
 function ConfidenceBadge({ level }: { level: Confidence | undefined }) {
   if (!level) return null;
@@ -257,9 +419,52 @@ const WORD_COUNT_PRESETS = [
   { label: "Long", value: 1500 },
 ];
 
+const TIMEZONE_OPTIONS = [
+  "UTC",
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Berlin",
+  "Asia/Singapore",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];
+
+const RUN_HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({
+  value: hour,
+  label: `${hour.toString().padStart(2, "0")}:00`,
+}));
+
+const DEFAULT_AUTOPILOT: AutopilotSettings = {
+  enabled: false,
+  cadence: "daily",
+  timezone: "UTC",
+  publishMode: "draft",
+  preferredRunHour: 9,
+  autoQueueOpportunities: false,
+  opportunityScoreThreshold: 60,
+};
+
+const DEFAULT_VISIBILITY: VisibilitySettings = {
+  llmTrackingEnabled: false,
+  geoReauditEnabled: false,
+};
+
+const PROJECT_TABS = ["brand", "voice", "content", "publishing"] as const;
+type ProjectTab = (typeof PROJECT_TABS)[number];
+
+function isProjectTab(value: string | undefined): value is ProjectTab {
+  return PROJECT_TABS.includes(value as ProjectTab);
+}
+
 export default function ProjectDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id, tab: tabParam } = useParams<{ id: string; tab?: string }>();
+  const navigate = useNavigate();
   const { token } = useAuth();
+  const activeTab: ProjectTab = isProjectTab(tabParam) ? tabParam : "brand";
   const [project, setProject] = useState<WebsiteProject | null>(null);
   const [content, setContent] = useState<ProjectContent | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -281,10 +486,35 @@ export default function ProjectDetail() {
   const [webflowToken, setWebflowToken] = useState("");
   const [webflowCollId, setWebflowCollId] = useState("");
   const [webflowBodyField, setWebflowBodyField] = useState("post-body");
+  const [wpSiteUrl, setWpSiteUrl] = useState("");
+  const [wpUsername, setWpUsername] = useState("");
+  const [wpAppPassword, setWpAppPassword] = useState("");
   const [isSavingNotion, setIsSavingNotion] = useState(false);
   const [isSavingWebflow, setIsSavingWebflow] = useState(false);
+  const [isSavingWordpress, setIsSavingWordpress] = useState(false);
   const [isDisconnectingNotion, setIsDisconnectingNotion] = useState(false);
   const [isDisconnectingWebflow, setIsDisconnectingWebflow] = useState(false);
+  const [isDisconnectingWordpress, setIsDisconnectingWordpress] =
+    useState(false);
+  const [autopilotSettings, setAutopilotSettings] = useState<AutopilotSettings>(DEFAULT_AUTOPILOT);
+  const [isSavingAutopilot, setIsSavingAutopilot] = useState(false);
+  const [autopilotSaveSuccess, setAutopilotSaveSuccess] = useState(false);
+  const [autopilotError, setAutopilotError] = useState<string | null>(null);
+  const [visibilitySettings, setVisibilitySettings] = useState<VisibilitySettings>(DEFAULT_VISIBILITY);
+  const [isSavingVisibility, setIsSavingVisibility] = useState(false);
+  const [visibilitySaveSuccess, setVisibilitySaveSuccess] = useState(false);
+  const [isDisconnectingLinkedin, setIsDisconnectingLinkedin] = useState(false);
+  const [isDisconnectingTwitter, setIsDisconnectingTwitter] = useState(false);
+  const [isDisconnectingMeta, setIsDisconnectingMeta] = useState(false);
+  const [metaPageToken, setMetaPageToken] = useState<string | null>(null);
+  const [metaPages, setMetaPages] = useState<Array<{
+    pageId: string;
+    pageName: string;
+    instagramAccountId?: string;
+    instagramUsername?: string;
+  }>>([]);
+  const [isSelectingMetaPage, setIsSelectingMetaPage] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [cmsError, setCmsError] = useState<string | null>(null);
   const [cmsSaveSuccess, setCmsSaveSuccess] = useState<string | null>(null);
   const [isTestingHealth, setIsTestingHealth] = useState(false);
@@ -292,8 +522,6 @@ export default function ProjectDetail() {
     string,
     { ok: boolean; error?: string }
   > | null>(null);
-  const [activeTab, setActiveTab] = useState("brand");
-
   const form = useForm<BrandProfileForm>({
     resolver: zodResolver(brandProfileSchema),
     defaultValues: {
@@ -330,6 +558,50 @@ export default function ProjectDetail() {
     },
   });
 
+  const MAX_WRITING_EXAMPLES = 5;
+  const writingExamples = voiceForm.watch("writingExamples") ?? [];
+
+  const appendWritingExample = () => {
+    if (writingExamples.length >= MAX_WRITING_EXAMPLES) return;
+    voiceForm.setValue("writingExamples", [...writingExamples, ""], {
+      shouldDirty: true,
+    });
+  };
+
+  const removeWritingExample = (index: number) => {
+    voiceForm.setValue(
+      "writingExamples",
+      writingExamples.filter((_, i) => i !== index),
+      { shouldDirty: true },
+    );
+  };
+
+  const MAX_VOICE_TERMS = 20;
+  const brandGlossary = voiceForm.watch("brandGlossary") ?? [];
+  const antiPatterns = voiceForm.watch("antiPatterns") ?? [];
+  const doWords = voiceForm.watch("doWords") ?? [];
+  const dontWords = voiceForm.watch("dontWords") ?? [];
+
+  const appendVoiceListItem = (
+    name: VoiceStringListName,
+    items: string[],
+  ) => {
+    if (items.length >= MAX_VOICE_TERMS) return;
+    voiceForm.setValue(name, [...items, ""], { shouldDirty: true });
+  };
+
+  const removeVoiceListItem = (
+    name: VoiceStringListName,
+    items: string[],
+    index: number,
+  ) => {
+    voiceForm.setValue(
+      name,
+      items.filter((_, i) => i !== index),
+      { shouldDirty: true },
+    );
+  };
+
   const populateFormFromBrandProfile = useCallback(
     (bp: BrandProfile) => {
       form.reset({
@@ -361,12 +633,12 @@ export default function ProjectDetail() {
   const populateVoiceForm = useCallback(
     (bp: BrandProfile) => {
       voiceForm.reset({
-        writingExamples: bp.writingExamples,
-        brandGlossary: bp.brandGlossary,
-        antiPatterns: bp.antiPatterns,
-        typicalStructure: bp.typicalStructure,
-        doWords: bp.doWords,
-        dontWords: bp.dontWords,
+        writingExamples: bp.writingExamples ?? [],
+        brandGlossary: bp.brandGlossary ?? [],
+        antiPatterns: bp.antiPatterns ?? [],
+        typicalStructure: bp.typicalStructure ?? "",
+        doWords: bp.doWords ?? [],
+        dontWords: bp.dontWords ?? [],
       });
     },
     [voiceForm],
@@ -423,6 +695,18 @@ export default function ProjectDetail() {
 
       setProject(projData);
 
+      if (projData.autopilotSettings) {
+        setAutopilotSettings({ ...DEFAULT_AUTOPILOT, ...projData.autopilotSettings });
+      } else {
+        setAutopilotSettings(DEFAULT_AUTOPILOT);
+      }
+
+      if (projData.visibilitySettings) {
+        setVisibilitySettings({ ...DEFAULT_VISIBILITY, ...projData.visibilitySettings });
+      } else {
+        setVisibilitySettings(DEFAULT_VISIBILITY);
+      }
+
       if (projData.brandProfile) {
         populateFormFromBrandProfile(projData.brandProfile);
         populateVoiceForm(projData.brandProfile);
@@ -453,23 +737,92 @@ export default function ProjectDetail() {
   }, [loadProject]);
 
   useEffect(() => {
+    if (!id) return;
+    if (!tabParam || !isProjectTab(tabParam)) {
+      navigate(`/projects/${id}/brand`, { replace: true });
+    }
+  }, [id, tabParam, navigate]);
+
+  useEffect(() => {
     if (activeTab !== "publishing" || !token || !id) return;
-    const hasCms = cmsIntegrations.notion || cmsIntegrations.webflow;
+    const hasCms =
+      cmsIntegrations.notion ||
+      cmsIntegrations.webflow ||
+      cmsIntegrations.wordpress ||
+      cmsIntegrations.linkedin ||
+      cmsIntegrations.twitter ||
+      cmsIntegrations.meta;
     if (!hasCms || isTestingHealth) return;
     setIsTestingHealth(true);
     fetch(`${API_BASE}/api/website-projects/${id}/cms-integrations/test`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
     })
-      .then((r) => r.json())
-      .then((data) =>
-        setHealthStatus(
-          data as Record<string, { ok: boolean; error?: string }>,
-        ),
-      )
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data) setHealthStatus(data);
+      })
       .catch(() => {})
       .finally(() => setIsTestingHealth(false));
-  }, [activeTab, token, id, cmsIntegrations.notion, cmsIntegrations.webflow]);
+  }, [
+    activeTab,
+    token,
+    id,
+    cmsIntegrations.notion,
+    cmsIntegrations.webflow,
+    cmsIntegrations.wordpress,
+    cmsIntegrations.linkedin,
+    cmsIntegrations.twitter,
+    cmsIntegrations.meta,
+  ]);
+
+  useEffect(() => {
+    if (!token || !id) return;
+    const linkedin = searchParams.get("linkedin");
+    const twitter = searchParams.get("twitter");
+    const meta = searchParams.get("meta");
+    const metaToken = searchParams.get("token");
+
+    if (linkedin === "connected") {
+      setCmsSaveSuccess("LinkedIn connected successfully");
+      loadCmsIntegrations();
+      setSearchParams({}, { replace: true });
+    } else if (linkedin === "error") {
+      setCmsError("LinkedIn connection failed");
+      setSearchParams({}, { replace: true });
+    }
+
+    if (twitter === "connected") {
+      setCmsSaveSuccess("X connected successfully");
+      loadCmsIntegrations();
+      setSearchParams({}, { replace: true });
+    } else if (twitter === "error") {
+      setCmsError("X connection failed");
+      setSearchParams({}, { replace: true });
+    }
+
+    if (meta === "select_page" && metaToken) {
+      setMetaPageToken(metaToken);
+      fetch(`${API_BASE}/api/auth/meta/pages?token=${encodeURIComponent(metaToken)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { pages?: typeof metaPages } | null) => {
+          if (data?.pages) setMetaPages(data.pages);
+        })
+        .catch(() => setCmsError("Failed to load Facebook Pages"));
+      setSearchParams({}, { replace: true });
+    } else if (meta === "connected") {
+      setCmsSaveSuccess("Meta connected successfully");
+      loadCmsIntegrations();
+      setSearchParams({}, { replace: true });
+    } else if (meta === "error" || meta === "no_pages") {
+      setCmsError(meta === "no_pages" ? "No Facebook Pages found on this account" : "Meta connection failed");
+      setSearchParams({}, { replace: true });
+    }
+  }, [token, id, searchParams, loadCmsIntegrations, setSearchParams]);
 
   useEffect(() => {
     if (!project) return;
@@ -620,9 +973,64 @@ export default function ProjectDetail() {
     }
   };
 
+  const onSaveAutopilot = async () => {
+    if (!token || !id) return;
+    setIsSavingAutopilot(true);
+    setAutopilotSaveSuccess(false);
+    setAutopilotError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/website-projects/${id}/autopilot-settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(autopilotSettings),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setAutopilotError((data as { error?: string }).error ?? "Failed to save autopilot settings");
+        return;
+      }
+      const saved = (await res.json()) as AutopilotSettings;
+      setAutopilotSettings(saved);
+      setProject((prev) => (prev ? { ...prev, autopilotSettings: saved } : prev));
+      setAutopilotSaveSuccess(true);
+      setTimeout(() => setAutopilotSaveSuccess(false), 3000);
+    } catch {
+      setAutopilotError("Failed to save autopilot settings");
+    } finally {
+      setIsSavingAutopilot(false);
+    }
+  };
+
+  const onSaveVisibility = async () => {
+    if (!token || !id) return;
+    setIsSavingVisibility(true);
+    setVisibilitySaveSuccess(false);
+    try {
+      const res = await fetch(`${API_BASE}/api/website-projects/${id}/visibility-settings`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(visibilitySettings),
+      });
+      if (!res.ok) return;
+      const saved = (await res.json()) as VisibilitySettings;
+      setVisibilitySettings(saved);
+      setProject((prev) => (prev ? { ...prev, visibilitySettings: saved } : prev));
+      setVisibilitySaveSuccess(true);
+      setTimeout(() => setVisibilitySaveSuccess(false), 3000);
+    } finally {
+      setIsSavingVisibility(false);
+    }
+  };
+
   const onAnalyzeWritingExamples = async () => {
     if (!token || !id) return;
-    const { writingExamples } = voiceForm.getValues();
+    const writingExamples = voiceForm.getValues("writingExamples") ?? [];
 
     // Filter out empty examples
     const nonEmptyExamples = writingExamples.filter(
@@ -823,6 +1231,86 @@ export default function ProjectDetail() {
     }
   };
 
+  const onSaveWordpress = async () => {
+    if (
+      !token ||
+      !id ||
+      !wpSiteUrl.trim() ||
+      !wpUsername.trim() ||
+      !wpAppPassword.trim()
+    )
+      return;
+    setIsSavingWordpress(true);
+    setCmsError(null);
+    setCmsSaveSuccess(null);
+    try {
+      const res = await fetch(
+        `${API_BASE}/api/website-projects/${id}/cms-integrations`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            wordpress: {
+              siteUrl: wpSiteUrl.trim(),
+              username: wpUsername.trim(),
+              appPassword: wpAppPassword.trim(),
+            },
+          }),
+        },
+      );
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to save");
+      }
+      const updated = (await res.json()) as CmsIntegrationStatus;
+      setCmsIntegrations(updated);
+      setWpSiteUrl("");
+      setWpUsername("");
+      setWpAppPassword("");
+      setCmsSaveSuccess("WordPress connected successfully");
+      setTimeout(() => setCmsSaveSuccess(null), 3000);
+    } catch (err) {
+      setCmsError(
+        err instanceof Error ? err.message : "Failed to connect WordPress",
+      );
+    } finally {
+      setIsSavingWordpress(false);
+    }
+  };
+
+  const onDisconnectWordpress = async () => {
+    if (!token || !id) return;
+    setIsDisconnectingWordpress(true);
+    setCmsError(null);
+    try {
+      await fetch(
+        `${API_BASE}/api/website-projects/${id}/cms-integrations/wordpress`,
+        {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+      setCmsIntegrations((prev) => {
+        const n = { ...prev };
+        delete n.wordpress;
+        return n;
+      });
+      setHealthStatus((prev) => {
+        if (!prev) return prev;
+        const n = { ...prev };
+        delete n.wordpress;
+        return n;
+      });
+    } catch {
+      setCmsError("Failed to disconnect WordPress");
+    } finally {
+      setIsDisconnectingWordpress(false);
+    }
+  };
+
   const onTestHealth = async () => {
     if (!token || !id) return;
     setIsTestingHealth(true);
@@ -844,6 +1332,80 @@ export default function ProjectDetail() {
       setCmsError("Failed to test connections");
     } finally {
       setIsTestingHealth(false);
+    }
+  };
+
+  const onConnectLinkedin = () => {
+    if (!id) return;
+    window.location.href = `${API_BASE}/api/auth/linkedin?projectId=${id}`;
+  };
+
+  const onConnectTwitter = () => {
+    if (!id) return;
+    window.location.href = `${API_BASE}/api/auth/twitter?projectId=${id}`;
+  };
+
+  const onConnectMeta = () => {
+    if (!id) return;
+    window.location.href = `${API_BASE}/api/auth/meta?projectId=${id}`;
+  };
+
+  const onSelectMetaPage = async (pageId: string) => {
+    if (!token || !metaPageToken) return;
+    setIsSelectingMetaPage(true);
+    setCmsError(null);
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/meta/select-page`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        credentials: "include",
+        body: JSON.stringify({ token: metaPageToken, pageId }),
+      });
+      if (!res.ok) throw new Error("Failed to select page");
+      setMetaPageToken(null);
+      setMetaPages([]);
+      await loadCmsIntegrations();
+      setCmsSaveSuccess("Facebook & Instagram connected successfully");
+      setTimeout(() => setCmsSaveSuccess(null), 3000);
+    } catch {
+      setCmsError("Failed to connect Facebook Page");
+    } finally {
+      setIsSelectingMetaPage(false);
+    }
+  };
+
+  const onDisconnectSocial = async (platform: "linkedin" | "twitter" | "meta") => {
+    if (!token || !id) return;
+    const setDisconnecting =
+      platform === "linkedin" ? setIsDisconnectingLinkedin
+      : platform === "twitter" ? setIsDisconnectingTwitter
+      : setIsDisconnectingMeta;
+    setDisconnecting(true);
+    setCmsError(null);
+    try {
+      await fetch(`${API_BASE}/api/website-projects/${id}/cms-integrations/${platform}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+        credentials: "include",
+      });
+      setCmsIntegrations((prev) => {
+        const n = { ...prev };
+        delete n[platform];
+        return n;
+      });
+      setHealthStatus((prev) => {
+        if (!prev) return prev;
+        const n = { ...prev };
+        delete n[platform];
+        return n;
+      });
+    } catch {
+      setCmsError(`Failed to disconnect ${platform}`);
+    } finally {
+      setDisconnecting(false);
     }
   };
 
@@ -943,40 +1505,63 @@ export default function ProjectDetail() {
           </p>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => {
+            if (!id || !isProjectTab(value)) return;
+            navigate(`/projects/${id}/${value}`);
+          }}
+        >
           <TabsList className="mb-8">
-            <TabsTrigger value="brand">Brand Profile</TabsTrigger>
-            <TabsTrigger value="voice">Brand Voice</TabsTrigger>
-            <TabsTrigger value="content">
-              Your Content
-              {content &&
-                content.contentStrategies.length +
-                  content.seoArticles.length +
-                  content.geoAudits.length +
-                  (content.roadmaps?.length ?? 0) >
-                  0 && (
+            <TabsTrigger value="brand" asChild>
+              <Link to={`/projects/${id}/brand`}>Brand Profile</Link>
+            </TabsTrigger>
+            <TabsTrigger value="voice" asChild>
+              <Link to={`/projects/${id}/voice`}>Brand Voice</Link>
+            </TabsTrigger>
+            <TabsTrigger value="content" asChild>
+              <Link to={`/projects/${id}/content`}>
+                Your Content
+                {content &&
+                  content.contentStrategies.length +
+                    content.seoArticles.length +
+                    content.geoAudits.length +
+                    (content.roadmaps?.length ?? 0) >
+                    0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-2 text-xs bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+                    >
+                      {content.contentStrategies.length +
+                        content.seoArticles.length +
+                        content.geoAudits.length +
+                        (content.roadmaps?.length ?? 0)}
+                    </Badge>
+                  )}
+              </Link>
+            </TabsTrigger>
+            <TabsTrigger value="publishing" asChild>
+              <Link to={`/projects/${id}/publishing`}>
+                Publishing
+                {(cmsIntegrations.notion ||
+                  cmsIntegrations.webflow ||
+                  cmsIntegrations.wordpress ||
+                  cmsIntegrations.linkedin ||
+                  cmsIntegrations.twitter ||
+                  cmsIntegrations.meta) && (
                   <Badge
                     variant="secondary"
-                    className="ml-2 text-xs bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300"
+                    className="ml-2 text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
                   >
-                    {content.contentStrategies.length +
-                      content.seoArticles.length +
-                      content.geoAudits.length +
-                      (content.roadmaps?.length ?? 0)}
+                    {(cmsIntegrations.notion ? 1 : 0) +
+                      (cmsIntegrations.webflow ? 1 : 0) +
+                      (cmsIntegrations.wordpress ? 1 : 0) +
+                      (cmsIntegrations.linkedin ? 1 : 0) +
+                      (cmsIntegrations.twitter ? 1 : 0) +
+                      (cmsIntegrations.meta ? 1 : 0)}
                   </Badge>
                 )}
-            </TabsTrigger>
-            <TabsTrigger value="publishing">
-              Publishing
-              {(cmsIntegrations.notion || cmsIntegrations.webflow) && (
-                <Badge
-                  variant="secondary"
-                  className="ml-2 text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
-                >
-                  {(cmsIntegrations.notion ? 1 : 0) +
-                    (cmsIntegrations.webflow ? 1 : 0)}
-                </Badge>
-              )}
+              </Link>
             </TabsTrigger>
           </TabsList>
 
@@ -1563,73 +2148,152 @@ export default function ProjectDetail() {
                         onSubmit={voiceForm.handleSubmit(onSaveBrandVoice)}
                         className="space-y-6"
                       >
-                        <div className="space-y-4">
-                          <label className="text-sm font-medium mb-1">
-                            Writing Examples
-                          </label>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Provide 3-5 samples of your best writing to help the
-                            AI learn your style.
-                          </p>
-                          <div className="space-y-2">
-                            {Array.from({ length: 5 }).map((_, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const examples =
-                                      voiceForm.getValues().writingExamples;
-                                    const newExamples = [...examples];
-                                    newExamples.splice(index, 1);
-                                    voiceForm.setValue(
-                                      "writingExamples",
-                                      newExamples,
-                                    );
-                                  }}
-                                  className="text-xs text-destructive hover:text-destructive/60 p-0"
-                                >
-                                  ×
-                                </button>
-                                <Textarea
-                                  placeholder="Paste a writing sample here..."
-                                  value={
-                                    voiceForm.getValues().writingExamples[
-                                      index
-                                    ] || ""
-                                  }
-                                  onChange={(e) => {
-                                    const examples =
-                                      voiceForm.getValues().writingExamples;
-                                    const newExamples = [...examples];
-                                    newExamples[index] = e.target.value;
-                                    voiceForm.setValue(
-                                      "writingExamples",
-                                      newExamples,
-                                    );
-                                  }}
-                                  className="resize-none"
-                                  rows={3}
-                                />
-                              </div>
-                            ))}
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <label className="text-sm font-medium">
+                                Writing Examples
+                              </label>
+                              <p className="text-xs text-muted-foreground mt-0.5">
+                                Add 3–5 samples of your best writing so the AI
+                                can learn your style.
+                              </p>
+                            </div>
+                            {writingExamples.length > 0 && (
+                              <Badge variant="secondary" className="shrink-0">
+                                {writingExamples.length}/{MAX_WRITING_EXAMPLES}
+                              </Badge>
+                            )}
                           </div>
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              const examples =
-                                voiceForm.getValues().writingExamples;
-                              voiceForm.setValue("writingExamples", [
-                                ...examples,
-                                "",
-                              ]);
-                            }}
-                            className="text-xs text-muted-foreground hover:text-muted-foreground/60 p-0"
-                          >
-                            + Add another example
-                          </Button>
+
+                          {writingExamples.length === 0 ? (
+                            <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 px-4 py-8 text-center">
+                              <FileText className="mx-auto h-8 w-8 text-muted-foreground/40 mb-3" />
+                              <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
+                                Paste blog posts, emails, or landing page copy
+                                you are proud of.
+                              </p>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={appendWritingExample}
+                              >
+                                <Plus className="w-4 h-4 mr-1.5" />
+                                Add first sample
+                              </Button>
+                            </div>
+                          ) : writingExamples.length === 1 ? (
+                            <div className="rounded-lg border border-border/60 p-3 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  Sample 1
+                                </span>
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  onClick={() => removeWritingExample(0)}
+                                  aria-label="Remove sample 1"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                              <FormField
+                                control={voiceForm.control}
+                                name="writingExamples.0"
+                                render={({ field: inputField }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Textarea
+                                        {...inputField}
+                                        placeholder="Paste a writing sample here…"
+                                        className="min-h-[120px] resize-y"
+                                        rows={4}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          ) : (
+                            <Accordion type="multiple" className="space-y-2">
+                              {writingExamples.map((sample, index) => {
+                                const preview = sample.trim()
+                                  ? sample.trim().slice(0, 72) +
+                                    (sample.trim().length > 72 ? "…" : "")
+                                  : "Click to paste a writing sample…";
+
+                                return (
+                                  <AccordionItem
+                                    key={`writing-example-${index}`}
+                                    value={`writing-example-${index}`}
+                                    className="rounded-lg border border-border/60 px-3 data-[state=open]:bg-muted/20"
+                                  >
+                                    <div className="flex items-center gap-1">
+                                      <AccordionTrigger className="flex-1 py-3 hover:no-underline">
+                                        <div className="flex min-w-0 flex-col items-start gap-0.5 text-left">
+                                          <span className="text-xs font-medium text-muted-foreground">
+                                            Sample {index + 1}
+                                          </span>
+                                          <span className="text-sm font-normal text-foreground/80 line-clamp-1">
+                                            {preview}
+                                          </span>
+                                        </div>
+                                      </AccordionTrigger>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                                        onClick={() =>
+                                          removeWritingExample(index)
+                                        }
+                                        aria-label={`Remove sample ${index + 1}`}
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                    <AccordionContent className="pb-3">
+                                      <FormField
+                                        control={voiceForm.control}
+                                        name={`writingExamples.${index}`}
+                                        render={({ field: inputField }) => (
+                                          <FormItem>
+                                            <FormControl>
+                                              <Textarea
+                                                {...inputField}
+                                                placeholder="Paste a writing sample here…"
+                                                className="min-h-[120px] resize-y"
+                                                rows={4}
+                                              />
+                                            </FormControl>
+                                            <FormMessage />
+                                          </FormItem>
+                                        )}
+                                      />
+                                    </AccordionContent>
+                                  </AccordionItem>
+                                );
+                              })}
+                            </Accordion>
+                          )}
+
+                          {writingExamples.length > 0 &&
+                            writingExamples.length < MAX_WRITING_EXAMPLES && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="w-full border-dashed"
+                                onClick={appendWritingExample}
+                              >
+                                <Plus className="w-4 h-4 mr-1.5" />
+                                Add another sample
+                              </Button>
+                            )}
                         </div>
                         <Button
                           type="button"
@@ -1638,136 +2302,50 @@ export default function ProjectDetail() {
                         >
                           Analyze Examples
                         </Button>
-                        <div className="space-y-4">
-                          <label className="text-sm font-medium mb-1">
-                            Brand Glossary
-                          </label>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Words and phrases you commonly use in your content.
-                          </p>
-                          <div className="space-y-2">
-                            {Array.from({ length: 10 }).map((_, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const glossary =
-                                      voiceForm.getValues().brandGlossary;
-                                    const newGlossary = [...glossary];
-                                    newGlossary.splice(index, 1);
-                                    voiceForm.setValue(
-                                      "brandGlossary",
-                                      newGlossary,
-                                    );
-                                  }}
-                                  className="text-xs text-destructive hover:text-destructive/60 p-0"
-                                >
-                                  ×
-                                </button>
-                                <Input
-                                  placeholder="Enter a term..."
-                                  value={
-                                    voiceForm.getValues().brandGlossary[
-                                      index
-                                    ] || ""
-                                  }
-                                  onChange={(e) => {
-                                    const glossary =
-                                      voiceForm.getValues().brandGlossary;
-                                    const newGlossary = [...glossary];
-                                    newGlossary[index] = e.target.value;
-                                    voiceForm.setValue(
-                                      "brandGlossary",
-                                      newGlossary,
-                                    );
-                                  }}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              const glossary =
-                                voiceForm.getValues().brandGlossary;
-                              voiceForm.setValue("brandGlossary", [
-                                ...glossary,
-                                "",
-                              ]);
-                            }}
-                            className="text-xs text-muted-foreground hover:text-muted-foreground/60 p-0"
-                          >
-                            + Add another term
-                          </Button>
-                        </div>
-                        <div className="space-y-4">
-                          <label className="text-sm font-medium mb-1">
-                            Words to Avoid
-                          </label>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Words and phrases you never want to appear in your
-                            content.
-                          </p>
-                          <div className="space-y-2">
-                            {Array.from({ length: 10 }).map((_, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const antiPatterns =
-                                      voiceForm.getValues().antiPatterns;
-                                    const newAntiPatterns = [...antiPatterns];
-                                    newAntiPatterns.splice(index, 1);
-                                    voiceForm.setValue(
-                                      "antiPatterns",
-                                      newAntiPatterns,
-                                    );
-                                  }}
-                                  className="text-xs text-destructive hover:text-destructive/60 p-0"
-                                >
-                                  ×
-                                </button>
-                                <Input
-                                  placeholder="Enter a term to avoid..."
-                                  value={
-                                    voiceForm.getValues().antiPatterns[index] ||
-                                    ""
-                                  }
-                                  onChange={(e) => {
-                                    const antiPatterns =
-                                      voiceForm.getValues().antiPatterns;
-                                    const newAntiPatterns = [...antiPatterns];
-                                    newAntiPatterns[index] = e.target.value;
-                                    voiceForm.setValue(
-                                      "antiPatterns",
-                                      newAntiPatterns,
-                                    );
-                                  }}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              const antiPatterns =
-                                voiceForm.getValues().antiPatterns;
-                              voiceForm.setValue("antiPatterns", [
-                                ...antiPatterns,
-                                "",
-                              ]);
-                            }}
-                            className="text-xs text-muted-foreground hover:text-muted-foreground/60 p-0"
-                          >
-                            + Add another term to avoid
-                          </Button>
-                        </div>
+                        <VoiceStringListField
+                          label="Brand Glossary"
+                          description="Words and phrases you commonly use in your content."
+                          emptyDescription="Add product names, branded terms, or phrases your team uses consistently."
+                          placeholder="Enter a term…"
+                          addFirstLabel="Add first term"
+                          addAnotherLabel="Add another term"
+                          maxItems={MAX_VOICE_TERMS}
+                          name="brandGlossary"
+                          control={voiceForm.control}
+                          values={brandGlossary}
+                          onAppend={() =>
+                            appendVoiceListItem("brandGlossary", brandGlossary)
+                          }
+                          onRemove={(index) =>
+                            removeVoiceListItem(
+                              "brandGlossary",
+                              brandGlossary,
+                              index,
+                            )
+                          }
+                        />
+                        <VoiceStringListField
+                          label="Anti-patterns"
+                          description="Words and phrases you never want to appear in your content."
+                          emptyDescription="List clichés, buzzwords, or off-brand language to block."
+                          placeholder="Enter a term to avoid…"
+                          addFirstLabel="Add first term"
+                          addAnotherLabel="Add another term"
+                          maxItems={MAX_VOICE_TERMS}
+                          name="antiPatterns"
+                          control={voiceForm.control}
+                          values={antiPatterns}
+                          onAppend={() =>
+                            appendVoiceListItem("antiPatterns", antiPatterns)
+                          }
+                          onRemove={(index) =>
+                            removeVoiceListItem(
+                              "antiPatterns",
+                              antiPatterns,
+                              index,
+                            )
+                          }
+                        />
                         <div className="space-y-4">
                           <label className="text-sm font-medium mb-1">
                             Typical Structure
@@ -1787,121 +2365,42 @@ export default function ProjectDetail() {
                             }
                           />
                         </div>
-                        <div className="space-y-4">
-                          <label className="text-sm font-medium mb-1">
-                            Preferred Words
-                          </label>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Words you like to use in your content.
-                          </p>
-                          <div className="space-y-2">
-                            {Array.from({ length: 10 }).map((_, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const doWords =
-                                      voiceForm.getValues().doWords;
-                                    const newDoWords = [...doWords];
-                                    newDoWords.splice(index, 1);
-                                    voiceForm.setValue("doWords", newDoWords);
-                                  }}
-                                  className="text-xs text-destructive hover:text-destructive/60 p-0"
-                                >
-                                  ×
-                                </button>
-                                <Input
-                                  placeholder="Enter a preferred word..."
-                                  value={
-                                    voiceForm.getValues().doWords[index] || ""
-                                  }
-                                  onChange={(e) => {
-                                    const doWords =
-                                      voiceForm.getValues().doWords;
-                                    const newDoWords = [...doWords];
-                                    newDoWords[index] = e.target.value;
-                                    voiceForm.setValue("doWords", newDoWords);
-                                  }}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              const doWords = voiceForm.getValues().doWords;
-                              voiceForm.setValue("doWords", [...doWords, ""]);
-                            }}
-                            className="text-xs text-muted-foreground hover:text-muted-foreground/60 p-0"
-                          >
-                            + Add another preferred word
-                          </Button>
-                        </div>
-                        <div className="space-y-4">
-                          <label className="text-sm font-medium mb-1">
-                            Words to Avoid
-                          </label>
-                          <p className="text-xs text-muted-foreground mb-2">
-                            Words you don't want to use in your content.
-                          </p>
-                          <div className="space-y-2">
-                            {Array.from({ length: 10 }).map((_, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center gap-2"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const dontWords =
-                                      voiceForm.getValues().dontWords;
-                                    const newDontWords = [...dontWords];
-                                    newDontWords.splice(index, 1);
-                                    voiceForm.setValue(
-                                      "dontWords",
-                                      newDontWords,
-                                    );
-                                  }}
-                                  className="text-xs text-destructive hover:text-destructive/60 p-0"
-                                >
-                                  ×
-                                </button>
-                                <Input
-                                  placeholder="Enter a word to avoid..."
-                                  value={
-                                    voiceForm.getValues().dontWords[index] || ""
-                                  }
-                                  onChange={(e) => {
-                                    const dontWords =
-                                      voiceForm.getValues().dontWords;
-                                    const newDontWords = [...dontWords];
-                                    newDontWords[index] = e.target.value;
-                                    voiceForm.setValue(
-                                      "dontWords",
-                                      newDontWords,
-                                    );
-                                  }}
-                                />
-                              </div>
-                            ))}
-                          </div>
-                          <Button
-                            type="button"
-                            onClick={() => {
-                              const dontWords = voiceForm.getValues().dontWords;
-                              voiceForm.setValue("dontWords", [
-                                ...dontWords,
-                                "",
-                              ]);
-                            }}
-                            className="text-xs text-muted-foreground hover:text-muted-foreground/60 p-0"
-                          >
-                            + Add another word to avoid
-                          </Button>
-                        </div>
+                        <VoiceStringListField
+                          label="Preferred Words"
+                          description="Words you like to use in your content."
+                          emptyDescription="Add words that match your brand tone and voice."
+                          placeholder="Enter a preferred word…"
+                          addFirstLabel="Add first word"
+                          addAnotherLabel="Add another word"
+                          maxItems={MAX_VOICE_TERMS}
+                          name="doWords"
+                          control={voiceForm.control}
+                          values={doWords}
+                          onAppend={() =>
+                            appendVoiceListItem("doWords", doWords)
+                          }
+                          onRemove={(index) =>
+                            removeVoiceListItem("doWords", doWords, index)
+                          }
+                        />
+                        <VoiceStringListField
+                          label="Words to Avoid"
+                          description="Words you don't want to use in your content."
+                          emptyDescription="Add words that feel off-brand or you want the AI to skip."
+                          placeholder="Enter a word to avoid…"
+                          addFirstLabel="Add first word"
+                          addAnotherLabel="Add another word"
+                          maxItems={MAX_VOICE_TERMS}
+                          name="dontWords"
+                          control={voiceForm.control}
+                          values={dontWords}
+                          onAppend={() =>
+                            appendVoiceListItem("dontWords", dontWords)
+                          }
+                          onRemove={(index) =>
+                            removeVoiceListItem("dontWords", dontWords, index)
+                          }
+                        />
                       </form>
                     </Form>
                   </>
@@ -1912,6 +2411,242 @@ export default function ProjectDetail() {
 
           <TabsContent value="publishing">
             <div className="space-y-6">
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Zap className="w-4 h-4 text-amber-500" />
+                    Content Autopilot
+                    {autopilotSettings.enabled && (
+                      <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-300">
+                        Active
+                      </Badge>
+                    )}
+                  </CardTitle>
+                  <CardDescription>
+                    Automatically generate the next due article from your content strategy on a daily or weekly schedule.
+                    Connect a CMS below to publish drafts or go live.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  {autopilotError && (
+                    <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-4 py-3">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span>{autopilotError}</span>
+                    </div>
+                  )}
+                  {autopilotSaveSuccess && (
+                    <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 rounded-md px-4 py-3 border border-emerald-200 dark:border-emerald-500/20">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>Autopilot settings saved</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium">Enable autopilot</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Picks the next due topic from your content strategy calendar
+                      </p>
+                    </div>
+                    <Switch
+                      checked={autopilotSettings.enabled}
+                      onCheckedChange={(checked) =>
+                        setAutopilotSettings((prev) => ({ ...prev, enabled: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Schedule</Label>
+                      <Select
+                        value={autopilotSettings.cadence}
+                        onValueChange={(value: "daily" | "weekly") =>
+                          setAutopilotSettings((prev) => ({ ...prev, cadence: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="daily">Daily — one article per day</SelectItem>
+                          <SelectItem value="weekly">Weekly — one article per week</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Publish mode</Label>
+                      <Select
+                        value={autopilotSettings.publishMode}
+                        onValueChange={(value: AutopilotSettings["publishMode"]) =>
+                          setAutopilotSettings((prev) => ({ ...prev, publishMode: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="manual">Manual review — generate only</SelectItem>
+                          <SelectItem value="draft">Auto-publish as draft</SelectItem>
+                          <SelectItem value="live">Auto-publish live</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Timezone</Label>
+                      <Select
+                        value={autopilotSettings.timezone}
+                        onValueChange={(value) =>
+                          setAutopilotSettings((prev) => ({ ...prev, timezone: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TIMEZONE_OPTIONS.map((tz) => (
+                            <SelectItem key={tz} value={tz}>
+                              {tz.replace(/_/g, " ")}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Run at (local time)</Label>
+                      <Select
+                        value={String(autopilotSettings.preferredRunHour)}
+                        onValueChange={(value) =>
+                          setAutopilotSettings((prev) => ({
+                            ...prev,
+                            preferredRunHour: Number(value),
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {RUN_HOUR_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={String(opt.value)}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium">Auto-queue keyword opportunities</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        High-score gaps from keyword intelligence → next content strategy slot
+                      </p>
+                    </div>
+                    <Switch
+                      checked={autopilotSettings.autoQueueOpportunities ?? false}
+                      onCheckedChange={(checked) =>
+                        setAutopilotSettings((prev) => ({ ...prev, autoQueueOpportunities: checked }))
+                      }
+                    />
+                  </div>
+                  {(autopilotSettings.autoQueueOpportunities ?? false) && (
+                    <div className="space-y-2">
+                      <Label>Minimum opportunity score to auto-queue</Label>
+                      <Select
+                        value={String(autopilotSettings.opportunityScoreThreshold ?? 60)}
+                        onValueChange={(value) =>
+                          setAutopilotSettings((prev) => ({
+                            ...prev,
+                            opportunityScoreThreshold: Number(value),
+                          }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="50">50 — moderate opportunities</SelectItem>
+                          <SelectItem value="60">60 — recommended</SelectItem>
+                          <SelectItem value="70">70 — high confidence only</SelectItem>
+                          <SelectItem value="80">80 — very selective</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {autopilotSettings.lastRunAt && (
+                    <p className="text-xs text-muted-foreground">
+                      Last run: {new Date(autopilotSettings.lastRunAt).toLocaleString()}
+                    </p>
+                  )}
+                  <div className="flex justify-end">
+                    <Button onClick={onSaveAutopilot} disabled={isSavingAutopilot}>
+                      {isSavingAutopilot ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save autopilot settings
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Sparkles className="w-4 h-4 text-violet-500" />
+                    AI Visibility & GEO
+                  </CardTitle>
+                  <CardDescription>
+                    Weekly LLM citation tracking and GEO re-audits —{" "}
+                    <Link to="/ai-visibility" className="text-blue-600 dark:text-blue-400 hover:underline">
+                      view full dashboard
+                    </Link>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {visibilitySaveSuccess && (
+                    <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 rounded-md px-4 py-3 border border-emerald-200 dark:border-emerald-500/20">
+                      <CheckCircle2 className="w-4 h-4 shrink-0" />
+                      <span>Visibility settings saved</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium">LLM citation tracking</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Weekly checks across ChatGPT, Perplexity, Claude, Gemini</p>
+                    </div>
+                    <Switch
+                      checked={visibilitySettings.llmTrackingEnabled}
+                      onCheckedChange={(checked) =>
+                        setVisibilitySettings((prev) => ({ ...prev, llmTrackingEnabled: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
+                    <div>
+                      <p className="text-sm font-medium">Weekly GEO re-audit</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">Re-scan homepage for schema and meta issues</p>
+                    </div>
+                    <Switch
+                      checked={visibilitySettings.geoReauditEnabled}
+                      onCheckedChange={(checked) =>
+                        setVisibilitySettings((prev) => ({ ...prev, geoReauditEnabled: checked }))
+                      }
+                    />
+                  </div>
+                  <div className="flex justify-end">
+                    <Button onClick={onSaveVisibility} disabled={isSavingVisibility} variant="outline">
+                      {isSavingVisibility ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="w-4 h-4 mr-2" />
+                      )}
+                      Save visibility settings
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
               {cmsError && (
                 <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-4 py-3">
                   <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -1924,7 +2659,12 @@ export default function ProjectDetail() {
                   <span>{cmsSaveSuccess}</span>
                 </div>
               )}
-              {(cmsIntegrations.notion || cmsIntegrations.webflow) && (
+              {(cmsIntegrations.notion ||
+                cmsIntegrations.webflow ||
+                cmsIntegrations.wordpress ||
+                cmsIntegrations.linkedin ||
+                cmsIntegrations.twitter ||
+                cmsIntegrations.meta) && (
                 <div className="flex items-center justify-end">
                   <Button
                     variant="outline"
@@ -2244,29 +2984,308 @@ export default function ProjectDetail() {
                 </CardContent>
               </Card>
 
-              {/* WordPress note */}
+              {/* WordPress */}
               <Card className="border shadow-sm">
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <span className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">
-                      W
-                    </span>
-                    WordPress
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    Publish content directly to any WordPress site using
-                    Application Passwords.
-                  </CardDescription>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <span className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">
+                          W
+                        </span>
+                        WordPress
+                        {cmsIntegrations.wordpress && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Connected
+                          </span>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        Publish content directly to any WordPress site using
+                        Application Passwords.
+                      </CardDescription>
+                    </div>
+                    {cmsIntegrations.wordpress && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={onDisconnectWordpress}
+                        disabled={isDisconnectingWordpress}
+                        className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
+                      >
+                        {isDisconnectingWordpress ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Unlink className="w-3.5 h-3.5 mr-1.5" />
+                        )}
+                        Disconnect
+                      </Button>
+                    )}
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Send className="w-4 h-4 shrink-0" />
-                    <span>
-                      WordPress credentials are entered per-publish. Open a
-                      content piece and click <strong>Publish</strong> to
-                      connect.
-                    </span>
+                  {cmsIntegrations.wordpress ? (
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">
+                          Site URL:
+                        </span>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                          {cmsIntegrations.wordpress.siteUrl}
+                        </code>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-foreground">
+                          Username:
+                        </span>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                          {cmsIntegrations.wordpress.usernameHint}
+                        </code>
+                      </div>
+                      {healthStatus?.wordpress && (
+                        <div
+                          className={`flex items-center gap-1.5 text-xs font-medium mt-1 ${healthStatus.wordpress.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
+                        >
+                          {healthStatus.wordpress.ok ? (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          ) : (
+                            <AlertCircle className="w-3.5 h-3.5" />
+                          )}
+                          {healthStatus.wordpress.ok
+                            ? "Connection healthy"
+                            : healthStatus.wordpress.error}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-2">
+                        To update credentials, disconnect first then re-connect.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">
+                          WordPress Site URL
+                        </label>
+                        <Input
+                          placeholder="https://yoursite.com"
+                          value={wpSiteUrl}
+                          onChange={(e) => setWpSiteUrl(e.target.value)}
+                          disabled={isSavingWordpress}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">
+                          WordPress Username
+                        </label>
+                        <Input
+                          placeholder="admin"
+                          value={wpUsername}
+                          onChange={(e) => setWpUsername(e.target.value)}
+                          disabled={isSavingWordpress}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-medium">
+                          Application Password
+                        </label>
+                        <Input
+                          type="password"
+                          placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
+                          value={wpAppPassword}
+                          onChange={(e) => setWpAppPassword(e.target.value)}
+                          disabled={isSavingWordpress}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Generate an Application Password in WordPress under{" "}
+                          <strong>Users → Profile → Application Passwords</strong>.
+                        </p>
+                      </div>
+                      <Button
+                        onClick={onSaveWordpress}
+                        disabled={
+                          !wpSiteUrl.trim() ||
+                          !wpUsername.trim() ||
+                          !wpAppPassword.trim() ||
+                          isSavingWordpress
+                        }
+                        size="sm"
+                      >
+                        {isSavingWordpress ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                            Connecting…
+                          </>
+                        ) : (
+                          <>
+                            <Link2 className="w-3.5 h-3.5 mr-1.5" />
+                            Connect WordPress
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* LinkedIn */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Linkedin className="w-4 h-4 text-blue-600" />
+                        LinkedIn
+                        {cmsIntegrations.linkedin && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Connected
+                          </span>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        Publish LinkedIn posts directly from Content Studio.
+                      </CardDescription>
+                    </div>
+                    {cmsIntegrations.linkedin && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onDisconnectSocial("linkedin")}
+                        disabled={isDisconnectingLinkedin}
+                        className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
+                      >
+                        {isDisconnectingLinkedin ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5 mr-1.5" />}
+                        Disconnect
+                      </Button>
+                    )}
                   </div>
+                </CardHeader>
+                <CardContent>
+                  {cmsIntegrations.linkedin ? (
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p><span className="font-medium text-foreground">Account:</span> {cmsIntegrations.linkedin.displayName ?? "Connected"}</p>
+                      {healthStatus?.linkedin && (
+                        <div className={`flex items-center gap-1.5 text-xs font-medium ${healthStatus.linkedin.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
+                          {healthStatus.linkedin.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                          {healthStatus.linkedin.ok ? "Connection healthy" : healthStatus.linkedin.error}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Button size="sm" onClick={onConnectLinkedin}>
+                      <Link2 className="w-3.5 h-3.5 mr-1.5" />
+                      Connect LinkedIn
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* X / Twitter */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Twitter className="w-4 h-4 text-sky-500" />
+                        X (Twitter)
+                        {cmsIntegrations.twitter && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Connected
+                          </span>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        Publish threads directly to X.
+                      </CardDescription>
+                    </div>
+                    {cmsIntegrations.twitter && (
+                      <Button variant="outline" size="sm" onClick={() => onDisconnectSocial("twitter")} disabled={isDisconnectingTwitter} className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5">
+                        {isDisconnectingTwitter ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5 mr-1.5" />}
+                        Disconnect
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {cmsIntegrations.twitter ? (
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p><span className="font-medium text-foreground">Account:</span> @{cmsIntegrations.twitter.screenName ?? "connected"}</p>
+                      {healthStatus?.twitter && (
+                        <div className={`flex items-center gap-1.5 text-xs font-medium ${healthStatus.twitter.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
+                          {healthStatus.twitter.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                          {healthStatus.twitter.ok ? "Connection healthy" : healthStatus.twitter.error}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Button size="sm" onClick={onConnectTwitter}>
+                      <Link2 className="w-3.5 h-3.5 mr-1.5" />
+                      Connect X
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Meta (Facebook + Instagram) */}
+              <Card className="border shadow-sm">
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Facebook className="w-4 h-4 text-blue-700" />
+                        <Instagram className="w-4 h-4 text-fuchsia-600" />
+                        Facebook & Instagram
+                        {cmsIntegrations.meta && (
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            Connected
+                          </span>
+                        )}
+                      </CardTitle>
+                      <CardDescription className="mt-1">
+                        Requires a Facebook Page with a linked Instagram Business account.
+                      </CardDescription>
+                    </div>
+                    {cmsIntegrations.meta && (
+                      <Button variant="outline" size="sm" onClick={() => onDisconnectSocial("meta")} disabled={isDisconnectingMeta} className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5">
+                        {isDisconnectingMeta ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5 mr-1.5" />}
+                        Disconnect
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {metaPageToken && metaPages.length > 0 ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">Select a Facebook Page to connect:</p>
+                      {metaPages.map((page) => (
+                        <Button key={page.pageId} variant="outline" size="sm" className="w-full justify-start" disabled={isSelectingMetaPage} onClick={() => onSelectMetaPage(page.pageId)}>
+                          <span className="font-medium">{page.pageName}</span>
+                          {page.instagramUsername && <span className="ml-2 text-xs text-muted-foreground">@{page.instagramUsername}</span>}
+                        </Button>
+                      ))}
+                    </div>
+                  ) : cmsIntegrations.meta ? (
+                    <div className="space-y-2 text-sm text-muted-foreground">
+                      <p><span className="font-medium text-foreground">Page:</span> {cmsIntegrations.meta.pageName ?? cmsIntegrations.meta.pageId}</p>
+                      {cmsIntegrations.meta.instagramUsername && (
+                        <p><span className="font-medium text-foreground">Instagram:</span> @{cmsIntegrations.meta.instagramUsername}</p>
+                      )}
+                      {healthStatus?.meta && (
+                        <div className={`flex items-center gap-1.5 text-xs font-medium ${healthStatus.meta.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
+                          {healthStatus.meta.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                          {healthStatus.meta.ok ? "Connection healthy" : healthStatus.meta.error}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <Button size="sm" onClick={onConnectMeta}>
+                      <Link2 className="w-3.5 h-3.5 mr-1.5" />
+                      Connect Meta
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             </div>

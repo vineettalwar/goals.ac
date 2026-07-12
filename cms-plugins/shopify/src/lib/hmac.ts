@@ -1,5 +1,6 @@
 import { createHmac, createHash, timingSafeEqual } from "crypto";
 import type { Request, Response, NextFunction } from "express";
+import { AppError } from "./errors.js";
 
 const HMAC_KEY = process.env.GOALS_AC_HMAC_KEY ?? process.env.GOALS_AC_SITE_KEY ?? "";
 const NONCE_EXPIRY_SEC = 300;
@@ -72,7 +73,7 @@ function getRawBody(req: Request): string {
 
 export function hmacAuth(req: Request, res: Response, next: NextFunction): void {
   if (!HMAC_KEY) {
-    res.status(500).json({ error: "HMAC key not configured" });
+    next(new AppError(500, "HMAC_NOT_CONFIGURED", "HMAC key not configured", false));
     return;
   }
 
@@ -81,21 +82,18 @@ export function hmacAuth(req: Request, res: Response, next: NextFunction): void 
   const signature = req.headers[GOALS_HEADERS.signature] as string | undefined;
 
   if (!timestamp || !nonce || !signature) {
-    res.status(401).json({
-      error: "Missing authentication headers",
-      required: ["X-Goals-Timestamp", "X-Goals-Nonce", "X-Goals-Signature"],
-    });
+    next(new AppError(401, "AUTH_HEADERS_MISSING", "Missing authentication headers"));
     return;
   }
 
   const ts = parseInt(timestamp, 10);
   if (Number.isNaN(ts) || Math.abs(Math.floor(Date.now() / 1000) - ts) > NONCE_EXPIRY_SEC) {
-    res.status(401).json({ error: "Request timestamp expired" });
+    next(new AppError(401, "AUTH_TIMESTAMP_EXPIRED", "Request timestamp expired"));
     return;
   }
 
   if (seenNonces.has(nonce)) {
-    res.status(401).json({ error: "Nonce has already been used" });
+    next(new AppError(401, "AUTH_NONCE_REUSED", "Nonce has already been used"));
     return;
   }
 
@@ -103,7 +101,7 @@ export function hmacAuth(req: Request, res: Response, next: NextFunction): void 
   const path = req.baseUrl + req.path;
 
   if (!verifySignature(req.method, path, timestamp, nonce, body, signature)) {
-    res.status(401).json({ error: "Invalid signature" });
+    next(new AppError(401, "AUTH_SIGNATURE_INVALID", "Invalid signature"));
     return;
   }
 

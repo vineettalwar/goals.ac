@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { usersTable, websiteProjectsTable, contentStrategiesTable, contentItemsTable, seoArticlesTable, geoAuditsTable } from "@workspace/db";
+import { usersTable, websiteProjectsTable, contentStrategiesTable, contentItemsTable, seoArticlesTable, geoAuditsTable, competitorAnalysesTable, keywordAnalysesTable } from "@workspace/db";
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { hashPassword, comparePassword, signToken, requireAuth, setAuthCookies, clearAuthCookies, REFRESH_TOKEN_COOKIE } from "../lib/auth";
@@ -246,6 +246,8 @@ router.delete("/auth/me", requireAuth, async (req, res) => {
         await tx.delete(contentStrategiesTable).where(inArray(contentStrategiesTable.websiteProjectId, projectIds));
         await tx.delete(seoArticlesTable).where(inArray(seoArticlesTable.websiteProjectId, projectIds));
         await tx.delete(geoAuditsTable).where(inArray(geoAuditsTable.websiteProjectId, projectIds));
+        await tx.delete(competitorAnalysesTable).where(inArray(competitorAnalysesTable.websiteProjectId, projectIds));
+        await tx.delete(keywordAnalysesTable).where(inArray(keywordAnalysesTable.websiteProjectId, projectIds));
       }
 
       await tx.delete(usersTable).where(eq(usersTable.id, userId));

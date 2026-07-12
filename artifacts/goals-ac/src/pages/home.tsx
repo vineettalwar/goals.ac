@@ -63,7 +63,7 @@ const PHASE_LABELS: Record<GenerationPhase, string> = {
   summary: "Executive Summary",
   phase0: "Phase 1: Foundation & Quick Wins (Months 1–3)",
   phase1: "Phase 2: Scaling & Automation (Months 4–6)",
-  phase2: "Phase 3: Market Domination & Expansion (Months 7–12)",
+  phase2: "Phase 3: Expansion (Months 7–12)",
 };
 
 const stageValues = Object.values(GenerateRoadmapRequestStage) as [
@@ -208,55 +208,50 @@ export default function Home() {
   return (
     <Layout>
       <SEO
-        title="goals.ac — AI Content Engine for B2B Startups"
-        description="The AI content engine that grows your B2B startup on autopilot. Generate SEO articles, GEO-optimized content, and growth playbooks tailored to your industry."
+        title="goals.ac — Content planning and publishing for B2B teams"
+        description="Plan, draft, review, and publish search content built around your market, company stage, and brand."
       />
 
       <div className="flex-1 flex flex-col">
         {/* Hero Section */}
-        <section className="relative py-28 md:py-40 overflow-hidden bg-mesh-dark text-zinc-50 border-b border-white/[0.06]">
-          {/* Decorative gradient orbs */}
-          <div className="orb orb-primary w-[600px] h-[500px] top-[-10%] left-[50%] -translate-x-1/2" />
-          <div className="orb orb-violet w-[400px] h-[400px] bottom-[-5%] right-[-5%]" />
-          <div className="orb orb-indigo w-[300px] h-[300px] bottom-[10%] left-[-5%]" />
-
-          <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl text-center">
+        <section className="relative py-24 md:py-32 overflow-hidden bg-zinc-950 text-zinc-50 border-b border-white/10">
+          <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-5xl text-left">
             <motion.div
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: "easeOut" }}
-              className="inline-flex items-center rounded-full border border-white/10 bg-white/[0.06] px-4 py-1.5 text-xs font-semibold text-zinc-300 mb-8 tracking-wide uppercase"
+              className="text-xs font-semibold text-zinc-400 mb-8 tracking-[0.18em] uppercase"
             >
-              The AI Content Engine for B2B Startups
+              Content operations for B2B teams
             </motion.div>
 
             <motion.h1
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.08, ease: "easeOut" }}
-              className="text-5xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.08]"
+              className="text-5xl md:text-7xl font-bold tracking-[-0.04em] mb-6 leading-[0.98] max-w-4xl"
             >
-              Grow your startup on content autopilot.
+              Know what to publish next—and why.
             </motion.h1>
 
             <motion.p
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.18, ease: "easeOut" }}
-              className="text-xl md:text-2xl text-zinc-400 mb-10 max-w-3xl mx-auto leading-relaxed"
+              className="text-lg md:text-xl text-zinc-400 mb-10 max-w-2xl leading-relaxed"
             >
-              goals.ac generates brand-aligned SEO articles, GEO-optimized
-              content, and growth playbooks — tailored to your industry, stage,
-              and audience. Ship content that ranks, every week.
+              Build a practical content plan from your market, company stage,
+              and site data. Draft in your brand voice, review the work, and
+              publish to the CMS you already use.
             </motion.p>
 
             <motion.p
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.24, ease: "easeOut" }}
-              className="text-sm text-zinc-500 mb-14 uppercase tracking-wider font-semibold"
+              className="text-sm text-zinc-500 mb-12"
             >
-              ↓ Try it free — generate your growth roadmap below
+              Start with a free 12-month roadmap. No account required.
             </motion.p>
           </div>
         </section>
@@ -282,8 +277,8 @@ export default function Home() {
                     Generate your 2026 Growth Roadmap
                   </h2>
                   <p className="text-muted-foreground text-sm mb-8">
-                    A taste of what goals.ac can do — instant, no sign-up.
-                    Unlock the full content engine after.
+                    Choose your market and stage. We’ll return a sequenced plan
+                    with priorities for the next 12 months. No account required.
                   </p>
                   <Form {...form}>
                     <form
@@ -428,14 +423,14 @@ export default function Home() {
                               )}
                             </>
                           ) : (
-                            "Generate Growth Strategy →"
+                            "Build my roadmap"
                           )}
                         </Button>
 
                         {isPending && (
                           <div className="rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-3 space-y-2">
                             <p className="text-xs font-semibold text-blue-600 dark:text-blue-300 uppercase tracking-wide mb-2">
-                              Generating in parallel…
+                              Building your roadmap…
                             </p>
                             {(
                               Object.keys(PHASE_LABELS) as GenerationPhase[]
@@ -485,15 +480,14 @@ export default function Home() {
           <div className="container mx-auto px-4 md:px-8 max-w-5xl">
             <div className="text-center mb-16">
               <div className="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-3 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 mb-4">
-                Platform Features
+                What you can do
               </div>
               <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">
-                An AI content engine, not just a tool.
+                One place to run the content workflow.
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Generate, optimize, and publish content that ranks in Google and
-                gets cited by AI. Plus the strategy tools to know what to write
-                next.
+                Turn research into briefs and drafts, keep review in the loop,
+                then publish and measure the result.
               </p>
             </div>
 
@@ -503,16 +497,16 @@ export default function Home() {
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-lg font-bold text-foreground">
-                    Branded SEO Content
+                    Draft from a real brief
                   </h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-3 border-blue-400/20">
                     <Pencil className="h-4 w-4 text-blue-400" />
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                  Generates brand-aligned articles optimized for search and AI
-                  visibility. Structured to rank, attract traffic, and build
-                  authority.
+                  Set the audience, search intent, angle, evidence, and brand
+                  voice before a draft is written. Edit every output before it
+                  goes live.
                 </p>
                 <div className="mt-auto glass-inner p-4">
                   <div className="space-y-2.5">
@@ -550,15 +544,15 @@ export default function Home() {
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-lg font-bold text-foreground">
-                    30-Day Content Strategy
+                    Plan the next 30 days
                   </h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-3 border-blue-400/20">
                     <LayoutGrid className="h-4 w-4 text-blue-400" />
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
-                  Plans a full month of content based on ranking and citation
-                  trends. Topics and formats chosen to maximize discoverability.
+                  Prioritize topics using your site, competitors, and tracked
+                  queries. Each item has an owner, format, and reason to exist.
                 </p>
                 <div className="mt-auto glass-inner p-4">
                   <div className="text-xs text-zinc-500 mb-3 font-semibold tracking-wide uppercase">
@@ -604,15 +598,15 @@ export default function Home() {
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-base font-bold text-foreground">
-                    Automated Publishing
+                    Controlled publishing
                   </h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-2 border-emerald-400/20">
                     <Bookmark className="h-4 w-4 text-emerald-400" />
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-                  Publishes content directly to your CMS across platforms
-                  without manual workflows.
+                  Send approved content to your CMS without rebuilding headings,
+                  metadata, links, and schema by hand.
                 </p>
                 <div className="mt-auto glass-inner p-3">
                   <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">
@@ -664,15 +658,15 @@ export default function Home() {
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-base font-bold text-foreground">
-                    Multi-CMS Publishing
+                    Use your existing CMS
                   </h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-2 border-amber-400/20">
                     <GitBranch className="h-4 w-4 text-amber-400" />
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-                  Connect Notion and Webflow to publish directly from your
-                  Content Studio — no copy-pasting.
+                  Connect WordPress, Notion, Webflow, and other supported
+                  platforms. Keep one review process across every destination.
                 </p>
                 <div className="mt-auto glass-inner p-3">
                   <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">
@@ -704,15 +698,15 @@ export default function Home() {
               <div className="rounded-2xl glass-card p-6 flex flex-col card-hover-glow">
                 <div className="flex items-start justify-between mb-4">
                   <h3 className="text-base font-bold text-foreground">
-                    Technical GEO Audit
+                    Technical visibility audit
                   </h3>
                   <div className="rounded-xl glass-card-md w-9 h-9 flex items-center justify-center flex-shrink-0 ml-2 border-sky-400/20">
                     <Key className="h-4 w-4 text-sky-400" />
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-                  Scans your site for technical gaps in schema, metadata, and
-                  structure impacting AI rankings.
+                  Find missing schema, weak metadata, crawl problems, and page
+                  structure that makes your content harder to retrieve or cite.
                 </p>
                 <div className="mt-auto glass-inner p-3">
                   <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">
@@ -754,11 +748,11 @@ export default function Home() {
                 How it works
               </div>
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
-                From zero to published content in days, not months.
+                A clear path from research to publish.
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                No agency retainers. No 6-month content plans. Just
-                AI-generated, brand-aligned content that ships continuously.
+                Keep the speed of assisted drafting without giving up editorial
+                judgment or control.
               </p>
             </div>
 
@@ -767,17 +761,17 @@ export default function Home() {
                 {
                   step: "01",
                   title: "Tell us your brand",
-                  desc: "Industry, audience, voice, and stage. The AI learns who you are so every piece sounds like you wrote it.",
+                  desc: "Add your market, audience, positioning, voice, and current site. These become constraints for planning and drafting.",
                 },
                 {
                   step: "02",
-                  title: "AI generates your content",
-                  desc: "SEO articles, GEO-optimized pages, social posts, and growth playbooks — all brand-aligned, all built to rank.",
+                  title: "Plan and draft",
+                  desc: "Choose a priority, review the brief, and produce a draft with the required structure, sources, links, and metadata.",
                 },
                 {
                   step: "03",
-                  title: "Publish & track",
-                  desc: "Push to Notion, Webflow, or WordPress. Track keyword rankings and AI citations as content compounds.",
+                  title: "Review, publish, measure",
+                  desc: "Approve the work, send it to your CMS, and track rankings and citations. Feed what you learn into the next brief.",
                 },
               ].map((item, i) => (
                 <div key={item.step} className="relative">
@@ -864,12 +858,11 @@ export default function Home() {
                 Free with signup
               </div>
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">
-                Unlock the full growth stack.
+                Continue from roadmap to execution.
               </h2>
               <p className="text-lg text-zinc-400 max-w-2xl mx-auto">
-                Create a free account to access AI-powered competitor
-                intelligence, keyword tracking, and your personal growth
-                dashboard.
+                Save your roadmap, inspect competitors, track search queries,
+                and turn priorities into briefs and drafts.
               </p>
             </div>
 
@@ -878,21 +871,21 @@ export default function Home() {
                 {
                   icon: Search,
                   title: "Competitor Analysis",
-                  desc: "Drop in any competitor URL. Get a tactical breakdown of their strengths, gaps, and 90-day plays you can win.",
+                  desc: "Compare a competitor’s topics, positioning, and content gaps with your own site.",
                   color: "text-purple-400",
                   border: "border-purple-400/20",
                 },
                 {
                   icon: BarChart3,
                   title: "Keyword Tracking",
-                  desc: "Track up to 10 keywords with AI-powered volume estimates, difficulty scores, and content opportunities.",
+                  desc: "Track target queries, recent positions, difficulty, and the pages assigned to each query.",
                   color: "text-emerald-400",
                   border: "border-emerald-400/20",
                 },
                 {
                   icon: MessageSquare,
-                  title: "AI Strategy Chat",
-                  desc: "Ask any question about your roadmap. Get instant, context-aware answers from your personal growth advisor.",
+                  title: "Roadmap Q&A",
+                  desc: "Ask questions against the roadmap and project context without starting the analysis again.",
                   color: "text-blue-400",
                   border: "border-blue-400/20",
                 },
@@ -955,15 +948,14 @@ export default function Home() {
               >
                 <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/[0.08] px-3 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-6">
                   <Target className="h-3 w-3" />
-                  Built for B2B founders
+                  For lean B2B teams
                 </div>
                 <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-5">
-                  Stop guessing your next move.
+                  Put the next decision in writing.
                 </h2>
                 <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-                  Join hundreds of founders building data-driven growth engines
-                  instead of running on gut feel. Free forever for the core
-                  platform.
+                  Start with a roadmap you can inspect, edit, and turn into
+                  work—not another dashboard full of suggestions.
                 </p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                   <Button

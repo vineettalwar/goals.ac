@@ -3,9 +3,13 @@ import healthRouter from "./routes/health.js";
 import contentRouter from "./routes/content.js";
 import schemaRouter from "./routes/schema.js";
 import siteGraphRouter from "./routes/site-graph.js";
+import { errorHandler, notFound, requestContext } from "./lib/errors.js";
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
+
+app.disable("x-powered-by");
+app.use(requestContext);
 
 // Parse JSON bodies (raw body needed for HMAC — store before parsing)
 app.use(express.json({
@@ -21,19 +25,19 @@ app.use("/goals-ac/v1", schemaRouter);
 app.use("/goals-ac/v1", siteGraphRouter);
 
 // 404 handler
-app.use((_req, res) => {
-  res.status(404).json({ error: "Not found" });
-});
+app.use(notFound);
 
 // Error handler
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  console.error("[server] Unhandled error:", err.message);
-  res.status(500).json({ error: "Internal server error" });
-});
+app.use(errorHandler);
 
 app.listen(PORT, () => {
-  console.log(`[shopify-app] goals.ac Shopify App listening on port ${PORT}`);
-  console.log(`[shopify-app] Health: http://localhost:${PORT}/goals-ac/v1/health`);
+  console.info(JSON.stringify({
+    level: "info",
+    time: new Date().toISOString(),
+    service: "goals-ac-shopify",
+    message: "Server listening",
+    port: PORT,
+  }));
 });
 
 export default app;

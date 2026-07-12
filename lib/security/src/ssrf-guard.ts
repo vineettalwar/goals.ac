@@ -46,7 +46,9 @@ export function assertPublicUrlSync(rawUrl: string): void {
     throw new Error("Only http/https URLs are allowed");
   }
 
-  const hostname = parsed.hostname;
+  // WHATWG URL retains brackets around IPv6 literals in Node. Normalize them
+  // before applying the reserved-range patterns so `[::1]` cannot bypass them.
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, "");
 
   if (PRIVATE_HOSTNAME.test(hostname)) {
     throw new Error(`URL resolves to a private/reserved address: ${hostname}`);
@@ -67,7 +69,7 @@ export async function assertPublicUrl(rawUrl: string): Promise<void> {
     throw new Error("Invalid URL");
   }
 
-  const hostname = parsed.hostname;
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, "");
 
   const results = await Promise.allSettled([
     dns.lookup(hostname, { family: 4 }),

@@ -23,32 +23,64 @@ services:
       - "8080:8080"
     environment:
       PORT: "8080"
-      NODE_ENV: development
+      NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/goalsac
+      APP_ORIGIN: http://localhost:5173
       # Dev-only placeholder secrets — replace with real values for any shared/production use.
       # Generate your own: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-      JWT_SECRET: dev-only-change-me-in-production-jwt-secret-32ch
-      GEMINI_KEY_ENCRYPTION_SECRET: dev-only-change-me-in-production-enc-secret-32ch
+      JWT_SECRET: local-compose-jwt-secret-not-for-shared-use-1234
+      GEMINI_KEY_ENCRYPTION_SECRET: local-compose-encryption-secret-not-shared-1234
     env_file:
       - path: .env
         required: false
     depends_on:
       postgres:
         condition: service_healthy
+    init: true
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/readyz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
 
   goals-ac:
     build:
       context: .
       dockerfile: artifacts/goals-ac/Dockerfile
     ports:
-      - "5173:5173"
-    environment:
-      PORT: "5173"
-      BASE_PATH: /
-      # Proxy /api requests to the api-server container during Vite dev
-      VITE_API_PROXY_TARGET: http://api-server:8080
+      - "5173:8080"
     depends_on:
-      - api-server
+      api-server:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api-worker:
+    build:
+      context: .
+      dockerfile: artifacts/api-server/Dockerfile
+    command: ["node", "--enable-source-maps", "./dist/worker.mjs"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/goalsac
+      JWT_SECRET: local-compose-jwt-secret-not-for-shared-use-1234
+      GEMINI_KEY_ENCRYPTION_SECRET: local-compose-encryption-secret-not-shared-1234
+    env_file:
+      - path: .env
+        required: false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api-server:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
 
 volumes:
   pgdata:

@@ -12,7 +12,11 @@
     "./webhook": "./src/webhook.ts",
     "./shopify": "./src/shopify.ts",
     "./joomla": "./src/joomla.ts",
-    "./drupal": "./src/drupal.ts"
+    "./drupal": "./src/drupal.ts",
+    "./goals-ac-plugin": "./src/goals-ac-plugin.ts",
+    "./linkedin": "./src/linkedin.ts",
+    "./twitter": "./src/twitter.ts",
+    "./meta": "./src/meta.ts"
   },
   "dependencies": {
     "@workspace/security": "workspace:*",

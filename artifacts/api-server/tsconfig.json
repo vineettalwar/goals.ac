@@ -31,6 +31,12 @@
     },
     {
       "path": "../../lib/jobs"
+    },
+    {
+      "path": "../../lib/seo-tools"
+    },
+    {
+      "path": "../../lib/serp-provider"
     }
   ]
 }

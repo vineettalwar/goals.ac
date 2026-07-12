@@ -103,14 +103,29 @@ class ContentController extends BaseController
             Idempotency::store($idempotencyKey, $response, $keyStore);
 
             $app->sendResponse((object) $response);
-        } catch (\Exception $e) {
-            $app->getLogger()->error('goals.ac content save failed: ' . $e->getMessage());
+        } catch (\Throwable $e) {
+            $requestId = $this->requestId($app);
+            $app->getLogger()->error(sprintf(
+                'goals.ac content save failed [request_id=%s, exception=%s]: %s',
+                $requestId,
+                get_class($e),
+                $e->getMessage()
+            ));
             $app->sendResponse((object) [
                 'error'   => true,
                 'code'    => 'save_failed',
                 'message' => 'Unable to save article.',
+                'requestId' => $requestId,
             ], 500);
         }
+    }
+
+    private function requestId($app): string
+    {
+        $supplied = $app->input->server->getString('HTTP_X_REQUEST_ID', '');
+        return preg_match('/^[a-zA-Z0-9._-]{1,128}$/', $supplied)
+            ? $supplied
+            : bin2hex(random_bytes(16));
     }
 
     /**
