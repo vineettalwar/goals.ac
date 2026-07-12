@@ -11,6 +11,8 @@ export type ContentFormatType =
   | "twitter_thread"
   | "instagram_post"
   | "facebook_post"
+  | "bluesky_post"
+  | "mastodon_post"
   | "email_sequence"
   | "ad_copy"
   | "landing_page_copy"
@@ -30,7 +32,9 @@ export type PublishDestinationId =
   | "linkedin"
   | "twitter"
   | "instagram"
-  | "facebook";
+  | "facebook"
+  | "bluesky"
+  | "mastodon";
 
 export type ConnectionMethod = "api" | "plugin" | "oauth";
 
@@ -69,7 +73,9 @@ export type CmsSummary = Record<
   | "joomla"
   | "linkedin"
   | "twitter"
-  | "meta",
+  | "meta"
+  | "bluesky"
+  | "mastodon",
   boolean
 >;
 
@@ -80,6 +86,8 @@ const SOCIAL_FORMAT_DESTINATION: Partial<
   twitter_thread: "twitter",
   instagram_post: "instagram",
   facebook_post: "facebook",
+  bluesky_post: "bluesky",
+  mastodon_post: "mastodon",
 };
 
 const LONG_FORM_FORMATS: ContentFormatType[] = [
@@ -282,6 +290,34 @@ export const PUBLISHING_DESTINATIONS: PublishDestinationDefinition[] = [
     isConnected: hasMeta,
     matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === "facebook",
   },
+  {
+    id: "bluesky",
+    label: "Bluesky",
+    category: "social",
+    integrationKey: "bluesky",
+    description: "Publish posts to Bluesky via AT Protocol OAuth.",
+    listColorClassName: "bg-sky-500",
+    connectionMethods: ["oauth"],
+    connectionMethodLabels: { oauth: "AT Protocol OAuth" },
+    oauthPath: "bluesky",
+    hideSettingsCard: true,
+    isConnected: (c) => !!c.bluesky,
+    matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === "bluesky",
+  },
+  {
+    id: "mastodon",
+    label: "Mastodon",
+    category: "social",
+    integrationKey: "mastodon",
+    description: "Publish toots to your Mastodon instance.",
+    listColorClassName: "bg-violet-500",
+    connectionMethods: ["oauth"],
+    connectionMethodLabels: { oauth: "Instance OAuth" },
+    oauthPath: "mastodon",
+    hideSettingsCard: true,
+    isConnected: (c) => !!c.mastodon,
+    matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === "mastodon",
+  },
 ];
 
 export function getDestination(
@@ -445,6 +481,16 @@ export function getConnectionSummary(
     case "twitter": {
       const twitter = record as { screenName?: string };
       return twitter.screenName ? `@${twitter.screenName}` : "Connected account";
+    }
+    case "bluesky": {
+      const bluesky = record as { handle?: string };
+      return bluesky.handle ? `@${bluesky.handle}` : "Connected account";
+    }
+    case "mastodon": {
+      const mastodon = record as { username?: string; instanceUrl?: string };
+      return mastodon.username
+        ? `@${mastodon.username}@${new URL(mastodon.instanceUrl ?? "https://mastodon.social").hostname}`
+        : "Connected account";
     }
     default:
       return null;

@@ -5,7 +5,7 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { fetchLinkedInAuthorUrn } from "@workspace/connectors/linkedin";
-import { fetchMetaPages, type MetaPageInfo } from "@workspace/connectors/meta";
+import { fetchMetaPages, type MetaPageInfo, exchangeMetaLongLivedToken } from "@workspace/connectors/meta";
 import {
   decryptCmsCredentials,
   type CmsIntegrationCredentials,
@@ -25,8 +25,11 @@ const META_APP_SECRET = process.env.META_APP_SECRET;
 export interface OAuthState {
   projectId: number;
   userId: number;
-  platform: "linkedin" | "twitter" | "meta";
+  platform: "linkedin" | "twitter" | "meta" | "bluesky" | "mastodon";
   codeVerifier?: string;
+  mastodonInstance?: string;
+  mastodonClientId?: string;
+  mastodonClientSecret?: string;
 }
 
 export function getNextApiOrigin(): string {
@@ -231,14 +234,37 @@ export async function handleMetaCallback(code: string, stateRaw: string): Promis
       publishingRedirect(state.projectId, { meta: "error" });
     }
 
-    const pages = await fetchMetaPages(tokenData.access_token);
+    let userAccessToken = tokenData.access_token;
+    let tokenExpiresAt: number | undefined;
+    if (META_APP_ID && META_APP_SECRET) {
+      try {
+        const longLived = await exchangeMetaLongLivedToken(
+          tokenData.access_token,
+          META_APP_ID,
+          META_APP_SECRET,
+        );
+        userAccessToken = longLived.accessToken;
+        if (longLived.expiresIn) {
+          tokenExpiresAt = Date.now() + longLived.expiresIn * 1000;
+        }
+      } catch {
+        // Fall back to short-lived token; page tokens may still work briefly
+      }
+    }
+
+    const pages = await fetchMetaPages(userAccessToken);
     if (pages.length === 0) {
       publishingRedirect(state.projectId, { meta: "no_pages" });
     }
 
     const pagesToken = crypto.randomBytes(16).toString("hex");
     const cookieStore = await cookies();
-    cookieStore.set(`meta_pages_${pagesToken}`, JSON.stringify({ pages, userId: state.userId, projectId: state.projectId }), {
+    cookieStore.set(`meta_pages_${pagesToken}`, JSON.stringify({
+      pages,
+      userId: state.userId,
+      projectId: state.projectId,
+      tokenExpiresAt,
+    }), {
       httpOnly: true,
       sameSite: "lax",
       maxAge: 10 * 60,
@@ -254,7 +280,12 @@ export async function getMetaPagesSession(token: string, userId: number) {
   const cookieStore = await cookies();
   const raw = cookieStore.get(`meta_pages_${token}`)?.value;
   if (!raw) return null;
-  const data = JSON.parse(raw) as { pages: MetaPageInfo[]; userId: number; projectId: number };
+  const data = JSON.parse(raw) as {
+    pages: MetaPageInfo[];
+    userId: number;
+    projectId: number;
+    tokenExpiresAt?: number;
+  };
   if (data.userId !== userId) return null;
   return data;
 }
@@ -280,9 +311,97 @@ export async function selectMetaPage(token: string, pageId: string, userId: numb
     pageName: page.pageName,
     instagramAccountId: page.instagramAccountId,
     instagramUsername: page.instagramUsername,
+    expiresAt: data.tokenExpiresAt,
   };
   await saveProjectCreds(data.projectId, userId, existing);
 
   const cookieStore = await cookies();
   cookieStore.delete(`meta_pages_${token}`);
+}
+
+export async function startMastodonOAuth(
+  projectId: number,
+  userId: number,
+  instanceRaw: string,
+): Promise<never> {
+  const { normalizeMastodonInstance, registerMastodonApp } = await import("@workspace/connectors/mastodon");
+  const instanceUrl = normalizeMastodonInstance(instanceRaw);
+  const redirectUri = `${getNextApiOrigin()}/api/auth/mastodon/callback`;
+  const { clientId, clientSecret } = await registerMastodonApp(instanceUrl, redirectUri);
+
+  const state = encodeState({
+    projectId,
+    userId,
+    platform: "mastodon",
+    mastodonInstance: instanceUrl,
+    mastodonClientId: clientId,
+    mastodonClientSecret: clientSecret,
+  });
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: "code",
+    scope: "read write:statuses",
+    state,
+  });
+
+  redirect(`${instanceUrl}/oauth/authorize?${params}`);
+}
+
+export async function handleMastodonCallback(code: string, stateRaw: string): Promise<never> {
+  const state = decodeState(stateRaw);
+  if (
+    !state ||
+    state.platform !== "mastodon" ||
+    !state.mastodonInstance ||
+    !state.mastodonClientId ||
+    !state.mastodonClientSecret
+  ) {
+    throw new Error("Invalid OAuth state");
+  }
+
+  try {
+    const redirectUri = `${getNextApiOrigin()}/api/auth/mastodon/callback`;
+    const tokenRes = await fetch(`${state.mastodonInstance}/oauth/token`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: state.mastodonClientId,
+        client_secret: state.mastodonClientSecret,
+        redirect_uri: redirectUri,
+        grant_type: "authorization_code",
+        code,
+      }),
+    });
+
+    const tokenData = (await tokenRes.json()) as { access_token?: string };
+    if (!tokenData.access_token) {
+      publishingRedirect(state.projectId, { mastodon: "error" });
+    }
+
+    const { fetchMastodonAccount } = await import("@workspace/connectors/mastodon");
+    const account = await fetchMastodonAccount(state.mastodonInstance, tokenData.access_token);
+
+    const [project] = await db
+      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+      .from(websiteProjectsTable)
+      .where(and(eq(websiteProjectsTable.id, state.projectId), eq(websiteProjectsTable.userId, state.userId)))
+      .limit(1);
+    if (!project) throw new Error("Project not found");
+
+    const existing = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
+    existing.mastodon = {
+      instanceUrl: state.mastodonInstance,
+      accessToken: tokenData.access_token,
+      accountId: account.id,
+      username: account.username,
+      clientId: state.mastodonClientId,
+      clientSecret: state.mastodonClientSecret,
+    };
+    await saveProjectCreds(state.projectId, state.userId, existing);
+    publishingRedirect(state.projectId, { mastodon: "connected" });
+  } catch {
+    publishingRedirect(state.projectId, { mastodon: "error" });
+  }
 }

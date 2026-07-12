@@ -468,13 +468,17 @@ export function PublishingSettingsPanel({
   onError: (message: string) => void;
   onSaveSuccess: (message: string) => void;
   onTestHealth: () => void;
-  onConnectOAuth: (path: string) => void;
-  onDisconnectSocial: (platform: "linkedin" | "twitter" | "meta") => void;
+  onConnectOAuth: (path: string, params?: { handle?: string; instance?: string }) => void;
+  onDisconnectSocial: (platform: "linkedin" | "twitter" | "meta" | "bluesky" | "mastodon") => void;
   onSelectMetaPage: (pageId: string) => void;
 }) {
   const cmsDestinations = getCmsDestinations();
   const socialDestinations = getSocialDestinations();
   const metaIntegration = cmsIntegrations.meta as Record<string, unknown> | undefined;
+  const blueskyIntegration = cmsIntegrations.bluesky as Record<string, unknown> | undefined;
+  const mastodonIntegration = cmsIntegrations.mastodon as Record<string, unknown> | undefined;
+  const [blueskyHandle, setBlueskyHandle] = useState("");
+  const [mastodonInstance, setMastodonInstance] = useState("");
 
   const handleConnected = useCallback(
     (updated: CmsIntegrationStatus, label?: string) => {
@@ -580,7 +584,8 @@ export function PublishingSettingsPanel({
                 )}
               </CardTitle>
               <CardDescription className="mt-1">
-                Requires a Facebook Page with a linked Instagram Business account.
+                Requires a Facebook Page with a linked Instagram Business account. Instagram text posts
+                use a placeholder image until you attach media (see Help).
               </CardDescription>
             </div>
             {metaIntegration && (
@@ -636,12 +641,163 @@ export function PublishingSettingsPanel({
                 </p>
               ) : null}
               <HealthBadge health={healthStatus?.meta} />
+              {healthStatus?.meta && !healthStatus.meta.ok ? (
+                <Button size="sm" variant="outline" onClick={() => onConnectOAuth("meta")}>
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                  Reconnect Meta
+                </Button>
+              ) : null}
             </div>
           ) : (
             <Button size="sm" onClick={() => onConnectOAuth("meta")}>
               <Link2 className="w-3.5 h-3.5 mr-1.5" />
               Connect Meta
             </Button>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border shadow-sm">
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Globe className="w-4 h-4 text-sky-500" />
+                Bluesky
+                {blueskyIntegration && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Connected
+                  </span>
+                )}
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Connect via AT Protocol OAuth to publish skeets from Content Studio.
+              </CardDescription>
+            </div>
+            {blueskyIntegration && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDisconnectSocial("bluesky")}
+                className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
+              >
+                <Unlink className="w-3.5 h-3.5 mr-1.5" />
+                Disconnect
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {blueskyIntegration ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                <span className="font-medium text-foreground">Account:</span> @
+                {String(blueskyIntegration.handle ?? blueskyIntegration.did ?? "connected")}
+              </p>
+              <HealthBadge health={healthStatus?.bluesky} />
+              {healthStatus?.bluesky && !healthStatus.bluesky.ok ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const handle = String(blueskyIntegration.handle ?? "");
+                    if (handle) onConnectOAuth("bluesky", { handle });
+                  }}
+                >
+                  <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
+                  Reconnect Bluesky
+                </Button>
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="bluesky-handle">Bluesky handle</Label>
+                <Input
+                  id="bluesky-handle"
+                  placeholder="you.bsky.social"
+                  value={blueskyHandle}
+                  onChange={(e) => setBlueskyHandle(e.target.value)}
+                />
+              </div>
+              <Button
+                size="sm"
+                disabled={!blueskyHandle.trim()}
+                onClick={() => onConnectOAuth("bluesky", { handle: blueskyHandle.trim() })}
+              >
+                <Link2 className="w-3.5 h-3.5 mr-1.5" />
+                Connect Bluesky
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className="border shadow-sm">
+        <CardHeader>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Globe className="w-4 h-4 text-violet-500" />
+                Mastodon
+                {mastodonIntegration && (
+                  <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    Connected
+                  </span>
+                )}
+              </CardTitle>
+              <CardDescription className="mt-1">
+                Connect your Mastodon instance to publish toots from Content Studio.
+              </CardDescription>
+            </div>
+            {mastodonIntegration && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onDisconnectSocial("mastodon")}
+                className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
+              >
+                <Unlink className="w-3.5 h-3.5 mr-1.5" />
+                Disconnect
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          {mastodonIntegration ? (
+            <div className="space-y-2 text-sm text-muted-foreground">
+              <p>
+                <span className="font-medium text-foreground">Account:</span> @
+                {String(mastodonIntegration.username ?? "connected")}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">Instance:</span>{" "}
+                {String(mastodonIntegration.instanceUrl ?? "")}
+              </p>
+              <HealthBadge health={healthStatus?.mastodon} />
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="mastodon-instance">Instance URL</Label>
+                <Input
+                  id="mastodon-instance"
+                  placeholder="mastodon.social"
+                  value={mastodonInstance}
+                  onChange={(e) => setMastodonInstance(e.target.value)}
+                />
+              </div>
+              <Button
+                size="sm"
+                disabled={!mastodonInstance.trim()}
+                onClick={() => onConnectOAuth("mastodon", { instance: mastodonInstance.trim() })}
+              >
+                <Link2 className="w-3.5 h-3.5 mr-1.5" />
+                Connect Mastodon
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
