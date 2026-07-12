@@ -1,5 +1,5 @@
 import { db } from "@workspace/db";
-import { usageEventsTable, usersTable, scheduledArticlesTable, companiesTable } from "@workspace/db/schema";
+import { usageEventsTable, usersTable, companiesTable } from "@workspace/db/schema";
 import { and, eq, gte, sql } from "drizzle-orm";
 
 export type PlanId = "starter" | "growth" | "scale";
