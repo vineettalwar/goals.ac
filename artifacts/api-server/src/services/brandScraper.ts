@@ -81,7 +81,7 @@ function extractInternalLinks(html: string, baseOrigin: string): string[] {
   return [...new Set(links)];
 }
 
-function pickKeyPages(links: string[], baseOrigin: string): string[] {
+function pickKeyPages(links: string[], _baseOrigin: string): string[] {
   const keyPaths = ["about", "product", "products", "pricing", "solution", "solutions", "features", "platform", "services", "how-it-works", "company", "mission"];
   const picked: string[] = [];
   for (const keyword of keyPaths) {
