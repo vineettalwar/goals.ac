@@ -49,12 +49,17 @@ export function ProjectContentTab({ projectId }: Props) {
         </div>
         <h3 className="text-lg font-semibold mb-2">No content yet</h3>
         <p className="text-sm text-muted-foreground max-w-sm mb-6">
-          Generate roadmaps, content strategies, SEO articles, and GEO audits from Content Studio.
-          They&apos;ll appear here when linked to this project.
+          Generate a growth roadmap, then content strategies and articles. Linked content appears
+          here automatically.
         </p>
-        <Link href={`/projects/${projectId}/content-studio`}>
-          <Button>Open Content Studio</Button>
-        </Link>
+        <div className="flex flex-wrap gap-2 justify-center">
+          <Link href="/growth-roadmaps">
+            <Button>Growth Roadmaps</Button>
+          </Link>
+          <Link href={`/projects/${projectId}/content-studio`}>
+            <Button variant="outline">Content Studio</Button>
+          </Link>
+        </div>
       </div>
     );
   }
@@ -156,7 +161,7 @@ export function ProjectContentTab({ projectId }: Props) {
                   </p>
                 </div>
                 <Button size="sm" variant="ghost" asChild>
-                  <Link href={`/roadmap/${roadmap.slug}`}>View</Link>
+                  <Link href={`/growth-roadmaps/${roadmap.slug}`}>View</Link>
                 </Button>
               </div>
             ))}
