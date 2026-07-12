@@ -60,7 +60,7 @@ if (port === BASE_PORT) {
   console.log(`Starting dev server at ${url}`);
 }
 
-const child = spawn("pnpm", ["exec", "next", "dev", "--port", String(port)], {
+const child = spawn("pnpm", ["exec", "next", "dev", "--port", String(port), "--turbopack"], {
   cwd: APP_DIR,
   stdio: "inherit",
   env: {

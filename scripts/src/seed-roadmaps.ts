@@ -1,4 +1,5 @@
 import { db, generateRoadmapSlug, roadmapsTable } from "@workspace/db";
+import { generateRoadmap } from "@workspace/content-engine/roadmap-generator";
 import { eq } from "drizzle-orm";
 
 interface Combo {
@@ -8,12 +9,17 @@ interface Combo {
 }
 
 const COMBOS: Combo[] = [
+  { industry: "BioTech", location: "Austin", stage: "pre-seed" },
+  { industry: "BioTech", location: "London", stage: "series-a" },
+  { industry: "BioTech", location: "Boston", stage: "series-a" },
+  { industry: "SaaS", location: "San Francisco", stage: "pre-seed" },
+  { industry: "SaaS", location: "San Francisco", stage: "series-a" },
+  { industry: "AI/ML", location: "San Francisco", stage: "pre-seed" },
   { industry: "FinTech", location: "London", stage: "seed" },
   { industry: "FinTech", location: "New York", stage: "seed" },
   { industry: "FinTech", location: "Singapore", stage: "series-a" },
   { industry: "FinTech", location: "Berlin", stage: "seed" },
   { industry: "SaaS", location: "London", stage: "seed" },
-  { industry: "SaaS", location: "San Francisco", stage: "series-a" },
   { industry: "SaaS", location: "Berlin", stage: "seed" },
   { industry: "SaaS", location: "Toronto", stage: "seed" },
   { industry: "HealthTech", location: "London", stage: "seed" },
@@ -24,7 +30,6 @@ const COMBOS: Combo[] = [
   { industry: "DeepTech", location: "Paris", stage: "seed" },
   { industry: "DeepTech", location: "San Francisco", stage: "series-a" },
   { industry: "AI/ML", location: "London", stage: "seed" },
-  { industry: "AI/ML", location: "San Francisco", stage: "series-a" },
   { industry: "AI/ML", location: "Berlin", stage: "seed" },
   { industry: "AI/ML", location: "Toronto", stage: "seed" },
   { industry: "EdTech", location: "London", stage: "seed" },
@@ -51,8 +56,6 @@ const COMBOS: Combo[] = [
   { industry: "Marketplace", location: "London", stage: "seed" },
   { industry: "Marketplace", location: "Berlin", stage: "series-a" },
   { industry: "Marketplace", location: "Dubai", stage: "seed" },
-  { industry: "BioTech", location: "London", stage: "series-a" },
-  { industry: "BioTech", location: "Boston", stage: "series-a" },
   { industry: "MedTech", location: "London", stage: "seed" },
   { industry: "MedTech", location: "Zurich", stage: "seed" },
   { industry: "eCommerce", location: "London", stage: "seed" },
@@ -60,11 +63,18 @@ const COMBOS: Combo[] = [
   { industry: "LogisticsTech", location: "Singapore", stage: "seed" },
 ];
 
-const API_BASE = process.env.API_BASE_URL ?? "http://localhost:8080/api";
+const DELAY_MS = Number(process.env.SEED_ROADMAP_DELAY_MS ?? 1000);
 
 async function seedRoadmaps() {
+  if (!process.env.GEMINI_API_KEY && !process.env.AI_INTEGRATIONS_GEMINI_API_KEY) {
+    console.error(
+      "GEMINI_API_KEY or AI_INTEGRATIONS_GEMINI_API_KEY is required to seed roadmaps.",
+    );
+    process.exit(1);
+  }
+
   console.log(`Starting roadmap seed — ${COMBOS.length} combos to process`);
-  console.log(`API base: ${API_BASE}\n`);
+  console.log(`Delay between generations: ${DELAY_MS}ms\n`);
 
   let generated = 0;
   let skipped = 0;
@@ -89,21 +99,19 @@ async function seedRoadmaps() {
     console.log(`[${i + 1}/${COMBOS.length}] GEN   ${slug}...`);
 
     try {
-      const response = await fetch(`${API_BASE}/roadmaps/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ industry, location, stage }),
-      });
+      const content = await generateRoadmap(industry, location, stage);
 
-      if (!response.ok) {
-        const errorBody = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorBody}`);
-      }
+      await db
+        .insert(roadmapsTable)
+        .values({ slug, industry, location, stage, content })
+        .onConflictDoNothing({ target: roadmapsTable.slug });
 
       console.log(`[${i + 1}/${COMBOS.length}] OK    ${slug}`);
       generated++;
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (DELAY_MS > 0 && i < COMBOS.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
+      }
     } catch (err) {
       console.error(`[${i + 1}/${COMBOS.length}] FAIL  ${slug}:`, err);
       failed++;
