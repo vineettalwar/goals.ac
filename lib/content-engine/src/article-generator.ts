@@ -1,6 +1,6 @@
-import { getAiClient } from "@workspace/ai-providers";
+import { getAiProviderClient, type AiProviderClient, type AiProviderOptions } from "@workspace/ai-providers";
 import { cleanAndParse } from "./utils";
-import type { GoogleGenAI } from "@google/genai";
+import { resolveAiClient } from "./support/resolve-ai-client";
 
 export interface ArticleInput {
   company: {
@@ -75,11 +75,25 @@ Writing principles:
 
 Respond ONLY with a valid JSON object. No prose outside JSON.`;
 
+export interface GenerateArticleOptions {
+  aiClient?: AiProviderClient;
+  userApiKey?: string | null;
+  aiProviderOptions?: AiProviderOptions;
+}
+
+async function resolveArticleClient(options?: GenerateArticleOptions): Promise<AiProviderClient> {
+  if (options?.aiClient) return options.aiClient;
+  if (options?.userApiKey !== undefined || options?.aiProviderOptions) {
+    return resolveAiClient(options?.userApiKey, options?.aiProviderOptions);
+  }
+  return getAiProviderClient();
+}
+
 export async function generateArticle(
   input: ArticleInput,
-  options?: { aiClient?: GoogleGenAI }
+  options?: GenerateArticleOptions,
 ): Promise<GeneratedArticle> {
-  const ai = options?.aiClient ?? getAiClient();
+  const ai = await resolveArticleClient(options);
 
   const personaContext = input.persona
     ? `Target reader persona: ${input.persona.name} (${input.persona.jobTitle})
@@ -126,33 +140,14 @@ Return a JSON object with these EXACT fields:
 - jsonLdSchema: object — valid JSON-LD combining Article schema and FAQPage schema based on the article content
 - personaAlignment: string — one sentence explaining exactly why this article addresses the target persona's core need`;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      systemInstruction: SYSTEM_PROMPT,
-      responseMimeType: "application/json",
-      maxOutputTokens: 16384,
-      thinkingConfig: { thinkingBudget: 2048 },
-    },
+  const response = await ai.generate({
+    prompt,
+    systemInstruction: SYSTEM_PROMPT,
+    responseMimeType: "application/json",
+    maxOutputTokens: 16384,
+    thinkingBudget: 2048,
   });
 
   const raw = response.text ?? "";
-  const parsed = cleanAndParse<GeneratedArticle>(raw);
-  const usageMetadata = (
-    response as unknown as {
-      usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
-    }
-  ).usageMetadata;
-
-  return {
-    ...parsed,
-    generationUsage: usageMetadata
-      ? {
-          promptTokens: usageMetadata.promptTokenCount,
-          outputTokens: usageMetadata.candidatesTokenCount,
-          totalTokens: usageMetadata.totalTokenCount,
-        }
-      : undefined,
-  };
+  return cleanAndParse<GeneratedArticle>(raw);
 }

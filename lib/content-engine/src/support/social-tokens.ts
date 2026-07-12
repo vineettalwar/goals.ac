@@ -122,12 +122,27 @@ export async function refreshTwitterToken(
 export async function getSocialAccessToken(
   projectId: number,
   userId: number,
-  platform: "linkedin" | "twitter" | "meta",
+  platform: "linkedin" | "twitter" | "meta" | "bluesky" | "mastodon",
 ): Promise<string> {
   if (platform === "linkedin") return refreshLinkedInToken(projectId, userId);
   if (platform === "twitter") return refreshTwitterToken(projectId, userId);
   const creds = await loadProjectCreds(projectId, userId);
-  return creds.meta?.accessToken ?? "";
+  if (platform === "bluesky") {
+    if (!creds.bluesky?.accessToken) return "";
+    if (creds.bluesky.expiresAt && creds.bluesky.expiresAt < Date.now() + 60_000) {
+      throw new Error("Bluesky connection expired. Reconnect in Project → Publishing.");
+    }
+    return creds.bluesky.accessToken;
+  }
+  if (platform === "mastodon") {
+    return creds.mastodon?.accessToken ?? "";
+  }
+  const meta = creds.meta;
+  if (!meta?.accessToken) return "";
+  if (meta.expiresAt && meta.expiresAt < Date.now() + 60_000) {
+    throw new Error("Meta connection expired. Reconnect Facebook & Instagram in Project → Publishing.");
+  }
+  return meta.accessToken;
 }
 
 export function generatePkce(): { verifier: string; challenge: string } {

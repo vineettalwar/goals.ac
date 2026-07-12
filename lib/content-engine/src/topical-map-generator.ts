@@ -1,5 +1,6 @@
-import { getAiClient } from "@workspace/ai-providers";
+import { getAiProviderClient, type AiProviderClient, type AiProviderOptions } from "@workspace/ai-providers";
 import { cleanAndParse } from "./utils";
+import { resolveAiClient } from "./support/resolve-ai-client";
 
 export interface TopicalCluster {
   pillarTopic: string;          // e.g. "B2B Lead Generation"
@@ -25,12 +26,29 @@ export interface TopicalMapResult {
   recommendedNextArticle: string;
 }
 
-export async function generateTopicalMap(input: {
-  company: { name: string; industry: string; description: string; targetAudience: string; websiteUrl: string };
-  existingArticleTitles: string[];
-  primaryKeywords?: string[];
-}): Promise<TopicalMapResult> {
-  const ai = getAiClient();
+export interface GenerateTopicalMapOptions {
+  aiClient?: AiProviderClient;
+  userApiKey?: string | null;
+  aiProviderOptions?: AiProviderOptions;
+}
+
+async function resolveTopicalMapClient(options?: GenerateTopicalMapOptions): Promise<AiProviderClient> {
+  if (options?.aiClient) return options.aiClient;
+  if (options?.userApiKey !== undefined || options?.aiProviderOptions) {
+    return resolveAiClient(options?.userApiKey, options?.aiProviderOptions);
+  }
+  return getAiProviderClient();
+}
+
+export async function generateTopicalMap(
+  input: {
+    company: { name: string; industry: string; description: string; targetAudience: string; websiteUrl: string };
+    existingArticleTitles: string[];
+    primaryKeywords?: string[];
+  },
+  options?: GenerateTopicalMapOptions,
+): Promise<TopicalMapResult> {
+  const ai = await resolveTopicalMapClient(options);
 
   const covered = input.existingArticleTitles.length > 0
     ? `Already covered topics (existing articles): ${input.existingArticleTitles.join("; ")}`
@@ -68,14 +86,11 @@ Return a JSON object with:
 
 Be specific to this company's niche. Realistic volume estimates. Focus on keywords real buyers search.`;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      responseMimeType: "application/json",
-      maxOutputTokens: 8192,
-      thinkingConfig: { thinkingBudget: 1024 },
-    },
+  const response = await ai.generate({
+    prompt,
+    responseMimeType: "application/json",
+    maxOutputTokens: 8192,
+    thinkingBudget: 1024,
   });
 
   const raw = response.text ?? "";

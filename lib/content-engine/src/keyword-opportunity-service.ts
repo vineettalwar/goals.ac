@@ -17,12 +17,13 @@ import {
   type GapOpportunity,
 } from "@workspace/seo-tools/keywordGapAnalyzer";
 import {
-  getGeminiClientWithFallback,
   modelForTier,
-  wrapGeminiClient,
+  resolveAiClient,
+  resolveProviderId,
 } from "@workspace/ai-providers";
 import { parseAutopilotSettings } from "./support/autopilot-scheduler";
 import { getDecryptedUserGeminiKey } from "./support/user-api-key";
+import { getUserAiProviderOptions } from "./support/user-ai-provider";
 import { logger } from "./logger";
 
 async function discoverAiGaps(params: {
@@ -34,11 +35,14 @@ async function discoverAiGaps(params: {
   competitorNames: string[];
   existingKeywords: string[];
   userApiKey?: string | null;
+  aiProviderOptions?: Awaited<ReturnType<typeof getUserAiProviderOptions>>;
 }): Promise<GapOpportunity[]> {
-  const clientResult = await getGeminiClientWithFallback(params.userApiKey);
-  if (!clientResult) return [];
-
-  const client = wrapGeminiClient(clientResult.client);
+  let client;
+  try {
+    client = await resolveAiClient(params.userApiKey, params.aiProviderOptions);
+  } catch {
+    return [];
+  }
   const prompt = `You are an SEO strategist. Find keyword gap opportunities for a B2B brand.
 
 Brand: ${params.brandName}
@@ -65,8 +69,9 @@ Return ONLY valid JSON array (max 8 items) of keyword gaps they should target:
 Focus on keywords competitors likely rank for that this brand does not yet cover.`;
 
   try {
+    const providerId = resolveProviderId(params.aiProviderOptions);
     const response = await client.generate({
-      model: modelForTier("gemini", "planning"),
+      model: providerId === "gemini" ? modelForTier("gemini", "planning") : undefined,
       prompt,
       responseMimeType: "application/json",
       temperature: 0.5,
@@ -154,7 +159,10 @@ export async function discoverOpportunities(projectId: number, userId: number): 
     );
   }
 
-  const userApiKey = await getDecryptedUserGeminiKey(userId);
+  const [userApiKey, aiProviderOptions] = await Promise.all([
+    getDecryptedUserGeminiKey(userId),
+    getUserAiProviderOptions(userId),
+  ]);
   const aiGaps = await discoverAiGaps({
     brandName: brand?.companyName ?? project.name,
     industry: brand?.industry ?? "",
@@ -164,6 +172,7 @@ export async function discoverOpportunities(projectId: number, userId: number): 
     competitorNames: competitorRows.map((c) => c.result.competitorName),
     existingKeywords: [...existingKeywords],
     userApiKey,
+    aiProviderOptions,
   });
   collected.push(...aiGaps);
 

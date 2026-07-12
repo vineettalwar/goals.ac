@@ -74,9 +74,31 @@ export interface CmsIntegrationCredentials {
     instagramAccountId?: string;
     instagramUsername?: string;
   };
+  bluesky?: {
+    accessToken: string;
+    refreshToken?: string;
+    expiresAt?: number;
+    did: string;
+    handle?: string;
+    sessionJson?: string;
+  };
+  mastodon?: {
+    instanceUrl: string;
+    accessToken: string;
+    accountId: string;
+    username: string;
+    clientId: string;
+    clientSecret: string;
+  };
 }
 
-export type SocialPlatform = "linkedin" | "twitter" | "instagram" | "facebook";
+export type SocialPlatform =
+  | "linkedin"
+  | "twitter"
+  | "instagram"
+  | "facebook"
+  | "bluesky"
+  | "mastodon";
 
 export type CmsPublishPlatform =
   | "ghost"
@@ -85,7 +107,14 @@ export type CmsPublishPlatform =
   | "drupal"
   | "joomla";
 
-export const SOCIAL_PLATFORMS: SocialPlatform[] = ["linkedin", "twitter", "instagram", "facebook"];
+export const SOCIAL_PLATFORMS: SocialPlatform[] = [
+  "linkedin",
+  "twitter",
+  "instagram",
+  "facebook",
+  "bluesky",
+  "mastodon",
+];
 
 export const CMS_PUBLISH_PLATFORMS: CmsPublishPlatform[] = [
   "ghost",
@@ -472,6 +501,21 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
       expiresAt: decrypted.meta.expiresAt,
     };
   }
+  if (decrypted.bluesky) {
+    result.bluesky = {
+      connected: true,
+      handle: decrypted.bluesky.handle,
+      did: decrypted.bluesky.did,
+      expiresAt: decrypted.bluesky.expiresAt,
+    };
+  }
+  if (decrypted.mastodon) {
+    result.mastodon = {
+      connected: true,
+      instanceUrl: decrypted.mastodon.instanceUrl,
+      username: decrypted.mastodon.username,
+    };
+  }
   return result;
 }
 
@@ -481,5 +525,7 @@ export function getConnectedSocialPlatforms(creds: CmsIntegrationCredentials): S
   if (creds.twitter) platforms.push("twitter");
   if (creds.meta?.instagramAccountId) platforms.push("instagram");
   if (creds.meta?.pageId) platforms.push("facebook");
+  if (creds.bluesky) platforms.push("bluesky");
+  if (creds.mastodon) platforms.push("mastodon");
   return platforms;
 }

@@ -1,14 +1,16 @@
-import { getAiClient } from "@workspace/ai-providers";
+import { getAiProviderClient, type AiProviderClient, type AiProviderOptions } from "@workspace/ai-providers";
 import { cleanAndParse } from "./utils";
-import type { GoogleGenAI } from "@google/genai";
 import type { GeneratedArticle } from "./article-generator";
+import { resolveAiClient } from "./support/resolve-ai-client";
 
 export type HumanizationLevel = "light" | "strong";
 
 export interface HumanizeOptions {
   level: HumanizationLevel;
   writingSample?: string;
-  aiClient?: GoogleGenAI;
+  aiClient?: AiProviderClient;
+  userApiKey?: string | null;
+  aiProviderOptions?: AiProviderOptions;
 }
 
 interface HumanizedOutput {
@@ -38,12 +40,20 @@ You MUST preserve, character-for-character where noted:
 
 Respond ONLY with a valid JSON object. No prose outside JSON.`;
 
+async function resolveHumanizerClient(opts: HumanizeOptions): Promise<AiProviderClient> {
+  if (opts.aiClient) return opts.aiClient;
+  if (opts.userApiKey !== undefined || opts.aiProviderOptions) {
+    return resolveAiClient(opts.userApiKey, opts.aiProviderOptions);
+  }
+  return getAiProviderClient();
+}
+
 export async function humanizeArticle(
   article: GeneratedArticle,
-  opts: HumanizeOptions
+  opts: HumanizeOptions,
 ): Promise<GeneratedArticle> {
   try {
-    const ai = opts.aiClient ?? getAiClient();
+    const ai = await resolveHumanizerClient(opts);
 
     const intensityCtx =
       opts.level === "strong"
@@ -77,15 +87,12 @@ Return a JSON object with these EXACT fields:
 - metaDescription: string — the rewritten meta description, 150-160 chars, includes the primary keyword
 - wordCount: number — word count of the rewritten body`;
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: {
-        systemInstruction: SYSTEM_PROMPT,
-        responseMimeType: "application/json",
-        maxOutputTokens: 16384,
-        thinkingConfig: { thinkingBudget: 1024 },
-      },
+    const response = await ai.generate({
+      prompt,
+      systemInstruction: SYSTEM_PROMPT,
+      responseMimeType: "application/json",
+      maxOutputTokens: 16384,
+      thinkingBudget: 1024,
     });
 
     const raw = response.text ?? "";
@@ -116,24 +123,6 @@ Return a JSON object with these EXACT fields:
       return article;
     }
 
-    const usageMetadata = (
-      response as unknown as {
-        usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number };
-      }
-    ).usageMetadata;
-
-    const aggregatedUsage =
-      article.generationUsage || usageMetadata
-        ? {
-            promptTokens:
-              (article.generationUsage?.promptTokens ?? 0) + (usageMetadata?.promptTokenCount ?? 0),
-            outputTokens:
-              (article.generationUsage?.outputTokens ?? 0) + (usageMetadata?.candidatesTokenCount ?? 0),
-            totalTokens:
-              (article.generationUsage?.totalTokens ?? 0) + (usageMetadata?.totalTokenCount ?? 0),
-          }
-        : undefined;
-
     return {
       ...article,
       bodyMarkdown: parsed.bodyMarkdown,
@@ -142,7 +131,6 @@ Return a JSON object with these EXACT fields:
           ? parsed.metaDescription
           : article.metaDescription,
       wordCount: rewrittenWordCount,
-      generationUsage: aggregatedUsage,
     };
   } catch {
     // Humanization must never break generation — fall back to the original article.

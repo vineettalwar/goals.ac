@@ -16,4 +16,5 @@ export * from "./support/cms-publish";
 export * from "./support/autopilot-scheduler";
 export * from "./support/visibility-settings";
 export * from "./support/user-api-key";
+export * from "./support/resolve-ai-client-for-user";
 export * from "./support/social-tokens";

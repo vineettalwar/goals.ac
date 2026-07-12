@@ -256,6 +256,24 @@ const FORMAT_CONFIGS: Record<
 - Optional: 3-5 relevant hashtags at the end (separate line)
 - Conversational, community-friendly tone. No corporate jargon.`,
   },
+  bluesky_post: {
+    label: "Bluesky Post",
+    wordRange: "50-280",
+    structure: `- Single post under 300 characters (Bluesky limit)
+- Hook in the first line — opinion, insight, or question
+- 1-2 short paragraphs max; plain text only (no markdown headings)
+- Optional: 1-3 relevant hashtags at the end
+- Conversational, punchy tone. No thread unless explicitly requested.`,
+  },
+  mastodon_post: {
+    label: "Mastodon Post",
+    wordRange: "50-500",
+    structure: `- Single toot under 500 characters (or use content warning if longer concept)
+- Hook first — direct statement or question for the fediverse
+- Plain text; hashtags are discoverable on Mastodon — use 2-4 relevant tags
+- Community-friendly, authentic tone; avoid engagement bait
+- Optional content warning line if discussing sensitive topics`,
+  },
   email_sequence: {
     label: "Email Sequence",
     wordRange: "800-1200",

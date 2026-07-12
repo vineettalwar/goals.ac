@@ -26,6 +26,8 @@ const FORMAT_MAP: Record<string, ContentFormatType> = {
   "twitter thread": "twitter_thread",
   "instagram post": "instagram_post",
   "facebook post": "facebook_post",
+  "bluesky post": "bluesky_post",
+  "mastodon post": "mastodon_post",
   "blog article": "blog_post",
   "blog post": "blog_post",
   "news article": "news_article",
@@ -44,6 +46,8 @@ const PLATFORM_FORMAT: Record<SocialPlatform, ContentFormatType> = {
   twitter: "twitter_thread",
   instagram: "instagram_post",
   facebook: "facebook_post",
+  bluesky: "bluesky_post",
+  mastodon: "mastodon_post",
 };
 
 export function mapStrategyFormatToContentFormat(format: string): ContentFormatType {

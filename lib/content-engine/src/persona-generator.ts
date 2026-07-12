@@ -1,5 +1,6 @@
-import { getAiClient } from "@workspace/ai-providers";
+import { getAiProviderClient, type AiProviderClient, type AiProviderOptions } from "@workspace/ai-providers";
 import { cleanAndParse } from "./utils";
+import { resolveAiClient } from "./support/resolve-ai-client";
 
 export interface PersonaInput {
   companyName: string;
@@ -18,12 +19,29 @@ export interface GeneratedPersona {
   preferredContent: string[];
 }
 
+export interface GeneratePersonasOptions {
+  aiClient?: AiProviderClient;
+  userApiKey?: string | null;
+  aiProviderOptions?: AiProviderOptions;
+}
+
 const SYSTEM_PROMPT = `You are a senior marketing strategist. Generate detailed, realistic Ideal Customer Profile (ICP) personas for a company. Each persona must be specific, psychologically grounded, and immediately actionable for content planning.
 
 Respond ONLY with a valid JSON array. No prose, no markdown fences, no explanation.`;
 
-export async function generatePersonas(input: PersonaInput): Promise<GeneratedPersona[]> {
-  const ai = getAiClient();
+async function resolvePersonaClient(options?: GeneratePersonasOptions): Promise<AiProviderClient> {
+  if (options?.aiClient) return options.aiClient;
+  if (options?.userApiKey !== undefined || options?.aiProviderOptions) {
+    return resolveAiClient(options?.userApiKey, options?.aiProviderOptions);
+  }
+  return getAiProviderClient();
+}
+
+export async function generatePersonas(
+  input: PersonaInput,
+  options?: GeneratePersonasOptions,
+): Promise<GeneratedPersona[]> {
+  const ai = await resolvePersonaClient(options);
 
   const prompt = `Generate 3 distinct marketing personas for the following company:
 
@@ -43,15 +61,12 @@ For each persona return a JSON object with these exact fields:
 
 Return ONLY a JSON array with exactly 3 persona objects.`;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-2.5-flash",
-    contents: [{ role: "user", parts: [{ text: prompt }] }],
-    config: {
-      systemInstruction: SYSTEM_PROMPT,
-      responseMimeType: "application/json",
-      maxOutputTokens: 4096,
-      thinkingConfig: { thinkingBudget: 0 },
-    },
+  const response = await ai.generate({
+    prompt,
+    systemInstruction: SYSTEM_PROMPT,
+    responseMimeType: "application/json",
+    maxOutputTokens: 4096,
+    thinkingBudget: 0,
   });
 
   const raw = response.text ?? "";

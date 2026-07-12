@@ -12,11 +12,9 @@ import {
   competitorNamesFromUrls,
   LLM_VISIBILITY_ENGINES,
 } from "@workspace/seo-tools/llmVisibilityChecker";
-import {
-  getGeminiClientWithFallback,
-  wrapGeminiClient,
-} from "@workspace/ai-providers";
+import { resolveAiClient } from "@workspace/ai-providers";
 import { getDecryptedUserGeminiKey } from "./support/user-api-key";
+import { getUserAiProviderOptions } from "./support/user-ai-provider";
 import { parseVisibilitySettings } from "./support/visibility-settings";
 import { logger } from "./logger";
 
@@ -112,13 +110,17 @@ export async function runVisibilityCheckForProject(projectId: number): Promise<n
   const brandUrl = project.url;
   const competitorNames = competitorNamesFromUrls(brand?.competitorUrls ?? []);
 
-  const userApiKey = await getDecryptedUserGeminiKey(project.userId);
-  const geminiResult = await getGeminiClientWithFallback(userApiKey);
-  if (!geminiResult) {
+  const [userApiKey, aiProviderOptions] = await Promise.all([
+    getDecryptedUserGeminiKey(project.userId),
+    getUserAiProviderOptions(project.userId),
+  ]);
+  let client;
+  try {
+    client = await resolveAiClient(userApiKey, aiProviderOptions);
+  } catch {
     logger.warn({ projectId }, "Visibility check: no AI client available");
     return 0;
   }
-  const client = wrapGeminiClient(geminiResult.client);
 
   let inserted = 0;
   for (const promptRow of prompts) {
