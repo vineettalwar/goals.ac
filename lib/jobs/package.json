@@ -6,12 +6,31 @@
   "exports": {
     ".": "./src/index.ts",
     "./queues": "./src/queues.ts",
-    "./boss": "./src/boss.ts"
+    "./boss": "./src/boss.ts",
+    "./handlers": "./src/handlers/index.ts",
+    "./handlers/connectionHealthCheck": "./src/handlers/connectionHealthCheck.ts",
+    "./handlers/keywordRankCheck": "./src/handlers/keywordRankCheck.ts",
+    "./handlers/contentGenerate": "./src/handlers/contentGenerate.ts",
+    "./handlers/contentGenerateSweep": "./src/handlers/contentGenerateSweep.ts",
+    "./handlers/contentPublish": "./src/handlers/contentPublish.ts",
+    "./handlers/llmVisibilityCheck": "./src/handlers/llmVisibilityCheck.ts",
+    "./handlers/geoReauditSweep": "./src/handlers/geoReauditSweep.ts",
+    "./handlers/keywordOpportunitySweep": "./src/handlers/keywordOpportunitySweep.ts"
   },
   "dependencies": {
-    "pg-boss": "^10.4.2"
+    "@workspace/connectors": "workspace:*",
+    "@workspace/content-engine": "workspace:*",
+    "@workspace/db": "workspace:*",
+    "@workspace/security": "workspace:*",
+    "@workspace/seo-tools": "workspace:*",
+    "@workspace/serp-provider": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "marked": "^18.0.3",
+    "pg-boss": "^10.4.2",
+    "pino": "^9"
   },
   "devDependencies": {
-    "@types/node": "catalog:"
+    "@types/node": "catalog:",
+    "pino-pretty": "^13"
   }
 }
