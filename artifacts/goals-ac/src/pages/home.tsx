@@ -54,6 +54,13 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/context/auth";
+import {
+  type CmsSummary,
+  getCmsDestinations,
+  getPublishCapabilityLabel,
+  isDestinationConnectedInSummary,
+  PUBLISHING_DESTINATIONS,
+} from "@/lib/publishing-destinations";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -94,10 +101,7 @@ export default function Home() {
   );
   const [generationError, setGenerationError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const [cmsSummary, setCmsSummary] = useState<{
-    notion: boolean;
-    webflow: boolean;
-  } | null>(null);
+  const [cmsSummary, setCmsSummary] = useState<CmsSummary | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -105,9 +109,14 @@ export default function Home() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((r) => r.json())
-      .then((d: { notion: boolean; webflow: boolean }) => setCmsSummary(d))
+      .then((d: CmsSummary) => setCmsSummary(d))
       .catch(() => {});
   }, [token]);
+
+  const cmsDestinations = getCmsDestinations();
+  const publishDestinations = PUBLISHING_DESTINATIONS.filter(
+    (d) => d.category === "cms" || (d.category === "social" && !d.hideSettingsCard),
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -231,7 +240,7 @@ export default function Home() {
               transition={{ duration: 0.5, delay: 0.08, ease: "easeOut" }}
               className="text-5xl md:text-7xl font-bold tracking-[-0.04em] mb-6 leading-[0.98] max-w-4xl"
             >
-              Know what to publish next—and why.
+              Know what to publish next and why.
             </motion.h1>
 
             <motion.p
@@ -605,51 +614,40 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-                  Send approved content to your CMS without rebuilding headings,
-                  metadata, links, and schema by hand.
+                  Connect your CMS or social accounts once. Keep one review
+                  process across every destination.
                 </p>
                 <div className="mt-auto glass-inner p-3">
                   <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">
                     {cmsSummary ? "Connected Platforms" : "Supported Platforms"}
                   </div>
-                  <div className="space-y-2">
-                    {[
-                      {
-                        name: "WordPress",
-                        color: "bg-blue-400",
-                        connected: cmsSummary ? true : false,
-                      },
-                      {
-                        name: "Notion",
-                        color: "bg-zinc-400",
-                        connected: cmsSummary ? cmsSummary.notion : false,
-                      },
-                      {
-                        name: "Webflow",
-                        color: "bg-purple-400",
-                        connected: cmsSummary ? cmsSummary.webflow : false,
-                      },
-                    ].map((cms) => (
-                      <div key={cms.name} className="flex items-center gap-2">
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full ${cms.color} flex-shrink-0`}
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          {cms.name}
-                        </span>
-                        {cmsSummary ? (
-                          <span
-                            className={`ml-auto text-xs font-medium ${cms.connected ? "text-emerald-400" : "text-zinc-500"}`}
-                          >
-                            {cms.connected ? "Connected" : "Not connected"}
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {publishDestinations.map((destination) => {
+                      const connected = cmsSummary
+                        ? isDestinationConnectedInSummary(destination, cmsSummary)
+                        : false;
+                      return (
+                        <div key={destination.id} className="flex items-center gap-2">
+                          <div
+                            className={`w-1.5 h-1.5 rounded-full ${destination.listColorClassName ?? "bg-muted"} shrink-0`}
+                          />
+                          <span className="text-xs text-muted-foreground">
+                            {destination.label}
                           </span>
-                        ) : (
-                          <span className="ml-auto text-xs text-zinc-500 font-medium">
-                            Available
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                          {cmsSummary ? (
+                            <span
+                              className={`ml-auto text-xs font-medium ${connected ? "text-emerald-400" : "text-zinc-500"}`}
+                            >
+                              {connected ? "Connected" : "Not connected"}
+                            </span>
+                          ) : (
+                            <span className="ml-auto text-xs text-zinc-500 font-medium">
+                              Available
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -665,27 +663,23 @@ export default function Home() {
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mb-5 leading-relaxed">
-                  Connect WordPress, Notion, Webflow, and other supported
-                  platforms. Keep one review process across every destination.
+                  Publish to WordPress, Shopify, Notion, Ghost, and more — via
+                  native APIs or goals.ac plugins where supported.
                 </p>
                 <div className="mt-auto glass-inner p-3">
                   <div className="text-xs text-zinc-500 mb-2.5 font-semibold tracking-wide uppercase">
                     One-click publish to
                   </div>
-                  <div className="space-y-2">
-                    {[
-                      { label: "Notion Databases", pct: 100 },
-                      { label: "Webflow CMS", pct: 100 },
-                      { label: "WordPress REST", pct: 100 },
-                    ].map((row) => (
-                      <div key={row.label} className="flex items-center gap-2">
-                        <span className="text-xs text-zinc-500 w-28">
-                          {row.label}
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {cmsDestinations.map((destination) => (
+                      <div key={destination.id} className="flex items-center gap-2">
+                        <span className="text-xs text-zinc-500 w-36 shrink-0 leading-snug">
+                          {getPublishCapabilityLabel(destination)}
                         </span>
                         <div className="flex-1 h-1.5 rounded bg-white/10">
                           <div
                             className="h-full rounded bg-gradient-to-r from-amber-500/60 to-amber-400/60"
-                            style={{ width: `${row.pct}%` }}
+                            style={{ width: "100%" }}
                           />
                         </div>
                       </div>

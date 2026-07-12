@@ -54,20 +54,22 @@ import {
   Layers,
   RefreshCw,
   CheckCircle2,
-  Link2,
-  Unlink,
   Send,
   Palette,
   Plus,
   Trash2,
-  Linkedin,
-  Twitter,
-  Instagram,
-  Facebook,
   Zap,
   Sparkles,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import {
+  PublishingSettingsPanel,
+  type CmsIntegrationStatus,
+} from "@/components/publishing-settings-panel";
+import {
+  countPublishingConnections,
+  hasAnyPublishingConnection,
+} from "@/lib/publishing-destinations";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -129,42 +131,6 @@ interface BrandProfile {
   doWords?: string[];
   dontWords?: string[];
   updatedAt?: string;
-}
-
-interface CmsIntegrationStatus {
-  notion?: {
-    connected: boolean;
-    databaseId: string;
-    integrationTokenHint: string;
-  };
-  webflow?: {
-    connected: boolean;
-    collectionId: string;
-    bodyFieldSlug: string;
-    apiTokenHint: string;
-  };
-  wordpress?: {
-    connected: boolean;
-    siteUrl: string;
-    usernameHint: string;
-  };
-  linkedin?: {
-    connected: boolean;
-    displayName?: string;
-    authorUrn?: string;
-  };
-  twitter?: {
-    connected: boolean;
-    screenName?: string;
-    userId?: string;
-  };
-  meta?: {
-    connected: boolean;
-    pageId: string;
-    pageName?: string;
-    instagramAccountId?: string;
-    instagramUsername?: string;
-  };
 }
 
 interface WebsiteProject {
@@ -387,12 +353,12 @@ const TONE_PRESETS = [
 ] as const;
 
 const READING_LEVELS = [
-  { value: "general", label: "General — accessible to everyone" },
+  { value: "general", label: "General (accessible to everyone)" },
   {
     value: "intermediate",
-    label: "Intermediate — assumes some domain knowledge",
+    label: "Intermediate (assumes some domain knowledge)",
   },
-  { value: "expert", label: "Expert — deep technical audience" },
+  { value: "expert", label: "Expert (deep technical audience)" },
 ] as const;
 
 const LANGUAGES = [
@@ -481,21 +447,6 @@ export default function ProjectDetail() {
   const [cmsIntegrations, setCmsIntegrations] = useState<CmsIntegrationStatus>(
     {},
   );
-  const [notionToken, setNotionToken] = useState("");
-  const [notionDbId, setNotionDbId] = useState("");
-  const [webflowToken, setWebflowToken] = useState("");
-  const [webflowCollId, setWebflowCollId] = useState("");
-  const [webflowBodyField, setWebflowBodyField] = useState("post-body");
-  const [wpSiteUrl, setWpSiteUrl] = useState("");
-  const [wpUsername, setWpUsername] = useState("");
-  const [wpAppPassword, setWpAppPassword] = useState("");
-  const [isSavingNotion, setIsSavingNotion] = useState(false);
-  const [isSavingWebflow, setIsSavingWebflow] = useState(false);
-  const [isSavingWordpress, setIsSavingWordpress] = useState(false);
-  const [isDisconnectingNotion, setIsDisconnectingNotion] = useState(false);
-  const [isDisconnectingWebflow, setIsDisconnectingWebflow] = useState(false);
-  const [isDisconnectingWordpress, setIsDisconnectingWordpress] =
-    useState(false);
   const [autopilotSettings, setAutopilotSettings] = useState<AutopilotSettings>(DEFAULT_AUTOPILOT);
   const [isSavingAutopilot, setIsSavingAutopilot] = useState(false);
   const [autopilotSaveSuccess, setAutopilotSaveSuccess] = useState(false);
@@ -745,14 +696,7 @@ export default function ProjectDetail() {
 
   useEffect(() => {
     if (activeTab !== "publishing" || !token || !id) return;
-    const hasCms =
-      cmsIntegrations.notion ||
-      cmsIntegrations.webflow ||
-      cmsIntegrations.wordpress ||
-      cmsIntegrations.linkedin ||
-      cmsIntegrations.twitter ||
-      cmsIntegrations.meta;
-    if (!hasCms || isTestingHealth) return;
+    if (!hasAnyPublishingConnection(cmsIntegrations) || isTestingHealth) return;
     setIsTestingHealth(true);
     fetch(`${API_BASE}/api/website-projects/${id}/cms-integrations/test`, {
       method: "POST",
@@ -765,17 +709,7 @@ export default function ProjectDetail() {
       })
       .catch(() => {})
       .finally(() => setIsTestingHealth(false));
-  }, [
-    activeTab,
-    token,
-    id,
-    cmsIntegrations.notion,
-    cmsIntegrations.webflow,
-    cmsIntegrations.wordpress,
-    cmsIntegrations.linkedin,
-    cmsIntegrations.twitter,
-    cmsIntegrations.meta,
-  ]);
+  }, [activeTab, token, id, cmsIntegrations]);
 
   useEffect(() => {
     if (!token || !id) return;
@@ -1093,224 +1027,6 @@ export default function ProjectDetail() {
     }
   };
 
-  const onSaveNotion = async () => {
-    if (!token || !id || !notionToken.trim() || !notionDbId.trim()) return;
-    setIsSavingNotion(true);
-    setCmsError(null);
-    setCmsSaveSuccess(null);
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/website-projects/${id}/cms-integrations`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            notion: {
-              integrationToken: notionToken.trim(),
-              databaseId: notionDbId.trim(),
-            },
-          }),
-        },
-      );
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Failed to save");
-      }
-      const updated = (await res.json()) as CmsIntegrationStatus;
-      setCmsIntegrations(updated);
-      setNotionToken("");
-      setNotionDbId("");
-      setCmsSaveSuccess("Notion connected successfully");
-      setTimeout(() => setCmsSaveSuccess(null), 3000);
-    } catch (err) {
-      setCmsError(
-        err instanceof Error ? err.message : "Failed to connect Notion",
-      );
-    } finally {
-      setIsSavingNotion(false);
-    }
-  };
-
-  const onDisconnectNotion = async () => {
-    if (!token || !id) return;
-    setIsDisconnectingNotion(true);
-    setCmsError(null);
-    try {
-      await fetch(
-        `${API_BASE}/api/website-projects/${id}/cms-integrations/notion`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      setCmsIntegrations((prev) => {
-        const n = { ...prev };
-        delete n.notion;
-        return n;
-      });
-    } catch {
-      setCmsError("Failed to disconnect Notion");
-    } finally {
-      setIsDisconnectingNotion(false);
-    }
-  };
-
-  const onSaveWebflow = async () => {
-    if (!token || !id || !webflowToken.trim() || !webflowCollId.trim()) return;
-    setIsSavingWebflow(true);
-    setCmsError(null);
-    setCmsSaveSuccess(null);
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/website-projects/${id}/cms-integrations`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            webflow: {
-              apiToken: webflowToken.trim(),
-              collectionId: webflowCollId.trim(),
-              bodyFieldSlug: webflowBodyField.trim() || "post-body",
-            },
-          }),
-        },
-      );
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Failed to save");
-      }
-      const updated = (await res.json()) as CmsIntegrationStatus;
-      setCmsIntegrations(updated);
-      setWebflowToken("");
-      setWebflowCollId("");
-      setWebflowBodyField("post-body");
-      setCmsSaveSuccess("Webflow connected successfully");
-      setTimeout(() => setCmsSaveSuccess(null), 3000);
-    } catch (err) {
-      setCmsError(
-        err instanceof Error ? err.message : "Failed to connect Webflow",
-      );
-    } finally {
-      setIsSavingWebflow(false);
-    }
-  };
-
-  const onDisconnectWebflow = async () => {
-    if (!token || !id) return;
-    setIsDisconnectingWebflow(true);
-    setCmsError(null);
-    try {
-      await fetch(
-        `${API_BASE}/api/website-projects/${id}/cms-integrations/webflow`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      setCmsIntegrations((prev) => {
-        const n = { ...prev };
-        delete n.webflow;
-        return n;
-      });
-      setHealthStatus((prev) => {
-        if (!prev) return prev;
-        const n = { ...prev };
-        delete n.webflow;
-        return n;
-      });
-    } catch {
-      setCmsError("Failed to disconnect Webflow");
-    } finally {
-      setIsDisconnectingWebflow(false);
-    }
-  };
-
-  const onSaveWordpress = async () => {
-    if (
-      !token ||
-      !id ||
-      !wpSiteUrl.trim() ||
-      !wpUsername.trim() ||
-      !wpAppPassword.trim()
-    )
-      return;
-    setIsSavingWordpress(true);
-    setCmsError(null);
-    setCmsSaveSuccess(null);
-    try {
-      const res = await fetch(
-        `${API_BASE}/api/website-projects/${id}/cms-integrations`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            wordpress: {
-              siteUrl: wpSiteUrl.trim(),
-              username: wpUsername.trim(),
-              appPassword: wpAppPassword.trim(),
-            },
-          }),
-        },
-      );
-      if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        throw new Error(data.error ?? "Failed to save");
-      }
-      const updated = (await res.json()) as CmsIntegrationStatus;
-      setCmsIntegrations(updated);
-      setWpSiteUrl("");
-      setWpUsername("");
-      setWpAppPassword("");
-      setCmsSaveSuccess("WordPress connected successfully");
-      setTimeout(() => setCmsSaveSuccess(null), 3000);
-    } catch (err) {
-      setCmsError(
-        err instanceof Error ? err.message : "Failed to connect WordPress",
-      );
-    } finally {
-      setIsSavingWordpress(false);
-    }
-  };
-
-  const onDisconnectWordpress = async () => {
-    if (!token || !id) return;
-    setIsDisconnectingWordpress(true);
-    setCmsError(null);
-    try {
-      await fetch(
-        `${API_BASE}/api/website-projects/${id}/cms-integrations/wordpress`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      setCmsIntegrations((prev) => {
-        const n = { ...prev };
-        delete n.wordpress;
-        return n;
-      });
-      setHealthStatus((prev) => {
-        if (!prev) return prev;
-        const n = { ...prev };
-        delete n.wordpress;
-        return n;
-      });
-    } catch {
-      setCmsError("Failed to disconnect WordPress");
-    } finally {
-      setIsDisconnectingWordpress(false);
-    }
-  };
-
   const onTestHealth = async () => {
     if (!token || !id) return;
     setIsTestingHealth(true);
@@ -1335,19 +1051,9 @@ export default function ProjectDetail() {
     }
   };
 
-  const onConnectLinkedin = () => {
+  const onConnectOAuth = (path: string) => {
     if (!id) return;
-    window.location.href = `${API_BASE}/api/auth/linkedin?projectId=${id}`;
-  };
-
-  const onConnectTwitter = () => {
-    if (!id) return;
-    window.location.href = `${API_BASE}/api/auth/twitter?projectId=${id}`;
-  };
-
-  const onConnectMeta = () => {
-    if (!id) return;
-    window.location.href = `${API_BASE}/api/auth/meta?projectId=${id}`;
+    window.location.href = `${API_BASE}/api/auth/${path}?projectId=${id}`;
   };
 
   const onSelectMetaPage = async (pageId: string) => {
@@ -1454,7 +1160,7 @@ export default function ProjectDetail() {
   return (
     <AppLayout>
       <SEO
-        title={`${project.name} — goals.ac`}
+        title={`${project.name} | goals.ac`}
         description={`SEO project for ${project.url}`}
       />
       <div className="container mx-auto px-4 md:px-8 max-w-5xl py-12">
@@ -1501,7 +1207,7 @@ export default function ProjectDetail() {
             </Button>
           </Link>
           <p className="text-xs text-muted-foreground mt-2">
-            Generate blog posts, guides, whitepapers, and more — powered by AI.
+            Generate blog posts, guides, whitepapers, and more from your brand profile.
           </p>
         </div>
 
@@ -1543,22 +1249,12 @@ export default function ProjectDetail() {
             <TabsTrigger value="publishing" asChild>
               <Link to={`/projects/${id}/publishing`}>
                 Publishing
-                {(cmsIntegrations.notion ||
-                  cmsIntegrations.webflow ||
-                  cmsIntegrations.wordpress ||
-                  cmsIntegrations.linkedin ||
-                  cmsIntegrations.twitter ||
-                  cmsIntegrations.meta) && (
+                {hasAnyPublishingConnection(cmsIntegrations) && (
                   <Badge
                     variant="secondary"
                     className="ml-2 text-xs bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
                   >
-                    {(cmsIntegrations.notion ? 1 : 0) +
-                      (cmsIntegrations.webflow ? 1 : 0) +
-                      (cmsIntegrations.wordpress ? 1 : 0) +
-                      (cmsIntegrations.linkedin ? 1 : 0) +
-                      (cmsIntegrations.twitter ? 1 : 0) +
-                      (cmsIntegrations.meta ? 1 : 0)}
+                    {countPublishingConnections(cmsIntegrations)}
                   </Badge>
                 )}
               </Link>
@@ -2467,8 +2163,8 @@ export default function ProjectDetail() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="daily">Daily — one article per day</SelectItem>
-                          <SelectItem value="weekly">Weekly — one article per week</SelectItem>
+                          <SelectItem value="daily">Daily (one article per day)</SelectItem>
+                          <SelectItem value="weekly">Weekly (one article per week)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -2484,7 +2180,7 @@ export default function ProjectDetail() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="manual">Manual review — generate only</SelectItem>
+                          <SelectItem value="manual">Manual review (generate only)</SelectItem>
                           <SelectItem value="draft">Auto-publish as draft</SelectItem>
                           <SelectItem value="live">Auto-publish live</SelectItem>
                         </SelectContent>
@@ -2538,7 +2234,7 @@ export default function ProjectDetail() {
                     <div>
                       <p className="text-sm font-medium">Auto-queue keyword opportunities</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        High-score gaps from keyword intelligence → next content strategy slot
+                        High-score keyword gaps added to your content strategy calendar
                       </p>
                     </div>
                     <Switch
@@ -2564,10 +2260,10 @@ export default function ProjectDetail() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="50">50 — moderate opportunities</SelectItem>
-                          <SelectItem value="60">60 — recommended</SelectItem>
-                          <SelectItem value="70">70 — high confidence only</SelectItem>
-                          <SelectItem value="80">80 — very selective</SelectItem>
+                          <SelectItem value="50">50 (moderate opportunities)</SelectItem>
+                          <SelectItem value="60">60 (recommended)</SelectItem>
+                          <SelectItem value="70">70 (high confidence only)</SelectItem>
+                          <SelectItem value="80">80 (very selective)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -2597,7 +2293,7 @@ export default function ProjectDetail() {
                     AI Visibility & GEO
                   </CardTitle>
                   <CardDescription>
-                    Weekly LLM citation tracking and GEO re-audits —{" "}
+                    Weekly LLM citation tracking and GEO re-audits.{" "}
                     <Link to="/ai-visibility" className="text-blue-600 dark:text-blue-400 hover:underline">
                       view full dashboard
                     </Link>
@@ -2647,647 +2343,40 @@ export default function ProjectDetail() {
                 </CardContent>
               </Card>
 
-              {cmsError && (
-                <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-4 py-3">
-                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                  <span>{cmsError}</span>
-                </div>
-              )}
-              {cmsSaveSuccess && (
-                <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 rounded-md px-4 py-3 border border-emerald-200 dark:border-emerald-500/20">
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
-                  <span>{cmsSaveSuccess}</span>
-                </div>
-              )}
-              {(cmsIntegrations.notion ||
-                cmsIntegrations.webflow ||
-                cmsIntegrations.wordpress ||
-                cmsIntegrations.linkedin ||
-                cmsIntegrations.twitter ||
-                cmsIntegrations.meta) && (
-                <div className="flex items-center justify-end">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={onTestHealth}
-                    disabled={isTestingHealth}
-                  >
-                    {isTestingHealth ? (
-                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                    ) : (
-                      <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
-                    )}
-                    Test connections
-                  </Button>
-                </div>
-              )}
-
-              {/* Notion */}
-              <Card className="border shadow-sm">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <span className="w-5 h-5 rounded bg-zinc-900 dark:bg-zinc-100 flex items-center justify-center text-[10px] font-bold text-white dark:text-zinc-900">
-                          N
-                        </span>
-                        Notion
-                        {cmsIntegrations.notion && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Connected
-                          </span>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        Publish content directly to a Notion database as a new
-                        page.
-                      </CardDescription>
-                    </div>
-                    {cmsIntegrations.notion && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onDisconnectNotion}
-                        disabled={isDisconnectingNotion}
-                        className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
-                      >
-                        {isDisconnectingNotion ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Unlink className="w-3.5 h-3.5 mr-1.5" />
-                        )}
-                        Disconnect
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {cmsIntegrations.notion ? (
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">
-                          Database ID:
-                        </span>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                          {cmsIntegrations.notion.databaseId}
-                        </code>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">
-                          Token:
-                        </span>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                          {cmsIntegrations.notion.integrationTokenHint}
-                        </code>
-                      </div>
-                      {healthStatus?.notion && (
-                        <div
-                          className={`flex items-center gap-1.5 text-xs font-medium mt-1 ${healthStatus.notion.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
-                        >
-                          {healthStatus.notion.ok ? (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          ) : (
-                            <AlertCircle className="w-3.5 h-3.5" />
-                          )}
-                          {healthStatus.notion.ok
-                            ? "Connection healthy"
-                            : healthStatus.notion.error}
-                        </div>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-2">
-                        To update credentials, disconnect first then re-connect.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">
-                          Integration Token
-                        </label>
-                        <Input
-                          type="password"
-                          placeholder="secret_..."
-                          value={notionToken}
-                          onChange={(e) => setNotionToken(e.target.value)}
-                          disabled={isSavingNotion}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Create an integration at{" "}
-                          <a
-                            href="https://www.notion.so/my-integrations"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 dark:text-blue-400 hover:underline"
-                          >
-                            notion.so/my-integrations
-                          </a>{" "}
-                          and share your database with it.
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">
-                          Database ID
-                        </label>
-                        <Input
-                          placeholder="32-character hex ID from your database URL"
-                          value={notionDbId}
-                          onChange={(e) => setNotionDbId(e.target.value)}
-                          disabled={isSavingNotion}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Found in your database URL: notion.so/your-workspace/
-                          <strong>{"<database-id>"}</strong>?v=...
-                        </p>
-                      </div>
-                      <Button
-                        onClick={onSaveNotion}
-                        disabled={
-                          !notionToken.trim() ||
-                          !notionDbId.trim() ||
-                          isSavingNotion
-                        }
-                        size="sm"
-                      >
-                        {isSavingNotion ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                            Connecting…
-                          </>
-                        ) : (
-                          <>
-                            <Link2 className="w-3.5 h-3.5 mr-1.5" />
-                            Connect Notion
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Webflow */}
-              <Card className="border shadow-sm">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <span className="w-5 h-5 rounded bg-blue-600 flex items-center justify-center text-[10px] font-bold text-white">
-                          W
-                        </span>
-                        Webflow
-                        {cmsIntegrations.webflow && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Connected
-                          </span>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        Publish content as a draft CMS item in your Webflow
-                        collection.
-                      </CardDescription>
-                    </div>
-                    {cmsIntegrations.webflow && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onDisconnectWebflow}
-                        disabled={isDisconnectingWebflow}
-                        className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
-                      >
-                        {isDisconnectingWebflow ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Unlink className="w-3.5 h-3.5 mr-1.5" />
-                        )}
-                        Disconnect
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {cmsIntegrations.webflow ? (
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">
-                          Collection ID:
-                        </span>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                          {cmsIntegrations.webflow.collectionId}
-                        </code>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">
-                          Body field:
-                        </span>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                          {cmsIntegrations.webflow.bodyFieldSlug}
-                        </code>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">
-                          Token:
-                        </span>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                          {cmsIntegrations.webflow.apiTokenHint}
-                        </code>
-                      </div>
-                      {healthStatus?.webflow && (
-                        <div
-                          className={`flex items-center gap-1.5 text-xs font-medium mt-1 ${healthStatus.webflow.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
-                        >
-                          {healthStatus.webflow.ok ? (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          ) : (
-                            <AlertCircle className="w-3.5 h-3.5" />
-                          )}
-                          {healthStatus.webflow.ok
-                            ? "Connection healthy"
-                            : healthStatus.webflow.error}
-                        </div>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-2">
-                        To update credentials, disconnect first then re-connect.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">API Token</label>
-                        <Input
-                          type="password"
-                          placeholder="Webflow site API token"
-                          value={webflowToken}
-                          onChange={(e) => setWebflowToken(e.target.value)}
-                          disabled={isSavingWebflow}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Found in Webflow:{" "}
-                          <strong>
-                            Site Settings → Integrations → API access
-                          </strong>
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">
-                          Collection ID
-                        </label>
-                        <Input
-                          placeholder="64-character collection ID"
-                          value={webflowCollId}
-                          onChange={(e) => setWebflowCollId(e.target.value)}
-                          disabled={isSavingWebflow}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Found in your Webflow CMS collection URL.
-                        </p>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">
-                          Body field slug
-                        </label>
-                        <Input
-                          placeholder="post-body"
-                          value={webflowBodyField}
-                          onChange={(e) => setWebflowBodyField(e.target.value)}
-                          disabled={isSavingWebflow}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          The slug of the Rich Text field in your collection
-                          that holds content (default: <code>post-body</code>).
-                        </p>
-                      </div>
-                      <Button
-                        onClick={onSaveWebflow}
-                        disabled={
-                          !webflowToken.trim() ||
-                          !webflowCollId.trim() ||
-                          isSavingWebflow
-                        }
-                        size="sm"
-                      >
-                        {isSavingWebflow ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                            Connecting…
-                          </>
-                        ) : (
-                          <>
-                            <Link2 className="w-3.5 h-3.5 mr-1.5" />
-                            Connect Webflow
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* WordPress */}
-              <Card className="border shadow-sm">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <span className="w-5 h-5 rounded bg-blue-500 flex items-center justify-center text-[10px] font-bold text-white">
-                          W
-                        </span>
-                        WordPress
-                        {cmsIntegrations.wordpress && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Connected
-                          </span>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        Publish content directly to any WordPress site using
-                        Application Passwords.
-                      </CardDescription>
-                    </div>
-                    {cmsIntegrations.wordpress && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={onDisconnectWordpress}
-                        disabled={isDisconnectingWordpress}
-                        className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
-                      >
-                        {isDisconnectingWordpress ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Unlink className="w-3.5 h-3.5 mr-1.5" />
-                        )}
-                        Disconnect
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {cmsIntegrations.wordpress ? (
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">
-                          Site URL:
-                        </span>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                          {cmsIntegrations.wordpress.siteUrl}
-                        </code>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground">
-                          Username:
-                        </span>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                          {cmsIntegrations.wordpress.usernameHint}
-                        </code>
-                      </div>
-                      {healthStatus?.wordpress && (
-                        <div
-                          className={`flex items-center gap-1.5 text-xs font-medium mt-1 ${healthStatus.wordpress.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
-                        >
-                          {healthStatus.wordpress.ok ? (
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                          ) : (
-                            <AlertCircle className="w-3.5 h-3.5" />
-                          )}
-                          {healthStatus.wordpress.ok
-                            ? "Connection healthy"
-                            : healthStatus.wordpress.error}
-                        </div>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-2">
-                        To update credentials, disconnect first then re-connect.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">
-                          WordPress Site URL
-                        </label>
-                        <Input
-                          placeholder="https://yoursite.com"
-                          value={wpSiteUrl}
-                          onChange={(e) => setWpSiteUrl(e.target.value)}
-                          disabled={isSavingWordpress}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">
-                          WordPress Username
-                        </label>
-                        <Input
-                          placeholder="admin"
-                          value={wpUsername}
-                          onChange={(e) => setWpUsername(e.target.value)}
-                          disabled={isSavingWordpress}
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-sm font-medium">
-                          Application Password
-                        </label>
-                        <Input
-                          type="password"
-                          placeholder="xxxx xxxx xxxx xxxx xxxx xxxx"
-                          value={wpAppPassword}
-                          onChange={(e) => setWpAppPassword(e.target.value)}
-                          disabled={isSavingWordpress}
-                        />
-                        <p className="text-xs text-muted-foreground">
-                          Generate an Application Password in WordPress under{" "}
-                          <strong>Users → Profile → Application Passwords</strong>.
-                        </p>
-                      </div>
-                      <Button
-                        onClick={onSaveWordpress}
-                        disabled={
-                          !wpSiteUrl.trim() ||
-                          !wpUsername.trim() ||
-                          !wpAppPassword.trim() ||
-                          isSavingWordpress
-                        }
-                        size="sm"
-                      >
-                        {isSavingWordpress ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                            Connecting…
-                          </>
-                        ) : (
-                          <>
-                            <Link2 className="w-3.5 h-3.5 mr-1.5" />
-                            Connect WordPress
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* LinkedIn */}
-              <Card className="border shadow-sm">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Linkedin className="w-4 h-4 text-blue-600" />
-                        LinkedIn
-                        {cmsIntegrations.linkedin && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Connected
-                          </span>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        Publish LinkedIn posts directly from Content Studio.
-                      </CardDescription>
-                    </div>
-                    {cmsIntegrations.linkedin && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onDisconnectSocial("linkedin")}
-                        disabled={isDisconnectingLinkedin}
-                        className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
-                      >
-                        {isDisconnectingLinkedin ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5 mr-1.5" />}
-                        Disconnect
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {cmsIntegrations.linkedin ? (
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <p><span className="font-medium text-foreground">Account:</span> {cmsIntegrations.linkedin.displayName ?? "Connected"}</p>
-                      {healthStatus?.linkedin && (
-                        <div className={`flex items-center gap-1.5 text-xs font-medium ${healthStatus.linkedin.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
-                          {healthStatus.linkedin.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-                          {healthStatus.linkedin.ok ? "Connection healthy" : healthStatus.linkedin.error}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <Button size="sm" onClick={onConnectLinkedin}>
-                      <Link2 className="w-3.5 h-3.5 mr-1.5" />
-                      Connect LinkedIn
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* X / Twitter */}
-              <Card className="border shadow-sm">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Twitter className="w-4 h-4 text-sky-500" />
-                        X (Twitter)
-                        {cmsIntegrations.twitter && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Connected
-                          </span>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        Publish threads directly to X.
-                      </CardDescription>
-                    </div>
-                    {cmsIntegrations.twitter && (
-                      <Button variant="outline" size="sm" onClick={() => onDisconnectSocial("twitter")} disabled={isDisconnectingTwitter} className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5">
-                        {isDisconnectingTwitter ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5 mr-1.5" />}
-                        Disconnect
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {cmsIntegrations.twitter ? (
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <p><span className="font-medium text-foreground">Account:</span> @{cmsIntegrations.twitter.screenName ?? "connected"}</p>
-                      {healthStatus?.twitter && (
-                        <div className={`flex items-center gap-1.5 text-xs font-medium ${healthStatus.twitter.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
-                          {healthStatus.twitter.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-                          {healthStatus.twitter.ok ? "Connection healthy" : healthStatus.twitter.error}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <Button size="sm" onClick={onConnectTwitter}>
-                      <Link2 className="w-3.5 h-3.5 mr-1.5" />
-                      Connect X
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Meta (Facebook + Instagram) */}
-              <Card className="border shadow-sm">
-                <CardHeader>
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-base">
-                        <Facebook className="w-4 h-4 text-blue-700" />
-                        <Instagram className="w-4 h-4 text-fuchsia-600" />
-                        Facebook & Instagram
-                        {cmsIntegrations.meta && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-                            <CheckCircle2 className="w-3.5 h-3.5" />
-                            Connected
-                          </span>
-                        )}
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        Requires a Facebook Page with a linked Instagram Business account.
-                      </CardDescription>
-                    </div>
-                    {cmsIntegrations.meta && (
-                      <Button variant="outline" size="sm" onClick={() => onDisconnectSocial("meta")} disabled={isDisconnectingMeta} className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5">
-                        {isDisconnectingMeta ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Unlink className="w-3.5 h-3.5 mr-1.5" />}
-                        Disconnect
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {metaPageToken && metaPages.length > 0 ? (
-                    <div className="space-y-3">
-                      <p className="text-sm text-muted-foreground">Select a Facebook Page to connect:</p>
-                      {metaPages.map((page) => (
-                        <Button key={page.pageId} variant="outline" size="sm" className="w-full justify-start" disabled={isSelectingMetaPage} onClick={() => onSelectMetaPage(page.pageId)}>
-                          <span className="font-medium">{page.pageName}</span>
-                          {page.instagramUsername && <span className="ml-2 text-xs text-muted-foreground">@{page.instagramUsername}</span>}
-                        </Button>
-                      ))}
-                    </div>
-                  ) : cmsIntegrations.meta ? (
-                    <div className="space-y-2 text-sm text-muted-foreground">
-                      <p><span className="font-medium text-foreground">Page:</span> {cmsIntegrations.meta.pageName ?? cmsIntegrations.meta.pageId}</p>
-                      {cmsIntegrations.meta.instagramUsername && (
-                        <p><span className="font-medium text-foreground">Instagram:</span> @{cmsIntegrations.meta.instagramUsername}</p>
-                      )}
-                      {healthStatus?.meta && (
-                        <div className={`flex items-center gap-1.5 text-xs font-medium ${healthStatus.meta.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
-                          {healthStatus.meta.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
-                          {healthStatus.meta.ok ? "Connection healthy" : healthStatus.meta.error}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <Button size="sm" onClick={onConnectMeta}>
-                      <Link2 className="w-3.5 h-3.5 mr-1.5" />
-                      Connect Meta
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
+              <PublishingSettingsPanel
+                apiBase={API_BASE}
+                projectId={id!}
+                token={token!}
+                cmsIntegrations={cmsIntegrations}
+                healthStatus={healthStatus}
+                cmsError={cmsError}
+                cmsSaveSuccess={cmsSaveSuccess}
+                isTestingHealth={isTestingHealth}
+                metaPageToken={metaPageToken}
+                metaPages={metaPages}
+                isSelectingMetaPage={isSelectingMetaPage}
+                isDisconnectingLinkedin={isDisconnectingLinkedin}
+                isDisconnectingTwitter={isDisconnectingTwitter}
+                isDisconnectingMeta={isDisconnectingMeta}
+                onIntegrationsChange={setCmsIntegrations}
+                onHealthKeyRemove={(key) =>
+                  setHealthStatus((prev) => {
+                    if (!prev) return prev;
+                    const next = { ...prev };
+                    delete next[key];
+                    return next;
+                  })
+                }
+                onError={setCmsError}
+                onSaveSuccess={(message) => {
+                  setCmsSaveSuccess(message);
+                  setTimeout(() => setCmsSaveSuccess(null), 3000);
+                }}
+                onTestHealth={onTestHealth}
+                onConnectOAuth={onConnectOAuth}
+                onDisconnectSocial={onDisconnectSocial}
+                onSelectMetaPage={onSelectMetaPage}
+              />
             </div>
           </TabsContent>
 
