@@ -24,7 +24,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@workspace/db", "@workspace/integrations-gemini-ai", "@workspace/security", "@workspace/ai-providers", "@workspace/connectors"],
+  output: "standalone",
+  transpilePackages: ["@workspace/db", "@workspace/integrations-gemini-ai", "@workspace/security", "@workspace/ai-providers", "@workspace/connectors", "@workspace/content-engine", "@workspace/jobs", "@workspace/seo-tools", "@workspace/serp-provider"],
   async headers() {
     return [
       {
