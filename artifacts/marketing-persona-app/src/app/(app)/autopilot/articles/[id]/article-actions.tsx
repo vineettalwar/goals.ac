@@ -127,7 +127,7 @@ export function ArticleActions({ articleId, status, hasWordPress, publishedUrl, 
                     key={c.id}
                     onSelect={() => handlePublishConnection(c)}
                     className={cn(
-                      "flex cursor-pointer items-center justify-between rounded-md px-2.5 py-2 text-sm outline-none",
+                      "flex cursor-pointer items-center justify-between rounded-md px-2.5 py-2 text-sm outline-hidden",
                       "hover:bg-secondary focus:bg-secondary"
                     )}
                   >

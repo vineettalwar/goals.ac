@@ -111,7 +111,7 @@ export default function TopicalMapPage() {
         <div className="flex items-center gap-3">
           {companies.length > 1 && (
             <select
-              className="h-10 rounded-lg border border-[--border] bg-white px-3 text-sm"
+              className="h-10 rounded-lg border border-(--border) bg-white px-3 text-sm"
               value={selectedCompanyId ?? ""}
               onChange={(e) => setSelectedCompanyId(Number(e.target.value))}
             >
@@ -207,8 +207,8 @@ export default function TopicalMapPage() {
                 </button>
 
                 {expandedCluster === ci && (
-                  <div className="border-t border-[--border]">
-                    <div className="grid grid-cols-1 divide-y divide-[--border]">
+                  <div className="border-t border-(--border)">
+                    <div className="grid grid-cols-1 divide-y divide-(--border)">
                       {cluster.supportingTopics.map((topic, ti) => (
                         <div key={ti} className="px-5 py-3 flex items-center gap-3">
                           {topic.covered

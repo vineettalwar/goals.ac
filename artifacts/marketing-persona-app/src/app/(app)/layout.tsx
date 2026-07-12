@@ -4,8 +4,9 @@ import { db } from "@workspace/db";
 import { companiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { SidebarNav } from "@/components/sidebar-nav";
+import { ActiveProjectProvider } from "@/context/active-project";
 
-export default async function AppLayout({ children, params }: { children: React.ReactNode; params?: unknown }) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   if (!session) redirect("/login");
 
@@ -23,15 +24,17 @@ export default async function AppLayout({ children, params }: { children: React.
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-background">
-      <SidebarNav
-        userName={session.user.name ?? "User"}
-        userEmail={session.user.email ?? ""}
-      />
-      <main className="flex-1 overflow-y-auto">
-        {children}
-      </main>
-    </div>
+    <ActiveProjectProvider>
+      <div className="flex h-screen overflow-hidden bg-background">
+        <SidebarNav
+          userName={session.user.name ?? "User"}
+          userEmail={session.user.email ?? ""}
+        />
+        <main className="flex-1 overflow-y-auto">
+          {children}
+        </main>
+      </div>
+    </ActiveProjectProvider>
   );
 }
 

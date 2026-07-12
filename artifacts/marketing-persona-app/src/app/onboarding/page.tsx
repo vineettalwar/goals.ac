@@ -122,7 +122,7 @@ export default function OnboardingPage() {
               <Label htmlFor="industry">Industry</Label>
               <select
                 id="industry"
-                className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
                 {...register("industry")}
               >
                 <option value="">Select industry...</option>

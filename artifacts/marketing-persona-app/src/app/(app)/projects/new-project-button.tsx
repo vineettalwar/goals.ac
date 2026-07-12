@@ -37,7 +37,8 @@ export function NewProjectButton() {
     });
     setLoading(false);
     if (!res.ok) { toast.error("Failed to create project"); return; }
-    const { project } = await res.json();
+    const project = await res.json();
+    if (!project?.id) { toast.error("Failed to create project"); return; }
     setOpen(false);
     reset();
     toast.success("Project created — analyzing your website...");

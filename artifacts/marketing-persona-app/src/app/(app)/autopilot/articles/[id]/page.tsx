@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { db } from "@workspace/db";
-import { scheduledArticlesTable, companiesTable, wordpressConnectionsTable, marketingPersonasTable } from "@workspace/db/schema";
+import { scheduledArticlesTable, companiesTable, wordpressConnectionsTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -153,7 +153,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(article.bodyMarkdown) }}
               />
               {article.wordCount > 0 && (
-                <p className="mt-6 text-xs text-muted-foreground border-t border-[--border] pt-4">
+                <p className="mt-6 text-xs text-muted-foreground border-t border-(--border) pt-4">
                   {article.wordCount.toLocaleString()} words
                 </p>
               )}

@@ -3,8 +3,7 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable, brandProfilesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
-import { Plus, Globe, ExternalLink } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Globe, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { NewProjectButton } from "./new-project-button";
 

@@ -6,7 +6,7 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
     <div className="min-h-screen flex flex-col">
       <main className="flex-1">{children}</main>
 
-      <footer className="border-t border-[--border] bg-white">
+      <footer className="border-t border-(--border) bg-white">
         <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-2 sm:grid-cols-4 gap-8">
           <div className="col-span-2 sm:col-span-1">
             <p className="font-bold text-primary mb-2">goals.ac</p>

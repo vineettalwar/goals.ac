@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Zap, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -91,7 +90,7 @@ export default function ContentEnginePage() {
             <div className="space-y-1.5 sm:col-span-1">
               <Label>Roadmap</Label>
               <select
-                className="w-full h-10 rounded-lg border border-[--border] bg-white px-3 text-sm"
+                className="w-full h-10 rounded-lg border border-(--border) bg-white px-3 text-sm"
                 value={form.roadmapId}
                 onChange={(e) => setForm((p) => ({ ...p, roadmapId: e.target.value }))}
               >
@@ -104,7 +103,7 @@ export default function ContentEnginePage() {
             <div className="space-y-1.5">
               <Label>Month</Label>
               <select
-                className="w-full h-10 rounded-lg border border-[--border] bg-white px-3 text-sm"
+                className="w-full h-10 rounded-lg border border-(--border) bg-white px-3 text-sm"
                 value={form.month}
                 onChange={(e) => setForm((p) => ({ ...p, month: parseInt(e.target.value) }))}
               >
@@ -143,7 +142,7 @@ export default function ContentEnginePage() {
               : "Generate a 30-day content calendar from one of your roadmaps"}
           </p>
           {roadmaps.length === 0 ? (
-            <Link href="/roadmaps"><Button variant="outline">View roadmaps</Button></Link>
+            <Link href="/growth-roadmaps"><Button variant="outline">View roadmaps</Button></Link>
           ) : (
             <Button onClick={() => setShowForm(true)}><Plus className="h-4 w-4" /> Generate first strategy</Button>
           )}

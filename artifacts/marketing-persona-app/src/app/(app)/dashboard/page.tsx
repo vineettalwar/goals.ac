@@ -5,12 +5,14 @@ import {
   scheduledArticlesTable,
   marketingPersonasTable,
   websiteProjectsTable,
+  contentPiecesTable,
 } from "@workspace/db/schema";
 import { eq, and, count, desc } from "drizzle-orm";
 import Link from "next/link";
-import { Zap, FileText, Users, FolderOpen, ArrowRight, Plus } from "lucide-react";
+import { Zap, FileText, Users, FolderOpen, ArrowRight, Plus, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { loadProjectVisibilitySummary } from "@/lib/project-visibility-summary";
 
 const STATUS_BADGE: Record<string, React.ComponentProps<typeof Badge>["variant"]> = {
   ready: "success",
@@ -34,25 +36,76 @@ export default async function DashboardPage() {
 
   // Fetch autopilot stats
   let personaCount = 0;
+  let readyCount = 0;
+  let publishedCount = 0;
   let recentArticles: (typeof scheduledArticlesTable.$inferSelect)[] = [];
 
   if (company) {
-    const [{ value: pCount }] = await db
-      .select({ value: count() })
-      .from(marketingPersonasTable)
-      .where(eq(marketingPersonasTable.companyId, company.id));
-    personaCount = pCount;
+    const [personaResult, readyResult, publishedResult, articles] = await Promise.all([
+      db
+        .select({ value: count() })
+        .from(marketingPersonasTable)
+        .where(eq(marketingPersonasTable.companyId, company.id)),
+      db
+        .select({ value: count() })
+        .from(scheduledArticlesTable)
+        .where(
+          and(
+            eq(scheduledArticlesTable.companyId, company.id),
+            eq(scheduledArticlesTable.status, "ready"),
+          ),
+        ),
+      db
+        .select({ value: count() })
+        .from(scheduledArticlesTable)
+        .where(
+          and(
+            eq(scheduledArticlesTable.companyId, company.id),
+            eq(scheduledArticlesTable.status, "published"),
+          ),
+        ),
+      db
+        .select()
+        .from(scheduledArticlesTable)
+        .where(eq(scheduledArticlesTable.companyId, company.id))
+        .orderBy(desc(scheduledArticlesTable.createdAt))
+        .limit(5),
+    ]);
 
-    recentArticles = await db
-      .select()
-      .from(scheduledArticlesTable)
-      .where(eq(scheduledArticlesTable.companyId, company.id))
-      .orderBy(desc(scheduledArticlesTable.createdAt))
-      .limit(5);
+    personaCount = personaResult[0]?.value ?? 0;
+    readyCount = readyResult[0]?.value ?? 0;
+    publishedCount = publishedResult[0]?.value ?? 0;
+    recentArticles = articles;
   }
 
-  const readyCount = recentArticles.filter((a) => a.status === "ready").length;
-  const publishedCount = recentArticles.filter((a) => a.status === "published").length;
+  const [drafts, visibilitySummary] = await Promise.all([
+    db
+      .select({
+        id: contentPiecesTable.id,
+        title: contentPiecesTable.title,
+        projectName: websiteProjectsTable.name,
+      })
+      .from(contentPiecesTable)
+      .innerJoin(
+        websiteProjectsTable,
+        eq(contentPiecesTable.websiteProjectId, websiteProjectsTable.id),
+      )
+      .where(
+        and(
+          eq(websiteProjectsTable.userId, userId),
+          eq(contentPiecesTable.status, "draft"),
+        ),
+      )
+      .orderBy(desc(contentPiecesTable.updatedAt))
+      .limit(10),
+    projects.length > 0
+      ? loadProjectVisibilitySummary(projects[0].id)
+      : Promise.resolve(null),
+  ]);
+
+  const visibilityScore = visibilitySummary?.visibilityScore ?? null;
+  const geoScore = visibilitySummary?.latestGeoScore ?? null;
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
@@ -103,6 +156,67 @@ export default async function DashboardPage() {
           <Button asChild>
             <Link href="/onboarding"><Plus className="h-4 w-4 mr-1.5" /> Get started</Link>
           </Button>
+        </div>
+      )}
+
+      {/* AI Visibility + GEO score cards */}
+      {projects.length > 0 && (visibilityScore != null || geoScore != null) && (
+        <div className="mb-8 grid gap-4 sm:grid-cols-2">
+          <Link
+            href="/ai-visibility"
+            className="block rounded-xl border border-violet-200 dark:border-violet-500/20 bg-violet-50/50 dark:bg-violet-500/5 p-4 hover:border-violet-300 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-violet-800 dark:text-violet-300">
+              <Eye className="h-4 w-4" /> Visibility
+            </div>
+            <p className="text-2xl font-bold mt-1">{visibilityScore ?? "—"}%</p>
+            <p className="text-xs text-muted-foreground mt-1">Brand citation rate across AI engines</p>
+          </Link>
+          <Link
+            href="/ai-visibility"
+            className="block rounded-xl border border-emerald-200 dark:border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-500/5 p-4 hover:border-emerald-300 transition-colors"
+          >
+            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+              GEO Score
+            </div>
+            <p className="text-2xl font-bold mt-1">
+              {geoScore ?? "—"}
+              <span className="text-base font-normal text-muted-foreground">/100</span>
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">Latest technical GEO audit</p>
+          </Link>
+        </div>
+      )}
+
+      {/* Content studio drafts */}
+      {drafts.length > 0 && (
+        <div className="mb-8 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/10 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            <span className="font-semibold text-sm text-amber-800 dark:text-amber-300">
+              {drafts.length} draft{drafts.length !== 1 ? "s" : ""} need your review
+            </span>
+          </div>
+          <div className="space-y-1">
+            {drafts.slice(0, 5).map((draft) => (
+              <Link
+                key={draft.id}
+                href={`/content-piece/${draft.id}`}
+                className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-800/20 transition-colors group"
+              >
+                <FileText className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
+                <span className="text-sm font-medium text-amber-900 dark:text-amber-200 truncate flex-1">
+                  {draft.title}
+                </span>
+                {draft.projectName && (
+                  <span className="text-xs text-amber-600 dark:text-amber-400 shrink-0">
+                    {draft.projectName}
+                  </span>
+                )}
+                <ArrowRight className="h-3.5 w-3.5 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 

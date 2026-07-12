@@ -3,12 +3,18 @@ import { roadmapsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { generateRoadmapStream, generateSlug } from "@/lib/ai/roadmap-generator";
 import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { requireAuth } from "@/lib/require-auth";
+import {
+  pinRoadmapToProject,
+  verifyProjectOwnership,
+} from "@/lib/pin-roadmap-to-project";
 import { z } from "zod";
 
 const GenerateRoadmapBody = z.object({
   industry: z.string().min(1),
   location: z.string().min(1),
   stage: z.string().min(1),
+  projectId: z.number().int().positive().optional(),
 });
 
 export async function POST(req: Request) {
@@ -28,7 +34,22 @@ export async function POST(req: Request) {
     );
   }
 
-  const { industry, location, stage } = parsed.data;
+  const { industry, location, stage, projectId } = parsed.data;
+
+  let validatedProjectId: number | null = null;
+  if (projectId != null) {
+    const { userId, error } = await requireAuth();
+    if (error) return error;
+
+    const project = await verifyProjectOwnership(projectId, userId!);
+    if (!project) {
+      return new Response(JSON.stringify({ error: "Project not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    validatedProjectId = projectId;
+  }
 
   const sseHeaders = {
     "Content-Type": "text/event-stream",
@@ -38,7 +59,14 @@ export async function POST(req: Request) {
 
   const slug = generateSlug(industry, location, stage);
 
-  // Check for cached roadmap
+  async function maybePin(roadmapId: number) {
+    if (validatedProjectId != null) {
+      await pinRoadmapToProject(validatedProjectId, roadmapId);
+      return true;
+    }
+    return false;
+  }
+
   const existing = await db
     .select()
     .from(roadmapsTable)
@@ -46,11 +74,16 @@ export async function POST(req: Request) {
     .limit(1);
 
   if (existing.length > 0) {
+    const roadmap = existing[0]!;
+    const pinned = await maybePin(roadmap.id);
+
     const stream = new ReadableStream({
       start(controller) {
         const encoder = new TextEncoder();
         controller.enqueue(
-          encoder.encode(`data: ${JSON.stringify({ event: "cached", ...existing[0] })}\n\n`),
+          encoder.encode(
+            `data: ${JSON.stringify({ event: "cached", ...roadmap, pinned })}\n\n`,
+          ),
         );
         controller.close();
       },
@@ -64,7 +97,7 @@ export async function POST(req: Request) {
         const encoder = new TextEncoder();
         function send(event: string, data: unknown) {
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ event, ...data as object })}\n\n`),
+            encoder.encode(`data: ${JSON.stringify({ event, ...(data as object) })}\n\n`),
           );
         }
 
@@ -74,8 +107,10 @@ export async function POST(req: Request) {
             content = await generateRoadmapStream(industry, location, stage, (event, data) => {
               send(event, data as object);
             });
-          } catch (err) {
-            send("error", { error: "Roadmap generation temporarily unavailable. Please try again shortly." });
+          } catch {
+            send("error", {
+              error: "Roadmap generation temporarily unavailable. Please try again shortly.",
+            });
             controller.close();
             return;
           }
@@ -86,18 +121,24 @@ export async function POST(req: Request) {
             .onConflictDoNothing({ target: roadmapsTable.slug })
             .returning();
 
-          const finalRoadmap = inserted ??
+          const finalRoadmap =
+            inserted ??
             (await db.select().from(roadmapsTable).where(eq(roadmapsTable.slug, slug)).limit(1))[0];
 
-          send("done", finalRoadmap);
+          const pinned = finalRoadmap ? await maybePin(finalRoadmap.id) : false;
+          send("done", { ...finalRoadmap, pinned });
           controller.close();
-        } catch (err) {
+        } catch {
           try {
             const encoder2 = new TextEncoder();
             controller.enqueue(
-              encoder2.encode(`data: ${JSON.stringify({ event: "error", error: "Internal server error" })}\n\n`),
+              encoder2.encode(
+                `data: ${JSON.stringify({ event: "error", error: "Internal server error" })}\n\n`,
+              ),
             );
-          } catch { /* closed */ }
+          } catch {
+            /* closed */
+          }
           controller.close();
         }
       },
