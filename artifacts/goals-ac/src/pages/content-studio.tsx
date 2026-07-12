@@ -1040,6 +1040,10 @@ export default function ContentStudio() {
   const { token, user } = useAuth();
   const navigate = useNavigate();
 
+  const safeJson = async <T,>(r: Response): Promise<T | null> => {
+    try { return await r.json(); } catch { return null; }
+  };
+
   const [projectName, setProjectName] = useState<string>("");
   const [pieces, setPieces] = useState<ContentPiece[]>([]);
   const [legacyItems, setLegacyItems] = useState<LegacyItem[]>([]);
@@ -1065,8 +1069,8 @@ export default function ContentStudio() {
       ]);
 
       if (!projRes.ok) { setError("Project not found"); return; }
-      const proj = await safeJson<{ name: string }>(projRes);
-      if (proj) setProjectName(proj.name);
+      const proj = await safeJson<{ name: string; brandProfile?: any }>(projRes);
+      if (proj && proj.name) setProjectName(proj.name);
 
       if (piecesRes.ok) {
         const raw = await safeJson<Omit<ContentPiece, "source">[]>(piecesRes);
@@ -1084,7 +1088,7 @@ export default function ContentStudio() {
         if (legacy) {
           const strategyMap = new Map((legacy.contentStrategies ?? []).map((s) => [s.id, s]));
 
-        const items: LegacyItem[] = [
+          const items: LegacyItem[] = [
           ...(legacy.seoArticles ?? []).map((a) => ({
             id: a.id,
             title: a.title,
@@ -1129,8 +1133,8 @@ export default function ContentStudio() {
             source: "roadmap" as const,
             linkTo: `/roadmap/${r.slug}`,
           })),
-        ];
-        setLegacyItems(items);
+         ];
+          setLegacyItems(items);
         }
       }
     } catch {
