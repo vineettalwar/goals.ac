@@ -44,7 +44,7 @@ function NavItem({ label, icon: Icon, to, active }: { label: string; icon: React
       {active && (
         <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-blue-500 rounded-full -ml-px" />
       )}
-      <Icon className={cn("w-4 h-4 flex-shrink-0 transition-colors", active ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground group-hover:text-foreground")} />
+      <Icon className={cn("w-4 h-4 shrink-0 transition-colors", active ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground group-hover:text-foreground")} />
       {label}
     </Link>
   );
@@ -76,8 +76,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="min-h-[100dvh] flex bg-background text-foreground font-sans selection:bg-primary/20">
-      <aside className="w-56 flex-shrink-0 flex flex-col border-r border-border/60 bg-background sticky top-0 h-[100dvh]">
+    <div className="min-h-dvh flex bg-background text-foreground font-sans selection:bg-primary/20">
+      <aside className="w-56 shrink-0 flex flex-col border-r border-border/60 bg-background sticky top-0 h-dvh">
         <div className="px-4 py-4 border-b border-border/60">
           <Link to="/" className="hover:opacity-80 transition-opacity inline-block">
             <Logo />
@@ -100,7 +100,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </div>
 
         <div className="border-t border-border/60 px-3 py-3 flex items-center gap-2">
-          <Avatar className="h-8 w-8 flex-shrink-0">
+          <Avatar className="h-8 w-8 shrink-0">
             {user?.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.name} />}
             <AvatarFallback className="text-xs bg-primary/10 text-primary border border-primary/20">
               {initials}
@@ -110,7 +110,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             <p className="text-xs font-semibold truncate leading-tight">{user?.name}</p>
             <p className="text-xs text-muted-foreground truncate leading-tight">{user?.email}</p>
           </div>
-          <div className="flex items-center gap-0.5 flex-shrink-0">
+          <div className="flex items-center gap-0.5 shrink-0">
             <button
               onClick={toggleTheme}
               aria-label="Toggle theme"
