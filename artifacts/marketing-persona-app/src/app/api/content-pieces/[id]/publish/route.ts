@@ -1,54 +1,37 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { contentPiecesTable, websiteProjectsTable } from "@workspace/db/schema";
+import { contentPiecesTable, websiteProjectsTable, wordpressConnectionsTable, companiesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { decryptSecret } from "@workspace/security/encryption";
+import { assertPieceOwner } from "@/lib/content-pieces-helpers";
+import {
+  decryptCmsCredentials,
+  CMS_PUBLISH_PLATFORMS,
+  type CmsPublishPlatform,
+  type CmsIntegrationCredentials,
+} from "@workspace/content-engine/support/cms-integrations";
+import {
+  publishPieceToCms,
+  publishPieceToWordPress,
+} from "@workspace/content-engine/support/cms-publish";
 import { publishToNotion } from "@workspace/connectors/notion";
 import { publishToWebflow } from "@workspace/connectors/webflow";
+import { publishToWordPress } from "@workspace/connectors/wordpress";
+import { decryptSecret } from "@workspace/security/encryption";
+import { enqueue, QUEUES } from "@workspace/jobs";
 import { z } from "zod";
 
-interface CmsIntegrationCredentials {
-  notion?: {
-    integrationToken: string;
-    databaseId: string;
-  };
-  webflow?: {
-    apiToken: string;
-    collectionId: string;
-    bodyFieldSlug: string;
-  };
-}
-
-function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsIntegrationCredentials {
-  const result: CmsIntegrationCredentials = {};
-  if (stored.notion) {
-    try {
-      result.notion = {
-        integrationToken: decryptSecret(stored.notion.integrationToken),
-        databaseId: stored.notion.databaseId,
-      };
-    } catch {
-      result.notion = stored.notion;
-    }
-  }
-  if (stored.webflow) {
-    try {
-      result.webflow = {
-        apiToken: decryptSecret(stored.webflow.apiToken),
-        collectionId: stored.webflow.collectionId,
-        bodyFieldSlug: stored.webflow.bodyFieldSlug,
-      };
-    } catch {
-      result.webflow = stored.webflow;
-    }
-  }
-  return result;
-}
-
 const PublishBody = z.object({
-  platform: z.enum(["notion", "webflow"]),
-});
+  platform: z.enum(CMS_PUBLISH_PLATFORMS as unknown as [string, ...string[]]).optional(),
+  wordpressConnectionId: z.number().int().positive().optional(),
+  wpSiteUrl: z.string().url().optional(),
+  wpUsername: z.string().optional(),
+  wpAppPassword: z.string().optional(),
+  async: z.boolean().optional(),
+}).refine(
+  (d) => d.platform || d.wordpressConnectionId || (d.wpSiteUrl && d.wpUsername && d.wpAppPassword),
+  { message: "Provide platform or WordPress credentials" },
+);
 
 export async function POST(
   req: Request,
@@ -67,69 +50,106 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const { platform } = parsed.data;
+  const { piece, error: ownerError } = await assertPieceOwner(id, userId!);
+  if (ownerError === "not_found") return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
+  if (ownerError === "forbidden") return NextResponse.json({ error: "Access denied" }, { status: 403 });
+
+  if (parsed.data.async) {
+    await enqueue(QUEUES.contentPublish, { contentPieceId: id, userId: userId! });
+    return NextResponse.json({ queued: true });
+  }
+
+  const [project] = await db
+    .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+    .from(websiteProjectsTable)
+    .where(eq(websiteProjectsTable.id, piece!.websiteProjectId))
+    .limit(1);
+
+  const creds = decryptCmsCredentials((project?.cmsIntegrations ?? {}) as Record<string, unknown>);
 
   try {
-    const [piece] = await db
-      .select()
-      .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.id, id))
-      .limit(1);
-
-    if (!piece) return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
-
-    const [project] = await db
-      .select({ id: websiteProjectsTable.id, cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-
-    if (!project) return NextResponse.json({ error: "Access denied" }, { status: 403 });
-
-    const stored = (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials;
-    const creds = decryptCmsCredentials(stored);
-
     let publishedUrl: string;
+    const publishable = {
+      id: piece!.id,
+      title: piece!.title,
+      bodyMarkdown: piece!.bodyMarkdown,
+      targetKeyword: piece!.targetKeyword,
+      formatType: piece!.formatType,
+    };
 
-    if (platform === "notion") {
-      if (!creds.notion) {
-        return NextResponse.json(
-          { error: "Notion is not connected. Configure it in Project Settings." },
-          { status: 400 },
-        );
-      }
+    if (parsed.data.wordpressConnectionId) {
+      const [row] = await db
+        .select({ connection: wordpressConnectionsTable })
+        .from(wordpressConnectionsTable)
+        .innerJoin(companiesTable, eq(companiesTable.id, wordpressConnectionsTable.companyId))
+        .where(
+          and(
+            eq(wordpressConnectionsTable.id, parsed.data.wordpressConnectionId),
+            eq(companiesTable.userId, userId!),
+          ),
+        )
+        .limit(1);
 
-      const tags: string[] = [];
-      if (piece.targetKeyword) tags.push(piece.targetKeyword);
-      if (piece.formatType) tags.push(piece.formatType.replace(/_/g, " "));
+      if (!row) return NextResponse.json({ error: "WordPress connection not found" }, { status: 404 });
 
+      const wpCreds: CmsIntegrationCredentials = {
+        wordpress: {
+          siteUrl: row.connection.siteUrl,
+          username: row.connection.username,
+          appPassword: decryptSecret(row.connection.encryptedAppPassword),
+        },
+      };
+      publishedUrl = await publishPieceToWordPress(publishable, wpCreds, {
+        status: row.connection.defaultStatus === "draft" ? "draft" : "publish",
+      });
+    } else if (parsed.data.wpSiteUrl && parsed.data.wpUsername && parsed.data.wpAppPassword) {
+      const result = await publishToWordPress(
+        {
+          siteUrl: parsed.data.wpSiteUrl,
+          username: parsed.data.wpUsername,
+          appPassword: parsed.data.wpAppPassword,
+        },
+        piece!.title,
+        piece!.bodyMarkdown,
+        "publish",
+      );
+      publishedUrl = result.url;
+    } else if (parsed.data.platform === "notion" && creds.notion) {
       publishedUrl = await publishToNotion(
         creds.notion.integrationToken,
         creds.notion.databaseId,
-        piece.title,
-        piece.bodyMarkdown,
-        { status: piece.status ?? "draft", tags },
+        piece!.title,
+        piece!.bodyMarkdown,
+        { status: piece!.status ?? "draft" },
       );
-    } else {
-      if (!creds.webflow) {
-        return NextResponse.json(
-          { error: "Webflow is not connected. Configure it in Project Settings." },
-          { status: 400 },
-        );
-      }
-
+    } else if (parsed.data.platform === "webflow" && creds.webflow) {
       publishedUrl = await publishToWebflow(
         creds.webflow.apiToken,
         creds.webflow.collectionId,
         creds.webflow.bodyFieldSlug,
-        piece.title,
-        piece.bodyMarkdown,
+        piece!.title,
+        piece!.bodyMarkdown,
       );
+    } else if (
+      parsed.data.platform &&
+      CMS_PUBLISH_PLATFORMS.includes(parsed.data.platform as CmsPublishPlatform)
+    ) {
+      publishedUrl = await publishPieceToCms(
+        parsed.data.platform as CmsPublishPlatform,
+        publishable,
+        creds,
+      );
+    } else {
+      return NextResponse.json({ error: "Platform not connected" }, { status: 400 });
     }
 
     const [updated] = await db
       .update(contentPiecesTable)
-      .set({ status: "published", publishedUrl })
+      .set({
+        status: "published",
+        publishedUrl,
+        publishPlatform: parsed.data.platform ?? "wordpress",
+      })
       .where(eq(contentPiecesTable.id, id))
       .returning();
 

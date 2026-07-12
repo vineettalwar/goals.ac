@@ -1,0 +1,71 @@
+import { NextResponse } from "next/server";
+import { db } from "@workspace/db";
+import { keywordOpportunitiesTable } from "@workspace/db/schema";
+import { eq, and, desc } from "drizzle-orm";
+import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/project-access";
+import { discoverOpportunities } from "@workspace/content-engine/keyword-opportunity-service";
+import { enqueue, QUEUES } from "@workspace/jobs";
+
+export async function GET(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { userId, error } = await requireAuth();
+  if (error) return error;
+
+  const { id: idStr } = await params;
+  const projectId = Number(idStr);
+  if (isNaN(projectId)) return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
+
+  const access = await requireProjectAccess(projectId, userId!);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+
+  const status = new URL(req.url).searchParams.get("status") ?? "open";
+
+  const opportunities = await db
+    .select()
+    .from(keywordOpportunitiesTable)
+    .where(
+      and(
+        eq(keywordOpportunitiesTable.websiteProjectId, projectId),
+        eq(keywordOpportunitiesTable.status, status as "open" | "queued" | "dismissed"),
+      ),
+    )
+    .orderBy(desc(keywordOpportunitiesTable.opportunityScore));
+
+  return NextResponse.json({ opportunities });
+}
+
+export async function POST(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { userId, error } = await requireAuth();
+  if (error) return error;
+
+  const { id: idStr } = await params;
+  const projectId = Number(idStr);
+  if (isNaN(projectId)) return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
+
+  const access = await requireProjectAccess(projectId, userId!);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+
+  const body = await req.json().catch(() => ({}));
+  const asyncMode = body?.async === true;
+
+  try {
+    if (asyncMode) {
+      await enqueue(QUEUES.keywordOpportunitySweep, { projectId, userId: userId! });
+      return NextResponse.json({ queued: true }, { status: 202 });
+    }
+
+    const inserted = await discoverOpportunities(projectId, userId!);
+    return NextResponse.json({ inserted });
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Discovery failed" },
+      { status: 502 },
+    );
+  }
+}

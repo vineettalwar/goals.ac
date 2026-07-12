@@ -141,7 +141,13 @@ export async function PATCH(
       .where(eq(websiteProjectsTable.id, id))
       .limit(1);
 
-    return NextResponse.json(updated);
+    const [brandProfile] = await db
+      .select()
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, id))
+      .limit(1);
+
+    return NextResponse.json({ ...updated, brandProfile: brandProfile ?? null });
   } catch (err) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }

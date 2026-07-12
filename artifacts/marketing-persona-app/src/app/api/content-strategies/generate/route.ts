@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   const year = parsed.data.year ?? now.getFullYear();
 
   try {
-    const items = await generateContentStrategy(industry, location, stage, projectContentStyle);
+    const items = await generateContentStrategy(industry, location, stage, null, projectContentStyle);
 
     const [strategy] = await db
       .insert(contentStrategiesTable)

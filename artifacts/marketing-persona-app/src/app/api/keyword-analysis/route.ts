@@ -1,9 +1,48 @@
-import { proxyToExpress, toExpressKeywordBody } from "@/lib/express-proxy";
+import { NextResponse } from "next/server";
+import { db, keywordAnalysesTable } from "@workspace/db";
+import { analyzeKeywords } from "@workspace/seo-tools/keywordAnalyzer";
+import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/project-access";
+import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
+import { z } from "zod";
+
+const KeywordAnalysisBody = z.object({
+  keywords: z.array(z.string().min(1).max(200)).min(1).max(10),
+  websiteUrl: z.string().url().optional(),
+  websiteProjectId: z.number().int().positive().optional(),
+});
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-  return proxyToExpress("/keyword-analysis", {
-    method: "POST",
-    body: JSON.stringify(toExpressKeywordBody(body as Record<string, unknown>)),
+  const { userId, error } = await requireAuth();
+  if (error) return error;
+
+  const body = await req.json().catch(() => null);
+  const parsed = KeywordAnalysisBody.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
+  }
+
+  if (parsed.data.websiteProjectId) {
+    const access = await requireProjectAccess(parsed.data.websiteProjectId, userId!);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  const userApiKey = await getDecryptedUserGeminiKey(userId!);
+  const analysis = await analyzeKeywords({
+    keywords: parsed.data.keywords,
+    websiteUrl: parsed.data.websiteUrl,
+    userApiKey,
   });
+
+  const [saved] = await db
+    .insert(keywordAnalysesTable)
+    .values({
+      websiteProjectId: parsed.data.websiteProjectId ?? null,
+      keywords: parsed.data.keywords,
+      websiteUrl: parsed.data.websiteUrl ?? null,
+      result: analysis,
+    })
+    .returning();
+
+  return NextResponse.json({ id: saved.id, ...analysis }, { status: 201 });
 }

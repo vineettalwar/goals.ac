@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { roadmapsTable } from "@workspace/db/schema";
-import { eq, and, desc, count, ilike } from "drizzle-orm";
+import { and, desc, count, ilike } from "drizzle-orm";
 
 export async function GET(req: Request) {
   try {

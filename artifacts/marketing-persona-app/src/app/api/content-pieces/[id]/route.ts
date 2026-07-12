@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { contentPiecesTable, websiteProjectsTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { assertPieceOwner } from "@/lib/content-pieces-helpers";
 import { z } from "zod";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -104,4 +105,23 @@ export async function PATCH(
   } catch (err) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
+}
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { userId, error } = await requireAuth();
+  if (error) return error;
+
+  const { id: idStr } = await params;
+  const id = Number(idStr);
+  if (isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+
+  const { error: ownerError } = await assertPieceOwner(id, userId!);
+  if (ownerError === "not_found") return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
+  if (ownerError === "forbidden") return NextResponse.json({ error: "Access denied" }, { status: 403 });
+
+  await db.delete(contentPiecesTable).where(eq(contentPiecesTable.id, id));
+  return NextResponse.json({ ok: true });
 }

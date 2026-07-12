@@ -100,6 +100,7 @@ export async function POST(req: Request) {
               (batchNum, totalBatches, batchItems) => {
                 send("progress", { batchNum, totalBatches, itemCount: batchItems.length });
               },
+              null,
               projectContentStyle,
             );
           } catch (err) {

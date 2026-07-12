@@ -61,6 +61,7 @@ export async function POST(req: Request) {
       industry,
       location,
       stage,
+      null,
       projectContentStyle,
     );
 
