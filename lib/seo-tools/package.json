@@ -9,7 +9,8 @@
     "./competitorAnalyzer": "./src/competitorAnalyzer.ts",
     "./keywordAnalyzer": "./src/keywordAnalyzer.ts",
     "./llmVisibilityChecker": "./src/llmVisibilityChecker.ts",
-    "./keywordGapAnalyzer": "./src/keywordGapAnalyzer.ts"
+    "./keywordGapAnalyzer": "./src/keywordGapAnalyzer.ts",
+    "./freeTools": "./src/freeTools.ts"
   },
   "dependencies": {
     "@workspace/ai-providers": "workspace:*",

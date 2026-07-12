@@ -1,9 +1,8 @@
 import {
-  createUserGeminiClient,
-  getGeminiClientWithFallback,
   modelForTier,
-  wrapGeminiClient,
-  type AiProviderClient,
+  resolveAiClient,
+  resolveProviderId,
+  type AiProviderOptions,
 } from "@workspace/ai-providers";
 
 export type ThreatLevel = "low" | "medium" | "high";
@@ -41,25 +40,17 @@ export async function scrapeCompetitorText(url: string): Promise<string> {
   }
 }
 
-async function resolveAiClient(userApiKey: string | null | undefined): Promise<AiProviderClient | null> {
-  const geminiResult = await getGeminiClientWithFallback(userApiKey);
-  if (!geminiResult) return null;
-  return wrapGeminiClient(geminiResult.client);
-}
-
 export async function analyzeCompetitor(params: {
   competitorUrl: string;
   industry: string;
   location: string;
   stage: string;
   userApiKey?: string | null;
+  aiProviderOptions?: AiProviderOptions;
 }): Promise<CompetitorAnalysisResult> {
-  const { competitorUrl, industry, location, stage, userApiKey } = params;
+  const { competitorUrl, industry, location, stage, userApiKey, aiProviderOptions } = params;
 
-  const client = await resolveAiClient(userApiKey);
-  if (!client) {
-    throw new Error("Analysis temporarily unavailable");
-  }
+  const client = await resolveAiClient(userApiKey, aiProviderOptions);
 
   let pageText = "";
   try {
@@ -88,7 +79,8 @@ Respond ONLY with a valid JSON object in this exact shape:
 
 Base analysis on the actual page content. Be specific and tactical, not generic.`;
 
-  const model = modelForTier("gemini", "strategy");
+  const providerId = resolveProviderId(aiProviderOptions);
+  const model = providerId === "gemini" ? modelForTier("gemini", "strategy") : undefined;
   const response = await client.generate({
     prompt,
     model,
@@ -102,5 +94,3 @@ Base analysis on the actual page content. Be specific and tactical, not generic.
     throw new Error("Failed to parse analysis response");
   }
 }
-
-export { createUserGeminiClient };

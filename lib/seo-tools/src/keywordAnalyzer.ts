@@ -1,8 +1,8 @@
 import {
-  getGeminiClientWithFallback,
   modelForTier,
-  wrapGeminiClient,
-  type AiProviderClient,
+  resolveAiClient,
+  resolveProviderId,
+  type AiProviderOptions,
 } from "@workspace/ai-providers";
 
 export type KeywordDifficulty = "low" | "medium" | "high";
@@ -22,23 +22,15 @@ export type KeywordAnalysisResult = {
   summary: string;
 };
 
-async function resolveAiClient(userApiKey: string | null | undefined): Promise<AiProviderClient | null> {
-  const geminiResult = await getGeminiClientWithFallback(userApiKey);
-  if (!geminiResult) return null;
-  return wrapGeminiClient(geminiResult.client);
-}
-
 export async function analyzeKeywords(params: {
   keywords: string[];
   websiteUrl?: string;
   userApiKey?: string | null;
+  aiProviderOptions?: AiProviderOptions;
 }): Promise<KeywordAnalysisResult> {
-  const { keywords, websiteUrl, userApiKey } = params;
+  const { keywords, websiteUrl, userApiKey, aiProviderOptions } = params;
 
-  const client = await resolveAiClient(userApiKey);
-  if (!client) {
-    throw new Error("Analysis temporarily unavailable");
-  }
+  const client = await resolveAiClient(userApiKey, aiProviderOptions);
 
   const prompt = `You are an SEO and GEO (Generative Engine Optimization) analyst. Analyze these keywords for a B2B startup${websiteUrl ? ` with website ${websiteUrl}` : ""}.
 
@@ -62,7 +54,8 @@ Respond ONLY with a valid JSON object in this exact shape:
 
 Be specific and tactical. Base estimates on realistic B2B SaaS market data.`;
 
-  const model = modelForTier("gemini", "planning");
+  const providerId = resolveProviderId(aiProviderOptions);
+  const model = providerId === "gemini" ? modelForTier("gemini", "planning") : undefined;
   const response = await client.generate({
     prompt,
     model,
