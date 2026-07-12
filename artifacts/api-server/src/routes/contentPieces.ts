@@ -34,10 +34,14 @@ import { publishThreadToTwitter, splitTwitterThread } from "@workspace/connector
 import { publishToFacebookPage, publishToInstagram } from "@workspace/connectors/meta";
 import {
   type CmsIntegrationCredentials,
+  type CmsPublishPlatform,
+  CMS_PUBLISH_PLATFORMS,
   encryptCmsCredentials,
   decryptCmsCredentials,
   maskCmsCredentials,
+  resolveWordPressConnectionType,
 } from "../lib/cmsIntegrations";
+import { publishPieceToCms, publishPieceToWordPress } from "../lib/cmsPublish";
 import { getSocialAccessToken } from "../lib/socialTokens";
 
 const router: IRouter = Router();
@@ -1170,6 +1174,11 @@ router.get("/user/cms-summary", requireAuth, async (req, res) => {
     let hasNotion = false;
     let hasWebflow = false;
     let hasWordpress = false;
+    let hasGhost = false;
+    let hasWebhook = false;
+    let hasShopify = false;
+    let hasDrupal = false;
+    let hasJoomla = false;
     let hasLinkedin = false;
     let hasTwitter = false;
     let hasMeta = false;
@@ -1179,6 +1188,11 @@ router.get("/user/cms-summary", requireAuth, async (req, res) => {
       if (stored.notion) hasNotion = true;
       if (stored.webflow) hasWebflow = true;
       if (stored.wordpress) hasWordpress = true;
+      if (stored.ghost) hasGhost = true;
+      if (stored.webhook) hasWebhook = true;
+      if (stored.shopify) hasShopify = true;
+      if (stored.drupal) hasDrupal = true;
+      if (stored.joomla) hasJoomla = true;
       if (stored.linkedin) hasLinkedin = true;
       if (stored.twitter) hasTwitter = true;
       if (stored.meta) hasMeta = true;
@@ -1188,6 +1202,11 @@ router.get("/user/cms-summary", requireAuth, async (req, res) => {
       notion: hasNotion,
       webflow: hasWebflow,
       wordpress: hasWordpress,
+      ghost: hasGhost,
+      webhook: hasWebhook,
+      shopify: hasShopify,
+      drupal: hasDrupal,
+      joomla: hasJoomla,
       linkedin: hasLinkedin,
       twitter: hasTwitter,
       meta: hasMeta,
@@ -1302,6 +1321,17 @@ router.post(
       }
 
       if (creds.wordpress) {
+        if (resolveWordPressConnectionType(creds.wordpress) === "plugin") {
+          const { testGoalsAcPluginConnection } = await import("@workspace/connectors/goals-ac-plugin");
+          const result = await testGoalsAcPluginConnection({
+            siteUrl: creds.wordpress.siteUrl,
+            siteKey: creds.wordpress.siteKey!,
+            platform: "wordpress",
+          });
+          health.wordpress = result.ok
+            ? { ok: true, siteName: result.health?.version }
+            : { ok: false, error: result.error };
+        } else {
         try {
           await assertPublicUrl(creds.wordpress.siteUrl);
           const testRes = await fetch(
@@ -1349,6 +1379,94 @@ router.post(
             ok: false,
             error: err instanceof Error ? err.message : "Connection failed",
           };
+        }
+        }
+      }
+
+      if (creds.ghost) {
+        const { testGhostConnection } = await import("@workspace/connectors/ghost");
+        const result = await testGhostConnection(creds.ghost);
+        health.ghost = result.ok
+          ? { ok: true, siteName: result.siteTitle }
+          : { ok: false, error: result.error };
+      }
+
+      if (creds.webhook) {
+        const { testWebhookConnection } = await import("@workspace/connectors/webhook");
+        const result = await testWebhookConnection(creds.webhook);
+        health.webhook = result.ok ? { ok: true } : { ok: false, error: result.error };
+      }
+
+      if (creds.shopify) {
+        if (creds.shopify.connectionType === "plugin") {
+          const { testGoalsAcPluginConnection } = await import("@workspace/connectors/goals-ac-plugin");
+          const result = await testGoalsAcPluginConnection({
+            siteUrl: creds.shopify.siteUrl!,
+            siteKey: creds.shopify.siteKey!,
+            platform: "shopify",
+          });
+          health.shopify = result.ok
+            ? { ok: true, siteName: result.health?.version }
+            : { ok: false, error: result.error };
+        } else {
+          const { testShopifyConnection } = await import("@workspace/connectors/shopify");
+          const result = await testShopifyConnection({
+            shopDomain: creds.shopify.shopDomain!,
+            accessToken: creds.shopify.accessToken!,
+            blogId: creds.shopify.blogId,
+          });
+          health.shopify = result.ok
+            ? { ok: true, siteName: result.shopName }
+            : { ok: false, error: result.error };
+        }
+      }
+
+      if (creds.drupal) {
+        if (creds.drupal.connectionType === "plugin") {
+          const { testGoalsAcPluginConnection } = await import("@workspace/connectors/goals-ac-plugin");
+          const result = await testGoalsAcPluginConnection({
+            siteUrl: creds.drupal.siteUrl,
+            siteKey: creds.drupal.siteKey!,
+            platform: "drupal",
+          });
+          health.drupal = result.ok
+            ? { ok: true, siteName: result.health?.version }
+            : { ok: false, error: result.error };
+        } else {
+          const { testDrupalConnection } = await import("@workspace/connectors/drupal");
+          const result = await testDrupalConnection({
+            siteUrl: creds.drupal.siteUrl,
+            authType: creds.drupal.authType ?? "basic",
+            username: creds.drupal.username,
+            password: creds.drupal.password,
+            accessToken: creds.drupal.accessToken,
+          });
+          health.drupal = result.ok
+            ? { ok: true, siteName: result.siteName }
+            : { ok: false, error: result.error };
+        }
+      }
+
+      if (creds.joomla) {
+        if (creds.joomla.connectionType === "plugin") {
+          const { testGoalsAcPluginConnection } = await import("@workspace/connectors/goals-ac-plugin");
+          const result = await testGoalsAcPluginConnection({
+            siteUrl: creds.joomla.siteUrl,
+            siteKey: creds.joomla.siteKey!,
+            platform: "joomla",
+          });
+          health.joomla = result.ok
+            ? { ok: true, siteName: result.health?.version }
+            : { ok: false, error: result.error };
+        } else {
+          const { testJoomlaConnection } = await import("@workspace/connectors/joomla");
+          const result = await testJoomlaConnection({
+            siteUrl: creds.joomla.siteUrl,
+            apiToken: creds.joomla.apiToken!,
+          });
+          health.joomla = result.ok
+            ? { ok: true, siteName: result.siteName }
+            : { ok: false, error: result.error };
         }
       }
 
@@ -1411,13 +1529,82 @@ const CmsIntegrationsBody = z.object({
     })
     .optional(),
   wordpress: z
+    .discriminatedUnion("connectionType", [
+      z.object({
+        connectionType: z.literal("api"),
+        siteUrl: z.string().url("Must be a valid WordPress site URL"),
+        username: z.string().min(1, "WordPress username is required"),
+        appPassword: z
+          .string()
+          .min(1, "WordPress application password is required"),
+      }),
+      z.object({
+        connectionType: z.literal("plugin"),
+        siteUrl: z.string().url("Must be a valid WordPress site URL"),
+        siteKey: z.string().min(1, "Site key is required"),
+      }),
+    ])
+    .optional(),
+  ghost: z
     .object({
-      siteUrl: z.string().url("Must be a valid WordPress site URL"),
-      username: z.string().min(1, "WordPress username is required"),
-      appPassword: z
-        .string()
-        .min(1, "WordPress application password is required"),
+      apiUrl: z.string().url("Must be a valid Ghost site URL"),
+      adminApiKey: z.string().min(1, "Ghost Admin API key is required"),
     })
+    .optional(),
+  webhook: z
+    .object({
+      url: z.string().url("Must be a valid webhook URL"),
+      signingSecret: z.string().min(1, "Webhook signing secret is required"),
+    })
+    .optional(),
+  shopify: z
+    .discriminatedUnion("connectionType", [
+      z.object({
+        connectionType: z.literal("api"),
+        shopDomain: z.string().min(1, "Shopify shop domain is required"),
+        accessToken: z.string().min(1, "Shopify access token is required"),
+        blogId: z.string().optional(),
+      }),
+      z.object({
+        connectionType: z.literal("plugin"),
+        siteUrl: z.string().url("Must be a valid Shopify app URL"),
+        siteKey: z.string().min(1, "Site key is required"),
+        blogId: z.string().optional(),
+      }),
+    ])
+    .optional(),
+  drupal: z
+    .discriminatedUnion("connectionType", [
+      z.object({
+        connectionType: z.literal("api"),
+        siteUrl: z.string().url("Must be a valid Drupal site URL"),
+        authType: z.enum(["basic", "bearer"]).default("basic"),
+        username: z.string().optional(),
+        password: z.string().optional(),
+        accessToken: z.string().optional(),
+        contentType: z.string().optional(),
+      }),
+      z.object({
+        connectionType: z.literal("plugin"),
+        siteUrl: z.string().url("Must be a valid Drupal site URL"),
+        siteKey: z.string().min(1, "Site key is required"),
+      }),
+    ])
+    .optional(),
+  joomla: z
+    .discriminatedUnion("connectionType", [
+      z.object({
+        connectionType: z.literal("api"),
+        siteUrl: z.string().url("Must be a valid Joomla site URL"),
+        apiToken: z.string().min(1, "Joomla API token is required"),
+        categoryId: z.number().int().positive().optional(),
+      }),
+      z.object({
+        connectionType: z.literal("plugin"),
+        siteUrl: z.string().url("Must be a valid Joomla site URL"),
+        siteKey: z.string().min(1, "Site key is required"),
+      }),
+    ])
     .optional(),
 });
 
@@ -1516,6 +1703,21 @@ router.patch(
       if (parsed.data.wordpress) {
         merged.wordpress = parsed.data.wordpress;
       }
+      if (parsed.data.ghost) {
+        merged.ghost = parsed.data.ghost;
+      }
+      if (parsed.data.webhook) {
+        merged.webhook = parsed.data.webhook;
+      }
+      if (parsed.data.shopify) {
+        merged.shopify = parsed.data.shopify;
+      }
+      if (parsed.data.drupal) {
+        merged.drupal = parsed.data.drupal;
+      }
+      if (parsed.data.joomla) {
+        merged.joomla = parsed.data.joomla;
+      }
 
       const encrypted = encryptCmsCredentials(merged);
 
@@ -1546,6 +1748,11 @@ router.delete(
       platform !== "notion" &&
       platform !== "webflow" &&
       platform !== "wordpress" &&
+      platform !== "ghost" &&
+      platform !== "webhook" &&
+      platform !== "shopify" &&
+      platform !== "drupal" &&
+      platform !== "joomla" &&
       platform !== "linkedin" &&
       platform !== "twitter" &&
       platform !== "meta"
@@ -1728,17 +1935,9 @@ router.post(
         return;
       }
 
-      let result: Awaited<ReturnType<typeof publishToWordPress>>;
+      let publishedUrl: string;
       try {
-        result = await publishToWordPress(
-          {
-            siteUrl: creds.wordpress.siteUrl,
-            username: creds.wordpress.username,
-            appPassword: creds.wordpress.appPassword,
-          },
-          piece.title,
-          piece.bodyMarkdown,
-        );
+        publishedUrl = await publishPieceToWordPress(piece, creds);
       } catch (wpErr) {
         const message =
           wpErr instanceof Error ? wpErr.message : "WordPress publish failed";
@@ -1749,10 +1948,7 @@ router.post(
         }
         if (AUTH_ERROR_PATTERN.test(message)) {
           req.log.warn({ wpErr }, "WordPress authentication failed");
-          res.status(401).json({
-            error:
-              "WordPress authentication failed. Check your username and application password.",
-          });
+          res.status(401).json({ error: message });
           return;
         }
         req.log.error({ wpErr }, "Failed to reach or publish to WordPress");
@@ -1766,7 +1962,12 @@ router.post(
 
       const [updated] = await db
         .update(contentPiecesTable)
-        .set({ status: "published", publishedUrl: result.url })
+        .set({
+          status: "published",
+          publishedUrl,
+          publishPlatform: "wordpress",
+          publishError: null,
+        })
         .where(eq(contentPiecesTable.id, id))
         .returning();
 
@@ -2114,5 +2315,111 @@ router.post(
     }
   },
 );
+
+const CMS_PLATFORM_LABELS: Record<CmsPublishPlatform, string> = {
+  ghost: "Ghost",
+  webhook: "Webhook",
+  shopify: "Shopify",
+  drupal: "Drupal",
+  joomla: "Joomla",
+};
+
+for (const platform of CMS_PUBLISH_PLATFORMS) {
+  router.post(
+    `/content-pieces/:id/publish/${platform}`,
+    requireAuth,
+    async (req, res) => {
+      const id = Number(req.params.id);
+      if (isNaN(id)) {
+        res.status(400).json({ error: "Invalid id" });
+        return;
+      }
+
+      try {
+        const [piece] = await db
+          .select()
+          .from(contentPiecesTable)
+          .where(eq(contentPiecesTable.id, id))
+          .limit(1);
+
+        if (!piece) {
+          res.status(404).json({ error: "Content piece not found" });
+          return;
+        }
+
+        const [project] = await db
+          .select({
+            id: websiteProjectsTable.id,
+            cmsIntegrations: websiteProjectsTable.cmsIntegrations,
+          })
+          .from(websiteProjectsTable)
+          .where(
+            and(
+              eq(websiteProjectsTable.id, piece.websiteProjectId),
+              eq(websiteProjectsTable.userId, req.user!.userId),
+            ),
+          )
+          .limit(1);
+
+        if (!project) {
+          res.status(403).json({ error: "Access denied" });
+          return;
+        }
+
+        const creds = decryptCmsCredentials(
+          (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials,
+        );
+
+        if (!creds[platform]) {
+          res.status(400).json({
+            error: `${CMS_PLATFORM_LABELS[platform]} is not connected. Configure it in Project Settings → Publishing.`,
+          });
+          return;
+        }
+
+        let publishedUrl: string;
+        try {
+          publishedUrl = await publishPieceToCms(platform, piece, creds);
+        } catch (publishErr) {
+          const message =
+            publishErr instanceof Error
+              ? publishErr.message
+              : `${CMS_PLATFORM_LABELS[platform]} publish failed`;
+          if (SSRF_ERROR_PATTERN.test(message)) {
+            res.status(400).json({ error: message });
+            return;
+          }
+          if (AUTH_ERROR_PATTERN.test(message)) {
+            res.status(401).json({ error: message });
+            return;
+          }
+          res.status(502).json({ error: message });
+          return;
+        }
+
+        const [updated] = await db
+          .update(contentPiecesTable)
+          .set({
+            status: "published",
+            publishedUrl,
+            publishPlatform: platform,
+            publishError: null,
+          })
+          .where(eq(contentPiecesTable.id, id))
+          .returning();
+
+        res.json(updated);
+      } catch (err) {
+        req.log.error({ err }, `Failed to publish to ${platform}`);
+        res.status(502).json({
+          error:
+            err instanceof Error
+              ? err.message
+              : `Failed to publish to ${CMS_PLATFORM_LABELS[platform]}`,
+        });
+      }
+    },
+  );
+}
 
 export default router;
