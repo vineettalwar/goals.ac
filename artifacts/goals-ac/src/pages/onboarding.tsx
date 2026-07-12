@@ -51,8 +51,6 @@ const LANGUAGES = [
   "English", "Spanish", "French", "German", "Portuguese", "Italian", "Dutch", "Japanese",
 ];
 
-const WORD_COUNT_MARKS = [300, 600, 900, 1200, 1500, 2000, 2500, 3000];
-
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
     <div className="flex items-center gap-2 mb-8">
@@ -283,7 +281,7 @@ export default function Onboarding() {
                   />
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white gap-2"
+                    className="w-full bg-linear-to-r from-blue-500 to-blue-600 border-0 text-white gap-2"
                     disabled={step1Form.formState.isSubmitting}
                   >
                     {step1Form.formState.isSubmitting ? (
@@ -371,7 +369,7 @@ export default function Onboarding() {
                 </div>
 
                 <Button
-                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white gap-2"
+                  className="w-full bg-linear-to-r from-blue-500 to-blue-600 border-0 text-white gap-2"
                   disabled={isScanning || isSavingBrand}
                   onClick={onStep2Confirm}
                 >
@@ -453,7 +451,7 @@ export default function Onboarding() {
                 </div>
 
                 <Button
-                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white gap-2"
+                  className="w-full bg-linear-to-r from-blue-500 to-blue-600 border-0 text-white gap-2"
                   disabled={isSavingStyle}
                   onClick={onStep3Confirm}
                 >
@@ -481,7 +479,7 @@ export default function Onboarding() {
               <div className="space-y-3 mb-8">
                 {/* Roadmap card */}
                 <div className="rounded-xl border border-border p-4 flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
                     <Sparkles className="w-5 h-5 text-blue-500" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -489,16 +487,16 @@ export default function Onboarding() {
                     <div className="text-xs text-muted-foreground">AI-generated 12-month strategy</div>
                   </div>
                   {roadmapLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground flex-shrink-0" />
+                    <Loader2 className="w-4 h-4 animate-spin text-muted-foreground shrink-0" />
                   ) : roadmapSlug ? (
                     <Link to={`/roadmap/${roadmapSlug}`} onClick={() => localStorage.setItem(WIZARD_DONE_KEY, "true")}>
-                      <Button size="sm" variant="outline" className="gap-1 flex-shrink-0">
+                      <Button size="sm" variant="outline" className="gap-1 shrink-0">
                         View <ArrowRight className="w-3 h-3" />
                       </Button>
                     </Link>
                   ) : (
                     <Link to="/" onClick={() => localStorage.setItem(WIZARD_DONE_KEY, "true")}>
-                      <Button size="sm" variant="outline" className="gap-1 flex-shrink-0">
+                      <Button size="sm" variant="outline" className="gap-1 shrink-0">
                         Generate <ArrowRight className="w-3 h-3" />
                       </Button>
                     </Link>
@@ -510,16 +508,16 @@ export default function Onboarding() {
                   <Link
                     to={`/projects/${project.id}/content-studio`}
                     onClick={() => localStorage.setItem(WIZARD_DONE_KEY, "true")}
-                    className="block rounded-xl border border-border p-4 flex items-center gap-4 hover:bg-muted/40 transition-colors"
+                    className="flex rounded-xl border border-border p-4 items-center gap-4 hover:bg-muted/40 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 rounded-lg bg-violet-500/10 border border-violet-500/20 flex items-center justify-center shrink-0">
                       <FileText className="w-5 h-5 text-violet-500" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm">Generate SEO article</div>
                       <div className="text-xs text-muted-foreground">Content Studio — keyword-targeted pieces</div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                    <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                   </Link>
                 )}
 
@@ -527,21 +525,21 @@ export default function Onboarding() {
                 <Link
                   to="/geo-audit"
                   onClick={() => localStorage.setItem(WIZARD_DONE_KEY, "true")}
-                  className="block rounded-xl border border-border p-4 flex items-center gap-4 hover:bg-muted/40 transition-colors"
+                  className="flex rounded-xl border border-border p-4 items-center gap-4 hover:bg-muted/40 transition-colors"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
                     <Map className="w-5 h-5 text-amber-500" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">Run GEO audit</div>
                     <div className="text-xs text-muted-foreground">Generative engine optimisation analysis</div>
                   </div>
-                  <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                  <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
                 </Link>
               </div>
 
               <Button
-                className="w-full bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white gap-2"
+                className="w-full bg-linear-to-r from-blue-500 to-blue-600 border-0 text-white gap-2"
                 onClick={completeWizard}
               >
                 Go to dashboard <ArrowRight className="w-4 h-4" />

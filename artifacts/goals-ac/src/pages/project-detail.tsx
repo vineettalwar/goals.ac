@@ -54,7 +54,6 @@ import {
   Layers,
   RefreshCw,
   CheckCircle2,
-  Send,
   Palette,
   Plus,
   Trash2,
@@ -438,8 +437,8 @@ export default function ProjectDetail() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isSavingStyle, setIsSavingStyle] = useState(false);
   const [saveStyleSuccess, setSaveStyleSuccess] = useState(false);
-  const [isSavingVoice, setIsSavingVoice] = useState(false);
-  const [saveVoiceSuccess, setSaveVoiceSuccess] = useState(false);
+  const [, setIsSavingVoice] = useState(false);
+  const [, setSaveVoiceSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRescanning, setIsRescanning] = useState(false);
   const scrapePollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -1737,7 +1736,7 @@ export default function ProjectDetail() {
                       <Button
                         type="submit"
                         disabled={isSavingStyle}
-                        className="bg-gradient-to-r from-blue-500 to-blue-600 border-0 text-white hover:from-blue-600 hover:to-blue-700"
+                        className="bg-linear-to-r from-blue-500 to-blue-600 border-0 text-white hover:from-blue-600 hover:to-blue-700"
                       >
                         {isSavingStyle ? (
                           <>

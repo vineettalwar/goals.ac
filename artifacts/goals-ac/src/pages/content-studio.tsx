@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
-  CardHeader,
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
@@ -45,7 +44,6 @@ import {
   Globe,
   ImageIcon,
   BarChart3,
-  Filter,
   RefreshCw,
   Trash2,
   ArrowUpDown,
@@ -390,60 +388,12 @@ const FORMAT_META: Record<
   },
 };
 
-const SOURCE_META: Record<string, { label: string; color: string }> = {
-  studio: { label: "Studio", color: "bg-primary/10 text-primary" },
-  seo_article: {
-    label: "SEO Article",
-    color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  },
-  content_strategy: {
-    label: "Strategy",
-    color:
-      "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400",
-  },
-  geo_audit: {
-    label: "GEO Audit",
-    color:
-      "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-  },
-  roadmap: {
-    label: "Roadmap",
-    color:
-      "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  },
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  draft: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-  ready: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-  published: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  pending: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
-  in_progress:
-    "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-  completed:
-    "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-};
-
 function FormatBadge({ type }: { type: ContentFormatType }) {
   const meta = FORMAT_META[type];
   const Icon = meta.icon;
   return (
     <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
       <Icon className="w-3.5 h-3.5 shrink-0" />
-      {meta.label}
-    </span>
-  );
-}
-
-function SourceBadge({ source }: { source: string }) {
-  const meta = SOURCE_META[source] ?? {
-    label: source,
-    color: "bg-muted text-muted-foreground",
-  };
-  return (
-    <span
-      className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full ${meta.color}`}
-    >
       {meta.label}
     </span>
   );
@@ -548,7 +498,7 @@ function CreateModal({
     undefined,
   );
   const _cachedPiece = useRef<Omit<ContentPiece, "source"> | null>(null);
-  const [streamPreview, setStreamPreview] = useState("");
+  const [, setStreamPreview] = useState("");
   const [detectedSections, setDetectedSections] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -1042,7 +992,7 @@ function CreateModal({
 
             {isDone && !isCachedResult && (
               <div className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800/50 p-3">
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
                 Done! Opening your content piece…
               </div>
             )}
@@ -1050,7 +1000,7 @@ function CreateModal({
             {isDone && isCachedResult && (
               <div className="rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-900/20 p-3 space-y-2.5">
                 <div className="flex items-center gap-2 text-sm font-medium text-amber-800 dark:text-amber-300">
-                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
                   This piece already exists — returning the cached version.
                 </div>
                 <p className="text-xs text-amber-700/80 dark:text-amber-400/70">
@@ -1103,7 +1053,7 @@ function CreateModal({
                 <div className="px-3 py-2.5 space-y-1.5 max-h-40 overflow-y-auto">
                   {detectedSections.length === 0 ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Loader2 className="w-3 h-3 animate-spin flex-shrink-0" />
+                      <Loader2 className="w-3 h-3 animate-spin shrink-0" />
                       Starting…
                     </div>
                   ) : (
@@ -1113,12 +1063,12 @@ function CreateModal({
                           key={i}
                           className="flex items-center gap-2 text-xs text-muted-foreground"
                         >
-                          <CheckCircle2 className="w-3 h-3 text-green-500 flex-shrink-0" />
+                          <CheckCircle2 className="w-3 h-3 text-green-500 shrink-0" />
                           {sec}
                         </div>
                       ))}
                       <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-                        <Loader2 className="w-3 h-3 animate-spin text-primary flex-shrink-0" />
+                        <Loader2 className="w-3 h-3 animate-spin text-primary shrink-0" />
                         {detectedSections[detectedSections.length - 1]}
                       </div>
                     </>
@@ -1129,7 +1079,7 @@ function CreateModal({
 
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 {error}
               </div>
             )}
@@ -1281,7 +1231,7 @@ function CreateModal({
                         >
                           {Icon && (
                             <Icon
-                              className={`w-3.5 h-3.5 mt-0.5 flex-shrink-0 ${meta.color.split(" ")[0]}`}
+                              className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${meta.color.split(" ")[0]}`}
                             />
                           )}
                           <div className="min-w-0">
@@ -1294,7 +1244,7 @@ function CreateModal({
                           </div>
                           {isSelected && (
                             <svg
-                              className="w-4 h-4 ml-auto flex-shrink-0 text-primary mt-0.5"
+                              className="w-4 h-4 ml-auto shrink-0 text-primary mt-0.5"
                               viewBox="0 0 20 20"
                               fill="currentColor"
                             >
@@ -1315,7 +1265,7 @@ function CreateModal({
 
             {error && (
               <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                <AlertCircle className="w-4 h-4 shrink-0" />
                 {error}
               </div>
             )}
@@ -1497,7 +1447,7 @@ function ContentCalendar({
 
       {pieces.length === 0 && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 rounded-lg px-4 py-3 border border-border/50">
-          <Calendar className="w-4 h-4 flex-shrink-0" />
+          <Calendar className="w-4 h-4 shrink-0" />
           <span>
             Create content pieces and they'll appear here. Drag them between
             days to reschedule.
@@ -1532,7 +1482,7 @@ function ContentCalendar({
               <div key={key} className="bg-background">
                 <DroppableDay dateKey={key}>
                   <span
-                    className={`text-xs font-medium block mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
+                    className={`text-xs font-medium mb-1 w-6 h-6 flex items-center justify-center rounded-full ${isToday ? "bg-primary text-primary-foreground" : "text-muted-foreground"}`}
                   >
                     {format(day, "d")}
                   </span>
@@ -2187,7 +2137,7 @@ export default function ContentStudio() {
                                 className="font-medium text-sm hover:text-primary transition-colors line-clamp-2 flex items-center gap-1"
                               >
                                 {item.title}
-                                <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                                <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
                               </Link>
                               {item.subtitle && (
                                 <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -2279,7 +2229,7 @@ export default function ContentStudio() {
                               className="font-medium text-sm hover:text-primary transition-colors line-clamp-2 flex items-center gap-1"
                             >
                               {item.title}
-                              <ExternalLink className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                              <ExternalLink className="w-3 h-3 text-muted-foreground shrink-0" />
                             </Link>
                             {item.subtitle && (
                               <p className="text-xs text-muted-foreground mt-0.5 truncate">
@@ -2332,7 +2282,7 @@ export default function ContentStudio() {
         </Tabs>
 
         <div className="mt-10 border-t border-border/50 pt-8">
-          <h2 className="text-base font-semibold mb-4 text-muted-foreground uppercase tracking-wide text-xs">
+          <h2 className="font-semibold mb-4 text-muted-foreground uppercase tracking-wide text-xs">
             Other project tools
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

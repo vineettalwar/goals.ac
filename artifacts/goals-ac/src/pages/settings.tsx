@@ -82,7 +82,7 @@ export default function Settings() {
 
   // AI provider status
   const [aiStatus, setAiStatus] = useState<AiProviderStatus | null>(null);
-  const [isLoadingAiStatus, setIsLoadingAiStatus] = useState(true);
+  const [, setIsLoadingAiStatus] = useState(true);
 
   const profileForm = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),

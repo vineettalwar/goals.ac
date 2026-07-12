@@ -15,7 +15,7 @@ import {
   RefreshCw, Save, BookOpen, Newspaper, GraduationCap, Map,
   FileSearch, LayoutTemplate, Globe, ImageIcon, Trash2, Send, ExternalLink,
   Linkedin, Twitter, Instagram, Mail, Megaphone, MonitorPlay, Package, Radio, HelpCircle,
-  Shuffle, CheckCircle2, Circle, FileText
+  Shuffle, CheckCircle2, Circle
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import {
@@ -227,7 +227,7 @@ function PublishDialog({
 
             {error && (
               <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
-                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
             )}
@@ -426,7 +426,7 @@ function RepurposeDialog({
 
           {error && (
             <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md p-3">
-              <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
               <span>{error}</span>
             </div>
           )}
@@ -726,7 +726,7 @@ export default function ContentPiecePage() {
         {piece.status === "draft" && !isEditing && (
           <div className="flex items-center justify-between gap-4 mb-6 px-4 py-3 rounded-lg bg-muted/50 border border-border">
             <div className="flex items-center gap-2.5 min-w-0">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
               <p className="text-sm text-muted-foreground">
                 Review the draft below, then mark it ready when you want to publish.
               </p>
@@ -736,7 +736,7 @@ export default function ContentPiecePage() {
               size="sm"
               onClick={handleMarkReady}
               disabled={isMarkingReady}
-              className="flex-shrink-0"
+              className="shrink-0"
             >
               {isMarkingReady ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />Mark as ready</>}
             </Button>
@@ -745,7 +745,7 @@ export default function ContentPiecePage() {
 
         {piece.publishedUrl && (
           <div className="flex items-center gap-3 mb-6 px-4 py-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-            <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+            <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-blue-800 dark:text-blue-300">Published</p>
               <a
