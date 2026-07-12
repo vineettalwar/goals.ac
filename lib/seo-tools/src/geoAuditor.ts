@@ -22,8 +22,11 @@ export async function auditUrl(url: string): Promise<AuditResult> {
   try {
     const response = await fetch(url, {
       signal: controller.signal,
+      redirect: "follow",
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; GEO-Auditor/1.0)",
+        "User-Agent":
+          "Mozilla/5.0 (compatible; GEO-Auditor/1.0; +https://goals.ac)",
+        Accept: "text/html,application/xhtml+xml",
       },
     });
 
@@ -32,6 +35,12 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     }
 
     html = await response.text();
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("Request timed out after 10 seconds");
+    }
+    const message = err instanceof Error ? err.message : String(err);
+    throw new Error(message.includes("fetch failed") ? `Could not reach ${url}` : message);
   } finally {
     clearTimeout(timeout);
   }
@@ -95,13 +104,33 @@ export async function auditUrl(url: string): Promise<AuditResult> {
   const hasSchemaOrg = schemaScripts.length > 0;
   const schemaTypes: string[] = [];
 
+  function collectSchemaTypes(node: unknown): void {
+    if (!node || typeof node !== "object") return;
+
+    if (Array.isArray(node)) {
+      for (const entry of node) collectSchemaTypes(entry);
+      return;
+    }
+
+    const record = node as Record<string, unknown>;
+    const typeValue = record["@type"];
+    if (typeof typeValue === "string") {
+      schemaTypes.push(typeValue);
+    } else if (Array.isArray(typeValue)) {
+      for (const entry of typeValue) {
+        if (typeof entry === "string") schemaTypes.push(entry);
+      }
+    }
+
+    const graph = record["@graph"];
+    if (Array.isArray(graph)) {
+      for (const entry of graph) collectSchemaTypes(entry);
+    }
+  }
+
   for (const script of schemaScripts) {
     try {
-      const data = JSON.parse(script.text);
-      const items = Array.isArray(data) ? data : [data];
-      for (const item of items) {
-        if (item["@type"]) schemaTypes.push(item["@type"]);
-      }
+      collectSchemaTypes(JSON.parse(script.text));
     } catch {
       // ignore invalid JSON
     }
@@ -119,6 +148,25 @@ export async function auditUrl(url: string): Promise<AuditResult> {
       check: "Schema.org Markup",
       status: "pass",
       detail: `Found ${schemaScripts.length} JSON-LD block(s): ${schemaTypes.join(", ") || "unknown types"}.`,
+      fix: "",
+    });
+  }
+
+  const hasFaqSchema = schemaTypes.some((type) => type.toLowerCase().includes("faq"));
+  if (!hasFaqSchema) {
+    issues.push({
+      check: "FAQ Schema",
+      status: hasSchemaOrg ? "warn" : "fail",
+      detail: hasSchemaOrg
+        ? "Structured data found, but no FAQPage schema."
+        : "No FAQPage schema for AI-friendly Q&A snippets.",
+      fix: "Publish an FAQ section or article with FAQPage JSON-LD so AI engines can cite direct answers.",
+    });
+  } else {
+    issues.push({
+      check: "FAQ Schema",
+      status: "pass",
+      detail: "FAQPage schema detected.",
       fix: "",
     });
   }
