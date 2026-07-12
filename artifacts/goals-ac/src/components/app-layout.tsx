@@ -21,14 +21,24 @@ interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-const NAV_ITEMS = [
+const MARKETING_URL = import.meta.env.VITE_MARKETING_URL ?? "http://localhost:3001";
+
+const NAV_ITEMS: Array<{
+  label: string;
+  icon: React.ElementType;
+  to: string;
+  matchPaths?: string[];
+}> = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/dashboard" },
-  { label: "Projects", icon: FolderOpen, to: "/dashboard", matchExact: false, matchPaths: ["/projects"] },
-  { label: "GEO Audit", icon: Zap, to: "/geo-audit" },
+  { label: "Projects", icon: FolderOpen, to: "/dashboard", matchPaths: ["/projects"] },
   { label: "Competitor Analysis", icon: Search, to: "/competitor-analysis" },
   { label: "Keyword Tracking", icon: BarChart3, to: "/keyword-tracking" },
   { label: "AI Visibility", icon: Sparkles, to: "/ai-visibility" },
 ];
+
+const EXTERNAL_LINKS = [
+  { label: "GEO Audit", icon: Zap, href: `${MARKETING_URL}/geo-audit` },
+] as const;
 
 function NavItem({ label, icon: Icon, to, active }: { label: string; icon: React.ElementType; to: string; active: boolean }) {
   return (
@@ -79,7 +89,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <div className="min-h-dvh flex bg-background text-foreground font-sans selection:bg-primary/20">
       <aside className="w-56 shrink-0 flex flex-col border-r border-border/60 bg-background sticky top-0 h-dvh">
         <div className="px-4 py-4 border-b border-border/60">
-          <Link to="/" className="hover:opacity-80 transition-opacity inline-block">
+          <Link to="/dashboard" className="hover:opacity-80 transition-opacity inline-block">
             <Logo />
           </Link>
         </div>
@@ -87,6 +97,18 @@ export function AppLayout({ children }: AppLayoutProps) {
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => (
             <NavItem key={item.label} {...item} active={isActive(item)} />
+          ))}
+          {EXTERNAL_LINKS.map(({ label, icon: Icon, href }) => (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
+            >
+              <Icon className="w-4 h-4 shrink-0" />
+              {label}
+            </a>
           ))}
         </nav>
 

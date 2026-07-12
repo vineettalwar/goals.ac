@@ -5,7 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SEO } from "@/components/seo";
 import { Logo } from "@/components/logo";
-import { Layout } from "@/components/layout";
+import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -48,7 +48,7 @@ export default function ForgotPassword() {
   };
 
   return (
-    <Layout>
+    <AuthShell>
       <SEO title="Reset Password — goals.ac" description="Reset your goals.ac password." />
       <div className="flex-1 flex items-center justify-center py-16 px-4 bg-background min-h-[80vh] relative overflow-hidden">
         <div className="orb orb-primary w-[500px] h-[400px] top-[-10%] left-[50%] -translate-x-1/2 pointer-events-none dark:block hidden" />
@@ -144,6 +144,6 @@ export default function ForgotPassword() {
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    </AuthShell>
   );
 }

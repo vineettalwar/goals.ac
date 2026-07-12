@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { SEO } from "@/components/seo";
 import { Logo } from "@/components/logo";
-import { Layout } from "@/components/layout";
+import { AuthShell } from "@/components/auth-shell";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import { useAuth } from "@/context/auth";
 import { Loader2 } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const MARKETING_URL = import.meta.env.VITE_MARKETING_URL ?? "http://localhost:3001";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -65,7 +66,7 @@ export default function Login() {
   };
 
   return (
-    <Layout>
+    <AuthShell>
       <SEO title="Sign In — goals.ac" description="Sign in to your goals.ac account." />
       <div className="flex-1 flex items-center justify-center py-16 px-4 bg-background min-h-[80vh] relative overflow-hidden">
         <div className="orb orb-primary w-[500px] h-[400px] top-[-10%] left-[50%] -translate-x-1/2 pointer-events-none dark:block hidden" />
@@ -153,13 +154,13 @@ export default function Login() {
             </Form>
             <p className="mt-6 text-center text-sm text-muted-foreground">
               Don't have an account?{" "}
-              <Link to="/signup" className="text-primary hover:text-primary/80 transition-colors font-medium">
+              <a href={`${MARKETING_URL}/signup`} className="text-primary hover:text-primary/80 transition-colors font-medium">
                 Sign up
-              </Link>
+              </a>
             </p>
           </CardContent>
         </Card>
       </div>
-    </Layout>
+    </AuthShell>
   );
 }

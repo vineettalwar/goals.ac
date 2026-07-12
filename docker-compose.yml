@@ -25,7 +25,7 @@ services:
       PORT: "8080"
       NODE_ENV: production
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/goalsac
-      APP_ORIGIN: http://localhost:5173
+      APP_ORIGIN: http://localhost:5173,http://localhost:3001
       # Dev-only placeholder secrets — replace with real values for any shared/production use.
       # Generate your own: node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
       JWT_SECRET: local-compose-jwt-secret-not-for-shared-use-1234

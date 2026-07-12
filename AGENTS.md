@@ -30,9 +30,9 @@ goals.ac/
 │   │   ├── src/services/        # AI generators (seoContent, contentStudio, roadmap, etc.)
 │   │   ├── src/lib/             # Auth middleware, sessions, encryption, cache, logger
 │   │   └── src/jobs/            # pg-boss job handlers
-│   ├── goals-ac/                # React + Vite SPA (main user-facing app)
-│   │   └── src/pages/           # content-studio, dashboard, roadmap pages, etc.
-│   └── marketing-persona-app/   # Next.js app (onboarding, integrations, autopilot, usage)
+│   ├── goals-ac/                # React + Vite product app (login, dashboard, content studio, tools)
+│   │   └── src/pages/           # dashboard, projects, content-studio, settings, etc.
+│   └── marketing-persona-app/   # Next.js marketing site + autopilot app (port 3001)
 ├── lib/
 │   ├── db/                      # Drizzle schema (20 tables), migrations, seeding
 │   ├── api-spec/                # OpenAPI spec — source of truth for API contracts
@@ -124,17 +124,26 @@ Each stage is a pure function, can be executed as a pg-boss job. The canonical c
 
 ## Running Locally
 
-```sh
-# Docker (recommended)
-docker compose up --build
-# Frontend: http://localhost:5173, API: http://localhost:8080/api
+Two frontends share the same API and database:
 
-# Manual
+| App | URL | Purpose |
+|---|---|---|
+| **Marketing** (`marketing-persona-app`) | http://localhost:3001 | Public site, signup, roadmaps, GEO audit, content-engine marketing |
+| **Product** (`goals-ac`) | http://localhost:5173 | Login, dashboard, projects, content studio, internal tools |
+| **API** (`api-server`) | http://localhost:8080/api | Shared REST API |
+
+```sh
+# Docker (API + Vite product app only)
+docker compose up --build
+# Product app: http://localhost:5173, API: http://localhost:8080/api
+
+# Manual — run all three for full local dev
 pnpm install
-cp .env.example .env  # fill in values
+cp .env.example .env  # fill in values; set VITE_MARKETING_URL and NEXT_PUBLIC_APP_URL
 pnpm --filter @workspace/db run migrate
-PORT=8080 pnpm --filter @workspace/api-server run dev   # API
-PORT=5173 pnpm --filter @workspace/goals-ac run dev     # UI
+PORT=8080 pnpm --filter @workspace/api-server run dev              # API
+pnpm --filter @workspace/marketing-persona-app run dev             # Marketing :3001
+pnpm --filter @workspace/goals-ac run dev                          # Product :5173
 ```
 
 ## Development Workflow

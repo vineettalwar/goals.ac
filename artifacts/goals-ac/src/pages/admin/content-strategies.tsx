@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Layout } from "@/components/layout";
+import { AppLayout } from "@/components/app-layout";
 import { useAuth } from "@/context/auth";
 import {
   useListContentStrategies,
@@ -125,19 +125,19 @@ export default function AdminContentStrategies() {
 
   if (!isAuthorized) {
     return (
-      <Layout>
+      <AppLayout>
         <div className="container mx-auto px-4 py-24 text-center max-w-md">
           <h1 className="text-2xl font-bold mb-3">Access Denied</h1>
           <p className="text-muted-foreground text-sm">
             This page is restricted to super admins.
           </p>
         </div>
-      </Layout>
+      </AppLayout>
     );
   }
 
   return (
-    <Layout>
+    <AppLayout>
       <div className="container mx-auto px-4 md:px-8 py-10 max-w-4xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight mb-1">Content Strategies</h1>
@@ -190,6 +190,6 @@ export default function AdminContentStrategies() {
           </>
         )}
       </div>
-    </Layout>
+    </AppLayout>
   );
 }

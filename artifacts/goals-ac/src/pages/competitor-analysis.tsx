@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Layout } from "@/components/layout";
+import { AppLayout } from "@/components/app-layout";
 import { SEO } from "@/components/seo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -110,7 +110,7 @@ export default function CompetitorAnalysis() {
   };
 
   return (
-    <Layout>
+    <AppLayout>
       <SEO
         title="Competitor Analysis | goals.ac"
         description="Analyze your competitors and uncover content gaps, GEO weaknesses, and quick wins to outrank them."
@@ -340,6 +340,6 @@ export default function CompetitorAnalysis() {
           )}
         </AnimatePresence>
       </div>
-    </Layout>
+    </AppLayout>
   );
 }

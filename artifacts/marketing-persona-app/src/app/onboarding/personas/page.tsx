@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Leaf, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
@@ -19,7 +19,7 @@ interface Persona {
   preferredContent: string[];
 }
 
-export default function PersonasPage() {
+function PersonasPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const companyId = params.get("companyId");
@@ -116,5 +116,17 @@ export default function PersonasPage() {
         )}
       </div>
     </div>
+  );
+}
+
+function PersonasPageFallback() {
+  return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+}
+
+export default function PersonasPage() {
+  return (
+    <Suspense fallback={<PersonasPageFallback />}>
+      <PersonasPageContent />
+    </Suspense>
   );
 }

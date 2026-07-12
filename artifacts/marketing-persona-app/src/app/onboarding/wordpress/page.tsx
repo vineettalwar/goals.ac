@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -21,7 +21,7 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
-export default function WordPressPage() {
+function WordPressPageContent() {
   const router = useRouter();
   const params = useSearchParams();
   const companyId = params.get("companyId");
@@ -195,5 +195,17 @@ export default function WordPressPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+function WordPressPageFallback() {
+  return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+}
+
+export default function WordPressPage() {
+  return (
+    <Suspense fallback={<WordPressPageFallback />}>
+      <WordPressPageContent />
+    </Suspense>
   );
 }

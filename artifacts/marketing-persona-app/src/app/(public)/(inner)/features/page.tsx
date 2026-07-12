@@ -40,7 +40,7 @@ export default function FeaturesPage() {
       <div className="text-center max-w-3xl mx-auto space-y-4">
         <h1 className="text-4xl font-bold">Features built for AI content teams</h1>
         <p className="text-lg text-muted-foreground">
-          GoldSuite AC on goals.ac combines research, writing, and publishing so teams can ship high-quality content faster.
+          goals.ac combines research, writing, and publishing so teams can ship high-quality content faster.
         </p>
       </div>
 

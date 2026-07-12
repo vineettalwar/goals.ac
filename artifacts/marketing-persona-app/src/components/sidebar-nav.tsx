@@ -27,7 +27,7 @@ const NAV_ITEMS = [
   { label: "Projects", href: "/projects", icon: FolderOpen },
   { label: "Roadmaps", href: "/roadmaps", icon: Map },
   { label: "Topical Map", href: "/topical-map", icon: Network },
-  { label: "Content Engine", href: "/content-engine", icon: Layers },
+  { label: "Content Studio", href: "/studio", icon: Layers },
   { label: "Competitor AI", href: "/competitor-analysis", icon: Search },
   { label: "Keywords", href: "/keyword-tracking", icon: BarChart2 },
   { label: "Integrations", href: "/integrations", icon: Plug },

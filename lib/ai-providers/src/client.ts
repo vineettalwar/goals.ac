@@ -98,7 +98,7 @@ async function resolveProviderId(): Promise<AiProviderId> {
 async function buildClient(providerId: AiProviderId): Promise<AiProviderClient> {
   switch (providerId) {
     case "gemini": {
-      const { getPlatformGeminiClient } = await import("./gemini.js");
+      const { getPlatformGeminiClient } = await import("./gemini");
       const client = await getPlatformGeminiClient();
       if (!client) {
         throw new Error(
@@ -110,7 +110,7 @@ async function buildClient(providerId: AiProviderId): Promise<AiProviderClient> 
 
     case "bedrock": {
       try {
-        const { BedrockClient } = await import("./bedrock.js");
+        const { BedrockClient } = await import("./bedrock");
         return await BedrockClient.create();
       } catch (err) {
         throw new Error(
@@ -121,7 +121,7 @@ async function buildClient(providerId: AiProviderId): Promise<AiProviderClient> 
     }
 
     case "ollama": {
-      const { OllamaClient } = await import("./ollama.js");
+      const { OllamaClient } = await import("./ollama");
       return OllamaClient.create();
     }
   }

@@ -6,19 +6,9 @@ import { setBaseUrl } from "@workspace/api-client-react";
 import { AuthProvider, useAuth } from "@/context/auth";
 import { ActiveProjectProvider } from "@/context/active-project";
 import { ThemeProvider } from "@/context/theme";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 
-import Home from "@/pages/home";
-import RoadmapDetail from "@/pages/roadmap-detail";
-import RoadmapDirectory from "@/pages/roadmap-directory";
-import ContentStrategy from "@/pages/content-strategy";
-import AdminContentStrategies from "@/pages/admin/content-strategies";
-import SeoArticle from "@/pages/seo-article";
-import GeoAuditForm from "@/pages/geo-audit-form";
-import GeoAuditDetail from "@/pages/geo-audit";
-import NotFound from "@/pages/not-found";
 import Login from "@/pages/login";
-import Signup from "@/pages/signup";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import Dashboard from "@/pages/dashboard";
@@ -31,11 +21,12 @@ import Onboarding from "@/pages/onboarding";
 import CompetitorAnalysis from "@/pages/competitor-analysis";
 import KeywordTracking from "@/pages/keyword-tracking";
 import AiVisibility from "@/pages/ai-visibility";
-import About from "@/pages/about";
-import Pricing from "@/pages/pricing";
-import ContentEngine from "@/pages/content-engine";
+import AdminContentStrategies from "@/pages/admin/content-strategies";
+import NotFound from "@/pages/not-found";
 
 setBaseUrl(import.meta.env.BASE_URL.replace(/\/$/, ""));
+
+const MARKETING_URL = import.meta.env.VITE_MARKETING_URL ?? "http://localhost:3001";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,6 +46,19 @@ function RequireAuth({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
+function RootRedirect() {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return null;
+  return <Navigate to={user ? "/dashboard" : "/login"} replace />;
+}
+
+function SignupRedirect() {
+  useEffect(() => {
+    window.location.href = `${MARKETING_URL}/signup`;
+  }, []);
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -64,9 +68,9 @@ function App() {
             <TooltipProvider>
               <BrowserRouter basename={import.meta.env.BASE_URL}>
               <Routes>
-                <Route path="/" element={<Home />} />
+                <Route path="/" element={<RootRedirect />} />
                 <Route path="/login" element={<Login />} />
-                <Route path="/signup" element={<Signup />} />
+                <Route path="/signup" element={<SignupRedirect />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/oauth-callback" element={<OAuthCallback />} />
@@ -77,19 +81,10 @@ function App() {
                 <Route path="/projects/:id/:tab" element={<RequireAuth><ProjectDetail /></RequireAuth>} />
                 <Route path="/projects/:id" element={<RequireAuth><ProjectDetail /></RequireAuth>} />
                 <Route path="/content-piece/:id" element={<RequireAuth><ContentPiecePage /></RequireAuth>} />
-                <Route path="/roadmaps" element={<RequireAuth><RoadmapDirectory /></RequireAuth>} />
-                <Route path="/roadmap/:slug" element={<RequireAuth><RoadmapDetail /></RequireAuth>} />
-                <Route path="/content-strategy/:id" element={<ContentStrategy />} />
-                <Route path="/admin/content-strategies" element={<AdminContentStrategies />} />
-                <Route path="/seo-article/:id" element={<SeoArticle />} />
-                <Route path="/geo-audit" element={<GeoAuditForm />} />
-                <Route path="/geo-audit/:id" element={<GeoAuditDetail />} />
                 <Route path="/competitor-analysis" element={<RequireAuth><CompetitorAnalysis /></RequireAuth>} />
                 <Route path="/keyword-tracking" element={<RequireAuth><KeywordTracking /></RequireAuth>} />
                 <Route path="/ai-visibility" element={<RequireAuth><AiVisibility /></RequireAuth>} />
-                <Route path="/about" element={<About />} />
-                <Route path="/pricing" element={<Pricing />} />
-                <Route path="/content-engine" element={<ContentEngine />} />
+                <Route path="/admin/content-strategies" element={<AdminContentStrategies />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </BrowserRouter>

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { Layout } from "@/components/layout";
+import { AppLayout } from "@/components/app-layout";
 import { SEO } from "@/components/seo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -308,7 +308,7 @@ export default function KeywordTracking() {
     }));
 
   return (
-    <Layout>
+    <AppLayout>
       <SEO
         title="Keyword Rank Tracking | goals.ac"
         description="Track SERP positions for target keywords and get AI-powered difficulty and visibility analysis."
@@ -662,6 +662,6 @@ export default function KeywordTracking() {
           )}
         </AnimatePresence>
       </div>
-    </Layout>
+    </AppLayout>
   );
 }

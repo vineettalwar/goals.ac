@@ -54,3 +54,7 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Next.js build
+.next/
+next-env.d.ts
