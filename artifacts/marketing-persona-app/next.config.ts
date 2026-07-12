@@ -58,6 +58,8 @@ const nextConfig: NextConfig = {
       { source: "/internal-links", destination: "/search/site", permanent: true },
       { source: "/competitor-analysis", destination: "/research/competitors", permanent: true },
       { source: "/reddit-discovery", destination: "/research/reddit", permanent: true },
+      { source: "/search/geo-audit", destination: "/audit", permanent: true },
+      { source: "/search/geo-audit/:id", destination: "/audit/:id", permanent: true },
     ];
   },
   async headers() {

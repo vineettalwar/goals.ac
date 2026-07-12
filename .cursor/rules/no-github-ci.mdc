@@ -1,0 +1,12 @@
+---
+description: Do not add GitHub Actions or CI workflows to this repo
+alwaysApply: true
+---
+
+# No GitHub CI
+
+This project does **not** use GitHub Actions or any `.github/workflows/` CI pipeline.
+
+- Do **not** create, restore, or suggest adding GitHub CI unless the user explicitly requests it.
+- Do **not** add `.github/workflows/*.yml` files as part of bug fixes, refactors, or feature work.
+- Validate changes locally instead: `pnpm run typecheck`, relevant package builds, and `docker compose config --quiet` when Docker config is touched.
