@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Plus, Zap, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { useActiveProject } from "@/context/active-project";
 
 interface Roadmap {
   id: number;
@@ -30,6 +31,7 @@ interface ContentStrategy {
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default function ContentEnginePage() {
+  const { activeProjectId, activeProject, isLoading: projectLoading } = useActiveProject();
   const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
   const [strategies, setStrategies] = useState<ContentStrategy[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,33 +44,75 @@ export default function ContentEnginePage() {
     year: now.getFullYear(),
   });
 
+  const loadProjectContent = useCallback(async () => {
+    if (!activeProjectId) {
+      setRoadmaps([]);
+      setStrategies([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/website-projects/${activeProjectId}/content`);
+      if (!res.ok) {
+        setRoadmaps([]);
+        setStrategies([]);
+        return;
+      }
+      const data = await res.json();
+      setRoadmaps(data.roadmaps ?? []);
+      setStrategies(data.contentStrategies ?? []);
+    } catch {
+      setRoadmaps([]);
+      setStrategies([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeProjectId]);
+
   useEffect(() => {
-    fetch("/api/roadmaps")
-      .then((r) => r.json())
-      .then((data) => {
-        setRoadmaps(data.roadmaps ?? data ?? []);
-        setLoading(false);
-      });
-  }, []);
+    if (!projectLoading) {
+      loadProjectContent();
+    }
+  }, [projectLoading, loadProjectContent]);
 
   async function handleGenerate() {
-    if (!form.roadmapId) { toast.error("Select a roadmap"); return; }
+    if (!form.roadmapId) {
+      toast.error("Select a roadmap");
+      return;
+    }
+    if (!activeProjectId) {
+      toast.error("Select a project first");
+      return;
+    }
     setGenerating(true);
     const res = await fetch("/api/content-strategies/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        roadmapId: parseInt(form.roadmapId),
+        roadmapId: parseInt(form.roadmapId, 10),
+        websiteProjectId: activeProjectId,
         month: form.month,
         year: form.year,
       }),
     });
     setGenerating(false);
-    if (!res.ok) { toast.error("Failed to generate strategy"); return; }
+    if (!res.ok) {
+      toast.error("Failed to generate strategy");
+      return;
+    }
     const { strategy } = await res.json();
     setStrategies((prev) => [strategy, ...prev]);
     setShowForm(false);
     toast.success("Content strategy generated");
+  }
+
+  if (projectLoading) {
+    return (
+      <div className="flex items-center justify-center p-16">
+        <Spinner size="lg" />
+      </div>
+    );
   }
 
   return (
@@ -76,38 +120,61 @@ export default function ContentEnginePage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Content Engine</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Generate 30-day content calendars from your growth roadmaps</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {activeProject
+              ? `30-day content calendars from ${activeProject.name}'s roadmaps`
+              : "Generate 30-day content calendars from your growth roadmaps"}
+          </p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
-          <Plus className="h-4 w-4" /> New strategy
-        </Button>
+        {activeProjectId && roadmaps.length > 0 && (
+          <Button onClick={() => setShowForm(!showForm)}>
+            <Plus className="h-4 w-4" /> New strategy
+          </Button>
+        )}
       </div>
 
-      {showForm && (
+      {!activeProjectId ? (
+        <div className="paper-card rounded-xl flex flex-col items-center justify-center p-16 text-center">
+          <Calendar className="h-10 w-10 text-muted-foreground mb-3" />
+          <p className="font-medium">No project selected</p>
+          <p className="text-sm text-muted-foreground mt-1 mb-4">
+            Select or create a project to generate content strategies from its roadmaps.
+          </p>
+          <Link href="/projects">
+            <Button variant="outline">Manage projects</Button>
+          </Link>
+        </div>
+      ) : showForm ? (
         <div className="paper-card p-6 rounded-xl space-y-4">
           <h2 className="font-semibold">Generate content strategy</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5 sm:col-span-1">
               <Label>Roadmap</Label>
               <select
-                className="w-full h-10 rounded-lg border border-(--border) bg-white px-3 text-sm"
+                className="w-full h-10 rounded-lg border border-input bg-card px-3 text-sm"
                 value={form.roadmapId}
                 onChange={(e) => setForm((p) => ({ ...p, roadmapId: e.target.value }))}
               >
                 <option value="">Select roadmap…</option>
                 {roadmaps.map((r) => (
-                  <option key={r.id} value={r.id}>{r.industry} — {r.location}</option>
+                  <option key={r.id} value={r.id}>
+                    {r.industry} — {r.location}
+                  </option>
                 ))}
               </select>
             </div>
             <div className="space-y-1.5">
               <Label>Month</Label>
               <select
-                className="w-full h-10 rounded-lg border border-(--border) bg-white px-3 text-sm"
+                className="w-full h-10 rounded-lg border border-input bg-card px-3 text-sm"
                 value={form.month}
-                onChange={(e) => setForm((p) => ({ ...p, month: parseInt(e.target.value) }))}
+                onChange={(e) => setForm((p) => ({ ...p, month: parseInt(e.target.value, 10) }))}
               >
-                {MONTH_NAMES.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
+                {MONTH_NAMES.map((m, i) => (
+                  <option key={i} value={i + 1}>
+                    {m}
+                  </option>
+                ))}
               </select>
             </div>
             <div className="space-y-1.5">
@@ -115,7 +182,7 @@ export default function ContentEnginePage() {
               <Input
                 type="number"
                 value={form.year}
-                onChange={(e) => setForm((p) => ({ ...p, year: parseInt(e.target.value) }))}
+                onChange={(e) => setForm((p) => ({ ...p, year: parseInt(e.target.value, 10) }))}
                 min={2024}
                 max={2030}
               />
@@ -123,15 +190,27 @@ export default function ContentEnginePage() {
           </div>
           <div className="flex gap-2">
             <Button onClick={handleGenerate} disabled={generating}>
-              {generating ? <><Spinner size="sm" /> Generating…</> : <><Zap className="h-4 w-4" /> Generate</>}
+              {generating ? (
+                <>
+                  <Spinner size="sm" /> Generating…
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4" /> Generate
+                </>
+              )}
             </Button>
-            <Button variant="outline" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setShowForm(false)}>
+              Cancel
+            </Button>
           </div>
         </div>
-      )}
+      ) : null}
 
       {loading ? (
-        <div className="flex items-center justify-center p-16"><Spinner size="lg" /></div>
+        <div className="flex items-center justify-center p-16">
+          <Spinner size="lg" />
+        </div>
       ) : strategies.length === 0 ? (
         <div className="paper-card rounded-xl flex flex-col items-center justify-center p-16 text-center">
           <Calendar className="h-10 w-10 text-muted-foreground mb-3" />
@@ -142,21 +221,34 @@ export default function ContentEnginePage() {
               : "Generate a 30-day content calendar from one of your roadmaps"}
           </p>
           {roadmaps.length === 0 ? (
-            <Link href="/growth-roadmaps"><Button variant="outline">View roadmaps</Button></Link>
+            <Link href="/growth-roadmaps">
+              <Button variant="outline">Go to Growth Roadmaps</Button>
+            </Link>
           ) : (
-            <Button onClick={() => setShowForm(true)}><Plus className="h-4 w-4" /> Generate first strategy</Button>
+            <Button onClick={() => setShowForm(true)}>
+              <Plus className="h-4 w-4" /> Generate first strategy
+            </Button>
           )}
         </div>
       ) : (
         <div className="space-y-3">
           {strategies.map((s) => (
-            <div key={s.id} className="paper-card rounded-xl p-5 flex items-center justify-between gap-4">
+            <div
+              key={s.id}
+              className="paper-card rounded-xl p-5 flex items-center justify-between gap-4"
+            >
               <div>
-                <p className="font-medium">{MONTH_NAMES[(s.month ?? 1) - 1]} {s.year}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{s.industry} · {s.location} · {new Date(s.createdAt).toLocaleDateString()}</p>
+                <p className="font-medium">
+                  {MONTH_NAMES[(s.month ?? 1) - 1]} {s.year}
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {s.industry} · {s.location} · {new Date(s.createdAt).toLocaleDateString()}
+                </p>
               </div>
               <Link href={`/content-strategy/${s.id}`}>
-                <Button variant="outline" size="sm">View plan</Button>
+                <Button variant="outline" size="sm">
+                  View plan
+                </Button>
               </Link>
             </div>
           ))}
