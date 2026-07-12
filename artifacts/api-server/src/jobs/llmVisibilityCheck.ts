@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { QUEUES, enqueue } from "@workspace/jobs";

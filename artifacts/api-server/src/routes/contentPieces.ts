@@ -11,7 +11,6 @@ import {
 } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { z } from "zod";
-import { marked } from "marked";
 import { requireAuth } from "../lib/auth";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import {
@@ -25,7 +24,7 @@ import {
 } from "../services/contentStudioGenerator";
 import { logger } from "../lib/logger";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
-import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
+import { decryptSecret } from "@workspace/security/encryption";
 import { publishToNotion } from "@workspace/connectors/notion";
 import { publishToWebflow } from "@workspace/connectors/webflow";
 import { publishToWordPress } from "@workspace/connectors/wordpress";

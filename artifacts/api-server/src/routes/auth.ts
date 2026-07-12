@@ -346,7 +346,7 @@ router.delete("/auth/api-key", requireAuth, async (req, res) => {
   }
 });
 
-router.get("/auth/google", (req, res) => {
+router.get("/auth/google", (_req, res) => {
   if (!GOOGLE_CLIENT_ID) {
     res.status(503).json({ error: "Google OAuth is not configured" });
     return;

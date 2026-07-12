@@ -12,8 +12,6 @@ const LINKEDIN_CLIENT_ID = process.env["LINKEDIN_CLIENT_ID"];
 const LINKEDIN_CLIENT_SECRET = process.env["LINKEDIN_CLIENT_SECRET"];
 const TWITTER_CLIENT_ID = process.env["TWITTER_CLIENT_ID"];
 const TWITTER_CLIENT_SECRET = process.env["TWITTER_CLIENT_SECRET"];
-const META_APP_ID = process.env["META_APP_ID"];
-const META_APP_SECRET = process.env["META_APP_SECRET"];
 
 function getApiOrigin(): string {
   const devDomain = process.env["REPLIT_DEV_DOMAIN"];

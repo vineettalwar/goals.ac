@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { geoAuditsTable, websiteProjectsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { geoAuditsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auditUrl } from "@workspace/seo-tools/geoAuditor";
 import { optionalAuth } from "../lib/auth";

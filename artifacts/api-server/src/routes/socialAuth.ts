@@ -8,7 +8,6 @@ import { fetchLinkedInAuthorUrn } from "@workspace/connectors/linkedin";
 import { fetchMetaPages, type MetaPageInfo } from "@workspace/connectors/meta";
 import {
   decryptCmsCredentials,
-  encryptCmsCredentials,
   type CmsIntegrationCredentials,
 } from "../lib/cmsIntegrations";
 import {
