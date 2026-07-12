@@ -9,7 +9,8 @@ import { getSocialAccessToken } from "../lib/socialTokens";
 import { publishToLinkedIn } from "@workspace/connectors/linkedin";
 import { publishThreadToTwitter, splitTwitterThread } from "@workspace/connectors/twitter";
 import { publishToFacebookPage, publishToInstagram } from "@workspace/connectors/meta";
-import { publishToWordPress } from "@workspace/connectors/wordpress";
+import { publishPieceToCms, publishPieceToWordPress } from "../lib/cmsPublish";
+import { CMS_PUBLISH_PLATFORMS, type CmsPublishPlatform } from "../lib/cmsIntegrations";
 import { publishToNotion } from "@workspace/connectors/notion";
 import { publishToWebflow } from "@workspace/connectors/webflow";
 import { logger } from "../lib/logger";
@@ -70,13 +71,22 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
     );
     publishedUrl = result.postUrl;
   } else if (piece.formatType === "blog_post" && creds.wordpress) {
-    const result = await publishToWordPress(
-      { siteUrl: creds.wordpress.siteUrl, username: creds.wordpress.username, appPassword: creds.wordpress.appPassword },
-      piece.title,
-      piece.bodyMarkdown,
-      wpStatus,
+    publishedUrl = await publishPieceToWordPress(piece, creds, { status: wpStatus });
+  } else if (
+    platform &&
+    CMS_PUBLISH_PLATFORMS.includes(platform as CmsPublishPlatform) &&
+    creds[platform as CmsPublishPlatform]
+  ) {
+    publishedUrl = await publishPieceToCms(
+      platform as CmsPublishPlatform,
+      piece,
+      creds,
+      { status: wpStatus === "publish" ? "published" : "draft" },
     );
-    publishedUrl = result.url;
+  } else if (creds.ghost && !platform) {
+    publishedUrl = await publishPieceToCms("ghost", piece, creds, {
+      status: wpStatus === "publish" ? "published" : "draft",
+    });
   } else if (creds.notion && !platform) {
     publishedUrl = await publishToNotion(creds.notion.integrationToken, creds.notion.databaseId, piece.title, piece.bodyMarkdown);
   } else if (creds.webflow && !platform) {
