@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
-import { AnimatedDarkBg } from "./animated-dark-bg";
+import { HeroPhotoBg } from "./hero-photo-bg";
 import { fadeUp, fadeUpTransition, staggerContainer } from "@/lib/motion";
 
 type DarkCTABandProps = {
@@ -14,7 +14,6 @@ type DarkCTABandProps = {
   titleLine2?: string;
   description?: string;
   backgroundImage?: string;
-  animatedBackground?: boolean;
   primaryCta?: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
   children?: React.ReactNode;
@@ -27,7 +26,6 @@ export function DarkCTABand({
   titleLine2,
   description,
   backgroundImage,
-  animatedBackground = false,
   primaryCta,
   secondaryCta,
   children,
@@ -35,19 +33,8 @@ export function DarkCTABand({
   const line1 = titleLine1 ?? title ?? "";
 
   return (
-    <section className="py-24 relative overflow-hidden text-white bg-[var(--surface-dark)] border-t border-white/10">
-      {animatedBackground && <AnimatedDarkBg />}
-
-      {backgroundImage && !animatedBackground && (
-        <>
-          <div
-            className="absolute inset-0 bg-center bg-cover bg-no-repeat z-0"
-            style={{ backgroundImage: `url(${backgroundImage})` }}
-            aria-hidden
-          />
-          <div className="absolute inset-0 bg-black/60 z-0" aria-hidden />
-        </>
-      )}
+    <section className="py-24 relative overflow-hidden text-white bg-black border-t border-white/10">
+      {backgroundImage && <HeroPhotoBg image={backgroundImage} overlayClass="bg-black/60" />}
 
       <div className="relative z-20 max-w-5xl mx-auto px-6">
         <div className="text-center mb-14">

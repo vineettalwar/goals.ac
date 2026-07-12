@@ -4,7 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
-import { AnimatedDarkBg } from "./animated-dark-bg";
+import { HeroPhotoBg } from "./hero-photo-bg";
 import { fadeUp, fadeUpTransition } from "@/lib/motion";
 
 type MarketingCTAProps = {
@@ -13,7 +13,7 @@ type MarketingCTAProps = {
   titleLine1?: string;
   titleLine2?: string;
   description: string;
-  variant?: "paper" | "image" | "animated";
+  variant?: "paper" | "dark";
   backgroundImage?: string;
   primaryHref?: string;
   primaryLabel?: string;
@@ -35,26 +35,15 @@ export function MarketingCTA({
   secondaryLabel,
 }: MarketingCTAProps) {
   const line1 = titleLine1 ?? title ?? "Put the next decision in writing";
-  const isDark = variant === "image" || variant === "animated";
+  const isDark = variant === "dark";
 
   return (
     <section
       className={`py-28 relative overflow-hidden border-t ${
-        isDark ? "text-white" : "bg-background text-foreground border-[--border]"
+        isDark ? "text-white bg-black" : "bg-background text-foreground border-(--border)"
       }`}
     >
-      {variant === "animated" && <AnimatedDarkBg />}
-
-      {variant === "image" && backgroundImage && (
-        <>
-          <div
-            className="absolute inset-0 bg-center bg-cover bg-no-repeat z-0"
-            style={{ backgroundImage: `url(${backgroundImage})` }}
-            aria-hidden
-          />
-          <div className="absolute inset-0 bg-black/55 z-0" aria-hidden />
-        </>
-      )}
+      {isDark && backgroundImage && <HeroPhotoBg image={backgroundImage} />}
 
       <div className="relative z-20 max-w-4xl mx-auto px-6 text-center">
         <motion.div

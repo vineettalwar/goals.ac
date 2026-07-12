@@ -74,7 +74,7 @@ export function PricingPageClient() {
           titleLine1="Plans that scale"
           titleLine2="with your pipeline"
           description="Simple, transparent pricing. No hidden fees. Cancel any time."
-          backgroundImage={HERO_IMAGES.pricing}
+          backgroundImage={HERO_IMAGES.pricing.hero}
           ctas={[{ label: "Start free", href: "/signup", variant: "primary" }]}
         />
       }
@@ -94,7 +94,7 @@ export function PricingPageClient() {
                 key={plan.name}
                 className={`rounded-2xl p-8 flex flex-col paper-card-hover ${
                   plan.featured
-                    ? "bg-primary text-primary-foreground shadow-lg ring-2 ring-[var(--accent-warm)] ring-offset-2 ring-offset-background"
+                    ? "bg-primary text-primary-foreground shadow-lg ring-2 ring-(--accent-warm) ring-offset-2 ring-offset-background"
                     : "paper-card"
                 }`}
               >
@@ -131,7 +131,7 @@ export function PricingPageClient() {
                   href={plan.href}
                   className={`text-center px-6 py-3 rounded-full font-medium transition-all ${
                     plan.featured
-                      ? "bg-[var(--accent-warm)] text-white hover:bg-[var(--accent-warm-hover)]"
+                      ? "bg-(--accent-warm) text-white hover:bg-(--accent-warm-hover)"
                       : "bg-primary text-primary-foreground hover:opacity-90"
                   }`}
                 >
@@ -175,8 +175,8 @@ export function PricingPageClient() {
         titleLine2="free roadmap"
         description="No credit card required. Generate your 12-month growth plan in minutes."
         primaryLabel="Create free account"
-        variant="image"
-        backgroundImage={HERO_IMAGES.roadmaps}
+        variant="dark"
+        backgroundImage={HERO_IMAGES.pricing.footer}
         secondaryHref="/features"
         secondaryLabel="Explore features →"
       />

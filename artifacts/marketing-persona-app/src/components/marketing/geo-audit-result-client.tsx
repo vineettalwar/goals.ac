@@ -40,7 +40,7 @@ export function GeoAuditResultClient({ url, geoScore, issues }: GeoAuditResultCl
           titleLine1={`Score ${geoScore}`}
           titleLine2="out of 100"
           description={url}
-          backgroundImage={HERO_IMAGES.geoAuditResult}
+          backgroundImage={HERO_IMAGES.geoAuditResult.hero}
           overlay={
             <div className="flex gap-6 justify-center mt-2">
               <div className="text-center">
@@ -98,7 +98,7 @@ export function GeoAuditResultClient({ url, geoScore, issues }: GeoAuditResultCl
         titleLine1="Want to fix these"
         titleLine2="issues automatically?"
         description="Sign up and let goals.ac generate AI-optimised content for your site."
-        backgroundImage={HERO_IMAGES.geoAuditResult}
+        backgroundImage={HERO_IMAGES.geoAuditResult.cta}
         primaryCta={{ label: "Get started free", href: "/signup" }}
       />
     </MarketingPageShell>

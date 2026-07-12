@@ -23,7 +23,7 @@ export function FAQAccordion({
   const line1 = titleLine1 ?? title ?? "Common questions";
 
   return (
-    <section className="py-24 bg-background border-t border-[--border]">
+    <section className="py-24 bg-background border-t border-(--border)">
       <div className="max-w-3xl mx-auto px-6">
         <div className="text-center mb-12">
           <EditorialHeading line1={line1} line2={titleLine2} theme="light" />

@@ -30,7 +30,7 @@ export function RoadmapsPageClient({ roadmaps }: RoadmapsPageClientProps) {
           titleLine1="Growth roadmaps"
           titleLine2="for every market"
           description="AI-generated 12-month B2B growth strategies. Free to browse, share, and build on."
-          backgroundImage={HERO_IMAGES.roadmaps}
+          backgroundImage={HERO_IMAGES.roadmaps.hero}
           ctas={[{ label: "Generate yours", href: "#roadmap-generator", variant: "primary" }]}
         />
       }

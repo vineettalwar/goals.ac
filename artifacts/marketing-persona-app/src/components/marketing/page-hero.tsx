@@ -21,7 +21,7 @@ export type PageHeroProps = {
   description?: string;
   leftDescription?: string;
   ctas?: HeroCta[];
-  backgroundImage: string;
+  backgroundImage?: string;
   spotlightImage?: string;
   enableSpotlight?: boolean;
   layout?: "home" | "centered";
@@ -82,7 +82,7 @@ export function PageHero({
   const ctaButtonClass = (variant: HeroCta["variant"]) =>
     variant === "ghost"
       ? "border border-white/30 bg-white/10 text-white hover:bg-white/20 text-sm font-medium px-7 py-3 rounded-full transition-all"
-      : "bg-[var(--accent-warm)] hover:bg-[var(--accent-warm-hover)] text-white text-sm font-medium px-7 py-3 rounded-full transition-all hover:scale-[1.03] active:scale-95 hover:shadow-lg hover:shadow-[var(--accent-warm)]/30";
+      : "bg-(--accent-warm) hover:bg-(--accent-warm-hover) text-white text-sm font-medium px-7 py-3 rounded-full transition-all hover:scale-[1.03] active:scale-95 hover:shadow-lg hover:shadow-(--accent-warm)/30";
 
   const renderCta = (cta: HeroCta, key: string) => {
     const className = ctaButtonClass(cta.variant ?? "primary");
@@ -112,11 +112,13 @@ export function PageHero({
       className="relative w-full overflow-hidden h-screen bg-black font-sans"
       style={{ height: "100dvh" }}
     >
-      <div
-        className="absolute inset-0 bg-center bg-cover bg-no-repeat z-10 hero-zoom"
-        style={{ backgroundImage: `url(${backgroundImage})` }}
-        aria-hidden
-      />
+      {backgroundImage && (
+        <div
+          className="absolute inset-0 bg-center bg-cover bg-no-repeat z-10 hero-zoom"
+          style={{ backgroundImage: `url(${backgroundImage})` }}
+          aria-hidden
+        />
+      )}
 
       {enableSpotlight && spotlightImage && (
         <RevealLayer

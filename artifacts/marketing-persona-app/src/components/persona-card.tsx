@@ -42,7 +42,7 @@ function EditableText({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
-          className="flex-1 rounded border border-ring bg-card px-2 py-0.5 text-sm focus:outline-none"
+          className="flex-1 rounded border border-ring bg-card px-2 py-0.5 text-sm focus:outline-hidden"
         />
         <button onClick={save} className="text-primary hover:text-primary/80"><Check className="h-3.5 w-3.5" /></button>
         <button onClick={() => setEditing(false)} className="text-muted-foreground hover:text-foreground"><X className="h-3.5 w-3.5" /></button>
@@ -99,7 +99,7 @@ function EditableList({
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") saveItem(i); if (e.key === "Escape") setEditingIdx(null); }}
-                className="flex-1 rounded border border-ring bg-card px-2 py-0.5 text-sm focus:outline-none"
+                className="flex-1 rounded border border-ring bg-card px-2 py-0.5 text-sm focus:outline-hidden"
               />
               <button onClick={() => saveItem(i)} className="text-primary"><Check className="h-3.5 w-3.5" /></button>
               <button onClick={() => setEditingIdx(null)} className="text-muted-foreground"><X className="h-3.5 w-3.5" /></button>

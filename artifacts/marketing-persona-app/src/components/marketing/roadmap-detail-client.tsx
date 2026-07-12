@@ -50,7 +50,7 @@ export function RoadmapDetailClient({
               ? content.executiveSummary.slice(0, 180) + (content.executiveSummary.length > 180 ? "…" : "")
               : "A 12-month AI-generated growth strategy tailored to your market and stage."
           }
-          backgroundImage={HERO_IMAGES.roadmapDetail}
+          backgroundImage={HERO_IMAGES.roadmapDetail.hero}
           ctas={[{ label: "Browse all roadmaps", href: "/roadmaps", variant: "ghost" }]}
         />
       }

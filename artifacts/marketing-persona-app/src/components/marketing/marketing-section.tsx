@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 import { EditorialHeading } from "./editorial-heading";
-import { AnimatedDarkBg } from "./animated-dark-bg";
+import { HeroPhotoBg } from "./hero-photo-bg";
 import { fadeUp, fadeUpTransition } from "@/lib/motion";
 
 export type MarketingSectionVariant = "paper" | "image" | "dark";
@@ -20,7 +20,6 @@ type MarketingSectionProps = {
   animate?: boolean;
   variant?: MarketingSectionVariant;
   backgroundImage?: string;
-  animatedBackground?: boolean;
   bridgeTop?: boolean;
   bridgeBottom?: boolean;
   id?: string;
@@ -29,7 +28,7 @@ type MarketingSectionProps = {
 const variantClasses: Record<MarketingSectionVariant, string> = {
   paper: "py-28 bg-background text-foreground",
   image: "py-28 relative overflow-hidden text-white",
-  dark: "py-24 relative overflow-hidden text-white bg-[var(--surface-dark)]",
+  dark: "py-24 relative overflow-hidden text-white bg-(--surface-dark)",
 };
 
 export function MarketingSection({
@@ -44,7 +43,6 @@ export function MarketingSection({
   animate = true,
   variant = "paper",
   backgroundImage,
-  animatedBackground = false,
   bridgeTop = false,
   bridgeBottom = false,
   id,
@@ -98,20 +96,9 @@ export function MarketingSection({
   return (
     <section
       id={id}
-      className={`${resolvedClassName}${bordered && variant === "paper" ? " border-t border-[--border]" : ""}`}
+      className={`${resolvedClassName}${bordered && variant === "paper" ? " border-t border-(--border)" : ""}`}
     >
-      {animatedBackground && <AnimatedDarkBg />}
-
-      {(variant === "image" || (variant === "dark" && backgroundImage)) && backgroundImage && !animatedBackground && (
-        <>
-          <div
-            className="absolute inset-0 bg-center bg-cover bg-no-repeat z-0"
-            style={{ backgroundImage: `url(${backgroundImage})` }}
-            aria-hidden
-          />
-          <div className="absolute inset-0 bg-black/55 z-0" aria-hidden />
-        </>
-      )}
+      {isDarkTheme && backgroundImage && <HeroPhotoBg image={backgroundImage} />}
 
       {bridgeTop && (
         <div className="absolute top-0 left-0 right-0 h-24 section-bridge-top pointer-events-none z-10" aria-hidden />

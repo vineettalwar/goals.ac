@@ -40,7 +40,7 @@ export function SeoArticleClient({
           titleLine1={line1}
           titleLine2={line2}
           description={metaDescription ?? undefined}
-          backgroundImage={HERO_IMAGES.seoArticle}
+          backgroundImage={HERO_IMAGES.seoArticle.hero}
         />
       }
       overlap={false}
@@ -56,8 +56,8 @@ export function SeoArticleClient({
         titleLine1="Generate articles like this"
         titleLine2="for your brand"
         description="Set your voice once, then draft SEO-optimised content tailored to your audience."
-        variant="image"
-        backgroundImage={HERO_IMAGES.contentEngine}
+        variant="dark"
+        backgroundImage={HERO_IMAGES.seoArticle.footer}
         secondaryHref="/content-engine"
         secondaryLabel="Explore content engine →"
       />

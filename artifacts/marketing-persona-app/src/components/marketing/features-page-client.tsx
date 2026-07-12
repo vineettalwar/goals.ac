@@ -75,7 +75,7 @@ export function FeaturesPageClient() {
           titleLine1="Built for teams"
           titleLine2="who ship with AI"
           description="goals.ac combines research, writing, and publishing so teams can ship high-quality content faster."
-          backgroundImage={HERO_IMAGES.features}
+          backgroundImage={HERO_IMAGES.features.hero}
           ctas={[
             { label: "Start free", href: "/signup", variant: "primary" },
             { label: "See pricing", href: "/pricing", variant: "ghost" },
@@ -85,7 +85,7 @@ export function FeaturesPageClient() {
     >
       <MarketingSection
         variant="image"
-        backgroundImage={HERO_IMAGES.features}
+        backgroundImage={HERO_IMAGES.features.capabilities}
         bridgeTop
         badge="Capabilities"
         titleLine1="Everything in one"
@@ -119,7 +119,7 @@ export function FeaturesPageClient() {
         titleLine1="Ready to test"
         titleLine2="your first workflow?"
         description="Create your account, tell the agent what you want, and start building publish-ready articles."
-        backgroundImage={HERO_IMAGES.pricing}
+        backgroundImage={HERO_IMAGES.features.cta}
         primaryCta={{ label: "Start free", href: "/signup" }}
         secondaryCta={{ label: "Compare plans", href: "/pricing" }}
       />
@@ -150,8 +150,8 @@ export function FeaturesPageClient() {
         titleLine1="Put the next"
         titleLine2="decision in writing"
         description="Start with a roadmap you can inspect, edit, and turn into work—not another dashboard full of suggestions."
-        variant="image"
-        backgroundImage={HERO_IMAGES.about}
+        variant="dark"
+        backgroundImage={HERO_IMAGES.features.footer}
         secondaryHref="/geo-audit"
         secondaryLabel="Or run a free GEO audit →"
       />

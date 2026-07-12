@@ -62,7 +62,7 @@ export function ContentStrategyClient({ id }: { id: string }) {
             badge="Content Strategy"
             titleLine1="Loading"
             titleLine2="your plan…"
-            backgroundImage={HERO_IMAGES.contentStrategy}
+            backgroundImage={HERO_IMAGES.contentStrategy.hero}
           />
         }
       >
@@ -81,7 +81,7 @@ export function ContentStrategyClient({ id }: { id: string }) {
             badge="Content Strategy"
             titleLine1="Strategy"
             titleLine2="not found"
-            backgroundImage={HERO_IMAGES.contentStrategy}
+            backgroundImage={HERO_IMAGES.contentStrategy.hero}
             ctas={[{ label: "Go home", href: "/", variant: "primary" }]}
           />
         }
@@ -100,7 +100,7 @@ export function ContentStrategyClient({ id }: { id: string }) {
           titleLine1={`${monthLabel} ${strategy.year}`}
           titleLine2="Content Strategy"
           description={`${strategy.stage} stage · ${(strategy.items ?? []).length} planned pieces`}
-          backgroundImage={HERO_IMAGES.contentStrategy}
+          backgroundImage={HERO_IMAGES.contentStrategy.hero}
           ctas={[
             { label: "Start free", href: "/signup", variant: "primary" },
             { label: "Content engine", href: "/content-engine", variant: "ghost" },
@@ -123,7 +123,7 @@ export function ContentStrategyClient({ id }: { id: string }) {
               {weekItems
                 .sort((a, b) => a.day - b.day)
                 .map((item) => (
-                  <div key={item.id} className="border border-[--border] rounded-lg p-4 space-y-2">
+                  <div key={item.id} className="border border-(--border) rounded-lg p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -153,8 +153,8 @@ export function ContentStrategyClient({ id }: { id: string }) {
         titleLine1="Turn this plan into"
         titleLine2="published content"
         description="Connect your CMS and generate drafts from each item in your strategy."
-        variant="image"
-        backgroundImage={HERO_IMAGES.contentStrategy}
+        variant="dark"
+        backgroundImage={HERO_IMAGES.contentStrategy.footer}
         primaryLabel="Create free account"
       />
     </MarketingPageShell>

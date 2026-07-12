@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
+  Target,
   Zap,
   FolderOpen,
   Map,
@@ -15,21 +16,26 @@ import {
   Leaf,
   Layers,
   Search,
-  Brain,
+  MessageSquare,
   Plug,
+  Eye,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ProjectSwitcher } from "@/components/project-switcher";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Autopilot", href: "/autopilot", icon: Zap },
-  { label: "Agent", href: "/agent", icon: Brain },
+  { label: "Agent", href: "/agent", icon: MessageSquare },
   { label: "Projects", href: "/projects", icon: FolderOpen },
-  { label: "Roadmaps", href: "/roadmaps", icon: Map },
+  { label: "Roadmaps", href: "/growth-roadmaps", icon: Map },
   { label: "Topical Map", href: "/topical-map", icon: Network },
   { label: "Content Studio", href: "/studio", icon: Layers },
-  { label: "Competitor AI", href: "/competitor-analysis", icon: Search },
+  { label: "Competitor Analysis", href: "/competitor-analysis", icon: Users },
+  { label: "Goals", href: "/goals", icon: Target },
   { label: "Keywords", href: "/keyword-tracking", icon: BarChart2 },
+  { label: "Visibility", href: "/ai-visibility", icon: Eye },
   { label: "Integrations", href: "/integrations", icon: Plug },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
@@ -77,7 +83,10 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
         </ul>
       </nav>
 
-      {/* User */}
+      {/* Project switcher + user */}
+      <div className="border-t border-border">
+        <ProjectSwitcher />
+      </div>
       <div className="border-t border-border p-3">
         <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">

@@ -60,7 +60,7 @@ export function GeoAuditPageClient() {
           titleLine1="See how AI"
           titleLine2="reads your site"
           description="Check how well your page is optimised for ChatGPT, Perplexity, Google AI, and other generative engines."
-          backgroundImage={HERO_IMAGES.geoAudit}
+          backgroundImage={HERO_IMAGES.geoAudit.hero}
           ctas={[{ label: "Run audit below", href: "#geo-audit-form", variant: "primary" }]}
         />
       }
@@ -108,7 +108,7 @@ export function GeoAuditPageClient() {
 
       <MarketingSection
         variant="image"
-        backgroundImage={HERO_IMAGES.geoAudit}
+        backgroundImage={HERO_IMAGES.geoAudit.checks}
         badge="What we check"
         titleLine1="Technical signals"
         titleLine2="for AI visibility"

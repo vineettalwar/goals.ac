@@ -26,7 +26,7 @@ export function LegalPageClient({
           badge={`Last updated ${lastUpdated}`}
           titleLine1={titleLine1}
           titleLine2={titleLine2}
-          backgroundImage={HERO_IMAGES.legal}
+          backgroundImage={HERO_IMAGES.legal.hero}
         />
       }
     >

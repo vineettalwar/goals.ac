@@ -25,7 +25,7 @@ export function MarketingNav() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between p-4 sm:p-5 font-sans">
+      <nav className="fixed top-0 left-0 right-0 z-100 flex items-center justify-between p-4 sm:p-5 font-sans">
         <Link href="/" className="flex items-center gap-2.5">
           <svg width="26" height="26" viewBox="0 0 256 256" fill="#ffffff" aria-hidden>
             <path d="M 256 256 L 128 256 L 0 128 L 128 128 Z M 256 128 L 128 128 L 0 0 L 128 0 Z" />
@@ -79,7 +79,7 @@ export function MarketingNav() {
       </nav>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-[99] md:hidden">
+        <div className="fixed inset-0 z-99 md:hidden">
           <button
             type="button"
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"

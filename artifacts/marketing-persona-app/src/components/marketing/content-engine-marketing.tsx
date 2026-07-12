@@ -88,7 +88,7 @@ export function ContentEngineMarketing() {
           titleLine1="Draft, review, and publish"
           titleLine2="from one workspace"
           description="Blog posts, guides, social posts, and landing page copy. Set your brand voice once, generate drafts, and send approved pieces to your CMS."
-          backgroundImage={HERO_IMAGES.contentEngine}
+          backgroundImage={HERO_IMAGES.contentEngine.hero}
           ctas={[
             { label: appLabel, href: appCta, variant: "primary" },
             { label: "See pricing", href: "/pricing", variant: "ghost" },
@@ -98,7 +98,7 @@ export function ContentEngineMarketing() {
     >
       <MarketingSection
         variant="image"
-        backgroundImage={HERO_IMAGES.contentEngine}
+        backgroundImage={HERO_IMAGES.contentEngine.formats}
         bridgeTop
         titleLine1="18 formats across"
         titleLine2="four categories"
@@ -148,7 +148,7 @@ export function ContentEngineMarketing() {
                 (name) => (
                   <div
                     key={name}
-                    className="rounded-lg border border-[--border] bg-white px-3 py-2.5 font-medium"
+                    className="rounded-lg border border-(--border) bg-white px-3 py-2.5 font-medium"
                   >
                     {name}
                   </div>
@@ -165,13 +165,13 @@ export function ContentEngineMarketing() {
               {["LinkedIn", "X / Twitter", "Instagram", "Facebook"].map((name) => (
                 <div
                   key={name}
-                  className="rounded-lg border border-[--border] bg-white px-3 py-2.5 font-medium"
+                  className="rounded-lg border border-(--border) bg-white px-3 py-2.5 font-medium"
                 >
                   {name}
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border border-dashed border-[--border] bg-muted/40 px-3 py-2.5 flex items-start gap-2 text-xs text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-(--border) bg-muted/40 px-3 py-2.5 flex items-start gap-2 text-xs text-muted-foreground">
               <Webhook className="h-4 w-4 mt-0.5 shrink-0" />
               Webhook connector sends HMAC-signed JSON to Zapier, Make, n8n, or your own endpoint.
             </div>
@@ -184,7 +184,7 @@ export function ContentEngineMarketing() {
         titleLine1="Built for search engines"
         titleLine2="and AI citations"
         description="Drafts include structured headings, schema markup, and clear answers to common questions."
-        backgroundImage={HERO_IMAGES.geoAudit}
+        backgroundImage={HERO_IMAGES.contentEngine.geo}
         primaryCta={{ label: "Run a free GEO audit", href: "/geo-audit" }}
       >
         <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
@@ -208,8 +208,8 @@ export function ContentEngineMarketing() {
         titleLine1="Plan topics, draft content,"
         titleLine2="publish without switching tools"
         description="Free to start. Connect a project, set your brand voice, and generate your first draft in minutes."
-        variant="image"
-        backgroundImage={HERO_IMAGES.contentEngine}
+        variant="dark"
+        backgroundImage={HERO_IMAGES.contentEngine.footer}
         primaryHref={appCta}
         primaryLabel={session ? "Open content studio" : "Create free account"}
         secondaryHref="/"

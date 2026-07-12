@@ -30,14 +30,14 @@ export function AboutPageClient() {
           titleLine1="Strategy and content"
           titleLine2="for B2B builders"
           description="goals.ac is an AI-powered growth platform for startups who want to compete with larger marketing teams — without hiring one."
-          backgroundImage={HERO_IMAGES.about}
+          backgroundImage={HERO_IMAGES.about.hero}
           ctas={[{ label: "Try the free roadmap", href: "/", variant: "primary" }]}
         />
       }
     >
       <MarketingSection
         variant="image"
-        backgroundImage={HERO_IMAGES.about}
+        backgroundImage={HERO_IMAGES.about.mission}
         bridgeTop
         titleLine1="Our"
         titleLine2="mission"
@@ -79,8 +79,8 @@ export function AboutPageClient() {
         description="Generate a free 12-month roadmap tailored to your industry and stage."
         primaryHref="/"
         primaryLabel="Build your roadmap"
-        variant="image"
-        backgroundImage={HERO_IMAGES.roadmaps}
+        variant="dark"
+        backgroundImage={HERO_IMAGES.about.footer}
         secondaryHref="/features"
         secondaryLabel="Explore features →"
       />
