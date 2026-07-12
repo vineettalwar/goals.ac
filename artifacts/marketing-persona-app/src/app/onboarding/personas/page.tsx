@@ -32,6 +32,7 @@ function PersonasPageContent() {
       router.push("/onboarding");
       return;
     }
+    router.prefetch(`/onboarding/wordpress?companyId=${companyId}`);
     generatePersonas();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId]);
@@ -97,6 +98,12 @@ function PersonasPageContent() {
           </div>
         ) : (
           <div className="space-y-4">
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+              <p className="font-medium">Next: analyze your competitors</p>
+              <p className="text-muted-foreground mt-1">
+                After onboarding, run Competitor Analysis to find content and GEO gaps using the URLs you added.
+              </p>
+            </div>
             {personas.map((persona) => (
               <PersonaCard key={persona.id} persona={persona} onUpdate={handleUpdate} />
             ))}

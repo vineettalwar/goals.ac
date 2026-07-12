@@ -1,11 +1,14 @@
-import { auth } from "@/auth";
+import { getSession } from "@/auth";
 import { db } from "@workspace/db";
-import { scheduledArticlesTable, companiesTable, wordpressConnectionsTable } from "@workspace/db/schema";
+import { scheduledArticlesTable, companiesTable, wordpressConnectionsTable, brandProfilesTable, websiteProjectsTable, type ContentStyle } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ArticleActions } from "./article-actions";
+import { ArticleQualityPanel } from "@/components/article-quality-panel";
+import { BrandTailoringPanel } from "@/components/brand-tailoring-panel";
+import { languageLabel } from "@/lib/supported-languages";
 import { ArrowLeft, ExternalLink, Clock, Target, BookOpen, Link2, Wallet } from "lucide-react";
 
 interface ArticleMetadata {
@@ -35,7 +38,7 @@ const STATUS_VARIANT = {
 
 export default async function ArticlePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const session = await auth();
+  const session = await getSession();
   if (!session) return null;
   const userId = parseInt(session.user.id, 10);
 
@@ -56,6 +59,16 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
 
   const { article, wp } = row;
   const meta = (article.articleMetadata ?? {}) as ArticleMetadata;
+
+  const brandRows = await db
+    .select({ brand: brandProfilesTable, contentStyle: websiteProjectsTable.contentStyle })
+    .from(brandProfilesTable)
+    .innerJoin(websiteProjectsTable, eq(websiteProjectsTable.id, brandProfilesTable.websiteProjectId))
+    .where(eq(websiteProjectsTable.userId, userId))
+    .limit(1);
+  const brand = brandRows[0]?.brand;
+  const primaryLanguage = (brandRows[0]?.contentStyle as ContentStyle | null)?.primaryLanguage;
+  const languageBadge = primaryLanguage && primaryLanguage !== "en" ? languageLabel(primaryLanguage) : null;
 
   // Render markdown to basic HTML (no extra deps)
   const renderMarkdown = (md: string) =>
@@ -92,6 +105,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
               {article.status}
             </Badge>
             {meta.searchIntent && <Badge variant="muted">{meta.searchIntent}</Badge>}
+            {languageBadge && <Badge variant="muted">{languageBadge}</Badge>}
             {meta.generationSource && (
               <Badge variant="muted">
                 {meta.generationSource === "user-key" ? "Your API key" : "Platform AI"}
@@ -165,8 +179,30 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
           )}
         </div>
 
-        {/* Sidebar: citations + internal links */}
+        {/* Sidebar: quality + brand + citations + internal links */}
         <div className="space-y-4">
+          {article.bodyMarkdown && (
+            <ArticleQualityPanel
+              bodyMarkdown={article.bodyMarkdown}
+              metaTitle={article.title}
+              metaDescription={article.metaDescription}
+              citations={meta.citations}
+              faqSection={meta.faqSection}
+              jsonLdSchema={meta.jsonLdSchema}
+              internalLinkSuggestions={meta.internalLinkSuggestions}
+              wordCount={article.wordCount}
+            />
+          )}
+
+          {brand && (
+            <BrandTailoringPanel
+              voiceTone={brand.voiceTone}
+              brandColors={brand.brandColors}
+              productOfferings={brand.productOfferings}
+              doWords={brand.doWords}
+            />
+          )}
+
           {/* Citations */}
           {meta.citations && meta.citations.length > 0 && (
             <div className="paper-card rounded-xl p-5">

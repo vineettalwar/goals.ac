@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { getSession } from "@/auth";
 import { db } from "@workspace/db";
 import { websiteProjectsTable, brandProfilesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { NewProjectButton } from "./new-project-button";
 
 export default async function ProjectsPage() {
-  const session = await auth();
+  const session = await getSession();
   if (!session) return null;
   const userId = parseInt(session.user.id, 10);
 

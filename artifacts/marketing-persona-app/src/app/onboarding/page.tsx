@@ -1,17 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Leaf, Plus, X } from "lucide-react";
+import { SUPPORTED_LANGUAGES } from "@/lib/supported-languages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StepIndicator } from "@/components/step-indicator";
+import { readRoadmapIntent } from "@/lib/roadmap-intent";
 
 const schema = z.object({
   name: z.string().min(1, "Company name is required"),
@@ -19,6 +22,7 @@ const schema = z.object({
   industry: z.string().min(1, "Select an industry"),
   description: z.string().min(20, "Describe your company in a few sentences"),
   targetAudience: z.string().min(20, "Describe who your customers are"),
+  primaryLanguage: z.string().min(2).optional(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -40,8 +44,15 @@ const INDUSTRIES = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { update } = useSession();
+
+  useEffect(() => {
+    router.prefetch("/onboarding/personas");
+  }, [router]);
+
   const [loading, setLoading] = useState(false);
   const [competitors, setCompetitors] = useState<string[]>([""]);
+  const [language, setLanguage] = useState("en");
 
   const {
     register,
@@ -70,7 +81,7 @@ export default function OnboardingPage() {
     const res = await fetch("/api/companies", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, competitorUrls: validCompetitors }),
+      body: JSON.stringify({ ...data, competitorUrls: validCompetitors, primaryLanguage: language }),
     });
 
     if (!res.ok) {
@@ -81,6 +92,16 @@ export default function OnboardingPage() {
     }
 
     const { company } = await res.json();
+    await update({ companyId: company.id });
+
+    if (readRoadmapIntent()) {
+      await fetch("/api/website-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: data.name, url: data.websiteUrl, contentStyle: { primaryLanguage: language } }),
+      }).catch(() => {});
+    }
+
     router.push(`/onboarding/personas?companyId=${company.id}`);
   }
 
@@ -153,6 +174,20 @@ export default function OnboardingPage() {
                 {...register("targetAudience")}
               />
               {errors.targetAudience && <p className="text-xs text-destructive">{errors.targetAudience.message}</p>}
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="primaryLanguage">Primary content language</Label>
+              <select
+                id="primaryLanguage"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {SUPPORTED_LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code}>{lang.label}</option>
+                ))}
+              </select>
             </div>
 
             <div className="space-y-2">

@@ -1,25 +1,13 @@
-import { auth } from "@/auth";
+import { getSession } from "@/auth";
 import { redirect } from "next/navigation";
-import { db } from "@workspace/db";
-import { companiesTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { ActiveProjectProvider } from "@/context/active-project";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const session = await auth();
+  const session = await getSession();
   if (!session) redirect("/login");
 
-  const userId = parseInt(session.user.id, 10);
-
-  // Check if user has completed onboarding
-  const [company] = await db
-    .select({ id: companiesTable.id, onboardingComplete: companiesTable.onboardingComplete })
-    .from(companiesTable)
-    .where(eq(companiesTable.userId, userId))
-    .limit(1);
-
-  if (!company) {
+  if (session.user.companyId == null) {
     redirect("/onboarding");
   }
 
@@ -37,4 +25,3 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     </ActiveProjectProvider>
   );
 }
-

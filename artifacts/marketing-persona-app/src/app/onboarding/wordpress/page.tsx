@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { StepIndicator } from "@/components/step-indicator";
+import { postOnboardingRedirect } from "@/lib/roadmap-intent";
 
 const schema = z.object({
   siteUrl: z.string().url("Enter a valid URL (include https://)"),
@@ -81,7 +82,7 @@ function WordPressPageContent() {
       body: JSON.stringify({ id: parseInt(companyId, 10), data: { onboardingComplete: true } }),
     });
 
-    router.push("/dashboard");
+    router.push(postOnboardingRedirect());
   }
 
   async function handleSkip() {
@@ -91,7 +92,7 @@ function WordPressPageContent() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: parseInt(companyId, 10), data: { onboardingComplete: true } }),
     });
-    router.push("/dashboard");
+    router.push(postOnboardingRedirect());
   }
 
   return (
