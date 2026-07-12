@@ -3,6 +3,7 @@ import { type AiProviderOptions } from "@workspace/ai-providers";
 import type { AiProviderClient } from "@workspace/ai-providers/client";
 import { resolveAiClient } from "./support/resolve-ai-client";
 import type { ContentStyle } from "@workspace/db";
+import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
 
 export interface SeoArticleContent {
   title: string;
@@ -16,7 +17,9 @@ const SYSTEM_PROMPT = `You are a world-class SEO content strategist and writer s
 
 Your articles are brand-aligned, industry-specific, and location-aware. They combine thought leadership with practical insight to build brand authority.
 
-You MUST respond with a single valid JSON object and nothing else. No markdown, no code blocks, no explanation — only raw JSON.`;
+${AI_WRITING_RULES_PROMPT}
+
+You MUST respond with a single valid JSON object and nothing else. No markdown, no code blocks, no explanation; only raw JSON.`;
 
 function buildContentStyleContext(style?: ContentStyle | null): string {
   if (!style) return "";

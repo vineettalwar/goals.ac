@@ -25,16 +25,44 @@ function countMatches(text: string, pattern: RegExp): number {
   return (text.match(pattern) ?? []).length;
 }
 
+function countExternalLinks(body: string): number {
+  return countMatches(body, /\[.+?\]\(https?:\/\/[^)]+\)/g);
+}
+
+function countInternalLinks(body: string): number {
+  return countMatches(body, /\[.+?\]\(\/[^)]+\)/g);
+}
+
+function inferFaqCount(body: string): number {
+  const faqSection = body.match(/##\s*(?:FAQ|Frequently Asked Questions)[\s\S]*/i)?.[0] ?? "";
+  const target = faqSection || body;
+  const h3Questions = countMatches(target, /^###\s+.+\?/gm);
+  const boldQuestions = countMatches(target, /^\*\*.+\?\*\*/gm);
+  return Math.max(h3Questions, boldQuestions);
+}
+
+function inferMetaDescription(body: string): string | null {
+  const withoutTitle = body.replace(/^#\s+.+\n?/m, "").trim();
+  const firstParagraph = withoutTitle
+    .split(/\n\s*\n/)
+    .map((block) => block.replace(/^#+\s+/gm, "").replace(/\*\*/g, "").trim())
+    .find((block) => block.length > 40 && !block.startsWith("-"));
+  return firstParagraph ?? null;
+}
+
 export function scoreArticleQuality(input: ArticleQualityInput): ArticleQualityResult {
   const body = input.bodyMarkdown ?? "";
   const wordCount = input.wordCount ?? body.split(/\s+/).filter(Boolean).length;
   const h2Count = countMatches(body, /^## /gm);
-  const hasFaq = (input.faqSection?.length ?? 0) >= 3;
-  const citationCount = input.citations?.length ?? 0;
-  const internalLinks = input.internalLinkSuggestions?.length ?? countMatches(body, /\[.+?\]\(\/[^)]+\)/g);
+  const faqCount = input.faqSection?.length ?? inferFaqCount(body);
+  const hasFaq = faqCount >= 3;
+  const citationCount = input.citations?.length ?? countExternalLinks(body);
+  const internalLinks =
+    input.internalLinkSuggestions?.length ?? countInternalLinks(body);
   const hasSchema = Boolean(input.jsonLdSchema && Object.keys(input.jsonLdSchema).length > 0);
   const titleLen = input.metaTitle?.length ?? 0;
-  const metaLen = input.metaDescription?.length ?? 0;
+  const inferredMeta = inferMetaDescription(body);
+  const metaLen = input.metaDescription?.length ?? inferredMeta?.length ?? 0;
 
   const breakdown: ArticleQualityBreakdown[] = [
     {
@@ -45,9 +73,9 @@ export function scoreArticleQuality(input: ArticleQualityInput): ArticleQualityR
     },
     {
       label: "FAQ",
-      score: hasFaq ? 15 : (input.faqSection?.length ?? 0) > 0 ? 8 : 0,
+      score: hasFaq ? 15 : faqCount > 0 ? 8 : 0,
       max: 15,
-      detail: hasFaq ? "FAQ section present" : "Add 3+ FAQ items",
+      detail: hasFaq ? "FAQ section present" : faqCount > 0 ? `${faqCount} FAQ items` : "Add 3+ FAQ items",
     },
     {
       label: "Citations",

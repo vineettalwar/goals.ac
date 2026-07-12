@@ -11,6 +11,22 @@ import type { AiProviderClient } from "@workspace/ai-providers/client";
 import { resolveAiClient } from "./support/resolve-ai-client";
 import { getCache } from "./cache";
 import type { ContentFormatType, ContentStyle } from "@workspace/db";
+import {
+  SEO_SYSTEM_PROMPT,
+  buildSeoLongformJsonSchema,
+  buildSeoLongformRequirements,
+  finalizeSeoContentPiece,
+  isSeoLongformFormat,
+  seoQualitySignals,
+  type ContentPieceMetadata,
+} from "./content-piece-seo";
+import {
+  brandVoiceCacheFingerprint,
+  buildBrandVoicePromptContext,
+  type UnifiedBrandContext,
+} from "./brand-voice";
+import { humanizeContentPiece } from "./humanizer";
+import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
 
 // LinkedIn Post Enhancement Constants (Phase 2)
 const LINKEDIN_ARCHETYPES = [
@@ -96,21 +112,31 @@ export interface ContentPieceResult {
   title: string;
   target_keyword: string;
   body_markdown: string;
+  meta_description?: string;
+  faq_section?: { question: string; answer: string }[];
+  citations?: { text: string; url: string; source: string }[];
+  internal_link_suggestions?: {
+    anchorText: string;
+    suggestedSlug: string;
+    rationale?: string;
+  }[];
+  json_ld_schema?: object;
+  pieceMetadata?: ContentPieceMetadata;
 }
 
-interface BrandContext {
-  companyName: string;
-  websiteUrl: string;
-  industry: string;
-  targetAudience: string;
-  voiceTone: string;
-  primaryKeywords: string[];
-  contentStyle?: ContentStyle | null;
-}
+export type ContentGenerationContext = {
+  existingPieceTitles?: string[];
+};
+
+export type BrandContext = UnifiedBrandContext;
 
 const SYSTEM_PROMPT = `You are a world-class SEO content strategist and writer. You produce authoritative, deeply researched content that ranks on Google and is cited by AI search tools like ChatGPT, Perplexity, and Claude.
 
-Your content is brand-aligned, audience-specific, and actionable. You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation — only raw JSON.`;
+Your content is brand-aligned, audience-specific, and actionable.
+
+${AI_WRITING_RULES_PROMPT}
+
+You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation; only raw JSON.`;
 
 const FORMAT_CONFIGS: Record<
   ContentFormatType,
@@ -118,98 +144,98 @@ const FORMAT_CONFIGS: Record<
 > = {
   blog_post: {
     label: "Blog Post",
-    wordRange: "900-1200",
+    wordRange: "1400-1800",
     structure: `- Engaging introduction (hook + premise, 2-3 sentences)
-- ## Why [Topic] Matters — 150-200 words
-- ## [Core Insight 1] — 200-250 words
-- ## [Core Insight 2] — 200-250 words
-- ## [Practical Takeaways] — numbered list of 5-7 actionable tips
-- ### Conclusion — 100-150 words with forward-looking close`,
+- ## Why [Topic] Matters: 150-200 words
+- ## [Core Insight 1]: 200-250 words
+- ## [Core Insight 2]: 200-250 words
+- ## [Practical Takeaways]: numbered list of 5-7 actionable tips
+- ### Conclusion: 100-150 words with forward-looking close`,
   },
   news_article: {
     label: "News Article",
     wordRange: "600-900",
     structure: `- Inverted pyramid: most important facts first
-- ## Background — 150 words of context
-- ## Key Developments — 200 words on what's happening
-- ## Industry Impact — 150 words on what this means for the sector
-- ## What's Next — 100 words forward-looking
+- ## Background: 150 words of context
+- ## Key Developments: 200 words on what's happening
+- ## Industry Impact: 150 words on what this means for the sector
+- ## What's Next: 100 words forward-looking
 - Keep tone journalistic, factual, and timely`,
   },
   tutorial: {
     label: "Tutorial",
     wordRange: "1200-1600",
     structure: `- Introduction: what you'll learn and prerequisites
-- ## What You Need — bullet list of tools/requirements
-- ## Step 1: [Action] — 150-200 words with detail
-- ## Step 2: [Action] — 150-200 words with detail
-- ## Step 3: [Action] — 150-200 words with detail
-- ## Step 4: [Action] — 150-200 words with detail
-- ## Common Mistakes to Avoid — 100-150 words
-- ## Summary — 100 words recap and next steps`,
+- ## What You Need: bullet list of tools/requirements
+- ## Step 1: [Action]: 150-200 words with detail
+- ## Step 2: [Action]: 150-200 words with detail
+- ## Step 3: [Action]: 150-200 words with detail
+- ## Step 4: [Action]: 150-200 words with detail
+- ## Common Mistakes to Avoid: 100-150 words
+- ## Summary: 100 words recap and next steps`,
   },
   guide: {
     label: "Comprehensive Guide",
     wordRange: "1400-1800",
     structure: `- Executive summary (what this guide covers)
-- ## Understanding [Topic] — foundational concepts, 200-250 words
-- ## Key Challenges — 200 words on what makes this hard
-- ## The Right Framework — 250 words on the recommended approach
-- ## Implementation Playbook — 300 words with numbered steps
-- ## Tools & Resources — 150 words curated list
-- ## Case Study / Example — 200 words illustrative scenario
-- ### Final Thoughts — 100 words closing`,
+- ## Understanding [Topic]: foundational concepts, 200-250 words
+- ## Key Challenges: 200 words on what makes this hard
+- ## The Right Framework: 250 words on the recommended approach
+- ## Implementation Playbook: 300 words with numbered steps
+- ## Tools & Resources: 150 words curated list
+- ## Case Study / Example: 200 words illustrative scenario
+- ### Final Thoughts: 100 words closing`,
   },
   whitepaper: {
     label: "Whitepaper",
     wordRange: "1800-2500",
-    structure: `- Executive Summary — 150 words
-- ## 1. Introduction — 200 words problem statement
-- ## 2. Industry Context & Data — 300 words with statistics/research
-- ## 3. Current Approaches & Their Limitations — 250 words
-- ## 4. Proposed Framework / Solution — 350 words detailed methodology
-- ## 5. Implementation Considerations — 200 words practical guidance
-- ## 6. ROI & Business Case — 200 words value argument
-- ## 7. Conclusion & Recommendations — 150 words
+    structure: `- Executive Summary: 150 words
+- ## 1. Introduction: 200 words problem statement
+- ## 2. Industry Context & Data: 300 words with statistics/research
+- ## 3. Current Approaches & Their Limitations: 250 words
+- ## 4. Proposed Framework / Solution: 350 words detailed methodology
+- ## 5. Implementation Considerations: 200 words practical guidance
+- ## 6. ROI & Business Case: 200 words value argument
+- ## 7. Conclusion & Recommendations: 150 words
 - Formal, authoritative tone. Use data, cite frameworks by name.`,
   },
   pillar_page: {
     label: "Pillar Page",
     wordRange: "2000-3000",
     structure: `- Hero introduction defining the topic space (200 words)
-- ## What Is [Topic]? — 200 words clear definition
-- ## Why [Topic] Matters in [Year] — 200 words relevance
-- ## [Subtopic 1] — 300 words deep dive
-- ## [Subtopic 2] — 300 words deep dive
-- ## [Subtopic 3] — 300 words deep dive
-- ## [Subtopic 4] — 300 words deep dive
-- ## Common Questions — 5 FAQ-style Q&A pairs
-- ## Tools & Platforms — curated recommendations
-- ### Getting Started — 150 words action plan
+- ## What Is [Topic]?: 200 words clear definition
+- ## Why [Topic] Matters in [Year]: 200 words relevance
+- ## [Subtopic 1]: 300 words deep dive
+- ## [Subtopic 2]: 300 words deep dive
+- ## [Subtopic 3]: 300 words deep dive
+- ## [Subtopic 4]: 300 words deep dive
+- ## Common Questions: 5 FAQ-style Q&A pairs
+- ## Tools & Platforms: curated recommendations
+- ### Getting Started: 150 words action plan
 - This is an evergreen hub page; comprehensive, link-worthy content`,
   },
   location_page: {
     label: "Location/Language Page",
     wordRange: "800-1200",
     structure: `- Opening that names the location and the service/product in first sentence
-- ## [Service/Product] in [Location] — 200 words local market context
-- ## Why [Location] Businesses Choose [Brand] — 150 words local proof points
-- ## Local Market Insights — 200 words location-specific data and trends
-- ## How We Serve [Location] Clients — 150 words operational detail
-- ## Get Started in [Location] — 100 words CTA-oriented close
+- ## [Service/Product] in [Location]: 200 words local market context
+- ## Why [Location] Businesses Choose [Brand]: 150 words local proof points
+- ## Local Market Insights: 200 words location-specific data and trends
+- ## How We Serve [Location] Clients: 150 words operational detail
+- ## Get Started in [Location]: 100 words CTA-oriented close
 - Weave location-specific signals throughout; mention local landmarks, regulations, or market nuances`,
   },
   infographic_outline: {
     label: "Infographic Outline",
     wordRange: "400-600",
-    structure: `- ## Infographic Title — compelling, shareable headline
-- ## Hook Statistic — 1-2 surprising data points to open with
-- ## Section 1: [Label] — 3-4 bullet data points or facts
-- ## Section 2: [Label] — 3-4 bullet data points or facts
-- ## Section 3: [Label] — 3-4 bullet data points or facts
-- ## Section 4: [Label] — 3-4 bullet data points or facts
-- ## Key Takeaway — 1-2 sentence summary quote
-- ## Call to Action — what the viewer should do next
+    structure: `- ## Infographic Title: compelling, shareable headline
+- ## Hook Statistic: 1-2 surprising data points to open with
+- ## Section 1: [Label]: 3-4 bullet data points or facts
+- ## Section 2: [Label]: 3-4 bullet data points or facts
+- ## Section 3: [Label]: 3-4 bullet data points or facts
+- ## Section 4: [Label]: 3-4 bullet data points or facts
+- ## Key Takeaway: 1-2 sentence summary quote
+- ## Call to Action: what the viewer should do next
 - Note: This is a content brief/outline for a designer, not prose. Each section is a visual panel.`,
   },
   linkedin_post: {
@@ -228,7 +254,7 @@ const FORMAT_CONFIGS: Record<
     label: "Twitter / X Thread",
     wordRange: "300-500",
     structure: `- Tweet 1 (hook): A bold claim or surprising stat that makes people stop scrolling. End with "Thread 🧵"
-- Tweet 2: Context — why this matters for founders right now
+- Tweet 2: Context: why this matters for founders right now
 - Tweets 3-6: One insight per tweet. Start each with a number (2/, 3/, etc.). Short, punchy sentences.
 - Tweet 7: The counterintuitive point most people miss
 - Tweet 8: Practical 3-step framework or checklist
@@ -238,8 +264,8 @@ const FORMAT_CONFIGS: Record<
   instagram_post: {
     label: "Instagram Post",
     wordRange: "150-300",
-    structure: `- ## Caption (first 125 characters are visible before "more" — make them count)
-  - Hook: one striking sentence — a bold statement, relatable pain, or surprising fact
+    structure: `- ## Caption (first 125 characters are visible before "more": make them count)
+  - Hook: one striking sentence: a bold statement, relatable pain, or surprising fact
   - 3-4 short paragraphs expanding the idea (2-3 lines each, mobile-friendly)
   - Closing CTA: invite to save, share, comment, or click the link in bio
 - ## Hashtag Block (separate from caption)
@@ -260,7 +286,7 @@ const FORMAT_CONFIGS: Record<
     label: "Bluesky Post",
     wordRange: "50-280",
     structure: `- Single post under 300 characters (Bluesky limit)
-- Hook in the first line — opinion, insight, or question
+- Hook in the first line: opinion, insight, or question
 - 1-2 short paragraphs max; plain text only (no markdown headings)
 - Optional: 1-3 relevant hashtags at the end
 - Conversational, punchy tone. No thread unless explicitly requested.`,
@@ -269,8 +295,8 @@ const FORMAT_CONFIGS: Record<
     label: "Mastodon Post",
     wordRange: "50-500",
     structure: `- Single toot under 500 characters (or use content warning if longer concept)
-- Hook first — direct statement or question for the fediverse
-- Plain text; hashtags are discoverable on Mastodon — use 2-4 relevant tags
+- Hook first: direct statement or question for the fediverse
+- Plain text; hashtags are discoverable on Mastodon: use 2-4 relevant tags
 - Community-friendly, authentic tone; avoid engagement bait
 - Optional content warning line if discussing sensitive topics`,
   },
@@ -312,79 +338,58 @@ const FORMAT_CONFIGS: Record<
   - H1: clear, keyword-rich headline (benefit-led, ≤ 10 words)
   - Subheadline: expand the promise (1-2 sentences)
   - Primary CTA button text + secondary link text
-- ## Problem / Agitation — 2-3 short paragraphs naming the pain
-- ## Solution Introduction — 2-3 paragraphs introducing the product/service
+- ## Problem / Agitation: 2-3 short paragraphs naming the pain
+- ## Solution Introduction: 2-3 paragraphs introducing the product/service
 - ## Key Features (3-4 items)
   - Feature name + 1-sentence benefit description each
-- ## Social Proof — 2 testimonial templates with [Name, Title, Company] placeholders
-- ## FAQ (3 questions) — anticipate objections
-- ## Final CTA Section — headline + CTA button + urgency line`,
+- ## Social Proof: 2 testimonial templates with [Name, Title, Company] placeholders
+- ## FAQ (3 questions): anticipate objections
+- ## Final CTA Section: headline + CTA button + urgency line`,
   },
   product_description: {
     label: "Product Description",
     wordRange: "300-500",
     structure: `- ## Product Name + Tagline (1 line)
-- ## The 30-Second Pitch — 2-3 sentences: what it is, who it's for, the #1 benefit
-- ## Key Benefits (3-5 bullet points) — outcome-focused, not feature lists
-- ## How It Works — 3-step simple explanation
-- ## Who It's For — 2-3 customer personas or use cases
-- ## Why Choose [Brand] — 2-3 differentiators vs. alternatives
-- ## CTA — one clear next step`,
+- ## The 30-Second Pitch: 2-3 sentences: what it is, who it's for, the #1 benefit
+- ## Key Benefits (3-5 bullet points): outcome-focused, not feature lists
+- ## How It Works: 3-step simple explanation
+- ## Who It's For: 2-3 customer personas or use cases
+- ## Why Choose [Brand]: 2-3 differentiators vs. alternatives
+- ## CTA: one clear next step`,
   },
   press_release: {
     label: "Press Release",
     wordRange: "500-700",
     structure: `- FOR IMMEDIATE RELEASE
-- ## Headline — newsworthy, specific, keyword-rich (active voice)
-- ## Subheadline — one sentence expanding the news
-- [City, Date] — Opening paragraph: the 5 Ws (who, what, when, where, why) in 2-3 sentences
-- ## Body Paragraph 1 — context and significance of the announcement
-- ## Quote from [CEO/Founder Name, Title, Company] — genuine-sounding, 2-3 sentences
-- ## Body Paragraph 2 — additional details, data points, or background
-- ## About [Company Name] — 3-sentence boilerplate
+- ## Headline: newsworthy, specific, keyword-rich (active voice)
+- ## Subheadline: one sentence expanding the news
+- [City, Date]: Opening paragraph: the 5 Ws (who, what, when, where, why) in 2-3 sentences
+- ## Body Paragraph 1: context and significance of the announcement
+- ## Quote from [CEO/Founder Name, Title, Company]: genuine-sounding, 2-3 sentences
+- ## Body Paragraph 2: additional details, data points, or background
+- ## About [Company Name]: 3-sentence boilerplate
 - ### Media Contact: [Name] | [Email] | [Phone]`,
   },
   faq_article: {
     label: "FAQ / Knowledge Base",
     wordRange: "800-1200",
-    structure: `- ## Introduction — 1 paragraph explaining what this FAQ covers and who it's for
+    structure: `- ## Introduction: 1 paragraph explaining what this FAQ covers and who it's for
 - ## Frequently Asked Questions (8-12 questions)
   - Each Q&A follows this format:
     ### [Question phrased exactly as a user would type it]
     [Answer: 2-4 sentences. Clear, direct, jargon-free. Link to related resources where relevant.]
 - Questions should progress from basic ("What is X?") to advanced ("How do I troubleshoot Y?")
 - Include the target keyword naturally in at least 3 question/answer pairs
-- ## Still Have Questions? — 1-paragraph close with CTA to contact support or book a demo`,
+- ## Still Have Questions?: 1-paragraph close with CTA to contact support or book a demo`,
   },
 };
-
-function buildContentStyleContext(style?: ContentStyle | null): string {
-  if (!style) return "";
-  const lines: string[] = [];
-  if (style.personaName) lines.push(`WRITING PERSONA: ${style.personaName}`);
-  if (style.tonePreset) lines.push(`TONE: ${style.tonePreset}`);
-  if (style.defaultWordCount)
-    lines.push(
-      `TARGET WORD COUNT: ~${style.defaultWordCount} words (override format default if instructed)`,
-    );
-  if (style.primaryLanguage) lines.push(`LANGUAGE: ${style.primaryLanguage}`);
-  if (style.readingLevel) lines.push(`READING LEVEL: ${style.readingLevel}`);
-  if (style.forbiddenWords && style.forbiddenWords.length > 0) {
-    lines.push(
-      `DO NOT USE THESE WORDS/PHRASES: ${style.forbiddenWords.join(", ")}`,
-    );
-  }
-  if (lines.length === 0) return "";
-  return (
-    "\nCONTENT STYLE GUIDELINES:\n" + lines.map((l) => `- ${l}`).join("\n")
-  );
-}
 
 function buildPrompt(
   format: ContentFormatType,
   brand: BrandContext,
   keyword: string,
   angleHint?: string,
+  existingPieceTitles?: string[],
 ): string {
   const config = FORMAT_CONFIGS[format];
   const kwList =
@@ -394,7 +399,8 @@ function buildPrompt(
   const wordRange = brand.contentStyle?.defaultWordCount
     ? `~${brand.contentStyle.defaultWordCount}`
     : config.wordRange;
-  const styleContext = buildContentStyleContext(brand.contentStyle);
+  const brandVoiceContext = buildBrandVoicePromptContext(brand);
+  const defaultVoice = brand.voiceTone?.trim() || "Professional, clear, and authoritative";
 
   // Special handling for LinkedIn posts with archetypes and hooks
   if (format === "linkedin_post") {
@@ -433,10 +439,9 @@ STRENGTH SCORE: ${hook.strengthScore}/10`;
     return `Create a ${config.label} for ${brand.companyName} (${brand.websiteUrl}), a company in the ${brand.industry} industry.
 
 TARGET KEYWORD: "${keyword}"
-BRAND VOICE: ${brand.voiceTone || "Professional, clear, and authoritative"}
 TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
 RELATED KEYWORDS TO WEAVE IN: ${kwList}
-${styleContext}
+${brandVoiceContext || `BRAND VOICE: ${defaultVoice}`}
 ${archetypeInfo}
 ${hookInfo}
 
@@ -455,30 +460,50 @@ Requirements:
 - Write like a founder speaking to peers - authentic and direct`;
   }
 
+  if (isSeoLongformFormat(format)) {
+    const existingArticlesCtx = existingPieceTitles?.length
+      ? `\nExisting content on this site (use for internal links): ${existingPieceTitles.slice(0, 12).join("; ")}`
+      : "";
+
+    return `Create a ${config.label} for ${brand.companyName} (${brand.websiteUrl}), a company in the ${brand.industry} industry.
+
+TARGET KEYWORD: "${keyword}"
+TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
+RELATED KEYWORDS TO WEAVE IN: ${kwList}
+${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${brandVoiceContext || `\nBRAND VOICE: ${defaultVoice}`}${existingArticlesCtx}
+
+Write a complete, publish-ready ${wordRange}-word article. Use this outline as internal guidance only: do NOT copy these bullet labels, word counts, or placeholder headings into the output:
+${config.structure}
+
+Return ONLY this JSON object:
+${buildSeoLongformJsonSchema(keyword)}
+
+${buildSeoLongformRequirements(brand.companyName, keyword, wordRange)}`;
+  }
+
   return `Create a ${config.label} for ${brand.companyName} (${brand.websiteUrl}), a company in the ${brand.industry} industry.
 
 TARGET KEYWORD: "${keyword}"
-BRAND VOICE: ${brand.voiceTone || "Professional, clear, and authoritative"}
 TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
 RELATED KEYWORDS TO WEAVE IN: ${kwList}
-${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${styleContext}
+${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${brandVoiceContext || `\nBRAND VOICE: ${defaultVoice}`}
 
-Write ${wordRange} words following this structure:
+Write a complete, publish-ready ${wordRange}-word piece. Use this outline as internal guidance only: do NOT copy outline labels into the output:
 ${config.structure}
 
 Return ONLY this exact JSON with no additional text:
 {
-  "title": "<compelling, SEO-optimised title that includes the target keyword — 55-70 characters>",
+  "title": "<compelling title>",
   "target_keyword": "${keyword}",
-  "body_markdown": "<full content in valid markdown following the structure above>"
+  "body_markdown": "<full content in valid markdown>"
 }
 
 Requirements:
+- Write real prose: never output planning notes or placeholder headings
 - Write entirely in the brand voice described above
 - Target the keyword "${keyword}" naturally throughout
-- Reference ${brand.companyName} 2-3 times without being promotional
-- Use specific data points, named frameworks, and concrete examples
-- Content must be original, authoritative, and citation-worthy`;
+- Reference ${brand.companyName} where appropriate without being promotional
+- Content must be original and actionable`;
 }
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -489,7 +514,6 @@ export function buildCacheKey(
   brand: BrandContext,
   angleHint?: string,
 ): string {
-  const style = brand.contentStyle;
   const raw = [
     format,
     keyword.toLowerCase().trim(),
@@ -500,12 +524,8 @@ export function buildCacheKey(
     brand.targetAudience,
     (brand.primaryKeywords ?? []).slice().sort().join(","),
     angleHint?.trim() ?? "",
-    style?.tonePreset ?? "",
-    style?.personaName ?? "",
-    style?.defaultWordCount?.toString() ?? "",
-    style?.primaryLanguage ?? "",
-    style?.readingLevel ?? "",
-    (style?.forbiddenWords ?? []).slice().sort().join(","),
+    brandVoiceCacheFingerprint(brand),
+    "seo-v5",
   ].join("::");
   return createHash("sha256").update(raw).digest("hex").slice(0, 16);
 }
@@ -591,7 +611,58 @@ function cleanAndParse(raw: string): ContentPieceResult {
   return JSON.parse(sanitized) as ContentPieceResult;
 }
 
-function validateResult(result: unknown): asserts result is ContentPieceResult {
+function getAiGenerationOptions(format: ContentFormatType) {
+  if (isSeoLongformFormat(format)) {
+    return {
+      systemInstruction: SEO_SYSTEM_PROMPT,
+      maxOutputTokens: 16384,
+      thinkingBudget: 2048,
+    };
+  }
+  return {
+    systemInstruction: SYSTEM_PROMPT,
+    maxOutputTokens: 8192,
+    thinkingBudget: 0,
+  };
+}
+
+function processGeneratedResult(
+  parsed: ContentPieceResult,
+  format: ContentFormatType,
+  humanized = false,
+): ContentPieceResult {
+  if (!isSeoLongformFormat(format)) return parsed;
+  const finalized = finalizeSeoContentPiece(parsed);
+  const signals = seoQualitySignals(finalized.body_markdown);
+  if (signals.words < 700) {
+    throw new Error("Generated SEO article too short");
+  }
+  if (humanized) {
+    finalized.pieceMetadata = {
+      ...finalized.pieceMetadata,
+      humanized: true,
+    };
+  }
+  return finalized;
+}
+
+async function postProcessGeneratedResult(
+  parsed: ContentPieceResult,
+  format: ContentFormatType,
+  brand: BrandContext,
+  ai: AiProviderClient,
+): Promise<ContentPieceResult> {
+  if (!isSeoLongformFormat(format)) {
+    return parsed;
+  }
+
+  const { result: humanizedResult, humanized } = await humanizeContentPiece(parsed, brand, {
+    aiClient: ai,
+  });
+  return processGeneratedResult(humanizedResult, format, humanized);
+}
+
+function validateResult(result: unknown, format: ContentFormatType): asserts result is ContentPieceResult {
   if (typeof result !== "object" || result === null)
     throw new Error("Result must be an object");
   const r = result as Record<string, unknown>;
@@ -599,9 +670,10 @@ function validateResult(result: unknown): asserts result is ContentPieceResult {
     throw new Error("Missing title");
   if (typeof r.target_keyword !== "string")
     throw new Error("Missing target_keyword");
+  const minLength = isSeoLongformFormat(format) ? 700 : 200;
   if (
     typeof r.body_markdown !== "string" ||
-    r.body_markdown.trim().length < 200
+    r.body_markdown.trim().length < minLength
   )
     throw new Error("body_markdown too short");
 }
@@ -612,26 +684,28 @@ async function generateWithClient(
   brand: BrandContext,
   keyword: string,
   angleHint?: string,
+  existingPieceTitles?: string[],
 ): Promise<ContentPieceResult> {
-  const prompt = buildPrompt(format, brand, keyword, angleHint);
+  const prompt = buildPrompt(format, brand, keyword, angleHint, existingPieceTitles);
+  const aiOptions = getAiGenerationOptions(format);
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const response = await ai.generate({
         prompt,
-        systemInstruction: SYSTEM_PROMPT,
+        systemInstruction: aiOptions.systemInstruction,
         responseMimeType: "application/json",
-        maxOutputTokens: 8192,
-        thinkingBudget: 0,
+        maxOutputTokens: aiOptions.maxOutputTokens,
+        thinkingBudget: aiOptions.thinkingBudget,
       });
 
       const rawText = response.text;
       if (!rawText) throw new Error("Empty AI response");
 
       const parsed = cleanAndParse(rawText);
-      validateResult(parsed);
-      return parsed;
+      validateResult(parsed, format);
+      return postProcessGeneratedResult(parsed, format, brand, ai);
     } catch (err) {
       lastError = err;
       logger.warn(
@@ -653,24 +727,26 @@ async function generateWithClientStream(
   keyword: string,
   onChunk: (text: string) => void,
   angleHint?: string,
+  existingPieceTitles?: string[],
 ): Promise<ContentPieceResult> {
-  const prompt = buildPrompt(format, brand, keyword, angleHint);
+  const prompt = buildPrompt(format, brand, keyword, angleHint, existingPieceTitles);
+  const aiOptions = getAiGenerationOptions(format);
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       let accumulated = "";
-      // Only emit chunks on the first attempt — retries are silent so no
+      // Only emit chunks on the first attempt: retries are silent so no
       // duplicate/garbled text is written to an already-open SSE connection.
       const emit = attempt === 1 ? onChunk : () => {};
 
       if (ai.generateStream) {
         const stream = ai.generateStream({
           prompt,
-          systemInstruction: SYSTEM_PROMPT,
+          systemInstruction: aiOptions.systemInstruction,
           responseMimeType: "application/json",
-          maxOutputTokens: 8192,
-          thinkingBudget: 0,
+          maxOutputTokens: aiOptions.maxOutputTokens,
+          thinkingBudget: aiOptions.thinkingBudget,
         });
         for await (const text of stream) {
           accumulated += text;
@@ -680,18 +756,18 @@ async function generateWithClientStream(
         // Fallback: non-streaming generate
         const result = await ai.generate({
           prompt,
-          systemInstruction: SYSTEM_PROMPT,
+          systemInstruction: aiOptions.systemInstruction,
           responseMimeType: "application/json",
-          maxOutputTokens: 8192,
-          thinkingBudget: 0,
+          maxOutputTokens: aiOptions.maxOutputTokens,
+          thinkingBudget: aiOptions.thinkingBudget,
         });
         accumulated = result.text;
         emit(result.text);
       }
 
       const parsed = cleanAndParse(accumulated);
-      validateResult(parsed);
-      return parsed;
+      validateResult(parsed, format);
+      return postProcessGeneratedResult(parsed, format, brand, ai);
     } catch (err) {
       lastError = err;
       logger.warn(
@@ -714,7 +790,9 @@ export async function generateContentPieceStream(
   angleHint?: string,
   userApiKey?: string | null,
   aiProviderOptions?: AiProviderOptions,
+  context: ContentGenerationContext = {},
 ): Promise<ContentPieceResult> {
+  const existingPieceTitles = context.existingPieceTitles;
   if (userApiKey && resolveProviderId(aiProviderOptions) === "gemini") {
     let chunksEmitted = 0;
     try {
@@ -731,6 +809,7 @@ export async function generateContentPieceStream(
           onChunk(chunk);
         },
         angleHint,
+        existingPieceTitles,
       );
     } catch (err) {
       if (isUserKeyError(err) && chunksEmitted === 0) {
@@ -752,6 +831,7 @@ export async function generateContentPieceStream(
     keyword,
     onChunk,
     angleHint,
+    existingPieceTitles,
   );
 }
 
@@ -763,13 +843,14 @@ export async function generateContentPiece(
   bypassCache = false,
   userApiKey?: string | null,
   aiProviderOptions?: AiProviderOptions,
+  context: ContentGenerationContext = {},
 ): Promise<ContentPieceResult> {
   const key = buildCacheKey(format, keyword, brand, angleHint);
   if (!bypassCache) {
     const cached = await cacheGet(key);
     if (cached) {
       logger.info({ format, keyword }, "Content piece served from cache");
-      return cached;
+      return isSeoLongformFormat(format) ? processGeneratedResult(cached, format) : cached;
     }
   }
 
@@ -780,6 +861,7 @@ export async function generateContentPiece(
     brand,
     keyword,
     angleHint,
+    context.existingPieceTitles,
   );
   await cacheSet(key, result);
   return result;
@@ -787,7 +869,9 @@ export async function generateContentPiece(
 
 const REPURPOSE_SYSTEM_PROMPT = `You are a world-class content strategist and copywriter. You take existing content and expertly repurpose it into a different format while preserving the core insights and brand voice.
 
-You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation — only raw JSON.`;
+${AI_WRITING_RULES_PROMPT}
+
+You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation; only raw JSON.`;
 
 function buildRepurposePrompt(
   targetFormat: ContentFormatType,
@@ -796,7 +880,8 @@ function buildRepurposePrompt(
   existingKeyword: string,
 ): string {
   const config = FORMAT_CONFIGS[targetFormat];
-  const styleContext = buildContentStyleContext(brand.contentStyle);
+  const brandVoiceContext = buildBrandVoicePromptContext(brand);
+  const defaultVoice = brand.voiceTone?.trim() || "Professional, clear, and authoritative";
   return `Repurpose the following existing content into a ${config.label} for ${brand.companyName} (${brand.websiteUrl}).
 
 EXISTING CONTENT:
@@ -804,15 +889,14 @@ ${existingContent.slice(0, 4000)}
 
 TARGET FORMAT: ${config.label} (${config.wordRange} words)
 TARGET KEYWORD: "${existingKeyword}"
-BRAND VOICE: ${brand.voiceTone || "Professional, clear, and authoritative"}
-TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}${styleContext}
+TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}${brandVoiceContext || `\nBRAND VOICE: ${defaultVoice}`}
 
 Rewrite the content following this structure:
 ${config.structure}
 
 Return ONLY this exact JSON with no additional text:
 {
-  "title": "<compelling, SEO-optimised title that includes the target keyword — 55-70 characters>",
+  "title": "<compelling, SEO-optimised title that includes the target keyword: 55-70 characters>",
   "target_keyword": "${existingKeyword}",
   "body_markdown": "<full repurposed content in valid markdown following the structure above>"
 }
@@ -856,8 +940,8 @@ export async function repurposeContentPiece(
         const rawText = response.text;
         if (!rawText) throw new Error("Empty AI response");
         const parsed = cleanAndParse(rawText);
-        validateResult(parsed);
-        return parsed;
+        validateResult(parsed, targetFormat);
+        return postProcessGeneratedResult(parsed, targetFormat, brand, ai);
       } catch (err) {
         lastError = err;
         logger.warn(
@@ -874,5 +958,3 @@ export async function repurposeContentPiece(
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
   return attemptGeneration(client);
 }
-
-export { type BrandContext };

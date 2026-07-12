@@ -1,47 +1,37 @@
-import { getAiProviderClient, type AiProviderClient } from "@workspace/ai-providers/client";
+import { getAiProviderClient } from "@workspace/ai-providers/client";
+import type { BrandExtract, Confidence } from "./brand-extract-types";
+import { sanitizeBrandExtract } from "./brand-extract-sanitize";
+import { cleanAndParse } from "./utils";
 import { logger } from "./logger";
 
-type Confidence = "high" | "medium" | "low";
-
-export interface BrandExtract {
-  companyName: string;
-  industry: string;
-  targetAudience: string;
-  voiceTone: string;
-  primaryKeywords: string[];
-  competitorUrls: string[];
-  confidence: {
-    companyName: Confidence;
-    industry: Confidence;
-    targetAudience: Confidence;
-    voiceTone: Confidence;
-    primaryKeywords: Confidence;
-    competitorUrls: Confidence;
-  };
-}
+export type { BrandExtract, Confidence } from "./brand-extract-types";
 
 const SYSTEM_PROMPT = `You are an expert brand analyst. Given raw text scraped from a company's website, extract brand information and rate your confidence for each field. You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation — only raw JSON.`;
 
-async function getAiClient(): Promise<AiProviderClient> {
-  return getAiProviderClient();
-}
+const FETCH_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (compatible; GoalsAC/1.0; +https://goals.ac)",
+};
 
-async function fetchPageText(url: string): Promise<string | null> {
+async function fetchPage(url: string): Promise<string | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
     const resp = await fetch(url, {
       signal: controller.signal,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; GoalsAC/1.0; +https://goals.ac)" },
+      headers: FETCH_HEADERS,
     });
     clearTimeout(timeout);
     if (!resp.ok) return null;
-    const html = await resp.text();
-    return stripHtml(html);
+    return await resp.text();
   } catch {
     clearTimeout(timeout);
     return null;
   }
+}
+
+async function fetchPageText(url: string): Promise<string | null> {
+  const html = await fetchPage(url);
+  return html ? stripHtml(html) : null;
 }
 
 function stripHtml(html: string): string {
@@ -81,7 +71,7 @@ function extractInternalLinks(html: string, baseOrigin: string): string[] {
   return [...new Set(links)];
 }
 
-function pickKeyPages(links: string[], _baseOrigin: string): string[] {
+function pickKeyPages(links: string[]): string[] {
   const keyPaths = ["about", "product", "products", "pricing", "solution", "solutions", "features", "platform", "services", "how-it-works", "company", "mission"];
   const picked: string[] = [];
   for (const keyword of keyPaths) {
@@ -108,25 +98,10 @@ function parseConfidence(val: unknown): Confidence {
 
 export async function scrapeBrandProfile(websiteUrl: string): Promise<BrandExtract> {
   const origin = new URL(websiteUrl).origin;
-
-  const homepageController = new AbortController();
-  const homepageTimeout = setTimeout(() => homepageController.abort(), 10000);
-  let homepageHtml = "";
-  try {
-    const resp = await fetch(websiteUrl, {
-      signal: homepageController.signal,
-      headers: { "User-Agent": "Mozilla/5.0 (compatible; GoalsAC/1.0; +https://goals.ac)" },
-    });
-    clearTimeout(homepageTimeout);
-    if (resp.ok) {
-      homepageHtml = await resp.text();
-    }
-  } catch {
-    clearTimeout(homepageTimeout);
-  }
+  const homepageHtml = (await fetchPage(websiteUrl)) ?? "";
 
   const internalLinks = extractInternalLinks(homepageHtml, origin);
-  const extraPages = pickKeyPages(internalLinks, origin);
+  const extraPages = pickKeyPages(internalLinks);
 
   const extraTexts = await Promise.all(extraPages.map((url) => fetchPageText(url)));
   const homepageText = stripHtml(homepageHtml);
@@ -135,38 +110,45 @@ export async function scrapeBrandProfile(websiteUrl: string): Promise<BrandExtra
     .join("\n\n---\n\n")
     .slice(0, 12000);
 
-  const ai = await getAiClient();
+  const ai = await getAiProviderClient();
 
-  const prompt = `Analyze this website text and extract brand information. Rate your confidence for each field based on how clearly it was found in the content. The website URL is: ${websiteUrl}
+  const prompt = `Analyze this website text and extract brand information. Write like a sharp analyst — not a marketing brochure. The website URL is: ${websiteUrl}
 
 WEBSITE TEXT:
 ${allText}
 
-Return ONLY this exact JSON structure. For confidence, use "high" (clearly stated in content), "medium" (inferred from context), or "low" (best guess with limited signal):
+Return ONLY valid JSON matching this schema (no markdown, no comments):
 
 {
-  "companyName": "<company name from the website>",
-  "companyNameConfidence": "<high|medium|low>",
-  "industry": "<specific industry/niche, e.g. 'B2B SaaS', 'E-commerce', 'FinTech', 'HR Tech'>",
-  "industryConfidence": "<high|medium|low>",
-  "targetAudience": "<2-3 sentences describing the ideal customer profile — their role, company size, pain points, and goals>",
-  "targetAudienceConfidence": "<high|medium|low>",
-  "voiceTone": "<describe the brand voice, e.g. 'Professional yet conversational, data-driven and direct'>",
-  "voiceToneConfidence": "<high|medium|low>",
-  "primaryKeywords": ["<keyword 1>", "<keyword 2>", "<keyword 3>", "<keyword 4>", "<keyword 5>"],
-  "primaryKeywordsConfidence": "<high|medium|low>",
-  "competitorUrls": ["<competitor URL if mentioned on site, otherwise empty array>"],
-  "competitorUrlsConfidence": "<high|medium|low>"
+  "companyName": "string",
+  "companyNameConfidence": "high|medium|low",
+  "industry": "string",
+  "industryConfidence": "high|medium|low",
+  "targetAudience": "string",
+  "targetAudienceConfidence": "high|medium|low",
+  "voiceTone": "string",
+  "voiceToneConfidence": "high|medium|low",
+  "primaryKeywords": ["string"],
+  "primaryKeywordsConfidence": "high|medium|low",
+  "competitorUrls": ["string"],
+  "competitorUrlsConfidence": "high|medium|low"
 }
 
-Rules:
-- companyName: Extract the actual company name, not a tagline
-- industry: Be specific, not generic like "technology"
-- targetAudience: Base this on the copy, not guesswork
-- voiceTone: Reflect the actual tone of the writing
-- primaryKeywords: Use terms the site itself emphasizes, 3-6 keywords
-- competitorUrls: Only include if explicitly mentioned on the site; otherwise return []
-- Confidence "high" = field value is explicitly stated or clearly evident; "medium" = reasonably inferred; "low" = guessed from limited signals`;
+Field rules:
+- companyName: Legal/brand name from the site — not a tagline or hero headline
+- industry: One short label, max 80 chars (e.g. "B2B SaaS for HR teams"). No parenthetical clauses
+- targetAudience: 1–2 plain sentences naming roles, company size, and pain points found in the copy. No filler like "seeking solutions" or "end-to-end"
+- voiceTone: One sentence, max 120 chars. Describe how the site actually reads (sentence length, formality). No stacked adjectives
+- primaryKeywords: 3–6 terms the site repeats or emphasizes — not generic SEO words
+- competitorUrls: ONLY real competitor URLs explicitly linked or named on the site. If none found, return []. NEVER invent or use placeholder URLs like competitor1.com or example.com
+
+Confidence rules — be conservative:
+- "high" only when the value is explicitly stated in the text
+- "medium" when reasonably inferred from multiple signals
+- "low" when guessing or signal is weak
+- competitorUrls should almost always be "low" unless a real URL appears in the text
+
+Banned in all string fields: placeholder URLs, example.com, "competitor1", buzzwords (synergy, leverage, cutting-edge, world-class, outcome-focused, results-oriented, seamless, robust, holistic, transformative, game-changer)`;
 
   for (let attempt = 1; attempt <= 2; attempt++) {
     try {
@@ -174,20 +156,18 @@ Rules:
         prompt,
         systemInstruction: SYSTEM_PROMPT,
         temperature: 0.2,
-        maxOutputTokens: 1200,
+        maxOutputTokens: 2048,
         thinkingBudget: 0,
         responseMimeType: "application/json",
       });
 
-      const raw = response.text ?? "";
-      const cleaned = raw.replace(/^```json\s*/i, "").replace(/^```\s*/i, "").replace(/```\s*$/i, "").trim();
-      const parsed = JSON.parse(cleaned) as Record<string, unknown>;
+      const parsed = cleanAndParse<Record<string, unknown>>(response.text ?? "");
 
       if (!parsed.companyName || !parsed.industry) {
         throw new Error("Incomplete brand extract");
       }
 
-      return {
+      return sanitizeBrandExtract({
         companyName: String(parsed.companyName || ""),
         industry: String(parsed.industry || ""),
         targetAudience: String(parsed.targetAudience || ""),
@@ -202,7 +182,7 @@ Rules:
           primaryKeywords: parseConfidence(parsed.primaryKeywordsConfidence),
           competitorUrls: parseConfidence(parsed.competitorUrlsConfidence),
         },
-      };
+      });
     } catch (err) {
       logger.warn({ err, attempt }, "Brand scrape parse error");
       if (attempt === 2) throw err;

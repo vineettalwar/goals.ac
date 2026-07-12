@@ -1,6 +1,11 @@
 import { getAiProviderClient, type AiProviderClient, type AiProviderOptions } from "@workspace/ai-providers";
 import { cleanAndParse } from "./utils";
 import { resolveAiClient } from "./support/resolve-ai-client";
+import {
+  buildBrandVoicePromptContext,
+  type UnifiedBrandContext,
+} from "./brand-voice";
+import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
 
 export interface ArticleInput {
   company: {
@@ -22,6 +27,7 @@ export interface ArticleInput {
   contentGoal?: string;
   tonePreference?: string;
   existingArticleTitles?: string[]; // for internal link suggestions
+  brandVoice?: UnifiedBrandContext;
 }
 
 export interface Citation {
@@ -65,10 +71,11 @@ export interface GeneratedArticle {
 const SYSTEM_PROMPT = `You are a world-class SEO strategist and content writer who produces editorial-quality articles that rank on Google and surface in AI search engines (ChatGPT, Perplexity, Claude).
 
 Writing principles:
-- Be specific, concrete, and direct — no vague generalities or padding
+- Be specific, concrete, and direct. No vague generalities or padding.
 - Use real-world examples, stats, named frameworks, and actionable steps
-- Write naturally for humans — no AI-sounding filler ("In today's fast-paced world", "In conclusion")
+- Write naturally for humans. No AI-sounding filler.
 - Structure with H2/H3 headings, short paragraphs, and scannable bullet lists
+${AI_WRITING_RULES_PROMPT}
 - Every claim that can be cited MUST be cited with a real, authoritative source (gov, university, industry research, named publications)
 - Include a 4-6 item FAQ section targeting long-tail and "People Also Ask" queries
 - The article must be worth bookmarking and sharing
@@ -113,6 +120,7 @@ Preferred content: ${input.persona.preferredContent.join(", ")}`
   const angleCtx = input.angle ? `Preferred angle for this draft: ${input.angle}` : "";
   const goalCtx = input.contentGoal ? `Business goal for this article: ${input.contentGoal}` : "";
   const toneCtx = input.tonePreference ? `Tone preference: ${input.tonePreference}` : "";
+  const brandVoiceCtx = input.brandVoice ? buildBrandVoicePromptContext(input.brandVoice) : "";
 
   const prompt = `Write a detailed 1400-1800 word SEO article for ${input.company.name} (${input.company.websiteUrl}), a ${input.company.industry} company.
 
@@ -123,6 +131,7 @@ ${existingArticlesCtx}
 ${angleCtx}
 ${goalCtx}
 ${toneCtx}
+${brandVoiceCtx}
 
 Return a JSON object with these EXACT fields:
 

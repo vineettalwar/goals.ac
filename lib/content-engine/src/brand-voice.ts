@@ -1,0 +1,158 @@
+import type { ContentStyle } from "@workspace/db";
+
+export type HumanizationLevel = "off" | "light" | "strong";
+
+export interface BrandVoiceFields {
+  voiceTone?: string;
+  writingExamples?: string[];
+  brandGlossary?: string[];
+  antiPatterns?: string[];
+  typicalStructure?: string;
+  doWords?: string[];
+  dontWords?: string[];
+}
+
+export interface UnifiedBrandContext extends BrandVoiceFields {
+  companyName: string;
+  websiteUrl: string;
+  industry: string;
+  targetAudience: string;
+  voiceTone: string;
+  primaryKeywords: string[];
+  contentStyle?: ContentStyle | null;
+  humanizationLevel?: HumanizationLevel;
+  writingSample?: string | null;
+}
+
+export function normalizeSiteHost(url: string): string {
+  try {
+    const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    const hostname = new URL(normalized).hostname.toLowerCase();
+    return hostname.replace(/^www\./, "");
+  } catch {
+    return url.trim().toLowerCase().replace(/^www\./, "");
+  }
+}
+
+export function resolveHumanizationLevel(
+  brand: Pick<UnifiedBrandContext, "humanizationLevel" | "contentStyle">,
+): HumanizationLevel {
+  const fromStyle = brand.contentStyle?.humanizationLevel;
+  if (fromStyle === "off" || fromStyle === "light" || fromStyle === "strong") {
+    return fromStyle;
+  }
+  if (
+    brand.humanizationLevel === "off" ||
+    brand.humanizationLevel === "light" ||
+    brand.humanizationLevel === "strong"
+  ) {
+    return brand.humanizationLevel;
+  }
+  return "light";
+}
+
+export function resolveWritingSample(
+  brand: Pick<UnifiedBrandContext, "writingExamples" | "writingSample">,
+): string | undefined {
+  const explicit = brand.writingSample?.trim();
+  if (explicit) return explicit.slice(0, 4000);
+
+  const examples = (brand.writingExamples ?? [])
+    .map((sample) => sample.trim())
+    .filter(Boolean);
+  if (examples.length === 0) return undefined;
+  return examples.join("\n\n---\n\n").slice(0, 4000);
+}
+
+function listSection(label: string, items: string[] | undefined, max = 12): string {
+  const values = (items ?? []).map((item) => item.trim()).filter(Boolean).slice(0, max);
+  if (values.length === 0) return "";
+  return `${label}:\n${values.map((item) => `- ${item}`).join("\n")}`;
+}
+
+export function buildBrandVoicePromptContext(
+  brand: BrandVoiceFields & { contentStyle?: ContentStyle | null },
+): string {
+  const sections: string[] = [];
+
+  if (brand.voiceTone?.trim()) {
+    sections.push(`BRAND VOICE: ${brand.voiceTone.trim()}`);
+  }
+
+  const style = brand.contentStyle;
+  if (style) {
+    const styleLines: string[] = [];
+    if (style.personaName) styleLines.push(`WRITING PERSONA: ${style.personaName}`);
+    if (style.tonePreset) styleLines.push(`TONE: ${style.tonePreset}`);
+    if (style.defaultWordCount) {
+      styleLines.push(`TARGET WORD COUNT: ~${style.defaultWordCount} words`);
+    }
+    if (style.primaryLanguage) styleLines.push(`LANGUAGE: ${style.primaryLanguage}`);
+    if (style.readingLevel) styleLines.push(`READING LEVEL: ${style.readingLevel}`);
+    const forbidden = [
+      ...(style.forbiddenWords ?? []),
+      ...(brand.dontWords ?? []),
+    ]
+      .map((word) => word.trim())
+      .filter(Boolean);
+    if (forbidden.length > 0) {
+      styleLines.push(`DO NOT USE THESE WORDS/PHRASES: ${[...new Set(forbidden)].join(", ")}`);
+    }
+    if (styleLines.length > 0) {
+      sections.push(`CONTENT STYLE GUIDELINES:\n${styleLines.map((line) => `- ${line}`).join("\n")}`);
+    }
+  } else if (brand.dontWords?.length) {
+    const forbidden = brand.dontWords.map((word) => word.trim()).filter(Boolean);
+    if (forbidden.length > 0) {
+      sections.push(`DO NOT USE THESE WORDS/PHRASES: ${forbidden.join(", ")}`);
+    }
+  }
+
+  const examples = (brand.writingExamples ?? []).map((sample) => sample.trim()).filter(Boolean);
+  if (examples.length > 0) {
+    sections.push(
+      `WRITING EXAMPLES (match cadence and diction — do NOT copy content):\n${examples
+        .slice(0, 3)
+        .map((sample, index) => `Example ${index + 1}:\n${sample.slice(0, 1200)}`)
+        .join("\n\n")}`,
+    );
+  }
+
+  const glossary = listSection("BRAND GLOSSARY (use these terms consistently)", brand.brandGlossary);
+  if (glossary) sections.push(glossary);
+
+  const doWords = listSection("PREFERRED WORDS & PHRASES", brand.doWords, 16);
+  if (doWords) sections.push(doWords);
+
+  const antiPatterns = listSection("ANTI-PATTERNS (never write like this)", brand.antiPatterns, 10);
+  if (antiPatterns) sections.push(antiPatterns);
+
+  if (brand.typicalStructure?.trim()) {
+    sections.push(`TYPICAL STRUCTURE:\n${brand.typicalStructure.trim()}`);
+  }
+
+  if (sections.length === 0) return "";
+  return `\n${sections.join("\n\n")}\n`;
+}
+
+export function brandVoiceCacheFingerprint(brand: UnifiedBrandContext): string {
+  const join = (values?: string[]) => (values ?? []).map((v) => v.trim()).filter(Boolean).sort().join("|");
+  return [
+    brand.voiceTone,
+    join(brand.writingExamples),
+    join(brand.brandGlossary),
+    join(brand.antiPatterns),
+    join(brand.doWords),
+    join(brand.dontWords),
+    brand.typicalStructure ?? "",
+    brand.contentStyle?.tonePreset ?? "",
+    brand.contentStyle?.personaName ?? "",
+    brand.contentStyle?.defaultWordCount?.toString() ?? "",
+    brand.contentStyle?.primaryLanguage ?? "",
+    brand.contentStyle?.readingLevel ?? "",
+    join(brand.contentStyle?.forbiddenWords),
+    resolveHumanizationLevel(brand),
+    brand.writingSample ?? "",
+    "brand-voice-v1",
+  ].join("::");
+}

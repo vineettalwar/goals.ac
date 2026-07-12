@@ -4,7 +4,6 @@ import {
   contentItemsTable,
   contentStrategiesTable,
   websiteProjectsTable,
-  brandProfilesTable,
   type ContentFormatType,
 } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
@@ -13,6 +12,7 @@ import {
   repurposeContentPiece,
   type BrandContext,
 } from "./content-studio-generator";
+import { loadBrandContextForProject } from "./support/brand-context-loader";
 import { getUserAiProviderOptions } from "./support/user-ai-provider";
 import {
   decryptCmsCredentials,
@@ -63,28 +63,9 @@ export function computePlannedDate(strategyYear: number, strategyMonth: number, 
 }
 
 async function loadBrandContext(projectId: number): Promise<BrandContext> {
-  const [project] = await db
-    .select()
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.id, projectId))
-    .limit(1);
-  if (!project) throw new Error("Project not found");
-
-  const [brand] = await db
-    .select()
-    .from(brandProfilesTable)
-    .where(eq(brandProfilesTable.websiteProjectId, projectId))
-    .limit(1);
-
-  return {
-    companyName: brand?.companyName ?? project.name,
-    websiteUrl: project.url,
-    industry: brand?.industry ?? "",
-    targetAudience: brand?.targetAudience ?? "",
-    voiceTone: brand?.voiceTone ?? "",
-    primaryKeywords: brand?.primaryKeywords ?? [],
-    contentStyle: (project.contentStyle as BrandContext["contentStyle"]) ?? null,
-  };
+  const brand = await loadBrandContextForProject(projectId);
+  if (!brand) throw new Error("Project not found");
+  return brand;
 }
 
 export interface GenerateFromItemResult {
