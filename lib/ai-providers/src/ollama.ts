@@ -1,9 +1,5 @@
-import type { AiProviderClient, GenerateParams, GenerateResult } from "./client.js";
-
-function env(key: string): string | undefined {
-  const v = process.env[key];
-  return v && v.trim() !== "" ? v.trim() : undefined;
-}
+import type { AiProviderClient, GenerateParams, GenerateResult } from "./client";
+import type { ResolvedOllamaConfig } from "./config";
 
 interface OllamaGenerateRequest {
   model: string;
@@ -37,9 +33,9 @@ export class OllamaClient implements AiProviderClient {
     this.defaultModel = defaultModel;
   }
 
-  static create(): OllamaClient {
-    const baseUrl = env("OLLAMA_BASE_URL") ?? "http://localhost:11434";
-    const model = env("OLLAMA_MODEL") ?? "llama3.1";
+  static create(config?: Partial<ResolvedOllamaConfig>): OllamaClient {
+    const baseUrl = config?.baseUrl ?? "http://localhost:11434";
+    const model = config?.model ?? "llama3.1";
     return new OllamaClient(baseUrl, model);
   }
 

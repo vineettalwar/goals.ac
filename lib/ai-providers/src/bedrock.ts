@@ -1,4 +1,4 @@
-import type { AiProviderClient, GenerateParams, GenerateResult } from "./client.js";
+import type { AiProviderClient, GenerateParams, GenerateResult } from "./client";
 
 function env(key: string): string | undefined {
   const v = process.env[key];

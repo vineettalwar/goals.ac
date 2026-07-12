@@ -1,6 +1,14 @@
 import type { GoogleGenAI } from "@google/genai";
+import {
+  buildAiProviderCacheKey,
+  resolveProviderId,
+  resolveOllamaConfig,
+  type AiProviderId,
+  type AiProviderOptions,
+} from "./config";
 
-export type AiProviderId = "gemini" | "bedrock" | "ollama";
+export type { AiProviderId, AiProviderOptions } from "./config";
+export { resolveProviderId, resolveOllamaConfig } from "./config";
 
 export interface GenerateParams {
   prompt: string;
@@ -71,31 +79,9 @@ class GeminiClient implements AiProviderClient {
 
 // ── Factory ─────────────────────────────────────────────────────────────────
 
-let _cached: AiProviderClient | null = null;
+const _cache = new Map<string, AiProviderClient>();
 
-function env(key: string): string | undefined {
-  const v = process.env[key];
-  return v && v.trim() !== "" ? v.trim() : undefined;
-}
-
-async function resolveProviderId(): Promise<AiProviderId> {
-  const explicit = env("AI_PROVIDER");
-  if (explicit === "bedrock" || explicit === "ollama" || explicit === "gemini") {
-    return explicit;
-  }
-
-  // Auto-detect: first available provider wins
-  if (env("GEMINI_API_KEY") || env("AI_INTEGRATIONS_GEMINI_API_KEY")) {
-    return "gemini";
-  }
-  if (env("AWS_ACCESS_KEY_ID") || env("AWS_PROFILE")) {
-    return "bedrock";
-  }
-  // Ollama is local — always check last
-  return "ollama";
-}
-
-async function buildClient(providerId: AiProviderId): Promise<AiProviderClient> {
+async function buildClient(providerId: AiProviderId, options?: AiProviderOptions): Promise<AiProviderClient> {
   switch (providerId) {
     case "gemini": {
       const { getPlatformGeminiClient } = await import("./gemini");
@@ -122,25 +108,30 @@ async function buildClient(providerId: AiProviderId): Promise<AiProviderClient> 
 
     case "ollama": {
       const { OllamaClient } = await import("./ollama");
-      return OllamaClient.create();
+      const ollama = resolveOllamaConfig(options);
+      return OllamaClient.create(ollama);
     }
   }
 }
 
 /**
- * Get or create the singleton AI provider client.
- * Provider is selected via AI_PROVIDER env var, or auto-detected.
+ * Get or create an AI provider client.
+ * Resolution order: in-app options → AI_PROVIDER env → auto-detect.
  */
-export async function getAiProviderClient(): Promise<AiProviderClient> {
-  if (_cached) return _cached;
-  const id = await resolveProviderId();
-  _cached = await buildClient(id);
-  return _cached;
+export async function getAiProviderClient(options?: AiProviderOptions): Promise<AiProviderClient> {
+  const cacheKey = buildAiProviderCacheKey(options);
+  const cached = _cache.get(cacheKey);
+  if (cached) return cached;
+
+  const id = resolveProviderId(options);
+  const client = await buildClient(id, options);
+  _cache.set(cacheKey, client);
+  return client;
 }
 
-/** Reset the cached client (useful when switching providers at runtime). */
+/** Reset cached clients (useful when switching providers at runtime). */
 export function resetAiProviderClient(): void {
-  _cached = null;
+  _cache.clear();
 }
 
 /**
