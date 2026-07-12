@@ -1,11 +1,8 @@
+import { LegalPageClient } from "@/components/marketing/legal-page-client";
+
 export default function TermsPage() {
   return (
-    <div className="max-w-3xl mx-auto px-6 py-20 space-y-8">
-      <div className="space-y-2">
-        <h1 className="text-4xl font-bold">Terms of Service</h1>
-        <p className="text-sm text-muted-foreground">Last updated: July 5, 2026</p>
-      </div>
-
+    <LegalPageClient titleLine1="Terms of" titleLine2="service" lastUpdated="July 5, 2026">
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">1. Service description</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
@@ -106,9 +103,12 @@ export default function TermsPage() {
         <h2 className="text-xl font-semibold">10. Contact</h2>
         <p className="text-sm text-muted-foreground leading-relaxed">
           Questions about these terms can be sent to{" "}
-          <a className="text-primary hover:underline" href="mailto:legal@goals.ac">legal@goals.ac</a>.
+          <a className="text-primary hover:underline" href="mailto:legal@goals.ac">
+            legal@goals.ac
+          </a>
+          .
         </p>
       </section>
-    </div>
+    </LegalPageClient>
   );
 }
