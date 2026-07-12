@@ -5,6 +5,7 @@ import { QUEUES, enqueue } from "@workspace/jobs";
 import type { ContentGeneratePayload, PgBoss } from "@workspace/jobs";
 import { generateFromContentItem } from "@workspace/content-engine/autopilot-orchestrator";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
 import {
   parseAutopilotSettings,
   shouldAutoPublish,
@@ -57,10 +58,14 @@ export async function registerContentGenerateHandler(boss: PgBoss): Promise<void
     const { contentItemId, projectId, userId, generateVariants, schedulePublish, triggeredByAutopilot } =
       job.data;
     try {
-      const userApiKey = await getDecryptedUserGeminiKey(userId);
+      const [userApiKey, aiProviderOptions] = await Promise.all([
+        getDecryptedUserGeminiKey(userId),
+        getUserAiProviderOptions(userId),
+      ]);
       const result = await generateFromContentItem(contentItemId, projectId, userId, {
         generateVariants: generateVariants !== false,
         userApiKey,
+        aiProviderOptions,
       });
 
       const [project] = await db

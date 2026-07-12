@@ -5,10 +5,7 @@ import { QUEUES, enqueue } from "@workspace/jobs";
 import type { ContentPublishPayload, ScheduledPublishSweepPayload, PgBoss } from "@workspace/jobs";
 import { decryptCmsCredentials, type CmsIntegrationCredentials } from "@workspace/content-engine/support/cms-integrations";
 import { parseAutopilotSettings, wordpressPublishStatus } from "@workspace/content-engine/support/autopilot-scheduler";
-import { getSocialAccessToken } from "@workspace/content-engine/support/social-tokens";
-import { publishToLinkedIn } from "@workspace/connectors/linkedin";
-import { publishThreadToTwitter, splitTwitterThread } from "@workspace/connectors/twitter";
-import { publishToFacebookPage, publishToInstagram } from "@workspace/connectors/meta";
+import { publishPieceToSocial, isSocialPlatform } from "@workspace/content-engine/support/social-publish";
 import { publishPieceToCms, publishPieceToWordPress } from "@workspace/content-engine/support/cms-publish";
 import { CMS_PUBLISH_PLATFORMS, type CmsPublishPlatform } from "@workspace/content-engine/support/cms-integrations";
 import { publishToNotion } from "@workspace/connectors/notion";
@@ -20,6 +17,8 @@ const FORMAT_TO_PLATFORM: Record<string, string> = {
   twitter_thread: "twitter",
   instagram_post: "instagram",
   facebook_post: "facebook",
+  bluesky_post: "bluesky",
+  mastodon_post: "mastodon",
 };
 
 async function publishPiece(pieceId: number, userId: number): Promise<void> {
@@ -48,28 +47,19 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
   const platform = piece.publishPlatform ?? FORMAT_TO_PLATFORM[piece.formatType];
   let publishedUrl: string | null = null;
 
-  if (platform === "linkedin" && creds.linkedin) {
-    const token = await getSocialAccessToken(piece.websiteProjectId, userId, "linkedin");
-    const result = await publishToLinkedIn({ accessToken: token, authorUrn: creds.linkedin.authorUrn }, piece.title, piece.bodyMarkdown);
-    publishedUrl = result.postUrl;
-  } else if (platform === "twitter" && creds.twitter) {
-    const token = await getSocialAccessToken(piece.websiteProjectId, userId, "twitter");
-    const result = await publishThreadToTwitter({ accessToken: token }, splitTwitterThread(piece.bodyMarkdown));
-    publishedUrl = result.postUrls[0] ?? null;
-  } else if (platform === "instagram" && creds.meta?.instagramAccountId) {
-    const token = await getSocialAccessToken(piece.websiteProjectId, userId, "meta");
-    const result = await publishToInstagram(
-      { accessToken: token, pageId: creds.meta.pageId, instagramAccountId: creds.meta.instagramAccountId },
-      piece.bodyMarkdown,
+  if (platform && isSocialPlatform(platform)) {
+    const result = await publishPieceToSocial(
+      platform,
+      {
+        id: piece.id,
+        title: piece.title,
+        bodyMarkdown: piece.bodyMarkdown,
+        websiteProjectId: piece.websiteProjectId,
+      },
+      userId,
+      creds,
     );
-    publishedUrl = result.postUrl;
-  } else if (platform === "facebook" && creds.meta?.pageId) {
-    const token = await getSocialAccessToken(piece.websiteProjectId, userId, "meta");
-    const result = await publishToFacebookPage(
-      { accessToken: token, pageId: creds.meta.pageId, instagramAccountId: creds.meta.instagramAccountId },
-      piece.bodyMarkdown,
-    );
-    publishedUrl = result.postUrl;
+    publishedUrl = result.publishedUrl;
   } else if (piece.formatType === "blog_post" && creds.wordpress) {
     publishedUrl = await publishPieceToWordPress(piece, creds, { status: wpStatus });
   } else if (
