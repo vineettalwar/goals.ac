@@ -18,28 +18,15 @@ import {
   Shuffle, CheckCircle2, Circle, FileText
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
+import {
+  type ContentFormatType,
+  type PublishDestinationId,
+  getConnectedDestinationsForFormat,
+  getPublishEndpoint,
+  getConnectionSummary,
+} from "@/lib/publishing-destinations";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-type ContentFormatType =
-  | "blog_post"
-  | "news_article"
-  | "tutorial"
-  | "guide"
-  | "whitepaper"
-  | "pillar_page"
-  | "location_page"
-  | "infographic_outline"
-  | "linkedin_post"
-  | "twitter_thread"
-  | "instagram_post"
-  | "facebook_post"
-  | "email_sequence"
-  | "ad_copy"
-  | "landing_page_copy"
-  | "product_description"
-  | "press_release"
-  | "faq_article";
 
 interface ContentPiece {
   id: number;
@@ -91,25 +78,7 @@ const STATUS_LABELS: Record<string, string> = {
   published: "Published",
 };
 
-type PublishPlatform = "wordpress" | "notion" | "webflow" | "linkedin" | "twitter" | "instagram" | "facebook";
-
-type CmsConnectionStatus = {
-  notion?: { databaseId: string; integrationTokenHint: string };
-  webflow?: { collectionId: string; apiTokenHint: string; bodyFieldSlug: string };
-  wordpress?: { siteUrl: string; usernameHint: string };
-  linkedin?: { connected: boolean; displayName?: string };
-  twitter?: { connected: boolean; screenName?: string };
-  meta?: { connected: boolean; pageName?: string; instagramUsername?: string };
-};
-
-const SOCIAL_FORMAT_PLATFORMS: Partial<Record<ContentFormatType, PublishPlatform[]>> = {
-  linkedin_post: ["linkedin"],
-  twitter_thread: ["twitter"],
-  instagram_post: ["instagram"],
-  facebook_post: ["facebook"],
-};
-
-const CMS_FORMAT_PLATFORMS: PublishPlatform[] = ["wordpress", "notion", "webflow"];
+type CmsConnectionStatus = Record<string, unknown>;
 
 function PublishDialog({
   open,
@@ -128,11 +97,15 @@ function PublishDialog({
   token: string | null;
   formatType: ContentFormatType;
 }) {
-  const [platform, setPlatform] = useState<PublishPlatform>("wordpress");
+  const [platform, setPlatform] = useState<PublishDestinationId>("wordpress");
   const [isPublishing, setIsPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connections, setConnections] = useState<CmsConnectionStatus | null>(null);
   const [isLoadingConnections, setIsLoadingConnections] = useState(false);
+
+  const availableDestinations = connections
+    ? getConnectedDestinationsForFormat(formatType, connections)
+    : [];
 
   useEffect(() => {
     if (!open || !token) return;
@@ -143,22 +116,8 @@ function PublishDialog({
       .then((r) => r.json())
       .then((data: CmsConnectionStatus) => {
         setConnections(data);
-        const social = SOCIAL_FORMAT_PLATFORMS[formatType] ?? [];
-        const cms = CMS_FORMAT_PLATFORMS.filter((p) => {
-          if (p === "wordpress") return !!data.wordpress;
-          if (p === "notion") return !!data.notion;
-          if (p === "webflow") return !!data.webflow;
-          return false;
-        });
-        const socialConnected = social.filter((p) => {
-          if (p === "linkedin") return !!data.linkedin;
-          if (p === "twitter") return !!data.twitter;
-          if (p === "instagram") return !!data.meta?.instagramUsername || !!data.meta;
-          if (p === "facebook") return !!data.meta;
-          return false;
-        });
-        const first = [...socialConnected, ...cms][0];
-        if (first) setPlatform(first);
+        const connected = getConnectedDestinationsForFormat(formatType, data);
+        if (connected[0]) setPlatform(connected[0].id);
       })
       .catch(() => setConnections({}))
       .finally(() => setIsLoadingConnections(false));
@@ -178,24 +137,7 @@ function PublishDialog({
     setIsPublishing(true);
     setError(null);
     try {
-      let endpoint = "";
-
-      if (platform === "wordpress") {
-        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/wordpress`;
-      } else if (platform === "notion") {
-        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/notion`;
-      } else if (platform === "webflow") {
-        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/webflow`;
-      } else if (platform === "linkedin") {
-        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/linkedin`;
-      } else if (platform === "twitter") {
-        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/twitter`;
-      } else if (platform === "instagram") {
-        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/instagram`;
-      } else if (platform === "facebook") {
-        endpoint = `${API_BASE}/api/content-pieces/${pieceId}/publish/facebook`;
-      }
-
+      const endpoint = getPublishEndpoint(platform, pieceId, API_BASE);
       const res = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
@@ -214,30 +156,8 @@ function PublishDialog({
     }
   };
 
-  const platformLabels: Record<PublishPlatform, string> = {
-    wordpress: "WordPress",
-    notion: "Notion",
-    webflow: "Webflow",
-    linkedin: "LinkedIn",
-    twitter: "X",
-    instagram: "Instagram",
-    facebook: "Facebook",
-  };
-
-  const formatPlatforms = SOCIAL_FORMAT_PLATFORMS[formatType] ?? CMS_FORMAT_PLATFORMS;
-
-  const availablePlatforms: PublishPlatform[] = formatPlatforms.filter((p) => {
-    if (p === "wordpress") return !!connections?.wordpress;
-    if (p === "notion") return !!connections?.notion;
-    if (p === "webflow") return !!connections?.webflow;
-    if (p === "linkedin") return !!connections?.linkedin;
-    if (p === "twitter") return !!connections?.twitter;
-    if (p === "instagram") return !!connections?.meta;
-    if (p === "facebook") return !!connections?.meta;
-    return false;
-  });
-
-  const hasConnections = availablePlatforms.length > 0;
+  const selectedDestination = availableDestinations.find((d) => d.id === platform);
+  const hasConnections = availableDestinations.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
@@ -248,7 +168,7 @@ function PublishDialog({
             Publish Content
           </DialogTitle>
           <DialogDescription>
-            Choose a platform to publish this content piece to.
+            Pick where this piece should go.
           </DialogDescription>
         </DialogHeader>
 
@@ -258,56 +178,52 @@ function PublishDialog({
           </div>
         ) : !hasConnections ? (
           <div className="rounded-lg border border-border bg-muted/40 px-4 py-6 text-sm text-center space-y-2">
-            <p className="font-medium text-foreground">No publishing destinations connected</p>
+            <p className="font-medium text-foreground">No destinations connected</p>
             <p className="text-muted-foreground">
-              Connect publishing destinations in{" "}
-              <strong>Project Settings → Publishing</strong> before publishing content.
+              Connect a CMS or social account in{" "}
+              <strong>Project Settings → Publishing</strong> first.
             </p>
           </div>
         ) : (
           <div className="space-y-4 mt-2">
             <div className="space-y-1.5">
               <Label>Platform</Label>
-              <div className={`grid gap-2 ${availablePlatforms.length === 1 ? "grid-cols-1" : availablePlatforms.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
-                {availablePlatforms.map((p) => (
+              <div className={`grid gap-2 ${availableDestinations.length === 1 ? "grid-cols-1" : availableDestinations.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
+                {availableDestinations.map((dest) => (
                   <button
-                    key={p}
+                    key={dest.id}
                     type="button"
-                    onClick={() => { setPlatform(p); setError(null); }}
+                    onClick={() => { setPlatform(dest.id); setError(null); }}
                     disabled={isPublishing}
                     className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none ${
-                      platform === p
+                      platform === dest.id
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                     }`}
                   >
-                    {platformLabels[p]}
+                    {dest.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            {platform === "wordpress" && connections?.wordpress && (
+            {selectedDestination && connections && (
               <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm space-y-1">
-                <p className="font-medium text-foreground">Connected WordPress site</p>
-                <p className="text-muted-foreground">Site URL: <code className="text-xs bg-muted px-1 rounded">{connections.wordpress.siteUrl}</code></p>
-                <p className="text-muted-foreground text-xs mt-1">The content will be published as a new post on this site.</p>
-              </div>
-            )}
-
-            {platform === "notion" && connections?.notion && (
-              <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm space-y-1">
-                <p className="font-medium text-foreground">Connected Notion database</p>
-                <p className="text-muted-foreground">Database ID: <code className="text-xs bg-muted px-1 rounded">{connections.notion.databaseId}</code></p>
-                <p className="text-muted-foreground text-xs mt-1">The content will be published as a new page in this database.</p>
-              </div>
-            )}
-
-            {platform === "webflow" && connections?.webflow && (
-              <div className="rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm space-y-1">
-                <p className="font-medium text-foreground">Connected Webflow collection</p>
-                <p className="text-muted-foreground">Collection ID: <code className="text-xs bg-muted px-1 rounded">{connections.webflow.collectionId}</code></p>
-                <p className="text-muted-foreground text-xs mt-1">A draft CMS item will be created. You can review and publish it in Webflow.</p>
+                <p className="font-medium text-foreground">
+                  Connected {selectedDestination.label}
+                </p>
+                {getConnectionSummary(platform, connections) && (
+                  <p className="text-muted-foreground">
+                    <code className="text-xs bg-muted px-1 rounded break-all">
+                      {getConnectionSummary(platform, connections)}
+                    </code>
+                  </p>
+                )}
+                <p className="text-muted-foreground text-xs mt-1">
+                  {selectedDestination.category === "social"
+                    ? "Posts to your connected social account."
+                    : "Creates a new post in your connected CMS."}
+                </p>
               </div>
             )}
 
@@ -327,7 +243,7 @@ function PublishDialog({
                 {isPublishing ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Publishing…</>
                 ) : (
-                  <><Send className="w-4 h-4 mr-2" />Publish to {platformLabels[platform]}</>
+                  <><Send className="w-4 h-4 mr-2" />Publish to {selectedDestination?.label ?? "destination"}</>
                 )}
               </Button>
               <Button variant="outline" onClick={handleClose} disabled={isPublishing}>
@@ -726,7 +642,7 @@ export default function ContentPiecePage() {
 
   return (
     <AppLayout>
-      <SEO title={`${piece.title} | Content Studio | goals.ac`} description={`${meta.label} — ${piece.targetKeyword}`} />
+      <SEO title={`${piece.title} | Content Studio | goals.ac`} description={`${meta.label} on ${piece.targetKeyword}`} />
       <div className="container mx-auto px-4 md:px-8 max-w-4xl py-10">
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
           <Link to="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
@@ -814,7 +730,7 @@ export default function ContentPiecePage() {
             <div className="flex items-center gap-2.5 min-w-0">
               <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0" />
               <p className="text-sm text-muted-foreground">
-                Draft — review the content below, then mark it ready when it's good to publish.
+                Review the draft below, then mark it ready when you want to publish.
               </p>
             </div>
             <Button
