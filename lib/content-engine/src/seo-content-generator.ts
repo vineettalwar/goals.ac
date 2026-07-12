@@ -1,6 +1,7 @@
 import { logger } from "./logger";
-import { getAiProviderClient, wrapGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
+import { type AiProviderOptions } from "@workspace/ai-providers";
 import type { AiProviderClient } from "@workspace/ai-providers/client";
+import { resolveAiClient } from "./support/resolve-ai-client";
 import type { ContentStyle } from "@workspace/db";
 
 export interface SeoArticleContent {
@@ -135,21 +136,9 @@ export async function generateSeoArticleContent(
   stage: string,
   userApiKey?: string | null,
   contentStyle?: ContentStyle | null,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<SeoArticleContent> {
-  if (userApiKey) {
-    try {
-      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
-      return await generateWithClient(userClient, brandName, websiteUrl, industry, location, stage, contentStyle);
-    } catch (err) {
-      if (isUserKeyError(err)) {
-        logger.warn({ err }, "User Gemini key failed for SEO article generation, falling back to platform key");
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  const client = await getAiProviderClient();
+  const client = await resolveAiClient(userApiKey, aiProviderOptions);
   return generateWithClient(client, brandName, websiteUrl, industry, location, stage, contentStyle);
 }
 
@@ -207,20 +196,8 @@ export async function generateSeoArticleContentStream(
   onChunk: (text: string) => void,
   userApiKey?: string | null,
   contentStyle?: ContentStyle | null,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<SeoArticleContent> {
-  if (userApiKey) {
-    try {
-      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
-      return await generateStreamWithClient(userClient, brandName, websiteUrl, industry, location, stage, onChunk, contentStyle);
-    } catch (err) {
-      if (isUserKeyError(err)) {
-        logger.warn({ err }, "User Gemini key failed for SEO article stream, falling back to platform key");
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  const client = await getAiProviderClient();
+  const client = await resolveAiClient(userApiKey, aiProviderOptions);
   return generateStreamWithClient(client, brandName, websiteUrl, industry, location, stage, onChunk, contentStyle);
 }

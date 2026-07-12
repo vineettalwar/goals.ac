@@ -13,6 +13,7 @@ import {
   repurposeContentPiece,
   type BrandContext,
 } from "./content-studio-generator";
+import { getUserAiProviderOptions } from "./support/user-ai-provider";
 import {
   decryptCmsCredentials,
   getConnectedSocialPlatforms,
@@ -91,7 +92,7 @@ export async function generateFromContentItem(
   itemId: number,
   projectId: number,
   userId: number,
-  options?: { generateVariants?: boolean; userApiKey?: string | null },
+  options?: { generateVariants?: boolean; userApiKey?: string | null; aiProviderOptions?: Awaited<ReturnType<typeof getUserAiProviderOptions>> },
 ): Promise<GenerateFromItemResult> {
   const [item] = await db
     .select()
@@ -126,6 +127,7 @@ export async function generateFromContentItem(
     item.topicAngle,
     false,
     options?.userApiKey,
+    options?.aiProviderOptions,
   );
 
   const [primary] = await db
@@ -159,6 +161,7 @@ export async function generateFromContentItem(
         generated.body_markdown,
         item.primaryKeyword,
         options?.userApiKey,
+        options?.aiProviderOptions,
       );
 
       const [variant] = await db

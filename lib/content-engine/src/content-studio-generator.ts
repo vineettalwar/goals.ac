@@ -1,12 +1,14 @@
 import { createHash } from "node:crypto";
 import { logger } from "./logger";
 import {
-  getAiProviderClient,
   wrapGeminiClient,
   createUserGeminiClient,
   isUserKeyError,
+  resolveProviderId,
+  type AiProviderOptions,
 } from "@workspace/ai-providers";
 import type { AiProviderClient } from "@workspace/ai-providers/client";
+import { resolveAiClient } from "./support/resolve-ai-client";
 import { getCache } from "./cache";
 import type { ContentFormatType, ContentStyle } from "@workspace/db";
 
@@ -693,8 +695,9 @@ export async function generateContentPieceStream(
   onChunk: (text: string) => void,
   angleHint?: string,
   userApiKey?: string | null,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<ContentPieceResult> {
-  if (userApiKey) {
+  if (userApiKey && resolveProviderId(aiProviderOptions) === "gemini") {
     let chunksEmitted = 0;
     try {
       const userClient = wrapGeminiClient(
@@ -723,7 +726,7 @@ export async function generateContentPieceStream(
     }
   }
 
-  const client = await getAiProviderClient();
+  const client = await resolveAiClient(userApiKey, aiProviderOptions);
   return generateWithClientStream(
     client,
     format,
@@ -741,6 +744,7 @@ export async function generateContentPiece(
   angleHint?: string,
   bypassCache = false,
   userApiKey?: string | null,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<ContentPieceResult> {
   const key = buildCacheKey(format, keyword, brand, angleHint);
   if (!bypassCache) {
@@ -751,33 +755,7 @@ export async function generateContentPiece(
     }
   }
 
-  if (userApiKey) {
-    try {
-      const userClient = wrapGeminiClient(
-        await createUserGeminiClient(userApiKey),
-      );
-      const result = await generateWithClient(
-        userClient,
-        format,
-        brand,
-        keyword,
-        angleHint,
-      );
-      await cacheSet(key, result);
-      return result;
-    } catch (err) {
-      if (isUserKeyError(err)) {
-        logger.warn(
-          { err },
-          "User Gemini key failed for content piece, falling back to platform key",
-        );
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  const client = await getAiProviderClient();
+  const client = await resolveAiClient(userApiKey, aiProviderOptions);
   const result = await generateWithClient(
     client,
     format,
@@ -835,6 +813,7 @@ export async function repurposeContentPiece(
   existingContent: string,
   existingKeyword: string,
   userApiKey?: string | null,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<ContentPieceResult> {
   const prompt = buildRepurposePrompt(
     targetFormat,
@@ -874,25 +853,7 @@ export async function repurposeContentPiece(
     throw lastError;
   }
 
-  if (userApiKey) {
-    try {
-      const userClient = wrapGeminiClient(
-        await createUserGeminiClient(userApiKey),
-      );
-      return await attemptGeneration(userClient);
-    } catch (err) {
-      if (isUserKeyError(err)) {
-        logger.warn(
-          { err },
-          "User Gemini key failed for repurpose generation, falling back to platform key",
-        );
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  const client = await getAiProviderClient();
+  const client = await resolveAiClient(userApiKey, aiProviderOptions);
   return attemptGeneration(client);
 }
 

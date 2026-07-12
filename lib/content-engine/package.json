@@ -23,6 +23,7 @@
     "./support/autopilot-scheduler": "./src/support/autopilot-scheduler.ts",
     "./support/visibility-settings": "./src/support/visibility-settings.ts",
     "./support/user-api-key": "./src/support/user-api-key.ts",
+    "./support/user-ai-provider": "./src/support/user-ai-provider.ts",
     "./support/social-tokens": "./src/support/social-tokens.ts"
   },
   "dependencies": {

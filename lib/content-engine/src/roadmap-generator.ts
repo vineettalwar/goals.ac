@@ -1,6 +1,7 @@
 import { logger } from "./logger";
-import { getAiProviderClient, wrapGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
+import { type AiProviderOptions } from "@workspace/ai-providers";
 import type { AiProviderClient } from "@workspace/ai-providers/client";
+import { resolveAiClient } from "./support/resolve-ai-client";
 
 export interface RoadmapPhase {
   title: string;
@@ -224,21 +225,9 @@ export async function generateRoadmapContent(
   stage: string,
   userApiKey?: string | null,
   onPhaseReady?: PhaseProgressCallback,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<RoadmapContent> {
-  if (userApiKey) {
-    try {
-      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
-      return await generateWithClient(userClient, industry, location, stage, onPhaseReady);
-    } catch (err) {
-      if (isUserKeyError(err)) {
-        logger.warn({ err }, "User Gemini key failed for roadmap generation, falling back to platform key");
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  const client = await getAiProviderClient();
+  const client = await resolveAiClient(userApiKey, aiProviderOptions);
   return generateWithClient(client, industry, location, stage, onPhaseReady);
 }
 
@@ -248,8 +237,9 @@ export async function generateRoadmap(
   location: string,
   stage: string,
   userApiKey?: string | null,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<RoadmapContent> {
-  return generateRoadmapContent(industry, location, stage, userApiKey);
+  return generateRoadmapContent(industry, location, stage, userApiKey, undefined, aiProviderOptions);
 }
 
 /** Streaming alias — emits SSE-style events via onEvent callback */
@@ -259,11 +249,12 @@ export async function generateRoadmapStream(
   stage: string,
   onEvent: (event: string, data: unknown) => void,
   userApiKey?: string | null,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<RoadmapContent> {
   return generateRoadmapContent(industry, location, stage, userApiKey, (event) => {
     if (event.type === "summary") onEvent("summary", { executiveSummary: event.data });
     if (event.type === "phase") onEvent("phase", { phaseIndex: event.phaseIndex, phase: event.data });
-  });
+  }, aiProviderOptions);
 }
 
 export { generateRoadmapSlug as generateSlug } from "@workspace/db";

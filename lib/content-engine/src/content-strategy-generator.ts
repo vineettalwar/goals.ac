@@ -1,6 +1,7 @@
 import { logger } from "./logger";
-import { getAiProviderClient, wrapGeminiClient, createUserGeminiClient, isUserKeyError } from "@workspace/ai-providers";
+import type { AiProviderOptions } from "@workspace/ai-providers";
 import type { AiProviderClient } from "@workspace/ai-providers/client";
+import { resolveAiClient } from "./support/resolve-ai-client";
 import type { ContentStyle } from "@workspace/db";
 
 export interface ContentItem {
@@ -140,21 +141,9 @@ export async function generateContentStrategy(
   stage: string,
   userApiKey?: string | null,
   contentStyle?: ContentStyle | null,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<ContentItem[]> {
-  if (userApiKey) {
-    try {
-      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
-      return await generateWithClient(userClient, industry, location, stage, contentStyle);
-    } catch (err) {
-      if (isUserKeyError(err)) {
-        logger.warn({ err }, "User Gemini key failed for content strategy generation, falling back to platform key");
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  const client = await getAiProviderClient();
+  const client = await resolveAiClient(userApiKey, aiProviderOptions);
   return generateWithClient(client, industry, location, stage, contentStyle);
 }
 
@@ -189,20 +178,8 @@ export async function generateContentStrategyWithProgress(
   onBatch: (batchNum: number, totalBatches: number, items: ContentItem[]) => void,
   userApiKey?: string | null,
   contentStyle?: ContentStyle | null,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<ContentItem[]> {
-  if (userApiKey) {
-    try {
-      const userClient = wrapGeminiClient(await createUserGeminiClient(userApiKey));
-      return await generateWithClientProgress(userClient, industry, location, stage, onBatch, contentStyle);
-    } catch (err) {
-      if (isUserKeyError(err)) {
-        logger.warn({ err }, "User Gemini key failed for content strategy stream, falling back to platform key");
-      } else {
-        throw err;
-      }
-    }
-  }
-
-  const client = await getAiProviderClient();
+  const client = await resolveAiClient(userApiKey, aiProviderOptions);
   return generateWithClientProgress(client, industry, location, stage, onBatch, contentStyle);
 }
