@@ -3,9 +3,10 @@ import { z } from "zod/v4";
 import { db, competitorAnalysesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { analyzeCompetitor } from "@workspace/seo-tools/competitorAnalyzer";
-import { modelForTier } from "@workspace/ai-providers";
+import { modelForTier, resolveProviderId } from "@workspace/ai-providers";
 import { optionalAuth } from "../lib/auth";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";
 import { requireProjectAccess } from "../lib/projectAccess";
 import { recordUsageEvent } from "../lib/usageEvents";
@@ -52,12 +53,14 @@ router.post("/competitor-analysis", optionalAuth, async (req, res) => {
 
   try {
     const userApiKey = req.user ? await getDecryptedUserGeminiKey(req.user.userId) : null;
+    const aiProviderOptions = req.user ? await getUserAiProviderOptions(req.user.userId) : undefined;
     const analysis = await analyzeCompetitor({
       competitorUrl,
       industry,
       location,
       stage,
       userApiKey,
+      aiProviderOptions,
     });
 
     const [saved] = await db
@@ -73,12 +76,13 @@ router.post("/competitor-analysis", optionalAuth, async (req, res) => {
       .returning();
 
     if (req.user) {
+      const providerId = resolveProviderId(aiProviderOptions);
       await recordUsageEvent({
         userId: req.user.userId,
         eventType: "competitor_analysis",
         tier: "strategy",
-        provider: "gemini",
-        model: modelForTier("gemini", "strategy"),
+        provider: providerId,
+        model: providerId === "gemini" ? modelForTier("gemini", "strategy") : undefined,
         usedByok: Boolean(userApiKey),
       });
     }

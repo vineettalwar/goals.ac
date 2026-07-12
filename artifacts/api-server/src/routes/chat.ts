@@ -4,8 +4,8 @@ import { roadmapsTable, conversations, messages } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { optionalAuth } from "../lib/auth";
-import { getGeminiClientWithFallback } from "@workspace/ai-providers";
-import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
+import { getAiProviderClient } from "@workspace/ai-providers";
 
 const router: IRouter = Router();
 
@@ -40,6 +40,16 @@ INSTRUCTIONS:
 - Do not use excessive markdown; plain prose is preferred`;
 }
 
+function buildChatPrompt(history: { role: string; content: string }[], message: string): string {
+  if (history.length === 0) return message;
+
+  const transcript = history
+    .map((m) => `${m.role === "assistant" ? "Assistant" : "User"}: ${m.content}`)
+    .join("\n\n");
+
+  return `Previous conversation:\n${transcript}\n\nUser: ${message}\n\nAssistant:`;
+}
+
 router.post("/roadmaps/:slug/chat", optionalAuth, async (req, res) => {
   const parsed = ChatMessageBody.safeParse(req.body);
   if (!parsed.success) {
@@ -62,13 +72,17 @@ router.post("/roadmaps/:slug/chat", optionalAuth, async (req, res) => {
       return;
     }
 
-    const userApiKey = req.user ? await getDecryptedUserGeminiKey(req.user.userId) : null;
-    const result = await getGeminiClientWithFallback(userApiKey);
-    if (!result) {
+    let client;
+    try {
+      if (req.user) {
+        ({ client } = await resolveAiClientForUser(req.user.userId));
+      } else {
+        client = await getAiProviderClient();
+      }
+    } catch {
       res.status(503).json({ error: "Chat temporarily unavailable" });
       return;
     }
-    const { client } = result;
 
     let convId = conversationId;
     let history: { role: string; content: string }[] = [];
@@ -90,19 +104,13 @@ router.post("/roadmaps/:slug/chat", optionalAuth, async (req, res) => {
 
     await db.insert(messages).values({ conversationId: convId, role: "user", content: message });
 
-    const geminiHistory = history.map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
-
-    const chat = client.chats.create({
-      model: "gemini-2.0-flash",
-      config: { systemInstruction: buildSystemPrompt(roadmap) },
-      history: geminiHistory,
+    const response = await client.generate({
+      prompt: buildChatPrompt(history, message),
+      systemInstruction: buildSystemPrompt(roadmap),
+      maxOutputTokens: 2048,
     });
 
-    const geminiRes = await chat.sendMessage({ message });
-    const reply = geminiRes.text ?? "";
+    const reply = response.text?.trim() ?? "";
 
     await db.insert(messages).values({ conversationId: convId, role: "assistant", content: reply });
 

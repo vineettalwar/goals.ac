@@ -3,9 +3,10 @@ import { z } from "zod/v4";
 import { db, keywordAnalysesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { analyzeKeywords } from "@workspace/seo-tools/keywordAnalyzer";
-import { modelForTier } from "@workspace/ai-providers";
+import { modelForTier, resolveProviderId } from "@workspace/ai-providers";
 import { optionalAuth } from "../lib/auth";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
 import { requireProjectAccess } from "../lib/projectAccess";
 import { recordUsageEvent } from "../lib/usageEvents";
 
@@ -42,7 +43,8 @@ router.post("/keyword-analysis", optionalAuth, async (req, res) => {
 
   try {
     const userApiKey = req.user ? await getDecryptedUserGeminiKey(req.user.userId) : null;
-    const analysis = await analyzeKeywords({ keywords, websiteUrl, userApiKey });
+    const aiProviderOptions = req.user ? await getUserAiProviderOptions(req.user.userId) : undefined;
+    const analysis = await analyzeKeywords({ keywords, websiteUrl, userApiKey, aiProviderOptions });
 
     const [saved] = await db
       .insert(keywordAnalysesTable)
@@ -55,12 +57,13 @@ router.post("/keyword-analysis", optionalAuth, async (req, res) => {
       .returning();
 
     if (req.user) {
+      const providerId = resolveProviderId(aiProviderOptions);
       await recordUsageEvent({
         userId: req.user.userId,
         eventType: "keyword_analysis",
         tier: "planning",
-        provider: "gemini",
-        model: modelForTier("gemini", "planning"),
+        provider: providerId,
+        model: providerId === "gemini" ? modelForTier("gemini", "planning") : undefined,
         usedByok: Boolean(userApiKey),
       });
     }

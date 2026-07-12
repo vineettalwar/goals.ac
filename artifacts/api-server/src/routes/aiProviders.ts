@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../lib/auth";
+import { isBedrockEnvConfigured } from "@workspace/ai-providers";
 
 const router = Router();
 
@@ -18,7 +19,7 @@ router.get("/ai-providers/status", requireAuth, async (_req, res) => {
       ? "env-key"
       : null;
 
-  const bedrockConfigured = !!(env("AWS_ACCESS_KEY_ID") || env("AWS_PROFILE"));
+  const bedrockConfigured = isBedrockEnvConfigured();
 
   let ollamaReachable = false;
   const ollamaBaseUrl = env("OLLAMA_BASE_URL") ?? "http://localhost:11434";
