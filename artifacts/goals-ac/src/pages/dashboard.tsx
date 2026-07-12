@@ -274,12 +274,12 @@ export default function Dashboard() {
                   to={`/content-piece/${d.id}`}
                   className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-800/20 transition-colors group"
                 >
-                  <FileText className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+                  <FileText className="w-3.5 h-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
                   <span className="text-sm font-medium text-amber-900 dark:text-amber-200 truncate flex-1">{d.title}</span>
                   {d.projectName && (
-                    <span className="text-xs text-amber-600 dark:text-amber-400 flex-shrink-0">{d.projectName}</span>
+                    <span className="text-xs text-amber-600 dark:text-amber-400 shrink-0">{d.projectName}</span>
                   )}
-                  <ArrowRight className="w-3.5 h-3.5 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
+                  <ArrowRight className="w-3.5 h-3.5 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                 </Link>
               ))}
               {!draftsExpanded && drafts.length > 3 && (
@@ -332,7 +332,7 @@ export default function Dashboard() {
                         className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mt-1"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                        <ExternalLink className="w-3 h-3 shrink-0" />
                         <span className="truncate">{project.url.replace(/^https?:\/\//, "")}</span>
                       </a>
                     </div>

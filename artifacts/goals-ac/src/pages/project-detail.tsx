@@ -1261,7 +1261,7 @@ export default function ProjectDetail() {
           </TabsList>
 
           <TabsContent value="brand" className="space-y-6">
-            <Card className="border-white/[0.07] glass-card-md shadow-none">
+            <Card className="border-white/7 glass-card-md shadow-none">
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -1290,7 +1290,7 @@ export default function ProjectDetail() {
                 </div>
 
                 {isScraping && (
-                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-blue-400/20 bg-blue-500/[0.07] px-4 py-3">
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-blue-400/20 bg-blue-500/7 px-4 py-3">
                     <Loader2 className="h-4 w-4 animate-spin text-blue-500 dark:text-blue-400 shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-blue-500 dark:text-blue-400">
@@ -1305,7 +1305,7 @@ export default function ProjectDetail() {
                 )}
 
                 {wasAutoFilled && !isScraping && (
-                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3">
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/7 px-4 py-3">
                     <Globe className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <p className="text-sm text-emerald-600 dark:text-emerald-400">
                       Auto-filled from your website — review and save to
@@ -1315,7 +1315,7 @@ export default function ProjectDetail() {
                 )}
 
                 {scrapeFailed && (
-                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-red-400/20 bg-red-500/[0.07] px-4 py-3">
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-red-400/20 bg-red-500/7 px-4 py-3">
                     <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-red-500 dark:text-red-400">
@@ -1524,7 +1524,7 @@ export default function ProjectDetail() {
               </CardContent>
             </Card>
 
-            <Card className="border-white/[0.07] glass-card-md shadow-none">
+            <Card className="border-white/7 glass-card-md shadow-none">
               <CardHeader>
                 <div className="flex items-start gap-3">
                   <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
@@ -1763,7 +1763,7 @@ export default function ProjectDetail() {
           </TabsContent>
 
           <TabsContent value="voice">
-            <Card className="border-white/[0.07] glass-card-md shadow-none">
+            <Card className="border-white/7 glass-card-md shadow-none">
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -1787,7 +1787,7 @@ export default function ProjectDetail() {
                 </div>
 
                 {isScraping && (
-                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-blue-400/20 bg-blue-500/[0.07] px-4 py-3">
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-blue-400/20 bg-blue-500/7 px-4 py-3">
                     <Loader2 className="h-4 w-4 animate-spin text-blue-500 dark:text-blue-400 shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-blue-500 dark:text-blue-400">
@@ -1802,7 +1802,7 @@ export default function ProjectDetail() {
                 )}
 
                 {wasAutoFilled && !isScraping && (
-                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/[0.07] px-4 py-3">
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-emerald-400/20 bg-emerald-500/7 px-4 py-3">
                     <Globe className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     <p className="text-sm text-emerald-600 dark:text-emerald-400">
                       Auto-filled from your website — review and save to
@@ -1812,7 +1812,7 @@ export default function ProjectDetail() {
                 )}
 
                 {scrapeFailed && (
-                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-red-400/20 bg-red-500/[0.07] px-4 py-3">
+                  <div className="mt-3 flex items-center gap-3 rounded-lg border border-red-400/20 bg-red-500/7 px-4 py-3">
                     <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400 shrink-0" />
                     <div>
                       <p className="text-sm font-medium text-red-500 dark:text-red-400">
@@ -2382,7 +2382,7 @@ export default function ProjectDetail() {
           <TabsContent value="content">
             <div className="space-y-6">
               {content && content.seoArticles.length > 0 && (
-                <Card className="border-white/[0.07] glass-card-md shadow-none">
+                <Card className="border-white/7 glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <FileText className="w-4 h-4 text-blue-500 dark:text-blue-400" />
@@ -2409,7 +2409,7 @@ export default function ProjectDetail() {
                             size="sm"
                             variant="ghost"
                             asChild
-                            className="hover:bg-muted dark:hover:bg-white/[0.07]"
+                            className="hover:bg-muted dark:hover:bg-white/7"
                           >
                             <Link to={`/seo-article/${article.id}`}>View</Link>
                           </Button>
@@ -2421,7 +2421,7 @@ export default function ProjectDetail() {
               )}
 
               {content && content.contentStrategies.length > 0 && (
-                <Card className="border-white/[0.07] glass-card-md shadow-none">
+                <Card className="border-white/7 glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <BarChart3 className="w-4 h-4 text-blue-500 dark:text-blue-400" />
@@ -2447,7 +2447,7 @@ export default function ProjectDetail() {
                             size="sm"
                             variant="ghost"
                             asChild
-                            className="hover:bg-muted dark:hover:bg-white/[0.07]"
+                            className="hover:bg-muted dark:hover:bg-white/7"
                           >
                             <Link to={`/content-strategy/${strategy.id}`}>
                               View
@@ -2461,7 +2461,7 @@ export default function ProjectDetail() {
               )}
 
               {content && content.geoAudits.length > 0 && (
-                <Card className="border-white/[0.07] glass-card-md shadow-none">
+                <Card className="border-white/7 glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Search className="w-4 h-4 text-sky-500 dark:text-sky-400" />
@@ -2490,7 +2490,7 @@ export default function ProjectDetail() {
                             size="sm"
                             variant="ghost"
                             asChild
-                            className="hover:bg-muted dark:hover:bg-white/[0.07]"
+                            className="hover:bg-muted dark:hover:bg-white/7"
                           >
                             <Link to={`/geo-audit/${audit.id}`}>View</Link>
                           </Button>
@@ -2502,7 +2502,7 @@ export default function ProjectDetail() {
               )}
 
               {content && content.roadmaps && content.roadmaps.length > 0 && (
-                <Card className="border-white/[0.07] glass-card-md shadow-none">
+                <Card className="border-white/7 glass-card-md shadow-none">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base">
                       <Map className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
@@ -2528,7 +2528,7 @@ export default function ProjectDetail() {
                             size="sm"
                             variant="ghost"
                             asChild
-                            className="hover:bg-muted dark:hover:bg-white/[0.07]"
+                            className="hover:bg-muted dark:hover:bg-white/7"
                           >
                             <Link to={`/roadmap/${roadmap.slug}`}>View</Link>
                           </Button>
@@ -2544,7 +2544,7 @@ export default function ProjectDetail() {
                 content.seoArticles.length === 0 &&
                 content.geoAudits.length === 0 &&
                 (!content.roadmaps || content.roadmaps.length === 0) && (
-                  <Card className="border-white/[0.07] glass-card border-dashed">
+                  <Card className="border-white/7 glass-card border-dashed">
                     <CardContent className="flex flex-col items-center justify-center py-16 text-center">
                       <div className="w-14 h-14 rounded-full glass-card-md flex items-center justify-center mb-4">
                         <FileText className="w-7 h-7 text-blue-500 dark:text-blue-400" />

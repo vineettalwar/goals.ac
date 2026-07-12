@@ -321,7 +321,7 @@ export default function Settings() {
 
           {/* ── Profile Tab ─────────────────────────────────────────── */}
           <TabsContent value="profile">
-            <Card className="border-white/[0.07] glass-card-md shadow-none">
+            <Card className="border-white/7 glass-card-md shadow-none">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-base">
                   <User className="w-4 h-4 text-blue-500 dark:text-blue-400" />
@@ -389,7 +389,7 @@ export default function Settings() {
           {/* ── AI Providers Tab ────────────────────────────────────── */}
           <TabsContent value="ai" className="space-y-6">
             {/* Active provider indicator */}
-            <div className="flex items-center gap-3 p-4 rounded-lg border border-blue-500/20 bg-blue-500/[0.05]">
+            <div className="flex items-center gap-3 p-4 rounded-lg border border-blue-500/20 bg-blue-500/5">
               <Cpu className="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0" />
               <div>
                 <p className="text-sm font-medium text-foreground">
@@ -403,7 +403,7 @@ export default function Settings() {
             </div>
 
             {/* Gemini */}
-            <Card className="border-white/[0.07] glass-card-md shadow-none">
+            <Card className="border-white/7 glass-card-md shadow-none">
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -482,7 +482,7 @@ export default function Settings() {
             </Card>
 
             {/* AWS Bedrock */}
-            <Card className="border-white/[0.07] glass-card-md shadow-none">
+            <Card className="border-white/7 glass-card-md shadow-none">
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -535,7 +535,7 @@ BEDROCK_MODEL=anthropic.claude-3-5-haiku-20241022-v1:0`}</code></pre>
             </Card>
 
             {/* Ollama */}
-            <Card className="border-white/[0.07] glass-card-md shadow-none">
+            <Card className="border-white/7 glass-card-md shadow-none">
               <CardHeader>
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -597,7 +597,7 @@ OLLAMA_MODEL=llama3.1`}</code></pre>
           {/* ── Security Tab ───────────────────────────────────────── */}
           {!isGoogleOnly && (
             <TabsContent value="security">
-              <Card className="border-white/[0.07] glass-card-md shadow-none">
+              <Card className="border-white/7 glass-card-md shadow-none">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-base">
                     <Lock className="w-4 h-4 text-blue-500 dark:text-blue-400" />

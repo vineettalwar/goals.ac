@@ -195,7 +195,7 @@ function PublishDialog({
                     type="button"
                     onClick={() => { setPlatform(dest.id); setError(null); }}
                     disabled={isPublishing}
-                    className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-none ${
+                    className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-hidden ${
                       platform === dest.id
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"

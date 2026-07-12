@@ -116,11 +116,11 @@ export default function CompetitorAnalysis() {
         description="Analyze your competitors and uncover content gaps, GEO weaknesses, and quick wins to outrank them."
       />
 
-      <div className="relative bg-mesh-dark text-zinc-50 py-16 md:py-20 border-b border-white/[0.06] overflow-hidden">
+      <div className="relative bg-mesh-dark text-zinc-50 py-16 md:py-20 border-b border-white/6 overflow-hidden">
         <div className="orb orb-primary w-[400px] h-[300px] top-[-10%] left-[30%] -translate-x-1/2" />
         <div className="container relative z-10 mx-auto px-4 md:px-8 max-w-3xl text-center">
           <motion.div {...fadeUp(0)}>
-            <div className="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/[0.08] px-3 py-1 text-xs font-semibold text-blue-300 mb-5">
+            <div className="inline-flex items-center rounded-full border border-blue-400/20 bg-blue-500/8 px-3 py-1 text-xs font-semibold text-blue-300 mb-5">
               <Search className="w-3 h-3 mr-1.5" /> COMPETITOR INTELLIGENCE
             </div>
           </motion.div>
