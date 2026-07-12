@@ -3,18 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, FileEdit, Globe2, Layers3, Webhook as WebhookIcon } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { ConnectionManager } from "./connection-manager";
+import { useCompany } from "@/lib/queries";
 
 export default function IntegrationsPage() {
-  const [companyId, setCompanyId] = useState<number | null>(null);
-
-  useEffect(() => {
-    fetch("/api/companies")
-      .then((r) => r.json())
-      .then(({ companies }) => {
-        if (companies?.[0]) setCompanyId(companies[0].id);
-      });
-  }, []);
+  const { data: companyId, isLoading } = useCompany();
 
   return (
     <div className="px-8 py-8 max-w-3xl space-y-6">
@@ -113,10 +107,14 @@ export default function IntegrationsPage() {
             </p>
           </div>
         </div>
-        {companyId ? (
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            <Spinner size="sm" /> Loading…
+          </p>
+        ) : companyId ? (
           <ConnectionManager provider="ghost" companyId={companyId} />
         ) : (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">No company found.</p>
         )}
       </div>
 
@@ -134,10 +132,14 @@ export default function IntegrationsPage() {
             </p>
           </div>
         </div>
-        {companyId ? (
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground flex items-center gap-2">
+            <Spinner size="sm" /> Loading…
+          </p>
+        ) : companyId ? (
           <ConnectionManager provider="webhook" companyId={companyId} />
         ) : (
-          <p className="text-sm text-muted-foreground">Loading...</p>
+          <p className="text-sm text-muted-foreground">No company found.</p>
         )}
       </div>
     </div>

@@ -1,12 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { ArrowRight, ChevronDown, ChevronUp, Map, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useActiveProject } from "@/context/active-project";
+import { useProjectContent, useRoadmapsCatalog, useWebsiteProject } from "@/lib/queries";
+import { queryKeys } from "@/lib/queries/keys";
 import { RoadmapGeneratorApp } from "./roadmap-generator-app";
 
 interface RoadmapSummary {
@@ -19,93 +22,46 @@ interface RoadmapSummary {
 }
 
 export function GrowthRoadmapsClient() {
+  const queryClient = useQueryClient();
   const { activeProjectId, activeProject, isLoading: projectLoading } = useActiveProject();
-  const [projectRoadmaps, setProjectRoadmaps] = useState<RoadmapSummary[]>([]);
-  const [catalogRoadmaps, setCatalogRoadmaps] = useState<RoadmapSummary[]>([]);
-  const [loadingProject, setLoadingProject] = useState(false);
-  const [loadingCatalog, setLoadingCatalog] = useState(false);
   const [catalogOpen, setCatalogOpen] = useState(false);
-  const [defaultIndustry, setDefaultIndustry] = useState<string | undefined>();
   const [pinningId, setPinningId] = useState<number | null>(null);
 
-  const loadProjectRoadmaps = useCallback(async () => {
-    if (!activeProjectId) {
-      setProjectRoadmaps([]);
-      return;
-    }
-    setLoadingProject(true);
-    try {
-      const res = await fetch(`/api/website-projects/${activeProjectId}/content`);
-      if (!res.ok) {
-        setProjectRoadmaps([]);
-        return;
-      }
-      const data = await res.json();
-      setProjectRoadmaps(data.roadmaps ?? []);
-    } catch {
-      setProjectRoadmaps([]);
-    } finally {
-      setLoadingProject(false);
-    }
-  }, [activeProjectId]);
+  const {
+    data: projectContent,
+    isLoading: loadingProject,
+    isFetching: fetchingProject,
+  } = useProjectContent(activeProjectId);
+  const { data: websiteProject } = useWebsiteProject(activeProjectId);
+  const { data: catalogRoadmaps = [], isLoading: loadingCatalog } = useRoadmapsCatalog(catalogOpen);
 
-  const loadCatalog = useCallback(async () => {
-    setLoadingCatalog(true);
-    try {
-      const res = await fetch("/api/roadmaps?limit=20");
-      if (!res.ok) {
-        setCatalogRoadmaps([]);
-        return;
-      }
-      const data = await res.json();
-      setCatalogRoadmaps(data.roadmaps ?? []);
-    } catch {
-      setCatalogRoadmaps([]);
-    } finally {
-      setLoadingCatalog(false);
+  const projectRoadmaps = (projectContent?.roadmaps ?? []) as RoadmapSummary[];
+  const defaultIndustry = useMemo(() => {
+    const brandProfile = websiteProject?.brandProfile as { industry?: string } | undefined;
+    if (typeof brandProfile?.industry === "string" && brandProfile.industry.trim()) {
+      return brandProfile.industry.trim();
     }
-  }, []);
+    return undefined;
+  }, [websiteProject]);
 
-  useEffect(() => {
-    loadProjectRoadmaps();
-  }, [loadProjectRoadmaps]);
-
-  useEffect(() => {
-    if (!activeProjectId) {
-      setDefaultIndustry(undefined);
-      return;
-    }
-    fetch(`/api/website-projects/${activeProjectId}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        const industry = data?.brandProfile?.industry;
-        if (typeof industry === "string" && industry.trim()) {
-          setDefaultIndustry(industry.trim());
-        }
-      })
-      .catch(() => setDefaultIndustry(undefined));
-  }, [activeProjectId]);
-
-  useEffect(() => {
-    if (catalogOpen && catalogRoadmaps.length === 0) {
-      loadCatalog();
-    }
-  }, [catalogOpen, catalogRoadmaps.length, loadCatalog]);
+  async function refreshProjectRoadmaps() {
+    if (!activeProjectId) return;
+    await queryClient.invalidateQueries({ queryKey: queryKeys.projectContent(activeProjectId) });
+  }
 
   async function pinRoadmap(roadmapId: number) {
     if (!activeProjectId) return;
     setPinningId(roadmapId);
     try {
-      const res = await fetch(
-        `/api/website-projects/${activeProjectId}/roadmaps/${roadmapId}`,
-        { method: "POST" },
-      );
+      const res = await fetch(`/api/website-projects/${activeProjectId}/roadmaps/${roadmapId}`, {
+        method: "POST",
+      });
       if (!res.ok) {
         toast.error("Failed to pin roadmap");
         return;
       }
       toast.success("Roadmap pinned to project");
-      await loadProjectRoadmaps();
+      await refreshProjectRoadmaps();
     } catch {
       toast.error("Failed to pin roadmap");
     } finally {
@@ -117,16 +73,15 @@ export function GrowthRoadmapsClient() {
     if (!activeProjectId) return;
     setPinningId(roadmapId);
     try {
-      const res = await fetch(
-        `/api/website-projects/${activeProjectId}/roadmaps/${roadmapId}`,
-        { method: "DELETE" },
-      );
+      const res = await fetch(`/api/website-projects/${activeProjectId}/roadmaps/${roadmapId}`, {
+        method: "DELETE",
+      });
       if (!res.ok) {
         toast.error("Failed to unpin roadmap");
         return;
       }
       toast.success("Roadmap removed from project");
-      await loadProjectRoadmaps();
+      await refreshProjectRoadmaps();
     } catch {
       toast.error("Failed to unpin roadmap");
     } finally {
@@ -135,7 +90,7 @@ export function GrowthRoadmapsClient() {
   }
 
   const pinnedIds = new Set(projectRoadmaps.map((r) => r.id));
-  const unpinnedCatalog = catalogRoadmaps.filter((r) => !pinnedIds.has(r.id));
+  const unpinnedCatalog = (catalogRoadmaps as RoadmapSummary[]).filter((r) => !pinnedIds.has(r.id));
 
   if (projectLoading) {
     return (
@@ -171,13 +126,13 @@ export function GrowthRoadmapsClient() {
         <RoadmapGeneratorApp
           projectId={activeProjectId}
           defaultIndustry={defaultIndustry}
-          onGenerated={loadProjectRoadmaps}
+          onGenerated={refreshProjectRoadmaps}
         />
       )}
 
       <div>
         <h2 className="text-sm font-semibold mb-3">Your project roadmaps</h2>
-        {loadingProject ? (
+        {loadingProject && projectRoadmaps.length === 0 ? (
           <div className="flex justify-center p-8">
             <Spinner />
           </div>
@@ -207,7 +162,7 @@ export function GrowthRoadmapsClient() {
                     variant="outline"
                     size="sm"
                     className="h-8"
-                    disabled={pinningId === r.id}
+                    disabled={pinningId === r.id || fetchingProject}
                     onClick={() => unpinRoadmap(r.id)}
                   >
                     <PinOff className="h-3 w-3 mr-1" />

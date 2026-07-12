@@ -1,17 +1,22 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { Globe, Plus } from "lucide-react";
 import { useActiveProject } from "@/context/active-project";
+import { NewProjectDialog } from "@/components/new-project-dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
+
+const ADD_PROJECT_VALUE = "__add_project__";
 
 function hostname(url: string) {
   try {
@@ -22,8 +27,15 @@ function hostname(url: string) {
 }
 
 export function ProjectSwitcher({ className }: { className?: string }) {
-  const { projects, activeProjectId, activeProject, setActiveProjectId, isLoading } =
-    useActiveProject();
+  const {
+    projects,
+    activeProjectId,
+    activeProject,
+    setActiveProjectId,
+    refreshProjects,
+    isLoading,
+  } = useActiveProject();
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -56,7 +68,13 @@ export function ProjectSwitcher({ className }: { className?: string }) {
       </p>
       <Select
         value={activeProjectId != null ? String(activeProjectId) : undefined}
-        onValueChange={(value) => setActiveProjectId(Number.parseInt(value, 10))}
+        onValueChange={(value) => {
+          if (value === ADD_PROJECT_VALUE) {
+            setAddDialogOpen(true);
+            return;
+          }
+          setActiveProjectId(Number.parseInt(value, 10));
+        }}
       >
         <SelectTrigger className="h-auto w-full gap-2 border-border bg-secondary/50 px-2.5 py-2 text-left shadow-none [&>svg:last-child]:hidden">
           <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -73,7 +91,12 @@ export function ProjectSwitcher({ className }: { className?: string }) {
             </div>
           </div>
         </SelectTrigger>
-        <SelectContent align="start" className="w-[var(--radix-select-trigger-width)]">
+        <SelectContent
+          side="top"
+          align="start"
+          sideOffset={6}
+          className="w-[var(--radix-select-trigger-width)]"
+        >
           {projects.map((project) => (
             <SelectItem key={project.id} value={String(project.id)} className="py-2">
               <div className="flex flex-col gap-0.5">
@@ -82,6 +105,13 @@ export function ProjectSwitcher({ className }: { className?: string }) {
               </div>
             </SelectItem>
           ))}
+          <SelectSeparator />
+          <SelectItem value={ADD_PROJECT_VALUE} className="py-2 text-primary focus:text-primary">
+            <span className="flex items-center gap-2">
+              <Plus className="h-3.5 w-3.5" />
+              Add project
+            </span>
+          </SelectItem>
         </SelectContent>
       </Select>
       <Link
@@ -90,6 +120,14 @@ export function ProjectSwitcher({ className }: { className?: string }) {
       >
         Manage projects
       </Link>
+      <NewProjectDialog
+        open={addDialogOpen}
+        onOpenChange={setAddDialogOpen}
+        onCreated={async (project) => {
+          await refreshProjects();
+          setActiveProjectId(project.id);
+        }}
+      />
     </div>
   );
 }

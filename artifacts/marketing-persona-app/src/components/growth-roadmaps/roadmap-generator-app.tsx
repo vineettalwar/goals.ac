@@ -49,6 +49,7 @@ export function RoadmapGeneratorApp({
   const [industries, setIndustries] = useState<Industry[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
   const [industry, setIndustry] = useState(defaultIndustry ?? "");
   const [location, setLocation] = useState("");
   const [stage, setStage] = useState<string>(STAGES[1].value);
@@ -64,11 +65,19 @@ export function RoadmapGeneratorApp({
   useEffect(() => {
     Promise.all([fetch("/api/industries"), fetch("/api/locations")])
       .then(async ([indRes, locRes]) => {
+        if (!indRes.ok || !locRes.ok) {
+          throw new Error("Failed to load form options");
+        }
         const [ind, loc] = await Promise.all([indRes.json(), locRes.json()]);
         setIndustries(Array.isArray(ind) ? ind : []);
         setLocations(Array.isArray(loc) ? loc : []);
+        setOptionsError(null);
       })
-      .catch(() => {})
+      .catch(() => {
+        setIndustries([]);
+        setLocations([]);
+        setOptionsError("Could not load industry and location options. Refresh and try again.");
+      })
       .finally(() => setLoadingOptions(false));
   }, []);
 
@@ -166,7 +175,11 @@ export function RoadmapGeneratorApp({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Industry</Label>
-            <Select value={industry} onValueChange={setIndustry} disabled={loadingOptions}>
+            <Select
+              value={industry || undefined}
+              onValueChange={setIndustry}
+              disabled={loadingOptions || industries.length === 0}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={loadingOptions ? "Loading…" : "Select industry"} />
               </SelectTrigger>
@@ -181,7 +194,11 @@ export function RoadmapGeneratorApp({
           </div>
           <div className="space-y-2">
             <Label>Location</Label>
-            <Select value={location} onValueChange={setLocation} disabled={loadingOptions}>
+            <Select
+              value={location || undefined}
+              onValueChange={setLocation}
+              disabled={loadingOptions || locations.length === 0}
+            >
               <SelectTrigger>
                 <SelectValue placeholder={loadingOptions ? "Loading…" : "Select location"} />
               </SelectTrigger>
@@ -212,7 +229,7 @@ export function RoadmapGeneratorApp({
           </Select>
         </div>
 
-        <Button type="submit" className="w-full" disabled={isPending || loadingOptions}>
+        <Button type="submit" className="w-full" disabled={isPending || loadingOptions || industries.length === 0 || locations.length === 0}>
           {isPending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -244,6 +261,10 @@ export function RoadmapGeneratorApp({
               );
             })}
           </div>
+        )}
+
+        {optionsError && (
+          <p className="text-sm text-destructive text-center">{optionsError}</p>
         )}
 
         {generationError && (

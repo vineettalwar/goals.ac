@@ -5,9 +5,12 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/queries/keys";
 
 const STORAGE_KEY = "activeProjectId";
 
@@ -29,42 +32,39 @@ interface ActiveProjectContextValue {
 
 const ActiveProjectContext = createContext<ActiveProjectContextValue | null>(null);
 
+async function fetchWebsiteProjects(): Promise<ProjectSummary[]> {
+  const res = await fetch("/api/website-projects");
+  if (!res.ok) return [];
+  const data = await res.json();
+  return Array.isArray(data) ? data : data.projects ?? [];
+}
+
 export function ActiveProjectProvider({ children }: { children: ReactNode }) {
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
+  const queryClient = useQueryClient();
   const [activeProjectId, setActiveProjectIdState] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
 
-  const refreshProjects = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch("/api/website-projects");
-      if (!res.ok) {
-        setProjects([]);
-        return;
-      }
-      const data = await res.json();
-      const list: ProjectSummary[] = Array.isArray(data) ? data : data.projects ?? [];
-      setProjects(list);
-
-      const stored = localStorage.getItem(STORAGE_KEY);
-      const storedId = stored ? Number.parseInt(stored, 10) : NaN;
-      const validStored = list.find((p) => p.id === storedId);
-
-      setActiveProjectIdState((current) => {
-        if (validStored) return validStored.id;
-        if (current && list.some((p) => p.id === current)) return current;
-        return list[0]?.id ?? null;
-      });
-    } catch {
-      setProjects([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const { data: projects = [], isLoading } = useQuery({
+    queryKey: queryKeys.websiteProjects,
+    queryFn: fetchWebsiteProjects,
+    staleTime: 60_000,
+    refetchOnMount: false,
+  });
 
   useEffect(() => {
-    refreshProjects();
-  }, [refreshProjects]);
+    if (initialized || isLoading) return;
+
+    const stored = localStorage.getItem(STORAGE_KEY);
+    const storedId = stored ? Number.parseInt(stored, 10) : NaN;
+    const validStored = projects.find((p) => p.id === storedId);
+
+    setActiveProjectIdState((current) => {
+      if (validStored) return validStored.id;
+      if (current && projects.some((p) => p.id === current)) return current;
+      return projects[0]?.id ?? null;
+    });
+    setInitialized(true);
+  }, [initialized, isLoading, projects]);
 
   const setActiveProjectId = useCallback((id: number | null) => {
     setActiveProjectIdState(id);
@@ -75,21 +75,29 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
+  const refreshProjects = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.websiteProjects });
+  }, [queryClient]);
+
+  const activeProject = useMemo(
+    () => projects.find((p) => p.id === activeProjectId) ?? null,
+    [projects, activeProjectId],
+  );
+
+  const value = useMemo(
+    () => ({
+      projects,
+      activeProjectId,
+      activeProject,
+      setActiveProjectId,
+      isLoading,
+      refreshProjects,
+    }),
+    [projects, activeProjectId, activeProject, setActiveProjectId, isLoading, refreshProjects],
+  );
 
   return (
-    <ActiveProjectContext.Provider
-      value={{
-        projects,
-        activeProjectId,
-        activeProject,
-        setActiveProjectId,
-        isLoading,
-        refreshProjects,
-      }}
-    >
-      {children}
-    </ActiveProjectContext.Provider>
+    <ActiveProjectContext.Provider value={value}>{children}</ActiveProjectContext.Provider>
   );
 }
 

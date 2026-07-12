@@ -89,7 +89,31 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
     return angleHint.trim() || undefined;
   }
 
-  async function handleGenerate(useStream: boolean) {
+  async function handleGenerateFallback(): Promise<ContentPieceRow> {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (bypassCache) headers["x-bypass-cache"] = "true";
+
+    const res = await fetch(`/api/website-projects/${projectId}/content-pieces`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        formatType: selectedFormat,
+        targetKeyword: keyword.trim(),
+        angleHint: buildAngleHint(selectedFormat!),
+        plannedDate: plannedDate || undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null);
+      throw new Error(data?.error ?? "Generation failed");
+    }
+
+    const piece = await res.json();
+    return piece as ContentPieceRow;
+  }
+
+  async function handleGenerate() {
     if (!selectedFormat || !keyword.trim()) {
       toast.error("Enter a target keyword");
       return;
@@ -97,73 +121,86 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
     setGenerating(true);
     setStreamPreview("");
 
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (bypassCache) headers["x-bypass-cache"] = "true";
+
     const payload = {
       formatType: selectedFormat,
       targetKeyword: keyword.trim(),
       angleHint: buildAngleHint(selectedFormat),
       plannedDate: plannedDate || undefined,
-      bypassCache,
     };
 
     try {
-      if (useStream) {
-        const res = await fetch(`/api/website-projects/${projectId}/content-pieces/generate/stream`, {
+      let res: Response;
+      try {
+        res = await fetch(`/api/website-projects/${projectId}/content-pieces/generate/stream`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers,
           body: JSON.stringify(payload),
         });
-        if (!res.ok || !res.body) throw new Error("Stream failed");
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-        let pieceId: number | null = null;
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split("\n");
-          buffer = lines.pop() ?? "";
-          for (const line of lines) {
-            if (!line.startsWith("data: ")) continue;
-            try {
-              const event = JSON.parse(line.slice(6));
-              if (event.event === "chunk" && event.text) {
-                setStreamPreview((p) => p + event.text);
-              }
-              if (event.event === "done" && event.piece) {
-                pieceId = event.piece.id;
-                onCreated(event.piece);
-              }
-              if (event.event === "cached" && event.piece) {
-                onCreated(event.piece);
-                pieceId = event.piece.id;
-              }
-            } catch {
-              // skip malformed SSE lines
-            }
-          }
-        }
-        if (pieceId) {
-          toast.success("Content generated");
-          handleClose();
-        }
-      } else {
-        const res = await fetch(`/api/website-projects/${projectId}/content-pieces`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-        if (!res.ok) throw new Error("Generation failed");
-        const data = await res.json();
-        const piece = data.piece ?? data;
+      } catch {
+        const piece = await handleGenerateFallback();
         onCreated(piece);
         toast.success("Content generated");
         handleClose();
+        return;
       }
-    } catch {
-      toast.error("Generation failed");
+
+      if (!res.ok || !res.body) {
+        const piece = await handleGenerateFallback();
+        onCreated(piece);
+        toast.success("Content generated");
+        handleClose();
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let finalPiece: ContentPieceRow | null = null;
+      let fromCache = false;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+
+        for (const line of lines) {
+          if (line.startsWith("event: cached")) {
+            fromCache = true;
+            continue;
+          }
+          if (line.startsWith("event: error")) {
+            throw new Error("Generation failed");
+          }
+          if (!line.startsWith("data: ")) continue;
+
+          try {
+            const parsed = JSON.parse(line.slice(6)) as { text?: string } | ContentPieceRow;
+            if ("text" in parsed && parsed.text) {
+              setStreamPreview((p) => p + parsed.text);
+            } else if ("id" in parsed) {
+              finalPiece = parsed as ContentPieceRow;
+            }
+          } catch {
+            // partial JSON during streaming
+          }
+        }
+      }
+
+      if (finalPiece) {
+        onCreated(finalPiece);
+        toast.success(fromCache ? "Loaded cached content" : "Content generated");
+        handleClose();
+        return;
+      }
+
+      throw new Error("Generation completed without a result");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Generation failed");
     } finally {
       setGenerating(false);
     }
@@ -366,14 +403,9 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
               </div>
             )}
 
-            <div className="flex gap-2 flex-wrap">
-              <Button onClick={() => handleGenerate(true)} disabled={generating}>
-                {generating ? <Spinner size="sm" /> : "Generate (stream)"}
-              </Button>
-              <Button variant="outline" onClick={() => handleGenerate(false)} disabled={generating}>
-                Generate
-              </Button>
-            </div>
+            <Button onClick={handleGenerate} disabled={generating || !keyword.trim()} className="w-full sm:w-auto">
+              {generating ? <Spinner size="sm" /> : "Generate"}
+            </Button>
           </div>
         )}
 

@@ -28,6 +28,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const profileSchema = z.object({ name: z.string().min(1) });
 const passwordSchema = z.object({
@@ -46,10 +53,23 @@ interface UsageSummary {
 
 interface AiProviderStatus {
   activeProvider: string;
+  source: "app" | "env" | "auto";
+  settings: {
+    provider: string | null;
+    ollamaBaseUrl: string | null;
+    ollamaModel: string | null;
+  };
+  envFallback: {
+    provider: string | null;
+    ollamaBaseUrl: string | null;
+    ollamaModel: string | null;
+  };
   gemini: { configured: boolean; source: string | null };
   bedrock: { configured: boolean; region: string | null; model: string | null };
   ollama: { configured: boolean; baseUrl: string; model: string; reachable: boolean };
 }
+
+type AiProviderChoice = "gemini" | "bedrock" | "ollama";
 
 const PLAN_LABELS: Record<UsageSummary["plan"], string> = {
   starter: "Starter",
@@ -72,6 +92,10 @@ export function SettingsClient() {
   const [geminiTesting, setGeminiTesting] = useState(false);
   const [geminiTestResult, setGeminiTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [geminiSaving, setGeminiSaving] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<AiProviderChoice>("gemini");
+  const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://localhost:11434");
+  const [ollamaModel, setOllamaModel] = useState("llama3.1");
+  const [providerSaving, setProviderSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletingKey, setDeletingKey] = useState(false);
 
@@ -101,7 +125,13 @@ export function SettingsClient() {
         setHasGeminiKey(true);
         setGeminiLastFour(keyData.lastFour ?? null);
       }
-      if (aiData) setAiStatus(aiData);
+      if (aiData) {
+        setAiStatus(aiData);
+        const savedProvider = aiData.settings?.provider as AiProviderChoice | null;
+        setSelectedProvider(savedProvider ?? (aiData.activeProvider as AiProviderChoice));
+        setOllamaBaseUrl(aiData.ollama.baseUrl ?? "http://localhost:11434");
+        setOllamaModel(aiData.ollama.model ?? "llama3.1");
+      }
       setUsageLoading(false);
     });
   }, []);
@@ -173,6 +203,27 @@ export function SettingsClient() {
     toast.success("API key removed");
   }
 
+  async function saveAiProvider() {
+    setProviderSaving(true);
+    const res = await fetch("/api/ai-providers/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        provider: selectedProvider,
+        ollamaBaseUrl: selectedProvider === "ollama" ? ollamaBaseUrl : null,
+        ollamaModel: selectedProvider === "ollama" ? ollamaModel : null,
+      }),
+    });
+    setProviderSaving(false);
+    if (!res.ok) {
+      toast.error("Failed to save AI provider");
+      return;
+    }
+    const data = await res.json();
+    setAiStatus(data);
+    toast.success("AI provider updated");
+  }
+
   async function deleteAccount() {
     if (!confirm("Delete your account and all projects? This cannot be undone.")) return;
     setDeleting(true);
@@ -238,15 +289,77 @@ export function SettingsClient() {
         </TabsContent>
 
         <TabsContent value="ai" className="space-y-6">
-          <div className="flex items-center gap-3 p-4 rounded-lg border border-primary/20 bg-primary/5">
-            <Cpu className="w-5 h-5 text-primary shrink-0" />
-            <div>
-              <p className="text-sm font-medium">
-                Active provider: <span className="capitalize text-primary">{activeProvider}</span>
-              </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Configure via the <code className="px-1 py-0.5 rounded bg-muted text-xs">AI_PROVIDER</code> env var.
-              </p>
+          <div className="paper-card p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <Cpu className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+              <div className="flex-1 space-y-4">
+                <div>
+                  <h2 className="font-semibold">Active AI provider</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Choose which provider powers generation. Env vars are used only when you have not set a preference here.
+                  </p>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="ai-provider">Provider</Label>
+                  <Select
+                    value={selectedProvider}
+                    onValueChange={(value) => setSelectedProvider(value as AiProviderChoice)}
+                  >
+                    <SelectTrigger id="ai-provider">
+                      <SelectValue placeholder="Select provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="gemini">Google Gemini</SelectItem>
+                      <SelectItem value="bedrock">AWS Bedrock</SelectItem>
+                      <SelectItem value="ollama">Ollama (local)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedProvider === "ollama" && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ollama-url">Ollama URL</Label>
+                      <Input
+                        id="ollama-url"
+                        value={ollamaBaseUrl}
+                        onChange={(e) => setOllamaBaseUrl(e.target.value)}
+                        placeholder="http://localhost:11434"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ollama-model">Model</Label>
+                      <Input
+                        id="ollama-model"
+                        value={ollamaModel}
+                        onChange={(e) => setOllamaModel(e.target.value)}
+                        placeholder="llama3.1"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-medium">
+                      Currently using: <span className="capitalize text-primary">{activeProvider}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Source: {aiStatus?.source === "app" ? "your settings" : aiStatus?.source === "env" ? "environment fallback" : "auto-detected"}
+                    </p>
+                  </div>
+                  <Button onClick={saveAiProvider} disabled={providerSaving}>
+                    {providerSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save provider"}
+                  </Button>
+                </div>
+
+                {aiStatus?.envFallback?.provider && !aiStatus.settings.provider && (
+                  <p className="text-xs text-muted-foreground">
+                    Env fallback: <code className="px-1 py-0.5 rounded bg-muted">AI_PROVIDER={aiStatus.envFallback.provider}</code>
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 

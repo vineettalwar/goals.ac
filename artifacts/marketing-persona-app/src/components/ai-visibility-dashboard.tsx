@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -27,7 +28,10 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
+import { PageSkeleton } from "@/components/page-skeleton";
 import { useActiveProject } from "@/context/active-project";
+import { useVisibilityData } from "@/lib/queries";
+import { queryKeys } from "@/lib/queries/keys";
 
 interface VisibilitySettings {
   llmTrackingEnabled: boolean;
@@ -88,59 +92,62 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
+function parseSummary(data: Record<string, unknown> | undefined, settings: VisibilitySettings): VisibilitySummary | null {
+  if (!data) return null;
+  return {
+    settings: (data.settings as VisibilitySettings) ?? settings,
+    visibilityScore: (data.visibilityScore as number) ?? (data.score as { overall?: number })?.overall ?? 0,
+    promptCount: (data.promptCount as number) ?? (data.prompts as unknown[])?.length ?? 0,
+    trend: (data.trend as VisibilitySummary["trend"]) ?? [],
+    byEngine: (data.byEngine as VisibilitySummary["byEngine"]) ?? [],
+    competitorMentions: (data.competitorMentions as VisibilitySummary["competitorMentions"]) ?? [],
+    geoScoreTrend: (data.geoScoreTrend as VisibilitySummary["geoScoreTrend"]) ?? [],
+    latestGeoScore: (data.latestGeoScore as number | null) ?? null,
+    recentSnapshots:
+      (data.recentSnapshots as VisibilitySummary["recentSnapshots"]) ??
+      (data.snapshots as VisibilitySummary["recentSnapshots"])?.slice(0, 20) ??
+      [],
+  };
+}
+
 export function AiVisibilityDashboard() {
+  const queryClient = useQueryClient();
   const { activeProjectId, activeProject, isLoading: projectsLoading } = useActiveProject();
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
-  const [summary, setSummary] = useState<VisibilitySummary | null>(null);
-  const [settings, setSettings] = useState<VisibilitySettings>({
-    llmTrackingEnabled: false,
-    geoReauditEnabled: false,
-  });
-  const [loading, setLoading] = useState(true);
+  const { settings: settingsQuery, summary: summaryQuery } = useVisibilityData(projectId);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    if (!projectId) {
-      setSummary(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    setError(null);
-    try {
-      const [settingsRes, summaryRes] = await Promise.all([
-        fetch(`/api/website-projects/${projectId}/visibility-settings`),
-        fetch(`/api/website-projects/${projectId}/visibility`),
-      ]);
-      if (settingsRes.ok) setSettings(await settingsRes.json());
-      if (summaryRes.ok) {
-        const data = await summaryRes.json();
-        setSummary({
-          settings: data.settings ?? settings,
-          visibilityScore: data.visibilityScore ?? data.score?.overall ?? 0,
-          promptCount: data.promptCount ?? data.prompts?.length ?? 0,
-          trend: data.trend ?? [],
-          byEngine: data.byEngine ?? [],
-          competitorMentions: data.competitorMentions ?? [],
-          geoScoreTrend: data.geoScoreTrend ?? [],
-          latestGeoScore: data.latestGeoScore ?? null,
-          recentSnapshots: data.recentSnapshots ?? data.snapshots?.slice(0, 20) ?? [],
-        });
-      } else {
-        setSummary(null);
-      }
-    } catch {
-      setError("Failed to load visibility data");
-    } finally {
-      setLoading(false);
-    }
-  }, [projectId]);
+  const settings = useMemo(
+    () =>
+      ({
+        llmTrackingEnabled: Boolean(settingsQuery.data?.llmTrackingEnabled),
+        geoReauditEnabled: Boolean(settingsQuery.data?.geoReauditEnabled),
+        lastVisibilityCheckAt: settingsQuery.data?.lastVisibilityCheckAt as string | undefined,
+        lastGeoReauditAt: settingsQuery.data?.lastGeoReauditAt as string | undefined,
+      }) satisfies VisibilitySettings,
+    [settingsQuery.data],
+  );
 
-  useEffect(() => {
-    if (projectId) load();
-  }, [projectId, load]);
+  const summary = useMemo(
+    () => parseSummary(summaryQuery.data, settings),
+    [summaryQuery.data, settings],
+  );
+
+  const loading =
+    Boolean(projectId) &&
+    settingsQuery.isLoading &&
+    summaryQuery.isLoading &&
+    !summary;
+
+  async function invalidateVisibility() {
+    if (!projectId) return;
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.visibilitySettings(projectId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.visibilitySummary(projectId) }),
+    ]);
+  }
 
   async function saveSettings(next: VisibilitySettings) {
     if (!projectId) return;
@@ -156,8 +163,8 @@ export function AiVisibilityDashboard() {
         setError("Failed to save settings");
         return;
       }
-      const saved = await res.json();
-      setSettings(saved);
+      const saved = (await res.json()) as VisibilitySettings;
+      queryClient.setQueryData(queryKeys.visibilitySettings(projectId), saved);
       if (saved.llmTrackingEnabled) {
         await fetch(`/api/website-projects/${projectId}/visibility`, {
           method: "POST",
@@ -165,7 +172,7 @@ export function AiVisibilityDashboard() {
           body: JSON.stringify({ action: "seed" }),
         });
       }
-      await load();
+      await invalidateVisibility();
     } finally {
       setSaving(false);
     }
@@ -186,7 +193,9 @@ export function AiVisibilityDashboard() {
         return;
       }
       toast.success("Visibility check queued");
-      setTimeout(() => load(), 3000);
+      setTimeout(() => {
+        void invalidateVisibility();
+      }, 3000);
     } finally {
       setChecking(false);
     }
@@ -244,24 +253,22 @@ export function AiVisibilityDashboard() {
                 checked={settings.llmTrackingEnabled}
                 disabled={saving}
                 onCheckedChange={(checked) => {
-                  const next = { ...settings, llmTrackingEnabled: checked };
-                  setSettings(next);
-                  saveSettings(next);
+                  saveSettings({ ...settings, llmTrackingEnabled: checked });
                 }}
               />
             </div>
             <div className="flex items-center justify-between gap-4 rounded-lg border px-4 py-3">
               <div>
                 <Label>Weekly GEO re-audit</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">Re-run technical GEO audit on your homepage every Sunday</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Re-run technical GEO audit on your homepage every Sunday
+                </p>
               </div>
               <Switch
                 checked={settings.geoReauditEnabled}
                 disabled={saving}
                 onCheckedChange={(checked) => {
-                  const next = { ...settings, geoReauditEnabled: checked };
-                  setSettings(next);
-                  saveSettings(next);
+                  saveSettings({ ...settings, geoReauditEnabled: checked });
                 }}
               />
             </div>
@@ -273,9 +280,7 @@ export function AiVisibilityDashboard() {
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-16">
-              <Spinner size="lg" />
-            </div>
+            <PageSkeleton />
           ) : summary ? (
             <>
               <div className="grid gap-4 sm:grid-cols-3">
@@ -330,7 +335,9 @@ export function AiVisibilityDashboard() {
               {summary.competitorMentions.length > 0 && (
                 <div className="paper-card p-6">
                   <h2 className="font-semibold">Competitor mentions in AI answers</h2>
-                  <p className="text-sm text-muted-foreground mb-4">How often competitors appear when your brand does not</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    How often competitors appear when your brand does not
+                  </p>
                   <div className="h-56">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={summary.competitorMentions.slice(0, 8)} layout="vertical">
@@ -357,11 +364,14 @@ export function AiVisibilityDashboard() {
                             <CheckCircle2 className="w-3 h-3 mr-1" /> Cited
                           </Badge>
                         ) : (
-                          <Badge variant="muted" className="shrink-0">Not cited</Badge>
+                          <Badge variant="muted" className="shrink-0">
+                            Not cited
+                          </Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        {ENGINE_LABELS[snap.engine] ?? snap.engine} · {new Date(snap.checkedAt).toLocaleString()}
+                        {ENGINE_LABELS[snap.engine] ?? snap.engine} ·{" "}
+                        {new Date(snap.checkedAt).toLocaleString()}
                         {snap.competitorsMentioned?.length > 0 &&
                           ` · Competitors: ${snap.competitorsMentioned.join(", ")}`}
                       </p>
@@ -373,7 +383,8 @@ export function AiVisibilityDashboard() {
               {summary.promptCount === 0 && (
                 <div className="paper-card p-8 text-center space-y-3">
                   <p className="text-sm text-muted-foreground">
-                    No prompts yet. Add competitor URLs and keywords in your brand profile, then enable tracking.
+                    No prompts yet. Add competitor URLs and keywords in your brand profile, then enable
+                    tracking.
                   </p>
                   <Button asChild variant="outline" size="sm">
                     <Link href={`/projects/${projectId}?tab=brand`}>Edit brand profile</Link>

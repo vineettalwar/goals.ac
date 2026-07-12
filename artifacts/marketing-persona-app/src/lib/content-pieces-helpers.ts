@@ -6,6 +6,8 @@ import {
   type BrandContext,
 } from "@workspace/content-engine/content-studio-generator";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
+import type { AiProviderOptions } from "@workspace/ai-providers";
 import { z } from "zod";
 
 export const GenerateBody = z.object({
@@ -48,6 +50,17 @@ export async function loadProjectBrand(
 
 export async function loadUserApiKey(userId: number): Promise<string | null> {
   return getDecryptedUserGeminiKey(userId);
+}
+
+export async function loadUserAiSettings(userId: number): Promise<{
+  userApiKey: string | null;
+  aiProviderOptions: AiProviderOptions;
+}> {
+  const [userApiKey, aiProviderOptions] = await Promise.all([
+    getDecryptedUserGeminiKey(userId),
+    getUserAiProviderOptions(userId),
+  ]);
+  return { userApiKey, aiProviderOptions };
 }
 
 export function buildPieceCacheKey(
