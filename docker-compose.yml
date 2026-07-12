@@ -39,7 +39,7 @@ services:
     init: true
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/readyz"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/api/healthz"]
       interval: 10s
       timeout: 5s
       retries: 10
