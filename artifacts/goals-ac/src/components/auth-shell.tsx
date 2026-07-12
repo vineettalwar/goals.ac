@@ -9,7 +9,7 @@ const MARKETING_URL = import.meta.env.VITE_MARKETING_URL ?? "http://localhost:30
 
 export function AuthShell({ children }: AuthShellProps) {
   return (
-    <div className="min-h-[100dvh] flex flex-col bg-background text-foreground">
+    <div className="min-h-dvh flex flex-col bg-background text-foreground">
       <header className="border-b border-border/60 bg-background/90 backdrop-blur-xl">
         <div className="container mx-auto px-4 md:px-8 h-14 flex items-center justify-between">
           <Link to="/login" className="hover:opacity-80 transition-opacity">
