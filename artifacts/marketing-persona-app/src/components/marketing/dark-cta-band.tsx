@@ -3,13 +3,16 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { fadeUp, fadeUpTransition } from "@/lib/motion";
+import { EditorialHeading } from "./editorial-heading";
+import { fadeUp, fadeUpTransition, staggerContainer } from "@/lib/motion";
 
 type DarkCTABandProps = {
   badge?: string;
-  title: string;
+  title?: string;
+  titleLine1?: string;
+  titleLine2?: string;
   description?: string;
+  backgroundImage?: string;
   primaryCta?: { label: string; href: string };
   secondaryCta?: { label: string; href: string };
   children?: React.ReactNode;
@@ -18,55 +21,75 @@ type DarkCTABandProps = {
 export function DarkCTABand({
   badge,
   title,
+  titleLine1,
+  titleLine2,
   description,
+  backgroundImage,
   primaryCta,
   secondaryCta,
   children,
 }: DarkCTABandProps) {
-  return (
-    <section className="py-24 bg-[var(--surface-dark)] text-white border-t border-white/10">
-      <div className="max-w-5xl mx-auto px-6">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          variants={fadeUp}
-          transition={fadeUpTransition}
-          className="text-center mb-14"
-        >
-          {badge && (
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold text-white/80 mb-4">
-              {badge}
-            </div>
-          )}
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4">{title}</h2>
-          {description && (
-            <p className="text-lg text-white/70 max-w-2xl mx-auto">{description}</p>
-          )}
-        </motion.div>
+  const line1 = titleLine1 ?? title ?? "";
 
-        {children}
+  return (
+    <section className="py-24 relative overflow-hidden text-white bg-[var(--surface-dark)] border-t border-white/10">
+      {backgroundImage && (
+        <>
+          <div
+            className="absolute inset-0 bg-center bg-cover bg-no-repeat z-0"
+            style={{ backgroundImage: `url(${backgroundImage})` }}
+            aria-hidden
+          />
+          <div className="absolute inset-0 bg-black/60 z-0" aria-hidden />
+        </>
+      )}
+
+      <div className="relative z-20 max-w-5xl mx-auto px-6">
+        <div className="text-center mb-14">
+          <EditorialHeading
+            line1={line1}
+            line2={titleLine2}
+            description={description}
+            badge={badge}
+            theme="dark"
+          />
+        </div>
+
+        {children && (
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="mb-12"
+          >
+            {children}
+          </motion.div>
+        )}
 
         {(primaryCta || secondaryCta) && (
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={fadeUp}
+            transition={fadeUpTransition}
+            className="flex flex-col sm:flex-row items-center justify-center gap-4"
+          >
             {primaryCta && (
-              <Button asChild size="lg" className="h-12 px-8">
-                <Link href={primaryCta.href}>
-                  {primaryCta.label} <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
+              <Link href={primaryCta.href} className="hero-cta-primary inline-flex items-center">
+                {primaryCta.label} <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             )}
             {secondaryCta && (
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="h-12 px-8 border-white/20 bg-transparent text-white hover:bg-white/10"
+              <Link
+                href={secondaryCta.href}
+                className="border border-white/30 bg-white/10 text-white hover:bg-white/20 text-sm font-medium px-7 py-3 rounded-full transition-all inline-flex items-center"
               >
-                <Link href={secondaryCta.href}>{secondaryCta.label}</Link>
-              </Button>
+                {secondaryCta.label}
+              </Link>
             )}
-          </div>
+          </motion.div>
         )}
       </div>
     </section>

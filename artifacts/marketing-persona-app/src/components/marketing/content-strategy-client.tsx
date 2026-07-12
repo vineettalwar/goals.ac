@@ -150,8 +150,11 @@ export function ContentStrategyClient({ id }: { id: string }) {
       </div>
 
       <MarketingCTA
-        title="Turn this plan into published content."
+        titleLine1="Turn this plan into"
+        titleLine2="published content"
         description="Connect your CMS and generate drafts from each item in your strategy."
+        variant="image"
+        backgroundImage={HERO_IMAGES.contentStrategy}
         primaryLabel="Create free account"
       />
     </MarketingPageShell>

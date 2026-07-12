@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 type MarketingPageShellProps = {
   hero: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
   overlap?: boolean;
 };
 

@@ -11,6 +11,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
+import { HeroOverlapShell } from "@/components/marketing/hero-overlap-shell";
+import { EditorialHeading } from "@/components/marketing/editorial-heading";
+import { cardSurfaceClass } from "@/lib/marketing-surfaces";
 import { HERO_IMAGES } from "@/lib/marketing-hero-images";
 
 const CHECKS = ["Title & Meta", "Schema.org", "H1/H2 structure", "Open Graph"];
@@ -21,6 +24,8 @@ const SAMPLE_ISSUES = [
   { title: "No llms.txt reference", severity: "Medium" },
   { title: "Heading hierarchy gap", severity: "Low" },
 ];
+
+const glassCard = cardSurfaceClass("glass", false);
 
 export function GeoAuditPageClient() {
   const router = useRouter();
@@ -60,12 +65,21 @@ export function GeoAuditPageClient() {
         />
       }
     >
-      <section id="geo-audit-form" className="py-0 bg-background relative z-20">
-        <div className="max-w-xl mx-auto px-6">
-          <form onSubmit={handleAudit} className="paper-card rounded-2xl p-8 space-y-5">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 uppercase tracking-wide">
-              No account required
-            </div>
+      <HeroOverlapShell id="geo-audit-form">
+        <div className="p-8 md:p-10">
+          <div className="inline-flex items-center gap-1.5 rounded-full editorial-badge-light px-2.5 py-0.5 text-[11px] font-semibold mb-4 uppercase tracking-wide">
+            No account required
+          </div>
+          <EditorialHeading
+            line1="Run a free"
+            line2="GEO audit"
+            description="Enter the exact page URL you want to audit for AI search visibility."
+            align="left"
+            size="card"
+            animate={false}
+            className="mb-6"
+          />
+          <form onSubmit={handleAudit} className="space-y-5">
             <div className="space-y-1.5">
               <Label htmlFor="url">Website URL</Label>
               <Input
@@ -76,11 +90,8 @@ export function GeoAuditPageClient() {
                 onChange={(e) => setUrl(e.target.value)}
                 required
               />
-              <p className="text-xs text-muted-foreground">
-                Enter the exact page URL you want to audit
-              </p>
             </div>
-            <Button type="submit" className="w-full h-12" disabled={loading}>
+            <Button type="submit" className="w-full h-12 hero-cta-primary rounded-xl" disabled={loading}>
               {loading ? (
                 <>
                   <Spinner size="sm" /> Auditing…
@@ -93,36 +104,39 @@ export function GeoAuditPageClient() {
             </Button>
           </form>
         </div>
-      </section>
+      </HeroOverlapShell>
 
       <MarketingSection
+        variant="image"
+        backgroundImage={HERO_IMAGES.geoAudit}
         badge="What we check"
-        title="Technical signals that affect AI visibility"
+        titleLine1="Technical signals"
+        titleLine2="for AI visibility"
         description="Every audit scans the page structure, metadata, and schema that influence retrieval and citation."
       >
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
           {CHECKS.map((check) => (
-            <div key={check} className="paper-card paper-card-hover rounded-xl p-4 text-center">
-              <p className="font-medium text-sm">{check}</p>
+            <div key={check} className={`${glassCard} p-4 text-center`}>
+              <p className="font-medium text-sm text-white">{check}</p>
             </div>
           ))}
         </div>
-        <div className="paper-card rounded-2xl p-6">
-          <p className="text-sm font-semibold mb-4">Sample issues you might see</p>
+        <div className={`${glassCard} p-6`}>
+          <p className="text-sm font-semibold mb-4 text-white">Sample issues you might see</p>
           <div className="space-y-2">
             {SAMPLE_ISSUES.map((issue) => (
               <div
                 key={issue.title}
-                className="flex items-center justify-between rounded-lg border border-[--border] px-4 py-3 text-sm"
+                className="flex items-center justify-between rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/90"
               >
                 <span>{issue.title}</span>
                 <span
                   className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
                     issue.severity === "High"
-                      ? "bg-red-100 text-red-700"
+                      ? "bg-red-500/20 text-red-200"
                       : issue.severity === "Medium"
-                        ? "bg-amber-100 text-amber-700"
-                        : "bg-muted text-muted-foreground"
+                        ? "bg-amber-500/20 text-amber-200"
+                        : "bg-white/10 text-white/60"
                   }`}
                 >
                   {issue.severity}

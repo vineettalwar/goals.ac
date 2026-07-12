@@ -35,8 +35,15 @@ export function AboutPageClient() {
         />
       }
     >
-      <MarketingSection title="Our mission" animate={false}>
-        <div className="max-w-3xl mx-auto space-y-6 text-muted-foreground leading-relaxed">
+      <MarketingSection
+        variant="image"
+        backgroundImage={HERO_IMAGES.about}
+        bridgeTop
+        titleLine1="Our"
+        titleLine2="mission"
+        animate={false}
+      >
+        <div className="max-w-3xl mx-auto space-y-6 text-white/80 leading-relaxed">
           <p>
             We believe every startup deserves a clear growth strategy and the content to execute
             it. Expensive agencies and generic AI tools shouldn&apos;t be the only options.
@@ -49,9 +56,12 @@ export function AboutPageClient() {
       </MarketingSection>
 
       <MarketingSection
+        variant="paper"
         badge="What we stand for"
-        title="How we build"
+        titleLine1="How we"
+        titleLine2="build"
         bordered
+        className="py-28 bg-background"
       >
         <div className="grid md:grid-cols-3 gap-5">
           {VALUES.map(({ title, desc }) => (
@@ -64,10 +74,13 @@ export function AboutPageClient() {
       </MarketingSection>
 
       <MarketingCTA
-        title="See what goals.ac can do for your market."
+        titleLine1="See what goals.ac"
+        titleLine2="can do for your market"
         description="Generate a free 12-month roadmap tailored to your industry and stage."
         primaryHref="/"
         primaryLabel="Build your roadmap"
+        variant="image"
+        backgroundImage={HERO_IMAGES.roadmaps}
         secondaryHref="/features"
         secondaryLabel="Explore features →"
       />

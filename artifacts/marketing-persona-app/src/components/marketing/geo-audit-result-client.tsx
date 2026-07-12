@@ -95,8 +95,10 @@ export function GeoAuditResultClient({ url, geoScore, issues }: GeoAuditResultCl
       </div>
 
       <DarkCTABand
-        title="Want to fix these issues automatically?"
+        titleLine1="Want to fix these"
+        titleLine2="issues automatically?"
         description="Sign up and let goals.ac generate AI-optimised content for your site."
+        backgroundImage={HERO_IMAGES.geoAuditResult}
         primaryCta={{ label: "Get started free", href: "/signup" }}
       />
     </MarketingPageShell>

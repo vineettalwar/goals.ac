@@ -53,8 +53,11 @@ export function SeoArticleClient({
       </article>
 
       <MarketingCTA
-        title="Generate articles like this for your brand."
+        titleLine1="Generate articles like this"
+        titleLine2="for your brand"
         description="Set your voice once, then draft SEO-optimised content tailored to your audience."
+        variant="image"
+        backgroundImage={HERO_IMAGES.contentEngine}
         secondaryHref="/content-engine"
         secondaryLabel="Explore content engine →"
       />

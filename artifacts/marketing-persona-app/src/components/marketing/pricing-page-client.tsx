@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
+import { EditorialHeading } from "@/components/marketing/editorial-heading";
 import { FAQAccordion } from "@/components/marketing/faq-accordion";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
 import { HERO_IMAGES } from "@/lib/marketing-hero-images";
@@ -78,15 +79,22 @@ export function PricingPageClient() {
         />
       }
     >
-      <section className="py-16 bg-background">
+      <section className="py-16 bg-background relative z-20">
         <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <EditorialHeading
+              line1="Pick the plan"
+              line2="that fits today"
+              description="Start free, upgrade when you're ready to scale content production."
+            />
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {PLANS.map((plan) => (
               <div
                 key={plan.name}
                 className={`rounded-2xl p-8 flex flex-col paper-card-hover ${
                   plan.featured
-                    ? "bg-primary text-primary-foreground shadow-lg"
+                    ? "bg-primary text-primary-foreground shadow-lg ring-2 ring-[var(--accent-warm)] ring-offset-2 ring-offset-background"
                     : "paper-card"
                 }`}
               >
@@ -121,8 +129,10 @@ export function PricingPageClient() {
                 </ul>
                 <Link
                   href={plan.href}
-                  className={`text-center px-6 py-3 rounded-xl font-medium transition-opacity hover:opacity-90 ${
-                    plan.featured ? "bg-white text-primary" : "bg-primary text-primary-foreground"
+                  className={`text-center px-6 py-3 rounded-full font-medium transition-all ${
+                    plan.featured
+                      ? "bg-[var(--accent-warm)] text-white hover:bg-[var(--accent-warm-hover)]"
+                      : "bg-primary text-primary-foreground hover:opacity-90"
                   }`}
                 >
                   {plan.cta}
@@ -140,11 +150,13 @@ export function PricingPageClient() {
       </section>
 
       <FAQAccordion
-        title="Pricing questions"
+        titleLine1="Pricing"
+        titleLine2="questions"
         items={[
           {
             question: "Is the roadmap generator free?",
-            answer: "Yes — fully free with no signup. Paid plans unlock the full content engine and publishing.",
+            answer:
+              "Yes — fully free with no signup. Paid plans unlock the full content engine and publishing.",
           },
           {
             question: "Can I change plans later?",
@@ -152,15 +164,19 @@ export function PricingPageClient() {
           },
           {
             question: "What happens if I exceed my content limit?",
-            answer: "You'll be prompted to upgrade. We never charge overage fees without your consent.",
+            answer:
+              "You'll be prompted to upgrade. We never charge overage fees without your consent.",
           },
         ]}
       />
 
       <MarketingCTA
-        title="Start with a free roadmap."
+        titleLine1="Start with a"
+        titleLine2="free roadmap"
         description="No credit card required. Generate your 12-month growth plan in minutes."
         primaryLabel="Create free account"
+        variant="image"
+        backgroundImage={HERO_IMAGES.roadmaps}
         secondaryHref="/features"
         secondaryLabel="Explore features →"
       />

@@ -1,3 +1,7 @@
+"use client";
+
+import { EditorialHeading } from "./editorial-heading";
+
 export type FAQItem = {
   question: string;
   answer: string;
@@ -5,15 +9,24 @@ export type FAQItem = {
 
 type FAQAccordionProps = {
   title?: string;
+  titleLine1?: string;
+  titleLine2?: string;
   items: FAQItem[];
 };
 
-export function FAQAccordion({ title = "Common questions", items }: FAQAccordionProps) {
+export function FAQAccordion({
+  title,
+  titleLine1,
+  titleLine2,
+  items,
+}: FAQAccordionProps) {
+  const line1 = titleLine1 ?? title ?? "Common questions";
+
   return (
     <section className="py-24 bg-background border-t border-[--border]">
       <div className="max-w-3xl mx-auto px-6">
         <div className="text-center mb-12">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">{title}</h2>
+          <EditorialHeading line1={line1} line2={titleLine2} theme="light" />
         </div>
         <div className="space-y-3">
           {items.map((faq) => (

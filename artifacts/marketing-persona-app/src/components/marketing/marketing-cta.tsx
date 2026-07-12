@@ -2,14 +2,18 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, Target } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ArrowRight } from "lucide-react";
+import { EditorialHeading } from "./editorial-heading";
 import { fadeUp, fadeUpTransition } from "@/lib/motion";
 
 type MarketingCTAProps = {
   badge?: string;
-  title: string;
+  title?: string;
+  titleLine1?: string;
+  titleLine2?: string;
   description: string;
+  variant?: "paper" | "image";
+  backgroundImage?: string;
   primaryHref?: string;
   primaryLabel?: string;
   secondaryHref?: string;
@@ -19,15 +23,37 @@ type MarketingCTAProps = {
 export function MarketingCTA({
   badge = "For lean B2B teams",
   title,
+  titleLine1,
+  titleLine2,
   description,
+  variant = "paper",
+  backgroundImage,
   primaryHref = "/signup",
   primaryLabel = "Start for free",
   secondaryHref,
   secondaryLabel,
 }: MarketingCTAProps) {
+  const line1 = titleLine1 ?? title ?? "Put the next decision in writing";
+  const isImage = variant === "image";
+
   return (
-    <section className="py-28 bg-background border-t border-[--border]">
-      <div className="max-w-4xl mx-auto px-6 text-center">
+    <section
+      className={`py-28 relative overflow-hidden border-t ${
+        isImage ? "text-white" : "bg-background text-foreground border-[--border]"
+      }`}
+    >
+      {isImage && backgroundImage && (
+        <>
+          <div
+            className="absolute inset-0 bg-center bg-cover bg-no-repeat z-0"
+            style={{ backgroundImage: `url(${backgroundImage})` }}
+            aria-hidden
+          />
+          <div className="absolute inset-0 bg-black/55 z-0" aria-hidden />
+        </>
+      )}
+
+      <div className="relative z-20 max-w-4xl mx-auto px-6 text-center">
         <motion.div
           initial="hidden"
           whileInView="visible"
@@ -35,24 +61,31 @@ export function MarketingCTA({
           variants={fadeUp}
           transition={fadeUpTransition}
         >
-          <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary mb-6">
-            <Target className="h-3 w-3" />
-            {badge}
-          </div>
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-5">{title}</h2>
-          <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
-            {description}
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Button asChild size="lg" className="h-12 px-8">
-              <Link href={primaryHref}>
-                {primaryLabel} <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+          <EditorialHeading
+            line1={line1}
+            line2={titleLine2}
+            description={description}
+            badge={badge}
+            theme={isImage ? "dark" : "light"}
+            animate={false}
+            className="mb-10"
+          />
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-10">
+            <Link href={primaryHref} className="hero-cta-primary inline-flex items-center">
+              {primaryLabel} <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
             {secondaryHref && secondaryLabel && (
-              <Button asChild variant="ghost" size="lg" className="h-12 px-8">
-                <Link href={secondaryHref}>{secondaryLabel}</Link>
-              </Button>
+              <Link
+                href={secondaryHref}
+                className={`text-sm font-medium px-7 py-3 rounded-full transition-all inline-flex items-center ${
+                  isImage
+                    ? "border border-white/30 bg-white/10 text-white hover:bg-white/20"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {secondaryLabel}
+              </Link>
             )}
           </div>
         </motion.div>

@@ -26,6 +26,7 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { DarkCTABand } from "@/components/marketing/dark-cta-band";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
+import { cardSurfaceClass } from "@/lib/marketing-surfaces";
 import { HERO_IMAGES } from "@/lib/marketing-hero-images";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5174";
@@ -33,7 +34,7 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5174";
 const FORMAT_CATEGORIES = [
   {
     label: "Long-form Articles",
-    color: "text-blue-700",
+    color: "text-blue-300",
     formats: [
       { icon: BookOpen, name: "Blog Post", range: "900–1,200 words" },
       { icon: Newspaper, name: "News Article", range: "600–900 words" },
@@ -46,7 +47,7 @@ const FORMAT_CATEGORIES = [
   },
   {
     label: "Social Media",
-    color: "text-sky-700",
+    color: "text-sky-300",
     formats: [
       { icon: Linkedin, name: "LinkedIn Post", range: "1,300–1,800 chars" },
       { icon: Twitter, name: "Twitter / X Thread", range: "9 tweets" },
@@ -54,7 +55,7 @@ const FORMAT_CATEGORIES = [
   },
   {
     label: "Email & Ads",
-    color: "text-violet-700",
+    color: "text-violet-300",
     formats: [
       { icon: Mail, name: "Email Sequence", range: "3 emails" },
       { icon: Megaphone, name: "Ad Copy", range: "Google + Meta" },
@@ -62,7 +63,7 @@ const FORMAT_CATEGORIES = [
   },
   {
     label: "Web Copy",
-    color: "text-amber-700",
+    color: "text-amber-300",
     formats: [
       { icon: MonitorPlay, name: "Landing Page Copy", range: "600–900 words" },
       { icon: Package, name: "Product Description", range: "300–500 words" },
@@ -71,6 +72,8 @@ const FORMAT_CATEGORIES = [
     ],
   },
 ];
+
+const glassCard = cardSurfaceClass("glass");
 
 export function ContentEngineMarketing() {
   const { data: session } = useSession();
@@ -94,12 +97,16 @@ export function ContentEngineMarketing() {
       }
     >
       <MarketingSection
-        title="18 formats across four categories"
+        variant="image"
+        backgroundImage={HERO_IMAGES.contentEngine}
+        bridgeTop
+        titleLine1="18 formats across"
+        titleLine2="four categories"
         description="Long-form articles, social posts, email sequences, and web copy. Repurpose any piece into another format from the same project."
       >
         <div className="grid md:grid-cols-2 gap-5">
           {FORMAT_CATEGORIES.map((category) => (
-            <div key={category.label} className="paper-card paper-card-hover rounded-2xl p-5">
+            <div key={category.label} className={`${glassCard} p-5`}>
               <h3 className={`text-sm font-bold uppercase tracking-wider mb-4 ${category.color}`}>
                 {category.label}
               </h3>
@@ -107,12 +114,12 @@ export function ContentEngineMarketing() {
                 {category.formats.map((format) => (
                   <div
                     key={format.name}
-                    className="flex items-start gap-2.5 rounded-lg border border-[--border] bg-white px-3 py-2.5"
+                    className="flex items-start gap-2.5 rounded-lg border border-white/10 bg-white/5 px-3 py-2.5"
                   >
                     <format.icon className={`h-4 w-4 mt-0.5 shrink-0 ${category.color}`} />
                     <div className="min-w-0">
-                      <div className="text-sm font-semibold leading-tight">{format.name}</div>
-                      <div className="text-[11px] text-muted-foreground mt-0.5">{format.range}</div>
+                      <div className="text-sm font-semibold leading-tight text-white">{format.name}</div>
+                      <div className="text-[11px] text-white/55 mt-0.5">{format.range}</div>
                     </div>
                   </div>
                 ))}
@@ -123,10 +130,12 @@ export function ContentEngineMarketing() {
       </MarketingSection>
 
       <MarketingSection
-        title="Publish everywhere you work"
+        variant="paper"
+        titleLine1="Publish everywhere"
+        titleLine2="you work"
         description="Connect your CMS and social accounts once. Keep one review process across every destination."
-        className="py-20 bg-muted/30"
         bordered
+        className="py-20 bg-background"
       >
         <div className="grid md:grid-cols-2 gap-6">
           <div className="paper-card paper-card-hover rounded-2xl p-6">
@@ -172,8 +181,10 @@ export function ContentEngineMarketing() {
 
       <DarkCTABand
         badge="GEO ready"
-        title="Built for search engines and AI citations."
+        titleLine1="Built for search engines"
+        titleLine2="and AI citations"
         description="Drafts include structured headings, schema markup, and clear answers to common questions."
+        backgroundImage={HERO_IMAGES.geoAudit}
         primaryCta={{ label: "Run a free GEO audit", href: "/geo-audit" }}
       >
         <div className="grid md:grid-cols-3 gap-4 max-w-4xl mx-auto">
@@ -184,7 +195,7 @@ export function ContentEngineMarketing() {
           ].map((label) => (
             <div
               key={label}
-              className="rounded-2xl border border-white/10 bg-white/5 p-5 flex items-start gap-4"
+              className="glass-card glass-card-hover rounded-2xl p-5 flex items-start gap-4"
             >
               <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
               <p className="text-sm text-white/70 leading-relaxed">{label}</p>
@@ -194,8 +205,11 @@ export function ContentEngineMarketing() {
       </DarkCTABand>
 
       <MarketingCTA
-        title="Plan topics, draft content, and publish without switching tools."
+        titleLine1="Plan topics, draft content,"
+        titleLine2="publish without switching tools"
         description="Free to start. Connect a project, set your brand voice, and generate your first draft in minutes."
+        variant="image"
+        backgroundImage={HERO_IMAGES.contentEngine}
         primaryHref={appCta}
         primaryLabel={session ? "Open content studio" : "Create free account"}
         secondaryHref="/"

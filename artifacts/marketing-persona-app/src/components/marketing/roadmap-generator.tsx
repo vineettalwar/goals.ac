@@ -2,11 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { HeroOverlapShell } from "./hero-overlap-shell";
+import { EditorialHeading } from "./editorial-heading";
 
 type GenerationPhase = "summary" | "phase0" | "phase1" | "phase2";
 
@@ -140,133 +139,121 @@ export function RoadmapGenerator({ sectionRef }: RoadmapGeneratorProps) {
     "w-full h-11 rounded-lg border border-[--border] bg-white px-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20";
 
   return (
-    <section
-      ref={ref}
-      id="roadmap-generator"
-      className="py-0 bg-background relative z-20"
-    >
-      <div className="max-w-3xl mx-auto px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-        >
-          <Card className="paper-card overflow-hidden">
-            <CardContent className="p-8 md:p-12">
-              <div className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 mb-3 uppercase tracking-wide">
-                Free starter tool
-              </div>
-              <h2 className="text-2xl font-bold tracking-tight mb-2">
-                Generate your 2026 Growth Roadmap
-              </h2>
-              <p className="text-muted-foreground text-sm mb-8">
-                Choose your market and stage. We&apos;ll return a sequenced plan with priorities for
-                the next 12 months. No account required.
-              </p>
+    <HeroOverlapShell id="roadmap-generator" sectionRef={ref}>
+      <div className="p-8 md:p-12">
+        <div className="inline-flex items-center gap-1.5 rounded-full editorial-badge-light px-2.5 py-0.5 text-[11px] font-semibold mb-4 uppercase tracking-wide">
+          Free starter tool
+        </div>
+        <EditorialHeading
+          line1="Generate your"
+          line2="2026 Growth Roadmap"
+          description="Choose your market and stage. We'll return a sequenced plan with priorities for the next 12 months. No account required."
+          align="left"
+          size="card"
+          animate={false}
+          className="mb-8"
+        />
 
-              <form onSubmit={onSubmit} className="space-y-8">
-                <div className="grid gap-6 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Industry</Label>
-                    <select
-                      className={selectClass}
-                      value={industry}
-                      onChange={(e) => setIndustry(e.target.value)}
-                      disabled={loadingOptions}
-                    >
-                      <option value="">
-                        {loadingOptions ? "Loading..." : "Select industry"}
-                      </option>
-                      {industries.map((ind) => (
-                        <option key={ind.id} value={ind.name}>
-                          {ind.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Location</Label>
-                    <select
-                      className={selectClass}
-                      value={location}
-                      onChange={(e) => setLocation(e.target.value)}
-                      disabled={loadingOptions}
-                    >
-                      <option value="">
-                        {loadingOptions ? "Loading..." : "Select location"}
-                      </option>
-                      {locations.map((loc) => (
-                        <option key={loc.id} value={loc.name}>
-                          {loc.name}, {loc.country}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+        <form onSubmit={onSubmit} className="space-y-8">
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Industry</Label>
+              <select
+                className={selectClass}
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                disabled={loadingOptions}
+              >
+                <option value="">
+                  {loadingOptions ? "Loading..." : "Select industry"}
+                </option>
+                {industries.map((ind) => (
+                  <option key={ind.id} value={ind.name}>
+                    {ind.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold">Location</Label>
+              <select
+                className={selectClass}
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                disabled={loadingOptions}
+              >
+                <option value="">
+                  {loadingOptions ? "Loading..." : "Select location"}
+                </option>
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.name}>
+                    {loc.name}, {loc.country}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
 
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Company Stage</Label>
-                  <select
-                    className={selectClass}
-                    value={stage}
-                    onChange={(e) => setStage(e.target.value)}
-                  >
-                    {STAGES.map((s) => (
-                      <option key={s.value} value={s.value}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+          <div className="space-y-2">
+            <Label className="text-sm font-semibold">Company Stage</Label>
+            <select
+              className={selectClass}
+              value={stage}
+              onChange={(e) => setStage(e.target.value)}
+            >
+              {STAGES.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </div>
 
-                <div className="pt-2 space-y-4">
-                  <Button
-                    type="submit"
-                    className="w-full h-12 text-base font-semibold"
-                    disabled={isPending || loadingOptions}
-                  >
-                    {isPending ? (
-                      <>
-                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        Generating roadmap…
-                      </>
-                    ) : (
-                      "Build my roadmap"
-                    )}
-                  </Button>
+          <div className="pt-2 space-y-4">
+            <button
+              type="submit"
+              className="w-full h-12 text-base font-semibold hero-cta-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isPending || loadingOptions}
+            >
+              {isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Generating roadmap…
+                </>
+              ) : (
+                "Build my roadmap"
+              )}
+            </button>
 
-                  {isPending && (
-                    <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 space-y-2">
-                      <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-2">
-                        Building your roadmap…
-                      </p>
-                      {(Object.keys(PHASE_LABELS) as GenerationPhase[]).map((key) => {
-                        const done = completedPhases.has(key);
-                        return (
-                          <div key={key} className="flex items-center gap-2 text-sm">
-                            {done ? (
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                            ) : (
-                              <Circle className="h-4 w-4 text-muted-foreground shrink-0 animate-pulse" />
-                            )}
-                            <span className={done ? "text-foreground" : "text-muted-foreground"}>
-                              {PHASE_LABELS[key]}
-                            </span>
-                          </div>
-                        );
-                      })}
+            {isPending && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 space-y-2">
+                <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-2">
+                  Building your roadmap…
+                </p>
+                {(Object.keys(PHASE_LABELS) as GenerationPhase[]).map((key) => {
+                  const done = completedPhases.has(key);
+                  return (
+                    <div key={key} className="flex items-center gap-2 text-sm">
+                      {done ? (
+                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-muted-foreground shrink-0 animate-pulse" />
+                      )}
+                      <span className={done ? "text-foreground" : "text-muted-foreground"}>
+                        {PHASE_LABELS[key]}
+                      </span>
                     </div>
-                  )}
+                  );
+                })}
+              </div>
+            )}
 
-                  {generationError && (
-                    <p className="text-sm text-destructive text-center">{generationError}</p>
-                  )}
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
+            {generationError && (
+              <p className="text-sm text-destructive text-center">{generationError}</p>
+            )}
+          </div>
+        </form>
       </div>
-    </section>
+    </HeroOverlapShell>
   );
 }

@@ -83,14 +83,25 @@ export function FeaturesPageClient() {
         />
       }
     >
-      <MarketingSection badge="Capabilities" title="Everything in one workflow" description="From strategy to published article — without switching tools.">
-        <FeatureGrid items={FEATURES} />
+      <MarketingSection
+        variant="image"
+        backgroundImage={HERO_IMAGES.features}
+        bridgeTop
+        badge="Capabilities"
+        titleLine1="Everything in one"
+        titleLine2="workflow"
+        description="From strategy to published article — without switching tools."
+      >
+        <FeatureGrid items={FEATURES} surface="glass" />
       </MarketingSection>
 
       <MarketingSection
-        title="A clear path from research to publish"
+        variant="paper"
+        titleLine1="A clear path"
+        titleLine2="from research to publish"
         description="Keep the speed of assisted drafting without giving up editorial judgment."
         bordered
+        className="py-24 bg-background"
       >
         <div className="grid md:grid-cols-3 gap-6">
           {WORKFLOW_STEPS.map((item) => (
@@ -105,32 +116,42 @@ export function FeaturesPageClient() {
 
       <DarkCTABand
         badge="Free to start"
-        title="Ready to test your first workflow?"
+        titleLine1="Ready to test"
+        titleLine2="your first workflow?"
         description="Create your account, tell the agent what you want, and start building publish-ready articles."
+        backgroundImage={HERO_IMAGES.pricing}
         primaryCta={{ label: "Start free", href: "/signup" }}
         secondaryCta={{ label: "Compare plans", href: "/pricing" }}
       />
 
       <FAQAccordion
+        titleLine1="Common"
+        titleLine2="questions"
         items={[
           {
             question: "Do I need a developer to connect my CMS?",
-            answer: "No — WordPress, Shopify, Notion, and others connect via native APIs or our plugins in minutes.",
+            answer:
+              "No — WordPress, Shopify, Notion, and others connect via native APIs or our plugins in minutes.",
           },
           {
             question: "Can I use my own AI API key?",
-            answer: "Yes. Bring your Gemini key for cost control, or use the platform key included in your plan.",
+            answer:
+              "Yes. Bring your Gemini key for cost control, or use the platform key included in your plan.",
           },
           {
             question: "What's included in the free tier?",
-            answer: "Roadmap generator, basic GEO audit, and limited content generation — no credit card required.",
+            answer:
+              "Roadmap generator, basic GEO audit, and limited content generation — no credit card required.",
           },
         ]}
       />
 
       <MarketingCTA
-        title="Put the next decision in writing."
+        titleLine1="Put the next"
+        titleLine2="decision in writing"
         description="Start with a roadmap you can inspect, edit, and turn into work—not another dashboard full of suggestions."
+        variant="image"
+        backgroundImage={HERO_IMAGES.about}
         secondaryHref="/geo-audit"
         secondaryLabel="Or run a free GEO audit →"
       />
