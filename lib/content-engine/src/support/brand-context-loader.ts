@@ -41,22 +41,27 @@ function brandProfileToContext(
     typicalStructure: brandProfile?.typicalStructure ?? "",
     doWords: brandProfile?.doWords ?? [],
     dontWords: brandProfile?.dontWords ?? [],
+    brandMemory: brandProfile?.brandMemory ?? null,
+    platformVoices: brandProfile?.platformVoices ?? null,
     contentStyle,
     humanizationLevel: contentStyle?.humanizationLevel ?? "light",
     writingSample: contentStyle?.writingSample ?? null,
+    brandVoiceSkill: brandProfile?.brandVoiceSkill ?? "",
+    skillLocked: brandProfile?.skillLocked ?? false,
     ...overrides,
   };
 }
 
+/** Caller must enforce project access (e.g. requireProjectAccess) when userId is set. */
 export async function loadBrandContextForProject(
   projectId: number,
-  userId?: number,
+  _userId?: number,
 ): Promise<UnifiedBrandContext | null> {
-  const where = userId
-    ? and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId))
-    : eq(websiteProjectsTable.id, projectId);
-
-  const [project] = await db.select().from(websiteProjectsTable).where(where).limit(1);
+  const [project] = await db
+    .select()
+    .from(websiteProjectsTable)
+    .where(eq(websiteProjectsTable.id, projectId))
+    .limit(1);
   if (!project) return null;
 
   const [brandProfile] = await db
@@ -65,7 +70,7 @@ export async function loadBrandContextForProject(
     .where(eq(brandProfilesTable.websiteProjectId, projectId))
     .limit(1);
 
-  return brandProfileToContext(project, brandProfile);
+  return brandProfileToContext(project, brandProfile, { projectId });
 }
 
 export async function findProjectIdForWebsiteUrl(

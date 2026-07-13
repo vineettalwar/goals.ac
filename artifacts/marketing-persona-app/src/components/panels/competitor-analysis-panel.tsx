@@ -83,7 +83,7 @@ export function CompetitorAnalysisPanel({ embedded = false }: { embedded?: boole
           <div className="space-y-1.5">
             <Label>Stage</Label>
             <select
-              className="w-full h-10 rounded-lg border border-(--border) bg-white px-3 text-sm"
+              className="w-full h-10 rounded-lg border border-border bg-white px-3 text-sm"
               value={form.stage}
               onChange={(e) => setForm((p) => ({ ...p, stage: e.target.value }))}
             >

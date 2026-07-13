@@ -24,3 +24,33 @@ export {
   registerKeywordOpportunitySweepHandler,
   KEYWORD_OPPORTUNITY_SWEEP_CRON,
 } from "./keywordOpportunitySweep";
+export {
+  registerGscSearchAnalyticsSyncHandler,
+  GSC_SEARCH_ANALYTICS_SYNC_CRON,
+} from "./gscSearchAnalyticsSync";
+export {
+  registerGa4AnalyticsSyncHandler,
+  GA4_ANALYTICS_SYNC_CRON,
+} from "./ga4AnalyticsSync";
+export {
+  registerArticleIdeaSourceSyncHandler,
+  ARTICLE_IDEA_SOURCE_SYNC_CRON,
+} from "./articleIdeaSourceSync";
+export { registerBrandVoiceIndexHandler } from "./brandVoiceIndex";
+export { registerBrandVoiceSkillRegenHandler } from "./brandVoiceSkillRegen";
+export {
+  registerBrandVoiceResyncHandler,
+  BRAND_VOICE_RESYNC_CRON,
+} from "./brandVoiceResync";
+export {
+  registerEvergreenRecycleSweepHandler,
+  EVERGREEN_RECYCLE_SWEEP_CRON,
+} from "./evergreenRecycle";
+export {
+  registerSocialHistorySyncHandler,
+  SOCIAL_HISTORY_SYNC_CRON,
+} from "./socialHistorySync";
+export {
+  registerSocialMetricsSyncHandler,
+  SOCIAL_METRICS_SYNC_CRON,
+} from "./socialMetricsSync";

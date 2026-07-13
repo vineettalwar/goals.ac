@@ -8,6 +8,7 @@
     "./notion": "./src/notion.ts",
     "./webflow": "./src/webflow.ts",
     "./wordpress": "./src/wordpress.ts",
+    "./wordpress-images": "./src/wordpress-images.ts",
     "./ghost": "./src/ghost.ts",
     "./webhook": "./src/webhook.ts",
     "./shopify": "./src/shopify.ts",
@@ -29,10 +30,12 @@
     "./convertkit": "./src/convertkit.ts",
     "./mailchimp": "./src/mailchimp.ts",
     "./hubspot": "./src/hubspot.ts",
-    "./typo3": "./src/typo3.ts"
+    "./typo3": "./src/typo3.ts",
+    "./social-metrics-types": "./src/social-metrics-types.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.20.28",
+    "@workspace/media": "workspace:*",
     "@workspace/security": "workspace:*",
     "marked": "^18.0.3"
   },

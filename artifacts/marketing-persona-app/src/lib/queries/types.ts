@@ -28,9 +28,13 @@ export interface KeywordSnapshot {
 export interface KeywordOpportunity {
   id: number;
   keyword: string;
+  source: string;
   opportunityScore: number;
   difficulty: string | null;
   suggestedTitle: string;
+  suggestedAngle: string;
+  estimatedVolume: string | null;
+  intent: string | null;
   status: string;
 }
 
@@ -48,4 +52,5 @@ export interface ProjectSummary {
   name: string;
   url: string;
   crawlStatus: string;
+  primaryLanguage?: string;
 }

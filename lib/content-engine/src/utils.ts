@@ -1,13 +1,48 @@
+/**
+ * Gemini occasionally emits raw C0 control characters (e.g. literal \n, \r, \t)
+ * inside JSON string values, which JSON.parse rejects. This function walks the
+ * raw output character-by-character, tracking string boundaries, and escapes
+ * any control character found inside a string region.
+ */
 export function sanitizeJsonControlChars(raw: string): string {
-  // Remove control characters that break JSON.parse inside string values
-  return raw.replace(/[\x00-\x1F\x7F]/g, (char) => {
-    switch (char) {
-      case "\n": return "\\n";
-      case "\r": return "\\r";
-      case "\t": return "\\t";
-      default: return "";
+  let out = "";
+  let inString = false;
+  let escaped = false;
+
+  for (let i = 0; i < raw.length; i++) {
+    const ch = raw[i];
+    const code = raw.charCodeAt(i);
+
+    if (escaped) {
+      out += ch;
+      escaped = false;
+      continue;
     }
-  });
+
+    if (ch === "\\" && inString) {
+      out += ch;
+      escaped = true;
+      continue;
+    }
+
+    if (ch === '"') {
+      inString = !inString;
+      out += ch;
+      continue;
+    }
+
+    if (inString && code < 0x20) {
+      if (code === 0x0a) out += "\\n";
+      else if (code === 0x0d) out += "\\r";
+      else if (code === 0x09) out += "\\t";
+      else out += `\\u${code.toString(16).padStart(4, "0")}`;
+      continue;
+    }
+
+    out += ch;
+  }
+
+  return out;
 }
 
 export function extractJsonBlock(raw: string): string {
@@ -33,6 +68,20 @@ export function extractJsonBlock(raw: string): string {
 
   if (lastIdx === -1) return stripped;
   return stripped.slice(start, lastIdx + 1);
+}
+
+export function normalizePagePath(url: string): string {
+  try {
+    const parsed = new URL(url);
+    let path = parsed.pathname || "/";
+    if (!path.startsWith("/")) path = `/${path}`;
+    const normalized = path.replace(/\/+$/, "");
+    return normalized || "/";
+  } catch {
+    let path = url.startsWith("/") ? url : `/${url}`;
+    const normalized = path.replace(/\/+$/, "");
+    return normalized || "/";
+  }
 }
 
 export function cleanAndParse<T>(raw: string): T {

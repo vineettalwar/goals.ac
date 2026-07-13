@@ -15,7 +15,7 @@ import {
   Trash2,
   CheckCircle2,
   FileCode2,
-  Sparkles,
+  TrendingUp,
 } from "lucide-react";
 import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
 import { isSeoLongformFormat } from "@workspace/content-engine/content-piece-seo";
@@ -42,6 +42,7 @@ import {
   type CmsConnectionSnapshot,
 } from "@/lib/publishing-destinations";
 import type { ContentPieceRecord } from "@/lib/server/loaders";
+import { ArticlePerformanceBadge } from "@/components/content-studio/article-performance-badge";
 import { cn } from "@/lib/utils";
 
 interface ContentPieceClientProps {
@@ -80,7 +81,10 @@ export function ContentPieceClient({
   const [cmsConnections] = useState(initialCmsConnections);
   const [deleting, setDeleting] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
+  const [regeneratingImages, setRegeneratingImages] = useState(false);
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const featuredImage = piece.pieceMetadata?.images?.find((img) => img.role === "featured");
 
   const displayBody = editing ? bodyDraft : piece.bodyMarkdown;
   const displayTitle = editing ? titleDraft : piece.title;
@@ -184,6 +188,19 @@ export function ContentPieceClient({
     router.push(`/content-piece/${newPiece.id}`);
   }
 
+  async function regenerateImages() {
+    setRegeneratingImages(true);
+    const res = await fetch(`/api/content-pieces/${pieceId}/images/regenerate`, { method: "POST" });
+    setRegeneratingImages(false);
+    if (!res.ok) {
+      toast.error("Failed to regenerate images");
+      return;
+    }
+    const data = (await res.json()) as { piece: ContentPieceRecord };
+    setPiece(data.piece);
+    toast.success("Images updated from keyword search");
+  }
+
   async function handlePublish() {
     setPublishing(true);
     const res = await fetch(`/api/content-pieces/${pieceId}/publish`, {
@@ -267,12 +284,53 @@ export function ContentPieceClient({
             {piece.targetKeyword && <Badge variant="muted">{piece.targetKeyword}</Badge>}
             <span className="text-xs text-muted-foreground">{displayWordCount.toLocaleString()} words</span>
             <Badge variant={piece.status === "published" ? "success" : "muted"}>{piece.status}</Badge>
+            <ArticlePerformanceBadge
+              projectId={String(piece.websiteProjectId)}
+              contentPieceId={piece.id}
+              publishedUrl={piece.publishedUrl}
+            />
+            {piece.publishedUrl ? (
+              <Link
+                href="/search/performance"
+                className="text-xs text-primary hover:underline"
+              >
+                View performance
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_300px] gap-6 items-start">
         <div className="space-y-4 min-w-0">
+          {featuredImage ? (
+            <div className="paper-card rounded-xl p-4 flex flex-col sm:flex-row gap-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={featuredImage.publishedUrl ?? featuredImage.remoteUrl}
+                alt={featuredImage.alt}
+                title={featuredImage.title}
+                className="w-full sm:w-48 h-32 object-cover rounded-lg shrink-0"
+              />
+              <div className="flex-1 min-w-0 space-y-2">
+                <p className="text-sm font-medium">Featured image</p>
+                <p className="text-xs text-muted-foreground line-clamp-2">{featuredImage.alt}</p>
+                <p className="text-xs text-muted-foreground">
+                  {featuredImage.provider} · score {featuredImage.rankScore.toFixed(2)}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={regeneratingImages}
+                  onClick={regenerateImages}
+                >
+                  <RefreshCw className={cn("h-3.5 w-3.5", regeneratingImages && "animate-spin")} />
+                  {regeneratingImages ? "Finding image…" : "Pick another image"}
+                </Button>
+              </div>
+            </div>
+          ) : null}
           <div className="paper-card rounded-xl overflow-hidden">
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 bg-muted/30">
               <div className="flex flex-wrap items-center gap-1.5">
@@ -312,7 +370,7 @@ export function ContentPieceClient({
                     disabled={enhancing || regenerating}
                     title="Add FAQ, citations, and internal links without rewriting from scratch"
                   >
-                    <Sparkles className={cn("h-3.5 w-3.5", enhancing && "animate-pulse")} />
+                    <TrendingUp className={cn("h-3.5 w-3.5", enhancing && "animate-pulse")} />
                     {enhancing ? "Enhancing…" : "Enhance quality"}
                   </Button>
                 )}

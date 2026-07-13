@@ -1,8 +1,30 @@
 import type { AiProviderClient, GenerateParams, GenerateResult } from "./client";
+import type { BedrockCredentialOptions } from "./config";
 
 function env(key: string): string | undefined {
   const v = process.env[key];
   return v && v.trim() !== "" ? v.trim() : undefined;
+}
+
+export interface BedrockCredentials {
+  accessKeyId: string;
+  secretAccessKey: string;
+  sessionToken?: string;
+  region?: string;
+  model?: string;
+}
+
+function resolveBedrockCredentials(credentials?: BedrockCredentialOptions | null): BedrockCredentials | null {
+  const accessKeyId = credentials?.accessKeyId?.trim();
+  const secretAccessKey = credentials?.secretAccessKey?.trim();
+  if (!accessKeyId || !secretAccessKey) return null;
+  return {
+    accessKeyId,
+    secretAccessKey,
+    sessionToken: credentials?.sessionToken?.trim() || undefined,
+    region: credentials?.region?.trim() || undefined,
+    model: credentials?.model?.trim() || undefined,
+  };
 }
 
 function buildMessages(params: GenerateParams) {
@@ -52,27 +74,45 @@ export class BedrockClient implements AiProviderClient {
     this.defaultModel = defaultModel;
   }
 
-  static async create(): Promise<BedrockClient> {
+  static async create(credentials?: BedrockCredentialOptions | null): Promise<BedrockClient> {
     const runtime = await loadBedrockModules();
-    const region = env("AWS_REGION") ?? env("AWS_DEFAULT_REGION") ?? "us-east-1";
-    const accessKeyId = env("AWS_ACCESS_KEY_ID");
-    const secretAccessKey = env("AWS_SECRET_ACCESS_KEY");
-    const sessionToken = env("AWS_SESSION_TOKEN");
-    const profile = env("AWS_PROFILE");
+    const resolved = resolveBedrockCredentials(credentials);
+    const region =
+      resolved?.region ??
+      env("AWS_REGION") ??
+      env("AWS_DEFAULT_REGION") ??
+      "us-east-1";
 
     const clientConfig: ConstructorParameters<typeof runtime.BedrockRuntimeClient>[0] = { region };
-    if (accessKeyId && secretAccessKey) {
+
+    if (resolved) {
       clientConfig.credentials = {
-        accessKeyId,
-        secretAccessKey,
-        ...(sessionToken ? { sessionToken } : {}),
+        accessKeyId: resolved.accessKeyId,
+        secretAccessKey: resolved.secretAccessKey,
+        ...(resolved.sessionToken ? { sessionToken: resolved.sessionToken } : {}),
       };
-    } else if (profile) {
-      clientConfig.profile = profile;
+    } else {
+      const accessKeyId = env("AWS_ACCESS_KEY_ID");
+      const secretAccessKey = env("AWS_SECRET_ACCESS_KEY");
+      const sessionToken = env("AWS_SESSION_TOKEN");
+      const profile = env("AWS_PROFILE");
+
+      if (accessKeyId && secretAccessKey) {
+        clientConfig.credentials = {
+          accessKeyId,
+          secretAccessKey,
+          ...(sessionToken ? { sessionToken } : {}),
+        };
+      } else if (profile) {
+        clientConfig.profile = profile;
+      }
     }
 
     const client = new runtime.BedrockRuntimeClient(clientConfig);
-    const model = env("BEDROCK_MODEL") ?? "anthropic.claude-3-5-haiku-20241022-v1:0";
+    const model =
+      resolved?.model ??
+      env("BEDROCK_MODEL") ??
+      "anthropic.claude-3-5-haiku-20241022-v1:0";
     return new BedrockClient(runtime, client, model);
   }
 

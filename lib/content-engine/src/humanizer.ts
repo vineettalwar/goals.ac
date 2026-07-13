@@ -6,10 +6,10 @@ import {
   buildBrandVoicePromptContext,
   resolveHumanizationLevel,
   resolveWritingSample,
-  type BrandVoiceFields,
   type HumanizationLevel,
   type UnifiedBrandContext,
 } from "./brand-voice";
+import { loadBrandVoiceGenerationContext } from "./support/brand-voice-generation";
 import { bodyWordCount } from "./content-piece-seo";
 import {
   AI_WRITING_REWRITE_RULES_PROMPT,
@@ -48,7 +48,7 @@ export type { HumanizationLevel };
 export interface HumanizeOptions {
   level: HumanizationLevel;
   writingSample?: string;
-  brandVoice?: BrandVoiceFields & { contentStyle?: UnifiedBrandContext["contentStyle"] };
+  brandVoice?: UnifiedBrandContext;
   aiClient?: AiProviderClient;
   userApiKey?: string | null;
   aiProviderOptions?: AiProviderOptions;
@@ -100,10 +100,21 @@ export async function humanizeArticle(
         ? `Intensity: STRONG. Do a full rewrite of the voice — restructure sentences and paragraphs freely (within the preservation rules), inject personality and directness, as if a sharp human editor rewrote the whole draft in their own words.`
         : `Intensity: LIGHT. Polish rhythm and word choice — fix robotic cadence, swap AI-tell phrases, add contractions, vary sentence length. Keep the original sentences where they already read naturally.`;
 
-    const voiceCtx = (() => {
+    const voiceCtx = await (async () => {
       const sample =
         opts.writingSample?.trim() || (opts.brandVoice ? resolveWritingSample(opts.brandVoice) : undefined);
-      const brandVoiceCtx = opts.brandVoice ? buildBrandVoicePromptContext(opts.brandVoice) : "";
+      let brandVoiceCtx = "";
+      if (opts.brandVoice) {
+        if (opts.brandVoice.projectId) {
+          const ctx = await loadBrandVoiceGenerationContext(
+            opts.brandVoice.projectId,
+            `${article.primaryKeyword} humanize`,
+          );
+          brandVoiceCtx = ctx?.promptContext ?? buildBrandVoicePromptContext(opts.brandVoice);
+        } else {
+          brandVoiceCtx = buildBrandVoicePromptContext(opts.brandVoice);
+        }
+      }
       const sampleCtx = sample
         ? `Mimic the cadence, diction, and tone of this writing sample from the author (do NOT copy its content, only its voice):
 ---WRITING SAMPLE START---

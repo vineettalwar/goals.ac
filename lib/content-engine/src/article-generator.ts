@@ -5,6 +5,7 @@ import {
   buildBrandVoicePromptContext,
   type UnifiedBrandContext,
 } from "./brand-voice";
+import { loadBrandVoiceGenerationContext } from "./support/brand-voice-generation";
 import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
 
 export interface ArticleInput {
@@ -120,7 +121,18 @@ Preferred content: ${input.persona.preferredContent.join(", ")}`
   const angleCtx = input.angle ? `Preferred angle for this draft: ${input.angle}` : "";
   const goalCtx = input.contentGoal ? `Business goal for this article: ${input.contentGoal}` : "";
   const toneCtx = input.tonePreference ? `Tone preference: ${input.tonePreference}` : "";
-  const brandVoiceCtx = input.brandVoice ? buildBrandVoicePromptContext(input.brandVoice) : "";
+  let brandVoiceCtx = "";
+  if (input.brandVoice) {
+    if (input.brandVoice.projectId) {
+      const ctx = await loadBrandVoiceGenerationContext(
+        input.brandVoice.projectId,
+        `${input.keyword ?? ""} article ${input.angle ?? ""}`,
+      );
+      brandVoiceCtx = ctx?.promptContext ?? buildBrandVoicePromptContext(input.brandVoice);
+    } else {
+      brandVoiceCtx = buildBrandVoicePromptContext(input.brandVoice);
+    }
+  }
 
   const prompt = `Write a detailed 1400-1800 word SEO article for ${input.company.name} (${input.company.websiteUrl}), a ${input.company.industry} company.
 

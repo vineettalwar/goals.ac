@@ -232,8 +232,8 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
                 </button>
 
                 {expandedCluster === ci && (
-                  <div className="border-t border-(--border)">
-                    <div className="grid grid-cols-1 divide-y divide-(--border)">
+                  <div className="border-t border-border">
+                    <div className="grid grid-cols-1 divide-y divide-border">
                       {cluster.supportingTopics.map((topic, ti) => (
                         <div key={ti} className="px-5 py-3 flex items-center gap-3">
                           {topic.covered

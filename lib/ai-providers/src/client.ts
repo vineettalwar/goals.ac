@@ -102,7 +102,7 @@ async function buildClient(
     case "bedrock": {
       try {
         const { BedrockClient } = await import("./bedrock");
-        return await BedrockClient.create();
+        return await BedrockClient.create(options?.bedrock);
       } catch (err) {
         throw new Error(
           `Bedrock provider failed to initialize: ${err instanceof Error ? err.message : err}. ` +
@@ -134,7 +134,9 @@ export async function getAiProviderClient(options?: AiProviderOptions): Promise<
   const cacheKey =
     id === "ollama" && resolvedOllama
       ? `ollama:${resolvedOllama.baseUrl}:${resolvedOllama.model}`
-      : buildAiProviderCacheKey(options);
+      : id === "bedrock" && options?.bedrock?.accessKeyId
+        ? `bedrock:${options.bedrock.accessKeyId}:${options.bedrock.region ?? ""}:${options.bedrock.model ?? ""}`
+        : buildAiProviderCacheKey(options);
 
   const cached = _cache.get(cacheKey);
   if (cached) return cached;

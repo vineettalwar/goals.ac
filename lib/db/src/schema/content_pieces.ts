@@ -4,6 +4,8 @@ import { z } from "zod/v4";
 import { websiteProjectsTable } from "./website_projects";
 import { briefsTable } from "./briefs";
 import { contentItemsTable } from "./content_strategies";
+import { usersTable } from "./users";
+import type { ContentPieceApprovalStatus, EvergreenConfig } from "./platform_voices";
 
 export const CONTENT_FORMAT_TYPES = [
   "blog_post",
@@ -30,9 +32,32 @@ export const CONTENT_FORMAT_TYPES = [
 
 export type ContentFormatType = (typeof CONTENT_FORMAT_TYPES)[number];
 
+export type ContentPieceImageRole = "featured" | "inline";
+
+export type ContentPieceImageRef = {
+  role: ContentPieceImageRole;
+  provider: "unsplash" | "pexels";
+  remoteId: string;
+  remoteUrl: string;
+  alt: string;
+  title: string;
+  searchQuery: string;
+  rankScore: number;
+  photographer: string;
+  photographerUrl: string;
+  sectionHeading?: string;
+  publishedUrl?: string;
+};
+
 export type ContentPieceMetadata = {
+  seoTitle?: string;
   metaDescription?: string;
+  focusKeyword?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImageUrl?: string;
   featuredImageUrl?: string;
+  images?: ContentPieceImageRef[];
   faqSection?: { question: string; answer: string }[];
   citations?: { text: string; url: string; source: string }[];
   internalLinkSuggestions?: { anchorText: string; suggestedSlug: string; rationale?: string }[];
@@ -55,6 +80,12 @@ export const contentPiecesTable = pgTable("content_pieces", {
   status: text("status").notNull().default("draft"),
   wordCount: integer("word_count").notNull().default(0),
   plannedDate: date("planned_date"),
+  scheduledAt: timestamp("scheduled_at", { withTimezone: true }),
+  approvalStatus: text("approval_status").notNull().default("draft").$type<ContentPieceApprovalStatus>(),
+  approvedByUserId: integer("approved_by_user_id").references(() => usersTable.id, { onDelete: "set null" }),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  evergreenConfig: jsonb("evergreen_config").$type<EvergreenConfig | null>(),
+  queuePosition: integer("queue_position"),
   publishedUrl: text("published_url"),
   publishPlatform: text("publish_platform"),
   publishError: text("publish_error"),
@@ -66,6 +97,8 @@ export const contentPiecesTable = pgTable("content_pieces", {
   index("content_pieces_website_project_id_idx").on(table.websiteProjectId),
   index("content_pieces_brief_id_idx").on(table.briefId),
   index("content_pieces_content_item_id_idx").on(table.contentItemId),
+  index("content_pieces_scheduled_at_idx").on(table.scheduledAt),
+  index("content_pieces_approval_status_idx").on(table.approvalStatus),
 ]);
 
 export const insertContentPieceSchema = createInsertSchema(contentPiecesTable).omit({

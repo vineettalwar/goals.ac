@@ -97,7 +97,7 @@ export function MarketingSection({
   return (
     <section
       id={id}
-      className={`${resolvedClassName}${bordered && variant === "paper" ? " border-t border-(--border)" : ""}`}
+      className={`${resolvedClassName}${bordered && variant === "paper" ? " border-t border-border" : ""}`}
     >
       {isDarkTheme && backgroundImage && <HeroPhotoBg image={backgroundImage} />}
 

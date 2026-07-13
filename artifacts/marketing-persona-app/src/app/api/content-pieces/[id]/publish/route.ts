@@ -16,13 +16,15 @@ import {
   isSocialPlatform,
   publishPieceToSocial,
 } from "@workspace/content-engine/support/social-publish";
-import {
-  publishPieceToDestination,
+import { publishPieceToDestination,
 } from "@workspace/content-engine/support/publish-destination";
 import { publishPieceToWordPress } from "@workspace/content-engine/support/cms-publish";
+import { featuredImageFromMetadata } from "@workspace/content-engine/article-image-enricher";
 import { publishToWordPress } from "@workspace/connectors/wordpress";
 import { decryptSecret } from "@workspace/security/encryption";
 import { enqueue, QUEUES } from "@workspace/jobs";
+import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand-voice-generation";
+import { seedSocialPostMetrics } from "@workspace/content-engine/social-metrics-service";
 import { z } from "zod";
 
 const ALL_PUBLISH_PLATFORMS = [
@@ -58,11 +60,10 @@ function featuredImageFromPiece(piece: {
   bodyMarkdown: string;
   pieceMetadata?: { featuredImageUrl?: string } | null;
 }): string | undefined {
-  if (piece.pieceMetadata?.featuredImageUrl) {
-    return piece.pieceMetadata.featuredImageUrl;
-  }
-  const match = piece.bodyMarkdown.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/);
-  return match?.[1];
+  return featuredImageFromMetadata({
+    bodyMarkdown: piece.bodyMarkdown,
+    pieceMetadata: piece.pieceMetadata,
+  });
 }
 
 export async function POST(
@@ -102,12 +103,14 @@ export async function POST(
   try {
     let publishedUrl: string;
     let publishPlatform = parsed.data.platform ?? "wordpress";
+    let remotePostId: string | undefined;
     const publishable = {
       id: piece!.id,
       title: piece!.title,
       bodyMarkdown: piece!.bodyMarkdown,
       targetKeyword: piece!.targetKeyword,
       formatType: piece!.formatType,
+      pieceMetadata: piece!.pieceMetadata,
     };
     const imageUrl = featuredImageFromPiece(piece!);
 
@@ -118,12 +121,14 @@ export async function POST(
           ...publishable,
           websiteProjectId: piece!.websiteProjectId,
           featuredImageUrl: imageUrl,
+          pieceMetadata: piece!.pieceMetadata,
         },
         userId!,
         creds,
       );
       publishedUrl = socialResult.publishedUrl;
       publishPlatform = socialResult.publishPlatform;
+      remotePostId = socialResult.remotePostId;
     } else if (parsed.data.wordpressConnectionId) {
       const [row] = await db
         .select({ connection: wordpressConnectionsTable })
@@ -181,6 +186,22 @@ export async function POST(
       })
       .where(eq(contentPiecesTable.id, id))
       .returning();
+
+    if (remotePostId && isSocialPlatform(publishPlatform)) {
+      await seedSocialPostMetrics({
+        contentPieceId: id,
+        platform: publishPlatform,
+        remotePostId,
+      });
+    }
+
+    ingestPublishedContentPiece(
+      piece!.websiteProjectId,
+      id,
+      piece!.title,
+      piece!.bodyMarkdown ?? "",
+      publishedUrl,
+    ).catch(() => {});
 
     return NextResponse.json(updated);
   } catch (err) {

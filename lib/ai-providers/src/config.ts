@@ -1,9 +1,18 @@
 export type AiProviderId = "gemini" | "bedrock" | "ollama";
 
+export interface BedrockCredentialOptions {
+  accessKeyId?: string | null;
+  secretAccessKey?: string | null;
+  sessionToken?: string | null;
+  region?: string | null;
+  model?: string | null;
+}
+
 export interface AiProviderOptions {
   providerId?: AiProviderId | null;
   ollamaBaseUrl?: string | null;
   ollamaModel?: string | null;
+  bedrock?: BedrockCredentialOptions | null;
 }
 
 export interface ResolvedOllamaConfig {

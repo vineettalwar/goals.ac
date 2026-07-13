@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { memo, useCallback, useEffect } from "react";
+import { memo, Suspense, useCallback, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -15,14 +15,18 @@ import {
   LogOut,
   Leaf,
   Layers,
+  Share2,
   Plug,
   Users,
   BookOpen,
   ScanSearch,
+  Shield,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isSuperAdmin } from "@/lib/org-access-shared";
 import { ProjectSwitcher } from "@/components/project-switcher";
+import { Spinner } from "@/components/ui/spinner";
 import { useActiveProject } from "@/context/active-project";
 import { queryKeys } from "@/lib/queries/keys";
 import {
@@ -48,6 +52,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItemDef[] }> = [
     label: "Create",
     items: [
       { label: "Content Studio", href: "__content_studio__", icon: Layers },
+      { label: "Social Hub", href: "__social_hub__", icon: Share2 },
       { label: "Autopilot", href: "/autopilot", icon: Zap },
     ],
   },
@@ -73,6 +78,13 @@ const FOOTER_ITEMS: NavItemDef[] = [
   { label: "Help", href: "/help", icon: BookOpen },
   { label: "Settings", href: "/settings", icon: Settings },
 ];
+
+function projectIdFromPathname(pathname: string): number | null {
+  const match = pathname.match(/^\/projects\/(\d+)(?:\/|$)/);
+  if (!match) return null;
+  const id = Number.parseInt(match[1]!, 10);
+  return Number.isFinite(id) ? id : null;
+}
 
 interface NavItemProps {
   label: string;
@@ -106,17 +118,22 @@ const NavItem = memo(function NavItem({ label, href, icon: Icon, active, onInten
 interface SidebarNavProps {
   userName: string;
   userEmail: string;
+  userRole?: string | null;
 }
 
-export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
+export function SidebarNav({ userName, userEmail, userRole }: SidebarNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
   const { activeProjectId } = useActiveProject();
 
   function resolveHref(href: string) {
+    const projectId = projectIdFromPathname(pathname) ?? activeProjectId;
     if (href === "__content_studio__") {
-      return activeProjectId ? `/projects/${activeProjectId}/content-studio` : "/projects";
+      return projectId ? `/projects/${projectId}/content-studio` : "/projects";
+    }
+    if (href === "__social_hub__") {
+      return projectId ? `/projects/${projectId}/social` : "/projects";
     }
     return href;
   }
@@ -124,6 +141,9 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
   function isActive(item: NavItemDef, resolvedHref: string) {
     if (item.label === "Content Studio") {
       return pathname.includes("/content-studio");
+    }
+    if (item.label === "Social Hub") {
+      return pathname.includes("/social");
     }
     if (item.matchPrefix) {
       if (item.matchPrefix === "/strategy") {
@@ -145,12 +165,20 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
     if (item.label === "Projects") {
       return pathname === resolvedHref || pathname.startsWith("/projects/");
     }
+    if (item.label === "Admin") {
+      return pathname === "/admin" || pathname.startsWith("/admin/");
+    }
     return pathname === resolvedHref || pathname.startsWith(`${resolvedHref}/`);
   }
+
+  const footerItems: NavItemDef[] = isSuperAdmin(userRole)
+    ? [...FOOTER_ITEMS, { label: "Admin", href: "/admin", icon: Shield }]
+    : FOOTER_ITEMS;
 
   useEffect(() => {
     if (activeProjectId) {
       router.prefetch(`/projects/${activeProjectId}/content-studio`);
+      router.prefetch(`/projects/${activeProjectId}/social`);
     }
   }, [activeProjectId, router]);
 
@@ -166,10 +194,28 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
           queryKey: queryKeys.goals(projectId),
           queryFn: () => fetchGoals(projectId),
         });
+      } else if (href.startsWith("/search/performance")) {
+        const end = new Date();
+        const start = new Date();
+        start.setDate(end.getDate() - 27);
+        const fmt = (d: Date) => d.toISOString().slice(0, 10);
+        const qs = new URLSearchParams({ startDate: fmt(start), endDate: fmt(end) });
+        void fetch(`/api/website-projects/${projectId}/article-performance?${qs}`);
       } else if (href.startsWith("/search/keywords") || href === "/search") {
         void queryClient.prefetchQuery({
           queryKey: queryKeys.trackedKeywords(projectId),
           queryFn: () => fetchTrackedKeywords(projectId),
+        });
+        void queryClient.prefetchQuery({
+          queryKey: queryKeys.keywordOpportunities(projectId),
+          queryFn: async () => {
+            const res = await fetch(
+              `/api/website-projects/${projectId}/keyword-opportunities?status=open`,
+            );
+            if (!res.ok) return [];
+            const data = await res.json();
+            return data.opportunities ?? [];
+          },
         });
       } else if (href.startsWith("/strategy/roadmaps") || href === "/strategy") {
         void queryClient.prefetchQuery({
@@ -216,7 +262,16 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
 
       <nav className="flex-1 overflow-y-auto px-2 py-3">
         <div className="mb-4 border-b border-border pb-3">
-          <ProjectSwitcher />
+          <Suspense
+            fallback={
+              <div className="flex items-center gap-2 px-3 py-2.5">
+                <Spinner size="sm" />
+                <span className="text-xs text-muted-foreground">Loading projects…</span>
+              </div>
+            }
+          >
+            <ProjectSwitcher />
+          </Suspense>
         </div>
         {NAV_SECTIONS.map((section) => (
           <div key={section.label} className="mb-4 last:mb-0">
@@ -244,7 +299,7 @@ export function SidebarNav({ userName, userEmail }: SidebarNavProps) {
 
       <div className="border-t border-border px-2 py-2">
         <ul className="space-y-0.5">
-          {FOOTER_ITEMS.map((item) => {
+          {footerItems.map((item) => {
             const resolvedHref = resolveHref(item.href);
             return (
               <NavItem

@@ -11,6 +11,8 @@
   "include": ["src"],
   "references": [
     { "path": "../ai-providers" },
-    { "path": "../db" }
+    { "path": "../db" },
+    { "path": "../keyword-research-provider" },
+    { "path": "../security" }
   ]
 }

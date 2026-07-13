@@ -4,6 +4,7 @@ import {
   resolveProviderId,
   type AiProviderOptions,
 } from "@workspace/ai-providers";
+import { getKeywordResearchProvider, formatVolume, type KeywordMetrics } from "@workspace/keyword-research-provider";
 
 export type KeywordDifficulty = "low" | "medium" | "high";
 
@@ -27,15 +28,55 @@ export async function analyzeKeywords(params: {
   websiteUrl?: string;
   userApiKey?: string | null;
   aiProviderOptions?: AiProviderOptions;
+  semrushCredentials?: { apiKey: string; database: string } | null;
+  languagePromptLine?: string;
 }): Promise<KeywordAnalysisResult> {
-  const { keywords, websiteUrl, userApiKey, aiProviderOptions } = params;
+  const {
+    keywords,
+    websiteUrl,
+    userApiKey,
+    aiProviderOptions,
+    semrushCredentials,
+    languagePromptLine,
+  } = params;
+
+  let semrushMetricsBlock = "";
+  const metricsByKeyword = new Map<string, KeywordMetrics>();
+
+  if (semrushCredentials?.apiKey) {
+    try {
+      const provider = getKeywordResearchProvider();
+      const metrics = await provider.getKeywordMetrics({
+        keywords,
+        database: semrushCredentials.database,
+        apiKey: semrushCredentials.apiKey,
+      });
+      for (const m of metrics) {
+        metricsByKeyword.set(m.keyword.toLowerCase(), m);
+      }
+      if (metrics.length > 0) {
+        semrushMetricsBlock = `\n\nUse these Semrush metrics as ground truth (do not invent different volumes or difficulty):
+${JSON.stringify(
+  metrics.map((m) => ({
+    keyword: m.keyword,
+    searchVolume: m.searchVolume,
+    keywordDifficulty: m.keywordDifficulty,
+    difficulty: m.difficulty,
+    intents: m.intents,
+  })),
+)}`;
+      }
+    } catch {
+      // fall back to AI-only estimates
+    }
+  }
 
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
 
   const prompt = `You are an SEO and GEO (Generative Engine Optimization) analyst. Analyze these keywords for a B2B startup${websiteUrl ? ` with website ${websiteUrl}` : ""}.
 
-Keywords to analyze: ${keywords.join(", ")}
-
+Keywords to analyze: ${keywords.join(", ")}${semrushMetricsBlock}
+${languagePromptLine ? `\n${languagePromptLine}\n` : ""}
 Respond ONLY with a valid JSON object in this exact shape:
 {
   "keywords": [
@@ -64,7 +105,21 @@ Be specific and tactical. Base estimates on realistic B2B SaaS market data.`;
 
   const raw = response.text ?? "{}";
   try {
-    return JSON.parse(raw) as KeywordAnalysisResult;
+    const parsed = JSON.parse(raw) as KeywordAnalysisResult;
+    if (metricsByKeyword.size === 0) return parsed;
+
+    return {
+      ...parsed,
+      keywords: parsed.keywords.map((kw) => {
+        const metrics = metricsByKeyword.get(kw.keyword.toLowerCase());
+        if (!metrics) return kw;
+        return {
+          ...kw,
+          estimatedVolume: formatVolume(metrics.searchVolume),
+          difficulty: metrics.difficulty,
+        };
+      }),
+    };
   } catch {
     throw new Error("Failed to parse analysis response");
   }

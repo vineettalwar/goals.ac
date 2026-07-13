@@ -27,10 +27,12 @@ import type {
   CreateGeoAuditRequest,
   CreateKeywordAnalysisRequest,
   CreateTrackedKeywordRequest,
+  DeleteArticleIdeaSourceParams,
   ErrorResponse,
   GenerateContentStrategyRequest,
   GenerateRoadmapRequest,
   GeoAudit,
+  GetSocialMetricsParams,
   HealthStatus,
   Industry,
   KeywordAnalysisResponse,
@@ -39,6 +41,8 @@ import type {
   Location,
   Roadmap,
   RoadmapListResponse,
+  SyncSocialHistoryParams,
+  SyncSocialMetricsParams,
   TrackedKeyword,
   TrackedKeywordListResponse,
   TrackedKeywordSnapshotsResponse,
@@ -1873,4 +1877,1614 @@ export const useDeleteTrackedKeyword = <
   TContext
 > => {
   return useMutation(getDeleteTrackedKeywordMutationOptions(options));
+};
+
+/**
+ * @summary Sync Google Search Console query data for a project
+ */
+export const getSyncGscSearchAnalyticsUrl = (id: number) => {
+  return `/api/website-projects/${id}/search-properties/gsc/sync`;
+};
+
+export const syncGscSearchAnalytics = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getSyncGscSearchAnalyticsUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSyncGscSearchAnalyticsMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncGscSearchAnalytics>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof syncGscSearchAnalytics>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["syncGscSearchAnalytics"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof syncGscSearchAnalytics>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return syncGscSearchAnalytics(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SyncGscSearchAnalyticsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof syncGscSearchAnalytics>>
+>;
+
+export type SyncGscSearchAnalyticsMutationError = ErrorType<void>;
+
+/**
+ * @summary Sync Google Search Console query data for a project
+ */
+export const useSyncGscSearchAnalytics = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncGscSearchAnalytics>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof syncGscSearchAnalytics>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getSyncGscSearchAnalyticsMutationOptions(options));
+};
+
+/**
+ * @summary GSC sync status for a project
+ */
+export const getGetGscSyncStatusUrl = (id: number) => {
+  return `/api/website-projects/${id}/search-properties/gsc/sync`;
+};
+
+export const getGscSyncStatus = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getGetGscSyncStatusUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetGscSyncStatusQueryKey = (id: number) => {
+  return [`/api/website-projects/${id}/search-properties/gsc/sync`] as const;
+};
+
+export const getGetGscSyncStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getGscSyncStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGscSyncStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetGscSyncStatusQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getGscSyncStatus>>
+  > = ({ signal }) => getGscSyncStatus(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getGscSyncStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetGscSyncStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getGscSyncStatus>>
+>;
+export type GetGscSyncStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary GSC sync status for a project
+ */
+
+export function useGetGscSyncStatus<
+  TData = Awaited<ReturnType<typeof getGscSyncStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getGscSyncStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetGscSyncStatusQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Aggregated GSC queries for a project
+ */
+export const getListGscQueriesUrl = (id: number) => {
+  return `/api/website-projects/${id}/gsc-queries`;
+};
+
+export const listGscQueries = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getListGscQueriesUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListGscQueriesQueryKey = (id: number) => {
+  return [`/api/website-projects/${id}/gsc-queries`] as const;
+};
+
+export const getListGscQueriesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listGscQueries>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGscQueries>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getListGscQueriesQueryKey(id);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof listGscQueries>>> = ({
+    signal,
+  }) => listGscQueries(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listGscQueries>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListGscQueriesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listGscQueries>>
+>;
+export type ListGscQueriesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Aggregated GSC queries for a project
+ */
+
+export function useListGscQueries<
+  TData = Awaited<ReturnType<typeof listGscQueries>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listGscQueries>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListGscQueriesQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Pull historical posts via OAuth into brand + platform voice
+ */
+export const getSyncSocialHistoryUrl = (
+  id: number,
+  params?: SyncSocialHistoryParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/website-projects/${id}/social/history-sync?${stringifiedParams}`
+    : `/api/website-projects/${id}/social/history-sync`;
+};
+
+export const syncSocialHistory = async (
+  id: number,
+  params?: SyncSocialHistoryParams,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getSyncSocialHistoryUrl(id, params), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSyncSocialHistoryMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncSocialHistory>>,
+    TError,
+    { id: number; params?: SyncSocialHistoryParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof syncSocialHistory>>,
+  TError,
+  { id: number; params?: SyncSocialHistoryParams },
+  TContext
+> => {
+  const mutationKey = ["syncSocialHistory"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof syncSocialHistory>>,
+    { id: number; params?: SyncSocialHistoryParams }
+  > = (props) => {
+    const { id, params } = props ?? {};
+
+    return syncSocialHistory(id, params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SyncSocialHistoryMutationResult = NonNullable<
+  Awaited<ReturnType<typeof syncSocialHistory>>
+>;
+
+export type SyncSocialHistoryMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Pull historical posts via OAuth into brand + platform voice
+ */
+export const useSyncSocialHistory = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncSocialHistory>>,
+    TError,
+    { id: number; params?: SyncSocialHistoryParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof syncSocialHistory>>,
+  TError,
+  { id: number; params?: SyncSocialHistoryParams },
+  TContext
+> => {
+  return useMutation(getSyncSocialHistoryMutationOptions(options));
+};
+
+/**
+ * @summary Per-platform OAuth history sync status
+ */
+export const getGetSocialHistorySyncStatusUrl = (id: number) => {
+  return `/api/website-projects/${id}/social/history-sync`;
+};
+
+export const getSocialHistorySyncStatus = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getGetSocialHistorySyncStatusUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSocialHistorySyncStatusQueryKey = (id: number) => {
+  return [`/api/website-projects/${id}/social/history-sync`] as const;
+};
+
+export const getGetSocialHistorySyncStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSocialHistorySyncStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSocialHistorySyncStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetSocialHistorySyncStatusQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSocialHistorySyncStatus>>
+  > = ({ signal }) =>
+    getSocialHistorySyncStatus(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSocialHistorySyncStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSocialHistorySyncStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSocialHistorySyncStatus>>
+>;
+export type GetSocialHistorySyncStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Per-platform OAuth history sync status
+ */
+
+export function useGetSocialHistorySyncStatus<
+  TData = Awaited<ReturnType<typeof getSocialHistorySyncStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSocialHistorySyncStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSocialHistorySyncStatusQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Social post performance metrics for a project
+ */
+export const getGetSocialMetricsUrl = (
+  id: number,
+  params?: GetSocialMetricsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/website-projects/${id}/social/metrics?${stringifiedParams}`
+    : `/api/website-projects/${id}/social/metrics`;
+};
+
+export const getSocialMetrics = async (
+  id: number,
+  params?: GetSocialMetricsParams,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getGetSocialMetricsUrl(id, params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSocialMetricsQueryKey = (
+  id: number,
+  params?: GetSocialMetricsParams,
+) => {
+  return [
+    `/api/website-projects/${id}/social/metrics`,
+    ...(params ? [params] : []),
+  ] as const;
+};
+
+export const getGetSocialMetricsQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSocialMetrics>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: GetSocialMetricsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSocialMetrics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetSocialMetricsQueryKey(id, params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSocialMetrics>>
+  > = ({ signal }) =>
+    getSocialMetrics(id, params, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSocialMetrics>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSocialMetricsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSocialMetrics>>
+>;
+export type GetSocialMetricsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Social post performance metrics for a project
+ */
+
+export function useGetSocialMetrics<
+  TData = Awaited<ReturnType<typeof getSocialMetrics>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  params?: GetSocialMetricsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSocialMetrics>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSocialMetricsQueryOptions(id, params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Sync engagement metrics for published social posts
+ */
+export const getSyncSocialMetricsUrl = (
+  id: number,
+  params?: SyncSocialMetricsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/website-projects/${id}/social/metrics/sync?${stringifiedParams}`
+    : `/api/website-projects/${id}/social/metrics/sync`;
+};
+
+export const syncSocialMetrics = async (
+  id: number,
+  params?: SyncSocialMetricsParams,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getSyncSocialMetricsUrl(id, params), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSyncSocialMetricsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncSocialMetrics>>,
+    TError,
+    { id: number; params?: SyncSocialMetricsParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof syncSocialMetrics>>,
+  TError,
+  { id: number; params?: SyncSocialMetricsParams },
+  TContext
+> => {
+  const mutationKey = ["syncSocialMetrics"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof syncSocialMetrics>>,
+    { id: number; params?: SyncSocialMetricsParams }
+  > = (props) => {
+    const { id, params } = props ?? {};
+
+    return syncSocialMetrics(id, params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SyncSocialMetricsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof syncSocialMetrics>>
+>;
+
+export type SyncSocialMetricsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Sync engagement metrics for published social posts
+ */
+export const useSyncSocialMetrics = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncSocialMetrics>>,
+    TError,
+    { id: number; params?: SyncSocialMetricsParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof syncSocialMetrics>>,
+  TError,
+  { id: number; params?: SyncSocialMetricsParams },
+  TContext
+> => {
+  return useMutation(getSyncSocialMetricsMutationOptions(options));
+};
+
+/**
+ * @summary Social metrics sync status
+ */
+export const getGetSocialMetricsSyncStatusUrl = (id: number) => {
+  return `/api/website-projects/${id}/social/metrics/sync`;
+};
+
+export const getSocialMetricsSyncStatus = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getGetSocialMetricsSyncStatusUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetSocialMetricsSyncStatusQueryKey = (id: number) => {
+  return [`/api/website-projects/${id}/social/metrics/sync`] as const;
+};
+
+export const getGetSocialMetricsSyncStatusQueryOptions = <
+  TData = Awaited<ReturnType<typeof getSocialMetricsSyncStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSocialMetricsSyncStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getGetSocialMetricsSyncStatusQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof getSocialMetricsSyncStatus>>
+  > = ({ signal }) =>
+    getSocialMetricsSyncStatus(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof getSocialMetricsSyncStatus>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetSocialMetricsSyncStatusQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getSocialMetricsSyncStatus>>
+>;
+export type GetSocialMetricsSyncStatusQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Social metrics sync status
+ */
+
+export function useGetSocialMetricsSyncStatus<
+  TData = Awaited<ReturnType<typeof getSocialMetricsSyncStatus>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getSocialMetricsSyncStatus>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetSocialMetricsSyncStatusQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Schedule or unschedule a social queue item
+ */
+export const getScheduleSocialQueuePieceUrl = (id: number, pieceId: number) => {
+  return `/api/website-projects/${id}/social/queue/${pieceId}`;
+};
+
+export const scheduleSocialQueuePiece = async (
+  id: number,
+  pieceId: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getScheduleSocialQueuePieceUrl(id, pieceId), {
+    ...options,
+    method: "PATCH",
+  });
+};
+
+export const getScheduleSocialQueuePieceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scheduleSocialQueuePiece>>,
+    TError,
+    { id: number; pieceId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof scheduleSocialQueuePiece>>,
+  TError,
+  { id: number; pieceId: number },
+  TContext
+> => {
+  const mutationKey = ["scheduleSocialQueuePiece"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof scheduleSocialQueuePiece>>,
+    { id: number; pieceId: number }
+  > = (props) => {
+    const { id, pieceId } = props ?? {};
+
+    return scheduleSocialQueuePiece(id, pieceId, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ScheduleSocialQueuePieceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof scheduleSocialQueuePiece>>
+>;
+
+export type ScheduleSocialQueuePieceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Schedule or unschedule a social queue item
+ */
+export const useScheduleSocialQueuePiece = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof scheduleSocialQueuePiece>>,
+    TError,
+    { id: number; pieceId: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof scheduleSocialQueuePiece>>,
+  TError,
+  { id: number; pieceId: number },
+  TContext
+> => {
+  return useMutation(getScheduleSocialQueuePieceMutationOptions(options));
+};
+
+/**
+ * @summary Import article ideas from CSV (site admin)
+ */
+export const getImportArticleIdeasCsvUrl = (id: number) => {
+  return `/api/website-projects/${id}/article-ideas/import`;
+};
+
+export const importArticleIdeasCsv = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getImportArticleIdeasCsvUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getImportArticleIdeasCsvMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importArticleIdeasCsv>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof importArticleIdeasCsv>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["importArticleIdeasCsv"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof importArticleIdeasCsv>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return importArticleIdeasCsv(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type ImportArticleIdeasCsvMutationResult = NonNullable<
+  Awaited<ReturnType<typeof importArticleIdeasCsv>>
+>;
+
+export type ImportArticleIdeasCsvMutationError = ErrorType<void>;
+
+/**
+ * @summary Import article ideas from CSV (site admin)
+ */
+export const useImportArticleIdeasCsv = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof importArticleIdeasCsv>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof importArticleIdeasCsv>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getImportArticleIdeasCsvMutationOptions(options));
+};
+
+/**
+ * @summary Create manual article ideas (site admin)
+ */
+export const getCreateArticleIdeasUrl = (id: number) => {
+  return `/api/website-projects/${id}/article-ideas`;
+};
+
+export const createArticleIdeas = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getCreateArticleIdeasUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCreateArticleIdeasMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createArticleIdeas>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createArticleIdeas>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["createArticleIdeas"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createArticleIdeas>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return createArticleIdeas(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateArticleIdeasMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createArticleIdeas>>
+>;
+
+export type CreateArticleIdeasMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Create manual article ideas (site admin)
+ */
+export const useCreateArticleIdeas = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createArticleIdeas>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createArticleIdeas>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getCreateArticleIdeasMutationOptions(options));
+};
+
+/**
+ * @summary List Google Sheets article idea sources
+ */
+export const getListArticleIdeaSourcesUrl = (id: number) => {
+  return `/api/website-projects/${id}/article-idea-sources`;
+};
+
+export const listArticleIdeaSources = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getListArticleIdeaSourcesUrl(id), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListArticleIdeaSourcesQueryKey = (id: number) => {
+  return [`/api/website-projects/${id}/article-idea-sources`] as const;
+};
+
+export const getListArticleIdeaSourcesQueryOptions = <
+  TData = Awaited<ReturnType<typeof listArticleIdeaSources>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listArticleIdeaSources>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListArticleIdeaSourcesQueryKey(id);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listArticleIdeaSources>>
+  > = ({ signal }) => listArticleIdeaSources(id, { signal, ...requestOptions });
+
+  return {
+    queryKey,
+    queryFn,
+    enabled: !!id,
+    ...queryOptions,
+  } as UseQueryOptions<
+    Awaited<ReturnType<typeof listArticleIdeaSources>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListArticleIdeaSourcesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listArticleIdeaSources>>
+>;
+export type ListArticleIdeaSourcesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List Google Sheets article idea sources
+ */
+
+export function useListArticleIdeaSources<
+  TData = Awaited<ReturnType<typeof listArticleIdeaSources>>,
+  TError = ErrorType<unknown>,
+>(
+  id: number,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listArticleIdeaSources>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListArticleIdeaSourcesQueryOptions(id, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * @summary Connect a Google Sheets source (site admin)
+ */
+export const getCreateArticleIdeaSourceUrl = (id: number) => {
+  return `/api/website-projects/${id}/article-idea-sources`;
+};
+
+export const createArticleIdeaSource = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getCreateArticleIdeaSourceUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getCreateArticleIdeaSourceMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createArticleIdeaSource>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof createArticleIdeaSource>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["createArticleIdeaSource"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof createArticleIdeaSource>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return createArticleIdeaSource(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type CreateArticleIdeaSourceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof createArticleIdeaSource>>
+>;
+
+export type CreateArticleIdeaSourceMutationError = ErrorType<void>;
+
+/**
+ * @summary Connect a Google Sheets source (site admin)
+ */
+export const useCreateArticleIdeaSource = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof createArticleIdeaSource>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof createArticleIdeaSource>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getCreateArticleIdeaSourceMutationOptions(options));
+};
+
+/**
+ * @summary Remove a Google Sheets source
+ */
+export const getDeleteArticleIdeaSourceUrl = (
+  id: number,
+  params: DeleteArticleIdeaSourceParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/website-projects/${id}/article-idea-sources?${stringifiedParams}`
+    : `/api/website-projects/${id}/article-idea-sources`;
+};
+
+export const deleteArticleIdeaSource = async (
+  id: number,
+  params: DeleteArticleIdeaSourceParams,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDeleteArticleIdeaSourceUrl(id, params), {
+    ...options,
+    method: "DELETE",
+  });
+};
+
+export const getDeleteArticleIdeaSourceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteArticleIdeaSource>>,
+    TError,
+    { id: number; params: DeleteArticleIdeaSourceParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof deleteArticleIdeaSource>>,
+  TError,
+  { id: number; params: DeleteArticleIdeaSourceParams },
+  TContext
+> => {
+  const mutationKey = ["deleteArticleIdeaSource"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof deleteArticleIdeaSource>>,
+    { id: number; params: DeleteArticleIdeaSourceParams }
+  > = (props) => {
+    const { id, params } = props ?? {};
+
+    return deleteArticleIdeaSource(id, params, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DeleteArticleIdeaSourceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof deleteArticleIdeaSource>>
+>;
+
+export type DeleteArticleIdeaSourceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Remove a Google Sheets source
+ */
+export const useDeleteArticleIdeaSource = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof deleteArticleIdeaSource>>,
+    TError,
+    { id: number; params: DeleteArticleIdeaSourceParams },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof deleteArticleIdeaSource>>,
+  TError,
+  { id: number; params: DeleteArticleIdeaSourceParams },
+  TContext
+> => {
+  return useMutation(getDeleteArticleIdeaSourceMutationOptions(options));
+};
+
+/**
+ * @summary Sync a Google Sheets article idea source now
+ */
+export const getSyncArticleIdeaSourceUrl = (id: number) => {
+  return `/api/website-projects/${id}/article-idea-sources/sync`;
+};
+
+export const syncArticleIdeaSource = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getSyncArticleIdeaSourceUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getSyncArticleIdeaSourceMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncArticleIdeaSource>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof syncArticleIdeaSource>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["syncArticleIdeaSource"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof syncArticleIdeaSource>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return syncArticleIdeaSource(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type SyncArticleIdeaSourceMutationResult = NonNullable<
+  Awaited<ReturnType<typeof syncArticleIdeaSource>>
+>;
+
+export type SyncArticleIdeaSourceMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Sync a Google Sheets article idea source now
+ */
+export const useSyncArticleIdeaSource = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof syncArticleIdeaSource>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof syncArticleIdeaSource>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getSyncArticleIdeaSourceMutationOptions(options));
+};
+
+/**
+ * @summary Run keyword opportunity discovery (gsc, semrush, or ai)
+ */
+export const getDiscoverKeywordOpportunitiesUrl = (id: number) => {
+  return `/api/website-projects/${id}/keyword-opportunities`;
+};
+
+export const discoverKeywordOpportunities = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getDiscoverKeywordOpportunitiesUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getDiscoverKeywordOpportunitiesMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof discoverKeywordOpportunities>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof discoverKeywordOpportunities>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["discoverKeywordOpportunities"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof discoverKeywordOpportunities>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return discoverKeywordOpportunities(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type DiscoverKeywordOpportunitiesMutationResult = NonNullable<
+  Awaited<ReturnType<typeof discoverKeywordOpportunities>>
+>;
+
+export type DiscoverKeywordOpportunitiesMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Run keyword opportunity discovery (gsc, semrush, or ai)
+ */
+export const useDiscoverKeywordOpportunities = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof discoverKeywordOpportunities>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof discoverKeywordOpportunities>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getDiscoverKeywordOpportunitiesMutationOptions(options));
+};
+
+/**
+ * @summary Queue an opportunity into the content strategy
+ */
+export const getQueueKeywordOpportunityUrl = (id: number) => {
+  return `/api/keyword-opportunities/${id}`;
+};
+
+export const queueKeywordOpportunity = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getQueueKeywordOpportunityUrl(id), {
+    ...options,
+    method: "POST",
+  });
+};
+
+export const getQueueKeywordOpportunityMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof queueKeywordOpportunity>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof queueKeywordOpportunity>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["queueKeywordOpportunity"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof queueKeywordOpportunity>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return queueKeywordOpportunity(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type QueueKeywordOpportunityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof queueKeywordOpportunity>>
+>;
+
+export type QueueKeywordOpportunityMutationError = ErrorType<void>;
+
+/**
+ * @summary Queue an opportunity into the content strategy
+ */
+export const useQueueKeywordOpportunity = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof queueKeywordOpportunity>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof queueKeywordOpportunity>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getQueueKeywordOpportunityMutationOptions(options));
+};
+
+/**
+ * @summary Update opportunity status (e.g. dismissed)
+ */
+export const getUpdateKeywordOpportunityUrl = (id: number) => {
+  return `/api/keyword-opportunities/${id}`;
+};
+
+export const updateKeywordOpportunity = async (
+  id: number,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getUpdateKeywordOpportunityUrl(id), {
+    ...options,
+    method: "PATCH",
+  });
+};
+
+export const getUpdateKeywordOpportunityMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateKeywordOpportunity>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof updateKeywordOpportunity>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  const mutationKey = ["updateKeywordOpportunity"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof updateKeywordOpportunity>>,
+    { id: number }
+  > = (props) => {
+    const { id } = props ?? {};
+
+    return updateKeywordOpportunity(id, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type UpdateKeywordOpportunityMutationResult = NonNullable<
+  Awaited<ReturnType<typeof updateKeywordOpportunity>>
+>;
+
+export type UpdateKeywordOpportunityMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Update opportunity status (e.g. dismissed)
+ */
+export const useUpdateKeywordOpportunity = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof updateKeywordOpportunity>>,
+    TError,
+    { id: number },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof updateKeywordOpportunity>>,
+  TError,
+  { id: number },
+  TContext
+> => {
+  return useMutation(getUpdateKeywordOpportunityMutationOptions(options));
 };

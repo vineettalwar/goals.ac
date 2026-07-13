@@ -18,7 +18,7 @@ export function SolutionsPageClient() {
           badge="Solutions"
           titleLine1="Outcomes"
           titleLine2="we help you achieve"
-          description="Whether you need AI citations, content at scale, or agency workflows — pick the path that matches your goal."
+          description="Whether you need AI citations, content at scale, or agency workflows, pick the path that matches your goal."
           backgroundImage={HERO_IMAGES.features.capabilities}
           ctas={[
             { label: "Start free", href: "/signup", variant: "primary" },

@@ -204,7 +204,7 @@ export function startMetaOAuth(projectId: number, userId: number): never {
     client_id: META_APP_ID,
     redirect_uri: `${getNextApiOrigin()}/api/auth/meta/callback`,
     state,
-    scope: "pages_show_list,pages_manage_posts,instagram_content_publish,business_management",
+    scope: "pages_show_list,pages_manage_posts,pages_read_engagement,instagram_basic,instagram_content_publish,business_management",
     response_type: "code",
   });
   redirect(`https://www.facebook.com/v21.0/dialog/oauth?${params}`);

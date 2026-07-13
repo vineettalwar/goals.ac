@@ -123,7 +123,7 @@ export function ContentStrategyClient({ id }: { id: string }) {
               {weekItems
                 .sort((a, b) => a.day - b.day)
                 .map((item) => (
-                  <div key={item.id} className="border border-(--border) rounded-lg p-4 space-y-2">
+                  <div key={item.id} className="border border-border rounded-lg p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
                         <FileText className="h-4 w-4 text-muted-foreground shrink-0" />

@@ -11,7 +11,8 @@
     "./config": "./src/config.ts",
     "./resolve-client": "./src/resolve-client.ts",
     "./bedrock": "./src/bedrock.ts",
-    "./ollama": "./src/ollama.ts"
+    "./ollama": "./src/ollama.ts",
+    "./embed": "./src/embed.ts"
   },
   "dependencies": {
     "@google/genai": "^1.44.0",

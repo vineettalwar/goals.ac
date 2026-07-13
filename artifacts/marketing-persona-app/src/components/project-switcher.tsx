@@ -50,8 +50,10 @@ export function ProjectSwitcher({ className }: { className?: string }) {
 
   const orgRole = session?.user?.orgRole;
   const platformRole = session?.user?.role;
-  const isMember = orgRole === "member" && !isPlatformAdmin(platformRole);
-  const canManageProjects = orgRole === "site_admin" || isPlatformAdmin(platformRole);
+  const isScopedMember =
+    (orgRole === "editor" || orgRole === "viewer") && !isPlatformAdmin(platformRole);
+  const canManageProjects =
+    orgRole === "site_admin" || orgRole === "owner" || isPlatformAdmin(platformRole);
 
   function selectProject(projectId: number) {
     setActiveProjectId(projectId);
@@ -94,7 +96,7 @@ export function ProjectSwitcher({ className }: { className?: string }) {
     );
   }
 
-  if (isMember) {
+  if (isScopedMember) {
     const project = activeProject ?? projects[0];
     if (!project) return null;
 
@@ -150,7 +152,7 @@ export function ProjectSwitcher({ className }: { className?: string }) {
           side="bottom"
           align="start"
           sideOffset={6}
-          className="w-[var(--radix-select-trigger-width)]"
+          className="w-(--radix-select-trigger-width)"
         >
           {projects.map((project) => (
             <SelectItem key={project.id} value={String(project.id)} className="py-2">

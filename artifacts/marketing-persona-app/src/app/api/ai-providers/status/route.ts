@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/require-auth";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser, hasOrgBedrockCredentials } from "@workspace/content-engine/support/org-ai-settings";
 import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/ai-providers-status";
 
 function toStatusInput(
@@ -27,6 +27,9 @@ export async function GET() {
   return NextResponse.json(
     finalizeAiProviderStatus(payload, {
       hasUserGeminiKey: Boolean(orgSettings?.encryptedGeminiKey),
+      hasOrgBedrockKey: hasOrgBedrockCredentials(orgSettings),
+      orgBedrockRegion: orgSettings?.bedrockRegion ?? null,
+      orgBedrockModel: orgSettings?.bedrockModel ?? null,
     }),
   );
 }

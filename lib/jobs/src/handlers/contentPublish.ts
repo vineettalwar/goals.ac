@@ -1,17 +1,20 @@
-import { eq, and, lte } from "drizzle-orm";
+import { eq, and, lte, notInArray } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { contentPiecesTable, websiteProjectsTable } from "@workspace/db";
+import { contentPiecesTable, websiteProjectsTable, SOCIAL_FORMAT_TYPES } from "@workspace/db";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { ContentPublishPayload, ScheduledPublishSweepPayload, PgBoss } from "@workspace/jobs";
 import { decryptCmsCredentials, type CmsIntegrationCredentials } from "@workspace/content-engine/support/cms-integrations";
 import { parseAutopilotSettings, wordpressPublishStatus } from "@workspace/content-engine/support/autopilot-scheduler";
 import { publishPieceToSocial, isSocialPlatform } from "@workspace/content-engine/support/social-publish";
+import { listDueSocialPieces } from "@workspace/content-engine/support/social-queue-service";
+import { featuredImageFromMetadata } from "@workspace/content-engine/article-image-enricher";
 import {
   publishPieceToDestination,
   publishBlogPieceToPrimaryDestination,
   resolvePrimaryEspDestination,
 } from "@workspace/content-engine/support/publish-destination";
 import { logger } from "../logger";
+import { seedSocialPostMetrics } from "@workspace/content-engine/social-metrics-service";
 
 const FORMAT_TO_PLATFORM: Record<string, string> = {
   linkedin_post: "linkedin",
@@ -25,13 +28,12 @@ const FORMAT_TO_PLATFORM: Record<string, string> = {
 
 function featuredImageFromPiece(piece: {
   bodyMarkdown: string;
-  pieceMetadata?: { featuredImageUrl?: string } | null;
+  pieceMetadata?: { featuredImageUrl?: string; images?: import("@workspace/db").ContentPieceImageRef[] } | null;
 }): string | undefined {
-  if (piece.pieceMetadata?.featuredImageUrl) {
-    return piece.pieceMetadata.featuredImageUrl;
-  }
-  const match = piece.bodyMarkdown.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/);
-  return match?.[1];
+  return featuredImageFromMetadata({
+    bodyMarkdown: piece.bodyMarkdown,
+    pieceMetadata: piece.pieceMetadata,
+  });
 }
 
 async function publishPiece(pieceId: number, userId: number): Promise<void> {
@@ -63,10 +65,13 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
     bodyMarkdown: piece.bodyMarkdown,
     targetKeyword: piece.targetKeyword,
     formatType: piece.formatType,
+    pieceMetadata: piece.pieceMetadata,
   };
+  const imageUrl = featuredImageFromPiece(piece);
 
   let publishedUrl: string | null = null;
   let publishPlatform = platform ?? piece.publishPlatform;
+  let remotePostId: string | undefined;
 
   if (platform && isSocialPlatform(platform)) {
     const result = await publishPieceToSocial(
@@ -76,12 +81,15 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
         title: piece.title,
         bodyMarkdown: piece.bodyMarkdown,
         websiteProjectId: piece.websiteProjectId,
+        featuredImageUrl: imageUrl,
+        pieceMetadata: piece.pieceMetadata,
       },
       userId,
       creds,
     );
     publishedUrl = result.publishedUrl;
     publishPlatform = result.publishPlatform;
+    remotePostId = result.remotePostId;
   } else if (piece.formatType === "email_sequence") {
     const espPlatform = resolvePrimaryEspDestination(creds, platform);
     if (!espPlatform) {
@@ -110,6 +118,27 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
     .update(contentPiecesTable)
     .set({ status: "published", publishedUrl, publishPlatform, publishError: null })
     .where(eq(contentPiecesTable.id, pieceId));
+
+  if (remotePostId && publishPlatform && isSocialPlatform(publishPlatform)) {
+    await seedSocialPostMetrics({
+      contentPieceId: pieceId,
+      platform: publishPlatform,
+      remotePostId,
+    });
+  }
+
+  const { ingestPublishedContentPiece } = await import(
+    "@workspace/content-engine/support/brand-voice-generation"
+  );
+  await ingestPublishedContentPiece(
+    piece.websiteProjectId,
+    pieceId,
+    piece.title,
+    piece.bodyMarkdown ?? "",
+    publishedUrl,
+  ).catch((err: unknown) => {
+    logger.warn({ err, contentPieceId: pieceId }, "Brand voice ingest after publish failed");
+  });
 }
 
 export async function registerContentPublishHandler(boss: PgBoss): Promise<void> {
@@ -133,7 +162,9 @@ export async function registerContentPublishHandler(boss: PgBoss): Promise<void>
 export async function registerScheduledPublishSweepHandler(boss: PgBoss): Promise<void> {
   await boss.work<ScheduledPublishSweepPayload>(QUEUES.scheduledPublishSweep, async () => {
     const today = new Date().toISOString().slice(0, 10);
-    const duePieces = await db
+    const socialDue = await listDueSocialPieces(new Date());
+
+    const blogDue = await db
       .select({
         id: contentPiecesTable.id,
         websiteProjectId: contentPiecesTable.websiteProjectId,
@@ -144,19 +175,34 @@ export async function registerScheduledPublishSweepHandler(boss: PgBoss): Promis
         and(
           lte(contentPiecesTable.plannedDate, today),
           eq(contentPiecesTable.status, "ready"),
+          notInArray(contentPiecesTable.formatType, [...SOCIAL_FORMAT_TYPES]),
         ),
       );
 
-    logger.info({ count: duePieces.length }, "Scheduled publish sweep");
+    const duePieces = [
+      ...socialDue.map((p: { id: number; websiteProjectId: number; userId: number }) => ({
+        id: p.id,
+        websiteProjectId: p.websiteProjectId,
+        userId: p.userId,
+      })),
+      ...(
+        await Promise.all(
+          blogDue.map(async (piece) => {
+            const [project] = await db
+              .select({ userId: websiteProjectsTable.userId })
+              .from(websiteProjectsTable)
+              .where(eq(websiteProjectsTable.id, piece.websiteProjectId))
+              .limit(1);
+            return project ? { id: piece.id, websiteProjectId: piece.websiteProjectId, userId: project.userId } : null;
+          }),
+        )
+      ).filter((p): p is { id: number; websiteProjectId: number; userId: number } => p !== null),
+    ];
+
+    logger.info({ count: duePieces.length, social: socialDue.length, blog: blogDue.length }, "Scheduled publish sweep");
 
     for (const piece of duePieces) {
-      const [project] = await db
-        .select({ userId: websiteProjectsTable.userId })
-        .from(websiteProjectsTable)
-        .where(eq(websiteProjectsTable.id, piece.websiteProjectId))
-        .limit(1);
-      if (!project) continue;
-      await enqueue(QUEUES.contentPublish, { contentPieceId: piece.id, userId: project.userId });
+      await enqueue(QUEUES.contentPublish, { contentPieceId: piece.id, userId: piece.userId });
     }
   });
 }

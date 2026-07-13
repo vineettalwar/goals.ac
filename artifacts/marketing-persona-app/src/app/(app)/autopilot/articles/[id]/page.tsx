@@ -172,7 +172,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
                 dangerouslySetInnerHTML={{ __html: renderMarkdown(article.bodyMarkdown) }}
               />
               {article.wordCount > 0 && (
-                <p className="mt-6 text-xs text-muted-foreground border-t border-(--border) pt-4">
+                <p className="mt-6 text-xs text-muted-foreground border-t border-border pt-4">
                   {article.wordCount.toLocaleString()} words
                 </p>
               )}

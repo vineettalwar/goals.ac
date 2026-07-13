@@ -3,6 +3,17 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
 import { organizationsTable } from "./organizations";
+import type { SocialScheduleSettings, SocialHistorySyncMeta } from "./platform_voices";
+
+export type StockImageProviderSetting = "unsplash" | "pexels" | "auto";
+
+export interface ProjectImageSettings {
+  stockProvider?: StockImageProviderSetting;
+  autoFeaturedImage?: boolean;
+  autoInlineImages?: boolean;
+  maxInlineImages?: number;
+  includeAttribution?: boolean;
+}
 
 export interface ContentStyle {
   tonePreset?: "professional" | "casual" | "technical" | "conversational";
@@ -15,7 +26,16 @@ export interface ContentStyle {
   humanizationLevel?: "off" | "light" | "strong";
   /** Optional writing sample override for humanizer voice matching */
   writingSample?: string | null;
+  imageSettings?: ProjectImageSettings;
 }
+
+export const DEFAULT_IMAGE_SETTINGS: ProjectImageSettings = {
+  stockProvider: "auto",
+  autoFeaturedImage: true,
+  autoInlineImages: true,
+  maxInlineImages: 2,
+  includeAttribution: false,
+};
 
 export type AutopilotCadence = "daily" | "weekly";
 export type AutopilotPublishMode = "manual" | "draft" | "live";
@@ -36,6 +56,7 @@ export interface AutopilotSettings {
   /** Minimum opportunity score (0–100) to auto-queue */
   opportunityScoreThreshold?: number;
   lastOpportunityDiscoveryAt?: string;
+  lastSemrushDiscoveryAt?: string;
 }
 
 export const DEFAULT_AUTOPILOT_SETTINGS: AutopilotSettings = {
@@ -77,6 +98,8 @@ export const websiteProjectsTable = pgTable("website_projects", {
   contentStyle: jsonb("content_style"),
   autopilotSettings: jsonb("autopilot_settings"),
   visibilitySettings: jsonb("visibility_settings"),
+  socialScheduleSettings: jsonb("social_schedule_settings").$type<SocialScheduleSettings | null>(),
+  socialHistorySyncMeta: jsonb("social_history_sync_meta").$type<SocialHistorySyncMeta | null>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [

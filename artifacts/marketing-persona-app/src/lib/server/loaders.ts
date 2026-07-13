@@ -12,13 +12,15 @@ import {
   decryptCmsCredentials,
   maskCmsCredentials,
 } from "@workspace/content-engine/support/cms-integrations";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser, hasOrgBedrockCredentials, hasOrgSemrushCredentials } from "@workspace/content-engine/support/org-ai-settings";
 import { decryptSecret } from "@workspace/security/encryption";
 import { getUsageSummaryForUser } from "@/lib/usage";
 import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/ai-providers-status";
 import type { CmsConnectionSnapshot } from "@/lib/publishing-destinations";
 import type { WebsiteProject } from "@/lib/project-detail-types";
 import { getAccessibleProject, getOrgMembership, isSuperAdmin, requireProjectAccess } from "@/lib/org-access";
+
+import type { ContentPieceMetadata } from "@workspace/db";
 
 export interface ContentPieceRecord {
   id: number;
@@ -29,14 +31,9 @@ export interface ContentPieceRecord {
   status: string;
   wordCount: number;
   websiteProjectId: number;
+  publishedUrl: string | null;
   createdAt: string;
-  pieceMetadata?: {
-    metaDescription?: string;
-    faqSection?: { question: string; answer: string }[];
-    citations?: { text: string; url: string; source: string }[];
-    internalLinkSuggestions?: { anchorText: string; suggestedSlug: string; rationale?: string }[];
-    jsonLdSchema?: object;
-  } | null;
+  pieceMetadata?: ContentPieceMetadata | null;
 }
 
 export const loadContentPieceForUser = cache(async (
@@ -63,6 +60,7 @@ export const loadContentPieceForUser = cache(async (
     status: piece.status,
     wordCount: piece.wordCount,
     websiteProjectId: piece.websiteProjectId,
+    publishedUrl: piece.publishedUrl ?? null,
     createdAt: piece.createdAt.toISOString(),
     pieceMetadata: piece.pieceMetadata ?? null,
   };
@@ -131,6 +129,17 @@ export interface SettingsInitialData {
     hasPassword: boolean;
   } | null;
   apiKey: { hasKey: boolean; lastFour: string | null };
+  bedrockCredentials: {
+    hasCredentials: boolean;
+    accessKeyLastFour: string | null;
+    region: string | null;
+    model: string | null;
+  };
+  semrushCredentials: {
+    hasCredentials: boolean;
+    apiKeyLastFour: string | null;
+    database: string | null;
+  };
   aiStatus: Awaited<ReturnType<typeof buildAiProviderStatus>> | null;
   canManageAiSettings: boolean;
 }
@@ -162,6 +171,26 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
     }
   }
 
+  const hasBedrockCredentials = hasOrgBedrockCredentials(orgSettings);
+  let bedrockAccessKeyLastFour: string | null = null;
+  if (orgSettings?.encryptedBedrockAccessKeyId) {
+    try {
+      bedrockAccessKeyLastFour = decryptSecret(orgSettings.encryptedBedrockAccessKeyId).slice(-4);
+    } catch {
+      bedrockAccessKeyLastFour = "••••";
+    }
+  }
+
+  const hasSemrushCredentials = hasOrgSemrushCredentials(orgSettings);
+  let semrushApiKeyLastFour: string | null = null;
+  if (orgSettings?.encryptedSemrushApiKey) {
+    try {
+      semrushApiKeyLastFour = decryptSecret(orgSettings.encryptedSemrushApiKey).slice(-4);
+    } catch {
+      semrushApiKeyLastFour = "••••";
+    }
+  }
+
   const statusInput = orgSettings
     ? {
         aiProvider: orgSettings.aiProvider,
@@ -171,7 +200,12 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
     : undefined;
   const aiStatusPayload = buildAiProviderStatus(statusInput);
   await enrichOllamaStatus(aiStatusPayload, toAiProviderOptions(statusInput));
-  const aiStatus = finalizeAiProviderStatus(aiStatusPayload, { hasUserGeminiKey: hasKey });
+  const aiStatus = finalizeAiProviderStatus(aiStatusPayload, {
+    hasUserGeminiKey: hasKey,
+    hasOrgBedrockKey: hasBedrockCredentials,
+    orgBedrockRegion: orgSettings?.bedrockRegion ?? null,
+    orgBedrockModel: orgSettings?.bedrockModel ?? null,
+  });
 
   const canManageAiSettings =
     membership?.orgRole === "site_admin" || isSuperAdmin(user?.role);
@@ -186,6 +220,17 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
         }
       : null,
     apiKey: { hasKey, lastFour },
+    bedrockCredentials: {
+      hasCredentials: hasBedrockCredentials,
+      accessKeyLastFour: bedrockAccessKeyLastFour,
+      region: orgSettings?.bedrockRegion ?? null,
+      model: orgSettings?.bedrockModel ?? null,
+    },
+    semrushCredentials: {
+      hasCredentials: hasSemrushCredentials,
+      apiKeyLastFour: semrushApiKeyLastFour,
+      database: orgSettings?.semrushDatabase ?? "us",
+    },
     aiStatus,
     canManageAiSettings,
   };

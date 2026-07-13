@@ -5,17 +5,19 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { acceptOrgInvite } from "@/lib/org-access";
 
 const signupSchema = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   password: z.string().min(8),
   referrer: z.string().max(100).optional(),
+  inviteToken: z.string().min(1).optional(),
 });
 
 export async function POST(req: Request) {
   const ip = getClientIp(req);
-  const limited = rateLimitResponse(
+  const limited = await rateLimitResponse(
     `auth-signup:${ip}`,
     RATE_LIMITS.AUTH_PER_IP.limit,
     RATE_LIMITS.AUTH_PER_IP.windowMs
@@ -28,7 +30,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const { name, email, password, referrer } = parsed.data;
+  const { name, email, password, referrer, inviteToken } = parsed.data;
 
   const [existing] = await db
     .select({ id: usersTable.id })
@@ -46,5 +48,13 @@ export async function POST(req: Request) {
     .values({ name, email, passwordHash, signupReferrer: referrer ?? null })
     .returning({ id: usersTable.id, email: usersTable.email, name: usersTable.name });
 
-  return NextResponse.json({ user }, { status: 201 });
+  let organizationId: number | null = null;
+  if (inviteToken) {
+    const acceptResult = await acceptOrgInvite({ token: inviteToken, userId: user.id });
+    if (acceptResult.ok) {
+      organizationId = acceptResult.organizationId;
+    }
+  }
+
+  return NextResponse.json({ user, organizationId }, { status: 201 });
 }

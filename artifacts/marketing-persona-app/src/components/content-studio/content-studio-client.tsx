@@ -33,8 +33,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { aiProviderUnavailableMessage } from "@/lib/ai-providers-status";
 import type { AiProviderId } from "@workspace/ai-providers/config";
+import { BrandAiProfileCard } from "./brand-ai-profile-card";
 import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
 import { FormatBadge, StatusBadge, type ContentFormatType } from "./content-studio-format-meta";
+import { ArticlePerformanceBadge } from "./article-performance-badge";
 import { FORMAT_OPTIONS } from "@/lib/content-format-options";
 
 export { FORMAT_OPTIONS };
@@ -68,6 +70,7 @@ export interface ContentPieceRow {
   wordCount: number;
   plannedDate: string | null;
   createdAt: string;
+  publishedUrl?: string | null;
 }
 
 interface StudioPiece extends ContentPieceRow {
@@ -394,6 +397,8 @@ export function ContentStudioClient({ projectId }: Props) {
         </div>
       </div>
 
+      <BrandAiProfileCard projectId={projectId} />
+
       {aiReady === false && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
           {aiProviderUnavailableMessage(activeProvider)}{" "}
@@ -494,6 +499,7 @@ export function ContentStudioClient({ projectId }: Props) {
                   <StudioPieceCard
                     key={piece.id}
                     piece={piece}
+                    projectId={projectId}
                     onDelete={handleDelete}
                     onMarkReady={handleMarkReady}
                   />
@@ -571,10 +577,12 @@ function FilterSelect({
 
 function StudioPieceCard({
   piece,
+  projectId,
   onDelete,
   onMarkReady,
 }: {
   piece: StudioPiece;
+  projectId: string;
   onDelete: (id: number) => void;
   onMarkReady: (id: number) => void;
 }) {
@@ -591,6 +599,11 @@ function StudioPieceCard({
           {piece.plannedDate && (
             <span className="text-xs text-muted-foreground">· {piece.plannedDate}</span>
           )}
+          <ArticlePerformanceBadge
+            projectId={projectId}
+            contentPieceId={piece.id}
+            publishedUrl={piece.publishedUrl}
+          />
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">

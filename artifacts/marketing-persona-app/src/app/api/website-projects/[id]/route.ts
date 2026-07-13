@@ -3,7 +3,12 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable, brandProfilesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject, requireProjectAccess } from "@/lib/org-access";
+import {
+  getAccessibleProject,
+  requireProjectAccess,
+  requireSiteAdminAccess,
+} from "@/lib/org-access";
+import { findDuplicateProjectByUrl } from "@/lib/project-url";
 import { z } from "zod";
 
 const ContentStyleBody = z.object({
@@ -15,6 +20,15 @@ const ContentStyleBody = z.object({
   readingLevel: z.enum(["general", "intermediate", "expert"]).optional(),
   humanizationLevel: z.enum(["off", "light", "strong"]).optional(),
   writingSample: z.string().max(10000).nullable().optional(),
+  imageSettings: z
+    .object({
+      stockProvider: z.enum(["unsplash", "pexels", "auto"]).optional(),
+      autoFeaturedImage: z.boolean().optional(),
+      autoInlineImages: z.boolean().optional(),
+      maxInlineImages: z.number().int().min(0).max(5).optional(),
+      includeAttribution: z.boolean().optional(),
+    })
+    .optional(),
 });
 
 const PatchBody = z.object({
@@ -84,6 +98,23 @@ export async function PATCH(
   try {
     const project = await getAccessibleProject(id, userId!);
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+
+    if (parsed.data.url !== undefined && project.organizationId != null) {
+      const duplicate = await findDuplicateProjectByUrl(
+        project.organizationId,
+        parsed.data.url,
+        id,
+      );
+      if (duplicate) {
+        return NextResponse.json(
+          {
+            error: "duplicate_website",
+            message: `A project for this website already exists (${duplicate.name}).`,
+          },
+          { status: 409 },
+        );
+      }
+    }
 
     // Update project-level fields
     const projectUpdates: Record<string, unknown> = {};
@@ -162,6 +193,11 @@ export async function DELETE(
   if (isNaN(id)) return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
 
   try {
+    const siteAdmin = await requireSiteAdminAccess(userId!);
+    if (!siteAdmin.ok) {
+      return NextResponse.json({ error: siteAdmin.error }, { status: siteAdmin.status });
+    }
+
     const access = await requireProjectAccess(id, userId!);
     if (!access.ok) {
       return NextResponse.json({ error: access.error }, { status: access.status });

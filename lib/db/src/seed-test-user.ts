@@ -33,14 +33,14 @@ async function seedTestUser() {
   if (existing) {
     await db
       .update(usersTable)
-      .set({ name: DEMO_NAME, passwordHash })
+      .set({ name: DEMO_NAME, passwordHash, role: "super_admin" })
       .where(eq(usersTable.id, existing.id));
     userId = existing.id;
     console.log(`Updated existing user id=${userId}`);
   } else {
     const [user] = await db
       .insert(usersTable)
-      .values({ name: DEMO_NAME, email: DEMO_EMAIL, passwordHash })
+      .values({ name: DEMO_NAME, email: DEMO_EMAIL, passwordHash, role: "super_admin" })
       .returning({ id: usersTable.id });
     userId = user.id;
     console.log(`Created user id=${userId}`);
@@ -125,6 +125,7 @@ async function seedTestUser() {
   console.log(`   User ID:  ${userId}`);
   console.log(`   Email:    ${DEMO_EMAIL}`);
   console.log(`   Password: ${DEMO_PASSWORD}`);
+  console.log(`   Role:     super_admin`);
   console.log(`   Company:  GoldSuite Demo Co (id=${companyId})`);
   console.log("\n   Login at marketing-persona-app /login or goals-ac /login\n");
 

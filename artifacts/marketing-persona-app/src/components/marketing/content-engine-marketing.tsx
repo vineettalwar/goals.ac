@@ -148,7 +148,7 @@ export function ContentEngineMarketing() {
                 (name) => (
                   <div
                     key={name}
-                    className="rounded-lg border border-(--border) bg-white px-3 py-2.5 font-medium"
+                    className="rounded-lg border border-border bg-white px-3 py-2.5 font-medium"
                   >
                     {name}
                   </div>
@@ -165,13 +165,13 @@ export function ContentEngineMarketing() {
               {["LinkedIn", "X / Twitter", "Instagram", "Facebook"].map((name) => (
                 <div
                   key={name}
-                  className="rounded-lg border border-(--border) bg-white px-3 py-2.5 font-medium"
+                  className="rounded-lg border border-border bg-white px-3 py-2.5 font-medium"
                 >
                   {name}
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border border-dashed border-(--border) bg-muted/40 px-3 py-2.5 flex items-start gap-2 text-xs text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 flex items-start gap-2 text-xs text-muted-foreground">
               <Webhook className="h-4 w-4 mt-0.5 shrink-0" />
               Webhook connector sends HMAC-signed JSON to Zapier, Make, n8n, or your own endpoint.
             </div>

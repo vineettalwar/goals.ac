@@ -7,8 +7,14 @@ import { requireAuth } from "@/lib/require-auth";
 import {
   addOrganizationMember,
   listOrganizationMembers,
+  OrgMemberRoleSchema,
   requireSiteAdminAccess,
 } from "@/lib/org-access";
+import { logOrgAudit } from "@/lib/org-audit";
+
+function clientIp(req: Request): string | undefined {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined;
+}
 
 export async function GET() {
   const { userId, error } = await requireAuth();
@@ -38,7 +44,7 @@ export async function GET() {
 
 const AddMemberBody = z.object({
   email: z.string().email(),
-  role: z.enum(["site_admin", "member"]),
+  role: OrgMemberRoleSchema,
   assignedProjectId: z.number().int().positive().nullable(),
 });
 
@@ -82,6 +88,16 @@ export async function POST(req: Request) {
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
+
+  await logOrgAudit({
+    organizationId,
+    actorUserId: userId,
+    action: "member.added",
+    resourceType: "user",
+    resourceId: targetUser.id,
+    metadata: { email: parsed.data.email, role: parsed.data.role },
+    ip: clientIp(req),
+  });
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

@@ -1,10 +1,25 @@
 import { getAiProviderClient } from "@workspace/ai-providers/client";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import type { BrandExtract, Confidence } from "./brand-extract-types";
 import { sanitizeBrandExtract } from "./brand-extract-sanitize";
 import { cleanAndParse } from "./utils";
 import { logger } from "./logger";
+import { assertAiGenerationEnabled } from "./support/platform-guard";
+import {
+  discoverBrandScanUrls,
+  pickKeyPages,
+  type BrandScanDiscoveryInput,
+  type BrandScanPlan,
+} from "./brand-scan-discovery";
+import { extractInternalLinks } from "./brand-scraper-links";
 
 export type { BrandExtract, Confidence } from "./brand-extract-types";
+export { extractInternalLinks } from "./brand-scraper-links";
+
+export type ScrapeBrandProfileOptions = {
+  scanPlan?: BrandScanPlan;
+  discoveryInput?: Omit<BrandScanDiscoveryInput, "websiteUrl" | "homepageLinks">;
+};
 
 const SYSTEM_PROMPT = `You are an expert brand analyst. Given raw text scraped from a company's website, extract brand information and rate your confidence for each field. You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation — only raw JSON.`;
 
@@ -13,6 +28,11 @@ const FETCH_HEADERS = {
 };
 
 async function fetchPage(url: string): Promise<string | null> {
+  try {
+    await assertPublicUrl(url);
+  } catch {
+    return null;
+  }
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
@@ -29,12 +49,12 @@ async function fetchPage(url: string): Promise<string | null> {
   }
 }
 
-async function fetchPageText(url: string): Promise<string | null> {
+async function fetchPageText(url: string, maxChars = 8000): Promise<string | null> {
   const html = await fetchPage(url);
-  return html ? stripHtml(html) : null;
+  return html ? stripHtml(html, maxChars) : null;
 }
 
-function stripHtml(html: string): string {
+function stripHtml(html: string, maxChars = 8000): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -50,45 +70,93 @@ function stripHtml(html: string): string {
     .replace(/&quot;/g, '"')
     .replace(/\s{2,}/g, " ")
     .trim()
-    .slice(0, 8000);
+    .slice(0, maxChars);
 }
 
-function extractInternalLinks(html: string, baseOrigin: string): string[] {
-  const links: string[] = [];
-  const hrefRegex = /href=["']([^"']+)["']/gi;
-  let match;
-  while ((match = hrefRegex.exec(html)) !== null) {
-    const href = match[1];
-    try {
-      const url = href.startsWith("http") ? new URL(href) : new URL(href, baseOrigin);
-      if (url.origin === baseOrigin) {
-        links.push(url.href);
-      }
-    } catch {
-      // skip invalid
+function extractWritingSamples(homepageText: string, pageTexts: string[]): string[] {
+  const samples: string[] = [];
+  const candidates = [homepageText, ...pageTexts].filter(Boolean);
+  for (const text of candidates) {
+    const sentences = text
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 40 && s.length < 400);
+    if (sentences.length > 0) {
+      samples.push(sentences.slice(0, 2).join(" "));
     }
+    if (samples.length >= 5) break;
   }
-  return [...new Set(links)];
+  return samples.slice(0, 5);
 }
 
-function pickKeyPages(links: string[]): string[] {
-  const keyPaths = ["about", "product", "products", "pricing", "solution", "solutions", "features", "platform", "services", "how-it-works", "company", "mission"];
-  const picked: string[] = [];
-  for (const keyword of keyPaths) {
-    const match = links.find((l) => {
-      try {
-        const path = new URL(l).pathname.toLowerCase();
-        return path.includes(keyword) && !path.includes("#") && !path.endsWith(".pdf");
-      } catch {
-        return false;
-      }
-    });
-    if (match && !picked.includes(match)) {
-      picked.push(match);
-    }
-    if (picked.length >= 2) break;
+async function analyzeBrandVoiceDeep(
+  websiteUrl: string,
+  allText: string,
+  writingSamples: string[],
+  scanSources: string[],
+): Promise<BrandExtract["deep"]> {
+  const ai = await getAiProviderClient();
+  const prompt = `Analyze brand voice from website copy. URL: ${websiteUrl}
+
+COPY:
+${allText.slice(0, 10000)}
+
+WRITING SAMPLES:
+${writingSamples.join("\n---\n")}
+
+Return ONLY valid JSON:
+{
+  "writingExamples": ["2-4 short verbatim excerpts from the site copy"],
+  "doWords": ["words/phrases the brand favors"],
+  "dontWords": ["words/phrases to avoid based on anti-patterns in industry"],
+  "antiPatterns": ["writing habits this brand avoids"],
+  "typicalStructure": "one sentence on how they structure pages/posts",
+  "brandGlossary": ["product names, coined terms, preferred labels"],
+  "productOfferings": ["main products or services"],
+  "brandMemory": {
+    "summary": "2-3 sentence brand positioning summary",
+    "voiceTraits": ["3-5 voice adjectives"],
+    "audienceInsights": ["2-4 audience insights"],
+    "competitorPositioning": "how they differentiate vs competitors",
+    "scanSources": ${JSON.stringify(scanSources)},
+    "confidence": { "summary": "high|medium|low" }
   }
-  return picked;
+}`;
+
+  const response = await ai.generate({
+    prompt,
+    systemInstruction: SYSTEM_PROMPT,
+    temperature: 0.3,
+    maxOutputTokens: 3072,
+    thinkingBudget: 0,
+    responseMimeType: "application/json",
+  });
+
+  const parsed = cleanAndParse<Record<string, unknown>>(response.text ?? "");
+  const memory = (parsed.brandMemory ?? {}) as Record<string, unknown>;
+
+  return {
+    writingExamples: Array.isArray(parsed.writingExamples)
+      ? parsed.writingExamples.map(String).slice(0, 5)
+      : writingSamples,
+    doWords: Array.isArray(parsed.doWords) ? parsed.doWords.map(String).slice(0, 12) : [],
+    dontWords: Array.isArray(parsed.dontWords) ? parsed.dontWords.map(String).slice(0, 12) : [],
+    antiPatterns: Array.isArray(parsed.antiPatterns) ? parsed.antiPatterns.map(String).slice(0, 8) : [],
+    typicalStructure: String(parsed.typicalStructure ?? ""),
+    brandGlossary: Array.isArray(parsed.brandGlossary) ? parsed.brandGlossary.map(String).slice(0, 15) : [],
+    productOfferings: Array.isArray(parsed.productOfferings) ? parsed.productOfferings.map(String).slice(0, 10) : [],
+    brandMemory: {
+      summary: String(memory.summary ?? ""),
+      voiceTraits: Array.isArray(memory.voiceTraits) ? memory.voiceTraits.map(String) : [],
+      audienceInsights: Array.isArray(memory.audienceInsights) ? memory.audienceInsights.map(String) : [],
+      competitorPositioning: String(memory.competitorPositioning ?? ""),
+      scanSources,
+      confidence:
+        typeof memory.confidence === "object" && memory.confidence
+          ? (memory.confidence as Record<string, Confidence>)
+          : { summary: "medium" },
+    },
+  };
 }
 
 function parseConfidence(val: unknown): Confidence {
@@ -96,17 +164,54 @@ function parseConfidence(val: unknown): Confidence {
   return "medium";
 }
 
-export async function scrapeBrandProfile(websiteUrl: string): Promise<BrandExtract> {
+export async function scrapeBrandProfile(
+  websiteUrl: string,
+  options?: ScrapeBrandProfileOptions,
+): Promise<BrandExtract> {
+  await assertAiGenerationEnabled();
   const origin = new URL(websiteUrl).origin;
   const homepageHtml = (await fetchPage(websiteUrl)) ?? "";
 
   const internalLinks = extractInternalLinks(homepageHtml, origin);
-  const extraPages = pickKeyPages(internalLinks);
+
+  const scanPlan =
+    options?.scanPlan ??
+    (options?.discoveryInput
+      ? discoverBrandScanUrls({
+          websiteUrl,
+          homepageLinks: internalLinks,
+          ...options.discoveryInput,
+        })
+      : undefined);
+
+  const extraPages = scanPlan?.pagesToFetch ?? pickKeyPages(internalLinks);
+  const scannedPages = scanPlan?.scanSources ?? [websiteUrl, ...extraPages];
 
   const extraTexts = await Promise.all(extraPages.map((url) => fetchPageText(url)));
   const homepageText = stripHtml(homepageHtml);
+  const cmsTexts = (scanPlan?.cmsExcerpts ?? []).map((entry) => entry.text);
+  const fetchedTexts = extraTexts.filter(Boolean) as string[];
 
-  const allText = [homepageText, ...extraTexts.filter(Boolean)]
+  const pageDocuments: import("./brand-extract-types").BrandPageDocument[] = [
+    { sourceUrl: websiteUrl, text: homepageText, sourceType: "website" },
+    ...extraPages
+      .map((url, index) => ({
+        sourceUrl: url,
+        text: extraTexts[index] ?? "",
+        sourceType: "website" as const,
+      }))
+      .filter((doc) => doc.text.trim().length > 100),
+    ...(scanPlan?.cmsExcerpts ?? []).map((entry) => ({
+      sourceUrl: entry.url,
+      title: entry.title,
+      text: entry.text,
+      sourceType: "cms" as const,
+    })),
+  ];
+
+  const writingSamples = extractWritingSamples(homepageText, [...fetchedTexts, ...cmsTexts]);
+
+  const allText = [homepageText, ...fetchedTexts, ...cmsTexts]
     .join("\n\n---\n\n")
     .slice(0, 12000);
 
@@ -182,6 +287,10 @@ Banned in all string fields: placeholder URLs, example.com, "competitor1", buzzw
           primaryKeywords: parseConfidence(parsed.primaryKeywordsConfidence),
           competitorUrls: parseConfidence(parsed.competitorUrlsConfidence),
         },
+        scannedPages,
+        pageDocuments,
+        discoveryMeta: scanPlan?.discoveryMeta,
+        deep: await analyzeBrandVoiceDeep(websiteUrl, allText, writingSamples, scannedPages),
       });
     } catch (err) {
       logger.warn({ err, attempt }, "Brand scrape parse error");

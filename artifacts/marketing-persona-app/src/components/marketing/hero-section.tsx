@@ -14,7 +14,7 @@ export function HeroSection({ onCtaClick }: HeroSectionProps) {
       badge="AI SEO for B2B teams"
       titleLine1="Rank on Google and get"
       titleLine2="cited by ChatGPT"
-      leftDescription="Roadmaps, GEO-ready articles, and AI visibility tracking — with editorial control at every step. You approve every draft before it hits your CMS."
+      leftDescription="Roadmaps, GEO-ready articles, and AI visibility tracking with editorial control at every step. You approve every draft before it hits your CMS."
       description="No backlink schemes. No black-box autopilot. Strategy-first content that compounds visibility and pipeline."
       backgroundImage={HERO_IMAGES.home.base}
       spotlightImage={HERO_IMAGES.home.spotlight}

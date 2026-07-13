@@ -24,6 +24,7 @@ interface ScrapeStatusHeaderProps {
   onRescan?: () => void;
   rescraping?: boolean;
   lastUpdated?: string | null;
+  discoverySummary?: string | null;
   title: string;
   description: string;
 }
@@ -35,6 +36,7 @@ export function ScrapeStatusHeader({
   onRescan,
   rescraping,
   lastUpdated,
+  discoverySummary,
   title,
   description,
 }: ScrapeStatusHeaderProps) {
@@ -44,6 +46,9 @@ export function ScrapeStatusHeader({
         <div>
           <h2 className="font-semibold">{title}</h2>
           <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+          {discoverySummary && (
+            <p className="text-xs text-muted-foreground mt-1">Scanned via {discoverySummary}</p>
+          )}
           {lastUpdated && (
             <p className="text-xs text-muted-foreground mt-1">Last updated {lastUpdated}</p>
           )}
@@ -70,8 +75,8 @@ export function ScrapeStatusHeader({
               Analyzing your website…
             </p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Reading your homepage and key pages to pre-fill your brand profile. This takes about
-              15–30 seconds.
+              Reading your homepage, sitemap, and key pages to pre-fill your brand profile. This
+              takes about 15–30 seconds.
             </p>
           </div>
         </div>

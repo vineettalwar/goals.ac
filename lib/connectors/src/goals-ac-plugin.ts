@@ -20,6 +20,7 @@ export interface GoalsAcPublishPayload {
   tags?: number[] | string[];
   featured_image_id?: number;
   meta?: Record<string, string>;
+  seo?: Record<string, string | undefined>;
   update_id?: string | number;
   /** Shopify only */
   blogId?: string;
@@ -247,4 +248,42 @@ export async function injectGoalsAcSchema(
   schema: { json_ld?: unknown; llms_txt?: string },
 ): Promise<{ ok?: boolean; status?: string }> {
   return goalsAcRequest(credentials, "POST", "schema", schema);
+}
+
+export interface GoalsAcMediaUploadPayload {
+  filename: string;
+  mimeType: string;
+  dataBase64: string;
+  alt?: string;
+  title?: string;
+  caption?: string;
+}
+
+export interface GoalsAcMediaUploadResult {
+  id: number;
+  sourceUrl: string;
+}
+
+export async function uploadGoalsAcPluginMedia(
+  credentials: GoalsAcPluginCredentials,
+  payload: GoalsAcMediaUploadPayload,
+): Promise<GoalsAcMediaUploadResult> {
+  const result = await goalsAcRequest<{ id: number; source_url: string }>(
+    credentials,
+    "POST",
+    "media",
+    {
+      filename: payload.filename,
+      mime_type: payload.mimeType,
+      data: payload.dataBase64,
+      alt: payload.alt,
+      title: payload.title,
+      caption: payload.caption,
+    },
+  );
+
+  return {
+    id: result.id,
+    sourceUrl: result.source_url,
+  };
 }

@@ -27,7 +27,7 @@ export function ProductRoadmapPageClient() {
           badge="Product roadmap"
           titleLine1="What we're"
           titleLine2="building next"
-          description="Live features, beta releases, and coming-soon items — vote with the waitlist."
+          description="Live features, beta releases, and coming-soon items. Vote with the waitlist."
           backgroundImage={HERO_IMAGES.features.cta}
           ctas={[{ label: "Start free", href: "/signup", variant: "primary" }]}
         />

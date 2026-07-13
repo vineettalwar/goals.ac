@@ -8,6 +8,14 @@ export type ScrapeData = Partial<Omit<BrandExtract, "confidence">> & {
   confidence?: ScrapeConfidence;
 };
 
+export interface ProjectImageSettings {
+  stockProvider?: "unsplash" | "pexels" | "auto";
+  autoFeaturedImage?: boolean;
+  autoInlineImages?: boolean;
+  maxInlineImages?: number;
+  includeAttribution?: boolean;
+}
+
 export interface ContentStyle {
   tonePreset?: "professional" | "casual" | "technical" | "conversational";
   personaName?: string;
@@ -17,6 +25,7 @@ export interface ContentStyle {
   readingLevel?: "general" | "intermediate" | "expert";
   humanizationLevel?: "off" | "light" | "strong";
   writingSample?: string | null;
+  imageSettings?: ProjectImageSettings;
 }
 
 export interface BrandProfile {

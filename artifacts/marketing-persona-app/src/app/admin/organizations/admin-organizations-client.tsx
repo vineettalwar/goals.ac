@@ -24,6 +24,8 @@ interface OrganizationRow {
   projectCount: number;
   memberCount: number;
   createdAt: string;
+  suspendedAt: string | null;
+  suspendedReason: string | null;
 }
 
 const PLANS = ["starter", "growth", "scale"] as const;
@@ -132,6 +134,30 @@ export function AdminOrganizationsClient() {
       toast.error(err instanceof Error ? err.message : "Failed to create organization");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function toggleSuspend(org: OrganizationRow) {
+    try {
+      if (org.suspendedAt) {
+        const res = await fetch(`/api/admin/organizations/suspend?organizationId=${org.id}`, {
+          method: "DELETE",
+        });
+        if (!res.ok) throw new Error("Failed to unsuspend");
+        toast.success(`${org.name} unsuspended`);
+      } else {
+        const reason = window.prompt("Suspension reason (optional):") ?? undefined;
+        const res = await fetch("/api/admin/organizations/suspend", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ organizationId: org.id, reason }),
+        });
+        if (!res.ok) throw new Error("Failed to suspend");
+        toast.success(`${org.name} suspended`);
+      }
+      await loadOrganizations();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Action failed");
     }
   }
 
@@ -312,15 +338,30 @@ export function AdminOrganizationsClient() {
                   <Badge variant="outline" className="text-xs capitalize">
                     {org.plan}
                   </Badge>
+                  {org.suspendedAt && (
+                    <Badge variant="destructive" className="text-xs">
+                      Suspended
+                    </Badge>
+                  )}
                 </div>
                 <p className="text-sm text-muted-foreground mt-1">
                   Owner: {org.ownerName} ({org.ownerEmail})
                 </p>
+                {org.suspendedReason && (
+                  <p className="text-xs text-destructive mt-1">Reason: {org.suspendedReason}</p>
+                )}
                 <p className="text-xs text-muted-foreground mt-1">
                   Created {new Date(org.createdAt).toLocaleDateString()} · {org.memberCount} members ·{" "}
                   {org.projectCount} sites
                 </p>
               </div>
+              <Button
+                variant={org.suspendedAt ? "outline" : "destructive"}
+                size="sm"
+                onClick={() => void toggleSuspend(org)}
+              >
+                {org.suspendedAt ? "Unsuspend" : "Suspend"}
+              </Button>
             </div>
           ))
         )}

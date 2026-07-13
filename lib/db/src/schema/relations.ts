@@ -5,6 +5,8 @@ import { organizationsTable } from "./organizations";
 import { organizationMembersTable } from "./organization_members";
 import { websiteProjectsTable } from "./website_projects";
 import { brandProfilesTable } from "./brand_profiles";
+import { brandVoiceSourcesTable } from "./brand_voice_sources";
+import { brandVoiceChunksTable } from "./brand_voice_chunks";
 import { goalsTable } from "./goals";
 import { briefsTable } from "./briefs";
 import { contentPiecesTable } from "./content_pieces";
@@ -72,11 +74,32 @@ export const websiteProjectsRelations = relations(websiteProjectsTable, ({ one, 
   goals: many(goalsTable),
   contentPieces: many(contentPiecesTable),
   trackedKeywords: many(trackedKeywordsTable),
+  brandVoiceSources: many(brandVoiceSourcesTable),
+  brandVoiceChunks: many(brandVoiceChunksTable),
 }));
 
 export const brandProfilesRelations = relations(brandProfilesTable, ({ one }) => ({
   websiteProject: one(websiteProjectsTable, {
     fields: [brandProfilesTable.websiteProjectId],
+    references: [websiteProjectsTable.id],
+  }),
+}));
+
+export const brandVoiceSourcesRelations = relations(brandVoiceSourcesTable, ({ one, many }) => ({
+  websiteProject: one(websiteProjectsTable, {
+    fields: [brandVoiceSourcesTable.websiteProjectId],
+    references: [websiteProjectsTable.id],
+  }),
+  chunks: many(brandVoiceChunksTable),
+}));
+
+export const brandVoiceChunksRelations = relations(brandVoiceChunksTable, ({ one }) => ({
+  source: one(brandVoiceSourcesTable, {
+    fields: [brandVoiceChunksTable.sourceId],
+    references: [brandVoiceSourcesTable.id],
+  }),
+  websiteProject: one(websiteProjectsTable, {
+    fields: [brandVoiceChunksTable.websiteProjectId],
     references: [websiteProjectsTable.id],
   }),
 }));

@@ -4,6 +4,7 @@ import type { AiProviderClient } from "@workspace/ai-providers/client";
 import { resolveAiClient } from "./support/resolve-ai-client";
 import type { ContentStyle } from "@workspace/db";
 import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
+import { loadBrandVoiceGenerationContext } from "./support/brand-voice-generation";
 
 export interface SeoArticleContent {
   title: string;
@@ -43,6 +44,7 @@ function buildPrompt(
   location: string,
   stage: string,
   contentStyle?: ContentStyle | null,
+  brandVoiceContext?: string,
 ): string {
   const stageContext: Record<string, string> = {
     "pre-seed": "early-stage startup validating its concept",
@@ -57,10 +59,11 @@ function buildPrompt(
     ? `${contentStyle.defaultWordCount}–${Math.round(contentStyle.defaultWordCount * 1.25)}`
     : "1200–1500";
   const styleContext = buildContentStyleContext(contentStyle);
+  const voiceBlock = brandVoiceContext?.trim() ? `\n${brandVoiceContext.trim()}` : "";
 
   return `Write a comprehensive, brand-aligned SEO article for ${brandName} (${websiteUrl}), a ${stageDesc} in the ${industry} industry based in ${location}.
 
-The article must be ${wordRange} words, structured for both search ranking and AI citation. Write from the perspective of a knowledgeable insider in the ${industry} space in ${location}.${styleContext}
+The article must be ${wordRange} words, structured for both search ranking and AI citation. Write from the perspective of a knowledgeable insider in the ${industry} space in ${location}.${styleContext}${voiceBlock}
 
 Return ONLY this exact JSON structure with no additional text:
 
@@ -96,8 +99,17 @@ async function generateWithClient(
   location: string,
   stage: string,
   contentStyle?: ContentStyle | null,
+  brandVoiceContext?: string,
 ): Promise<SeoArticleContent> {
-  const prompt = buildPrompt(brandName, websiteUrl, industry, location, stage, contentStyle);
+  const prompt = buildPrompt(
+    brandName,
+    websiteUrl,
+    industry,
+    location,
+    stage,
+    contentStyle,
+    brandVoiceContext,
+  );
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= 3; attempt++) {
@@ -140,9 +152,27 @@ export async function generateSeoArticleContent(
   userApiKey?: string | null,
   contentStyle?: ContentStyle | null,
   aiProviderOptions?: AiProviderOptions,
+  projectId?: number,
 ): Promise<SeoArticleContent> {
+  let brandVoiceContext = "";
+  if (projectId) {
+    const ctx = await loadBrandVoiceGenerationContext(
+      projectId,
+      `${industry} ${location} ${stage} seo article`,
+    );
+    brandVoiceContext = ctx?.promptContext ?? "";
+  }
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
-  return generateWithClient(client, brandName, websiteUrl, industry, location, stage, contentStyle);
+  return generateWithClient(
+    client,
+    brandName,
+    websiteUrl,
+    industry,
+    location,
+    stage,
+    contentStyle,
+    brandVoiceContext,
+  );
 }
 
 async function generateStreamWithClient(
@@ -154,8 +184,17 @@ async function generateStreamWithClient(
   stage: string,
   onChunk: (text: string) => void,
   contentStyle?: ContentStyle | null,
+  brandVoiceContext?: string,
 ): Promise<SeoArticleContent> {
-  const prompt = buildPrompt(brandName, websiteUrl, industry, location, stage, contentStyle);
+  const prompt = buildPrompt(
+    brandName,
+    websiteUrl,
+    industry,
+    location,
+    stage,
+    contentStyle,
+    brandVoiceContext,
+  );
   let accumulated = "";
 
   if (ai.generateStream) {
@@ -200,7 +239,26 @@ export async function generateSeoArticleContentStream(
   userApiKey?: string | null,
   contentStyle?: ContentStyle | null,
   aiProviderOptions?: AiProviderOptions,
+  projectId?: number,
 ): Promise<SeoArticleContent> {
+  let brandVoiceContext = "";
+  if (projectId) {
+    const ctx = await loadBrandVoiceGenerationContext(
+      projectId,
+      `${industry} ${location} ${stage} seo article`,
+    );
+    brandVoiceContext = ctx?.promptContext ?? "";
+  }
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
-  return generateStreamWithClient(client, brandName, websiteUrl, industry, location, stage, onChunk, contentStyle);
+  return generateStreamWithClient(
+    client,
+    brandName,
+    websiteUrl,
+    industry,
+    location,
+    stage,
+    onChunk,
+    contentStyle,
+    brandVoiceContext,
+  );
 }

@@ -3,6 +3,7 @@ import { getSession } from "@/auth";
 import { redirect } from "next/navigation";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { ActiveProjectProvider } from "@/context/active-project";
+import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -12,9 +13,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getSession();
   if (!session) redirect("/login");
 
-  if (session.user.companyId == null) {
+  if (session.user.companyId == null && !session.impersonation) {
     redirect("/onboarding");
   }
+
+  const sidebarRole = session.impersonatorRole ?? session.user.role;
 
   return (
     <ActiveProjectProvider>
@@ -22,10 +25,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <SidebarNav
           userName={session.user.name ?? "User"}
           userEmail={session.user.email ?? ""}
+          userRole={sidebarRole}
         />
-        <main className="flex-1 overflow-y-auto">
-          {children}
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <ImpersonationBanner />
+          <main className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
+        </div>
       </div>
     </ActiveProjectProvider>
   );

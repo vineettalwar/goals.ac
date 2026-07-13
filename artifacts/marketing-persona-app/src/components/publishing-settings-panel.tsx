@@ -40,6 +40,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   IntegrationCategorySection,
@@ -70,6 +71,14 @@ export type IntegrationLayout = "stacked" | "grid";
 export type IntegrationCategoryFilter = "all" | "cms" | "social" | "esp";
 
 type IntegrationDialogId = PublishDestinationId | "meta";
+
+function getIntegrationDialogTitle(
+  activeDialog: IntegrationDialogId,
+  destinations: PublishDestinationDefinition[],
+): string {
+  if (activeDialog === "meta") return "Facebook & Instagram";
+  return destinations.find((d) => d.id === activeDialog)?.label ?? "Integration settings";
+}
 
 export type CmsIntegrationStatus = Record<string, unknown>;
 
@@ -1059,6 +1068,16 @@ export function PublishingSettingsPanel({
 
         <Dialog open={activeDialog != null} onOpenChange={(open) => !open && setActiveDialog(null)}>
           <DialogContent className="max-w-xl gap-0 overflow-y-auto p-0 sm:max-w-2xl max-h-[88vh]">
+            {activeDialog ? (
+              <DialogTitle className="sr-only">
+                {getIntegrationDialogTitle(activeDialog, [
+                  ...cmsDestinations,
+                  ...espDestinations,
+                  ...exportDestinations,
+                  ...socialDestinations,
+                ])}
+              </DialogTitle>
+            ) : null}
             <div className="p-6">{renderDialogBody()}</div>
           </DialogContent>
         </Dialog>

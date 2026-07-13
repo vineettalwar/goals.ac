@@ -13,6 +13,7 @@ export const STRATEGY_TABS: HubTab[] = [
 
 export const SEARCH_TABS: HubTab[] = [
   { label: "Keywords", href: "/search/keywords" },
+  { label: "Performance", href: "/search/performance" },
   { label: "AI Visibility", href: "/search/visibility" },
   { label: "Site Links", href: "/search/site", badge: "Beta" },
 ];

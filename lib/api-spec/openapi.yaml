@@ -580,6 +580,308 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /website-projects/{id}/search-properties/gsc/sync:
+    post:
+      operationId: syncGscSearchAnalytics
+      tags: [seo-tools]
+      summary: Sync Google Search Console query data for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sync completed
+        "429":
+          description: Rate limited
+        "502":
+          description: Sync failed
+    get:
+      operationId: getGscSyncStatus
+      tags: [seo-tools]
+      summary: GSC sync status for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sync status
+
+  /website-projects/{id}/gsc-queries:
+    get:
+      operationId: listGscQueries
+      tags: [seo-tools]
+      summary: Aggregated GSC queries for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Query rollup list
+
+  /website-projects/{id}/social/history-sync:
+    post:
+      operationId: syncSocialHistory
+      tags: [social]
+      summary: Pull historical posts via OAuth into brand + platform voice
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: background
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Sync completed
+        "202":
+          description: Queued
+    get:
+      operationId: getSocialHistorySyncStatus
+      tags: [social]
+      summary: Per-platform OAuth history sync status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Status
+
+  /website-projects/{id}/social/metrics:
+    get:
+      operationId: getSocialMetrics
+      tags: [social]
+      summary: Social post performance metrics for a project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: platform
+          in: query
+          schema:
+            type: string
+        - name: days
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Metrics rows and totals
+
+  /website-projects/{id}/social/metrics/sync:
+    post:
+      operationId: syncSocialMetrics
+      tags: [social]
+      summary: Sync engagement metrics for published social posts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: background
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Sync completed
+        "202":
+          description: Queued
+    get:
+      operationId: getSocialMetricsSyncStatus
+      tags: [social]
+      summary: Social metrics sync status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Status
+
+  /website-projects/{id}/social/queue/{pieceId}:
+    patch:
+      operationId: scheduleSocialQueuePiece
+      tags: [social]
+      summary: Schedule or unschedule a social queue item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: pieceId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated content piece
+
+  /website-projects/{id}/article-ideas/import:
+    post:
+      operationId: importArticleIdeasCsv
+      tags: [seo-tools]
+      summary: Import article ideas from CSV (site admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Import result
+        "403":
+          description: Forbidden
+
+  /website-projects/{id}/article-ideas:
+    post:
+      operationId: createArticleIdeas
+      tags: [seo-tools]
+      summary: Create manual article ideas (site admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Created
+
+  /website-projects/{id}/article-idea-sources:
+    get:
+      operationId: listArticleIdeaSources
+      tags: [seo-tools]
+      summary: List Google Sheets article idea sources
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Source list
+    post:
+      operationId: createArticleIdeaSource
+      tags: [seo-tools]
+      summary: Connect a Google Sheets source (site admin)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "201":
+          description: Source created
+        "403":
+          description: Forbidden
+    delete:
+      operationId: deleteArticleIdeaSource
+      tags: [seo-tools]
+      summary: Remove a Google Sheets source
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: sourceId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+
+  /website-projects/{id}/article-idea-sources/sync:
+    post:
+      operationId: syncArticleIdeaSource
+      tags: [seo-tools]
+      summary: Sync a Google Sheets article idea source now
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sync result
+
+  /website-projects/{id}/keyword-opportunities:
+    post:
+      operationId: discoverKeywordOpportunities
+      tags: [seo-tools]
+      summary: Run keyword opportunity discovery (gsc, semrush, or ai)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Discovery result
+
+  /keyword-opportunities/{id}:
+    post:
+      operationId: queueKeywordOpportunity
+      tags: [seo-tools]
+      summary: Queue an opportunity into the content strategy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Queued
+        "400":
+          description: No content strategy
+    patch:
+      operationId: updateKeywordOpportunity
+      tags: [seo-tools]
+      summary: Update opportunity status (e.g. dismissed)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated
+
 components:
   schemas:
     HealthStatus:

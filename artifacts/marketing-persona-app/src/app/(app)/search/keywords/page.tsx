@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import { PageSkeleton } from "@/components/page-skeleton";
 
 const KeywordTrackingPanel = dynamic(
@@ -7,5 +8,9 @@ const KeywordTrackingPanel = dynamic(
 );
 
 export default function SearchKeywordsPage() {
-  return <KeywordTrackingPanel embedded />;
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <KeywordTrackingPanel embedded />
+    </Suspense>
+  );
 }

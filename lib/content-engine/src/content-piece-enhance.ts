@@ -12,6 +12,7 @@ import {
   seoQualitySignals,
 } from "./content-piece-seo";
 import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
+import { loadBrandVoiceGenerationContext } from "./support/brand-voice-generation";
 
 export type EnhanceBrandContext = {
   companyName: string;
@@ -20,6 +21,7 @@ export type EnhanceBrandContext = {
   targetAudience: string;
   voiceTone: string;
   primaryKeywords: string[];
+  projectId?: number;
 };
 
 const ENHANCE_SYSTEM_PROMPT = `You are a senior SEO editor. Your job is to upgrade an existing draft to publish-ready quality WITHOUT rewriting it from scratch.
@@ -53,17 +55,21 @@ export interface EnhanceContentInput {
 function buildEnhancePrompt(
   input: EnhanceContentInput,
   existingPieceTitles: string[],
+  brandVoiceContext?: string,
 ): string {
   const gaps = describeQualityGaps(input.bodyMarkdown);
   const existingArticlesCtx = existingPieceTitles.length
     ? `\nOther content on this site (use for internal links): ${existingPieceTitles.slice(0, 12).join("; ")}`
     : "";
+  const voiceBlock =
+    brandVoiceContext?.trim() ||
+    `BRAND VOICE: ${input.brand.voiceTone || "Professional, clear, authoritative"}`;
 
   return `Upgrade this ${input.formatType.replace(/_/g, " ")} draft for ${input.brand.companyName} (${input.brand.websiteUrl}).
 
 TARGET KEYWORD: "${input.targetKeyword}"
 TITLE: ${input.title}
-BRAND VOICE: ${input.brand.voiceTone || "Professional, clear, authoritative"}
+${voiceBlock}
 TARGET AUDIENCE: ${input.brand.targetAudience || "Business professionals"}${existingArticlesCtx}
 
 Quality gaps to fix:
@@ -103,7 +109,17 @@ export async function enhanceContentPiece(
     throw new Error("Enhance quality is only available for long-form SEO content");
   }
 
-  const prompt = buildEnhancePrompt(input, existingPieceTitles);
+  const prompt = await (async () => {
+    let brandVoiceContext = "";
+    if (input.brand.projectId) {
+      const ctx = await loadBrandVoiceGenerationContext(
+        input.brand.projectId,
+        `${input.targetKeyword} enhance`,
+      );
+      brandVoiceContext = ctx?.promptContext ?? "";
+    }
+    return buildEnhancePrompt(input, existingPieceTitles, brandVoiceContext);
+  })();
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
   let lastError: unknown;
 

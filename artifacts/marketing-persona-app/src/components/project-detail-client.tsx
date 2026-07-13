@@ -274,7 +274,7 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
           { label: "GEO Audit", href: `/audit`, icon: <Search className="h-5 w-5" /> },
           {
             label: "Analytics",
-            href: `/search/keywords`,
+            href: `/search/performance`,
             icon: <BarChart3 className="h-5 w-5" />,
           },
         ].map((item) => (

@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { ScrapeFormSkeleton, ScrapeStatusHeader } from "@/components/project-scrape-status";
 import type { ContentStyle, WebsiteProject } from "@/lib/project-detail-types";
+import { formatBrandScanDiscoverySummary } from "@/lib/brand-scan-summary";
 import { SUPPORTED_LANGUAGES } from "@/lib/supported-languages";
 
 const TONE_PRESETS = [
@@ -45,6 +46,12 @@ const HUMANIZATION_LEVELS = [
   { value: "off", label: "Off", description: "Publish the first AI draft as-is." },
   { value: "light", label: "Light", description: "Polish rhythm and remove AI-tell phrases." },
   { value: "strong", label: "Strong", description: "Full editorial rewrite while preserving SEO structure." },
+] as const;
+
+const STOCK_PROVIDERS = [
+  { value: "auto", label: "Auto (best match from Unsplash + Pexels)" },
+  { value: "unsplash", label: "Unsplash only" },
+  { value: "pexels", label: "Pexels only" },
 ] as const;
 
 function profileToBrandForm(
@@ -129,6 +136,8 @@ export function ProjectBrandTab({
     readingLevel: project.contentStyle?.readingLevel ?? "general",
     humanizationLevel: project.contentStyle?.humanizationLevel ?? "light",
     writingSample: project.contentStyle?.writingSample ?? "",
+    stockProvider: project.contentStyle?.imageSettings?.stockProvider ?? "auto",
+    autoInlineImages: project.contentStyle?.imageSettings?.autoInlineImages ?? true,
   });
   const [savingBrand, setSavingBrand] = useState(false);
   const [savingStyle, setSavingStyle] = useState(false);
@@ -147,6 +156,8 @@ export function ProjectBrandTab({
         readingLevel: project.contentStyle.readingLevel ?? "general",
         humanizationLevel: project.contentStyle.humanizationLevel ?? "light",
         writingSample: project.contentStyle.writingSample ?? "",
+        stockProvider: project.contentStyle.imageSettings?.stockProvider ?? "auto",
+        autoInlineImages: project.contentStyle.imageSettings?.autoInlineImages ?? true,
       });
     }
   }, [project.brandProfile, project.contentStyle, project.scrapeData]);
@@ -170,6 +181,15 @@ export function ProjectBrandTab({
         minute: "2-digit",
       })
     : null;
+
+  const discoverySummary = useMemo(
+    () =>
+      formatBrandScanDiscoverySummary(
+        project.scrapeData?.discoveryMeta,
+        project.pageCount,
+      ),
+    [project.scrapeData?.discoveryMeta, project.pageCount],
+  );
 
   async function saveBrand() {
     setSavingBrand(true);
@@ -240,6 +260,12 @@ export function ProjectBrandTab({
       readingLevel: styleForm.readingLevel as ContentStyle["readingLevel"],
       humanizationLevel: styleForm.humanizationLevel as ContentStyle["humanizationLevel"],
       writingSample: styleForm.writingSample.trim() || null,
+      imageSettings: {
+        stockProvider: styleForm.stockProvider as "unsplash" | "pexels" | "auto",
+        autoFeaturedImage: true,
+        autoInlineImages: styleForm.autoInlineImages,
+        maxInlineImages: 2,
+      },
     };
     const res = await fetch(`/api/website-projects/${projectId}`, {
       method: "PATCH",
@@ -270,6 +296,7 @@ export function ProjectBrandTab({
           onRescan={onRescan}
           rescraping={rescraping}
           lastUpdated={lastUpdated}
+          discoverySummary={discoverySummary}
         />
 
         {isScraping ? (
@@ -533,6 +560,48 @@ export function ProjectBrandTab({
             <p className="text-xs text-muted-foreground">
               Comma-separated — the AI will avoid these in all generated content
             </p>
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <Label>Stock images</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Copyright-free photos matched to each article&apos;s target keyword, uploaded to WordPress or LinkedIn at publish.
+              </p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Photo provider</Label>
+              <Select
+                value={styleForm.stockProvider}
+                onValueChange={(value) =>
+                  setStyleForm((p) => ({
+                    ...p,
+                    stockProvider: value as "unsplash" | "pexels" | "auto",
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {STOCK_PROVIDERS.map((provider) => (
+                    <SelectItem key={provider.value} value={provider.value}>
+                      {provider.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={styleForm.autoInlineImages}
+                onChange={(e) =>
+                  setStyleForm((p) => ({ ...p, autoInlineImages: e.target.checked }))
+                }
+              />
+              Add inline images in long-form articles (up to 2 per post)
+            </label>
           </div>
 
           <div className="space-y-3">

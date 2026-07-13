@@ -13,6 +13,17 @@ const PatchBody = z.object({
   bodyMarkdown: z.string().optional(),
   status: z.enum(["draft", "ready"]).optional(),
   plannedDate: z.string().regex(ISO_DATE_RE, "plannedDate must be a valid ISO date (YYYY-MM-DD)").nullable().optional(),
+  scheduledAt: z.string().datetime().nullable().optional(),
+  approvalStatus: z.enum(["draft", "pending_review", "approved", "rejected"]).optional(),
+  evergreenConfig: z
+    .object({
+      enabled: z.boolean(),
+      recycleIntervalDays: z.number().int().min(7).max(365),
+      maxRecycles: z.number().int().min(1).max(50).optional(),
+      recycleCount: z.number().int().min(0).optional(),
+    })
+    .nullable()
+    .optional(),
 }).refine(
   (data) => Object.values(data).some((v) => v !== undefined),
   { message: "Request body must include at least one field to update" },
@@ -70,6 +81,11 @@ export async function PATCH(
     }
     if (parsed.data.status !== undefined) updates.status = parsed.data.status;
     if (parsed.data.plannedDate !== undefined) updates.plannedDate = parsed.data.plannedDate;
+    if (parsed.data.scheduledAt !== undefined) {
+      updates.scheduledAt = parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt) : null;
+    }
+    if (parsed.data.approvalStatus !== undefined) updates.approvalStatus = parsed.data.approvalStatus;
+    if (parsed.data.evergreenConfig !== undefined) updates.evergreenConfig = parsed.data.evergreenConfig;
 
     const [updated] = await db
       .update(contentPiecesTable)

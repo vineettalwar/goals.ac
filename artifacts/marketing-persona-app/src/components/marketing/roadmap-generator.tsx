@@ -87,7 +87,7 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
   };
 
   const selectClass =
-    "w-full h-11 rounded-lg border border-(--border) bg-white px-3 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20";
+    "w-full h-11 rounded-lg border border-border bg-white px-3 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20";
 
   return (
     <HeroOverlapShell id="roadmap-generator" sectionRef={ref}>
@@ -98,7 +98,7 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
         <EditorialHeading
           line1="Generate your"
           line2="2026 Growth Roadmap"
-          description="Choose your market and stage, then create a free account to build a custom 12-month plan. Browse sample roadmaps in our catalog anytime — no signup required."
+          description="Choose your market and stage, then create a free account to build a custom 12-month plan. Browse sample roadmaps in our catalog anytime, no signup required."
           align="left"
           size="card"
           animate={false}
@@ -169,13 +169,6 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
               Generate my roadmap
               <ArrowRight className="h-5 w-5" />
             </button>
-
-            <p className="text-center text-sm text-muted-foreground">
-              Want a sample first?{" "}
-              <Link href="/roadmaps" className="text-primary font-medium hover:underline">
-                Browse free roadmaps
-              </Link>
-            </p>
 
             {formError && (
               <p className="text-sm text-destructive text-center">{formError}</p>

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useRef, type ReactNode } from "react";
 import { useSpotlightCursor } from "@/hooks/use-spotlight-cursor";
@@ -85,9 +86,14 @@ export function PageHero({
       style={{ height: "100dvh" }}
     >
       {backgroundImage && (
-        <div
-          className="absolute inset-0 bg-center bg-cover bg-no-repeat z-10 hero-zoom"
-          style={{ backgroundImage: `url(${backgroundImage})` }}
+        <Image
+          src={backgroundImage}
+          alt=""
+          fill
+          priority
+          fetchPriority="high"
+          sizes="100vw"
+          className="absolute inset-0 object-cover z-10 hero-zoom"
           aria-hidden
         />
       )}

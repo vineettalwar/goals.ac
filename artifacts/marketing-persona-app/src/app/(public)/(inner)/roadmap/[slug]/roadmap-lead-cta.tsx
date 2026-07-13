@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Headphones } from "lucide-react";
 import { LeadCaptureModal } from "@/components/lead-capture-modal";
 
 export function RoadmapLeadCTA({ slug }: { slug: string }) {
@@ -26,7 +26,7 @@ export function RoadmapLeadCTA({ slug }: { slug: string }) {
             onClick={() => setModalOpen(true)}
             className="inline-flex items-center gap-2 border border-border bg-background px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-muted transition-colors"
           >
-            <Sparkles className="h-4 w-4 text-primary" />
+            <Headphones className="h-4 w-4 text-primary" />
             Get expert help
           </button>
         </div>

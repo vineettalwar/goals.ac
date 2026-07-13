@@ -21,6 +21,22 @@ import {
   GEO_REAUDIT_SWEEP_CRON,
   registerKeywordOpportunitySweepHandler,
   KEYWORD_OPPORTUNITY_SWEEP_CRON,
+  registerGscSearchAnalyticsSyncHandler,
+  GSC_SEARCH_ANALYTICS_SYNC_CRON,
+  registerGa4AnalyticsSyncHandler,
+  GA4_ANALYTICS_SYNC_CRON,
+  registerArticleIdeaSourceSyncHandler,
+  ARTICLE_IDEA_SOURCE_SYNC_CRON,
+  registerBrandVoiceIndexHandler,
+  registerBrandVoiceSkillRegenHandler,
+  registerBrandVoiceResyncHandler,
+  BRAND_VOICE_RESYNC_CRON,
+  registerEvergreenRecycleSweepHandler,
+  EVERGREEN_RECYCLE_SWEEP_CRON,
+  registerSocialHistorySyncHandler,
+  SOCIAL_HISTORY_SYNC_CRON,
+  registerSocialMetricsSyncHandler,
+  SOCIAL_METRICS_SYNC_CRON,
 } from "@workspace/jobs";
 import pino from "pino";
 
@@ -32,7 +48,7 @@ const workerLogger = pino({
 });
 
 const CONNECTION_HEALTH_CHECK_CRON = "0 4 * * *";
-const SCHEDULED_PUBLISH_SWEEP_CRON = "0 5 * * *";
+const SCHEDULED_PUBLISH_SWEEP_CRON = "*/15 * * * *";
 
 async function main(): Promise<void> {
   const boss = await getBoss();
@@ -54,6 +70,15 @@ async function main(): Promise<void> {
   await registerLlmVisibilityCheckHandler(boss);
   await registerGeoReauditSweepHandler(boss);
   await registerKeywordOpportunitySweepHandler(boss);
+  await registerGscSearchAnalyticsSyncHandler(boss);
+  await registerGa4AnalyticsSyncHandler(boss);
+  await registerArticleIdeaSourceSyncHandler(boss);
+  await registerBrandVoiceIndexHandler(boss);
+  await registerBrandVoiceSkillRegenHandler(boss);
+  await registerBrandVoiceResyncHandler(boss);
+  await registerEvergreenRecycleSweepHandler(boss);
+  await registerSocialHistorySyncHandler(boss);
+  await registerSocialMetricsSyncHandler(boss);
 
   await scheduleCron(QUEUES.connectionHealthCheck, CONNECTION_HEALTH_CHECK_CRON, {});
   await scheduleCron(QUEUES.keywordRankCheck, KEYWORD_RANK_SWEEP_CRON, {});
@@ -62,6 +87,13 @@ async function main(): Promise<void> {
   await scheduleCron(QUEUES.llmVisibilityCheck, LLM_VISIBILITY_SWEEP_CRON, {});
   await scheduleCron(QUEUES.geoReauditSweep, GEO_REAUDIT_SWEEP_CRON, {});
   await scheduleCron(QUEUES.keywordOpportunitySweep, KEYWORD_OPPORTUNITY_SWEEP_CRON, {});
+  await scheduleCron(QUEUES.gscSearchAnalyticsSync, GSC_SEARCH_ANALYTICS_SYNC_CRON, {});
+  await scheduleCron(QUEUES.ga4AnalyticsSync, GA4_ANALYTICS_SYNC_CRON, {});
+  await scheduleCron(QUEUES.articleIdeaSourceSync, ARTICLE_IDEA_SOURCE_SYNC_CRON, {});
+  await scheduleCron(QUEUES.brandVoiceResync, BRAND_VOICE_RESYNC_CRON, {});
+  await scheduleCron(QUEUES.evergreenRecycleSweep, EVERGREEN_RECYCLE_SWEEP_CRON, {});
+  await scheduleCron(QUEUES.socialHistorySync, SOCIAL_HISTORY_SYNC_CRON, {});
+  await scheduleCron(QUEUES.socialMetricsSync, SOCIAL_METRICS_SYNC_CRON, {});
 
   workerLogger.info({ queues: Object.values(QUEUES) }, "Job worker started");
 

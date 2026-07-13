@@ -13,7 +13,7 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   const ip = getClientIp(req);
-  const limited = rateLimitResponse(
+  const limited = await rateLimitResponse(
     `auth-reset-password:${ip}`,
     RATE_LIMITS.AUTH_PER_IP.limit,
     RATE_LIMITS.AUTH_PER_IP.windowMs

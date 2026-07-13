@@ -2,14 +2,16 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { toast } from "sonner";
-import { CheckCircle2, ExternalLink, Link2, Search, Unlink, AlertTriangle } from "lucide-react";
+import { CheckCircle2, ExternalLink, Link2, Search, Unlink, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   IntegrationCategorySection,
@@ -191,6 +193,7 @@ function ConnectionDetails({
   onRefresh,
   disconnecting,
   showPicker,
+  gscSyncStatus,
 }: {
   connection: SearchPropertyConnectionStatus;
   projectId: string;
@@ -199,12 +202,40 @@ function ConnectionDetails({
   onRefresh: () => void;
   disconnecting: string | null;
   showPicker: boolean;
+  gscSyncStatus?: {
+    lastSyncedAt: string | null;
+    queryCount: number;
+  } | null;
 }) {
   const meta = PROVIDER_META[connection.provider];
   const oauthReady = isOAuthReady(connection.provider, oauthConfigured);
+  const [syncingGsc, setSyncingGsc] = useState(false);
 
   function onConnect() {
     window.location.href = `/api/auth/${meta.connectPath}?projectId=${projectId}`;
+  }
+
+  async function onSyncGsc() {
+    setSyncingGsc(true);
+    try {
+      const res = await fetch(`/api/website-projects/${projectId}/search-properties/gsc/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error((data as { error?: string }).error ?? "GSC sync failed");
+        return;
+      }
+      const data = await res.json();
+      toast.success(
+        `Synced ${data.rowsUpserted ?? 0} query rows · ${data.opportunitiesInserted ?? 0} new ideas`,
+      );
+      onRefresh();
+    } finally {
+      setSyncingGsc(false);
+    }
   }
 
   return (
@@ -237,6 +268,21 @@ function ConnectionDetails({
               Connected and verified
             </p>
           ) : null}
+          {connection.apiIngestionNote ? (
+            <p className="text-xs">{connection.apiIngestionNote}</p>
+          ) : null}
+          {connection.provider === "google_search_console" &&
+          connection.propertyVerified &&
+          gscSyncStatus ? (
+            <p className="text-xs">
+              {gscSyncStatus.queryCount > 0
+                ? `${gscSyncStatus.queryCount.toLocaleString()} queries indexed`
+                : "No query data synced yet"}
+              {gscSyncStatus.lastSyncedAt
+                ? ` · Last sync ${new Date(gscSyncStatus.lastSyncedAt).toLocaleDateString()}`
+                : ""}
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -264,6 +310,20 @@ function ConnectionDetails({
                   Open {connection.aiReportLabel}
                 </a>
               </Button>
+            ) : null}
+            {connection.provider === "google_search_console" && connection.propertyVerified ? (
+              <>
+                <Button size="sm" variant="outline" onClick={onSyncGsc} disabled={syncingGsc}>
+                  {syncingGsc ? <Spinner size="sm" /> : <RefreshCw className="w-3.5 h-3.5 mr-1.5" />}
+                  Sync queries
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/search/keywords">Keyword ideas</Link>
+                </Button>
+                <Button size="sm" variant="outline" asChild>
+                  <Link href="/search/performance">Article performance</Link>
+                </Button>
+              </>
             ) : null}
             <Button
               size="sm"
@@ -308,10 +368,24 @@ export function SearchPropertyConnectionsPanel({
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
   const [activeProvider, setActiveProvider] = useState<SearchPropertyProvider | null>(null);
+  const [gscSyncStatus, setGscSyncStatus] = useState<{
+    lastSyncedAt: string | null;
+    queryCount: number;
+  } | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/website-projects/${projectId}/search-properties`);
-    if (res.ok) setData(await res.json());
+    const [propsRes, gscRes] = await Promise.all([
+      fetch(`/api/website-projects/${projectId}/search-properties`),
+      fetch(`/api/website-projects/${projectId}/search-properties/gsc/sync`),
+    ]);
+    if (propsRes.ok) setData(await propsRes.json());
+    if (gscRes.ok) {
+      const status = await gscRes.json();
+      setGscSyncStatus({
+        lastSyncedAt: status.lastSyncedAt ?? null,
+        queryCount: status.queryCount ?? 0,
+      });
+    }
   }, [projectId]);
 
   useEffect(() => {
@@ -415,6 +489,7 @@ export function SearchPropertyConnectionsPanel({
                 onRefresh={onRefresh}
                 disconnecting={disconnecting}
                 showPicker={connection.connected && !connection.propertyVerified}
+                gscSyncStatus={gscSyncStatus}
               />
             </div>
           ))}
@@ -465,6 +540,9 @@ export function SearchPropertyConnectionsPanel({
         onOpenChange={(open) => !open && setActiveProvider(null)}
       >
         <DialogContent className="max-w-xl gap-0 overflow-y-auto p-0 sm:max-w-lg max-h-[88vh]">
+          <DialogTitle className="sr-only">
+            {activeConnection ? PROVIDER_META[activeConnection.provider].label : "Connection settings"}
+          </DialogTitle>
           <div className="p-6">
             {activeConnection ? (
               <ConnectionDetails
@@ -475,6 +553,7 @@ export function SearchPropertyConnectionsPanel({
                 onRefresh={onRefresh}
                 disconnecting={disconnecting}
                 showPicker={activeConnection.connected && !activeConnection.propertyVerified}
+                gscSyncStatus={gscSyncStatus}
               />
             ) : null}
           </div>

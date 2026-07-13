@@ -77,3 +77,54 @@ export async function testBlueskyConnection(
     };
   }
 }
+
+/** Recent post texts from an author's feed (for brand voice / history sync). */
+export async function fetchBlueskyAuthorPosts(
+  credentials: BlueskyCredentials,
+  limit = 50,
+  agent?: Agent,
+): Promise<string[]> {
+  if (!credentials.accessToken || !credentials.did) return [];
+  const resolvedAgent =
+    agent ??
+    new Agent({
+      service: "https://bsky.social",
+      headers: { Authorization: `Bearer ${credentials.accessToken}` },
+    });
+  const feed = await resolvedAgent.getAuthorFeed({
+    actor: credentials.did,
+    limit,
+  });
+  return (feed.data.feed ?? [])
+    .map((item) => item.post?.record)
+    .filter((record): record is { text?: string } => Boolean(record && typeof record === "object"))
+    .map((record) => (record.text ?? "").trim())
+    .filter(Boolean);
+}
+
+export async function fetchBlueskyPostMetrics(
+  credentials: BlueskyCredentials,
+  postUri: string,
+  agent?: Agent,
+): Promise<import("./social-metrics-types").NormalizedPostMetrics> {
+  const resolvedAgent =
+    agent ??
+    new Agent({
+      service: "https://bsky.social",
+      headers: { Authorization: `Bearer ${credentials.accessToken}` },
+    });
+  try {
+    const thread = await resolvedAgent.getPostThread({ uri: postUri, depth: 0 });
+    const threadNode = thread.data.thread;
+    const post = threadNode && "post" in threadNode ? threadNode.post : undefined;
+    return {
+      impressions: null,
+      likes: post?.likeCount ?? null,
+      comments: post?.replyCount ?? null,
+      shares: post?.repostCount ?? null,
+      clicks: null,
+    };
+  } catch {
+    return { impressions: null, likes: null, comments: null, shares: null, clicks: null };
+  }
+}

@@ -19,7 +19,7 @@ const playfairDisplay = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: { default: "goals.ac", template: "%s — goals.ac" },
+  title: { default: "goals.ac", template: "%s | goals.ac" },
   description: "AI-powered B2B content growth engine. Grow faster with persona-driven SEO articles, roadmaps, and automated WordPress publishing.",
   metadataBase: new URL(process.env.NEXTAUTH_URL ?? "https://goals.ac"),
   openGraph: {
@@ -36,12 +36,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     name: "goals.ac",
     url: siteUrl,
     description:
-      "AI-powered B2B content growth engine — persona-driven SEO articles, roadmaps, GEO audits, and CMS publishing.",
+      "AI-powered B2B content growth engine with persona-driven SEO articles, roadmaps, GEO audits, and CMS publishing.",
     sameAs: [],
   };
 
   return (
     <html lang="en" className={`${jakartaSans.variable} ${playfairDisplay.variable}`}>
+      <head>
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://images.higgs.ai" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="dns-prefetch" href="https://images.higgs.ai" />
+      </head>
       <body>
         <script
           type="application/ld+json"

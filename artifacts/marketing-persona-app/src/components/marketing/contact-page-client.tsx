@@ -93,7 +93,7 @@ export function ContactPageClient() {
                 {status === "loading" ? "Sending…" : "Send message"}
               </Button>
               {status === "done" && (
-                <p className="text-sm text-green-600">Thanks — we&apos;ll be in touch soon.</p>
+                <p className="text-sm text-green-600">Thanks! We&apos;ll be in touch soon.</p>
               )}
               {status === "error" && (
                 <p className="text-sm text-destructive">Something went wrong. Email hello@goals.ac directly.</p>

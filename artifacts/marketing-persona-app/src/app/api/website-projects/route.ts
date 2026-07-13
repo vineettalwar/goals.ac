@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { websiteProjectsTable, brandProfilesTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { websiteProjectsTable } from "@workspace/db/schema";
+import type { ContentStyle } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/require-auth";
 import {
   assertCanCreateProject,
@@ -9,9 +9,10 @@ import {
   listAccessibleProjects,
   resolveOrganizationIdForUser,
 } from "@/lib/org-access";
-import { assertPublicUrl } from "@workspace/security/ssrf-guard";
-import { scrapeBrandProfile } from "@/lib/ai/brand-scraper";
+import { runBrandScrapeWithDiscovery } from "@workspace/content-engine/support/brand-scrape-orchestrator";
 import { logger } from "@/lib/logger";
+import { findDuplicateProjectByUrl } from "@/lib/project-url";
+import { logOrgAudit } from "@/lib/org-audit";
 import { z } from "zod";
 
 const CreateProjectBody = z.object({
@@ -19,71 +20,8 @@ const CreateProjectBody = z.object({
   url: z.string().url("Must be a valid URL"),
 });
 
-async function runBrandScrape(projectId: number, url: string, overwrite = false): Promise<void> {
-  await db
-    .update(websiteProjectsTable)
-    .set({ scrapeStatus: "pending" })
-    .where(eq(websiteProjectsTable.id, projectId));
-
-  try {
-    await assertPublicUrl(url);
-    const extract = await scrapeBrandProfile(url);
-
-    const existing = await db
-      .select()
-      .from(brandProfilesTable)
-      .where(eq(brandProfilesTable.websiteProjectId, projectId))
-      .limit(1);
-
-    if (existing.length > 0) {
-      const current = existing[0];
-      const updates: Record<string, unknown> = {};
-
-      if (overwrite) {
-        updates.companyName = extract.companyName;
-        updates.industry = extract.industry;
-        updates.targetAudience = extract.targetAudience;
-        updates.voiceTone = extract.voiceTone;
-        updates.primaryKeywords = extract.primaryKeywords;
-        updates.competitorUrls = extract.competitorUrls;
-      } else {
-        if (!current.companyName && extract.companyName) updates.companyName = extract.companyName;
-        if (!current.industry && extract.industry) updates.industry = extract.industry;
-        if (!current.targetAudience && extract.targetAudience) updates.targetAudience = extract.targetAudience;
-        if (!current.voiceTone && extract.voiceTone) updates.voiceTone = extract.voiceTone;
-        if ((!current.primaryKeywords || current.primaryKeywords.length === 0) && extract.primaryKeywords.length > 0) updates.primaryKeywords = extract.primaryKeywords;
-        if ((!current.competitorUrls || current.competitorUrls.length === 0) && extract.competitorUrls.length > 0) updates.competitorUrls = extract.competitorUrls;
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await db
-          .update(brandProfilesTable)
-          .set(updates)
-          .where(eq(brandProfilesTable.websiteProjectId, projectId));
-      }
-    } else {
-      await db.insert(brandProfilesTable).values({
-        websiteProjectId: projectId,
-        companyName: extract.companyName,
-        industry: extract.industry,
-        targetAudience: extract.targetAudience,
-        voiceTone: extract.voiceTone,
-        primaryKeywords: extract.primaryKeywords,
-        competitorUrls: extract.competitorUrls,
-      });
-    }
-
-    await db
-      .update(websiteProjectsTable)
-      .set({ scrapeStatus: "done", scrapeData: extract })
-      .where(eq(websiteProjectsTable.id, projectId));
-  } catch (err) {
-    logger.error({ err, projectId, url }, "Brand scrape failed");
-    await db
-      .update(websiteProjectsTable)
-      .set({ scrapeStatus: "failed" })
-      .where(eq(websiteProjectsTable.id, projectId));
-  }
+function clientIp(req: Request): string | undefined {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined;
 }
 
 export async function GET() {
@@ -92,7 +30,17 @@ export async function GET() {
 
   try {
     const projects = await listAccessibleProjects(userId!);
-    return NextResponse.json(projects);
+    return NextResponse.json(
+      projects.map((project) => ({
+        id: project.id,
+        name: project.name,
+        url: project.url,
+        organizationId: project.organizationId,
+        crawlStatus: project.crawlStatus,
+        primaryLanguage:
+          (project.contentStyle as ContentStyle | null)?.primaryLanguage ?? "en",
+      })),
+    );
   } catch (err) {
     logger.error({ err, userId }, "Failed to list website projects");
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
@@ -128,6 +76,17 @@ export async function POST(req: Request) {
       );
     }
 
+    const duplicate = await findDuplicateProjectByUrl(organizationId, url);
+    if (duplicate) {
+      return NextResponse.json(
+        {
+          error: "duplicate_website",
+          message: `A project for this website already exists (${duplicate.name}).`,
+        },
+        { status: 409 },
+      );
+    }
+
     const [project] = await db
       .insert(websiteProjectsTable)
       .values({
@@ -140,8 +99,18 @@ export async function POST(req: Request) {
       })
       .returning();
 
-    runBrandScrape(project.id, url).catch((err) => {
+    runBrandScrapeWithDiscovery(project.id, url).catch((err) => {
       logger.error({ err, projectId: project.id, url }, "Background brand scrape failed");
+    });
+
+    await logOrgAudit({
+      organizationId,
+      actorUserId: userId,
+      action: "project.created",
+      resourceType: "website_project",
+      resourceId: project.id,
+      metadata: { name, url },
+      ip: clientIp(req),
     });
 
     return NextResponse.json(project, { status: 201 });

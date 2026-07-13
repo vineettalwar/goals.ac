@@ -1,31 +1,34 @@
 import {
   BarChart3,
-  Bot,
-  Brain,
+  BookOpen,
+  ClipboardCheck,
   Eye,
+  FileText,
   Globe,
+  Key,
   Link2,
-  Map,
+  Map as MapIcon,
   MessageSquare,
   Network,
+  PenLine,
   Search,
   Shield,
-  Wand2,
+  Target,
   Zap,
 } from "lucide-react";
 import { HERO_IMAGES } from "@/lib/marketing-hero-images";
 
 export const PLATFORM_FEATURES = [
   {
-    icon: Wand2,
+    icon: FileText,
     title: "Branded SEO content",
-    desc: "Brief-driven articles with your voice, citations, FAQ, and schema — you approve every draft.",
+    desc: "Brief-driven articles with your voice, citations, FAQ, and schema. You approve every draft.",
     status: "live" as const,
   },
   {
-    icon: Map,
+    icon: MapIcon,
     title: "30-day content strategy",
-    desc: "Calendar from your growth roadmap and topical map — not generic topic lists.",
+    desc: "Calendar from your growth roadmap and topical map, not generic topic lists.",
     status: "live" as const,
   },
   {
@@ -37,7 +40,7 @@ export const PLATFORM_FEATURES = [
   {
     icon: Link2,
     title: "Internal link hub",
-    desc: "Build authority with content clusters and contextual internal links — not link schemes.",
+    desc: "Build authority with content clusters and contextual internal links, not link schemes.",
     status: "beta" as const,
   },
   {
@@ -49,7 +52,7 @@ export const PLATFORM_FEATURES = [
   {
     icon: MessageSquare,
     title: "Reddit discovery",
-    desc: "Find high-intent threads and draft replies — you post manually, we never astroturf.",
+    desc: "Find high-intent threads and draft replies. You post manually; we never astroturf.",
     status: "beta" as const,
   },
   {
@@ -66,6 +69,29 @@ export const PLATFORM_FEATURES = [
   },
 ];
 
+export const PLATFORM_FEATURE_PILLARS = [
+  {
+    title: "Plan",
+    featureTitles: ["30-day content strategy", "Branded SEO content"],
+  },
+  {
+    title: "Publish",
+    featureTitles: ["Automated publishing", "Internal link hub", "Multilingual content"],
+  },
+  {
+    title: "Measure",
+    featureTitles: ["Technical GEO audit", "LLM visibility tracking", "Reddit discovery"],
+  },
+] as const;
+
+export function getPlatformFeaturePillars() {
+  const byTitle = new Map(PLATFORM_FEATURES.map((feature) => [feature.title, feature]));
+  return PLATFORM_FEATURE_PILLARS.map((pillar) => ({
+    title: pillar.title,
+    features: pillar.featureTitles.map((title) => byTitle.get(title)).filter((f) => f !== undefined),
+  }));
+}
+
 export const LANDER_CONFIG = {
   aiVisibility: {
     badge: "AI Visibility",
@@ -79,7 +105,7 @@ export const LANDER_CONFIG = {
     features: [
       { icon: Eye, title: "Multi-engine tracking", description: "Snapshots for ChatGPT, Perplexity, Claude, and Gemini." },
       { icon: BarChart3, title: "Citation trends", description: "Weekly visibility score and competitor mention charts." },
-      { icon: Brain, title: "Prompt library", description: "Track brand-relevant prompts your buyers actually ask." },
+      { icon: BookOpen, title: "Prompt library", description: "Track brand-relevant prompts your buyers actually ask." },
       { icon: Shield, title: "GEO re-audit", description: "Re-run technical audits when visibility drops." },
     ],
     faq: [
@@ -91,19 +117,19 @@ export const LANDER_CONFIG = {
     badge: "Rank on ChatGPT",
     titleLine1: "Get recommended",
     titleLine2: "by AI assistants",
-    description: "Structure content for citation: schema, FAQ, authoritative sources, and topical depth — not keyword stuffing.",
+    description: "Structure content for citation: schema, FAQ, authoritative sources, and topical depth, not keyword stuffing.",
     heroImage: HERO_IMAGES.features.capabilities,
     primaryCta: { label: "Build your roadmap", href: "/roadmaps" },
     secondaryCta: { label: "Free GEO audit", href: "/geo-audit" },
     features: [
       { icon: Search, title: "GEO-ready drafts", description: "JSON-LD, FAQ blocks, and citation-friendly structure." },
       { icon: Network, title: "Topical authority", description: "Cluster coverage map shows gaps AI systems expect you to own." },
-      { icon: Bot, title: "Visibility monitoring", description: "Know when assistants start citing your pages." },
-      { icon: Wand2, title: "Brand-aligned content", description: "Articles inherit your voice and cross-link your offerings." },
+      { icon: Eye, title: "Visibility monitoring", description: "Know when assistants start citing your pages." },
+      { icon: FileText, title: "Brand-aligned content", description: "Articles inherit your voice and cross-link your offerings." },
     ],
     faq: [
       { question: "How long until AI citations?", answer: "Most teams see movement in 4–12 weeks as content publishes and indexes." },
-      { question: "Is this different from SEO?", answer: "GEO optimizes for AI retrieval and citation — we align both in one workflow." },
+      { question: "Is this different from SEO?", answer: "GEO optimizes for AI retrieval and citation. We align both in one workflow." },
     ],
   },
   geo: {
@@ -121,8 +147,8 @@ export const LANDER_CONFIG = {
       { icon: Eye, title: "Visibility tie-in", description: "Connect audit scores to AI citation tracking." },
     ],
     faq: [
-      { question: "What is GEO?", answer: "Generative Engine Optimization — improving how AI systems retrieve and cite your content." },
-      { question: "Is the audit free?", answer: "Yes — no account required for a basic audit." },
+      { question: "What is GEO?", answer: "Generative Engine Optimization: improving how AI systems retrieve and cite your content." },
+      { question: "Is the audit free?", answer: "Yes. No account required for a basic audit." },
     ],
   },
   contentStrategy: {
@@ -134,7 +160,7 @@ export const LANDER_CONFIG = {
     primaryCta: { label: "Start free", href: "/signup" },
     secondaryCta: { label: "Browse roadmaps", href: "/roadmaps" },
     features: [
-      { icon: Map, title: "Roadmap-driven", description: "Every item ties back to a strategic phase — not random topics." },
+      { icon: MapIcon, title: "Roadmap-driven", description: "Every item ties back to a strategic phase, not random topics." },
       { icon: BarChart3, title: "Competitor-informed", description: "Prioritize gaps competitors already rank for." },
       { icon: Zap, title: "One-click generate", description: "Turn calendar items into briefs and drafts." },
       { icon: Network, title: "Topical clusters", description: "Build pillar + supporting article sequences." },
@@ -147,17 +173,17 @@ export const LANDER_CONFIG = {
     badge: "Content Autopilot",
     titleLine1: "Publish on schedule",
     titleLine2: "with editorial control",
-    description: "Daily or weekly generation with manual review, draft, or live publish — you choose the level of automation.",
+    description: "Daily or weekly generation with manual review, draft, or live publish. You choose the level of automation.",
     heroImage: HERO_IMAGES.features.hero,
     primaryCta: { label: "Start free", href: "/signup" },
     features: [
       { icon: Zap, title: "Flexible cadence", description: "Daily or weekly runs in your timezone." },
       { icon: Shield, title: "Review queue", description: "Inspect every draft before it goes live." },
       { icon: Globe, title: "CMS publish", description: "WordPress, Shopify, Notion, Ghost, and more." },
-      { icon: Bot, title: "Quality scores", description: "Per-article scores for structure, citations, and schema." },
+      { icon: ClipboardCheck, title: "Quality scores", description: "Per-article scores for structure, citations, and schema." },
     ],
     faq: [
-      { question: "Can I review before publishing?", answer: "Yes — set publish mode to manual or draft. Live auto-publish is optional." },
+      { question: "Can I review before publishing?", answer: "Yes. Set publish mode to manual or draft. Live auto-publish is optional." },
     ],
   },
   cmsPublishing: {
@@ -175,7 +201,7 @@ export const LANDER_CONFIG = {
       { icon: Zap, title: "Autopilot publish", description: "Schedule drafts to go live automatically." },
     ],
     faq: [
-      { question: "Do I need a developer?", answer: "No — connect via OAuth/API or install our WordPress/Joomla/Drupal plugin in minutes." },
+      { question: "Do I need a developer?", answer: "No. Connect via OAuth/API or install our WordPress/Joomla/Drupal plugin in minutes." },
     ],
   },
   linkBuilding: {
@@ -183,18 +209,18 @@ export const LANDER_CONFIG = {
     status: "beta" as const,
     titleLine1: "Authority without",
     titleLine2: "link schemes",
-    description: "Build topical authority with internal link clusters and content depth — not paid exchange networks that risk penalties.",
+    description: "Build topical authority with internal link clusters and content depth, not paid exchange networks that risk penalties.",
     heroImage: HERO_IMAGES.features.capabilities,
     primaryCta: { label: "Try Internal Link Hub", href: "/signup" },
     secondaryCta: { label: "Compare tools", href: "/compare/ai-seo-tools" },
     features: [
       { icon: Network, title: "Internal link graph", description: "See orphan pages and missing inbound links." },
       { icon: Link2, title: "Contextual suggestions", description: "Anchor text recommendations per draft." },
-      { icon: Map, title: "Cluster completion", description: "Track pillar + supporting article coverage." },
+      { icon: MapIcon, title: "Cluster completion", description: "Track pillar + supporting article coverage." },
       { icon: Shield, title: "White-hat only", description: "No link exchanges or PBN-style networks." },
     ],
     faq: [
-      { question: "Do you build backlinks like exchange networks?", answer: "No — we focus on owned content, internal linking, and topical authority. An outreach playbook is on our roadmap." },
+      { question: "Do you build backlinks like exchange networks?", answer: "No. We focus on owned content, internal linking, and topical authority. An outreach playbook is on our roadmap." },
     ],
     waitlistKey: "link-building-playbook",
     waitlistTitle: "Outreach playbook",
@@ -204,17 +230,17 @@ export const LANDER_CONFIG = {
     status: "beta" as const,
     titleLine1: "Find threads",
     titleLine2: "worth joining",
-    description: "Discover high-intent Reddit discussions in your niche and get draft reply suggestions — you post manually.",
+    description: "Discover high-intent Reddit discussions in your niche and get draft reply suggestions. You post manually.",
     heroImage: HERO_IMAGES.home.signup,
     primaryCta: { label: "Try Reddit Discovery", href: "/signup" },
     features: [
       { icon: MessageSquare, title: "Thread discovery", description: "AI finds relevant subreddit posts for your keywords." },
-      { icon: Brain, title: "Intent scoring", description: "Prioritize threads where buyers ask for recommendations." },
-      { icon: Wand2, title: "Draft replies", description: "Suggested responses aligned with your brand voice." },
-      { icon: Shield, title: "No auto-posting", description: "You own the relationship — we never astroturf." },
+      { icon: Target, title: "Intent scoring", description: "Prioritize threads where buyers ask for recommendations." },
+      { icon: PenLine, title: "Draft replies", description: "Suggested responses aligned with your brand voice." },
+      { icon: Shield, title: "No auto-posting", description: "You own the relationship. We never astroturf." },
     ],
     faq: [
-      { question: "Do you post to Reddit automatically?", answer: "No — we suggest threads and drafts. You copy, edit, and post yourself." },
+      { question: "Do you post to Reddit automatically?", answer: "No. We suggest threads and drafts. You copy, edit, and post yourself." },
     ],
   },
   multilingual: {
@@ -227,9 +253,9 @@ export const LANDER_CONFIG = {
     primaryCta: { label: "Start free", href: "/signup" },
     features: [
       { icon: Globe, title: "10 languages live", description: "English, French, German, Spanish, Italian, Portuguese, Dutch, Swedish, Polish, UK English." },
-      { icon: Wand2, title: "Brand voice preserved", description: "Tone and glossary apply across languages." },
+      { icon: PenLine, title: "Brand voice preserved", description: "Tone and glossary apply across languages." },
       { icon: Search, title: "SEO/GEO aligned", description: "Structured output in every locale." },
-      { icon: Map, title: "Roadmap locales", description: "50+ languages planned — vote with the waitlist." },
+      { icon: MapIcon, title: "Roadmap locales", description: "50+ languages planned. Vote with the waitlist." },
     ],
     faq: [
       { question: "Which languages are supported?", answer: "10 today; join the waitlist to prioritize the next locales we add." },
@@ -242,18 +268,18 @@ export const LANDER_CONFIG = {
     status: "coming-soon" as const,
     titleLine1: "Resell SEO",
     titleLine2: "without building it",
-    description: "Manage multiple client projects, BYOK billing, and white-label roadmaps — reseller dashboard coming soon.",
+    description: "Manage multiple client projects, BYOK billing, and white-label roadmaps. Reseller dashboard coming soon.",
     heroImage: HERO_IMAGES.pricing.hero,
     primaryCta: { label: "Start on Scale", href: "/signup?plan=scale" },
     secondaryCta: { label: "See pricing", href: "/pricing" },
     features: [
       { icon: Globe, title: "Multi-project", description: "Unlimited projects on Scale plan today." },
-      { icon: Brain, title: "BYOK", description: "Clients bring their own AI keys for cost control." },
+      { icon: Key, title: "BYOK", description: "Clients bring their own AI keys for cost control." },
       { icon: BarChart3, title: "Competitor intel", description: "Unlimited competitor analysis on Scale." },
       { icon: Zap, title: "Autopilot per client", description: "Separate queues and CMS connections." },
     ],
     faq: [
-      { question: "Is white-label available?", answer: "Not yet — join the agency waitlist for early access to reseller features." },
+      { question: "Is white-label available?", answer: "Not yet. Join the agency waitlist for early access to reseller features." },
     ],
     waitlistKey: "agency-reseller",
     waitlistTitle: "Agency reseller program",

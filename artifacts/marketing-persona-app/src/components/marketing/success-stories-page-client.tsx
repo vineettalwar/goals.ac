@@ -71,7 +71,7 @@ export function SuccessStoriesPageClient({ articles, roadmaps }: Props) {
           </div>
           <div className="paper-card p-6">
             <h3 className="font-bold text-lg mb-2">Article quality demo</h3>
-            <p className="text-sm text-muted-foreground mb-3">Every draft gets a /100 quality score — structure, citations, schema, and more.</p>
+            <p className="text-sm text-muted-foreground mb-3">Every draft gets a /100 quality score covering structure, citations, schema, and more.</p>
             <div className="flex items-center gap-2 text-emerald-600 font-bold text-2xl">
               <TrendingUp className="h-5 w-5" /> 92/100
             </div>

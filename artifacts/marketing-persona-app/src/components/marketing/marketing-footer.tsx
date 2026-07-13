@@ -3,12 +3,12 @@ import { FOOTER_COLUMNS } from "@/lib/site-nav";
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-(--border) bg-white">
+    <footer className="border-t border-border bg-white">
       <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
         <div className="col-span-2 md:col-span-3 lg:col-span-1">
           <p className="font-bold text-primary mb-2">goals.ac</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            Rank on Google and get cited by ChatGPT — with strategy and editorial control.
+            Rank on Google and get cited by ChatGPT, with strategy and editorial control.
           </p>
         </div>
         {FOOTER_COLUMNS.map(({ title, links }) => (

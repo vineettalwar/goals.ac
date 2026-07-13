@@ -5,8 +5,11 @@ import { usersTable } from "./users";
 import { organizationsTable } from "./organizations";
 import { websiteProjectsTable } from "./website_projects";
 
-/** site_admin = all org sites; member = single assigned site only */
-export type OrgMemberRole = "site_admin" | "member";
+/** owner = billing + full control; site_admin = all org sites; editor/viewer = scoped access */
+export type OrgMemberRole = "owner" | "site_admin" | "editor" | "viewer";
+
+/** @deprecated Use editor */
+export type LegacyOrgMemberRole = "member";
 
 export const organizationMembersTable = pgTable("organization_members", {
   id: serial("id").primaryKey(),
@@ -16,8 +19,8 @@ export const organizationMembersTable = pgTable("organization_members", {
   userId: integer("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
-  role: text("role").notNull().default("member"),
-  /** Required for members; null for site_admin */
+  role: text("role").notNull().default("editor"),
+  /** Required for editor/viewer; null for site_admin/owner */
   assignedProjectId: integer("assigned_project_id").references(() => websiteProjectsTable.id, {
     onDelete: "set null",
   }),

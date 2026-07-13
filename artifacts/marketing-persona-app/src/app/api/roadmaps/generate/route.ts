@@ -22,7 +22,7 @@ const GenerateRoadmapBody = z.object({
 });
 
 export async function POST(req: Request) {
-  const limited = rateLimitResponse(
+  const limited = await rateLimitResponse(
     `ai-gen:ip:${getClientIp(req)}`,
     RATE_LIMITS.AI_GENERATION_PER_USER.limit,
     RATE_LIMITS.AI_GENERATION_PER_USER.windowMs

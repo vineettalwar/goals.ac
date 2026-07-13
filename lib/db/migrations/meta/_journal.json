@@ -274,6 +274,83 @@
       "when": 1783868000000,
       "tag": "0037_org_ai_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1783870000000,
+      "tag": "0038_org_bedrock_credentials",
+      "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1783872000000,
+      "tag": "0039_keyword_research_hub",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1783874000000,
+      "tag": "0040_platform_org_security",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1783876000000,
+      "tag": "0041_org_roles_and_invites",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1783880000000,
+      "tag": "0042_brand_memory",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1783882000000,
+      "tag": "0043_user_mfa",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1783884000000,
+      "tag": "0044_org_semrush_credentials",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1783886000000,
+      "tag": "0045_ga4_analytics",
+      "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1783888000000,
+      "tag": "0046_brand_voice_rag",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1783890000000,
+      "tag": "0047_social_hub",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1783892000000,
+      "tag": "0048_social_sync_metrics",
+      "breakpoints": true
     }
   ]
 }

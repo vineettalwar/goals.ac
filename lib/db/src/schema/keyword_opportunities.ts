@@ -2,7 +2,15 @@ import { pgTable, serial, integer, text, timestamp } from "drizzle-orm/pg-core";
 import { websiteProjectsTable } from "./website_projects";
 import { contentItemsTable } from "./content_strategies";
 
-export type KeywordOpportunitySource = "competitor_gap" | "rank_drop" | "ai_analysis" | "manual";
+export type KeywordOpportunitySource =
+  | "competitor_gap"
+  | "rank_drop"
+  | "ai_analysis"
+  | "manual"
+  | "gsc_query"
+  | "csv_import"
+  | "google_sheets"
+  | "semrush";
 export type KeywordOpportunityStatus = "open" | "queued" | "dismissed";
 export type KeywordDifficultyLevel = "low" | "medium" | "high";
 

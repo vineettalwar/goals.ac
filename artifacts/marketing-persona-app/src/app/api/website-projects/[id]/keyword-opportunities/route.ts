@@ -5,7 +5,9 @@ import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { requireProjectAccess } from "@/lib/project-access";
 import { discoverOpportunities } from "@workspace/content-engine/keyword-opportunity-service";
+import { getDecryptedSemrushCredentialsForUser } from "@workspace/content-engine/support/org-ai-settings";
 import { enqueue, QUEUES } from "@workspace/jobs";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
 
 export async function GET(
   req: Request,
@@ -53,14 +55,43 @@ export async function POST(
 
   const body = await req.json().catch(() => ({}));
   const asyncMode = body?.async === true;
+  const refresh = body?.refresh === true;
+  const source =
+    body?.source === "gsc"
+      ? "gsc"
+      : body?.source === "ai"
+        ? "ai"
+        : body?.source === "semrush"
+          ? "semrush"
+          : "all";
 
   try {
+    if (source === "semrush") {
+      const limited = await rateLimitResponse(
+        `semrush-discovery:project:${projectId}`,
+        RATE_LIMITS.SEMRUSH_DISCOVERY_PER_PROJECT.limit,
+        RATE_LIMITS.SEMRUSH_DISCOVERY_PER_PROJECT.windowMs,
+      );
+      if (limited) return limited;
+
+      const credentials = await getDecryptedSemrushCredentialsForUser(userId!);
+      if (!credentials) {
+        return NextResponse.json(
+          { error: "Semrush is not configured. Add your organization's API key in Settings." },
+          { status: 400 },
+        );
+      }
+    }
+
     if (asyncMode) {
       await enqueue(QUEUES.keywordOpportunitySweep, { projectId, userId: userId! });
       return NextResponse.json({ queued: true }, { status: 202 });
     }
 
-    const inserted = await discoverOpportunities(projectId, userId!);
+    const inserted = await discoverOpportunities(projectId, userId!, {
+      sources: [source],
+      refresh,
+    });
     return NextResponse.json({ inserted });
   } catch (err) {
     return NextResponse.json(

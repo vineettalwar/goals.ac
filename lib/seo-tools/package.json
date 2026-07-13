@@ -10,9 +10,17 @@
     "./keywordAnalyzer": "./src/keywordAnalyzer.ts",
     "./llmVisibilityChecker": "./src/llmVisibilityChecker.ts",
     "./keywordGapAnalyzer": "./src/keywordGapAnalyzer.ts",
-    "./freeTools": "./src/freeTools.ts"
+    "./gscSearchAnalytics": "./src/gscSearchAnalytics.ts",
+    "./ga4Analytics": "./src/ga4Analytics.ts",
+    "./ga4Admin": "./src/ga4Admin.ts",
+    "./gscOpportunityScorer": "./src/gscOpportunityScorer.ts",
+    "./semrushGapAnalyzer": "./src/semrushGapAnalyzer.ts",
+    "./freeTools": "./src/freeTools.ts",
+    "./sitemap-crawl": "./src/sitemap-crawl.ts"
   },
   "dependencies": {
+    "@workspace/security": "workspace:*",
+    "@workspace/keyword-research-provider": "workspace:*",
     "@workspace/ai-providers": "workspace:*",
     "@workspace/db": "workspace:*",
     "node-html-parser": "^7.1.0"

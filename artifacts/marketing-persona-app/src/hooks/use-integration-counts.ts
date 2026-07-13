@@ -8,6 +8,7 @@ import {
   type CmsConnectionSnapshot,
 } from "@/lib/publishing-destinations";
 import type { SearchPropertyConnectionsResponse } from "@/lib/search-property-types";
+import type { AnalyticsPropertyConnectionsResponse } from "@/lib/analytics-property-types";
 
 export type IntegrationCounts = {
   cms: number;
@@ -19,6 +20,11 @@ export type IntegrationCounts = {
 };
 
 function countSearchConnections(data: SearchPropertyConnectionsResponse | null): number {
+  if (!data) return 0;
+  return data.connections.filter((c) => c.connected && c.propertyVerified).length;
+}
+
+function countAnalyticsConnections(data: AnalyticsPropertyConnectionsResponse | null): number {
   if (!data) return 0;
   return data.connections.filter((c) => c.connected && c.propertyVerified).length;
 }
@@ -40,9 +46,10 @@ export function useIntegrationCounts(projectId: string): IntegrationCounts {
     }
 
     try {
-      const [cmsRes, searchRes] = await Promise.all([
+      const [cmsRes, searchRes, analyticsRes] = await Promise.all([
         fetch(`/api/website-projects/${projectId}/cms-integrations`),
         fetch(`/api/website-projects/${projectId}/search-properties`),
+        fetch(`/api/website-projects/${projectId}/analytics-properties`),
       ]);
 
       const cms = cmsRes.ok
@@ -51,11 +58,15 @@ export function useIntegrationCounts(projectId: string): IntegrationCounts {
       const search = searchRes.ok
         ? ((await searchRes.json()) as SearchPropertyConnectionsResponse)
         : null;
+      const analytics = analyticsRes.ok
+        ? ((await analyticsRes.json()) as AnalyticsPropertyConnectionsResponse)
+        : null;
 
       const cmsCount = countCmsConnections(cms);
       const espCount = countEspConnections(cms);
       const socialCount = countSocialConnections(cms);
-      const searchCount = countSearchConnections(search);
+      const searchCount =
+        countSearchConnections(search) + countAnalyticsConnections(analytics);
 
       setCounts({
         cms: cmsCount,

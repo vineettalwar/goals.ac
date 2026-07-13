@@ -23,7 +23,7 @@ export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
   if (error) return error;
 
-  const limited = rateLimitResponse(
+  const limited = await rateLimitResponse(
     `reddit-disc:${userId}`,
     RATE_LIMITS.AI_GENERATION_PER_USER.limit,
     RATE_LIMITS.AI_GENERATION_PER_USER.windowMs,

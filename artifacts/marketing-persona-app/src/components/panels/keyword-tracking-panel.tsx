@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
   Search,
@@ -12,9 +13,8 @@ import {
   Lightbulb,
   Plus,
   Trash2,
-  Target,
   AlertTriangle,
-  ListPlus,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { PageSkeleton } from "@/components/page-skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useActiveProject } from "@/context/active-project";
 import {
   useKeywordIntelligence,
@@ -29,6 +30,8 @@ import {
   useTrackedKeywords,
 } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
+import { ArticleIdeasHub, type SourceFilter } from "@/components/panels/article-ideas-hub";
+import { ArticleIdeasImportPanel } from "@/components/panels/article-ideas-import-panel";
 
 const KeywordRankChart = dynamic(
   () => import("@/components/keyword-rank-chart").then((m) => m.KeywordRankChart),
@@ -56,26 +59,63 @@ const DIFFICULTY_COLORS = {
   high: "destructive" as const,
 };
 
+const RESEARCH_SOURCE_FILTERS = new Set<SourceFilter>([
+  "semrush",
+  "gsc_query",
+  "csv_import",
+  "google_sheets",
+  "manual",
+  "imports",
+  "ai_analysis",
+  "competitor_gap",
+  "rank_drop",
+]);
+
+function isSourceFilter(value: string | null): value is SourceFilter {
+  return value != null && RESEARCH_SOURCE_FILTERS.has(value as SourceFilter);
+}
+
 export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean }) {
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { activeProjectId, activeProject, isLoading: projectLoading } = useActiveProject();
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
+  const [activeTab, setActiveTab] = useState("ideas");
   const [keywordInput, setKeywordInput] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [trackInput, setTrackInput] = useState("");
   const [selectedTrackedId, setSelectedTrackedId] = useState<number | null>(null);
-  const [isDiscovering, setIsDiscovering] = useState(false);
+  const [ideasSourceFilter, setIdeasSourceFilter] = useState<SourceFilter>("all");
 
   const { data: tracked = [], isLoading: trackedLoading } = useTrackedKeywords(projectId);
   const {
-    opportunities,
     alerts,
     isLoading: intelligenceLoading,
     refetch: refetchIntelligence,
   } = useKeywordIntelligence(projectId);
   const { data: snapshots = [] } = useKeywordSnapshots(selectedTrackedId);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab === "import" || tab === "tracking" || tab === "analyzer" || tab === "ideas") {
+      setActiveTab(tab);
+    }
+    const source = searchParams.get("source");
+    if (isSourceFilter(source)) {
+      setIdeasSourceFilter(source);
+    }
+    if (searchParams.get("sheets") === "connected") {
+      toast.success("Google Sheets connected");
+    }
+    if (searchParams.get("sheets") === "error") {
+      toast.error("Google Sheets connection failed");
+    }
+    if (searchParams.get("sheets") === "forbidden") {
+      toast.error("Only site admins can connect Google Sheets for this project");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (activeProject?.url) {
@@ -142,43 +182,18 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
     if (selectedTrackedId === id) setSelectedTrackedId(null);
   }
 
-  async function handleDiscoverGaps() {
-    if (!projectId) return;
-    setIsDiscovering(true);
-    const res = await fetch(`/api/website-projects/${projectId}/keyword-opportunities`, {
-      method: "POST",
-    });
-    setIsDiscovering(false);
-    if (!res.ok) {
-      toast.error("Discovery failed");
-      return;
-    }
-    toast.success("Opportunities discovered");
-    await refetchIntelligence();
-  }
-
-  async function handleQueueOpportunity(id: number) {
-    const res = await fetch(`/api/keyword-opportunities/${id}`, { method: "POST" });
-    if (!res.ok) {
-      toast.error("Failed to queue");
-      return;
-    }
-    toast.success("Queued to content strategy");
-    await refetchIntelligence();
-  }
-
   const showInitialLoad =
     projectId && trackedLoading && intelligenceLoading && tracked.length === 0;
 
-  const containerClass = embedded ? "space-y-8" : "px-8 py-8 max-w-5xl space-y-8";
+  const containerClass = embedded ? "space-y-6" : "px-8 py-8 max-w-5xl space-y-6";
 
   return (
     <div className={containerClass}>
       {!embedded ? (
         <div>
-          <h1 className="text-2xl font-bold">Keyword Tracking</h1>
+          <h1 className="text-2xl font-bold">Keyword research</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Analyze keywords, track SERP ranks, and discover content gaps
+            Article ideas from Search Console, imports, rank tracking, and AI analysis
           </p>
         </div>
       ) : null}
@@ -188,7 +203,7 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
           <PageSkeleton />
         ) : (
           <div className="paper-card p-6 rounded-xl text-sm text-muted-foreground">
-            Choose a project in the sidebar to track keywords.
+            Choose a project in the sidebar to research keywords.
           </div>
         )
       ) : showInitialLoad ? (
@@ -201,158 +216,163 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
             </p>
           )}
 
-          <div className="paper-card p-6 rounded-xl space-y-4">
-            <h2 className="font-semibold flex items-center gap-2">
-              <Search className="h-4 w-4" /> Keyword analysis
-            </h2>
-            <div className="space-y-1.5">
-              <Label>Keywords (comma-separated)</Label>
-              <Input
-                placeholder="B2B lead generation, SaaS marketing"
-                value={keywordInput}
-                onChange={(e) => setKeywordInput(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Website URL (optional)</Label>
-              <Input
-                placeholder="https://yoursite.com"
-                value={websiteUrl}
-                onChange={(e) => setWebsiteUrl(e.target.value)}
-              />
-            </div>
-            <Button onClick={handleAnalyze} disabled={loading}>
-              {loading ? (
-                <>
-                  <Spinner size="sm" /> Analyzing…
-                </>
-              ) : (
-                "Analyze keywords"
-              )}
-            </Button>
-          </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="ideas">
+                <Lightbulb className="h-4 w-4 mr-1" />
+                Article ideas
+              </TabsTrigger>
+              <TabsTrigger value="import">
+                <Upload className="h-4 w-4 mr-1" />
+                Import
+              </TabsTrigger>
+              <TabsTrigger value="tracking">
+                <TrendingUp className="h-4 w-4 mr-1" />
+                Rank tracking
+              </TabsTrigger>
+              <TabsTrigger value="analyzer">
+                <Search className="h-4 w-4 mr-1" />
+                AI analyzer
+              </TabsTrigger>
+            </TabsList>
 
-          {analysis && (
-            <div className="space-y-4">
-              <div className="paper-card rounded-xl p-5">
-                <h2 className="font-semibold flex items-center gap-2 mb-2">
-                  <Lightbulb className="h-4 w-4 text-primary" /> Top opportunity
-                </h2>
-                <p className="text-sm text-muted-foreground">{analysis.topOpportunity}</p>
-                <p className="text-sm mt-2">{analysis.summary}</p>
-              </div>
-              {analysis.keywords.map((kw, i) => (
-                <div key={i} className="paper-card rounded-xl p-5 space-y-3">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <h3 className="font-semibold">{kw.keyword}</h3>
-                    <Badge variant={DIFFICULTY_COLORS[kw.difficulty]}>{kw.difficulty}</Badge>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${kw.aiVisibility}%` }}
-                      />
+            <TabsContent value="ideas" className="space-y-6 mt-6">
+              <ArticleIdeasHub
+                projectId={projectId}
+                initialSourceFilter={ideasSourceFilter}
+                onRefetch={() => refetchIntelligence()}
+              />
+
+              {alerts.length > 0 && (
+                <div className="paper-card p-6 rounded-xl space-y-3">
+                  <h2 className="font-semibold flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 text-amber-500" /> Rank alerts
+                  </h2>
+                  {alerts.map((a) => (
+                    <div
+                      key={a.id}
+                      className="text-sm p-3 rounded-lg bg-amber-500/5 border border-amber-500/20"
+                    >
+                      <span className="font-medium">{a.keyword}</span>: {a.message}
                     </div>
-                    <span className="text-xs font-medium">AI: {kw.aiVisibility}%</span>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
+            </TabsContent>
 
-          <div className="paper-card p-6 rounded-xl space-y-4">
-            <h2 className="font-semibold flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" /> Rank tracking
-            </h2>
-            <div className="flex gap-2">
-              <Input
-                placeholder="Keyword to track"
-                value={trackInput}
-                onChange={(e) => setTrackInput(e.target.value)}
+            <TabsContent value="import" className="mt-6">
+              <ArticleIdeasImportPanel
+                projectId={projectId}
+                onImported={() => refetchIntelligence()}
               />
-              <Button onClick={handleTrackKeyword}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="space-y-2">
-              {tracked.map((kw) => (
-                <div
-                  key={kw.id}
-                  className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border"
-                >
-                  <button
-                    type="button"
-                    className="text-left flex-1"
-                    onClick={() => setSelectedTrackedId(kw.id)}
-                  >
-                    <span className="font-medium">{kw.keyword}</span>
-                    <span className="text-xs text-muted-foreground ml-2">
-                      {kw.latestSnapshot?.position != null
-                        ? `#${kw.latestSnapshot.position}`
-                        : "—"}
-                    </span>
-                  </button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDeleteTracked(kw.id)}>
-                    <Trash2 className="h-4 w-4" />
+            </TabsContent>
+
+            <TabsContent value="tracking" className="space-y-6 mt-6">
+              <div className="paper-card p-6 rounded-xl space-y-4">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" /> Rank tracking
+                </h2>
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Keyword to track"
+                    value={trackInput}
+                    onChange={(e) => setTrackInput(e.target.value)}
+                  />
+                  <Button onClick={handleTrackKeyword}>
+                    <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
-            </div>
-            {selectedTrackedId && (
-              <KeywordRankChart
-                snapshots={snapshots}
-              />
-            )}
-          </div>
-
-          <div className="paper-card p-6 rounded-xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold flex items-center gap-2">
-                <Target className="h-4 w-4" /> Keyword gaps
-              </h2>
-              <Button variant="outline" size="sm" onClick={handleDiscoverGaps} disabled={isDiscovering}>
-                {isDiscovering ? <Spinner size="sm" /> : <ListPlus className="h-4 w-4" />}
-                Discover gaps
-              </Button>
-            </div>
-            {opportunities.map((opp) => (
-              <div
-                key={opp.id}
-                className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border"
-              >
-                <div>
-                  <p className="font-medium">{opp.keyword}</p>
-                  <p className="text-xs text-muted-foreground">{opp.suggestedTitle}</p>
+                <div className="space-y-2">
+                  {tracked.map((kw) => (
+                    <div
+                      key={kw.id}
+                      className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border"
+                    >
+                      <button
+                        type="button"
+                        className="text-left flex-1"
+                        onClick={() => setSelectedTrackedId(kw.id)}
+                      >
+                        <span className="font-medium">{kw.keyword}</span>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          {kw.latestSnapshot?.position != null
+                            ? `#${kw.latestSnapshot.position}`
+                            : "—"}
+                        </span>
+                      </button>
+                      <Button variant="ghost" size="icon" onClick={() => handleDeleteTracked(kw.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-                <Button size="sm" variant="outline" onClick={() => handleQueueOpportunity(opp.id)}>
-                  Queue
+                {selectedTrackedId && <KeywordRankChart snapshots={snapshots} />}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="analyzer" className="space-y-6 mt-6">
+              <div className="paper-card p-6 rounded-xl space-y-4">
+                <h2 className="font-semibold flex items-center gap-2">
+                  <Search className="h-4 w-4" /> Keyword analysis
+                </h2>
+                <div className="space-y-1.5">
+                  <Label>Keywords (comma-separated)</Label>
+                  <Input
+                    placeholder="B2B lead generation, SaaS marketing"
+                    value={keywordInput}
+                    onChange={(e) => setKeywordInput(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Website URL (optional)</Label>
+                  <Input
+                    placeholder="https://yoursite.com"
+                    value={websiteUrl}
+                    onChange={(e) => setWebsiteUrl(e.target.value)}
+                  />
+                </div>
+                <Button onClick={handleAnalyze} disabled={loading}>
+                  {loading ? (
+                    <>
+                      <Spinner size="sm" /> Analyzing…
+                    </>
+                  ) : (
+                    "Analyze keywords"
+                  )}
                 </Button>
               </div>
-            ))}
-            {opportunities.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                No open opportunities. Run discovery to find gaps.
-              </p>
-            )}
-          </div>
 
-          {alerts.length > 0 && (
-            <div className="paper-card p-6 rounded-xl space-y-3">
-              <h2 className="font-semibold flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 text-amber-500" /> Rank alerts
-              </h2>
-              {alerts.map((a) => (
-                <div
-                  key={a.id}
-                  className="text-sm p-3 rounded-lg bg-amber-500/5 border border-amber-500/20"
-                >
-                  <span className="font-medium">{a.keyword}</span>: {a.message}
+              {analysis && (
+                <div className="space-y-4">
+                  <div className="paper-card rounded-xl p-5">
+                    <h2 className="font-semibold flex items-center gap-2 mb-2">
+                      <Lightbulb className="h-4 w-4 text-primary" /> Top opportunity
+                    </h2>
+                    <p className="text-sm text-muted-foreground">{analysis.topOpportunity}</p>
+                    <p className="text-sm mt-2">{analysis.summary}</p>
+                  </div>
+                  {analysis.keywords.map((kw, i) => (
+                    <div key={i} className="paper-card rounded-xl p-5 space-y-3">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <h3 className="font-semibold">{kw.keyword}</h3>
+                        <Badge variant={DIFFICULTY_COLORS[kw.difficulty]}>{kw.difficulty}</Badge>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary rounded-full"
+                            style={{ width: `${kw.aiVisibility}%` }}
+                          />
+                        </div>
+                        <span className="text-xs font-medium">AI: {kw.aiVisibility}%</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              )}
+            </TabsContent>
+          </Tabs>
         </>
       )}
 
@@ -361,7 +381,7 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
         <Link href="/search/visibility" className="text-primary hover:underline">
           Visibility
         </Link>{" "}
-        for LLM citation tracking.
+        for LLM citation tracking and Search Console connection.
       </p>
     </div>
   );

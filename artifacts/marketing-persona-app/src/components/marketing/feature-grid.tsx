@@ -24,11 +24,12 @@ export function FeatureGrid({ items, columns = 3, surface = "paper" }: FeatureGr
     surface === "glass"
       ? "mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-white/10 text-white"
       : "mb-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary";
-  const titleClass = surface === "glass" ? "font-semibold text-white" : "font-semibold";
+  const titleClass =
+    surface === "glass" ? "text-lg font-semibold text-white" : "text-lg font-semibold";
   const descClass =
     surface === "glass"
-      ? "mt-2 text-sm text-white/65 leading-relaxed"
-      : "mt-2 text-sm text-muted-foreground leading-relaxed";
+      ? "mt-2 text-base text-white/65 leading-relaxed"
+      : "mt-2 text-base text-muted-foreground leading-relaxed";
 
   return (
     <div className={gridClass}>

@@ -6,6 +6,7 @@ import { useActiveProject } from "@/context/active-project";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { ProjectPublishingTab } from "@/components/project-publishing-tab";
 import { SearchPropertyConnectionsPanel } from "@/components/search-property-connections-panel";
+import { AnalyticsPropertyConnectionsPanel } from "@/components/analytics-property-connections-panel";
 import { IntegrationTabBadge } from "@/components/integration-tile";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { IntegrationCategoryFilter } from "@/components/publishing-settings-panel";
@@ -13,6 +14,7 @@ import {
   useIntegrationCounts,
 } from "@/hooks/use-integration-counts";
 import { SEARCH_INTEGRATIONS_COUNT } from "@/components/search-property-connections-panel";
+import { ANALYTICS_INTEGRATIONS_COUNT } from "@/components/analytics-property-connections-panel";
 import { getCmsDestinations, getEspDestinations, SOCIAL_SETTINGS_COUNT } from "@/lib/publishing-destinations";
 
 type IntegrationsTab = "all" | IntegrationCategoryFilter | "search";
@@ -78,17 +80,24 @@ export default function IntegrationsPage() {
               <IntegrationTabBadge count={counts.esp} />
             </TabsTrigger>
             <TabsTrigger value="search" className="gap-0">
-              Search & AI
+              Search & Analytics
               <IntegrationTabBadge count={counts.search} />
             </TabsTrigger>
           </TabsList>
 
           {activeTab === "all" || activeTab === "search" ? (
-            <SearchPropertyConnectionsPanel
-              projectId={projectId}
-              embedded
-              layout="grid"
-            />
+            <div className="space-y-6">
+              <SearchPropertyConnectionsPanel
+                projectId={projectId}
+                embedded
+                layout="grid"
+              />
+              <AnalyticsPropertyConnectionsPanel
+                projectId={projectId}
+                embedded
+                layout="grid"
+              />
+            </div>
           ) : null}
 
           {activeTab !== "search" ? (
@@ -102,7 +111,8 @@ export default function IntegrationsPage() {
 
           {!counts.loading && activeTab === "all" ? (
             <p className="text-xs text-muted-foreground">
-              {counts.total} of {CMS_TOTAL + ESP_TOTAL + SOCIAL_SETTINGS_COUNT + SEARCH_INTEGRATIONS_COUNT}{" "}
+              {counts.total} of{" "}
+              {CMS_TOTAL + ESP_TOTAL + SOCIAL_SETTINGS_COUNT + SEARCH_INTEGRATIONS_COUNT + ANALYTICS_INTEGRATIONS_COUNT}{" "}
               integrations connected.
             </p>
           ) : null}

@@ -5,12 +5,13 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
 import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { buildPasswordResetEmail, sendEmail } from "@/lib/email";
 
 const schema = z.object({ email: z.string().email() });
 
 export async function POST(req: Request) {
   const ip = getClientIp(req);
-  const limited = rateLimitResponse(
+  const limited = await rateLimitResponse(
     `auth-forgot-password:${ip}`,
     RATE_LIMITS.AUTH_PER_IP.limit,
     RATE_LIMITS.AUTH_PER_IP.windowMs
@@ -40,32 +41,17 @@ export async function POST(req: Request) {
         .set({ passwordResetToken: token, passwordResetExpires: expires })
         .where(eq(usersTable.id, user.id));
 
-      // Send email if Resend is configured
-      const resendKey = process.env.RESEND_API_KEY;
-      const fromEmail = process.env.RESEND_FROM_EMAIL ?? "noreply@goals.ac";
       const appUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3001";
-
-      if (resendKey) {
-        const resetUrl = `${appUrl}/reset-password?token=${token}`;
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${resendKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromEmail,
-            to: email,
-            subject: "Reset your goals.ac password",
-            html: `
-              <p>Hi ${user.name},</p>
-              <p>You requested a password reset. Click the link below to choose a new password:</p>
-              <p><a href="${resetUrl}">${resetUrl}</a></p>
-              <p>This link expires in 1 hour.</p>
-              <p>If you didn't request this, ignore this email — your password won't change.</p>
-            `,
-          }),
+      const resetUrl = `${appUrl}/reset-password?token=${token}`;
+      const emailContent = buildPasswordResetEmail({ resetUrl, userName: user.name });
+      try {
+        await sendEmail({
+          to: email,
+          subject: emailContent.subject,
+          html: emailContent.html,
         });
+      } catch {
+        // Swallow email errors — still respond 200
       }
     }
   } catch {

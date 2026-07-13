@@ -1,4 +1,4 @@
-import type { ContentStyle } from "@workspace/db";
+import type { ContentStyle, PlatformVoices } from "@workspace/db";
 
 export type HumanizationLevel = "off" | "light" | "strong";
 
@@ -10,6 +10,13 @@ export interface BrandVoiceFields {
   typicalStructure?: string;
   doWords?: string[];
   dontWords?: string[];
+  projectId?: number;
+  brandMemory?: {
+    summary?: string;
+    voiceTraits?: string[];
+    audienceInsights?: string[];
+    competitorPositioning?: string;
+  } | null;
 }
 
 export interface UnifiedBrandContext extends BrandVoiceFields {
@@ -19,9 +26,21 @@ export interface UnifiedBrandContext extends BrandVoiceFields {
   targetAudience: string;
   voiceTone: string;
   primaryKeywords: string[];
+  brandMemory?: {
+    summary?: string;
+    voiceTraits?: string[];
+    audienceInsights?: string[];
+    competitorPositioning?: string;
+    lastIndexedAt?: string;
+    skillVersion?: number;
+  } | null;
   contentStyle?: ContentStyle | null;
   humanizationLevel?: HumanizationLevel;
   writingSample?: string | null;
+  brandVoiceSkill?: string;
+  skillLocked?: boolean;
+  projectId?: number;
+  platformVoices?: PlatformVoices | null;
 }
 
 export function normalizeSiteHost(url: string): string {
@@ -77,6 +96,16 @@ export function buildBrandVoicePromptContext(
 
   if (brand.voiceTone?.trim()) {
     sections.push(`BRAND VOICE: ${brand.voiceTone.trim()}`);
+  }
+
+  if (brand.brandMemory?.summary?.trim()) {
+    sections.push(`BRAND MEMORY: ${brand.brandMemory.summary.trim()}`);
+  }
+  if (brand.brandMemory?.voiceTraits?.length) {
+    sections.push(listSection("VOICE TRAITS", brand.brandMemory.voiceTraits, 8));
+  }
+  if (brand.brandMemory?.audienceInsights?.length) {
+    sections.push(listSection("AUDIENCE INSIGHTS", brand.brandMemory.audienceInsights, 6));
   }
 
   const style = brand.contentStyle;
@@ -135,6 +164,35 @@ export function buildBrandVoicePromptContext(
   return `\n${sections.join("\n\n")}\n`;
 }
 
+export interface HybridBrandVoiceOptions {
+  brandVoiceSkill?: string;
+  retrievedPassages?: string;
+}
+
+export function buildHybridBrandVoicePromptContext(
+  brand: BrandVoiceFields & { contentStyle?: ContentStyle | null },
+  options?: HybridBrandVoiceOptions,
+): string {
+  const sections: string[] = [];
+  const base = buildBrandVoicePromptContext(brand).trim();
+  if (base) sections.push(base);
+
+  const skill = options?.brandVoiceSkill?.trim();
+  if (skill) {
+    sections.push(
+      `BRAND VOICE SKILL (follow this voice guide):\n${skill.slice(0, 4000)}`,
+    );
+  }
+
+  const passages = options?.retrievedPassages?.trim();
+  if (passages) {
+    sections.push(passages);
+  }
+
+  if (sections.length === 0) return "";
+  return `\n${sections.join("\n\n")}\n`;
+}
+
 export function brandVoiceCacheFingerprint(brand: UnifiedBrandContext): string {
   const join = (values?: string[]) => (values ?? []).map((v) => v.trim()).filter(Boolean).sort().join("|");
   return [
@@ -153,6 +211,9 @@ export function brandVoiceCacheFingerprint(brand: UnifiedBrandContext): string {
     join(brand.contentStyle?.forbiddenWords),
     resolveHumanizationLevel(brand),
     brand.writingSample ?? "",
-    "brand-voice-v1",
+    brand.brandMemory?.lastIndexedAt ?? "",
+    brand.brandVoiceSkill?.slice(0, 200) ?? "",
+    String(brand.brandMemory?.skillVersion ?? 0),
+    "brand-voice-v2",
   ].join("::");
 }

@@ -38,6 +38,15 @@
     },
     {
       "path": "./lib/serp-provider"
+    },
+    {
+      "path": "./lib/keyword-research-provider"
+    },
+    {
+      "path": "./lib/stock-images"
+    },
+    {
+      "path": "./lib/media"
     }
   ]
 }

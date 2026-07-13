@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Bot, User, ChevronDown, Loader2 } from "lucide-react";
+import { MessageCircle, X, Send, User, ChevronDown, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -85,7 +85,7 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40 shrink-0">
             <div className="flex items-center gap-2.5">
               <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
-                <Bot className="w-4 h-4 text-primary-foreground" />
+                <MessageCircle className="w-4 h-4 text-primary-foreground" />
               </div>
               <div>
                 <p className="text-sm font-semibold">Roadmap Assistant</p>
@@ -109,7 +109,7 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
                   {msg.role === "user" ? (
                     <User className="w-3.5 h-3.5 text-primary-foreground" />
                   ) : (
-                    <Bot className="w-3.5 h-3.5 text-muted-foreground" />
+                    <MessageCircle className="w-3.5 h-3.5 text-muted-foreground" />
                   )}
                 </div>
                 <div
@@ -124,7 +124,7 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
             {loading && (
               <div className="flex gap-2.5">
                 <div className="w-6 h-6 rounded-full bg-muted border border-border flex items-center justify-center shrink-0">
-                  <Bot className="w-3.5 h-3.5 text-muted-foreground" />
+                  <MessageCircle className="w-3.5 h-3.5 text-muted-foreground" />
                 </div>
                 <div className="bg-muted rounded-xl px-3 py-2.5">
                   <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />

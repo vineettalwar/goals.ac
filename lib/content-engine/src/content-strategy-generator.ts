@@ -3,6 +3,7 @@ import type { AiProviderOptions } from "@workspace/ai-providers";
 import type { AiProviderClient } from "@workspace/ai-providers/client";
 import { resolveAiClient } from "./support/resolve-ai-client";
 import type { ContentStyle } from "@workspace/db";
+import { loadBrandVoiceGenerationContext } from "./support/brand-voice-generation";
 
 export interface ContentItem {
   day: number;
@@ -31,9 +32,18 @@ function buildContentStyleContext(style?: ContentStyle | null): string {
   return "\n\nContent Style Guidelines:\n" + lines.map((l) => `- ${l}`).join("\n");
 }
 
-function buildBatchPrompt(industry: string, location: string, stage: string, startDay: number, endDay: number, contentStyle?: ContentStyle | null): string {
+function buildBatchPrompt(
+  industry: string,
+  location: string,
+  stage: string,
+  startDay: number,
+  endDay: number,
+  contentStyle?: ContentStyle | null,
+  brandVoiceContext?: string,
+): string {
   const styleContext = buildContentStyleContext(contentStyle);
-  return `Generate days ${startDay} to ${endDay} of a 30-day content strategy for a ${industry} startup based in ${location} at the ${stage} stage.${styleContext}
+  const voiceBlock = brandVoiceContext?.trim() ? `\n\nBrand Voice:\n${brandVoiceContext.trim()}` : "";
+  return `Generate days ${startDay} to ${endDay} of a 30-day content strategy for a ${industry} startup based in ${location} at the ${stage} stage.${styleContext}${voiceBlock}
 
 Return ONLY a JSON array of exactly ${endDay - startDay + 1} objects (days ${startDay}–${endDay}), each with this exact structure:
 [
@@ -91,8 +101,17 @@ async function generateBatch(
   startDay: number,
   endDay: number,
   contentStyle?: ContentStyle | null,
+  brandVoiceContext?: string,
 ): Promise<ContentItem[]> {
-  const prompt = buildBatchPrompt(industry, location, stage, startDay, endDay, contentStyle);
+  const prompt = buildBatchPrompt(
+    industry,
+    location,
+    stage,
+    startDay,
+    endDay,
+    contentStyle,
+    brandVoiceContext,
+  );
   let lastError: unknown;
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
@@ -124,11 +143,12 @@ async function generateWithClient(
   location: string,
   stage: string,
   contentStyle?: ContentStyle | null,
+  brandVoiceContext?: string,
 ): Promise<ContentItem[]> {
   const [batch1, batch2, batch3] = await Promise.all([
-    generateBatch(ai, industry, location, stage, 1, 10, contentStyle),
-    generateBatch(ai, industry, location, stage, 11, 20, contentStyle),
-    generateBatch(ai, industry, location, stage, 21, 30, contentStyle),
+    generateBatch(ai, industry, location, stage, 1, 10, contentStyle, brandVoiceContext),
+    generateBatch(ai, industry, location, stage, 11, 20, contentStyle, brandVoiceContext),
+    generateBatch(ai, industry, location, stage, 21, 30, contentStyle, brandVoiceContext),
   ]);
   const all = [...batch1, ...batch2, ...batch3].sort((a, b) => a.day - b.day);
   validateContentItems(all);
@@ -142,9 +162,18 @@ export async function generateContentStrategy(
   userApiKey?: string | null,
   contentStyle?: ContentStyle | null,
   aiProviderOptions?: AiProviderOptions,
+  projectId?: number,
 ): Promise<ContentItem[]> {
+  let brandVoiceContext = "";
+  if (projectId) {
+    const ctx = await loadBrandVoiceGenerationContext(
+      projectId,
+      `${industry} ${location} content strategy`,
+    );
+    brandVoiceContext = ctx?.promptContext ?? "";
+  }
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
-  return generateWithClient(client, industry, location, stage, contentStyle);
+  return generateWithClient(client, industry, location, stage, contentStyle, brandVoiceContext);
 }
 
 const BATCH_RANGES: [number, number][] = [[1, 10], [11, 20], [21, 30]];
@@ -156,10 +185,11 @@ async function generateWithClientProgress(
   stage: string,
   onBatch: (batchNum: number, totalBatches: number, items: ContentItem[]) => void,
   contentStyle?: ContentStyle | null,
+  brandVoiceContext?: string,
 ): Promise<ContentItem[]> {
   let completed = 0;
   const batchPromises = BATCH_RANGES.map(([start, end]) =>
-    generateBatch(ai, industry, location, stage, start, end, contentStyle).then((items) => {
+    generateBatch(ai, industry, location, stage, start, end, contentStyle, brandVoiceContext).then((items) => {
       completed++;
       onBatch(completed, BATCH_RANGES.length, items);
       return items;
@@ -179,7 +209,24 @@ export async function generateContentStrategyWithProgress(
   userApiKey?: string | null,
   contentStyle?: ContentStyle | null,
   aiProviderOptions?: AiProviderOptions,
+  projectId?: number,
 ): Promise<ContentItem[]> {
+  let brandVoiceContext = "";
+  if (projectId) {
+    const ctx = await loadBrandVoiceGenerationContext(
+      projectId,
+      `${industry} ${location} content strategy`,
+    );
+    brandVoiceContext = ctx?.promptContext ?? "";
+  }
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
-  return generateWithClientProgress(client, industry, location, stage, onBatch, contentStyle);
+  return generateWithClientProgress(
+    client,
+    industry,
+    location,
+    stage,
+    onBatch,
+    contentStyle,
+    brandVoiceContext,
+  );
 }

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { useCaptureLeadForRoadmap } from "@workspace/api-client-react";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { CheckCircle2, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
@@ -79,7 +79,7 @@ export function LeadCaptureModal({ roadmapSlug, trigger, open: controlledOpen, o
             {isSubmitted ? (
               <><CheckCircle2 className="w-4 h-4 mr-2" /> Request Submitted</>
             ) : (
-              <><Sparkles className="w-4 h-4 mr-2" /> Automate these milestones with Lead.sh</>
+              <><Zap className="w-4 h-4 mr-2" /> Automate these milestones with Lead.sh</>
             )}
           </Button>
         )}

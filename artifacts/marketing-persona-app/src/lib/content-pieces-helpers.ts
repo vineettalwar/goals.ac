@@ -70,7 +70,10 @@ export async function loadProjectBrand(
   projectId: number,
   userId: number,
 ): Promise<{ brand: BrandContext; projectId: number } | null> {
-  const brand = await loadBrandContextForProject(projectId, userId);
+  const access = await requireProjectAccess(projectId, userId);
+  if (!access.ok) return null;
+
+  const brand = await loadBrandContextForProject(projectId);
   if (!brand) return null;
   return { brand, projectId };
 }

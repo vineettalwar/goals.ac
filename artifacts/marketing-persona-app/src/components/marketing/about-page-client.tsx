@@ -9,7 +9,7 @@ import { HERO_IMAGES } from "@/lib/marketing-hero-images";
 const VALUES = [
   {
     title: "Clarity over complexity",
-    desc: "Every output should be inspectable, editable, and actionable — not a black box.",
+    desc: "Every output should be inspectable, editable, and actionable, not a black box.",
   },
   {
     title: "Editorial control",
@@ -17,7 +17,7 @@ const VALUES = [
   },
   {
     title: "Built for B2B",
-    desc: "Roadmaps, briefs, and drafts tuned for startup growth — not generic blog spam.",
+    desc: "Roadmaps, briefs, and drafts tuned for startup growth, not generic blog spam.",
   },
 ];
 
@@ -29,7 +29,7 @@ export function AboutPageClient() {
           badge="About us"
           titleLine1="Strategy and content"
           titleLine2="for B2B builders"
-          description="goals.ac is an AI-powered growth platform for startups who want to compete with larger marketing teams — without hiring one."
+          description="goals.ac is an AI-powered growth platform for startups who want to compete with larger marketing teams, without hiring one."
           backgroundImage={HERO_IMAGES.about.hero}
           ctas={[{ label: "Try the free roadmap", href: "/", variant: "primary" }]}
         />
@@ -49,7 +49,7 @@ export function AboutPageClient() {
             it. Expensive agencies and generic AI tools shouldn&apos;t be the only options.
           </p>
           <p>
-            goals.ac uses Gemini AI to generate highly specific, audience-targeted content — from
+            goals.ac uses Gemini AI to generate highly specific, audience-targeted content, from
             12-month growth roadmaps to weekly SEO articles published automatically to your CMS.
           </p>
         </div>

@@ -16,10 +16,19 @@ import {
   CheckCircle2,
   XCircle,
   Loader2,
+  Cloud,
+  BarChart3,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OrgSecurityPanel } from "@/components/org-security-panel";
+import { useActiveProject } from "@/context/active-project";
+import {
+  contentLanguageLabel,
+  semrushDatabaseForLanguage,
+  semrushDatabaseLabel,
+} from "@workspace/content-engine/support/content-language";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -65,14 +74,41 @@ interface AiProviderStatus {
     ollamaModel: string | null;
   };
   gemini: { configured: boolean; source: string | null };
+  bedrock: {
+    configured: boolean;
+    region: string | null;
+    model: string | null;
+    source: string | null;
+  };
   ollama: { configured: boolean; baseUrl: string; model: string; reachable: boolean };
 }
 
-type AiProviderChoice = "gemini" | "ollama";
+type AiProviderChoice = "gemini" | "bedrock" | "ollama";
 
 function normalizeProviderChoice(value: string | null | undefined): AiProviderChoice {
-  return value === "ollama" ? "ollama" : "gemini";
+  if (value === "bedrock") return "bedrock";
+  if (value === "ollama") return "ollama";
+  return "gemini";
 }
+
+interface BedrockCredentialsForm {
+  accessKeyId: string;
+  secretAccessKey: string;
+  sessionToken: string;
+  region: string;
+  model: string;
+}
+
+const DEFAULT_BEDROCK_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0";
+
+const SEMRUSH_DATABASES = [
+  { value: "us", label: "United States" },
+  { value: "uk", label: "United Kingdom" },
+  { value: "ca", label: "Canada" },
+  { value: "au", label: "Australia" },
+  { value: "de", label: "Germany" },
+  { value: "fr", label: "France" },
+] as const;
 
 const PLAN_LABELS: Record<UsageSummary["plan"], string> = {
   starter: "Starter",
@@ -86,6 +122,7 @@ interface SettingsClientProps {
 
 export function SettingsClient({ initialData }: SettingsClientProps) {
   const { data: session, update } = useSession();
+  const { activeProject } = useActiveProject();
   const [activeTab, setActiveTab] = useState("profile");
   const [usage, setUsage] = useState<UsageSummary | null>(initialData?.usage ?? null);
   const [usageLoading, setUsageLoading] = useState(!initialData);
@@ -101,6 +138,46 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
   const [geminiTesting, setGeminiTesting] = useState(false);
   const [geminiTestResult, setGeminiTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [geminiSaving, setGeminiSaving] = useState(false);
+  const [hasBedrockCredentials, setHasBedrockCredentials] = useState(
+    initialData?.bedrockCredentials.hasCredentials ?? false,
+  );
+  const [bedrockAccessKeyLastFour, setBedrockAccessKeyLastFour] = useState<string | null>(
+    initialData?.bedrockCredentials.accessKeyLastFour ?? null,
+  );
+  const [bedrockRegion, setBedrockRegion] = useState(
+    initialData?.bedrockCredentials.region ?? "us-east-1",
+  );
+  const [bedrockModel, setBedrockModel] = useState(
+    initialData?.bedrockCredentials.model ?? DEFAULT_BEDROCK_MODEL,
+  );
+  const [bedrockDialogOpen, setBedrockDialogOpen] = useState(false);
+  const [bedrockForm, setBedrockForm] = useState<BedrockCredentialsForm>({
+    accessKeyId: "",
+    secretAccessKey: "",
+    sessionToken: "",
+    region: "us-east-1",
+    model: DEFAULT_BEDROCK_MODEL,
+  });
+  const [bedrockTesting, setBedrockTesting] = useState(false);
+  const [bedrockTestResult, setBedrockTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [bedrockSaving, setBedrockSaving] = useState(false);
+  const [deletingBedrock, setDeletingBedrock] = useState(false);
+  const [hasSemrushCredentials, setHasSemrushCredentials] = useState(
+    initialData?.semrushCredentials.hasCredentials ?? false,
+  );
+  const [semrushApiKeyLastFour, setSemrushApiKeyLastFour] = useState<string | null>(
+    initialData?.semrushCredentials.apiKeyLastFour ?? null,
+  );
+  const [semrushDatabase, setSemrushDatabase] = useState(
+    initialData?.semrushCredentials.database ?? "us",
+  );
+  const [semrushDialogOpen, setSemrushDialogOpen] = useState(false);
+  const [semrushApiKeyInput, setSemrushApiKeyInput] = useState("");
+  const [semrushFormDatabase, setSemrushFormDatabase] = useState("us");
+  const [semrushTesting, setSemrushTesting] = useState(false);
+  const [semrushTestResult, setSemrushTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [semrushSaving, setSemrushSaving] = useState(false);
+  const [deletingSemrush, setDeletingSemrush] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<AiProviderChoice>(() => {
     if (!initialData?.aiStatus) return "gemini";
     const saved = initialData.aiStatus.settings?.provider;
@@ -121,7 +198,10 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
   const [deletingKey, setDeletingKey] = useState(false);
   const canManageAiSettings =
     initialData?.canManageAiSettings ??
-    (session?.user?.orgRole === "site_admin" || session?.user?.role === "super_admin" || session?.user?.role === "admin");
+    (session?.user?.orgRole === "site_admin" ||
+      session?.user?.orgRole === "owner" ||
+      session?.user?.role === "super_admin" ||
+      session?.user?.role === "admin");
 
   const profileForm = useForm({
     resolver: zodResolver(profileSchema),
@@ -138,8 +218,10 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
       fetch("/api/usage").then((r) => (r.ok ? r.json() : null)),
       fetch("/api/auth/me").then((r) => (r.ok ? r.json() : null)),
       fetch("/api/auth/api-key").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/auth/bedrock-credentials").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/auth/semrush-credentials").then((r) => (r.ok ? r.json() : null)),
       fetch("/api/ai-providers/status").then((r) => (r.ok ? r.json() : null)),
-    ]).then(([usageData, meData, keyData, aiData]) => {
+    ]).then(([usageData, meData, keyData, bedrockData, semrushData, aiData]) => {
       if (usageData?.usage) setUsage(usageData.usage);
       if (meData) {
         setHasGoogleId(meData.hasGoogleId ?? false);
@@ -149,6 +231,19 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
       if (keyData?.hasKey) {
         setHasGeminiKey(true);
         setGeminiLastFour(keyData.lastFour ?? null);
+      }
+      if (bedrockData?.hasCredentials) {
+        setHasBedrockCredentials(true);
+        setBedrockAccessKeyLastFour(bedrockData.accessKeyLastFour ?? null);
+        setBedrockRegion(bedrockData.region ?? "us-east-1");
+        setBedrockModel(bedrockData.model ?? DEFAULT_BEDROCK_MODEL);
+      }
+      if (semrushData?.hasCredentials) {
+        setHasSemrushCredentials(true);
+        setSemrushApiKeyLastFour(semrushData.apiKeyLastFour ?? null);
+        setSemrushDatabase(semrushData.database ?? "us");
+      } else if (semrushData?.database) {
+        setSemrushDatabase(semrushData.database);
       }
       if (aiData) {
         setAiStatus(aiData);
@@ -232,6 +327,146 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
     setHasGeminiKey(false);
     setGeminiLastFour(null);
     toast.success("API key removed");
+  }
+
+  function openBedrockDialog() {
+    setBedrockForm({
+      accessKeyId: "",
+      secretAccessKey: "",
+      sessionToken: "",
+      region: bedrockRegion || "us-east-1",
+      model: bedrockModel || DEFAULT_BEDROCK_MODEL,
+    });
+    setBedrockTestResult(null);
+    setBedrockDialogOpen(true);
+  }
+
+  function bedrockPayloadFromForm() {
+    return {
+      accessKeyId: bedrockForm.accessKeyId.trim(),
+      secretAccessKey: bedrockForm.secretAccessKey.trim(),
+      sessionToken: bedrockForm.sessionToken.trim() || null,
+      region: bedrockForm.region.trim(),
+      model: bedrockForm.model.trim(),
+    };
+  }
+
+  async function testBedrockCredentials() {
+    const payload = bedrockPayloadFromForm();
+    if (!payload.accessKeyId || !payload.secretAccessKey || !payload.region || !payload.model) return;
+    setBedrockTesting(true);
+    setBedrockTestResult(null);
+    const res = await fetch("/api/auth/bedrock-credentials/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setBedrockTestResult(await res.json());
+    setBedrockTesting(false);
+  }
+
+  async function saveBedrockCredentials() {
+    const payload = bedrockPayloadFromForm();
+    if (!payload.accessKeyId || !payload.secretAccessKey || !payload.region || !payload.model) return;
+    setBedrockSaving(true);
+    const res = await fetch("/api/auth/bedrock-credentials", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    setBedrockSaving(false);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error((err as { error?: string }).error ?? "Failed to save Bedrock credentials");
+      return;
+    }
+    const data = await res.json();
+    setHasBedrockCredentials(true);
+    setBedrockAccessKeyLastFour(data.accessKeyLastFour ?? payload.accessKeyId.slice(-4));
+    setBedrockRegion(data.region ?? payload.region);
+    setBedrockModel(data.model ?? payload.model);
+    setBedrockDialogOpen(false);
+    toast.success("AWS Bedrock credentials saved");
+    const statusRes = await fetch("/api/ai-providers/status");
+    if (statusRes.ok) setAiStatus(await statusRes.json());
+  }
+
+  async function removeBedrockCredentials() {
+    setDeletingBedrock(true);
+    const res = await fetch("/api/auth/bedrock-credentials", { method: "DELETE" });
+    setDeletingBedrock(false);
+    if (!res.ok) { toast.error("Failed to remove Bedrock credentials"); return; }
+    setHasBedrockCredentials(false);
+    setBedrockAccessKeyLastFour(null);
+    toast.success("Bedrock credentials removed");
+    const statusRes = await fetch("/api/ai-providers/status");
+    if (statusRes.ok) setAiStatus(await statusRes.json());
+  }
+
+  function openSemrushDialog() {
+    setSemrushApiKeyInput("");
+    const suggested = semrushDatabaseForLanguage(activeProject?.primaryLanguage);
+    setSemrushFormDatabase(suggested ?? (semrushDatabase || "us"));
+    setSemrushTestResult(null);
+    setSemrushDialogOpen(true);
+  }
+
+  const suggestedSemrushDatabase = semrushDatabaseForLanguage(activeProject?.primaryLanguage);
+  const showSemrushDatabaseHint =
+    Boolean(suggestedSemrushDatabase) &&
+    suggestedSemrushDatabase !== semrushFormDatabase &&
+    Boolean(activeProject?.primaryLanguage) &&
+    activeProject?.primaryLanguage !== "en";
+
+  async function testSemrushCredentials() {
+    if (!semrushApiKeyInput.trim()) return;
+    setSemrushTesting(true);
+    setSemrushTestResult(null);
+    const res = await fetch("/api/auth/semrush-credentials/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        apiKey: semrushApiKeyInput.trim(),
+        database: semrushFormDatabase,
+      }),
+    });
+    setSemrushTestResult(await res.json());
+    setSemrushTesting(false);
+  }
+
+  async function saveSemrushCredentials() {
+    if (!semrushApiKeyInput.trim()) return;
+    setSemrushSaving(true);
+    const res = await fetch("/api/auth/semrush-credentials", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        apiKey: semrushApiKeyInput.trim(),
+        database: semrushFormDatabase,
+      }),
+    });
+    setSemrushSaving(false);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error((err as { error?: string }).error ?? "Failed to save Semrush credentials");
+      return;
+    }
+    const data = await res.json();
+    setHasSemrushCredentials(true);
+    setSemrushApiKeyLastFour(data.apiKeyLastFour ?? semrushApiKeyInput.slice(-4));
+    setSemrushDatabase(data.database ?? semrushFormDatabase);
+    setSemrushDialogOpen(false);
+    toast.success("Semrush API key saved");
+  }
+
+  async function removeSemrushCredentials() {
+    setDeletingSemrush(true);
+    const res = await fetch("/api/auth/semrush-credentials", { method: "DELETE" });
+    setDeletingSemrush(false);
+    if (!res.ok) { toast.error("Failed to remove Semrush credentials"); return; }
+    setHasSemrushCredentials(false);
+    setSemrushApiKeyLastFour(null);
+    toast.success("Semrush credentials removed");
   }
 
   async function saveAiProvider() {
@@ -344,6 +579,7 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="gemini">Google Gemini</SelectItem>
+                      <SelectItem value="bedrock">AWS Bedrock</SelectItem>
                       <SelectItem value="ollama">Ollama (local)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -434,6 +670,89 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
             )}
           </div>
 
+          <div className="paper-card p-6 space-y-4">
+            <h2 className="font-semibold flex items-center gap-2">
+              <Cloud className="w-4 h-4 text-amber-500" />
+              AWS Bedrock (BYOK)
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Bring your own AWS IAM credentials to run Claude and other Bedrock models through your AWS account.
+              {!canManageAiSettings && " Only site admins can manage Bedrock credentials."}
+            </p>
+            {hasBedrockCredentials ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Organization Bedrock credentials connected</p>
+                    <p className="text-xs text-muted-foreground">
+                      Access key ending in ••••{bedrockAccessKeyLastFour ?? "••••"}
+                      {bedrockRegion ? ` · ${bedrockRegion}` : ""}
+                      {bedrockModel ? ` · ${bedrockModel}` : ""}
+                    </p>
+                  </div>
+                </div>
+                {canManageAiSettings && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={openBedrockDialog}>
+                      Replace credentials
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={removeBedrockCredentials} disabled={deletingBedrock}>
+                      {deletingBedrock ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove credentials"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : canManageAiSettings ? (
+              <Button variant="outline" size="sm" onClick={openBedrockDialog}>
+                <KeyRound className="mr-2 h-3.5 w-3.5" />Add Bedrock credentials
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">No organization Bedrock credentials configured.</p>
+            )}
+          </div>
+
+          <div className="paper-card p-6 space-y-4">
+            <h2 className="font-semibold flex items-center gap-2">
+              <BarChart3 className="w-4 h-4 text-orange-500" />
+              Semrush (BYOK)
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Connect your Semrush API key to pull keyword gaps, search volume, and difficulty into content suggestions.
+              {!canManageAiSettings && " Only site admins can manage Semrush credentials."}
+            </p>
+            {hasSemrushCredentials ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Organization Semrush API key connected</p>
+                    <p className="text-xs text-muted-foreground">
+                      Key ending in ••••{semrushApiKeyLastFour ?? "••••"}
+                      {semrushDatabase ? ` · database: ${semrushDatabaseLabel(semrushDatabase)}` : ""}
+                    </p>
+                  </div>
+                </div>
+                {canManageAiSettings && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={openSemrushDialog}>
+                      Replace key
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={removeSemrushCredentials} disabled={deletingSemrush}>
+                      {deletingSemrush ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove key"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : canManageAiSettings ? (
+              <Button variant="outline" size="sm" onClick={openSemrushDialog}>
+                <KeyRound className="mr-2 h-3.5 w-3.5" />Add Semrush API key
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">No organization Semrush credentials configured.</p>
+            )}
+          </div>
+
           {aiStatus && (
             <div className="paper-card p-6 space-y-3 text-sm">
               <h2 className="font-semibold">Provider status</h2>
@@ -441,6 +760,14 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                 <span>Gemini (platform)</span>
                 <span className={aiStatus.gemini.configured ? "text-emerald-600" : "text-muted-foreground"}>
                   {aiStatus.gemini.configured ? `Configured (${aiStatus.gemini.source})` : "Not configured"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Bedrock</span>
+                <span className={aiStatus.bedrock.configured ? "text-emerald-600" : "text-muted-foreground"}>
+                  {aiStatus.bedrock.configured
+                    ? `Configured (${aiStatus.bedrock.source ?? "env"})`
+                    : "Not configured"}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -453,7 +780,8 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
           )}
         </TabsContent>
 
-        <TabsContent value="security">
+        <TabsContent value="security" className="space-y-6">
+          <OrgSecurityPanel canManage={canManageAiSettings} />
           <div className="paper-card p-6 space-y-4">
             <h2 className="font-semibold">Change password</h2>
             <div className="space-y-1.5">
@@ -505,6 +833,165 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
               </Button>
               <Button onClick={saveGeminiKey} disabled={geminiSaving || !geminiKeyInput}>
                 {geminiSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save key"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={bedrockDialogOpen} onOpenChange={setBedrockDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>AWS Bedrock credentials</DialogTitle>
+            <DialogDescription>
+              Credentials are encrypted and stored securely. Use an IAM user with Bedrock invoke permissions.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="bedrock-access-key-id">Access key ID</Label>
+              <Input
+                id="bedrock-access-key-id"
+                type="password"
+                placeholder="AKIA..."
+                value={bedrockForm.accessKeyId}
+                onChange={(e) => setBedrockForm((prev) => ({ ...prev, accessKeyId: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="bedrock-secret-access-key">Secret access key</Label>
+              <Input
+                id="bedrock-secret-access-key"
+                type="password"
+                placeholder="Secret key"
+                value={bedrockForm.secretAccessKey}
+                onChange={(e) => setBedrockForm((prev) => ({ ...prev, secretAccessKey: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="bedrock-session-token">Session token (optional)</Label>
+              <Input
+                id="bedrock-session-token"
+                type="password"
+                placeholder="For temporary credentials"
+                value={bedrockForm.sessionToken}
+                onChange={(e) => setBedrockForm((prev) => ({ ...prev, sessionToken: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="bedrock-region">Region</Label>
+                <Input
+                  id="bedrock-region"
+                  placeholder="us-east-1"
+                  value={bedrockForm.region}
+                  onChange={(e) => setBedrockForm((prev) => ({ ...prev, region: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="bedrock-model">Model ID</Label>
+                <Input
+                  id="bedrock-model"
+                  placeholder={DEFAULT_BEDROCK_MODEL}
+                  value={bedrockForm.model}
+                  onChange={(e) => setBedrockForm((prev) => ({ ...prev, model: e.target.value }))}
+                />
+              </div>
+            </div>
+            {bedrockTestResult && (
+              <div className={`flex items-center gap-2 text-sm ${bedrockTestResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                {bedrockTestResult.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                {bedrockTestResult.ok ? "Credentials are valid" : bedrockTestResult.error ?? "Credential test failed"}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={testBedrockCredentials}
+                disabled={
+                  bedrockTesting ||
+                  !bedrockForm.accessKeyId.trim() ||
+                  !bedrockForm.secretAccessKey.trim() ||
+                  !bedrockForm.region.trim() ||
+                  !bedrockForm.model.trim()
+                }
+              >
+                {bedrockTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test credentials"}
+              </Button>
+              <Button
+                onClick={saveBedrockCredentials}
+                disabled={
+                  bedrockSaving ||
+                  !bedrockForm.accessKeyId.trim() ||
+                  !bedrockForm.secretAccessKey.trim() ||
+                  !bedrockForm.region.trim() ||
+                  !bedrockForm.model.trim()
+                }
+              >
+                {bedrockSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save credentials"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={semrushDialogOpen} onOpenChange={setSemrushDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Semrush API key</DialogTitle>
+            <DialogDescription>
+              Your key is encrypted and stored securely. Used for keyword gap analysis and metrics.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="semrush-api-key">API key</Label>
+              <Input
+                id="semrush-api-key"
+                type="password"
+                placeholder="Semrush API key"
+                value={semrushApiKeyInput}
+                onChange={(e) => setSemrushApiKeyInput(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="semrush-database">Regional database</Label>
+              <Select value={semrushFormDatabase} onValueChange={setSemrushFormDatabase}>
+                <SelectTrigger id="semrush-database">
+                  <SelectValue placeholder="Select database" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SEMRUSH_DATABASES.map((db) => (
+                    <SelectItem key={db.value} value={db.value}>
+                      {db.label} ({db.value})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {showSemrushDatabaseHint && suggestedSemrushDatabase && (
+                <p className="text-xs text-muted-foreground">
+                  Suggested for your active project&apos;s language (
+                  {contentLanguageLabel(activeProject?.primaryLanguage)}):{" "}
+                  {semrushDatabaseLabel(suggestedSemrushDatabase)}
+                </p>
+              )}
+            </div>
+            {semrushTestResult && (
+              <div className={`flex items-center gap-2 text-sm ${semrushTestResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                {semrushTestResult.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                {semrushTestResult.ok ? "API key is valid" : semrushTestResult.error ?? "Key test failed"}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={testSemrushCredentials}
+                disabled={semrushTesting || !semrushApiKeyInput.trim()}
+              >
+                {semrushTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test key"}
+              </Button>
+              <Button onClick={saveSemrushCredentials} disabled={semrushSaving || !semrushApiKeyInput.trim()}>
+                {semrushSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save key"}
               </Button>
             </div>
           </div>

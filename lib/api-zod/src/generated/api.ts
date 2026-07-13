@@ -454,3 +454,148 @@ export const GetTrackedKeywordSnapshotsResponse = zod.object({
 export const DeleteTrackedKeywordParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * @summary Sync Google Search Console query data for a project
+ */
+export const SyncGscSearchAnalyticsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary GSC sync status for a project
+ */
+export const GetGscSyncStatusParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Aggregated GSC queries for a project
+ */
+export const ListGscQueriesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Pull historical posts via OAuth into brand + platform voice
+ */
+export const SyncSocialHistoryParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SyncSocialHistoryQueryParams = zod.object({
+  platform: zod.coerce.string().optional(),
+  background: zod.coerce.boolean().optional(),
+});
+
+/**
+ * @summary Per-platform OAuth history sync status
+ */
+export const GetSocialHistorySyncStatusParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Social post performance metrics for a project
+ */
+export const GetSocialMetricsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const GetSocialMetricsQueryParams = zod.object({
+  platform: zod.coerce.string().optional(),
+  days: zod.coerce.number().optional(),
+});
+
+/**
+ * @summary Sync engagement metrics for published social posts
+ */
+export const SyncSocialMetricsParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const SyncSocialMetricsQueryParams = zod.object({
+  background: zod.coerce.boolean().optional(),
+});
+
+/**
+ * @summary Social metrics sync status
+ */
+export const GetSocialMetricsSyncStatusParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Schedule or unschedule a social queue item
+ */
+export const ScheduleSocialQueuePieceParams = zod.object({
+  id: zod.coerce.number(),
+  pieceId: zod.coerce.number(),
+});
+
+/**
+ * @summary Import article ideas from CSV (site admin)
+ */
+export const ImportArticleIdeasCsvParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Create manual article ideas (site admin)
+ */
+export const CreateArticleIdeasParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary List Google Sheets article idea sources
+ */
+export const ListArticleIdeaSourcesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Connect a Google Sheets source (site admin)
+ */
+export const CreateArticleIdeaSourceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Remove a Google Sheets source
+ */
+export const DeleteArticleIdeaSourceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const DeleteArticleIdeaSourceQueryParams = zod.object({
+  sourceId: zod.coerce.number(),
+});
+
+/**
+ * @summary Sync a Google Sheets article idea source now
+ */
+export const SyncArticleIdeaSourceParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Run keyword opportunity discovery (gsc, semrush, or ai)
+ */
+export const DiscoverKeywordOpportunitiesParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Queue an opportunity into the content strategy
+ */
+export const QueueKeywordOpportunityParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+/**
+ * @summary Update opportunity status (e.g. dismissed)
+ */
+export const UpdateKeywordOpportunityParams = zod.object({
+  id: zod.coerce.number(),
+});

@@ -26,11 +26,26 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
   ]);
 
   const providerId = resolveProviderId(aiProviderOptions);
-  const usingUserKey = Boolean(userApiKey && providerId === "gemini");
+  const usingGeminiKey = Boolean(userApiKey && providerId === "gemini");
+  const usingBedrockKey = Boolean(
+    providerId === "bedrock" &&
+      aiProviderOptions.bedrock?.accessKeyId &&
+      aiProviderOptions.bedrock?.secretAccessKey,
+  );
 
-  if (usingUserKey && userApiKey) {
+  if (usingGeminiKey && userApiKey) {
     try {
       const client = wrapGeminiClient(await createUserGeminiClient(userApiKey));
+      return { client, providerId, usingUserKey: true, source: "user-key" };
+    } catch {
+      // Fall through to platform provider below.
+    }
+  }
+
+  if (usingBedrockKey) {
+    try {
+      const { BedrockClient } = await import("@workspace/ai-providers/bedrock");
+      const client = await BedrockClient.create(aiProviderOptions.bedrock);
       return { client, providerId, usingUserKey: true, source: "user-key" };
     } catch {
       // Fall through to platform provider below.

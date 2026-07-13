@@ -15,7 +15,10 @@
     "./handlers/contentPublish": "./src/handlers/contentPublish.ts",
     "./handlers/llmVisibilityCheck": "./src/handlers/llmVisibilityCheck.ts",
     "./handlers/geoReauditSweep": "./src/handlers/geoReauditSweep.ts",
-    "./handlers/keywordOpportunitySweep": "./src/handlers/keywordOpportunitySweep.ts"
+    "./handlers/keywordOpportunitySweep": "./src/handlers/keywordOpportunitySweep.ts",
+    "./handlers/gscSearchAnalyticsSync": "./src/handlers/gscSearchAnalyticsSync.ts",
+    "./handlers/ga4AnalyticsSync": "./src/handlers/ga4AnalyticsSync.ts",
+    "./handlers/articleIdeaSourceSync": "./src/handlers/articleIdeaSourceSync.ts"
   },
   "dependencies": {
     "@workspace/connectors": "workspace:*",

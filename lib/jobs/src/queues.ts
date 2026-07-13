@@ -20,6 +20,15 @@ export const QUEUES = {
   llmVisibilityCheck: "llm-visibility-check",
   geoReauditSweep: "geo-reaudit-sweep",
   keywordOpportunitySweep: "keyword-opportunity-sweep",
+  gscSearchAnalyticsSync: "gsc-search-analytics-sync",
+  ga4AnalyticsSync: "ga4-analytics-sync",
+  articleIdeaSourceSync: "article-idea-source-sync",
+  brandVoiceIndex: "brand-voice-index",
+  brandVoiceSkillRegen: "brand-voice-skill-regen",
+  brandVoiceResync: "brand-voice-resync",
+  evergreenRecycleSweep: "evergreen-recycle-sweep",
+  socialHistorySync: "social-history-sync",
+  socialMetricsSync: "social-metrics-sync",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
@@ -96,6 +105,65 @@ export interface KeywordOpportunitySweepPayload {
 
 export type KeywordOpportunitySweepJobData = KeywordOpportunitySweepPayload | Record<string, never>;
 
+export interface GscSearchAnalyticsSyncPayload {
+  projectId: number;
+  userId?: number;
+}
+
+export type GscSearchAnalyticsSyncJobData = GscSearchAnalyticsSyncPayload | Record<string, never>;
+
+export interface Ga4AnalyticsSyncPayload {
+  projectId: number;
+  userId?: number;
+}
+
+export type Ga4AnalyticsSyncJobData = Ga4AnalyticsSyncPayload | Record<string, never>;
+
+export interface ArticleIdeaSourceSyncPayload {
+  sourceId: number;
+  userId: number;
+}
+
+export type ArticleIdeaSourceSyncJobData = ArticleIdeaSourceSyncPayload | Record<string, never>;
+
+export interface BrandVoiceIndexPayload {
+  projectId: number;
+  sourceIds?: number[];
+  regenerateSkill?: boolean;
+}
+
+export type BrandVoiceIndexJobData = BrandVoiceIndexPayload;
+
+export interface BrandVoiceSkillRegenPayload {
+  projectId: number;
+}
+
+export type BrandVoiceSkillRegenJobData = BrandVoiceSkillRegenPayload;
+
+export interface BrandVoiceResyncPayload {
+  projectId: number;
+  userId?: number;
+}
+
+export type BrandVoiceResyncJobData = BrandVoiceResyncPayload | Record<string, never>;
+
+export type EvergreenRecycleSweepPayload = Record<string, never>;
+
+export interface SocialHistorySyncPayload {
+  projectId: number;
+  userId: number;
+  platform?: string;
+}
+
+export type SocialHistorySyncJobData = SocialHistorySyncPayload | Record<string, never>;
+
+export interface SocialMetricsSyncPayload {
+  projectId: number;
+  userId?: number;
+}
+
+export type SocialMetricsSyncJobData = SocialMetricsSyncPayload | Record<string, never>;
+
 /** Maps each queue name to the payload shape(s) it accepts. */
 export interface QueuePayloadMap {
   [QUEUES.connectionHealthCheck]: ConnectionHealthCheckJobData;
@@ -107,6 +175,15 @@ export interface QueuePayloadMap {
   [QUEUES.llmVisibilityCheck]: LlmVisibilityCheckJobData;
   [QUEUES.geoReauditSweep]: GeoReauditJobData;
   [QUEUES.keywordOpportunitySweep]: KeywordOpportunitySweepJobData;
+  [QUEUES.gscSearchAnalyticsSync]: GscSearchAnalyticsSyncJobData;
+  [QUEUES.ga4AnalyticsSync]: Ga4AnalyticsSyncJobData;
+  [QUEUES.articleIdeaSourceSync]: ArticleIdeaSourceSyncJobData;
+  [QUEUES.brandVoiceIndex]: BrandVoiceIndexJobData;
+  [QUEUES.brandVoiceSkillRegen]: BrandVoiceSkillRegenJobData;
+  [QUEUES.brandVoiceResync]: BrandVoiceResyncJobData;
+  [QUEUES.evergreenRecycleSweep]: EvergreenRecycleSweepPayload;
+  [QUEUES.socialHistorySync]: SocialHistorySyncJobData;
+  [QUEUES.socialMetricsSync]: SocialMetricsSyncJobData;
 }
 
 export type QueuePayloadFor<Q extends QueueName> = QueuePayloadMap[Q];

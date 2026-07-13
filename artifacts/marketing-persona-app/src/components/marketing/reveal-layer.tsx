@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 
 type RevealLayerProps = {
   image: string;
@@ -23,8 +23,17 @@ export function RevealLayer({
 }: RevealLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const revealRef = useRef<HTMLDivElement>(null);
+  const [enabled, setEnabled] = useState(true);
 
   useEffect(() => {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+    const narrow = window.innerWidth < 768;
+    setEnabled(!reducedMotion && !coarsePointer && !narrow);
+  }, []);
+
+  useEffect(() => {
+    if (!enabled) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -47,9 +56,10 @@ export function RevealLayer({
       window.removeEventListener("resize", resize);
       observer?.disconnect();
     };
-  }, [containerRef]);
+  }, [containerRef, enabled]);
 
   useEffect(() => {
+    if (!enabled) return;
     const canvas = canvasRef.current;
     const reveal = revealRef.current;
     if (!canvas || !reveal) return;
@@ -77,7 +87,9 @@ export function RevealLayer({
     reveal.style.webkitMaskImage = `url(${maskUrl})`;
     reveal.style.maskSize = "100% 100%";
     reveal.style.webkitMaskSize = "100% 100%";
-  }, [cursorX, cursorY, radius]);
+  }, [cursorX, cursorY, radius, enabled]);
+
+  if (!enabled) return null;
 
   return (
     <>

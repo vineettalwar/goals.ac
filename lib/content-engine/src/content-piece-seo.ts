@@ -34,7 +34,14 @@ export type ContentPieceInternalLink = {
 };
 
 export type ContentPieceMetadata = {
+  seoTitle?: string;
   metaDescription?: string;
+  focusKeyword?: string;
+  ogTitle?: string;
+  ogDescription?: string;
+  ogImageUrl?: string;
+  featuredImageUrl?: string;
+  images?: import("@workspace/db").ContentPieceImageRef[];
   faqSection?: ContentPieceFaqItem[];
   citations?: ContentPieceCitation[];
   internalLinkSuggestions?: ContentPieceInternalLink[];
@@ -43,6 +50,16 @@ export type ContentPieceMetadata = {
 };
 
 export type RichContentPieceFields = ContentPieceMetadata & {
+  seo_title?: string;
+  seoTitle?: string;
+  focus_keyword?: string;
+  focusKeyword?: string;
+  og_title?: string;
+  ogTitle?: string;
+  og_description?: string;
+  ogDescription?: string;
+  og_image_url?: string;
+  ogImageUrl?: string;
   meta_description?: string;
   faq_section?: ContentPieceFaqItem[];
   citations?: ContentPieceCitation[];
@@ -95,7 +112,12 @@ function appendRelatedReading(
 
 function normalizeMetadata(raw: RichContentPieceFields): ContentPieceMetadata {
   return {
+    seoTitle: raw.seo_title ?? raw.seoTitle,
     metaDescription: raw.meta_description ?? raw.metaDescription,
+    focusKeyword: raw.focus_keyword ?? raw.focusKeyword,
+    ogTitle: raw.og_title ?? raw.ogTitle,
+    ogDescription: raw.og_description ?? raw.ogDescription,
+    ogImageUrl: raw.og_image_url ?? raw.ogImageUrl,
     faqSection: raw.faq_section ?? raw.faqSection,
     citations: raw.citations,
     internalLinkSuggestions:
@@ -134,7 +156,11 @@ export function finalizeSeoContentPiece<
       : result.meta_description,
     pieceMetadata: {
       ...metadata,
+      seoTitle: metadata.seoTitle ?? sanitizeAiProse(result.title),
       metaDescription,
+      focusKeyword: metadata.focusKeyword ?? result.target_keyword,
+      ogTitle: metadata.ogTitle ?? metadata.seoTitle ?? sanitizeAiProse(result.title),
+      ogDescription: metadata.ogDescription ?? metaDescription,
       faqSection: metadata.faqSection?.map((faq) => ({
         question: sanitizeAiProse(faq.question),
         answer: sanitizeAiProse(faq.answer),
@@ -190,7 +216,11 @@ export function buildSeoLongformJsonSchema(keyword: string): string {
   return `{
   "title": "<compelling SEO title with target keyword, 55-65 characters>",
   "target_keyword": "${keyword}",
+  "seo_title": "<optional distinct SEO title if different from title>",
   "meta_description": "<150-160 character meta description with primary keyword>",
+  "focus_keyword": "${keyword}",
+  "og_title": "<Open Graph title, 55-70 characters>",
+  "og_description": "<Open Graph description, 150-200 characters>",
   "body_markdown": "<full publish-ready markdown article>",
   "faq_section": [{ "question": "<user-style question ending with ?>", "answer": "<2-4 sentence answer>" }],
   "citations": [{ "text": "<anchor text used in article>", "url": "<https://real-authoritative-url>", "source": "<publisher name>" }],

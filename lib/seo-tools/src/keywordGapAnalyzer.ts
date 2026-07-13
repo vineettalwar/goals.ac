@@ -2,7 +2,14 @@ import type { KeywordDifficulty } from "./keywordAnalyzer";
 
 export type GapOpportunity = {
   keyword: string;
-  source: "competitor_gap" | "ai_analysis";
+  source:
+    | "competitor_gap"
+    | "ai_analysis"
+    | "gsc_query"
+    | "csv_import"
+    | "google_sheets"
+    | "manual"
+    | "semrush";
   competitorUrl?: string;
   estimatedVolume?: string;
   difficulty: KeywordDifficulty;

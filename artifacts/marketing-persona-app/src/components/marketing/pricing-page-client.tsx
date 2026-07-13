@@ -12,30 +12,30 @@ import { HERO_IMAGES } from "@/lib/marketing-hero-images";
 const PLANS = [
   {
     name: "Starter",
-    price: "$0",
-    period: "forever",
+    price: "TBD",
+    period: "",
     description: "Perfect for exploring goals.ac",
     features: [
-      "3 growth roadmaps/month",
-      "1 website project",
-      "5 content pieces/month",
+      "Growth roadmaps",
+      "Website projects",
+      "Content pieces",
       "GEO audit (basic)",
       "Community support",
     ],
-    cta: "Start free",
+    cta: "Join waitlist",
     href: "/signup",
     featured: false,
   },
   {
     name: "Growth",
-    price: "$49",
-    period: "/month",
+    price: "TBD",
+    period: "",
     description: "For startups serious about content",
     features: [
       "Unlimited roadmaps",
-      "5 website projects",
-      "50 content pieces/month",
-      "Marketing personas (unlimited)",
+      "Multiple website projects",
+      "Content Studio",
+      "Marketing personas",
       "WordPress auto-publish",
       "Full GEO audit",
       "AI visibility tracking",
@@ -43,29 +43,26 @@ const PLANS = [
       "Content Autopilot",
       "Priority support",
     ],
-    cta: "Start Growth",
-    href: "/signup?plan=growth",
+    cta: "Contact us",
+    href: "/contact",
     featured: true,
   },
   {
     name: "Scale",
-    price: "$149",
-    period: "/month",
+    price: "TBD",
+    period: "",
     description: "For teams and agencies",
     features: [
       "Everything in Growth",
       "Unlimited projects",
-      "Unlimited content",
-      "Multi-site WordPress",
-      "Competitor analysis (unlimited)",
+      "Multi-site publishing",
+      "Org roles & team access",
       "Keyword tracking",
-      "Internal Link Hub (Beta)",
-      "Reddit Discovery (Beta)",
       "Admin dashboard",
       "Dedicated support",
     ],
-    cta: "Start Scale",
-    href: "/signup?plan=scale",
+    cta: "Contact us",
+    href: "/contact",
     featured: false,
   },
 ];
@@ -78,9 +75,12 @@ export function PricingPageClient() {
           badge="Pricing"
           titleLine1="Plans that scale"
           titleLine2="with your pipeline"
-          description="Simple, transparent pricing. No hidden fees. Cancel any time."
+          description="Pricing is being finalized. Join early access or talk to us about your team."
           backgroundImage={HERO_IMAGES.pricing.hero}
-          ctas={[{ label: "Start free", href: "/signup", variant: "primary" }]}
+          ctas={[
+            { label: "Start free", href: "/signup", variant: "primary" },
+            { label: "Contact us", href: "/contact", variant: "ghost" },
+          ]}
         />
       }
     >
@@ -88,9 +88,9 @@ export function PricingPageClient() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-12">
             <EditorialHeading
-              line1="Pick the plan"
-              line2="that fits today"
-              description="Start free, upgrade when you're ready to scale content production."
+              line1="Pricing"
+              line2="coming soon"
+              description="We're finalizing plans. Feature tiers below show what we're building. Exact pricing TBD."
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -111,11 +111,13 @@ export function PricingPageClient() {
                 <h2 className="text-xl font-bold">{plan.name}</h2>
                 <div className="mt-2 mb-1">
                   <span className="text-4xl font-bold">{plan.price}</span>
-                  <span
-                    className={`text-sm ${plan.featured ? "opacity-70" : "text-muted-foreground"}`}
-                  >
-                    {plan.period}
-                  </span>
+                  {plan.period && (
+                    <span
+                      className={`text-sm ${plan.featured ? "opacity-70" : "text-muted-foreground"}`}
+                    >
+                      {plan.period}
+                    </span>
+                  )}
                 </div>
                 <p
                   className={`text-sm mb-6 ${plan.featured ? "opacity-80" : "text-muted-foreground"}`}
@@ -146,7 +148,7 @@ export function PricingPageClient() {
             ))}
           </div>
           <p className="text-center text-sm text-muted-foreground mt-10">
-            14-day free trial on paid features · cancel anytime · no link schemes. Questions?{" "}
+            Pricing TBD · early access available · no link schemes. Questions?{" "}
             <Link href="/contact" className="text-primary hover:underline">
               Contact us
             </Link>
@@ -158,18 +160,18 @@ export function PricingPageClient() {
               <thead>
                 <tr className="border-b border-border text-left">
                   <th className="py-3 pr-4 font-medium text-muted-foreground">Capability</th>
-                  <th className="py-3 px-4 font-medium">goals.ac Growth</th>
+                  <th className="py-3 px-4 font-medium">goals.ac</th>
                   <th className="py-3 pl-4 font-medium text-muted-foreground">Typical autopilot SEO</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  ["12-month strategy roadmaps", "✓ Free", "✗"],
+                  ["12-month strategy roadmaps", "✓", "✗"],
                   ["Editorial review before publish", "✓ Always", "Limited"],
                   ["AI visibility tracking", "✓", "✓"],
                   ["Backlink exchange network", "✗ White-hat only", "✓"],
                   ["CMS integrations (8+)", "✓", "4–5"],
-                  ["Monthly price", "$49", "$99+"],
+                  ["Pricing", "TBD", "$99+/mo"],
                 ].map(([cap, us, them]) => (
                   <tr key={cap}>
                     <td className="py-3 pr-4">{cap}</td>
@@ -188,18 +190,14 @@ export function PricingPageClient() {
         titleLine2="questions"
         items={[
           {
+            question: "When will pricing be available?",
+            answer:
+              "We're finalizing tiers and billing. Join the waitlist or contact us for early access. We'll notify you before paid plans launch.",
+          },
+          {
             question: "Is the roadmap generator free?",
             answer:
-              "Browsing our public roadmap catalog is free with no signup. Signed-in users can generate custom roadmaps — Starter includes 3 per month; Growth and Scale plans include unlimited.",
-          },
-          {
-            question: "Can I change plans later?",
-            answer: "Yes. Upgrade or downgrade any time from your account settings.",
-          },
-          {
-            question: "What happens if I exceed my content limit?",
-            answer:
-              "You'll be prompted to upgrade. We never charge overage fees without your consent.",
+              "Browsing our public roadmap catalog is free with no signup. Signed-in users can generate custom roadmaps during early access.",
           },
           {
             question: "Which platforms can I publish to?",
@@ -217,8 +215,8 @@ export function PricingPageClient() {
         primaryLabel="Create free account"
         variant="dark"
         backgroundImage={HERO_IMAGES.pricing.footer}
-        secondaryHref="/features"
-        secondaryLabel="Explore features →"
+        secondaryHref="/contact"
+        secondaryLabel="Contact us about pricing →"
       />
     </MarketingPageShell>
   );

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { MessageCircle, X, Send, Loader2, Bot, User, ChevronDown } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 
@@ -90,7 +90,7 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/40">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-white" />
+                  <MessageCircle className="w-4 h-4 text-white" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold">Roadmap Assistant</p>
@@ -112,7 +112,7 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
                   }`}>
                     {msg.role === "user"
                       ? <User className="w-3.5 h-3.5 text-white" />
-                      : <Bot className="w-3.5 h-3.5 text-muted-foreground" />}
+                      : <MessageCircle className="w-3.5 h-3.5 text-muted-foreground" />}
                   </div>
                   <div className={`rounded-xl px-3 py-2 text-sm leading-relaxed max-w-[85%] ${
                     msg.role === "user"
@@ -126,7 +126,7 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
               {loading && (
                 <div className="flex gap-2.5">
                   <div className="w-6 h-6 rounded-full bg-muted border border-border flex items-center justify-center shrink-0">
-                    <Bot className="w-3.5 h-3.5 text-muted-foreground" />
+                    <MessageCircle className="w-3.5 h-3.5 text-muted-foreground" />
                   </div>
                   <div className="bg-muted rounded-xl px-3 py-2.5">
                     <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />

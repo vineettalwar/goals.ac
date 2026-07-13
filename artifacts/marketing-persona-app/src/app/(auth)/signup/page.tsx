@@ -35,20 +35,34 @@ function SignupPageContent() {
   const searchParams = useSearchParams();
   const roadmapIntent = useRoadmapIntent();
   const signupReferrer = searchParams.get("from")?.trim() || roadmapIntent?.referrer;
-  const loginHref = `/login?${buildAuthRedirectParams(signupReferrer).toString()}`;
+  const inviteToken = searchParams.get("token")?.trim() || undefined;
+  const inviteEmail = searchParams.get("email")?.trim() || undefined;
+  const callbackUrl = searchParams.get("callbackUrl")?.trim();
+  const loginHref = callbackUrl
+    ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`
+    : `/login?${buildAuthRedirectParams(signupReferrer).toString()}`;
   const [loading, setLoading] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: {
+      email: inviteEmail ?? "",
+    },
+  });
 
   async function onSubmit(data: FormData) {
     setLoading(true);
     const res = await fetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...data, referrer: signupReferrer }),
+      body: JSON.stringify({
+        ...data,
+        referrer: signupReferrer,
+        inviteToken,
+      }),
     });
 
     if (!res.ok) {
@@ -57,6 +71,8 @@ function SignupPageContent() {
       setLoading(false);
       return;
     }
+
+    const signupBody = (await res.json()) as { organizationId?: number | null };
 
     const result = await signIn("credentials", {
       email: data.email,
@@ -68,6 +84,12 @@ function SignupPageContent() {
     if (result?.error) {
       toast.error("Account created but sign-in failed. Please log in.");
       router.push(loginHref);
+    } else if (callbackUrl) {
+      router.push(callbackUrl);
+      router.refresh();
+    } else if (signupBody.organizationId) {
+      router.push("/dashboard");
+      router.refresh();
     } else {
       router.prefetch("/onboarding");
       router.push("/onboarding");
@@ -80,9 +102,11 @@ function SignupPageContent() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold">Create account</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          {roadmapIntent
-            ? `Sign up free to generate your ${roadmapIntent.industry} roadmap for ${roadmapIntent.location}.`
-            : "Start automating your content"}
+          {inviteToken
+            ? "Create your account to accept your team invitation."
+            : roadmapIntent
+              ? `Sign up free to generate your ${roadmapIntent.industry} roadmap for ${roadmapIntent.location}.`
+              : "Start automating your content"}
         </p>
       </div>
 
@@ -95,7 +119,14 @@ function SignupPageContent() {
 
         <div className="space-y-1.5">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" autoComplete="email" placeholder="you@company.com" {...register("email")} />
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@company.com"
+            readOnly={Boolean(inviteEmail)}
+            {...register("email")}
+          />
           {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
         </div>
 

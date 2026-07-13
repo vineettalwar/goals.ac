@@ -320,3 +320,21 @@ export type ListRoadmapsParams = {
 export type ListTrackedKeywordsParams = {
   projectId: number;
 };
+
+export type SyncSocialHistoryParams = {
+  platform?: string;
+  background?: boolean;
+};
+
+export type GetSocialMetricsParams = {
+  platform?: string;
+  days?: number;
+};
+
+export type SyncSocialMetricsParams = {
+  background?: boolean;
+};
+
+export type DeleteArticleIdeaSourceParams = {
+  sourceId: number;
+};

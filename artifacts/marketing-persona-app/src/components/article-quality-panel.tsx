@@ -1,6 +1,6 @@
 "use client";
 
-import { Sparkles } from "lucide-react";
+import { TrendingUp } from "lucide-react";
 import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
 import { ScoreRing } from "@/components/score-ring";
 import { Button } from "@/components/ui/button";
@@ -56,7 +56,7 @@ export function ArticleQualityPanel({
             Missing FAQ, citations, or links? Enhance adds them without rewriting from scratch.
           </p>
           <Button className="w-full" size="sm" onClick={onEnhance} disabled={enhancing}>
-            <Sparkles className="h-3.5 w-3.5" />
+            <TrendingUp className="h-3.5 w-3.5" />
             {enhancing ? "Enhancing…" : "Enhance quality"}
           </Button>
         </div>

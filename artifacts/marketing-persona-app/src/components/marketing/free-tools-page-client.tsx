@@ -21,7 +21,7 @@ const TOOLS = [
 ];
 
 function SerpPreview() {
-  const [title, setTitle] = useState("Your Page Title — Brand Name");
+  const [title, setTitle] = useState("Your Page Title | Brand Name");
   const [desc, setDesc] = useState("A compelling meta description between 50 and 160 characters that summarizes your page for searchers and AI systems.");
 
   return (
@@ -82,7 +82,7 @@ export function FreeToolsPageClient() {
           badge="Free tools"
           titleLine1="SEO & GEO"
           titleLine2="free tools"
-          description="No account required. Audit, check, and preview — then upgrade to the full platform."
+          description="No account required. Audit, check, and preview, then upgrade to the full platform."
           backgroundImage={HERO_IMAGES.geoAudit.hero}
           ctas={[{ label: "Start free", href: "/signup", variant: "primary" }]}
         />

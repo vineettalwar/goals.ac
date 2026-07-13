@@ -96,3 +96,36 @@ export async function testTwitterConnection(
     return { ok: false, error: err instanceof Error ? err.message : "Connection failed" };
   }
 }
+
+export async function fetchTwitterPostMetrics(
+  credentials: TwitterCredentials,
+  tweetId: string,
+): Promise<import("./social-metrics-types").NormalizedPostMetrics> {
+  await assertPublicUrl(X_API);
+  const res = await fetch(
+    `${X_API}/2/tweets/${encodeURIComponent(tweetId)}?tweet.fields=public_metrics`,
+    { headers: { Authorization: `Bearer ${credentials.accessToken}` } },
+  );
+  if (!res.ok) {
+    return { impressions: null, likes: null, comments: null, shares: null, clicks: null };
+  }
+  const data = (await res.json()) as {
+    data?: {
+      public_metrics?: {
+        impression_count?: number;
+        like_count?: number;
+        reply_count?: number;
+        retweet_count?: number;
+        quote_count?: number;
+      };
+    };
+  };
+  const m = data.data?.public_metrics;
+  return {
+    impressions: m?.impression_count ?? null,
+    likes: m?.like_count ?? null,
+    comments: m?.reply_count ?? null,
+    shares: (m?.retweet_count ?? 0) + (m?.quote_count ?? 0) || null,
+    clicks: null,
+  };
+}

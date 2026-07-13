@@ -28,6 +28,8 @@ export function parseAutopilotSettings(raw: unknown): AutopilotSettings {
         : 60,
     lastOpportunityDiscoveryAt:
       typeof obj.lastOpportunityDiscoveryAt === "string" ? obj.lastOpportunityDiscoveryAt : undefined,
+    lastSemrushDiscoveryAt:
+      typeof obj.lastSemrushDiscoveryAt === "string" ? obj.lastSemrushDiscoveryAt : undefined,
   };
 }
 

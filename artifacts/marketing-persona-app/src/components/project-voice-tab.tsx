@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { ScrapeFormSkeleton, ScrapeStatusHeader } from "@/components/project-scrape-status";
+import { BrandVoiceSkillEditor } from "@/components/brand-voice-skill-editor";
 
 const MAX_WRITING_EXAMPLES = 5;
 const MAX_VOICE_TERMS = 20;
@@ -141,6 +142,8 @@ export function ProjectVoiceTab({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [pasteSample, setPasteSample] = useState("");
   const [saved, setSaved] = useState(false);
 
   const loadVoice = useCallback(async () => {
@@ -212,6 +215,36 @@ export function ProjectVoiceTab({
     setTimeout(() => setSaved(false), 3000);
   }
 
+  async function uploadSamples(files?: FileList | null) {
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      if (pasteSample.trim().length >= 80) {
+        formData.set("text", pasteSample.trim());
+      }
+      if (files) {
+        for (const file of files) {
+          formData.append("files", file);
+        }
+      }
+      const res = await fetch(`/api/website-projects/${projectId}/brand-voice/ingest`, {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Upload failed");
+      }
+      const data = (await res.json()) as { count: number };
+      toast.success(`Indexed ${data.count} sample${data.count === 1 ? "" : "s"} for brand voice`);
+      setPasteSample("");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   async function analyzeExamples() {
     const examples = form.writingExamples.map((s) => s.trim()).filter(Boolean);
     if (examples.length === 0) {
@@ -271,6 +304,55 @@ export function ProjectVoiceTab({
         <ScrapeFormSkeleton />
       ) : (
         <div className="space-y-6">
+          <BrandVoiceSkillEditor projectId={projectId} />
+
+          <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/20 p-4 space-y-3">
+            <div>
+              <p className="text-sm font-medium">Upload writing samples</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Paste text or upload .txt / .md files. Samples are chunked and indexed for topic-aware retrieval.
+              </p>
+            </div>
+            <Textarea
+              value={pasteSample}
+              onChange={(e) => setPasteSample(e.target.value)}
+              placeholder="Paste an article, email, or landing page copy (min 80 characters)…"
+              rows={4}
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={uploading || pasteSample.trim().length < 80}
+                onClick={() => uploadSamples()}
+              >
+                {uploading ? <Spinner size="sm" className="mr-1.5" /> : null}
+                Index pasted text
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={uploading}
+                onClick={() => document.getElementById(`brand-voice-upload-${projectId}`)?.click()}
+              >
+                {uploading ? "Uploading…" : "Upload files"}
+              </Button>
+              <input
+                id={`brand-voice-upload-${projectId}`}
+                type="file"
+                accept=".txt,.md,text/plain,text/markdown"
+                multiple
+                className="sr-only"
+                onChange={(e) => {
+                  void uploadSamples(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          </div>
+
           <div className="space-y-3">
             <div className="flex items-center justify-between gap-2">
               <div>

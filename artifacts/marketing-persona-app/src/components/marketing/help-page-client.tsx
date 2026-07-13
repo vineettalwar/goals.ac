@@ -48,7 +48,7 @@ export function HelpPageClient() {
             helpHref: "/help/connect-meta-facebook-instagram",
           },
           {
-            question: "I'm self-hosting — what env vars do I need?",
+            question: "I'm self-hosting. What env vars do I need?",
             answer: "LinkedIn, X, and Meta require OAuth client IDs. Bluesky needs a stable signing key. See the admin guides.",
             helpHref: "/help/admin-social-env-vars",
           },

@@ -5,6 +5,7 @@ import type { ContentFormatType } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { enhanceContentPiece } from "@workspace/content-engine/content-piece-enhance";
+import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand-voice-generation";
 import { isSeoLongformFormat } from "@workspace/content-engine/content-piece-seo";
 import {
   assertPieceOwner,
@@ -22,7 +23,7 @@ export async function POST(
   const { userId, error } = await requireAuth();
   if (error) return error;
 
-  const limited = rateLimitResponse(
+  const limited = await rateLimitResponse(
     `ai-gen:user:${userId}`,
     RATE_LIMITS.AI_GENERATION_PER_USER.limit,
     RATE_LIMITS.AI_GENERATION_PER_USER.windowMs,
@@ -62,7 +63,7 @@ export async function POST(
         targetKeyword: piece!.targetKeyword ?? "",
         bodyMarkdown: piece!.bodyMarkdown ?? "",
         formatType,
-        brand: ctx.brand,
+        brand: { ...ctx.brand, projectId: ctx.projectId },
         metaDescription: piece!.pieceMetadata?.metaDescription ?? null,
       },
       existingPieceTitles.filter((title) => title !== piece!.title),
@@ -82,6 +83,14 @@ export async function POST(
       })
       .where(eq(contentPiecesTable.id, id))
       .returning();
+
+    ingestPublishedContentPiece(
+      piece!.websiteProjectId,
+      id,
+      result.title,
+      result.body_markdown,
+      updated?.publishedUrl ?? null,
+    ).catch(() => {});
 
     return NextResponse.json(updated);
   } catch (err) {

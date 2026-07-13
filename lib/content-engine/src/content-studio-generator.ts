@@ -9,6 +9,7 @@ import {
 } from "@workspace/ai-providers";
 import type { AiProviderClient } from "@workspace/ai-providers/client";
 import { resolveAiClient } from "./support/resolve-ai-client";
+import { assertAiGenerationEnabled } from "./support/platform-guard";
 import { getCache } from "./cache";
 import type { ContentFormatType, ContentStyle } from "@workspace/db";
 import {
@@ -25,8 +26,18 @@ import {
   buildBrandVoicePromptContext,
   type UnifiedBrandContext,
 } from "./brand-voice";
+import { loadBrandVoiceGenerationContext } from "./support/brand-voice-generation";
+import {
+  buildPlatformVoicePromptContext,
+  platformForFormat,
+} from "./platform-voice";
 import { humanizeContentPiece } from "./humanizer";
 import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
+import {
+  enrichContentPieceImages,
+  parseImageSettings,
+} from "./article-image-enricher";
+import { cleanAndParse } from "./utils";
 
 // LinkedIn Post Enhancement Constants (Phase 2)
 const LINKEDIN_ARCHETYPES = [
@@ -129,6 +140,27 @@ export type ContentGenerationContext = {
 };
 
 export type BrandContext = UnifiedBrandContext;
+
+async function resolveVoicePromptContext(
+  brand: BrandContext,
+  format: ContentFormatType,
+  keyword: string,
+  angleHint?: string,
+): Promise<string> {
+  const platform = platformForFormat(format);
+  if (platform) {
+    const platformVoice = buildPlatformVoicePromptContext(brand.platformVoices, platform);
+    if (platformVoice.trim()) return platformVoice;
+  }
+  if (brand.projectId) {
+    const ctx = await loadBrandVoiceGenerationContext(
+      brand.projectId,
+      `${keyword} ${format} ${angleHint ?? ""}`,
+    );
+    if (ctx?.promptContext.trim()) return ctx.promptContext;
+  }
+  return buildBrandVoicePromptContext(brand);
+}
 
 const SYSTEM_PROMPT = `You are a world-class SEO content strategist and writer. You produce authoritative, deeply researched content that ranks on Google and is cited by AI search tools like ChatGPT, Perplexity, and Claude.
 
@@ -384,13 +416,13 @@ const FORMAT_CONFIGS: Record<
   },
 };
 
-function buildPrompt(
+async function buildPrompt(
   format: ContentFormatType,
   brand: BrandContext,
   keyword: string,
   angleHint?: string,
   existingPieceTitles?: string[],
-): string {
+): Promise<string> {
   const config = FORMAT_CONFIGS[format];
   const kwList =
     brand.primaryKeywords.length > 0
@@ -399,7 +431,7 @@ function buildPrompt(
   const wordRange = brand.contentStyle?.defaultWordCount
     ? `~${brand.contentStyle.defaultWordCount}`
     : config.wordRange;
-  const brandVoiceContext = buildBrandVoicePromptContext(brand);
+  const brandVoiceContext = await resolveVoicePromptContext(brand, format, keyword, angleHint);
   const defaultVoice = brand.voiceTone?.trim() || "Professional, clear, and authoritative";
 
   // Special handling for LinkedIn posts with archetypes and hooks
@@ -555,62 +587,6 @@ export async function cacheSet(
   }
 }
 
-/**
- * Gemini occasionally emits raw C0 control characters (e.g. literal \n, \r, \t)
- * inside JSON string values, which JSON.parse rejects. This function walks the
- * raw output character-by-character, tracking string boundaries, and escapes
- * any control character found inside a string region.
- */
-function sanitizeJsonControlChars(raw: string): string {
-  let out = "";
-  let inString = false;
-  let escaped = false;
-
-  for (let i = 0; i < raw.length; i++) {
-    const ch = raw[i];
-    const code = raw.charCodeAt(i);
-
-    if (escaped) {
-      out += ch;
-      escaped = false;
-      continue;
-    }
-
-    if (ch === "\\" && inString) {
-      out += ch;
-      escaped = true;
-      continue;
-    }
-
-    if (ch === '"') {
-      inString = !inString;
-      out += ch;
-      continue;
-    }
-
-    if (inString && code < 0x20) {
-      if (code === 0x0a) out += "\\n";
-      else if (code === 0x0d) out += "\\r";
-      else if (code === 0x09) out += "\\t";
-      else out += `\\u${code.toString(16).padStart(4, "0")}`;
-      continue;
-    }
-
-    out += ch;
-  }
-
-  return out;
-}
-
-function cleanAndParse(raw: string): ContentPieceResult {
-  const stripped = raw
-    .trim()
-    .replace(/^```json\s*/i, "")
-    .replace(/```\s*$/, "");
-  const sanitized = sanitizeJsonControlChars(stripped);
-  return JSON.parse(sanitized) as ContentPieceResult;
-}
-
 function getAiGenerationOptions(format: ContentFormatType) {
   if (isSeoLongformFormat(format)) {
     return {
@@ -652,14 +628,42 @@ async function postProcessGeneratedResult(
   brand: BrandContext,
   ai: AiProviderClient,
 ): Promise<ContentPieceResult> {
-  if (!isSeoLongformFormat(format)) {
-    return parsed;
+  let result: ContentPieceResult;
+  if (!isSeoLongformFormat(format) && format !== "linkedin_post") {
+    result = parsed;
+  } else {
+    const { result: humanizedResult, humanized } = await humanizeContentPiece(parsed, brand, {
+      aiClient: ai,
+    });
+    result = isSeoLongformFormat(format)
+      ? processGeneratedResult(humanizedResult, format, humanized)
+      : humanizedResult;
   }
 
-  const { result: humanizedResult, humanized } = await humanizeContentPiece(parsed, brand, {
-    aiClient: ai,
-  });
-  return processGeneratedResult(humanizedResult, format, humanized);
+  try {
+    const enriched = await enrichContentPieceImages(
+      {
+        title: result.title,
+        target_keyword: result.target_keyword,
+        body_markdown: result.body_markdown,
+        formatType: format,
+        pieceMetadata: result.pieceMetadata,
+      },
+      {
+        imageSettings: parseImageSettings(brand.contentStyle),
+        ai,
+        brandName: brand.companyName,
+      },
+    );
+    return {
+      ...result,
+      body_markdown: enriched.body_markdown,
+      pieceMetadata: enriched.pieceMetadata,
+    };
+  } catch (err) {
+    logger.warn({ err, format }, "Stock image enrichment skipped");
+    return result;
+  }
 }
 
 function validateResult(result: unknown, format: ContentFormatType): asserts result is ContentPieceResult {
@@ -686,7 +690,7 @@ async function generateWithClient(
   angleHint?: string,
   existingPieceTitles?: string[],
 ): Promise<ContentPieceResult> {
-  const prompt = buildPrompt(format, brand, keyword, angleHint, existingPieceTitles);
+  const prompt = await buildPrompt(format, brand, keyword, angleHint, existingPieceTitles);
   const aiOptions = getAiGenerationOptions(format);
   let lastError: unknown;
 
@@ -729,7 +733,7 @@ async function generateWithClientStream(
   angleHint?: string,
   existingPieceTitles?: string[],
 ): Promise<ContentPieceResult> {
-  const prompt = buildPrompt(format, brand, keyword, angleHint, existingPieceTitles);
+  const prompt = await buildPrompt(format, brand, keyword, angleHint, existingPieceTitles);
   const aiOptions = getAiGenerationOptions(format);
   let lastError: unknown;
 
@@ -792,6 +796,7 @@ export async function generateContentPieceStream(
   aiProviderOptions?: AiProviderOptions,
   context: ContentGenerationContext = {},
 ): Promise<ContentPieceResult> {
+  await assertAiGenerationEnabled();
   const existingPieceTitles = context.existingPieceTitles;
   if (userApiKey && resolveProviderId(aiProviderOptions) === "gemini") {
     let chunksEmitted = 0;
@@ -845,6 +850,7 @@ export async function generateContentPiece(
   aiProviderOptions?: AiProviderOptions,
   context: ContentGenerationContext = {},
 ): Promise<ContentPieceResult> {
+  await assertAiGenerationEnabled();
   const key = buildCacheKey(format, keyword, brand, angleHint);
   if (!bypassCache) {
     const cached = await cacheGet(key);
@@ -873,14 +879,18 @@ ${AI_WRITING_RULES_PROMPT}
 
 You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation; only raw JSON.`;
 
-function buildRepurposePrompt(
+async function buildRepurposePrompt(
   targetFormat: ContentFormatType,
   brand: BrandContext,
   existingContent: string,
   existingKeyword: string,
-): string {
+): Promise<string> {
   const config = FORMAT_CONFIGS[targetFormat];
-  const brandVoiceContext = buildBrandVoicePromptContext(brand);
+  const brandVoiceContext = await resolveVoicePromptContext(
+    brand,
+    targetFormat,
+    existingKeyword,
+  );
   const defaultVoice = brand.voiceTone?.trim() || "Professional, clear, and authoritative";
   return `Repurpose the following existing content into a ${config.label} for ${brand.companyName} (${brand.websiteUrl}).
 
@@ -917,7 +927,7 @@ export async function repurposeContentPiece(
   userApiKey?: string | null,
   aiProviderOptions?: AiProviderOptions,
 ): Promise<ContentPieceResult> {
-  const prompt = buildRepurposePrompt(
+  const prompt = await buildRepurposePrompt(
     targetFormat,
     brand,
     existingContent,

@@ -16,8 +16,7 @@ import {
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../lib/auth";
-import { assertPublicUrl } from "@workspace/security/ssrf-guard";
-import { scrapeBrandProfile } from "../services/brandScraper";
+import { runBrandScrapeWithDiscovery } from "@workspace/content-engine/support/brand-scrape-orchestrator";
 import { parseAutopilotSettings } from "../lib/autopilotScheduler";
 import type { AutopilotSettings } from "@workspace/db";
 
@@ -75,170 +74,14 @@ const AnalyzeWritingExamplesBody = z.object({
     .min(1, "At least one writing example is required"),
 });
 
-type CrawlData = {
-  sitemapType: "urlset" | "sitemapindex";
-  pageUrls: string[];
-  lastCrawledAt: string;
-};
-
-async function fetchXml(url: string): Promise<string | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
-  try {
-    const resp = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-    if (!resp.ok) return null;
-    return await resp.text();
-  } catch {
-    clearTimeout(timeout);
-    return null;
-  }
-}
-
-function extractLocs(xml: string): string[] {
-  return (xml.match(/<loc>\s*(.*?)\s*<\/loc>/g) ?? [])
-    .map((m) => m.replace(/<\/?loc>/g, "").trim())
-    .filter(Boolean);
-}
-
-async function fetchSitemapInfo(
-  url: string,
-): Promise<{
-  sitemapUrl: string | null;
-  pageCount: number;
-  crawlData: CrawlData | null;
-}> {
-  const baseUrl = new URL(url).origin;
-
-  await assertPublicUrl(baseUrl);
-
-  const candidates = [
-    `${baseUrl}/sitemap.xml`,
-    `${baseUrl}/sitemap_index.xml`,
-    `${baseUrl}/sitemap/sitemap.xml`,
-  ];
-
-  for (const candidate of candidates) {
-    const text = await fetchXml(candidate);
-    if (!text) continue;
-
-    if (text.includes("<sitemapindex")) {
-      const subSitemapUrls = extractLocs(text);
-      const allPageUrls: string[] = [];
-
-      for (const subUrl of subSitemapUrls.slice(0, 10)) {
-        try {
-          await assertPublicUrl(subUrl);
-        } catch {
-          continue;
-        }
-        const subText = await fetchXml(subUrl);
-        if (subText && subText.includes("<urlset")) {
-          allPageUrls.push(...extractLocs(subText));
-        }
-      }
-
-      const crawlData: CrawlData = {
-        sitemapType: "sitemapindex",
-        pageUrls: allPageUrls.slice(0, 200),
-        lastCrawledAt: new Date().toISOString(),
-      };
-      return {
-        sitemapUrl: candidate,
-        pageCount: allPageUrls.length,
-        crawlData,
-      };
-    }
-
-    if (text.includes("<urlset")) {
-      const pageUrls = extractLocs(text);
-      const crawlData: CrawlData = {
-        sitemapType: "urlset",
-        pageUrls: pageUrls.slice(0, 200),
-        lastCrawledAt: new Date().toISOString(),
-      };
-      return { sitemapUrl: candidate, pageCount: pageUrls.length, crawlData };
-    }
-  }
-
-  return { sitemapUrl: null, pageCount: 0, crawlData: null };
-}
-
 async function runBrandScrape(
   projectId: number,
   url: string,
   log: { error: (obj: unknown, msg: string) => void },
   overwrite = false,
 ): Promise<void> {
-  await db
-    .update(websiteProjectsTable)
-    .set({ scrapeStatus: "pending" })
-    .where(eq(websiteProjectsTable.id, projectId));
-
   try {
-    await assertPublicUrl(url);
-    const extract = await scrapeBrandProfile(url);
-
-    const existing = await db
-      .select()
-      .from(brandProfilesTable)
-      .where(eq(brandProfilesTable.websiteProjectId, projectId))
-      .limit(1);
-
-    if (existing.length > 0) {
-      const current = existing[0];
-      const updates: Record<string, unknown> = {};
-
-      if (overwrite) {
-        updates.companyName = extract.companyName;
-        updates.industry = extract.industry;
-        updates.targetAudience = extract.targetAudience;
-        updates.voiceTone = extract.voiceTone;
-        updates.primaryKeywords = extract.primaryKeywords;
-        updates.competitorUrls = extract.competitorUrls;
-      } else {
-        if (!current.companyName && extract.companyName)
-          updates.companyName = extract.companyName;
-        if (!current.industry && extract.industry)
-          updates.industry = extract.industry;
-        if (!current.targetAudience && extract.targetAudience)
-          updates.targetAudience = extract.targetAudience;
-        if (!current.voiceTone && extract.voiceTone)
-          updates.voiceTone = extract.voiceTone;
-        if (
-          (!current.primaryKeywords || current.primaryKeywords.length === 0) &&
-          extract.primaryKeywords.length > 0
-        )
-          updates.primaryKeywords = extract.primaryKeywords;
-        if (
-          (!current.competitorUrls || current.competitorUrls.length === 0) &&
-          extract.competitorUrls.length > 0
-        )
-          updates.competitorUrls = extract.competitorUrls;
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await db
-          .update(brandProfilesTable)
-          .set(updates)
-          .where(eq(brandProfilesTable.websiteProjectId, projectId));
-      }
-    } else {
-      await db.insert(brandProfilesTable).values({
-        websiteProjectId: projectId,
-        companyName: extract.companyName,
-        industry: extract.industry,
-        targetAudience: extract.targetAudience,
-        voiceTone: extract.voiceTone,
-        primaryKeywords: extract.primaryKeywords,
-        competitorUrls: extract.competitorUrls,
-      });
-    }
-
-    await db
-      .update(websiteProjectsTable)
-      .set({ scrapeStatus: "done", scrapeData: extract })
-      .where(eq(websiteProjectsTable.id, projectId));
+    await runBrandScrapeWithDiscovery(projectId, url, { overwrite, refreshSitemap: true });
   } catch (err) {
     log.error(err, "Brand scrape failed");
     await db
@@ -287,22 +130,13 @@ router.post("/website-projects", requireAuth, async (req, res) => {
 
     res.status(201).json(project);
 
-    fetchSitemapInfo(url)
-      .then(async ({ sitemapUrl, pageCount, crawlData }) => {
-        await db
-          .update(websiteProjectsTable)
-          .set({ sitemapUrl, pageCount, crawlData, crawlStatus: "done" })
-          .where(eq(websiteProjectsTable.id, project.id));
-
-        await runBrandScrape(project.id, url, req.log);
-      })
-      .catch(async (err) => {
-        req.log.error(err, "Sitemap fetch failed");
-        await db
-          .update(websiteProjectsTable)
-          .set({ crawlStatus: "failed", scrapeStatus: "failed" })
-          .where(eq(websiteProjectsTable.id, project.id));
-      });
+    runBrandScrape(project.id, url, req.log).catch(async (err) => {
+      req.log.error(err, "Brand scrape failed on project create");
+      await db
+        .update(websiteProjectsTable)
+        .set({ scrapeStatus: "failed" })
+        .where(eq(websiteProjectsTable.id, project.id));
+    });
   } catch (err) {
     req.log.error(err, "Failed to create website project");
     res.status(500).json({ error: "Internal server error" });

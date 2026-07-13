@@ -2,11 +2,10 @@ import { getSession } from "@/auth";
 import { db } from "@workspace/db";
 import { brandProfilesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Globe, ExternalLink } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Globe } from "lucide-react";
 import { NewProjectButton } from "./new-project-button";
+import { ProjectList } from "./project-list";
 import {
   countOrganizationProjects,
   getOrgMembership,
@@ -84,30 +83,15 @@ export default async function ProjectsPage() {
           <NewProjectButton />
         </div>
       ) : (
-        <div className="grid gap-3">
-          {rows.map(({ project, brand }) => (
-            <Link key={project.id} href={`/projects/${project.id}`}>
-              <div className="paper-card p-5 flex items-center gap-4 hover:bg-secondary/20 transition-colors">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-secondary">
-                  <Globe className="h-5 w-5 text-muted-foreground" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="font-medium">{project.name}</p>
-                    <Badge variant={project.scrapeStatus === "complete" ? "success" : "muted"} className="text-xs">
-                      {project.scrapeStatus === "complete" ? "Ready" : project.scrapeStatus ?? "New"}
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-muted-foreground truncate mt-0.5">{project.url}</p>
-                  {brand?.industry && (
-                    <p className="text-xs text-muted-foreground mt-0.5">{brand.industry}</p>
-                  )}
-                </div>
-                <ExternalLink className="h-4 w-4 text-muted-foreground shrink-0" />
-              </div>
-            </Link>
-          ))}
-        </div>
+        <ProjectList
+          projects={rows.map(({ project, brand }) => ({
+            id: project.id,
+            name: project.name,
+            url: project.url,
+            scrapeStatus: project.scrapeStatus,
+            industry: brand?.industry ?? null,
+          }))}
+        />
       )}
     </div>
   );

@@ -1,35 +1,37 @@
 import { db } from "@workspace/db";
 import {
   companiesTable,
+  orgInvitesTable,
   organizationMembersTable,
   organizationsTable,
   usersTable,
   websiteProjectsTable,
 } from "@workspace/db/schema";
-import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
-import { z } from "zod";
+import type { OrgSecuritySettings } from "@workspace/db/schema";
+import crypto from "crypto";
+import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import {
   getProjectQuota,
   getOrganizationProjectCount,
   type PlanId,
 } from "@/lib/usage";
+import {
+  hasOrgPermission,
+  isSuperAdmin,
+  normalizeOrgRole,
+  OrgPermission,
+  type OrgMemberRole,
+} from "@/lib/org-access-shared";
 
-export const OrgMemberRoleSchema = z.enum(["site_admin", "member"]);
-export type OrgMemberRole = z.infer<typeof OrgMemberRoleSchema>;
-
-export function isSuperAdmin(userRole: string | null | undefined): boolean {
-  return userRole === "super_admin" || userRole === "admin";
-}
-
-export function isSiteAdmin(orgRole: OrgMemberRole | null | undefined): boolean {
-  return orgRole === "site_admin";
-}
+export * from "@/lib/org-access-shared";
 
 export interface OrgMembership {
   organizationId: number;
   orgRole: OrgMemberRole;
   assignedProjectId: number | null;
   organizationPlan: PlanId;
+  suspendedAt: Date | null;
+  securitySettings: OrgSecuritySettings | null;
 }
 
 export async function getOrgMembership(userId: number): Promise<OrgMembership | null> {
@@ -39,6 +41,8 @@ export async function getOrgMembership(userId: number): Promise<OrgMembership | 
       orgRole: organizationMembersTable.role,
       assignedProjectId: organizationMembersTable.assignedProjectId,
       organizationPlan: organizationsTable.plan,
+      suspendedAt: organizationsTable.suspendedAt,
+      securitySettings: organizationsTable.securitySettings,
     })
     .from(organizationMembersTable)
     .innerJoin(organizationsTable, eq(organizationsTable.id, organizationMembersTable.organizationId))
@@ -47,15 +51,58 @@ export async function getOrgMembership(userId: number): Promise<OrgMembership | 
 
   if (!row) return null;
 
-  const parsedRole = OrgMemberRoleSchema.safeParse(row.orgRole);
-  if (!parsedRole.success) return null;
+  const orgRole = normalizeOrgRole(row.orgRole);
+  if (!orgRole) return null;
 
   return {
     organizationId: row.organizationId,
-    orgRole: parsedRole.data,
+    orgRole,
     assignedProjectId: row.assignedProjectId,
     organizationPlan: (row.organizationPlan as PlanId) ?? "starter",
+    suspendedAt: row.suspendedAt,
+    securitySettings: row.securitySettings ?? null,
   };
+}
+
+export async function assertOrgNotSuspended(
+  userId: number,
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const platformRole = await getUserPlatformRole(userId);
+  if (isSuperAdmin(platformRole)) return { ok: true };
+
+  const membership = await getOrgMembership(userId);
+  if (membership?.suspendedAt) {
+    return { ok: false, status: 403, error: "Organization is suspended" };
+  }
+  return { ok: true };
+}
+
+export async function requireOrgPermission(
+  userId: number,
+  permission: OrgPermission,
+): Promise<
+  | { ok: true; membership: OrgMembership | null }
+  | { ok: false; status: number; error: string }
+> {
+  const platformRole = await getUserPlatformRole(userId);
+  if (isSuperAdmin(platformRole)) {
+    const membership = await getOrgMembership(userId);
+    return { ok: true, membership };
+  }
+
+  const suspended = await assertOrgNotSuspended(userId);
+  if (!suspended.ok) return suspended;
+
+  const membership = await getOrgMembership(userId);
+  if (!membership) {
+    return { ok: false, status: 403, error: "Forbidden" };
+  }
+
+  if (!hasOrgPermission(membership.orgRole, permission)) {
+    return { ok: false, status: 403, error: "Forbidden" };
+  }
+
+  return { ok: true, membership };
 }
 
 export async function getUserPlatformRole(userId: number): Promise<string> {
@@ -65,6 +112,10 @@ export async function getUserPlatformRole(userId: number): Promise<string> {
     .where(eq(usersTable.id, userId))
     .limit(1);
   return user?.role ?? "user";
+}
+
+function roleHasAllProjects(orgRole: OrgMemberRole): boolean {
+  return orgRole === "owner" || orgRole === "site_admin";
 }
 
 export async function listAccessibleProjectIds(userId: number): Promise<number[]> {
@@ -83,7 +134,17 @@ export async function listAccessibleProjectIds(userId: number): Promise<number[]
     return rows.map((r) => r.id);
   }
 
-  if (membership.orgRole === "site_admin") {
+  if (membership.suspendedAt) return [];
+
+  if (roleHasAllProjects(membership.orgRole)) {
+    const rows = await db
+      .select({ id: websiteProjectsTable.id })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.organizationId, membership.organizationId));
+    return rows.map((r) => r.id);
+  }
+
+  if (membership.securitySettings?.allowCrossProjectEditors) {
     const rows = await db
       .select({ id: websiteProjectsTable.id })
       .from(websiteProjectsTable)
@@ -123,6 +184,9 @@ export async function requireProjectAccess(
   projectId: number,
   userId: number,
 ): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const suspended = await assertOrgNotSuspended(userId);
+  if (!suspended.ok) return suspended;
+
   const accessibleIds = await listAccessibleProjectIds(userId);
   if (!accessibleIds.includes(projectId)) {
     return { ok: false, status: 404, error: "Project not found" };
@@ -149,12 +213,9 @@ export async function requireSiteAdminAccess(
   | { ok: true; membership: OrgMembership }
   | { ok: false; status: number; error: string }
 > {
-  const platformRole = await getUserPlatformRole(userId);
-  if (isSuperAdmin(platformRole)) {
-    const membership = await getOrgMembership(userId);
-    if (membership) {
-      return { ok: true, membership };
-    }
+  const result = await requireOrgPermission(userId, OrgPermission.TEAM_MANAGE);
+  if (!result.ok) return result;
+  if (!result.membership) {
     return {
       ok: true,
       membership: {
@@ -162,25 +223,21 @@ export async function requireSiteAdminAccess(
         orgRole: "site_admin",
         assignedProjectId: null,
         organizationPlan: "scale",
+        suspendedAt: null,
+        securitySettings: null,
       },
     };
   }
-
-  const membership = await getOrgMembership(userId);
-  if (!membership || membership.orgRole !== "site_admin") {
-    return { ok: false, status: 403, error: "Forbidden" };
-  }
-
-  return { ok: true, membership };
+  return { ok: true, membership: result.membership };
 }
 
 export async function assertCanCreateProject(
   userId: number,
   organizationId: number,
 ): Promise<{ ok: true } | { ok: false; status: number; error: string; code?: string }> {
-  const siteAdmin = await requireSiteAdminAccess(userId);
-  if (!siteAdmin.ok) {
-    return { ok: false, status: siteAdmin.status, error: siteAdmin.error };
+  const perm = await requireOrgPermission(userId, OrgPermission.PROJECT_WRITE);
+  if (!perm.ok) {
+    return { ok: false, status: perm.status, error: perm.error };
   }
 
   const platformRole = await getUserPlatformRole(userId);
@@ -188,12 +245,12 @@ export async function assertCanCreateProject(
     return { ok: true };
   }
 
-  if (siteAdmin.membership.organizationId !== organizationId) {
+  if (perm.membership && perm.membership.organizationId !== organizationId) {
     return { ok: false, status: 403, error: "Forbidden" };
   }
 
   const [org] = await db
-    .select({ plan: organizationsTable.plan })
+    .select({ plan: organizationsTable.plan, suspendedAt: organizationsTable.suspendedAt })
     .from(organizationsTable)
     .where(eq(organizationsTable.id, organizationId))
     .limit(1);
@@ -202,13 +259,17 @@ export async function assertCanCreateProject(
     return { ok: false, status: 404, error: "Organization not found" };
   }
 
+  if (org.suspendedAt) {
+    return { ok: false, status: 403, error: "Organization is suspended" };
+  }
+
   const quota = getProjectQuota(org.plan);
   if (quota === null) {
     return { ok: true };
   }
 
-  const count = await getOrganizationProjectCount(organizationId);
-  if (count >= quota) {
+  const projectCount = await getOrganizationProjectCount(organizationId);
+  if (projectCount >= quota) {
     return {
       ok: false,
       status: 402,
@@ -232,7 +293,7 @@ export interface CreateOrganizationInput {
   companyId?: number | null;
 }
 
-/** Create org and site_admin membership for a user (idempotent if membership exists). */
+/** Create org and owner membership for a user (idempotent if membership exists). */
 export async function ensureOrganizationForUser(input: CreateOrganizationInput): Promise<number> {
   const existing = await getOrgMembership(input.userId);
   if (existing) {
@@ -264,7 +325,7 @@ export async function ensureOrganizationForUser(input: CreateOrganizationInput):
   await db.insert(organizationMembersTable).values({
     organizationId: org.id,
     userId: input.userId,
-    role: "site_admin",
+    role: "owner",
     assignedProjectId: null,
   });
 
@@ -287,14 +348,44 @@ export async function listOrganizationMembers(organizationId: number) {
     .orderBy(organizationMembersTable.id);
 }
 
+function requiresAssignedProject(role: OrgMemberRole): boolean {
+  return role === "editor" || role === "viewer";
+}
+
 export async function updateOrganizationMember(input: {
   organizationId: number;
   memberUserId: number;
   role: OrgMemberRole;
   assignedProjectId: number | null;
 }): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (input.role === "member" && input.assignedProjectId == null) {
-    return { ok: false, error: "Members must have an assigned project" };
+  if (requiresAssignedProject(input.role) && input.assignedProjectId == null) {
+    return { ok: false, error: "Editors and viewers must have an assigned project" };
+  }
+
+  const [target] = await db
+    .select({ role: organizationMembersTable.role })
+    .from(organizationMembersTable)
+    .where(
+      and(
+        eq(organizationMembersTable.organizationId, input.organizationId),
+        eq(organizationMembersTable.userId, input.memberUserId),
+      ),
+    )
+    .limit(1);
+
+  if (target && normalizeOrgRole(target.role) === "owner" && input.role !== "owner") {
+    const owners = await db
+      .select({ id: organizationMembersTable.id })
+      .from(organizationMembersTable)
+      .where(
+        and(
+          eq(organizationMembersTable.organizationId, input.organizationId),
+          eq(organizationMembersTable.role, "owner"),
+        ),
+      );
+    if (owners.length <= 1) {
+      return { ok: false, error: "Transfer ownership before demoting the owner" };
+    }
   }
 
   if (input.assignedProjectId != null) {
@@ -317,7 +408,7 @@ export async function updateOrganizationMember(input: {
     .update(organizationMembersTable)
     .set({
       role: input.role,
-      assignedProjectId: input.role === "site_admin" ? null : input.assignedProjectId,
+      assignedProjectId: roleHasAllProjects(input.role) ? null : input.assignedProjectId,
     })
     .where(
       and(
@@ -330,6 +421,41 @@ export async function updateOrganizationMember(input: {
   if (result.length === 0) {
     return { ok: false, error: "Member not found" };
   }
+
+  return { ok: true };
+}
+
+export async function removeOrganizationMember(input: {
+  organizationId: number;
+  memberUserId: number;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const [member] = await db
+    .select({ role: organizationMembersTable.role })
+    .from(organizationMembersTable)
+    .where(
+      and(
+        eq(organizationMembersTable.organizationId, input.organizationId),
+        eq(organizationMembersTable.userId, input.memberUserId),
+      ),
+    )
+    .limit(1);
+
+  if (!member) {
+    return { ok: false, error: "Member not found" };
+  }
+
+  if (normalizeOrgRole(member.role) === "owner") {
+    return { ok: false, error: "Cannot remove the organization owner" };
+  }
+
+  await db
+    .delete(organizationMembersTable)
+    .where(
+      and(
+        eq(organizationMembersTable.organizationId, input.organizationId),
+        eq(organizationMembersTable.userId, input.memberUserId),
+      ),
+    );
 
   return { ok: true };
 }
@@ -360,8 +486,8 @@ export async function addOrganizationMember(input: {
     });
   }
 
-  if (input.role === "member" && input.assignedProjectId == null) {
-    return { ok: false, error: "Members must have an assigned project" };
+  if (requiresAssignedProject(input.role) && input.assignedProjectId == null) {
+    return { ok: false, error: "Editors and viewers must have an assigned project" };
   }
 
   if (input.assignedProjectId != null) {
@@ -384,10 +510,43 @@ export async function addOrganizationMember(input: {
     organizationId: input.organizationId,
     userId: input.userId,
     role: input.role,
-    assignedProjectId: input.role === "site_admin" ? null : input.assignedProjectId,
+    assignedProjectId: roleHasAllProjects(input.role) ? null : input.assignedProjectId,
   });
 
   return { ok: true };
+}
+
+export async function suspendOrganization(input: {
+  organizationId: number;
+  reason?: string;
+}): Promise<void> {
+  await db
+    .update(organizationsTable)
+    .set({
+      suspendedAt: new Date(),
+      suspendedReason: input.reason ?? null,
+    })
+    .where(eq(organizationsTable.id, input.organizationId));
+}
+
+export async function unsuspendOrganization(organizationId: number): Promise<void> {
+  await db
+    .update(organizationsTable)
+    .set({
+      suspendedAt: null,
+      suspendedReason: null,
+    })
+    .where(eq(organizationsTable.id, organizationId));
+}
+
+export async function updateOrgSecuritySettings(
+  organizationId: number,
+  settings: OrgSecuritySettings,
+): Promise<void> {
+  await db
+    .update(organizationsTable)
+    .set({ securitySettings: settings })
+    .where(eq(organizationsTable.id, organizationId));
 }
 
 export async function countOrganizationProjects(organizationId: number): Promise<number> {
@@ -403,6 +562,8 @@ export interface AdminOrganizationRow {
   ownerName: string;
   companyId: number | null;
   createdAt: Date;
+  suspendedAt: Date | null;
+  suspendedReason: string | null;
   projectCount: number;
   memberCount: number;
 }
@@ -418,6 +579,8 @@ export async function listAllOrganizations(): Promise<AdminOrganizationRow[]> {
       ownerName: usersTable.name,
       companyId: organizationsTable.companyId,
       createdAt: organizationsTable.createdAt,
+      suspendedAt: organizationsTable.suspendedAt,
+      suspendedReason: organizationsTable.suspendedReason,
     })
     .from(organizationsTable)
     .innerJoin(usersTable, eq(usersTable.id, organizationsTable.ownerId))
@@ -519,7 +682,7 @@ export async function onboardOrganizationAsAdmin(
   await db.insert(organizationMembersTable).values({
     organizationId: org.id,
     userId: input.ownerUserId,
-    role: "site_admin",
+    role: "owner",
     assignedProjectId: null,
   });
 
@@ -546,3 +709,364 @@ export async function onboardOrganizationAsAdmin(
 
   return { ok: true, organizationId: org.id, companyId, projectId };
 }
+
+export interface AdminUserRow {
+  id: number;
+  email: string;
+  name: string;
+  platformRole: string;
+  plan: PlanId;
+  organizationId: number | null;
+  organizationName: string | null;
+  orgRole: OrgMemberRole | null;
+  projectCount: number;
+  createdAt: Date;
+  status: "active" | "pending_invite" | "no_org";
+}
+
+export interface ListAllUsersInput {
+  search?: string;
+  organizationId?: number;
+  platformRole?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export async function listAllUsers(input: ListAllUsersInput = {}): Promise<{
+  users: AdminUserRow[];
+  total: number;
+}> {
+  const limit = Math.min(input.limit ?? 50, 200);
+  const offset = input.offset ?? 0;
+  const now = new Date();
+
+  const conditions = [];
+  if (input.search?.trim()) {
+    const term = `%${input.search.trim()}%`;
+    conditions.push(or(ilike(usersTable.email, term), ilike(usersTable.name, term)));
+  }
+  if (input.platformRole) {
+    conditions.push(eq(usersTable.role, input.platformRole));
+  }
+  if (input.organizationId) {
+    conditions.push(eq(organizationMembersTable.organizationId, input.organizationId));
+  }
+
+  const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+  const baseQuery = db
+    .select({
+      id: usersTable.id,
+      email: usersTable.email,
+      name: usersTable.name,
+      platformRole: usersTable.role,
+      plan: usersTable.plan,
+      organizationId: organizationMembersTable.organizationId,
+      organizationName: organizationsTable.name,
+      orgRole: organizationMembersTable.role,
+      createdAt: usersTable.createdAt,
+    })
+    .from(usersTable)
+    .leftJoin(organizationMembersTable, eq(organizationMembersTable.userId, usersTable.id))
+    .leftJoin(organizationsTable, eq(organizationsTable.id, organizationMembersTable.organizationId));
+
+  const [rows, [totalRow]] = await Promise.all([
+    (whereClause ? baseQuery.where(whereClause) : baseQuery)
+      .orderBy(desc(usersTable.id))
+      .limit(limit)
+      .offset(offset),
+    db
+      .select({ count: count() })
+      .from(usersTable)
+      .leftJoin(organizationMembersTable, eq(organizationMembersTable.userId, usersTable.id))
+      .leftJoin(organizationsTable, eq(organizationsTable.id, organizationMembersTable.organizationId))
+      .where(whereClause),
+  ]);
+
+  if (rows.length === 0) {
+    return { users: [], total: Number(totalRow?.count ?? 0) };
+  }
+
+  const userIds = rows.map((r) => r.id);
+  const emails = rows.map((r) => r.email.toLowerCase());
+
+  const [projectCounts, pendingInvites] = await Promise.all([
+    db
+      .select({
+        userId: websiteProjectsTable.userId,
+        count: count(),
+      })
+      .from(websiteProjectsTable)
+      .where(inArray(websiteProjectsTable.userId, userIds))
+      .groupBy(websiteProjectsTable.userId),
+    db
+      .select({ email: orgInvitesTable.email })
+      .from(orgInvitesTable)
+      .where(
+        and(
+          inArray(orgInvitesTable.email, emails),
+          isNull(orgInvitesTable.acceptedAt),
+          gt(orgInvitesTable.expiresAt, now),
+        ),
+      ),
+  ]);
+
+  const projectCountByUser = new Map(
+    projectCounts.map((row) => [row.userId, Number(row.count)]),
+  );
+  const pendingInviteEmails = new Set(pendingInvites.map((i) => i.email.toLowerCase()));
+
+  const users: AdminUserRow[] = rows.map((row) => {
+    let status: AdminUserRow["status"] = "no_org";
+    if (row.organizationId) {
+      status = "active";
+    } else if (pendingInviteEmails.has(row.email.toLowerCase())) {
+      status = "pending_invite";
+    }
+
+    return {
+      id: row.id,
+      email: row.email,
+      name: row.name,
+      platformRole: row.platformRole,
+      plan: (row.plan as PlanId) ?? "starter",
+      organizationId: row.organizationId,
+      organizationName: row.organizationName,
+      orgRole: normalizeOrgRole(row.orgRole),
+      projectCount: projectCountByUser.get(row.id) ?? 0,
+      createdAt: row.createdAt,
+      status,
+    };
+  });
+
+  return { users, total: Number(totalRow?.count ?? 0) };
+}
+
+export interface PendingInviteRow {
+  id: number;
+  email: string;
+  organizationId: number;
+  organizationName: string;
+  role: OrgMemberRole;
+  assignedProjectId: number | null;
+  expiresAt: Date;
+  createdAt: Date;
+}
+
+export async function listPendingInvites(): Promise<PendingInviteRow[]> {
+  const now = new Date();
+  const rows = await db
+    .select({
+      id: orgInvitesTable.id,
+      email: orgInvitesTable.email,
+      organizationId: orgInvitesTable.organizationId,
+      organizationName: organizationsTable.name,
+      role: orgInvitesTable.role,
+      assignedProjectId: orgInvitesTable.assignedProjectId,
+      expiresAt: orgInvitesTable.expiresAt,
+      createdAt: orgInvitesTable.createdAt,
+    })
+    .from(orgInvitesTable)
+    .innerJoin(organizationsTable, eq(organizationsTable.id, orgInvitesTable.organizationId))
+    .where(and(isNull(orgInvitesTable.acceptedAt), gt(orgInvitesTable.expiresAt, now)))
+    .orderBy(desc(orgInvitesTable.createdAt));
+
+  return rows.map((row) => ({
+    ...row,
+    role: normalizeOrgRole(row.role) ?? "editor",
+  }));
+}
+
+const INVITE_EXPIRY_DAYS = 7;
+
+export async function createOrgInvite(input: {
+  organizationId: number;
+  email: string;
+  role: OrgMemberRole;
+  assignedProjectId: number | null;
+  invitedByUserId: number;
+}): Promise<
+  | { ok: true; inviteId: number; token: string }
+  | { ok: false; error: string }
+> {
+  const normalizedEmail = input.email.trim().toLowerCase();
+
+  const [org] = await db
+    .select({ id: organizationsTable.id, name: organizationsTable.name })
+    .from(organizationsTable)
+    .where(eq(organizationsTable.id, input.organizationId))
+    .limit(1);
+
+  if (!org) {
+    return { ok: false, error: "Organization not found" };
+  }
+
+  const now = new Date();
+  const [existingPending] = await db
+    .select({ id: orgInvitesTable.id })
+    .from(orgInvitesTable)
+    .where(
+      and(
+        eq(orgInvitesTable.organizationId, input.organizationId),
+        eq(orgInvitesTable.email, normalizedEmail),
+        isNull(orgInvitesTable.acceptedAt),
+        gt(orgInvitesTable.expiresAt, now),
+      ),
+    )
+    .limit(1);
+
+  if (existingPending) {
+    return { ok: false, error: "A pending invite already exists for this email and organization" };
+  }
+
+  const [existingMember] = await db
+    .select({ id: organizationMembersTable.id })
+    .from(organizationMembersTable)
+    .innerJoin(usersTable, eq(usersTable.id, organizationMembersTable.userId))
+    .where(
+      and(
+        eq(organizationMembersTable.organizationId, input.organizationId),
+        eq(usersTable.email, normalizedEmail),
+      ),
+    )
+    .limit(1);
+
+  if (existingMember) {
+    return { ok: false, error: "User is already a member of this organization" };
+  }
+
+  const token = crypto.randomBytes(32).toString("hex");
+  const expiresAt = new Date(Date.now() + INVITE_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+
+  const [invite] = await db
+    .insert(orgInvitesTable)
+    .values({
+      organizationId: input.organizationId,
+      email: normalizedEmail,
+      role: input.role,
+      assignedProjectId: input.assignedProjectId,
+      token,
+      invitedByUserId: input.invitedByUserId,
+      expiresAt,
+    })
+    .returning({ id: orgInvitesTable.id });
+
+  return { ok: true, inviteId: invite.id, token };
+}
+
+export interface InviteDetails {
+  id: number;
+  email: string;
+  role: OrgMemberRole;
+  organizationId: number;
+  organizationName: string;
+  assignedProjectId: number | null;
+  expiresAt: Date;
+  acceptedAt: Date | null;
+  expired: boolean;
+}
+
+export async function getInviteByToken(token: string): Promise<InviteDetails | null> {
+  const [row] = await db
+    .select({
+      id: orgInvitesTable.id,
+      email: orgInvitesTable.email,
+      role: orgInvitesTable.role,
+      organizationId: orgInvitesTable.organizationId,
+      organizationName: organizationsTable.name,
+      assignedProjectId: orgInvitesTable.assignedProjectId,
+      expiresAt: orgInvitesTable.expiresAt,
+      acceptedAt: orgInvitesTable.acceptedAt,
+    })
+    .from(orgInvitesTable)
+    .innerJoin(organizationsTable, eq(organizationsTable.id, orgInvitesTable.organizationId))
+    .where(eq(orgInvitesTable.token, token))
+    .limit(1);
+
+  if (!row) return null;
+
+  const now = new Date();
+  return {
+    id: row.id,
+    email: row.email,
+    role: normalizeOrgRole(row.role) ?? "editor",
+    organizationId: row.organizationId,
+    organizationName: row.organizationName,
+    assignedProjectId: row.assignedProjectId,
+    expiresAt: row.expiresAt,
+    acceptedAt: row.acceptedAt,
+    expired: row.expiresAt < now,
+  };
+}
+
+export async function acceptOrgInvite(input: {
+  token: string;
+  userId: number;
+}): Promise<{ ok: true; organizationId: number } | { ok: false; error: string }> {
+  const invite = await getInviteByToken(input.token);
+  if (!invite) {
+    return { ok: false, error: "Invite not found" };
+  }
+  if (invite.acceptedAt) {
+    return { ok: false, error: "Invite has already been accepted" };
+  }
+  if (invite.expired) {
+    return { ok: false, error: "Invite has expired" };
+  }
+
+  const [user] = await db
+    .select({ id: usersTable.id, email: usersTable.email })
+    .from(usersTable)
+    .where(eq(usersTable.id, input.userId))
+    .limit(1);
+
+  if (!user) {
+    return { ok: false, error: "User not found" };
+  }
+
+  if (user.email.toLowerCase() !== invite.email.toLowerCase()) {
+    return {
+      ok: false,
+      error: "This invite was sent to a different email address. Sign in with the invited email.",
+    };
+  }
+
+  const existingMembership = await getOrgMembership(input.userId);
+  if (existingMembership && existingMembership.organizationId !== invite.organizationId) {
+    return { ok: false, error: "You already belong to another organization" };
+  }
+
+  const result = await addOrganizationMember({
+    organizationId: invite.organizationId,
+    userId: input.userId,
+    role: invite.role,
+    assignedProjectId: invite.assignedProjectId,
+  });
+
+  if (!result.ok) {
+    return result;
+  }
+
+  await db
+    .update(orgInvitesTable)
+    .set({ acceptedAt: new Date() })
+    .where(eq(orgInvitesTable.id, invite.id));
+
+  return { ok: true, organizationId: invite.organizationId };
+}
+
+export async function getUserForImpersonation(userId: number) {
+  const [user] = await db
+    .select({
+      id: usersTable.id,
+      email: usersTable.email,
+      name: usersTable.name,
+      role: usersTable.role,
+    })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+
+  return user ?? null;
+}
+

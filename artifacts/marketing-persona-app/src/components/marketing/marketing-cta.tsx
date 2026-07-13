@@ -40,7 +40,7 @@ export function MarketingCTA({
   return (
     <section
       className={`py-28 relative overflow-hidden border-t ${
-        isDark ? "text-white bg-black" : "bg-background text-foreground border-(--border)"
+        isDark ? "text-white bg-black" : "bg-background text-foreground border-border"
       }`}
     >
       {isDark && backgroundImage && <HeroPhotoBg image={backgroundImage} />}

@@ -40,7 +40,12 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: NewProjectDi
     });
     setLoading(false);
     if (!res.ok) {
-      toast.error("Failed to create project");
+      const body = await res.json().catch(() => ({}));
+      const message =
+        (body as { message?: string }).message ??
+        (body as { error?: string }).error ??
+        "Failed to create project";
+      toast.error(message);
       return;
     }
     const project = await res.json();

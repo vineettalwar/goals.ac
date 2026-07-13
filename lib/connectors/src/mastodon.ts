@@ -147,3 +147,30 @@ export async function fetchMastodonAccount(
   if (!data.id || !data.username) throw new Error("Invalid Mastodon account response");
   return { id: data.id, username: data.username };
 }
+
+export async function fetchMastodonPostMetrics(
+  credentials: MastodonCredentials,
+  postId: string,
+): Promise<import("./social-metrics-types").NormalizedPostMetrics> {
+  const origin = normalizeMastodonInstance(credentials.instanceUrl);
+  const url = `${origin}/api/v1/statuses/${postId}`;
+  await assertPublicUrl(url);
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${credentials.accessToken}` },
+  });
+  if (!res.ok) {
+    return { impressions: null, likes: null, comments: null, shares: null, clicks: null };
+  }
+  const data = (await res.json()) as {
+    favourites_count?: number;
+    reblogs_count?: number;
+    replies_count?: number;
+  };
+  return {
+    impressions: null,
+    likes: data.favourites_count ?? null,
+    comments: data.replies_count ?? null,
+    shares: data.reblogs_count ?? null,
+    clicks: null,
+  };
+}

@@ -1,4 +1,6 @@
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
+import type { NormalizedPostMetrics } from "./social-metrics-types";
+import { EMPTY_POST_METRICS } from "./social-metrics-types";
 
 export interface MetaCredentials {
   accessToken: string;
@@ -185,4 +187,81 @@ export async function fetchMetaPages(userAccessToken: string): Promise<MetaPageI
     instagramAccountId: p.instagram_business_account?.id,
     instagramUsername: p.instagram_business_account?.username,
   }));
+}
+
+async function fetchMetaInsights(
+  postId: string,
+  accessToken: string,
+  metrics: string[],
+): Promise<Record<string, number>> {
+  const url = `${GRAPH_API}/${postId}/insights?metric=${metrics.join(",")}&access_token=${encodeURIComponent(accessToken)}`;
+  await assertPublicUrl(url);
+  const res = await fetch(url);
+  if (!res.ok) return {};
+  const data = (await res.json()) as {
+    data?: Array<{ name?: string; values?: Array<{ value?: number }> }>;
+  };
+  const out: Record<string, number> = {};
+  for (const row of data.data ?? []) {
+    if (row.name && row.values?.[0]?.value != null) {
+      out[row.name] = row.values[0].value;
+    }
+  }
+  return out;
+}
+
+export async function fetchFacebookPostMetrics(
+  credentials: MetaCredentials,
+  postId: string,
+): Promise<NormalizedPostMetrics> {
+  const insights = await fetchMetaInsights(postId, credentials.accessToken, [
+    "post_impressions",
+    "post_engaged_users",
+    "post_clicks",
+  ]);
+  const reactionsUrl = `${GRAPH_API}/${postId}?fields=reactions.summary(true),comments.summary(true),shares&access_token=${encodeURIComponent(credentials.accessToken)}`;
+  await assertPublicUrl(reactionsUrl);
+  const res = await fetch(reactionsUrl);
+  if (!res.ok) {
+    return {
+      impressions: insights.post_impressions ?? null,
+      likes: null,
+      comments: null,
+      shares: null,
+      clicks: insights.post_clicks ?? null,
+    };
+  }
+  const data = (await res.json()) as {
+    reactions?: { summary?: { total_count?: number } };
+    comments?: { summary?: { total_count?: number } };
+    shares?: { count?: number };
+  };
+  return {
+    impressions: insights.post_impressions ?? null,
+    likes: data.reactions?.summary?.total_count ?? null,
+    comments: data.comments?.summary?.total_count ?? null,
+    shares: data.shares?.count ?? null,
+    clicks: insights.post_clicks ?? null,
+  };
+}
+
+export async function fetchInstagramPostMetrics(
+  credentials: MetaCredentials,
+  mediaId: string,
+): Promise<NormalizedPostMetrics> {
+  const insights = await fetchMetaInsights(mediaId, credentials.accessToken, [
+    "impressions",
+    "reach",
+    "likes",
+    "comments",
+    "shares",
+    "saved",
+  ]);
+  return {
+    impressions: insights.impressions ?? insights.reach ?? null,
+    likes: insights.likes ?? null,
+    comments: insights.comments ?? null,
+    shares: insights.shares ?? null,
+    clicks: null,
+  };
 }

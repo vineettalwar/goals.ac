@@ -30,6 +30,13 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "images.pexels.com" },
+      { protocol: "https", hostname: "images.higgs.ai" },
+    ],
+  },
   experimental: {
     staleTimes: {
       dynamic: 30,
@@ -44,8 +51,16 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     root: monorepoRoot,
+    // Turbopack resolves workspace packages from lib/* via the app’s
+    // node_modules; explicit aliases keep @workspace/jobs reachable when
+    // imported from nested packages like @workspace/content-engine.
+    resolveAlias: {
+      "@workspace/jobs": "lib/jobs/src/index.ts",
+      "@workspace/jobs/boss": "lib/jobs/src/boss.ts",
+      "@workspace/jobs/queues": "lib/jobs/src/queues.ts",
+    },
   },
-  transpilePackages: ["@workspace/db", "@workspace/integrations-gemini-ai", "@workspace/security", "@workspace/ai-providers", "@workspace/connectors", "@workspace/content-engine", "@workspace/jobs", "@workspace/seo-tools", "@workspace/serp-provider"],
+  transpilePackages: ["@workspace/db", "@workspace/integrations-gemini-ai", "@workspace/security", "@workspace/ai-providers", "@workspace/connectors", "@workspace/content-engine", "@workspace/jobs", "@workspace/media", "@workspace/seo-tools", "@workspace/serp-provider"],
   async redirects() {
     return [
       { source: "/agent", destination: "/autopilot", permanent: true },
@@ -54,6 +69,7 @@ const nextConfig: NextConfig = {
       { source: "/topical-map", destination: "/strategy/topical-map", permanent: true },
       { source: "/goals", destination: "/strategy/goals", permanent: true },
       { source: "/keyword-tracking", destination: "/search/keywords", permanent: true },
+      { source: "/search/suggestions", destination: "/search/keywords?tab=ideas", permanent: true },
       { source: "/ai-visibility", destination: "/search/visibility", permanent: true },
       { source: "/internal-links", destination: "/search/site", permanent: true },
       { source: "/competitor-analysis", destination: "/research/competitors", permanent: true },

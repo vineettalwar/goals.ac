@@ -95,6 +95,7 @@ export function buildAiProviderStatus(
       configured: bedrockConfigured,
       region: env("AWS_REGION") ?? env("AWS_DEFAULT_REGION") ?? (bedrockConfigured ? "us-east-1" : null),
       model: env("BEDROCK_MODEL") ?? null,
+      source: (bedrockConfigured ? "env" : null) as "env" | "org-key" | null,
     },
     ollama: {
       configured: activeProvider === "ollama" || !!user?.ollamaBaseUrl || !!env("OLLAMA_BASE_URL"),
@@ -113,13 +114,16 @@ export function isActiveProviderReady(
     ollamaConfigured: boolean;
     ollamaReachable?: boolean;
     hasUserGeminiKey?: boolean;
+    hasOrgBedrockKey?: boolean;
+    orgBedrockRegion?: string | null;
+    orgBedrockModel?: string | null;
   },
 ): boolean {
   switch (activeProvider) {
     case "gemini":
       return options.geminiConfigured || Boolean(options.hasUserGeminiKey);
     case "bedrock":
-      return options.bedrockConfigured;
+      return options.bedrockConfigured || Boolean(options.hasOrgBedrockKey);
     case "ollama":
       return options.ollamaReachable ?? options.ollamaConfigured;
     default:
@@ -132,7 +136,7 @@ export function aiProviderUnavailableMessage(activeProvider: AiProviderId): stri
     case "gemini":
       return "No Gemini API key configured. Add your key in Settings or set GEMINI_API_KEY in .env.local.";
     case "bedrock":
-      return "AWS Bedrock is not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY (or AWS_PROFILE) in .env.local, or choose a different AI provider in Settings.";
+      return "AWS Bedrock is not configured. Add your AWS credentials in Settings or set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env.local.";
     case "ollama":
       return "Ollama is not reachable. Start Ollama locally, set OLLAMA_BASE_URL in .env.local, or update your Ollama URL in Settings.";
     default:
@@ -144,16 +148,32 @@ export type AiProviderStatusPayload = ReturnType<typeof buildAiProviderStatus>;
 
 export function finalizeAiProviderStatus(
   status: AiProviderStatusPayload,
-  options?: { hasUserGeminiKey?: boolean },
+  options?: {
+    hasUserGeminiKey?: boolean;
+    hasOrgBedrockKey?: boolean;
+    orgBedrockRegion?: string | null;
+    orgBedrockModel?: string | null;
+  },
 ): AiProviderStatusPayload {
+  const bedrockConfigured = status.bedrock.configured || Boolean(options?.hasOrgBedrockKey);
   return {
     ...status,
+    bedrock: {
+      ...status.bedrock,
+      configured: bedrockConfigured,
+      region: options?.orgBedrockRegion ?? status.bedrock.region,
+      model: options?.orgBedrockModel ?? status.bedrock.model,
+      source: options?.hasOrgBedrockKey ? "org-key" : status.bedrock.source,
+    },
     ready: isActiveProviderReady(status.activeProvider, {
       geminiConfigured: status.gemini.configured,
-      bedrockConfigured: status.bedrock.configured,
+      bedrockConfigured,
       ollamaConfigured: status.ollama.configured,
       ollamaReachable: status.ollama.reachable,
       hasUserGeminiKey: options?.hasUserGeminiKey,
+      hasOrgBedrockKey: options?.hasOrgBedrockKey,
+      orgBedrockRegion: options?.orgBedrockRegion,
+      orgBedrockModel: options?.orgBedrockModel,
     }),
   };
 }

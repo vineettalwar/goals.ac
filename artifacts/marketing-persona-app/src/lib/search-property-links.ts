@@ -24,7 +24,7 @@ export const AI_REPORT_LABELS: Record<SearchPropertyProvider, string> = {
 
 export const API_INGESTION_NOTES: Record<SearchPropertyProvider, string> = {
   google_search_console:
-    "AI Overview impressions are visible in Search Console. API ingestion is not available yet — open the report or export CSV.",
+    "Search queries, impressions, and positions sync on Keyword research → Article ideas. AI Overview metrics remain in the Search Console UI.",
   bing_webmaster:
     "Citation counts are visible in Bing AI Performance. API ingestion is on Microsoft's backlog — open the report for now.",
 };

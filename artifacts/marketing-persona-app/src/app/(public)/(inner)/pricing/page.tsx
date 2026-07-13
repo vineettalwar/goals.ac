@@ -3,10 +3,10 @@ import { PricingPageDynamic } from "@/components/marketing/marketing-client-dyna
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Simple credit-based pricing for AI content generation, GEO audits, and autopilot publishing.",
+  description: "Pricing TBD. Explore goals.ac tiers for AI content, GEO audits, and autopilot publishing. Contact us for early access.",
   openGraph: {
-    title: "Pricing — goals.ac",
-    description: "Simple credit-based pricing for AI content generation, GEO audits, and autopilot publishing.",
+    title: "Pricing | goals.ac",
+    description: "Pricing TBD. Explore goals.ac tiers for AI content, GEO audits, and autopilot publishing.",
   },
 };
 

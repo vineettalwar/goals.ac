@@ -70,7 +70,7 @@ export function ComparePageClient() {
           </table>
         </div>
         <p className="text-sm text-muted-foreground mt-6 text-center max-w-2xl mx-auto">
-          We don&apos;t name competitors directly — this reflects common autopilot SEO / AI content tools.
+          We don&apos;t name competitors directly. This reflects common autopilot SEO and AI content tools.
           {" "}
           <Link href="/link-building" className="text-primary hover:underline">Learn our white-hat link approach →</Link>
         </p>
@@ -82,14 +82,14 @@ export function ComparePageClient() {
         items={[
           { question: "Why not use a backlink exchange?", answer: "Link exchanges risk Google penalties and don't build real topical authority. We focus on content clusters and internal linking." },
           { question: "Is goals.ac fully automated?", answer: "Autopilot is optional. You can review every draft, use manual publish mode, and inspect quality scores before going live." },
-          { question: "What about price?", answer: "Growth is $49/mo vs $99+ for comparable autopilot tools — with strategy roadmaps included free." },
+          { question: "What about price?", answer: "Growth is $49/mo vs $99+ for comparable autopilot tools, with strategy roadmaps included free." },
         ]}
       />
 
       <MarketingCTA
         titleLine1="Try the"
         titleLine2="strategy-first approach"
-        description="Start free — build a roadmap, run a GEO audit, and generate your first draft."
+        description="Start free. Build a roadmap, run a GEO audit, and generate your first draft."
         variant="dark"
         backgroundImage={HERO_IMAGES.features.footer}
         secondaryHref="/free-tools"
