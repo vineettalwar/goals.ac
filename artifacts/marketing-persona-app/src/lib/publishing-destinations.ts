@@ -29,6 +29,19 @@ export type PublishDestinationId =
   | "shopify"
   | "drupal"
   | "joomla"
+  | "wix"
+  | "framer"
+  | "squarespace"
+  | "contentful"
+  | "sanity"
+  | "strapi"
+  | "hubspot"
+  | "typo3"
+  | "beehiiv"
+  | "convertkit"
+  | "mailchimp"
+  | "medium"
+  | "substack"
   | "linkedin"
   | "twitter"
   | "instagram"
@@ -43,7 +56,7 @@ export type CmsConnectionSnapshot = Record<string, unknown>;
 export interface PublishDestinationDefinition {
   id: PublishDestinationId;
   label: string;
-  category: "cms" | "social";
+  category: "cms" | "social" | "esp" | "export";
   integrationKey: string;
   description: string;
   badgeLetter?: string;
@@ -60,6 +73,8 @@ export interface PublishDestinationDefinition {
   oauthPath?: string;
   /** Hide duplicate settings card when another destination shares integrationKey */
   hideSettingsCard?: boolean;
+  /** Export-only destinations have no live publish */
+  exportOnly?: boolean;
 }
 
 export type CmsSummary = Record<
@@ -71,6 +86,17 @@ export type CmsSummary = Record<
   | "shopify"
   | "drupal"
   | "joomla"
+  | "wix"
+  | "framer"
+  | "squarespace"
+  | "contentful"
+  | "sanity"
+  | "strapi"
+  | "hubspot"
+  | "typo3"
+  | "beehiiv"
+  | "convertkit"
+  | "mailchimp"
   | "linkedin"
   | "twitter"
   | "meta"
@@ -99,7 +125,6 @@ const LONG_FORM_FORMATS: ContentFormatType[] = [
   "pillar_page",
   "location_page",
   "infographic_outline",
-  "email_sequence",
   "ad_copy",
   "landing_page_copy",
   "product_description",
@@ -107,8 +132,14 @@ const LONG_FORM_FORMATS: ContentFormatType[] = [
   "faq_article",
 ];
 
+const EMAIL_FORMATS: ContentFormatType[] = ["email_sequence"];
+
 function matchesLongForm(format: ContentFormatType): boolean {
   return LONG_FORM_FORMATS.includes(format);
+}
+
+function matchesEmail(format: ContentFormatType): boolean {
+  return EMAIL_FORMATS.includes(format);
 }
 
 function hasMeta(connections: CmsConnectionSnapshot): boolean {
@@ -152,7 +183,7 @@ export const PUBLISHING_DESTINATIONS: PublishDestinationDefinition[] = [
     label: "Webflow",
     category: "cms",
     integrationKey: "webflow",
-    description: "Publish content as a draft CMS item in your Webflow collection.",
+    description: "Publish content as a CMS item in your Webflow collection (draft or live).",
     badgeLetter: "W",
     badgeClassName: "bg-blue-600",
     listColorClassName: "bg-purple-400",
@@ -237,6 +268,190 @@ export const PUBLISHING_DESTINATIONS: PublishDestinationDefinition[] = [
     connectionMethodLabels: { api: "Signed webhook URL" },
     isConnected: (c) => !!c.webhook,
     matchesFormat: matchesLongForm,
+  },
+  {
+    id: "wix",
+    label: "Wix",
+    category: "cms",
+    integrationKey: "wix",
+    description: "Publish blog posts to Wix via the Blog API.",
+    badgeLetter: "W",
+    badgeClassName: "bg-yellow-500 text-black",
+    listColorClassName: "bg-yellow-400",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "OAuth access token" },
+    isConnected: (c) => !!c.wix,
+    matchesFormat: matchesLongForm,
+  },
+  {
+    id: "framer",
+    label: "Framer",
+    category: "cms",
+    integrationKey: "framer",
+    description: "Publish CMS collection items to Framer sites.",
+    badgeLetter: "F",
+    badgeClassName: "bg-violet-600",
+    listColorClassName: "bg-violet-400",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "Project API token" },
+    isConnected: (c) => !!c.framer,
+    matchesFormat: matchesLongForm,
+  },
+  {
+    id: "squarespace",
+    label: "Squarespace",
+    category: "cms",
+    integrationKey: "squarespace",
+    description: "Publish blog posts to Squarespace via the Content API.",
+    badgeLetter: "S",
+    badgeClassName: "bg-neutral-900 text-white",
+    listColorClassName: "bg-neutral-500",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "API key" },
+    isConnected: (c) => !!c.squarespace,
+    matchesFormat: matchesLongForm,
+  },
+  {
+    id: "contentful",
+    label: "Contentful",
+    category: "cms",
+    integrationKey: "contentful",
+    description: "Create entries in Contentful via the Management API.",
+    badgeLetter: "C",
+    badgeClassName: "bg-blue-500",
+    listColorClassName: "bg-blue-300",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "Personal access token" },
+    isConnected: (c) => !!c.contentful,
+    matchesFormat: matchesLongForm,
+  },
+  {
+    id: "sanity",
+    label: "Sanity",
+    category: "cms",
+    integrationKey: "sanity",
+    description: "Create documents in Sanity datasets via the HTTP API.",
+    badgeLetter: "S",
+    badgeClassName: "bg-red-600",
+    listColorClassName: "bg-red-400",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "Project token" },
+    isConnected: (c) => !!c.sanity,
+    matchesFormat: matchesLongForm,
+  },
+  {
+    id: "strapi",
+    label: "Strapi",
+    category: "cms",
+    integrationKey: "strapi",
+    description: "Publish content to Strapi via REST API.",
+    badgeLetter: "S",
+    badgeClassName: "bg-indigo-600",
+    listColorClassName: "bg-indigo-400",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "API token" },
+    isConnected: (c) => !!c.strapi,
+    matchesFormat: matchesLongForm,
+  },
+  {
+    id: "hubspot",
+    label: "HubSpot CMS",
+    category: "cms",
+    integrationKey: "hubspot",
+    description: "Publish blog posts to HubSpot CMS.",
+    badgeLetter: "H",
+    badgeClassName: "bg-orange-500",
+    listColorClassName: "bg-orange-400",
+    connectionMethods: ["oauth"],
+    connectionMethodLabels: { oauth: "Private app token" },
+    isConnected: (c) => !!c.hubspot,
+    matchesFormat: matchesLongForm,
+  },
+  {
+    id: "typo3",
+    label: "TYPO3",
+    category: "cms",
+    integrationKey: "typo3",
+    description: "Publish via the goals.ac TYPO3 extension (HMAC plugin).",
+    badgeLetter: "T",
+    badgeClassName: "bg-orange-700",
+    listColorClassName: "bg-orange-500",
+    connectionMethods: ["plugin"],
+    connectionMethodLabels: { plugin: "goals.ac plugin (HMAC)" },
+    isConnected: (c) => !!c.typo3,
+    matchesFormat: matchesLongForm,
+  },
+  {
+    id: "beehiiv",
+    label: "Beehiiv",
+    category: "esp",
+    integrationKey: "beehiiv",
+    description: "Publish email sequences and newsletters to Beehiiv.",
+    badgeLetter: "B",
+    badgeClassName: "bg-yellow-600",
+    listColorClassName: "bg-yellow-500",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "API key" },
+    isConnected: (c) => !!c.beehiiv,
+    matchesFormat: matchesEmail,
+  },
+  {
+    id: "convertkit",
+    label: "ConvertKit",
+    category: "esp",
+    integrationKey: "convertkit",
+    description: "Create email broadcasts in ConvertKit (Kit).",
+    badgeLetter: "K",
+    badgeClassName: "bg-red-500",
+    listColorClassName: "bg-red-400",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "API secret" },
+    isConnected: (c) => !!c.convertkit,
+    matchesFormat: matchesEmail,
+  },
+  {
+    id: "mailchimp",
+    label: "Mailchimp",
+    category: "esp",
+    integrationKey: "mailchimp",
+    description: "Create email campaign drafts in Mailchimp.",
+    badgeLetter: "M",
+    badgeClassName: "bg-yellow-500 text-black",
+    listColorClassName: "bg-yellow-400",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "API key" },
+    isConnected: (c) => !!c.mailchimp,
+    matchesFormat: matchesEmail,
+  },
+  {
+    id: "medium",
+    label: "Medium",
+    category: "export",
+    integrationKey: "medium",
+    description: "Medium's API is deprecated. Export markdown and paste into Medium.",
+    badgeLetter: "M",
+    badgeClassName: "bg-neutral-700",
+    listColorClassName: "bg-neutral-500",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "Export only" },
+    isConnected: () => true,
+    matchesFormat: matchesLongForm,
+    exportOnly: true,
+  },
+  {
+    id: "substack",
+    label: "Substack",
+    category: "export",
+    integrationKey: "substack",
+    description: "No write API available. Export markdown and paste into Substack.",
+    badgeLetter: "S",
+    badgeClassName: "bg-orange-600",
+    listColorClassName: "bg-orange-400",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "Export only" },
+    isConnected: () => true,
+    matchesFormat: (f) => matchesEmail(f) || matchesLongForm(f),
+    exportOnly: true,
   },
   {
     id: "linkedin",
@@ -330,6 +545,14 @@ export function getCmsDestinations(): PublishDestinationDefinition[] {
   return PUBLISHING_DESTINATIONS.filter((d) => d.category === "cms");
 }
 
+export function getEspDestinations(): PublishDestinationDefinition[] {
+  return PUBLISHING_DESTINATIONS.filter((d) => d.category === "esp");
+}
+
+export function getExportDestinations(): PublishDestinationDefinition[] {
+  return PUBLISHING_DESTINATIONS.filter((d) => d.category === "export");
+}
+
 export function getSocialDestinations(): PublishDestinationDefinition[] {
   return PUBLISHING_DESTINATIONS.filter(
     (d) => d.category === "social" && !d.hideSettingsCard,
@@ -347,6 +570,27 @@ export function countPublishingConnections(
   }
   return keys.size;
 }
+
+export function countCmsConnections(connections: CmsConnectionSnapshot): number {
+  return getCmsDestinations().filter((d) => d.isConnected(connections)).length;
+}
+
+export function countEspConnections(connections: CmsConnectionSnapshot): number {
+  return getEspDestinations().filter((d) => d.isConnected(connections)).length;
+}
+
+/** Distinct social integrations shown in settings (LinkedIn, X, Meta, Bluesky, Mastodon). */
+export function countSocialConnections(connections: CmsConnectionSnapshot): number {
+  let count = 0;
+  if (connections.linkedin) count += 1;
+  if (connections.twitter) count += 1;
+  if (connections.meta) count += 1;
+  if (connections.bluesky) count += 1;
+  if (connections.mastodon) count += 1;
+  return count;
+}
+
+export const SOCIAL_SETTINGS_COUNT = 5;
 
 export function hasAnyPublishingConnection(
   connections: CmsConnectionSnapshot,
@@ -473,6 +717,47 @@ export function getConnectionSummary(
     case "webhook": {
       const webhook = record as { url?: string };
       return webhook.url ?? null;
+    }
+    case "wix": {
+      const wix = record as { siteId?: string };
+      return wix.siteId ? `Site ${wix.siteId}` : null;
+    }
+    case "framer": {
+      const framer = record as { collectionId?: string };
+      return framer.collectionId ? `Collection ${framer.collectionId}` : null;
+    }
+    case "squarespace": {
+      const sq = record as { siteId?: string };
+      return sq.siteId ? `Blog ${sq.siteId}` : null;
+    }
+    case "contentful": {
+      const cf = record as { spaceId?: string; contentTypeId?: string };
+      return cf.spaceId ? `${cf.spaceId} / ${cf.contentTypeId ?? "entry"}` : null;
+    }
+    case "sanity": {
+      const sanity = record as { projectId?: string; dataset?: string };
+      return sanity.projectId ? `${sanity.projectId}/${sanity.dataset ?? "production"}` : null;
+    }
+    case "strapi": {
+      const strapi = record as { baseUrl?: string };
+      return strapi.baseUrl ?? null;
+    }
+    case "hubspot": {
+      const hubspot = record as { blogId?: string };
+      return hubspot.blogId ? `Blog ${hubspot.blogId}` : null;
+    }
+    case "typo3": {
+      const typo3 = record as { siteUrl?: string };
+      return typo3.siteUrl ?? null;
+    }
+    case "beehiiv":
+    case "convertkit":
+    case "mailchimp": {
+      return "Connected";
+    }
+    case "medium":
+    case "substack": {
+      return "Export only";
     }
     case "linkedin": {
       const linkedin = record as { displayName?: string };

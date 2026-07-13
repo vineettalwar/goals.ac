@@ -9,6 +9,8 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   PublishingSettingsPanel,
   type CmsIntegrationStatus,
+  type IntegrationCategoryFilter,
+  type IntegrationLayout,
 } from "@/components/publishing-settings-panel";
 import { ProjectAutomationPanel } from "@/components/project-automation-panel";
 
@@ -16,6 +18,8 @@ interface Props {
   projectId: string;
   /** Hide autopilot / visibility automation controls (e.g. on the Integrations hub). */
   showAutomation?: boolean;
+  layout?: IntegrationLayout;
+  categoryFilter?: IntegrationCategoryFilter;
 }
 
 type MetaPage = {
@@ -25,7 +29,12 @@ type MetaPage = {
   instagramUsername?: string;
 };
 
-export function ProjectPublishingTab({ projectId, showAutomation = true }: Props) {
+export function ProjectPublishingTab({
+  projectId,
+  showAutomation = true,
+  layout = "grid",
+  categoryFilter = "all",
+}: Props) {
   const searchParams = useSearchParams();
   const [cmsIntegrations, setCmsIntegrations] = useState<CmsIntegrationStatus>({});
   const [healthStatus, setHealthStatus] = useState<Record<string, { ok: boolean; error?: string }> | null>(null);
@@ -136,21 +145,34 @@ export function ProjectPublishingTab({ projectId, showAutomation = true }: Props
       {showAutomation ? <ProjectAutomationPanel projectId={projectId} /> : null}
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold">Publishing destinations</h2>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Connect CMS platforms and social accounts to publish Content Studio pieces.
+        {layout === "grid" && showAutomation ? (
+          <div className="border-b border-border/50 pb-3">
+            <h2 className="text-sm font-medium">Publishing destinations</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Connect platforms to publish Content Studio pieces.
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={onTestHealth} disabled={isTestingHealth}>
-            {isTestingHealth ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
-            Test connections
-          </Button>
-        </div>
+        ) : null}
 
-        {cmsError && <p className="text-sm text-destructive">{cmsError}</p>}
-        {cmsSaveSuccess && <p className="text-sm text-emerald-600">{cmsSaveSuccess}</p>}
+        {layout === "stacked" ? (
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold">Publishing destinations</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Connect CMS platforms and social accounts to publish Content Studio pieces.
+              </p>
+            </div>
+            <Button variant="outline" size="sm" onClick={onTestHealth} disabled={isTestingHealth}>
+              {isTestingHealth ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
+              Test connections
+            </Button>
+          </div>
+        ) : null}
+
+        {layout === "stacked" && cmsError ? <p className="text-sm text-destructive">{cmsError}</p> : null}
+        {layout === "stacked" && cmsSaveSuccess ? (
+          <p className="text-sm text-emerald-600">{cmsSaveSuccess}</p>
+        ) : null}
 
         <PublishingSettingsPanel
         apiBase=""
@@ -167,6 +189,8 @@ export function ProjectPublishingTab({ projectId, showAutomation = true }: Props
         isDisconnectingLinkedin={false}
         isDisconnectingTwitter={false}
         isDisconnectingMeta={false}
+        layout={layout}
+        categoryFilter={categoryFilter}
         onIntegrationsChange={setCmsIntegrations}
         onHealthKeyRemove={(key) =>
           setHealthStatus((prev) => {

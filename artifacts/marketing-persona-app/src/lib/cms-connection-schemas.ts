@@ -104,11 +104,22 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
         defaultValue: "post-body",
         hint: "Rich Text field slug in your collection (default: post-body).",
       },
+      {
+        key: "publishStatus",
+        label: "Publish mode",
+        type: "select",
+        defaultValue: "draft",
+        options: [
+          { value: "draft", label: "Save as draft" },
+          { value: "live", label: "Publish live" },
+        ],
+      },
     ],
     buildPayload: (values) => ({
       apiToken: trim(values, "apiToken"),
       collectionId: trim(values, "collectionId"),
       bodyFieldSlug: trim(values, "bodyFieldSlug") || "post-body",
+      publishStatus: (trim(values, "publishStatus") || "draft") as "draft" | "live",
     }),
     canSubmit: (values) => has(values, "apiToken") && has(values, "collectionId"),
     connectedDetails: (integration) => [
@@ -497,6 +508,283 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
       apiToken: "",
       categoryId: "",
     }),
+  },
+  wix: {
+    fields: [
+      { key: "accessToken", label: "Access token", type: "password", required: true },
+      { key: "siteId", label: "Site ID", type: "text", required: true },
+      {
+        key: "publishStatus",
+        label: "Publish mode",
+        type: "select",
+        defaultValue: "draft",
+        options: [
+          { value: "draft", label: "Draft" },
+          { value: "live", label: "Live" },
+        ],
+      },
+    ],
+    buildPayload: (values) => ({
+      accessToken: trim(values, "accessToken"),
+      siteId: trim(values, "siteId"),
+      publishStatus: (trim(values, "publishStatus") || "draft") as "draft" | "live",
+    }),
+    canSubmit: (values) => has(values, "accessToken") && has(values, "siteId"),
+    connectedDetails: (integration) => [
+      { label: "Site ID", value: String(integration.siteId ?? "") },
+    ],
+    resetValues: () => ({ accessToken: "", siteId: "", publishStatus: "draft" }),
+  },
+  framer: {
+    fields: [
+      { key: "apiToken", label: "API token", type: "password", required: true },
+      { key: "collectionId", label: "Collection ID", type: "text", required: true },
+      { key: "titleFieldSlug", label: "Title field slug", type: "text", defaultValue: "title", required: true },
+      { key: "bodyFieldSlug", label: "Body field slug", type: "text", defaultValue: "body", required: true },
+      {
+        key: "publishStatus",
+        label: "Publish mode",
+        type: "select",
+        defaultValue: "draft",
+        options: [
+          { value: "draft", label: "Draft" },
+          { value: "live", label: "Live" },
+        ],
+      },
+    ],
+    buildPayload: (values) => ({
+      apiToken: trim(values, "apiToken"),
+      collectionId: trim(values, "collectionId"),
+      titleFieldSlug: trim(values, "titleFieldSlug") || "title",
+      bodyFieldSlug: trim(values, "bodyFieldSlug") || "body",
+      publishStatus: (trim(values, "publishStatus") || "draft") as "draft" | "live",
+    }),
+    canSubmit: (values) =>
+      has(values, "apiToken") && has(values, "collectionId") && has(values, "titleFieldSlug"),
+    connectedDetails: (integration) => [
+      { label: "Collection", value: String(integration.collectionId ?? "") },
+    ],
+    resetValues: () => ({
+      apiToken: "",
+      collectionId: "",
+      titleFieldSlug: "title",
+      bodyFieldSlug: "body",
+      publishStatus: "draft",
+    }),
+  },
+  squarespace: {
+    fields: [
+      { key: "apiKey", label: "API key", type: "password", required: true },
+      { key: "siteId", label: "Blog ID", type: "text", required: true },
+      {
+        key: "publishStatus",
+        label: "Publish mode",
+        type: "select",
+        defaultValue: "draft",
+        options: [
+          { value: "draft", label: "Draft" },
+          { value: "live", label: "Live" },
+        ],
+      },
+    ],
+    buildPayload: (values) => ({
+      apiKey: trim(values, "apiKey"),
+      siteId: trim(values, "siteId"),
+      publishStatus: (trim(values, "publishStatus") || "draft") as "draft" | "live",
+    }),
+    canSubmit: (values) => has(values, "apiKey") && has(values, "siteId"),
+    connectedDetails: (integration) => [
+      { label: "Blog ID", value: String(integration.siteId ?? "") },
+    ],
+    resetValues: () => ({ apiKey: "", siteId: "", publishStatus: "draft" }),
+  },
+  contentful: {
+    fields: [
+      { key: "accessToken", label: "Management token", type: "password", required: true },
+      { key: "spaceId", label: "Space ID", type: "text", required: true },
+      { key: "environmentId", label: "Environment ID", type: "text", defaultValue: "master", required: true },
+      { key: "contentTypeId", label: "Content type ID", type: "text", required: true },
+      { key: "titleField", label: "Title field ID", type: "text", defaultValue: "title" },
+      { key: "bodyField", label: "Body field ID", type: "text", defaultValue: "body" },
+      { key: "slugField", label: "Slug field ID", type: "text", defaultValue: "slug" },
+    ],
+    buildPayload: (values) => ({
+      accessToken: trim(values, "accessToken"),
+      spaceId: trim(values, "spaceId"),
+      environmentId: trim(values, "environmentId") || "master",
+      contentTypeId: trim(values, "contentTypeId"),
+      fieldMapping: {
+        titleField: trim(values, "titleField") || "title",
+        bodyField: trim(values, "bodyField") || "body",
+        slugField: trim(values, "slugField") || "slug",
+      },
+    }),
+    canSubmit: (values) =>
+      has(values, "accessToken") && has(values, "spaceId") && has(values, "contentTypeId"),
+    connectedDetails: (integration) => [
+      { label: "Space", value: String(integration.spaceId ?? "") },
+      { label: "Content type", value: String(integration.contentTypeId ?? "") },
+    ],
+    resetValues: () => ({
+      accessToken: "",
+      spaceId: "",
+      environmentId: "master",
+      contentTypeId: "",
+      titleField: "title",
+      bodyField: "body",
+      slugField: "slug",
+    }),
+  },
+  sanity: {
+    fields: [
+      { key: "projectId", label: "Project ID", type: "text", required: true },
+      { key: "dataset", label: "Dataset", type: "text", defaultValue: "production", required: true },
+      { key: "token", label: "API token", type: "password", required: true },
+      { key: "documentType", label: "Document type", type: "text", defaultValue: "post", required: true },
+      { key: "titleField", label: "Title field", type: "text", defaultValue: "title" },
+      { key: "bodyField", label: "Body field", type: "text", defaultValue: "body" },
+      { key: "slugField", label: "Slug field", type: "text", defaultValue: "slug" },
+    ],
+    buildPayload: (values) => ({
+      projectId: trim(values, "projectId"),
+      dataset: trim(values, "dataset") || "production",
+      token: trim(values, "token"),
+      documentType: trim(values, "documentType") || "post",
+      fieldMapping: {
+        titleField: trim(values, "titleField") || "title",
+        bodyField: trim(values, "bodyField") || "body",
+        slugField: trim(values, "slugField") || "slug",
+      },
+    }),
+    canSubmit: (values) => has(values, "projectId") && has(values, "token"),
+    connectedDetails: (integration) => [
+      { label: "Project", value: String(integration.projectId ?? "") },
+      { label: "Dataset", value: String(integration.dataset ?? "") },
+    ],
+    resetValues: () => ({
+      projectId: "",
+      dataset: "production",
+      token: "",
+      documentType: "post",
+      titleField: "title",
+      bodyField: "body",
+      slugField: "slug",
+    }),
+  },
+  strapi: {
+    fields: [
+      { key: "baseUrl", label: "Strapi URL", type: "url", required: true },
+      { key: "apiToken", label: "API token", type: "password", required: true },
+      { key: "contentType", label: "Content type", type: "text", defaultValue: "articles", required: true },
+      {
+        key: "publishStatus",
+        label: "Publish mode",
+        type: "select",
+        defaultValue: "draft",
+        options: [
+          { value: "draft", label: "Draft" },
+          { value: "live", label: "Live" },
+        ],
+      },
+    ],
+    buildPayload: (values) => ({
+      baseUrl: trim(values, "baseUrl"),
+      apiToken: trim(values, "apiToken"),
+      contentType: trim(values, "contentType") || "articles",
+      publishStatus: (trim(values, "publishStatus") || "draft") as "draft" | "live",
+    }),
+    canSubmit: (values) => has(values, "baseUrl") && has(values, "apiToken"),
+    connectedDetails: (integration) => [
+      { label: "URL", value: String(integration.baseUrl ?? "") },
+    ],
+    resetValues: () => ({ baseUrl: "", apiToken: "", contentType: "articles", publishStatus: "draft" }),
+  },
+  hubspot: {
+    fields: [
+      { key: "accessToken", label: "Private app token", type: "password", required: true },
+      { key: "blogId", label: "Blog ID", type: "text", required: true },
+      {
+        key: "publishStatus",
+        label: "Publish mode",
+        type: "select",
+        defaultValue: "draft",
+        options: [
+          { value: "draft", label: "Draft" },
+          { value: "live", label: "Live" },
+        ],
+      },
+    ],
+    buildPayload: (values) => ({
+      accessToken: trim(values, "accessToken"),
+      blogId: trim(values, "blogId"),
+      publishStatus: (trim(values, "publishStatus") || "draft") as "draft" | "live",
+    }),
+    canSubmit: (values) => has(values, "accessToken") && has(values, "blogId"),
+    connectedDetails: (integration) => [
+      { label: "Blog ID", value: String(integration.blogId ?? "") },
+    ],
+    resetValues: () => ({ accessToken: "", blogId: "", publishStatus: "draft" }),
+  },
+  typo3: {
+    fields: [
+      { key: "siteUrl", label: "TYPO3 site URL", type: "url", required: true },
+      { key: "siteKey", label: "Site key", type: "password", required: true },
+    ],
+    buildPayload: (values) => ({
+      connectionType: "plugin" as const,
+      siteUrl: trim(values, "siteUrl"),
+      siteKey: trim(values, "siteKey"),
+    }),
+    canSubmit: (values) => has(values, "siteUrl") && has(values, "siteKey"),
+    connectedDetails: (integration) => [
+      { label: "Site URL", value: String(integration.siteUrl ?? "") },
+    ],
+    resetValues: () => ({ siteUrl: "", siteKey: "" }),
+  },
+  beehiiv: {
+    fields: [
+      { key: "apiKey", label: "API key", type: "password", required: true },
+      { key: "publicationId", label: "Publication ID", type: "text", required: true },
+    ],
+    buildPayload: (values) => ({
+      apiKey: trim(values, "apiKey"),
+      publicationId: trim(values, "publicationId"),
+    }),
+    canSubmit: (values) => has(values, "apiKey") && has(values, "publicationId"),
+    connectedDetails: (integration) => [
+      { label: "Publication", value: String(integration.publicationId ?? "") },
+    ],
+    resetValues: () => ({ apiKey: "", publicationId: "" }),
+  },
+  convertkit: {
+    fields: [
+      { key: "apiSecret", label: "API secret", type: "password", required: true },
+      { key: "formId", label: "Form ID (optional)", type: "text" },
+    ],
+    buildPayload: (values) => ({
+      apiSecret: trim(values, "apiSecret"),
+      formId: trim(values, "formId") || undefined,
+    }),
+    canSubmit: (values) => has(values, "apiSecret"),
+    connectedDetails: () => [{ label: "Status", value: "Connected" }],
+    resetValues: () => ({ apiSecret: "", formId: "" }),
+  },
+  mailchimp: {
+    fields: [
+      { key: "apiKey", label: "API key", type: "password", required: true },
+      { key: "serverPrefix", label: "Server prefix", type: "text", placeholder: "us1", required: true },
+      { key: "listId", label: "Audience list ID", type: "text", required: true },
+    ],
+    buildPayload: (values) => ({
+      apiKey: trim(values, "apiKey"),
+      serverPrefix: trim(values, "serverPrefix"),
+      listId: trim(values, "listId"),
+    }),
+    canSubmit: (values) => has(values, "apiKey") && has(values, "serverPrefix") && has(values, "listId"),
+    connectedDetails: (integration) => [
+      { label: "List ID", value: String(integration.listId ?? "") },
+    ],
+    resetValues: () => ({ apiKey: "", serverPrefix: "", listId: "" }),
   },
 };
 

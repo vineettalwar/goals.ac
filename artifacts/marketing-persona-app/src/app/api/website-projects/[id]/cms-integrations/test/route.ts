@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { db } from "@workspace/db";
-import { websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import {
   type CmsIntegrationCredentials,
   decryptCmsCredentials,
@@ -20,12 +18,7 @@ export async function POST(
   if (isNaN(projectId)) return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
 
   try {
-    const [project] = await db
-      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-
+    const project = await getAccessibleProject(projectId, userId!);
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
     const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
@@ -54,25 +47,9 @@ export async function POST(
     }
 
     if (creds.webflow) {
-      try {
-        const testRes = await fetch(`https://api.webflow.com/v2/collections/${creds.webflow.collectionId}`, {
-          headers: {
-            Authorization: `Bearer ${creds.webflow.apiToken}`,
-            accept: "application/json",
-          },
-        });
-        if (testRes.ok) {
-          health.webflow = { ok: true };
-        } else if (testRes.status === 401 || testRes.status === 403) {
-          health.webflow = { ok: false, error: "Invalid API token" };
-        } else if (testRes.status === 404) {
-          health.webflow = { ok: false, error: "Collection not found" };
-        } else {
-          health.webflow = { ok: false, error: `Webflow API error: ${testRes.status}` };
-        }
-      } catch (err) {
-        health.webflow = { ok: false, error: err instanceof Error ? err.message : "Connection failed" };
-      }
+      const { testWebflowConnection } = await import("@workspace/connectors/webflow");
+      const result = await testWebflowConnection(creds.webflow.apiToken, creds.webflow.collectionId);
+      health.webflow = result.ok ? { ok: true } : { ok: false, error: result.error };
     }
 
     if (creds.wordpress) {
@@ -231,6 +208,62 @@ export async function POST(
       health.mastodon = result.ok
         ? { ok: true, siteName: result.username ? `@${result.username}` : undefined }
         : { ok: false, error: result.error };
+    }
+
+    if (creds.wix) {
+      const { testWixConnection } = await import("@workspace/connectors/wix");
+      const result = await testWixConnection(creds.wix);
+      health.wix = result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    if (creds.framer) {
+      const { testFramerConnection } = await import("@workspace/connectors/framer");
+      const result = await testFramerConnection(creds.framer);
+      health.framer = result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    if (creds.squarespace) {
+      const { testSquarespaceConnection } = await import("@workspace/connectors/squarespace");
+      const result = await testSquarespaceConnection(creds.squarespace);
+      health.squarespace = result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    if (creds.contentful) {
+      const { testContentfulConnection } = await import("@workspace/connectors/contentful");
+      const result = await testContentfulConnection(creds.contentful);
+      health.contentful = result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    if (creds.sanity) {
+      const { testSanityConnection } = await import("@workspace/connectors/sanity");
+      const result = await testSanityConnection(creds.sanity);
+      health.sanity = result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    if (creds.strapi) {
+      const { testStrapiConnection } = await import("@workspace/connectors/strapi");
+      const result = await testStrapiConnection(creds.strapi);
+      health.strapi = result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    if (creds.beehiiv) {
+      const { testBeehiivConnection } = await import("@workspace/connectors/beehiiv");
+      const result = await testBeehiivConnection(creds.beehiiv);
+      health.beehiiv = result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    if (creds.convertkit) {
+      const { testConvertKitConnection } = await import("@workspace/connectors/convertkit");
+      const result = await testConvertKitConnection(creds.convertkit);
+      health.convertkit = result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    if (creds.mailchimp) {
+      const { testMailchimpConnection } = await import("@workspace/connectors/mailchimp");
+      const result = await testMailchimpConnection(creds.mailchimp);
+      health.mailchimp = result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    if (creds.hubspot) {
+      const { testHubSpotConnection } = await import("@workspace/connectors/hubspot");
+      const result = await testHubSpotConnection(creds.hubspot);
+      health.hubspot = result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    if (creds.typo3) {
+      const { testTypo3Connection } = await import("@workspace/connectors/typo3");
+      const result = await testTypo3Connection(creds.typo3);
+      health.typo3 = result.ok ? { ok: true } : { ok: false, error: result.error };
     }
 
     return NextResponse.json(health);
