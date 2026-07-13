@@ -21,6 +21,8 @@ export * from "./brand_profiles";
 export * from "./project_roadmaps";
 export * from "./content_pieces";
 export * from "./companies";
+export * from "./organizations";
+export * from "./organization_members";
 export * from "./marketing_personas";
 export * from "./scheduled_articles";
 export * from "./wordpress_connections";

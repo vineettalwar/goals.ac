@@ -32,6 +32,7 @@ export type ContentFormatType = (typeof CONTENT_FORMAT_TYPES)[number];
 
 export type ContentPieceMetadata = {
   metaDescription?: string;
+  featuredImageUrl?: string;
   faqSection?: { question: string; answer: string }[];
   citations?: { text: string; url: string; source: string }[];
   internalLinkSuggestions?: { anchorText: string; suggestedSlug: string; rationale?: string }[];

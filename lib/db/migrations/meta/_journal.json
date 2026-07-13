@@ -260,6 +260,20 @@
       "when": 1783864000000,
       "tag": "0035_content_piece_metadata",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1783866000000,
+      "tag": "0036_organizations",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1783868000000,
+      "tag": "0037_org_ai_settings",
+      "breakpoints": true
     }
   ]
 }

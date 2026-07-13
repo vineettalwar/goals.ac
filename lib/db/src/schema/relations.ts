@@ -1,6 +1,8 @@
 import { relations } from "drizzle-orm";
 import { usersTable } from "./users";
 import { companiesTable } from "./companies";
+import { organizationsTable } from "./organizations";
+import { organizationMembersTable } from "./organization_members";
 import { websiteProjectsTable } from "./website_projects";
 import { brandProfilesTable } from "./brand_profiles";
 import { goalsTable } from "./goals";
@@ -14,19 +16,54 @@ export const usersRelations = relations(usersTable, ({ many }) => ({
   websiteProjects: many(websiteProjectsTable),
   companies: many(companiesTable),
   sessions: many(sessionsTable),
+  organizationMemberships: many(organizationMembersTable),
+  ownedOrganizations: many(organizationsTable),
 }));
 
-export const companiesRelations = relations(companiesTable, ({ one }) => ({
+export const organizationsRelations = relations(organizationsTable, ({ one, many }) => ({
+  owner: one(usersTable, {
+    fields: [organizationsTable.ownerId],
+    references: [usersTable.id],
+  }),
+  company: one(companiesTable, {
+    fields: [organizationsTable.companyId],
+    references: [companiesTable.id],
+  }),
+  members: many(organizationMembersTable),
+  websiteProjects: many(websiteProjectsTable),
+}));
+
+export const organizationMembersRelations = relations(organizationMembersTable, ({ one }) => ({
+  organization: one(organizationsTable, {
+    fields: [organizationMembersTable.organizationId],
+    references: [organizationsTable.id],
+  }),
+  user: one(usersTable, {
+    fields: [organizationMembersTable.userId],
+    references: [usersTable.id],
+  }),
+  assignedProject: one(websiteProjectsTable, {
+    fields: [organizationMembersTable.assignedProjectId],
+    references: [websiteProjectsTable.id],
+  }),
+}));
+
+export const companiesRelations = relations(companiesTable, ({ one, many }) => ({
   user: one(usersTable, {
     fields: [companiesTable.userId],
     references: [usersTable.id],
   }),
+  organizations: many(organizationsTable),
 }));
 
 export const websiteProjectsRelations = relations(websiteProjectsTable, ({ one, many }) => ({
   user: one(usersTable, {
     fields: [websiteProjectsTable.userId],
     references: [usersTable.id],
+  }),
+  organization: one(organizationsTable, {
+    fields: [websiteProjectsTable.organizationId],
+    references: [organizationsTable.id],
   }),
   brandProfile: one(brandProfilesTable, {
     fields: [websiteProjectsTable.id],

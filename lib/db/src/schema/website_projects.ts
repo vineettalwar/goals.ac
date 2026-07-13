@@ -2,6 +2,7 @@ import { pgTable, serial, text, integer, timestamp, jsonb, index } from "drizzle
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
+import { organizationsTable } from "./organizations";
 
 export interface ContentStyle {
   tonePreset?: "professional" | "casual" | "technical" | "conversational";
@@ -62,6 +63,8 @@ export const websiteProjectsTable = pgTable("website_projects", {
   userId: integer("user_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
+  organizationId: integer("organization_id")
+    .references(() => organizationsTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   url: text("url").notNull(),
   sitemapUrl: text("sitemap_url"),
@@ -78,6 +81,7 @@ export const websiteProjectsTable = pgTable("website_projects", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 }, (table) => [
   index("website_projects_user_id_idx").on(table.userId),
+  index("website_projects_organization_id_idx").on(table.organizationId),
 ]);
 
 export const insertWebsiteProjectSchema = createInsertSchema(websiteProjectsTable).omit({
