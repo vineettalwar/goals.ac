@@ -65,11 +65,14 @@ interface AiProviderStatus {
     ollamaModel: string | null;
   };
   gemini: { configured: boolean; source: string | null };
-  bedrock: { configured: boolean; region: string | null; model: string | null };
   ollama: { configured: boolean; baseUrl: string; model: string; reachable: boolean };
 }
 
-type AiProviderChoice = "gemini" | "bedrock" | "ollama";
+type AiProviderChoice = "gemini" | "ollama";
+
+function normalizeProviderChoice(value: string | null | undefined): AiProviderChoice {
+  return value === "ollama" ? "ollama" : "gemini";
+}
 
 const PLAN_LABELS: Record<UsageSummary["plan"], string> = {
   starter: "Starter",
@@ -100,8 +103,8 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
   const [geminiSaving, setGeminiSaving] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<AiProviderChoice>(() => {
     if (!initialData?.aiStatus) return "gemini";
-    const saved = initialData.aiStatus.settings?.provider as AiProviderChoice | null;
-    return saved ?? (initialData.aiStatus.activeProvider as AiProviderChoice);
+    const saved = initialData.aiStatus.settings?.provider;
+    return normalizeProviderChoice(saved ?? initialData.aiStatus.activeProvider);
   });
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState(
     initialData?.aiStatus?.settings?.ollamaBaseUrl ??
@@ -116,6 +119,9 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
   const [providerSaving, setProviderSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deletingKey, setDeletingKey] = useState(false);
+  const canManageAiSettings =
+    initialData?.canManageAiSettings ??
+    (session?.user?.orgRole === "site_admin" || session?.user?.role === "super_admin" || session?.user?.role === "admin");
 
   const profileForm = useForm({
     resolver: zodResolver(profileSchema),
@@ -146,8 +152,8 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
       }
       if (aiData) {
         setAiStatus(aiData);
-        const savedProvider = aiData.settings?.provider as AiProviderChoice | null;
-        setSelectedProvider(savedProvider ?? (aiData.activeProvider as AiProviderChoice));
+        const savedProvider = aiData.settings?.provider;
+        setSelectedProvider(normalizeProviderChoice(savedProvider ?? aiData.activeProvider));
         setOllamaBaseUrl(
           aiData.settings?.ollamaBaseUrl ??
             aiData.envFallback?.ollamaBaseUrl ??
@@ -265,7 +271,7 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
     <div className="px-8 py-8 max-w-3xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-1 text-sm">Manage your profile, AI providers, and account.</p>
+        <p className="text-muted-foreground mt-1 text-sm">Manage your profile, organization AI settings, and account.</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -321,7 +327,8 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                 <div>
                   <h2 className="font-semibold">Active AI provider</h2>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Choose which provider powers generation. Env vars are used only when you have not set a preference here.
+                    Choose which provider powers generation for your organization. All projects in your org share this setting.
+                    {!canManageAiSettings && " Only site admins can change these settings."}
                   </p>
                 </div>
 
@@ -330,13 +337,13 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                   <Select
                     value={selectedProvider}
                     onValueChange={(value) => setSelectedProvider(value as AiProviderChoice)}
+                    disabled={!canManageAiSettings}
                   >
                     <SelectTrigger id="ai-provider">
                       <SelectValue placeholder="Select provider" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="gemini">Google Gemini</SelectItem>
-                      <SelectItem value="bedrock">AWS Bedrock</SelectItem>
                       <SelectItem value="ollama">Ollama (local)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -351,6 +358,7 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                         value={ollamaBaseUrl}
                         onChange={(e) => setOllamaBaseUrl(e.target.value)}
                         placeholder="http://localhost:11434"
+                        disabled={!canManageAiSettings}
                       />
                     </div>
                     <div className="space-y-1.5">
@@ -360,6 +368,7 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                         value={ollamaModel}
                         onChange={(e) => setOllamaModel(e.target.value)}
                         placeholder={aiStatus?.envFallback?.ollamaModel ?? "gemma4:e2b"}
+                        disabled={!canManageAiSettings}
                       />
                     </div>
                   </div>
@@ -371,12 +380,14 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                       Currently using: <span className="capitalize text-primary">{activeProvider}</span>
                     </p>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Source: {aiStatus?.source === "app" ? "your settings" : aiStatus?.source === "env" ? "environment fallback" : "auto-detected"}
+                      Source: {aiStatus?.source === "app" ? "organization settings" : aiStatus?.source === "env" ? "environment fallback" : "auto-detected"}
                     </p>
                   </div>
-                  <Button onClick={saveAiProvider} disabled={providerSaving}>
-                    {providerSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save provider"}
-                  </Button>
+                  {canManageAiSettings && (
+                    <Button onClick={saveAiProvider} disabled={providerSaving}>
+                      {providerSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save provider"}
+                    </Button>
+                  )}
                 </div>
 
                 {aiStatus?.envFallback?.provider && !aiStatus.settings.provider && (
@@ -391,30 +402,35 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
           <div className="paper-card p-6 space-y-4">
             <h2 className="font-semibold">Google Gemini (BYOK)</h2>
             <p className="text-sm text-muted-foreground">
-              Bring your own API key to route AI generation through your Gemini account.
+              Bring your own API key to route AI generation for your entire organization through your Gemini account.
+              {!canManageAiSettings && " Only site admins can manage the API key."}
             </p>
             {hasGeminiKey ? (
               <div className="space-y-3">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium">Gemini API key connected</p>
+                    <p className="text-sm font-medium">Organization Gemini API key connected</p>
                     <p className="text-xs text-muted-foreground">Ending in ••••{geminiLastFour ?? "••••"}</p>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => { setGeminiKeyInput(""); setGeminiTestResult(null); setGeminiDialogOpen(true); }}>
-                    Replace key
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={removeGeminiKey} disabled={deletingKey}>
-                    {deletingKey ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove key"}
-                  </Button>
-                </div>
+                {canManageAiSettings && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setGeminiKeyInput(""); setGeminiTestResult(null); setGeminiDialogOpen(true); }}>
+                      Replace key
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={removeGeminiKey} disabled={deletingKey}>
+                      {deletingKey ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove key"}
+                    </Button>
+                  </div>
+                )}
               </div>
-            ) : (
+            ) : canManageAiSettings ? (
               <Button variant="outline" size="sm" onClick={() => { setGeminiKeyInput(""); setGeminiTestResult(null); setGeminiDialogOpen(true); }}>
                 <KeyRound className="mr-2 h-3.5 w-3.5" />Add Gemini API key
               </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">No organization API key configured.</p>
             )}
           </div>
 
@@ -425,12 +441,6 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                 <span>Gemini (platform)</span>
                 <span className={aiStatus.gemini.configured ? "text-emerald-600" : "text-muted-foreground"}>
                   {aiStatus.gemini.configured ? `Configured (${aiStatus.gemini.source})` : "Not configured"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span>AWS Bedrock</span>
-                <span className={aiStatus.bedrock.configured ? "text-emerald-600" : "text-muted-foreground"}>
-                  {aiStatus.bedrock.configured ? "Configured" : "Not configured"}
                 </span>
               </div>
               <div className="flex justify-between">

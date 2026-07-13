@@ -14,7 +14,7 @@ export function AdminContentStrategiesClient() {
           <h1 className="text-2xl font-bold">Admin: Content Strategies</h1>
           <p className="text-sm text-muted-foreground mt-1">Prepare, generate, and schedule strategy items</p>
         </div>
-        <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">← Dashboard</Link>
+        <Link href="/admin" className="text-sm text-muted-foreground hover:text-foreground">← Admin</Link>
       </div>
 
       {selectedId ? (

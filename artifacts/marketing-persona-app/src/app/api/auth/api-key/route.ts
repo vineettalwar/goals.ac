@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db/schema";
+import { organizationsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireSiteAdmin } from "@/lib/require-site-admin";
 import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
 import { z } from "zod";
 
 const ApiKeyBody = z.object({
@@ -14,18 +16,14 @@ export async function GET() {
   const { userId, error } = await requireAuth();
   if (error) return error;
 
-  const [user] = await db
-    .select({ encryptedGeminiKey: usersTable.encryptedGeminiKey })
-    .from(usersTable)
-    .where(eq(usersTable.id, userId!))
-    .limit(1);
-
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
-  if (!user.encryptedGeminiKey) return NextResponse.json({ hasKey: false });
+  const orgSettings = await getOrgAiSettingsForUser(userId!);
+  if (!orgSettings?.encryptedGeminiKey) {
+    return NextResponse.json({ hasKey: false });
+  }
 
   let lastFour = "••••";
   try {
-    lastFour = decryptSecret(user.encryptedGeminiKey).slice(-4);
+    lastFour = decryptSecret(orgSettings.encryptedGeminiKey).slice(-4);
   } catch {
     // keep placeholder if decryption fails
   }
@@ -34,8 +32,13 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-  const { userId, error } = await requireAuth();
+  const { userId, error } = await requireSiteAdmin();
   if (error) return error;
+
+  const orgSettings = await getOrgAiSettingsForUser(userId!);
+  if (!orgSettings) {
+    return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = ApiKeyBody.safeParse(body);
@@ -44,15 +47,27 @@ export async function PATCH(req: Request) {
   }
 
   const encrypted = encryptSecret(parsed.data.key);
-  await db.update(usersTable).set({ encryptedGeminiKey: encrypted }).where(eq(usersTable.id, userId!));
+  await db
+    .update(organizationsTable)
+    .set({ encryptedGeminiKey: encrypted })
+    .where(eq(organizationsTable.id, orgSettings.organizationId));
 
   return NextResponse.json({ ok: true, hasKey: true, lastFour: parsed.data.key.slice(-4) });
 }
 
 export async function DELETE() {
-  const { userId, error } = await requireAuth();
+  const { userId, error } = await requireSiteAdmin();
   if (error) return error;
 
-  await db.update(usersTable).set({ encryptedGeminiKey: null }).where(eq(usersTable.id, userId!));
+  const orgSettings = await getOrgAiSettingsForUser(userId!);
+  if (!orgSettings) {
+    return NextResponse.json({ error: "Organization not found" }, { status: 404 });
+  }
+
+  await db
+    .update(organizationsTable)
+    .set({ encryptedGeminiKey: null })
+    .where(eq(organizationsTable.id, orgSettings.organizationId));
+
   return NextResponse.json({ ok: true });
 }

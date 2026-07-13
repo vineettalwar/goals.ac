@@ -1,11 +1,12 @@
 import { db } from "@workspace/db";
 import {
+  companiesTable,
   organizationMembersTable,
   organizationsTable,
   usersTable,
   websiteProjectsTable,
 } from "@workspace/db/schema";
-import { and, eq, inArray, asc } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   getProjectQuota,
@@ -391,4 +392,157 @@ export async function addOrganizationMember(input: {
 
 export async function countOrganizationProjects(organizationId: number): Promise<number> {
   return getOrganizationProjectCount(organizationId);
+}
+
+export interface AdminOrganizationRow {
+  id: number;
+  name: string;
+  plan: PlanId;
+  ownerId: number;
+  ownerEmail: string;
+  ownerName: string;
+  companyId: number | null;
+  createdAt: Date;
+  projectCount: number;
+  memberCount: number;
+}
+
+export async function listAllOrganizations(): Promise<AdminOrganizationRow[]> {
+  const orgs = await db
+    .select({
+      id: organizationsTable.id,
+      name: organizationsTable.name,
+      plan: organizationsTable.plan,
+      ownerId: organizationsTable.ownerId,
+      ownerEmail: usersTable.email,
+      ownerName: usersTable.name,
+      companyId: organizationsTable.companyId,
+      createdAt: organizationsTable.createdAt,
+    })
+    .from(organizationsTable)
+    .innerJoin(usersTable, eq(usersTable.id, organizationsTable.ownerId))
+    .orderBy(desc(organizationsTable.id));
+
+  if (orgs.length === 0) return [];
+
+  const orgIds = orgs.map((org) => org.id);
+  const [projectCounts, memberCounts] = await Promise.all([
+    db
+      .select({
+        organizationId: websiteProjectsTable.organizationId,
+        count: count(),
+      })
+      .from(websiteProjectsTable)
+      .where(inArray(websiteProjectsTable.organizationId, orgIds))
+      .groupBy(websiteProjectsTable.organizationId),
+    db
+      .select({
+        organizationId: organizationMembersTable.organizationId,
+        count: count(),
+      })
+      .from(organizationMembersTable)
+      .where(inArray(organizationMembersTable.organizationId, orgIds))
+      .groupBy(organizationMembersTable.organizationId),
+  ]);
+
+  const projectCountByOrg = new Map(
+    projectCounts.map((row) => [row.organizationId, Number(row.count)]),
+  );
+  const memberCountByOrg = new Map(
+    memberCounts.map((row) => [row.organizationId, Number(row.count)]),
+  );
+
+  return orgs.map((org) => ({
+    ...org,
+    plan: (org.plan as PlanId) ?? "starter",
+    projectCount: projectCountByOrg.get(org.id) ?? 0,
+    memberCount: memberCountByOrg.get(org.id) ?? 0,
+  }));
+}
+
+export interface OnboardOrganizationInput {
+  ownerUserId: number;
+  organizationName: string;
+  plan: PlanId;
+  company?: {
+    name: string;
+    websiteUrl: string;
+    industry: string;
+    description: string;
+    targetAudience: string;
+  };
+  firstProject?: {
+    name: string;
+    url: string;
+  };
+}
+
+/** Create a new org for a user who is not already in one (platform admin use). */
+export async function onboardOrganizationAsAdmin(
+  input: OnboardOrganizationInput,
+): Promise<
+  | { ok: true; organizationId: number; companyId: number | null; projectId: number | null }
+  | { ok: false; error: string }
+> {
+  const existing = await getOrgMembership(input.ownerUserId);
+  if (existing) {
+    return { ok: false, error: "User already belongs to an organization" };
+  }
+
+  let companyId: number | null = null;
+  if (input.company) {
+    const [company] = await db
+      .insert(companiesTable)
+      .values({
+        userId: input.ownerUserId,
+        name: input.company.name,
+        websiteUrl: input.company.websiteUrl,
+        industry: input.company.industry,
+        description: input.company.description,
+        targetAudience: input.company.targetAudience,
+        onboardingComplete: true,
+      })
+      .returning({ id: companiesTable.id });
+    companyId = company.id;
+  }
+
+  const [org] = await db
+    .insert(organizationsTable)
+    .values({
+      name: input.organizationName,
+      plan: input.plan,
+      ownerId: input.ownerUserId,
+      companyId,
+    })
+    .returning({ id: organizationsTable.id });
+
+  await db.insert(organizationMembersTable).values({
+    organizationId: org.id,
+    userId: input.ownerUserId,
+    role: "site_admin",
+    assignedProjectId: null,
+  });
+
+  await db
+    .update(usersTable)
+    .set({ plan: input.plan })
+    .where(eq(usersTable.id, input.ownerUserId));
+
+  let projectId: number | null = null;
+  if (input.firstProject) {
+    const [project] = await db
+      .insert(websiteProjectsTable)
+      .values({
+        userId: input.ownerUserId,
+        organizationId: org.id,
+        name: input.firstProject.name,
+        url: input.firstProject.url,
+        crawlStatus: "pending",
+        scrapeStatus: "pending",
+      })
+      .returning({ id: websiteProjectsTable.id });
+    projectId = project.id;
+  }
+
+  return { ok: true, organizationId: org.id, companyId, projectId };
 }

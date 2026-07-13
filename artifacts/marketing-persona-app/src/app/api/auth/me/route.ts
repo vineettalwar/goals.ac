@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
 import { z } from "zod";
 
 const updateSchema = z.object({
@@ -14,20 +15,23 @@ export async function GET() {
   const { userId, error } = await requireAuth();
   if (error) return error;
 
-  const [user] = await db
-    .select({
-      id: usersTable.id,
-      email: usersTable.email,
-      name: usersTable.name,
-      role: usersTable.role,
-      avatarUrl: usersTable.avatarUrl,
-      encryptedGeminiKey: usersTable.encryptedGeminiKey,
-      googleId: usersTable.googleId,
-      passwordHash: usersTable.passwordHash,
-    })
-    .from(usersTable)
-    .where(eq(usersTable.id, userId!))
-    .limit(1);
+  const [user, orgSettings] = await Promise.all([
+    db
+      .select({
+        id: usersTable.id,
+        email: usersTable.email,
+        name: usersTable.name,
+        role: usersTable.role,
+        avatarUrl: usersTable.avatarUrl,
+        googleId: usersTable.googleId,
+        passwordHash: usersTable.passwordHash,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId!))
+      .limit(1)
+      .then((rows) => rows[0]),
+    getOrgAiSettingsForUser(userId!),
+  ]);
 
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
   return NextResponse.json({
@@ -38,7 +42,7 @@ export async function GET() {
       role: user.role,
       avatarUrl: user.avatarUrl,
     },
-    hasGeminiKey: Boolean(user.encryptedGeminiKey),
+    hasGeminiKey: Boolean(orgSettings?.encryptedGeminiKey),
     hasGoogleId: Boolean(user.googleId),
     hasPassword: Boolean(user.passwordHash),
   });

@@ -1,7 +1,8 @@
 import { getSession } from "@/auth";
 import { db } from "@workspace/db";
 import { scheduledArticlesTable, companiesTable, wordpressConnectionsTable, brandProfilesTable, websiteProjectsTable, type ContentStyle } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
+import { listAccessibleProjectIds } from "@/lib/org-access";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
@@ -60,12 +61,16 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   const { article, wp } = row;
   const meta = (article.articleMetadata ?? {}) as ArticleMetadata;
 
-  const brandRows = await db
-    .select({ brand: brandProfilesTable, contentStyle: websiteProjectsTable.contentStyle })
-    .from(brandProfilesTable)
-    .innerJoin(websiteProjectsTable, eq(websiteProjectsTable.id, brandProfilesTable.websiteProjectId))
-    .where(eq(websiteProjectsTable.userId, userId))
-    .limit(1);
+  const accessibleProjectIds = await listAccessibleProjectIds(userId);
+  const brandRows =
+    accessibleProjectIds.length > 0
+      ? await db
+          .select({ brand: brandProfilesTable, contentStyle: websiteProjectsTable.contentStyle })
+          .from(brandProfilesTable)
+          .innerJoin(websiteProjectsTable, eq(websiteProjectsTable.id, brandProfilesTable.websiteProjectId))
+          .where(inArray(websiteProjectsTable.id, accessibleProjectIds))
+          .limit(1)
+      : [];
   const brand = brandRows[0]?.brand;
   const primaryLanguage = (brandRows[0]?.contentStyle as ContentStyle | null)?.primaryLanguage;
   const languageBadge = primaryLanguage && primaryLanguage !== "en" ? languageLabel(primaryLanguage) : null;

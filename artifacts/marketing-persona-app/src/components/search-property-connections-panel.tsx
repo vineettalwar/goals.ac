@@ -3,11 +3,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { CheckCircle2, ExternalLink, Link2, Unlink, AlertTriangle } from "lucide-react";
+import { CheckCircle2, ExternalLink, Link2, Search, Unlink, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+} from "@/components/ui/dialog";
+import {
+  IntegrationCategorySection,
+  IntegrationIconBox,
+  IntegrationTile,
+} from "@/components/integration-tile";
 import {
   Select,
   SelectContent,
@@ -28,16 +36,18 @@ const PROVIDER_META = {
     shortLabel: "Search Console",
     connectPath: "google-search-console",
     description: "AI Overview and AI Mode impressions from Google.",
-    accent: "border-blue-200 bg-blue-50/50 dark:border-blue-500/20 dark:bg-blue-500/5",
+    icon: <Search className="h-4 w-4 text-blue-600" />,
   },
   bing_webmaster: {
     label: "Bing Webmaster Tools",
     shortLabel: "Bing Webmaster",
     connectPath: "bing-webmaster",
     description: "Citation counts from Copilot and Bing AI summaries.",
-    accent: "border-teal-200 bg-teal-50/50 dark:border-teal-500/20 dark:bg-teal-500/5",
+    icon: <Search className="h-4 w-4 text-teal-600" />,
   },
 } as const;
+
+export const SEARCH_INTEGRATIONS_COUNT = 2;
 
 function isOAuthReady(
   provider: keyof typeof PROVIDER_META,
@@ -173,7 +183,7 @@ function PropertyPicker({
   );
 }
 
-function ConnectionCard({
+function ConnectionDetails({
   connection,
   projectId,
   oauthConfigured,
@@ -198,27 +208,14 @@ function ConnectionCard({
   }
 
   return (
-    <div className={`rounded-xl border p-5 space-y-3 ${meta.accent}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="font-semibold text-sm">{meta.label}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">{meta.description}</p>
-        </div>
-        {connection.connected ? (
-          connection.propertyVerified ? (
-            <Badge className="shrink-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
-              <CheckCircle2 className="w-3 h-3 mr-1" /> Connected
-            </Badge>
-          ) : (
-            <Badge variant="muted" className="shrink-0">
-              <AlertTriangle className="w-3 h-3 mr-1" /> Pick property
-            </Badge>
-          )
-        ) : null}
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-base font-semibold">{meta.label}</h3>
+        <p className="text-sm text-muted-foreground mt-1">{meta.description}</p>
       </div>
 
       {connection.connected ? (
-        <div className="space-y-2 text-xs text-muted-foreground">
+        <div className="space-y-2 text-sm text-muted-foreground">
           {connection.propertyVerified && connection.propertyUrl ? (
             <p>
               <span className="font-medium text-foreground">Property:</span> {connection.propertyUrl}
@@ -227,6 +224,17 @@ function ConnectionCard({
           {connection.accountEmail ? (
             <p>
               <span className="font-medium text-foreground">Account:</span> {connection.accountEmail}
+            </p>
+          ) : null}
+          {connection.connected && !connection.propertyVerified ? (
+            <p className="flex items-center gap-1.5 text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Account linked — pick a verified property to finish setup.
+            </p>
+          ) : connection.propertyVerified ? (
+            <p className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Connected and verified
             </p>
           ) : null}
         </div>
@@ -262,6 +270,7 @@ function ConnectionCard({
               variant="ghost"
               onClick={() => onDisconnect(connection.provider)}
               disabled={disconnecting === connection.provider}
+              className="text-destructive hover:text-destructive"
             >
               {disconnecting === connection.provider ? (
                 <Spinner size="sm" />
@@ -288,14 +297,17 @@ function ConnectionCard({
 export function SearchPropertyConnectionsPanel({
   projectId,
   embedded = false,
+  layout = "grid",
 }: {
   projectId: string;
   embedded?: boolean;
+  layout?: "grid" | "cards";
 }) {
   const searchParams = useSearchParams();
   const [data, setData] = useState<SearchPropertyConnectionsResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState<string | null>(null);
+  const [activeProvider, setActiveProvider] = useState<SearchPropertyProvider | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/website-projects/${projectId}/search-properties`);
@@ -313,6 +325,7 @@ export function SearchPropertyConnectionsPanel({
     if (gsc === "connected") toast.success("Google Search Console connected");
     if (gsc === "pick_property") {
       toast.message("Google account connected — choose a Search Console property");
+      setActiveProvider("google_search_console");
     }
     if (gsc === "no_properties") {
       toast.warning("Google account connected, but no verified Search Console properties were found");
@@ -325,6 +338,7 @@ export function SearchPropertyConnectionsPanel({
     if (bing === "connected") toast.success("Bing Webmaster Tools connected");
     if (bing === "pick_property") {
       toast.message("Bing account connected — choose a verified site");
+      setActiveProvider("bing_webmaster");
     }
     if (bing === "no_properties") {
       toast.warning("Bing account connected, but no verified sites were found");
@@ -349,6 +363,7 @@ export function SearchPropertyConnectionsPanel({
         return;
       }
       toast.success("Disconnected");
+      setActiveProvider(null);
       await load();
     } finally {
       setDisconnecting(null);
@@ -357,44 +372,114 @@ export function SearchPropertyConnectionsPanel({
 
   async function onRefresh() {
     await load();
+    setActiveProvider(null);
   }
 
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner size="sm" /> Loading search property connections…
+        <Spinner size="sm" /> Loading search connections…
       </div>
     );
   }
 
   if (!data) return null;
 
-  return (
-    <section className="space-y-4">
-      {!embedded ? (
-        <div>
-          <h2 className="font-semibold text-sm">Verified citation sources</h2>
-          <p className="text-xs text-muted-foreground mt-1">
-            Connect Search Console or Bing Webmaster for native AI citation reports.
-          </p>
+  const connectedCount = data.connections.filter(
+    (c) => c.connected && c.propertyVerified,
+  ).length;
+
+  const activeConnection = activeProvider
+    ? data.connections.find((c) => c.provider === activeProvider)
+    : null;
+
+  if (layout === "cards") {
+    return (
+      <section className="space-y-4">
+        {!embedded ? (
+          <div>
+            <h2 className="font-semibold text-sm">Verified citation sources</h2>
+            <p className="text-xs text-muted-foreground mt-1">
+              Connect Search Console or Bing Webmaster for native AI citation reports.
+            </p>
+          </div>
+        ) : null}
+        <div className="grid gap-4 md:grid-cols-2">
+          {data.connections.map((connection) => (
+            <div key={connection.provider} className="rounded-xl border p-5 space-y-3">
+              <ConnectionDetails
+                connection={connection}
+                projectId={projectId}
+                oauthConfigured={data.oauthConfigured}
+                onDisconnect={onDisconnect}
+                onRefresh={onRefresh}
+                disconnecting={disconnecting}
+                showPicker={connection.connected && !connection.propertyVerified}
+              />
+            </div>
+          ))}
         </div>
-      ) : null}
+      </section>
+    );
+  }
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {data.connections.map((connection) => (
-          <ConnectionCard
-            key={connection.provider}
-            connection={connection}
-            projectId={projectId}
-            oauthConfigured={data.oauthConfigured}
-            onDisconnect={onDisconnect}
-            onRefresh={onRefresh}
-            disconnecting={disconnecting}
-            showPicker={connection.connected && !connection.propertyVerified}
-          />
-        ))}
-      </div>
+  return (
+    <section className="space-y-3">
+      <IntegrationCategorySection
+        title="Search & AI citation"
+        description="Track AI Overview and Copilot citations from search consoles."
+        connectedCount={connectedCount}
+        totalCount={SEARCH_INTEGRATIONS_COUNT}
+        compact={embedded}
+      >
+        <div className="grid gap-2 sm:grid-cols-2">
+          {data.connections.map((connection) => {
+            const meta = PROVIDER_META[connection.provider];
+            const connected = connection.connected && connection.propertyVerified;
+            const pending = connection.connected && !connection.propertyVerified;
 
+            return (
+              <IntegrationTile
+                key={connection.provider}
+                icon={<IntegrationIconBox>{meta.icon}</IntegrationIconBox>}
+                title={meta.label}
+                description={meta.description}
+                connected={connected || pending}
+                pending={pending}
+                summary={
+                  connected
+                    ? connection.propertyUrl ?? connection.accountEmail
+                    : pending
+                      ? "Pick a verified property"
+                      : null
+                }
+                onClick={() => setActiveProvider(connection.provider)}
+              />
+            );
+          })}
+        </div>
+      </IntegrationCategorySection>
+
+      <Dialog
+        open={activeProvider != null}
+        onOpenChange={(open) => !open && setActiveProvider(null)}
+      >
+        <DialogContent className="max-w-xl gap-0 overflow-y-auto p-0 sm:max-w-lg max-h-[88vh]">
+          <div className="p-6">
+            {activeConnection ? (
+              <ConnectionDetails
+                connection={activeConnection}
+                projectId={projectId}
+                oauthConfigured={data.oauthConfigured}
+                onDisconnect={onDisconnect}
+                onRefresh={onRefresh}
+                disconnecting={disconnecting}
+                showPicker={activeConnection.connected && !activeConnection.propertyVerified}
+              />
+            ) : null}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

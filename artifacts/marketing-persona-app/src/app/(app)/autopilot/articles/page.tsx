@@ -4,10 +4,10 @@ import { getSession } from "@/auth";
 import { db } from "@workspace/db";
 import {
   companiesTable,
-  websiteProjectsTable,
   type ContentStyle,
 } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { listAccessibleProjects } from "@/lib/org-access";
 import { Badge } from "@/components/ui/badge";
 import { GenerateArticleButton } from "../generate-article-button";
 import { languageLabel } from "@/lib/supported-languages";
@@ -17,11 +17,8 @@ import {
 } from "@/components/autopilot/autopilot-sections";
 
 async function ArticlesLanguageBadge({ userId }: { userId: number }) {
-  const [project] = await db
-    .select({ contentStyle: websiteProjectsTable.contentStyle })
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.userId, userId))
-    .limit(1);
+  const projects = await listAccessibleProjects(userId);
+  const project = projects[0];
   const primaryLanguage = (project?.contentStyle as ContentStyle | null)?.primaryLanguage;
   const label = primaryLanguage && primaryLanguage !== "en" ? languageLabel(primaryLanguage) : null;
   if (!label) return null;
