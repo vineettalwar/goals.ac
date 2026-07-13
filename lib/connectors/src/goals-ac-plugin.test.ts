@@ -16,6 +16,7 @@ describe("goals.ac CMS plugin contract", () => {
     ["drupal", "https://site.test/goals-ac/content", "/goals-ac/content"],
     ["joomla", "https://site.test/api/index.php/v1/goals-ac/content", "/api/index.php/v1/goals-ac/content"],
     ["shopify", "https://site.test/goals-ac/v1/content", "/goals-ac/v1/content"],
+    ["typo3", "https://site.test/goals-ac/v1/content", "/goals-ac/v1/content"],
   ])("builds matching %s request and signature paths", (platform, url, path) => {
     const credentials = { siteUrl: "https://site.test/", siteKey: "key", platform };
     expect(goalsAcApiUrl(credentials, "/content")).toBe(url);

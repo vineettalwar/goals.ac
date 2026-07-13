@@ -3,7 +3,7 @@ import { marked } from "marked";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 
 /** CMS platforms that expose the goals.ac plugin HTTP contract. */
-export type GoalsAcPluginPlatform = "wordpress" | "drupal" | "joomla" | "shopify";
+export type GoalsAcPluginPlatform = "wordpress" | "drupal" | "joomla" | "shopify" | "typo3";
 
 export interface GoalsAcPluginCredentials {
   siteUrl: string;
@@ -101,6 +101,8 @@ export function goalsAcSignPath(
       return `/goals-ac/${normalized}`;
     case "joomla":
       return `/api/index.php/v1/goals-ac/${normalized}`;
+    case "typo3":
+      return `/goals-ac/v1/${normalized}`;
   }
 }
 
@@ -120,6 +122,8 @@ export function goalsAcApiUrl(
     case "joomla":
       return `${base}/api/index.php/v1/goals-ac/${normalized}`;
     case "shopify":
+      return `${base}/goals-ac/v1/${normalized}`;
+    case "typo3":
       return `${base}/goals-ac/v1/${normalized}`;
   }
 }

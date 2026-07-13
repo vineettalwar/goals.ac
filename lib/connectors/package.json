@@ -18,7 +18,18 @@
     "./twitter": "./src/twitter.ts",
     "./meta": "./src/meta.ts",
     "./bluesky": "./src/bluesky.ts",
-    "./mastodon": "./src/mastodon.ts"
+    "./mastodon": "./src/mastodon.ts",
+    "./wix": "./src/wix.ts",
+    "./framer": "./src/framer.ts",
+    "./squarespace": "./src/squarespace.ts",
+    "./contentful": "./src/contentful.ts",
+    "./sanity": "./src/sanity.ts",
+    "./strapi": "./src/strapi.ts",
+    "./beehiiv": "./src/beehiiv.ts",
+    "./convertkit": "./src/convertkit.ts",
+    "./mailchimp": "./src/mailchimp.ts",
+    "./hubspot": "./src/hubspot.ts",
+    "./typo3": "./src/typo3.ts"
   },
   "dependencies": {
     "@atproto/api": "^0.20.28",

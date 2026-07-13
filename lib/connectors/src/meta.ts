@@ -48,30 +48,39 @@ export async function publishToFacebookPage(
   return { postId: data.id, postUrl: `https://www.facebook.com/${data.id}` };
 }
 
+function extractFirstImageUrl(bodyMarkdown: string): string | undefined {
+  const match = bodyMarkdown.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/);
+  return match?.[1];
+}
+
 export async function publishToInstagram(
   credentials: MetaCredentials,
   bodyMarkdown: string,
+  options?: { imageUrl?: string },
 ): Promise<MetaPublishResult> {
   if (!credentials.instagramAccountId) {
     throw new Error("No Instagram Business account linked to this Facebook Page.");
   }
 
   const caption = captionFromMarkdown(bodyMarkdown).slice(0, 2200);
+  const imageUrl = options?.imageUrl ?? extractFirstImageUrl(bodyMarkdown);
+  if (!imageUrl) {
+    throw new Error(
+      "Instagram requires an image. Add a featured image URL in content metadata or include an image in markdown.",
+    );
+  }
+
+  await assertPublicUrl(imageUrl);
   const createUrl = `${GRAPH_API}/${credentials.instagramAccountId}/media`;
   await assertPublicUrl(createUrl);
 
-  // v1: text-only not supported by Instagram API — publish caption as a placeholder
-  // using a 1x1 transparent image data URI is blocked; use message-only via Facebook cross-post pattern.
-  // For Instagram, we create a media container with caption only if user provides image later.
-  // Workaround: post to Facebook Page with instagram publishing enabled via connected account.
   const containerRes = await fetch(createUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       caption,
       access_token: credentials.accessToken,
-      // Instagram requires image_url or video_url — use a public placeholder for text-only v1
-      image_url: "https://placehold.co/1080x1080/png?text=goals.ac",
+      image_url: imageUrl,
     }),
   });
 
