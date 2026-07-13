@@ -48,6 +48,16 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
+  if (
+    isLoggedIn &&
+    pathname.startsWith("/projects") &&
+    req.auth?.user?.orgRole === "member" &&
+    req.auth.user.role !== "super_admin" &&
+    req.auth.user.role !== "admin"
+  ) {
+    return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
+  }
+
   return NextResponse.next();
 });
 

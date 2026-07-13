@@ -8,4 +8,21 @@ export const authConfig = {
     newUser: "/onboarding",
   },
   providers: [],
+  callbacks: {
+    jwt({ token }) {
+      return token;
+    },
+    session({ session, token }) {
+      const authToken = token as typeof token & {
+        organizationId?: number | null;
+        orgRole?: string | null;
+      };
+      session.user = {
+        ...session.user,
+        organizationId: authToken.organizationId ?? null,
+        orgRole: (authToken.orgRole as "site_admin" | "member" | null) ?? null,
+      };
+      return session;
+    },
+  },
 } satisfies NextAuthConfig;

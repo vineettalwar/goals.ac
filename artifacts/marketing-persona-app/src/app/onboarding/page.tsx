@@ -91,8 +91,12 @@ export default function OnboardingPage() {
       return;
     }
 
-    const { company } = await res.json();
-    await update({ companyId: company.id });
+    const { company, organizationId } = await res.json();
+    await update({
+      companyId: company.id,
+      organizationId: organizationId ?? null,
+      orgRole: "site_admin",
+    });
 
     if (readRoadmapIntent()) {
       await fetch("/api/website-projects", {

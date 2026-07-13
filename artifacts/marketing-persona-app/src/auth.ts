@@ -9,6 +9,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { authConfig } from "@/auth.config";
 import { getCompanyIdForUser } from "@/lib/user-company";
+import { getOrgMembership, type OrgMemberRole } from "@/lib/org-access";
 
 declare module "next-auth" {
   interface Session {
@@ -19,6 +20,8 @@ declare module "next-auth" {
       image?: string;
       role: string;
       companyId: number | null;
+      organizationId: number | null;
+      orgRole: OrgMemberRole | null;
     };
   }
   interface User {
@@ -78,6 +81,8 @@ const nextAuth = NextAuth({
         id?: string;
         role?: string;
         companyId?: number | null;
+        organizationId?: number | null;
+        orgRole?: OrgMemberRole | null;
       };
 
       if (user) {
@@ -86,14 +91,32 @@ const nextAuth = NextAuth({
       }
 
       if (trigger === "update") {
-        const update = session as { companyId?: number | null } | undefined;
+        const update = session as {
+          companyId?: number | null;
+          organizationId?: number | null;
+          orgRole?: OrgMemberRole | null;
+        } | undefined;
         if (update?.companyId !== undefined) {
           authToken.companyId = update.companyId;
         }
-      } else if (user || authToken.companyId === undefined) {
+        if (update?.organizationId !== undefined) {
+          authToken.organizationId = update.organizationId;
+        }
+        if (update?.orgRole !== undefined) {
+          authToken.orgRole = update.orgRole;
+        }
+      } else if (user || authToken.companyId === undefined || authToken.organizationId === undefined) {
         const userId = user?.id ?? authToken.id;
         if (userId) {
-          authToken.companyId = await getCompanyIdForUser(parseInt(String(userId), 10));
+          const numericUserId = parseInt(String(userId), 10);
+          if (authToken.companyId === undefined) {
+            authToken.companyId = await getCompanyIdForUser(numericUserId);
+          }
+          if (authToken.organizationId === undefined) {
+            const membership = await getOrgMembership(numericUserId);
+            authToken.organizationId = membership?.organizationId ?? null;
+            authToken.orgRole = membership?.orgRole ?? null;
+          }
         }
       }
 
@@ -112,10 +135,16 @@ const nextAuth = NextAuth({
       return authToken;
     },
     session({ session, token }) {
-      const authToken = token as typeof token & { companyId?: number | null };
+      const authToken = token as typeof token & {
+        companyId?: number | null;
+        organizationId?: number | null;
+        orgRole?: OrgMemberRole | null;
+      };
       session.user.id = token.id as string;
       session.user.role = token.role as string;
       session.user.companyId = authToken.companyId ?? null;
+      session.user.organizationId = authToken.organizationId ?? null;
+      session.user.orgRole = authToken.orgRole ?? null;
       return session;
     },
   },
