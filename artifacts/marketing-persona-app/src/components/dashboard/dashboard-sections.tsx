@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot-scheduler";
 import { loadProjectVisibilitySummary } from "@/lib/project-visibility-summary";
+import { getAccessibleProject, requireProjectAccess } from "@/lib/org-access";
 
 const STATUS_BADGE: Record<string, React.ComponentProps<typeof Badge>["variant"]> = {
   ready: "success",
@@ -173,12 +174,7 @@ export async function DashboardAutopilotLink({
   userId: number;
   projectId: number;
 }) {
-  const [project] = await db
-    .select({ autopilotSettings: websiteProjectsTable.autopilotSettings })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.userId, userId), eq(websiteProjectsTable.id, projectId)))
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId);
   if (!project) return null;
 
   const autopilotSettings = parseAutopilotSettings(project.autopilotSettings);
@@ -212,12 +208,7 @@ export async function DashboardVisibility({
   userId: number;
   projectId: number;
 }) {
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.userId, userId), eq(websiteProjectsTable.id, projectId)))
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId);
   if (!project) return null;
 
   const summary = await loadProjectVisibilitySummary(project.id);
@@ -264,6 +255,9 @@ export async function DashboardDrafts({
   userId: number;
   projectId: number;
 }) {
+  const access = await requireProjectAccess(projectId, userId);
+  if (!access.ok) return null;
+
   const drafts = await db
     .select({
       id: contentPiecesTable.id,
@@ -277,7 +271,6 @@ export async function DashboardDrafts({
     )
     .where(
       and(
-        eq(websiteProjectsTable.userId, userId),
         eq(websiteProjectsTable.id, projectId),
         eq(contentPiecesTable.status, "draft"),
       ),
@@ -399,12 +392,7 @@ export async function DashboardProjects({
   userId: number;
   projectId: number;
 }) {
-  const [project] = await db
-    .select()
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.userId, userId), eq(websiteProjectsTable.id, projectId)))
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId);
   const projects = project ? [project] : [];
 
   return (

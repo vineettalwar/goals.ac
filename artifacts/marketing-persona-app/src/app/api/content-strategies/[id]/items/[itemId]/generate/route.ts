@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { contentStrategiesTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { contentStrategiesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/org-access";
 import { generateFromContentItem } from "@workspace/content-engine/autopilot-orchestrator";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
@@ -32,13 +33,8 @@ export async function POST(
     return NextResponse.json({ error: "Strategy is not linked to a project" }, { status: 400 });
   }
 
-  const [proj] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, strategy.websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
-  if (!proj) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  const access = await requireProjectAccess(strategy.websiteProjectId, userId!);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const body = await req.json().catch(() => ({}));
   const generateVariants = body?.generateVariants !== false;

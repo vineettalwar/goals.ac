@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import {
   type CmsIntegrationCredentials,
   decryptCmsCredentials,
@@ -24,12 +25,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const [project] = await db
-    .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId!);
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   const decrypted = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);

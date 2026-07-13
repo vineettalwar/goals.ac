@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { contentItemsTable, contentStrategiesTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { contentItemsTable, contentStrategiesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/org-access";
 import { z } from "zod";
 
 const PatchBody = z.object({
@@ -45,12 +46,8 @@ export async function PATCH(
     if (!strategy) return NextResponse.json({ error: "Content strategy not found" }, { status: 404 });
 
     if (strategy.websiteProjectId) {
-      const [proj] = await db
-        .select({ id: websiteProjectsTable.id })
-        .from(websiteProjectsTable)
-        .where(and(eq(websiteProjectsTable.id, strategy.websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-        .limit(1);
-      if (!proj) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+      const access = await requireProjectAccess(strategy.websiteProjectId, userId!);
+      if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
     const [updated] = await db

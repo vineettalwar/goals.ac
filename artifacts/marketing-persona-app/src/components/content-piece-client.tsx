@@ -413,7 +413,7 @@ export function ContentPieceClient({
             </Button>
             {connectedDestinations.length === 0 && (
               <Link
-                href={`/projects/${piece.websiteProjectId}?tab=publishing`}
+                href="/integrations"
                 className="block text-xs text-primary hover:underline"
               >
                 Connect a destination

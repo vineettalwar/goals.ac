@@ -1,9 +1,7 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { db } from "@workspace/db";
-import { websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { getAccessibleProject } from "@/lib/org-access";
 import { fetchLinkedInAuthorUrn } from "@workspace/connectors/linkedin";
 import { fetchMetaPages, type MetaPageInfo, exchangeMetaLongLivedToken } from "@workspace/connectors/meta";
 import {
@@ -56,9 +54,9 @@ export function decodeState(raw: string): OAuthState | null {
   }
 }
 
-function publishingRedirect(projectId: number, params: Record<string, string>): never {
+function publishingRedirect(_projectId: number, params: Record<string, string>): never {
   const qs = new URLSearchParams(params).toString();
-  redirect(`${getNextFrontendOrigin()}/projects/${projectId}?tab=publishing&${qs}`);
+  redirect(`${getNextFrontendOrigin()}/integrations?${qs}`);
 }
 
 export function startLinkedInOAuth(projectId: number, userId: number): never {
@@ -109,11 +107,7 @@ export async function handleLinkedInCallback(code: string, stateRaw: string): Pr
     });
     const profile = (await profileRes.json()) as { name?: string };
 
-    const [project] = await db
-      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, state.projectId), eq(websiteProjectsTable.userId, state.userId)))
-      .limit(1);
+    const project = await getAccessibleProject(state.projectId, state.userId);
     if (!project) throw new Error("Project not found");
 
     const existing = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
@@ -183,11 +177,7 @@ export async function handleTwitterCallback(code: string, stateRaw: string): Pro
     });
     const me = (await meRes.json()) as { data?: { id?: string; username?: string } };
 
-    const [project] = await db
-      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, state.projectId), eq(websiteProjectsTable.userId, state.userId)))
-      .limit(1);
+    const project = await getAccessibleProject(state.projectId, state.userId);
     if (!project) throw new Error("Project not found");
 
     const existing = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
@@ -297,11 +287,7 @@ export async function selectMetaPage(token: string, pageId: string, userId: numb
   const page = data.pages.find((p) => p.pageId === pageId);
   if (!page) throw new Error("Page not found");
 
-  const [project] = await db
-    .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, data.projectId), eq(websiteProjectsTable.userId, userId)))
-    .limit(1);
+  const project = await getAccessibleProject(data.projectId, userId);
   if (!project) throw new Error("Project not found");
 
   const existing = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
@@ -383,11 +369,7 @@ export async function handleMastodonCallback(code: string, stateRaw: string): Pr
     const { fetchMastodonAccount } = await import("@workspace/connectors/mastodon");
     const account = await fetchMastodonAccount(state.mastodonInstance, tokenData.access_token);
 
-    const [project] = await db
-      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, state.projectId), eq(websiteProjectsTable.userId, state.userId)))
-      .limit(1);
+    const project = await getAccessibleProject(state.projectId, state.userId);
     if (!project) throw new Error("Project not found");
 
     const existing = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);

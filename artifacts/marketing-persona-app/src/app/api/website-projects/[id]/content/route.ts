@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import {
-  websiteProjectsTable,
   contentStrategiesTable,
   contentItemsTable,
   seoArticlesTable,
@@ -12,8 +11,9 @@ import {
   projectRoadmapsTable,
   roadmapsTable,
 } from "@workspace/db/schema";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, desc, inArray, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/org-access";
 
 export async function GET(
   _req: Request,
@@ -26,13 +26,8 @@ export async function GET(
   const id = Number(idStr);
   if (isNaN(id)) return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, id), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
-  if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  const access = await requireProjectAccess(id, userId!);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const [
     contentStrategies,

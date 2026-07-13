@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { contentPiecesTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { contentPiecesTable } from "@workspace/db/schema";
+import { eq, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/org-access";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();
@@ -18,14 +19,8 @@ export async function GET(req: Request) {
   const projectId = parseInt(websiteProjectId, 10);
   if (isNaN(projectId)) return NextResponse.json({ error: "Invalid websiteProjectId" }, { status: 400 });
 
-  // Verify ownership
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
-  if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  const access = await requireProjectAccess(projectId, userId!);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   try {
     const pieces = await db

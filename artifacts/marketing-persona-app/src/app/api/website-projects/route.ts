@@ -3,6 +3,12 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable, brandProfilesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import {
+  assertCanCreateProject,
+  ensureOrganizationForUser,
+  listAccessibleProjects,
+  resolveOrganizationIdForUser,
+} from "@/lib/org-access";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { scrapeBrandProfile } from "@/lib/ai/brand-scraper";
 import { logger } from "@/lib/logger";
@@ -85,11 +91,7 @@ export async function GET() {
   if (error) return error;
 
   try {
-    const projects = await db
-      .select()
-      .from(websiteProjectsTable)
-      .where(eq(websiteProjectsTable.userId, userId!));
-
+    const projects = await listAccessibleProjects(userId!);
     return NextResponse.json(projects);
   } catch (err) {
     logger.error({ err, userId }, "Failed to list website projects");
@@ -110,10 +112,27 @@ export async function POST(req: Request) {
   const { name, url } = parsed.data;
 
   try {
+    let organizationId = await resolveOrganizationIdForUser(userId!);
+    if (organizationId == null) {
+      organizationId = await ensureOrganizationForUser({
+        userId: userId!,
+        name: "My Organization",
+      });
+    }
+
+    const quotaCheck = await assertCanCreateProject(userId!, organizationId);
+    if (!quotaCheck.ok) {
+      return NextResponse.json(
+        { error: quotaCheck.code ?? quotaCheck.error, message: quotaCheck.error },
+        { status: quotaCheck.status },
+      );
+    }
+
     const [project] = await db
       .insert(websiteProjectsTable)
       .values({
         userId: userId!,
+        organizationId,
         name,
         url,
         crawlStatus: "pending",

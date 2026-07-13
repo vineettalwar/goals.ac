@@ -1,8 +1,9 @@
 import { db } from "@workspace/db";
-import { contentStrategiesTable, contentItemsTable, roadmapsTable, websiteProjectsTable } from "@workspace/db/schema";
+import { contentStrategiesTable, contentItemsTable, roadmapsTable } from "@workspace/db/schema";
 import type { ContentStyle } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import { generateContentStrategyWithProgress } from "@/lib/ai/content-strategy-generator";
 import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
@@ -54,16 +55,12 @@ export async function POST(req: Request) {
   let projectContentStyle: ContentStyle | null = null;
 
   if (websiteProjectId) {
-    const [proj] = await db
-      .select({ id: websiteProjectsTable.id, contentStyle: websiteProjectsTable.contentStyle })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
+    const proj = await getAccessibleProject(websiteProjectId, userId!);
 
     if (!proj) {
       return new Response(
-        JSON.stringify({ error: "You do not have access to this project" }),
-        { status: 403, headers: { "Content-Type": "application/json" } },
+        JSON.stringify({ error: "Project not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } },
       );
     }
     validatedProjectId = websiteProjectId;

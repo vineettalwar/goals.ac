@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { briefsTable, goalsTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { briefsTable, goalsTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/org-access";
 import { z } from "zod";
 
 const FUNNEL_STAGES = ["tofu", "mofu", "bofu"] as const;
@@ -34,13 +35,10 @@ async function findOwnedBrief(id: number, userId: number) {
   const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.id, brief.goalId)).limit(1);
   if (!goal) return null;
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, goal.projectId), eq(websiteProjectsTable.userId, userId)))
-    .limit(1);
+  const access = await requireProjectAccess(goal.projectId, userId);
+  if (!access.ok) return null;
 
-  return project ? brief : null;
+  return brief;
 }
 
 export async function GET(

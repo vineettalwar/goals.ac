@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { contentPiecesTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { contentPiecesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
 import { assertPieceOwner } from "@/lib/content-pieces-helpers";
 import { z } from "zod";
@@ -30,21 +30,9 @@ export async function GET(
   if (isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
 
   try {
-    const [piece] = await db
-      .select()
-      .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.id, id))
-      .limit(1);
-
-    if (!piece) return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
-
-    const [project] = await db
-      .select({ id: websiteProjectsTable.id })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-
-    if (!project) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    const { piece, error: ownerError } = await assertPieceOwner(id, userId!);
+    if (ownerError === "not_found") return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
+    if (ownerError === "forbidden") return NextResponse.json({ error: "Access denied" }, { status: 403 });
 
     return NextResponse.json(piece);
   } catch (err) {
@@ -70,21 +58,9 @@ export async function PATCH(
   }
 
   try {
-    const [piece] = await db
-      .select()
-      .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.id, id))
-      .limit(1);
-
-    if (!piece) return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
-
-    const [project] = await db
-      .select({ id: websiteProjectsTable.id })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-
-    if (!project) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    const { piece, error: ownerError } = await assertPieceOwner(id, userId!);
+    if (ownerError === "not_found") return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
+    if (ownerError === "forbidden") return NextResponse.json({ error: "Access denied" }, { status: 403 });
 
     const updates: Record<string, unknown> = {};
     if (parsed.data.title !== undefined) updates.title = parsed.data.title;

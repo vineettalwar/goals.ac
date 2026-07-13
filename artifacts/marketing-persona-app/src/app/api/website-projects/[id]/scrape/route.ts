@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { websiteProjectsTable, brandProfilesTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { scrapeBrandProfile } from "@/lib/ai/brand-scraper";
 
@@ -70,12 +71,7 @@ export async function POST(
   if (isNaN(id)) return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
 
   try {
-    const [project] = await db
-      .select()
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, id), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-
+    const project = await getAccessibleProject(id, userId!);
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
     // Start scrape asynchronously

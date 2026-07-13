@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
-import { db } from "@workspace/db";
-import { websiteProjectsTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { listAccessibleProjects } from "@/lib/org-access";
 import type { CmsIntegrationCredentials } from "@workspace/content-engine/support/cms-integrations";
 
 export async function GET() {
   const { userId, error } = await requireAuth();
   if (error) return error;
 
-  const projects = await db
-    .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.userId, userId!));
+  const projects = await listAccessibleProjects(userId!);
 
   let hasNotion = false;
   let hasWebflow = false;

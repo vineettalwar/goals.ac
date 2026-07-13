@@ -1,7 +1,8 @@
 import { db } from "@workspace/db";
-import { brandProfilesTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { brandProfilesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import { z } from "zod";
 
 const UpdateBrandVoiceBody = z.object({
@@ -23,12 +24,7 @@ export async function GET(
   const projectId = Number((await params).id);
   if (isNaN(projectId)) return Response.json({ error: "Invalid project id" }, { status: 400 });
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId!);
   if (!project) return Response.json({ error: "Project not found" }, { status: 404 });
 
   const [brandProfile] = await db
@@ -65,12 +61,7 @@ export async function PUT(
     return Response.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId!);
   if (!project) return Response.json({ error: "Project not found" }, { status: 404 });
 
   const updates: Record<string, unknown> = {};

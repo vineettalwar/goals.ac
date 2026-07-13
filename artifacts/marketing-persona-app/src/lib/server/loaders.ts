@@ -6,17 +6,19 @@ import {
   brandProfilesTable,
   usersTable,
 } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
   type CmsIntegrationCredentials,
   decryptCmsCredentials,
   maskCmsCredentials,
 } from "@workspace/content-engine/support/cms-integrations";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
 import { decryptSecret } from "@workspace/security/encryption";
 import { getUsageSummaryForUser } from "@/lib/usage";
 import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/ai-providers-status";
 import type { CmsConnectionSnapshot } from "@/lib/publishing-destinations";
 import type { WebsiteProject } from "@/lib/project-detail-types";
+import { getAccessibleProject, getOrgMembership, isSuperAdmin, requireProjectAccess } from "@/lib/org-access";
 
 export interface ContentPieceRecord {
   id: number;
@@ -49,15 +51,8 @@ export const loadContentPieceForUser = cache(async (
 
   if (!piece) return null;
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(
-      and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, userId)),
-    )
-    .limit(1);
-
-  if (!project) return null;
+  const access = await requireProjectAccess(piece.websiteProjectId, userId);
+  if (!access.ok) return null;
 
   return {
     id: piece.id,
@@ -77,12 +72,7 @@ export const loadCmsConnectionsForProject = cache(async (
   projectId: number,
   userId: number,
 ): Promise<CmsConnectionSnapshot> => {
-  const [project] = await db
-    .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId)))
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId);
   if (!project?.cmsIntegrations) return {};
 
   const decrypted = decryptCmsCredentials(project.cmsIntegrations as CmsIntegrationCredentials);
@@ -93,12 +83,7 @@ export const loadWebsiteProjectForUser = cache(async (
   projectId: number,
   userId: number,
 ): Promise<WebsiteProject | null> => {
-  const [project] = await db
-    .select()
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId)))
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId);
   if (!project) return null;
 
   const [brandProfile] = await db
@@ -147,39 +132,49 @@ export interface SettingsInitialData {
   } | null;
   apiKey: { hasKey: boolean; lastFour: string | null };
   aiStatus: Awaited<ReturnType<typeof buildAiProviderStatus>> | null;
+  canManageAiSettings: boolean;
 }
 
 export const loadSettingsInitialData = cache(async (userId: number): Promise<SettingsInitialData> => {
-  const [user, usage] = await Promise.all([
+  const [user, usage, orgSettings, membership] = await Promise.all([
     db
       .select({
-        encryptedGeminiKey: usersTable.encryptedGeminiKey,
         googleId: usersTable.googleId,
         passwordHash: usersTable.passwordHash,
-        aiProvider: usersTable.aiProvider,
-        ollamaBaseUrl: usersTable.ollamaBaseUrl,
-        ollamaModel: usersTable.ollamaModel,
+        role: usersTable.role,
       })
       .from(usersTable)
       .where(eq(usersTable.id, userId))
       .limit(1)
       .then((rows) => rows[0]),
     getUsageSummaryForUser(userId),
+    getOrgAiSettingsForUser(userId),
+    getOrgMembership(userId),
   ]);
 
+  const hasKey = Boolean(orgSettings?.encryptedGeminiKey);
   let lastFour: string | null = null;
-  const hasKey = Boolean(user?.encryptedGeminiKey);
-  if (user?.encryptedGeminiKey) {
+  if (orgSettings?.encryptedGeminiKey) {
     try {
-      lastFour = decryptSecret(user.encryptedGeminiKey).slice(-4);
+      lastFour = decryptSecret(orgSettings.encryptedGeminiKey).slice(-4);
     } catch {
       lastFour = "••••";
     }
   }
 
-  const aiStatusPayload = buildAiProviderStatus(user ?? undefined);
-  await enrichOllamaStatus(aiStatusPayload, toAiProviderOptions(user ?? undefined));
+  const statusInput = orgSettings
+    ? {
+        aiProvider: orgSettings.aiProvider,
+        ollamaBaseUrl: orgSettings.ollamaBaseUrl,
+        ollamaModel: orgSettings.ollamaModel,
+      }
+    : undefined;
+  const aiStatusPayload = buildAiProviderStatus(statusInput);
+  await enrichOllamaStatus(aiStatusPayload, toAiProviderOptions(statusInput));
   const aiStatus = finalizeAiProviderStatus(aiStatusPayload, { hasUserGeminiKey: hasKey });
+
+  const canManageAiSettings =
+    membership?.orgRole === "site_admin" || isSuperAdmin(user?.role);
 
   return {
     usage,
@@ -192,5 +187,6 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
       : null,
     apiKey: { hasKey, lastFour },
     aiStatus,
+    canManageAiSettings,
   };
 });

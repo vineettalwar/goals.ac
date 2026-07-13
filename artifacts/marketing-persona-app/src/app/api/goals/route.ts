@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { goalsTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { goalsTable } from "@workspace/db/schema";
+import { eq, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/org-access";
 import { z } from "zod";
 
 const OBJECTIVES = ["traffic", "leads", "sales", "authority"] as const;
@@ -28,13 +29,8 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "projectId is required" }, { status: 400 });
   }
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
-  if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  const access = await requireProjectAccess(projectId, userId!);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const goals = await db
     .select()
@@ -55,13 +51,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, parsed.data.projectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
-  if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+  const access = await requireProjectAccess(parsed.data.projectId, userId!);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const [goal] = await db
     .insert(goalsTable)

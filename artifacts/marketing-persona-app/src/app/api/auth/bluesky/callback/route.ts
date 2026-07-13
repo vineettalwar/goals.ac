@@ -1,7 +1,5 @@
 import { redirect } from "next/navigation";
-import { db } from "@workspace/db";
-import { websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { getAccessibleProject } from "@/lib/org-access";
 import { Agent } from "@atproto/api";
 import {
   decryptCmsCredentials,
@@ -15,9 +13,9 @@ import {
 } from "@/lib/bluesky-oauth";
 import { getNextFrontendOrigin } from "@/lib/social-oauth";
 
-function publishingRedirect(projectId: number, params: Record<string, string>): never {
+function publishingRedirect(_projectId: number, params: Record<string, string>): never {
   const qs = new URLSearchParams(params).toString();
-  redirect(`${getNextFrontendOrigin()}/projects/${projectId}?tab=publishing&${qs}`);
+  redirect(`${getNextFrontendOrigin()}/integrations?${qs}`);
 }
 
 export async function GET(req: Request) {
@@ -27,7 +25,7 @@ export async function GET(req: Request) {
   const oauthError = url.searchParams.get("error");
 
   if (oauthError || !code || !stateRaw) {
-    redirect(`${getNextFrontendOrigin()}/projects?tab=publishing&bluesky=error`);
+    redirect(`${getNextFrontendOrigin()}/integrations?bluesky=error`);
   }
 
   let projectId = 0;
@@ -52,11 +50,7 @@ export async function GET(req: Request) {
       if (saved) blueskyCreds.sessionJson = JSON.stringify(saved);
     }
 
-    const [project] = await db
-      .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId)))
-      .limit(1);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) throw new Error("Project not found");
 
     const existing = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
@@ -67,6 +61,6 @@ export async function GET(req: Request) {
     if (projectId) {
       publishingRedirect(projectId, { bluesky: "error" });
     }
-    redirect(`${getNextFrontendOrigin()}/projects?tab=publishing&bluesky=error`);
+    redirect(`${getNextFrontendOrigin()}/integrations?bluesky=error`);
   }
 }

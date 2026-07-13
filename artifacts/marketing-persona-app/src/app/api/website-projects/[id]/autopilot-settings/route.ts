@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import type { AutopilotSettings } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot-scheduler";
 import { z } from "zod";
 
@@ -18,12 +19,9 @@ const AutopilotSettingsBody = z.object({
 });
 
 async function loadOwnedProject(projectId: number, userId: number) {
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id, autopilotSettings: websiteProjectsTable.autopilotSettings })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId)))
-    .limit(1);
-  return project ?? null;
+  const project = await getAccessibleProject(projectId, userId);
+  if (!project) return null;
+  return { id: project.id, autopilotSettings: project.autopilotSettings };
 }
 
 export async function GET(

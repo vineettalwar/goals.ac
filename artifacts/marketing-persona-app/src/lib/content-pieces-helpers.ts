@@ -1,6 +1,5 @@
 import { db } from "@workspace/db";
 import {
-  websiteProjectsTable,
   contentPiecesTable,
   briefsTable,
   goalsTable,
@@ -8,6 +7,7 @@ import {
   type ContentFormatType,
 } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { requireProjectAccess } from "@/lib/org-access";
 import {
   buildCacheKey,
   type BrandContext,
@@ -35,13 +35,9 @@ export async function loadBriefForProject(briefId: number, projectId: number, us
   const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.id, brief.goalId)).limit(1);
   if (!goal || goal.projectId !== projectId) return null;
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId)))
-    .limit(1);
+  const access = await requireProjectAccess(projectId, userId);
+  if (!access.ok) return null;
 
-  if (!project) return null;
   return brief;
 }
 
@@ -159,12 +155,7 @@ export async function assertPieceOwner(pieceId: number, userId: number) {
 
   if (!piece) return { piece: null, error: "not_found" as const };
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, userId)))
-    .limit(1);
-
-  if (!project) return { piece: null, error: "forbidden" as const };
+  const access = await requireProjectAccess(piece.websiteProjectId, userId);
+  if (!access.ok) return { piece: null, error: "forbidden" as const };
   return { piece, error: null };
 }

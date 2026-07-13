@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable, brandProfilesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject, requireProjectAccess } from "@/lib/org-access";
 import { z } from "zod";
 
 const ContentStyleBody = z.object({
@@ -48,12 +49,7 @@ export async function GET(
   if (isNaN(id)) return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
 
   try {
-    const [project] = await db
-      .select()
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, id), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-
+    const project = await getAccessibleProject(id, userId!);
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
     const [brandProfile] = await db
@@ -86,12 +82,7 @@ export async function PATCH(
   }
 
   try {
-    const [project] = await db
-      .select()
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, id), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-
+    const project = await getAccessibleProject(id, userId!);
     if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
     // Update project-level fields
@@ -171,13 +162,10 @@ export async function DELETE(
   if (isNaN(id)) return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
 
   try {
-    const [project] = await db
-      .select({ id: websiteProjectsTable.id })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, id), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-
-    if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    const access = await requireProjectAccess(id, userId!);
+    if (!access.ok) {
+      return NextResponse.json({ error: access.error }, { status: access.status });
+    }
 
     await db.delete(websiteProjectsTable).where(eq(websiteProjectsTable.id, id));
     return new Response(null, { status: 204 });

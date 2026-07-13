@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { db } from "@workspace/db";
-import { contentStrategiesTable, contentItemsTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { contentStrategiesTable, contentItemsTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
+import { requireProjectAccess } from "@/lib/org-access";
 
 export async function GET(
   _req: Request,
@@ -28,18 +29,9 @@ export async function GET(
         return NextResponse.json({ error: "Authentication required" }, { status: 401 });
       }
 
-      const [proj] = await db
-        .select({ id: websiteProjectsTable.id })
-        .from(websiteProjectsTable)
-        .where(
-          and(
-            eq(websiteProjectsTable.id, strategy.websiteProjectId),
-            eq(websiteProjectsTable.userId, userId),
-          ),
-        )
-        .limit(1);
-      if (!proj) {
-        return NextResponse.json({ error: "You do not have access to this content strategy" }, { status: 403 });
+      const access = await requireProjectAccess(strategy.websiteProjectId, userId);
+      if (!access.ok) {
+        return NextResponse.json({ error: access.error }, { status: access.status });
       }
     }
 

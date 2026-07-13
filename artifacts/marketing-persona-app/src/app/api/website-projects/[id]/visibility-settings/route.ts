@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { websiteProjectsTable, llmVisibilityPromptsTable } from "@workspace/db/schema";
 import type { VisibilitySettings } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import { parseVisibilitySettings } from "@workspace/content-engine/support/visibility-settings";
 import { seedPromptsForProject } from "@workspace/content-engine/llm-visibility-service";
 import { z } from "zod";
@@ -23,12 +24,7 @@ export async function GET(
   const projectId = Number((await params).id);
   if (isNaN(projectId)) return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
 
-  const [project] = await db
-    .select({ visibilitySettings: websiteProjectsTable.visibilitySettings })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId!);
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   return NextResponse.json(parseVisibilitySettings(project.visibilitySettings));
@@ -50,12 +46,7 @@ export async function PATCH(
     return NextResponse.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const [project] = await db
-    .select({ visibilitySettings: websiteProjectsTable.visibilitySettings })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId!);
   if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   const current = parseVisibilitySettings(project.visibilitySettings);

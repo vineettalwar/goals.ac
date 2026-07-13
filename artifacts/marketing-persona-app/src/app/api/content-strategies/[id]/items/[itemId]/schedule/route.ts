@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { contentStrategiesTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { contentStrategiesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import { parseAutopilotSettings, shouldAutoPublish } from "@workspace/content-engine/support/autopilot-scheduler";
 import { enqueue, QUEUES } from "@workspace/jobs";
 
@@ -29,13 +30,8 @@ export async function POST(
     return NextResponse.json({ error: "Strategy is not linked to a project" }, { status: 400 });
   }
 
-  const [proj] = await db
-    .select({ autopilotSettings: websiteProjectsTable.autopilotSettings })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, strategy.websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
-  if (!proj) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  const proj = await getAccessibleProject(strategy.websiteProjectId, userId!);
+  if (!proj) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   const settings = parseAutopilotSettings(proj.autopilotSettings);
 

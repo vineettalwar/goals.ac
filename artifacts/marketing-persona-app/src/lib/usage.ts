@@ -1,6 +1,7 @@
 import { db } from "@workspace/db";
-import { usageEventsTable, usersTable, companiesTable } from "@workspace/db/schema";
+import { usageEventsTable, usersTable, companiesTable, websiteProjectsTable, organizationsTable, organizationMembersTable } from "@workspace/db/schema";
 import { and, eq, gte, sql } from "drizzle-orm";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
 
 export type PlanId = "starter" | "growth" | "scale";
 
@@ -24,6 +25,25 @@ export const ROADMAP_QUOTAS: Record<PlanId, number | null> = {
 
 export function getRoadmapQuota(plan: string | null | undefined): number | null {
   return ROADMAP_QUOTAS[(plan as PlanId) ?? "starter"] ?? ROADMAP_QUOTAS.starter;
+}
+
+// Website project quotas per org plan. `null` means unlimited.
+export const PROJECT_QUOTAS: Record<PlanId, number | null> = {
+  starter: 1,
+  growth: 5,
+  scale: null,
+};
+
+export function getProjectQuota(plan: string | null | undefined): number | null {
+  return PROJECT_QUOTAS[(plan as PlanId) ?? "starter"] ?? PROJECT_QUOTAS.starter;
+}
+
+export async function getOrganizationProjectCount(organizationId: number): Promise<number> {
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(websiteProjectsTable)
+    .where(eq(websiteProjectsTable.organizationId, organizationId));
+  return row?.count ?? 0;
 }
 
 // Gemini 2.5 Flash blended pricing estimate: $0.30/M input tokens, $2.50/M output tokens.
@@ -159,14 +179,25 @@ export interface UsageSummary {
 
 /** Full usage summary for a user's account, used by the settings usage dashboard. */
 export async function getUsageSummaryForUser(userId: number): Promise<UsageSummary> {
-  const [user] = await db
-    .select({ plan: usersTable.plan, encryptedGeminiKey: usersTable.encryptedGeminiKey })
-    .from(usersTable)
-    .where(eq(usersTable.id, userId))
-    .limit(1);
+  const [user, orgSettings, membership] = await Promise.all([
+    db
+      .select({ plan: usersTable.plan })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId))
+      .limit(1)
+      .then((rows) => rows[0]),
+    getOrgAiSettingsForUser(userId),
+    db
+      .select({ plan: organizationsTable.plan })
+      .from(organizationMembersTable)
+      .innerJoin(organizationsTable, eq(organizationsTable.id, organizationMembersTable.organizationId))
+      .where(eq(organizationMembersTable.userId, userId))
+      .limit(1)
+      .then((rows) => rows[0]),
+  ]);
 
-  const plan = (user?.plan as PlanId) ?? "starter";
-  const usesByok = Boolean(user?.encryptedGeminiKey);
+  const plan = (membership?.plan as PlanId) ?? (user?.plan as PlanId) ?? "starter";
+  const usesByok = Boolean(orgSettings?.encryptedGeminiKey);
   const quota = getPlanQuota(plan);
 
   const [articlesThisMonth, byokSpendThisMonthUsd] = await Promise.all([
@@ -194,17 +225,21 @@ export async function getCompanyOwnerPlanInfo(
     .select({
       userId: companiesTable.userId,
       plan: usersTable.plan,
-      encryptedGeminiKey: usersTable.encryptedGeminiKey,
+      orgPlan: organizationsTable.plan,
+      orgGeminiKey: organizationsTable.encryptedGeminiKey,
+      userGeminiKey: usersTable.encryptedGeminiKey,
     })
     .from(companiesTable)
     .innerJoin(usersTable, eq(usersTable.id, companiesTable.userId))
+    .leftJoin(organizationMembersTable, eq(organizationMembersTable.userId, companiesTable.userId))
+    .leftJoin(organizationsTable, eq(organizationsTable.id, organizationMembersTable.organizationId))
     .where(eq(companiesTable.id, companyId))
     .limit(1);
 
   if (!row) return null;
   return {
     userId: row.userId,
-    plan: (row.plan as PlanId) ?? "starter",
-    usesByok: Boolean(row.encryptedGeminiKey),
+    plan: (row.orgPlan as PlanId) ?? (row.plan as PlanId) ?? "starter",
+    usesByok: Boolean(row.orgGeminiKey ?? row.userGeminiKey),
   };
 }

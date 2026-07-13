@@ -255,7 +255,7 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
 
       {activeTab === "publishing" && (
         <Suspense fallback={<TabSkeleton />}>
-          <ProjectPublishingTab projectId={projectId} />
+          <ProjectPublishingTab projectId={projectId} layout="grid" />
         </Suspense>
       )}
 

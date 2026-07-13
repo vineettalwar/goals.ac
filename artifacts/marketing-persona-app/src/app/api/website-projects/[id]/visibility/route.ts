@@ -6,8 +6,9 @@ import {
   llmVisibilitySnapshotsTable,
   geoAuditsTable,
 } from "@workspace/db/schema";
-import { eq, and, desc, gte } from "drizzle-orm";
+import { eq, desc, gte, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import { parseVisibilitySettings } from "@workspace/content-engine/support/visibility-settings";
 import {
   seedPromptsForProject,
@@ -20,12 +21,7 @@ import {
 import { enqueue, QUEUES } from "@workspace/jobs";
 
 async function loadOwnedProject(projectId: number, userId: number) {
-  const [project] = await db
-    .select()
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId)))
-    .limit(1);
-  return project ?? null;
+  return getAccessibleProject(projectId, userId);
 }
 
 export async function GET(

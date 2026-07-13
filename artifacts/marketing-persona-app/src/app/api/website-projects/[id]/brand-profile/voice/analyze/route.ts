@@ -1,7 +1,5 @@
-import { db } from "@workspace/db";
-import { websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import { z } from "zod";
 
 const AnalyzeWritingExamplesBody = z.object({
@@ -27,14 +25,7 @@ export async function POST(
     );
   }
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(
-      and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId!)),
-    )
-    .limit(1);
-
+  const project = await getAccessibleProject(projectId, userId!);
   if (!project) return Response.json({ error: "Project not found" }, { status: 404 });
 
   const { writingExamples } = parsed.data;

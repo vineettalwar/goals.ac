@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { contentStrategiesTable, contentItemsTable, websiteProjectsTable, usersTable } from "@workspace/db/schema";
+import { contentStrategiesTable, contentItemsTable, usersTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/org-access";
 import { z } from "zod";
 
 const UpdateItemStatusBody = z.object({
@@ -19,12 +20,8 @@ async function assertStrategyAccess(strategyId: number, userId: number) {
   if (!strategy) return { error: "not_found" as const };
 
   if (strategy.websiteProjectId) {
-    const [proj] = await db
-      .select({ id: websiteProjectsTable.id })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, strategy.websiteProjectId), eq(websiteProjectsTable.userId, userId)))
-      .limit(1);
-    if (!proj) return { error: "forbidden" as const };
+    const access = await requireProjectAccess(strategy.websiteProjectId, userId);
+    if (!access.ok) return { error: "forbidden" as const };
   } else {
     const [user] = await db.select({ role: usersTable.role }).from(usersTable).where(eq(usersTable.id, userId)).limit(1);
     if (user?.role !== "admin" && user?.role !== "super_admin") return { error: "forbidden" as const };

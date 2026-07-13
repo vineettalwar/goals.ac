@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { seoArticlesTable, websiteProjectsTable } from "@workspace/db/schema";
+import { seoArticlesTable } from "@workspace/db/schema";
 import type { ContentStyle } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { getAccessibleProject } from "@/lib/org-access";
 import { generateSeoArticleContent } from "@/lib/ai/seo-content-generator";
 import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
@@ -45,12 +45,8 @@ export async function POST(req: Request) {
   let projectContentStyle: ContentStyle | null = null;
 
   if (websiteProjectId) {
-    const [proj] = await db
-      .select({ id: websiteProjectsTable.id, contentStyle: websiteProjectsTable.contentStyle })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-    if (!proj) return NextResponse.json({ error: "You do not have access to this project" }, { status: 403 });
+    const proj = await getAccessibleProject(websiteProjectId, userId!);
+    if (!proj) return NextResponse.json({ error: "Project not found" }, { status: 404 });
     validatedProjectId = websiteProjectId;
     projectContentStyle = proj.contentStyle as ContentStyle | null;
   }

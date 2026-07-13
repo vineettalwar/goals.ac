@@ -5,20 +5,12 @@ import {
   websiteProjectsTable,
 } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
+import { getAccessibleProject } from "@/lib/org-access";
 
 export async function verifyProjectOwnership(projectId: number, userId: number) {
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(
-      and(
-        eq(websiteProjectsTable.id, projectId),
-        eq(websiteProjectsTable.userId, userId),
-      ),
-    )
-    .limit(1);
-
-  return project ?? null;
+  const project = await getAccessibleProject(projectId, userId);
+  if (!project) return null;
+  return { id: project.id };
 }
 
 export async function pinRoadmapToProject(projectId: number, roadmapId: number) {

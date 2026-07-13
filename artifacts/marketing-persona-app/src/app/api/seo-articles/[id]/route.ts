@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { seoArticlesTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { seoArticlesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/org-access";
 import { z } from "zod";
 
 const PatchBody = z.object({
@@ -33,12 +34,8 @@ export async function GET(
     if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
 
     if (article.websiteProjectId) {
-      const [proj] = await db
-        .select({ id: websiteProjectsTable.id })
-        .from(websiteProjectsTable)
-        .where(and(eq(websiteProjectsTable.id, article.websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-        .limit(1);
-      if (!proj) return NextResponse.json({ error: "You do not have access to this article" }, { status: 403 });
+      const access = await requireProjectAccess(article.websiteProjectId, userId!);
+      if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
     return NextResponse.json(article);
@@ -74,12 +71,8 @@ export async function PATCH(
     if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
 
     if (article.websiteProjectId) {
-      const [proj] = await db
-        .select({ id: websiteProjectsTable.id })
-        .from(websiteProjectsTable)
-        .where(and(eq(websiteProjectsTable.id, article.websiteProjectId), eq(websiteProjectsTable.userId, userId!)))
-        .limit(1);
-      if (!proj) return NextResponse.json({ error: "You do not have access to this article" }, { status: 403 });
+      const access = await requireProjectAccess(article.websiteProjectId, userId!);
+      if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
     const updates: Record<string, unknown> = {};

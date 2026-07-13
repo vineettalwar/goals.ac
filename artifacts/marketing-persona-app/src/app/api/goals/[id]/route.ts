@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { goalsTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and } from "drizzle-orm";
+import { goalsTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/org-access";
 import { z } from "zod";
 
 const OBJECTIVES = ["traffic", "leads", "sales", "authority"] as const;
@@ -26,13 +27,10 @@ async function findOwnedGoal(id: number, userId: number) {
   const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.id, id)).limit(1);
   if (!goal) return null;
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, goal.projectId), eq(websiteProjectsTable.userId, userId)))
-    .limit(1);
+  const access = await requireProjectAccess(goal.projectId, userId);
+  if (!access.ok) return null;
 
-  return project ? goal : null;
+  return goal;
 }
 
 export async function GET(

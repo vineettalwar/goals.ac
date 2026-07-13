@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { briefsTable, goalsTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { briefsTable, goalsTable } from "@workspace/db/schema";
+import { eq, desc, inArray } from "drizzle-orm";
 import { requireAuth } from "@/lib/require-auth";
+import { requireProjectAccess } from "@/lib/org-access";
 import { z } from "zod";
 
 const CreateBriefBody = z.object({
@@ -24,13 +25,8 @@ export async function GET(req: Request) {
   const goalId = Number(url.searchParams.get("goalId"));
 
   if (!isNaN(projectId)) {
-    const [project] = await db
-      .select({ id: websiteProjectsTable.id })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-
-    if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    const access = await requireProjectAccess(projectId, userId!);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
     const projectGoals = await db
       .select({ id: goalsTable.id })
@@ -56,13 +52,8 @@ export async function GET(req: Request) {
   const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.id, goalId)).limit(1);
   if (!goal) return NextResponse.json({ error: "Goal not found" }, { status: 404 });
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, goal.projectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
-  if (!project) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  const access = await requireProjectAccess(goal.projectId, userId!);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const briefs = await db
     .select()
@@ -86,13 +77,8 @@ export async function POST(req: Request) {
   let resolvedGoalId = parsed.data.goalId;
 
   if (!resolvedGoalId && parsed.data.projectId) {
-    const [project] = await db
-      .select({ id: websiteProjectsTable.id })
-      .from(websiteProjectsTable)
-      .where(and(eq(websiteProjectsTable.id, parsed.data.projectId), eq(websiteProjectsTable.userId, userId!)))
-      .limit(1);
-
-    if (!project) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    const access = await requireProjectAccess(parsed.data.projectId, userId!);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
     const [existingGoal] = await db
       .select({ id: goalsTable.id })
@@ -121,13 +107,8 @@ export async function POST(req: Request) {
   const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.id, resolvedGoalId)).limit(1);
   if (!goal) return NextResponse.json({ error: "Goal not found" }, { status: 404 });
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, goal.projectId), eq(websiteProjectsTable.userId, userId!)))
-    .limit(1);
-
-  if (!project) return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  const access = await requireProjectAccess(goal.projectId, userId!);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const [brief] = await db
     .insert(briefsTable)

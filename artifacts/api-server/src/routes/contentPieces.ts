@@ -2321,6 +2321,7 @@ const CMS_PLATFORM_LABELS: Record<CmsPublishPlatform, string> = {
   shopify: "Shopify",
   drupal: "Drupal",
   joomla: "Joomla",
+  typo3: "TYPO3",
 };
 
 for (const platform of CMS_PUBLISH_PLATFORMS) {
