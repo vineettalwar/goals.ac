@@ -1,0 +1,21 @@
+{
+  "name": "goals-ac/typo3-extension",
+  "description": "goals.ac TYPO3 connector extension",
+  "type": "typo3-cms-extension",
+  "license": "GPL-2.0-or-later",
+  "require": {
+    "php": "^8.1",
+    "goals-ac/shared": "@dev"
+  },
+  "repositories": [
+    {
+      "type": "path",
+      "url": "../shared"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "GoalsAc\\Typo3\\": "Classes/"
+    }
+  }
+}
