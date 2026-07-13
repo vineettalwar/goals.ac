@@ -4,8 +4,10 @@ import {
   companiesTable,
   marketingPersonasTable,
   scheduledArticlesTable,
-  wordpressConnectionsTable,
+  websiteProjectsTable,
   usersTable,
+  organizationsTable,
+  organizationMembersTable,
 } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { generateArticle } from "@/lib/ai/article-generator";
@@ -15,16 +17,44 @@ import {
   resolveHumanizationLevel,
   resolveWritingSample,
 } from "@workspace/content-engine/brand-voice";
-import { publishToWordPress } from "@workspace/connectors/wordpress";
-import { decryptSecret } from "@workspace/security/encryption";
+import {
+  decryptCmsCredentials,
+  type CmsIntegrationCredentials,
+} from "@workspace/content-engine/support/cms-integrations";
+import { publishBlogPieceToPrimaryDestination } from "@workspace/content-engine/support/publish-destination";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
 import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";
+import { getOrgMembership } from "@/lib/org-access";
 
 function estimateCostUsd(totalTokens: number | undefined, wordCount: number): number {
   if (typeof totalTokens === "number" && totalTokens > 0) {
     return Number((totalTokens * 0.0000004).toFixed(4));
   }
   return Number((Math.max(wordCount, 800) * 0.00002).toFixed(4));
+}
+
+async function findProjectCmsForCompany(
+  userId: number,
+  websiteUrl: string,
+): Promise<CmsIntegrationCredentials | null> {
+  const membership = await getOrgMembership(userId);
+  const projects = membership
+    ? await db
+        .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations, url: websiteProjectsTable.url })
+        .from(websiteProjectsTable)
+        .where(eq(websiteProjectsTable.organizationId, membership.organizationId))
+    : await db
+        .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations, url: websiteProjectsTable.url })
+        .from(websiteProjectsTable)
+        .where(eq(websiteProjectsTable.userId, userId));
+
+  const normalizedCompanyUrl = websiteUrl.replace(/\/$/, "").toLowerCase();
+  const matched =
+    projects.find((p) => p.url.replace(/\/$/, "").toLowerCase() === normalizedCompanyUrl) ??
+    projects.find((p) => p.cmsIntegrations && Object.keys(p.cmsIntegrations as object).length > 0);
+
+  if (!matched?.cmsIntegrations) return null;
+  return decryptCmsCredentials(matched.cmsIntegrations as CmsIntegrationCredentials);
 }
 
 export async function GET(req: Request) {
@@ -43,14 +73,21 @@ export async function GET(req: Request) {
   for (const company of companies) {
     try {
       const [owner] = await db
-        .select({ plan: usersTable.plan, encryptedGeminiKey: usersTable.encryptedGeminiKey })
+        .select({
+          plan: usersTable.plan,
+          orgPlan: organizationsTable.plan,
+          orgGeminiKey: organizationsTable.encryptedGeminiKey,
+          userGeminiKey: usersTable.encryptedGeminiKey,
+        })
         .from(usersTable)
+        .leftJoin(organizationMembersTable, eq(organizationMembersTable.userId, usersTable.id))
+        .leftJoin(organizationsTable, eq(organizationsTable.id, organizationMembersTable.organizationId))
         .where(eq(usersTable.id, company.userId))
         .limit(1);
 
-      const usesByok = Boolean(owner?.encryptedGeminiKey);
+      const usesByok = Boolean(owner?.orgGeminiKey ?? owner?.userGeminiKey);
       if (!usesByok) {
-        const quota = getPlanQuota(owner?.plan);
+        const quota = getPlanQuota(owner?.orgPlan ?? owner?.plan);
         if (quota !== null) {
           const articlesThisMonth = await getMonthlyArticleCount(company.id);
           if (articlesThisMonth >= quota) {
@@ -63,11 +100,7 @@ export async function GET(req: Request) {
         }
       }
 
-      const [wp] = await db
-        .select()
-        .from(wordpressConnectionsTable)
-        .where(and(eq(wordpressConnectionsTable.companyId, company.id), eq(wordpressConnectionsTable.isVerified, true)))
-        .limit(1);
+      const cmsCreds = await findProjectCmsForCompany(company.userId, company.websiteUrl);
 
       const [persona] = await db
         .select()
@@ -99,7 +132,6 @@ export async function GET(req: Request) {
         aiClient: aiConfig.client,
       });
 
-      // Second pass: humanize the article unless opted out.
       let humanized = false;
       const humanizationLevel = resolveHumanizationLevel(brandVoice);
       if (humanizationLevel !== "off") {
@@ -118,24 +150,31 @@ export async function GET(req: Request) {
 
       let status: string = "ready";
       let publishedUrl: string | undefined;
-      let wordpressPostId: number | undefined;
+      let publishPlatform: string | undefined;
 
-      if (wp && wp.defaultStatus === "publish") {
-        const appPassword = decryptSecret(wp.encryptedAppPassword);
-        const result = await publishToWordPress(
-          { siteUrl: wp.siteUrl, username: wp.username, appPassword },
-          generated.title,
-          generated.bodyMarkdown,
-          "publish",
-          generated.metaDescription,
-          wp.defaultCategoryId ? [wp.defaultCategoryId] : undefined
-        );
-        status = "published";
-        publishedUrl = result.url;
-        wordpressPostId = result.postId;
+      if (cmsCreds) {
+        try {
+          const result = await publishBlogPieceToPrimaryDestination(
+            {
+              title: generated.title,
+              bodyMarkdown: generated.bodyMarkdown,
+              targetKeyword: generated.primaryKeyword,
+              formatType: "blog_post",
+            },
+            cmsCreds,
+            { status: "publish" },
+          );
+          status = "published";
+          publishedUrl = result.publishedUrl;
+          publishPlatform = result.publishPlatform;
+        } catch (publishErr) {
+          console.warn(
+            `[cron/generate-articles] Publish failed for company ${company.id}:`,
+            publishErr instanceof Error ? publishErr.message : publishErr,
+          );
+        }
       }
 
-      // Append FAQ to body markdown (same as manual generate endpoint)
       let fullBody = generated.bodyMarkdown;
       if (generated.faqSection?.length > 0) {
         fullBody += "\n\n## Frequently Asked Questions\n\n";
@@ -154,7 +193,7 @@ export async function GET(req: Request) {
           status,
           humanized,
           publishedUrl: publishedUrl ?? null,
-          wordpressPostId: wordpressPostId ?? null,
+          wordpressPostId: null,
           articleMetadata: {
             citations: generated.citations ?? [],
             faqSection: generated.faqSection ?? [],
@@ -166,6 +205,7 @@ export async function GET(req: Request) {
             generationSource: source,
             estimatedCostUsd,
             generationUsage: generated.generationUsage ?? null,
+            publishPlatform: publishPlatform ?? null,
           },
         })
         .where(eq(scheduledArticlesTable.id, articleRecord.id))

@@ -16,6 +16,7 @@ export interface PublishablePiece {
   title: string;
   bodyMarkdown: string;
   websiteProjectId: number;
+  featuredImageUrl?: string;
 }
 
 export interface SocialPublishResult {
@@ -83,6 +84,7 @@ export async function publishPieceToSocial(
         instagramAccountId: resolvedCreds.meta.instagramAccountId,
       },
       piece.bodyMarkdown,
+      { imageUrl: piece.featuredImageUrl },
     );
     return { publishedUrl: result.postUrl, publishPlatform: "instagram" };
   }

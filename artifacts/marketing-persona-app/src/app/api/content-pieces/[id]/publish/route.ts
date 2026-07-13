@@ -6,9 +6,9 @@ import { requireAuth } from "@/lib/require-auth";
 import { assertPieceOwner } from "@/lib/content-pieces-helpers";
 import {
   decryptCmsCredentials,
+  ESP_PUBLISH_PLATFORMS,
   CMS_PUBLISH_PLATFORMS,
   SOCIAL_PLATFORMS,
-  type CmsPublishPlatform,
   type CmsIntegrationCredentials,
   type SocialPlatform,
 } from "@workspace/content-engine/support/cms-integrations";
@@ -17,11 +17,9 @@ import {
   publishPieceToSocial,
 } from "@workspace/content-engine/support/social-publish";
 import {
-  publishPieceToCms,
-  publishPieceToWordPress,
-} from "@workspace/content-engine/support/cms-publish";
-import { publishToNotion } from "@workspace/connectors/notion";
-import { publishToWebflow } from "@workspace/connectors/webflow";
+  publishPieceToDestination,
+} from "@workspace/content-engine/support/publish-destination";
+import { publishPieceToWordPress } from "@workspace/content-engine/support/cms-publish";
 import { publishToWordPress } from "@workspace/connectors/wordpress";
 import { decryptSecret } from "@workspace/security/encryption";
 import { enqueue, QUEUES } from "@workspace/jobs";
@@ -32,6 +30,15 @@ const ALL_PUBLISH_PLATFORMS = [
   "notion",
   "webflow",
   "wordpress",
+  "wix",
+  "framer",
+  "squarespace",
+  "contentful",
+  "sanity",
+  "strapi",
+  "hubspot",
+  "typo3",
+  ...ESP_PUBLISH_PLATFORMS,
   ...SOCIAL_PLATFORMS,
 ] as const;
 
@@ -46,6 +53,17 @@ const PublishBody = z.object({
   (d) => d.platform || d.wordpressConnectionId || (d.wpSiteUrl && d.wpUsername && d.wpAppPassword),
   { message: "Provide platform or WordPress credentials" },
 );
+
+function featuredImageFromPiece(piece: {
+  bodyMarkdown: string;
+  pieceMetadata?: { featuredImageUrl?: string } | null;
+}): string | undefined {
+  if (piece.pieceMetadata?.featuredImageUrl) {
+    return piece.pieceMetadata.featuredImageUrl;
+  }
+  const match = piece.bodyMarkdown.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/);
+  return match?.[1];
+}
 
 export async function POST(
   req: Request,
@@ -91,11 +109,16 @@ export async function POST(
       targetKeyword: piece!.targetKeyword,
       formatType: piece!.formatType,
     };
+    const imageUrl = featuredImageFromPiece(piece!);
 
     if (parsed.data.platform && isSocialPlatform(parsed.data.platform)) {
       const socialResult = await publishPieceToSocial(
         parsed.data.platform as SocialPlatform,
-        { ...publishable, websiteProjectId: piece!.websiteProjectId },
+        {
+          ...publishable,
+          websiteProjectId: piece!.websiteProjectId,
+          featuredImageUrl: imageUrl,
+        },
         userId!,
         creds,
       );
@@ -138,31 +161,12 @@ export async function POST(
         "publish",
       );
       publishedUrl = result.url;
-    } else if (parsed.data.platform === "notion" && creds.notion) {
-      publishedUrl = await publishToNotion(
-        creds.notion.integrationToken,
-        creds.notion.databaseId,
-        piece!.title,
-        piece!.bodyMarkdown,
-        { status: piece!.status ?? "draft" },
-      );
-    } else if (parsed.data.platform === "webflow" && creds.webflow) {
-      publishedUrl = await publishToWebflow(
-        creds.webflow.apiToken,
-        creds.webflow.collectionId,
-        creds.webflow.bodyFieldSlug,
-        piece!.title,
-        piece!.bodyMarkdown,
-      );
-    } else if (
-      parsed.data.platform &&
-      CMS_PUBLISH_PLATFORMS.includes(parsed.data.platform as CmsPublishPlatform)
-    ) {
-      publishedUrl = await publishPieceToCms(
-        parsed.data.platform as CmsPublishPlatform,
-        publishable,
-        creds,
-      );
+    } else if (parsed.data.platform) {
+      const result = await publishPieceToDestination(parsed.data.platform, publishable, creds, {
+        featuredImageUrl: imageUrl,
+      });
+      publishedUrl = result.publishedUrl;
+      publishPlatform = result.publishPlatform;
     } else {
       return NextResponse.json({ error: "Platform not connected" }, { status: 400 });
     }

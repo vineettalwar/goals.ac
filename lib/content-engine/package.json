@@ -32,11 +32,14 @@
     "./support/visibility-settings": "./src/support/visibility-settings.ts",
     "./support/user-api-key": "./src/support/user-api-key.ts",
     "./support/user-ai-provider": "./src/support/user-ai-provider.ts",
+    "./support/org-ai-settings": "./src/support/org-ai-settings.ts",
     "./support/brand-context-loader": "./src/support/brand-context-loader.ts",
     "./support/resolve-ai-client": "./src/support/resolve-ai-client.ts",
     "./support/resolve-ai-client-for-user": "./src/support/resolve-ai-client-for-user.ts",
     "./support/social-tokens": "./src/support/social-tokens.ts",
-    "./support/social-publish": "./src/support/social-publish.ts"
+    "./support/social-publish": "./src/support/social-publish.ts",
+    "./support/publish-destination": "./src/support/publish-destination.ts",
+    "./support/esp-publish": "./src/support/esp-publish.ts"
   },
   "dependencies": {
     "@google/genai": "^1.44.0",

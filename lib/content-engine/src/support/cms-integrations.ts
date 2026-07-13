@@ -2,6 +2,13 @@ import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 
 export type CmsConnectionType = "api" | "plugin";
 
+export interface CmsFieldMapping {
+  titleField?: string;
+  bodyField?: string;
+  slugField?: string;
+  metaDescriptionField?: string;
+}
+
 export interface CmsIntegrationCredentials {
   notion?: {
     integrationToken: string;
@@ -11,6 +18,7 @@ export interface CmsIntegrationCredentials {
     apiToken: string;
     collectionId: string;
     bodyFieldSlug: string;
+    publishStatus?: "draft" | "live";
   };
   wordpress?: {
     connectionType?: CmsConnectionType;
@@ -90,6 +98,67 @@ export interface CmsIntegrationCredentials {
     clientId: string;
     clientSecret: string;
   };
+  wix?: {
+    accessToken: string;
+    siteId: string;
+    memberId?: string;
+    publishStatus?: "draft" | "live";
+  };
+  framer?: {
+    apiToken: string;
+    collectionId: string;
+    titleFieldSlug: string;
+    bodyFieldSlug: string;
+    publishStatus?: "draft" | "live";
+  };
+  squarespace?: {
+    apiKey: string;
+    siteId: string;
+    publishStatus?: "draft" | "live";
+  };
+  contentful?: {
+    accessToken: string;
+    spaceId: string;
+    environmentId: string;
+    contentTypeId: string;
+    fieldMapping: CmsFieldMapping;
+  };
+  sanity?: {
+    projectId: string;
+    dataset: string;
+    token: string;
+    documentType: string;
+    fieldMapping: CmsFieldMapping;
+  };
+  strapi?: {
+    baseUrl: string;
+    apiToken: string;
+    contentType: string;
+    publishStatus?: "draft" | "live";
+  };
+  beehiiv?: {
+    apiKey: string;
+    publicationId: string;
+  };
+  convertkit?: {
+    apiSecret: string;
+    formId?: string;
+  };
+  mailchimp?: {
+    apiKey: string;
+    serverPrefix: string;
+    listId: string;
+  };
+  hubspot?: {
+    accessToken: string;
+    blogId: string;
+    publishStatus?: "draft" | "live";
+  };
+  typo3?: {
+    connectionType: CmsConnectionType;
+    siteUrl: string;
+    siteKey: string;
+  };
 }
 
 export type SocialPlatform =
@@ -105,7 +174,16 @@ export type CmsPublishPlatform =
   | "webhook"
   | "shopify"
   | "drupal"
-  | "joomla";
+  | "joomla"
+  | "typo3";
+
+export type EspPublishPlatform = "beehiiv" | "convertkit" | "mailchimp";
+
+export const ESP_PUBLISH_PLATFORMS: EspPublishPlatform[] = [
+  "beehiiv",
+  "convertkit",
+  "mailchimp",
+];
 
 export const SOCIAL_PLATFORMS: SocialPlatform[] = [
   "linkedin",
@@ -122,6 +200,7 @@ export const CMS_PUBLISH_PLATFORMS: CmsPublishPlatform[] = [
   "shopify",
   "drupal",
   "joomla",
+  "typo3",
 ];
 
 export function resolveWordPressConnectionType(
@@ -155,6 +234,7 @@ export function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsInte
       apiToken: encryptSecret(creds.webflow.apiToken),
       collectionId: creds.webflow.collectionId,
       bodyFieldSlug: creds.webflow.bodyFieldSlug,
+      publishStatus: creds.webflow.publishStatus,
     };
   }
   if (creds.wordpress) {
@@ -259,6 +339,109 @@ export function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsInte
       instagramUsername: creds.meta.instagramUsername,
     };
   }
+  if (creds.bluesky) {
+    result.bluesky = {
+      accessToken: encryptSecret(creds.bluesky.accessToken),
+      refreshToken: creds.bluesky.refreshToken ? encryptSecret(creds.bluesky.refreshToken) : undefined,
+      expiresAt: creds.bluesky.expiresAt,
+      did: creds.bluesky.did,
+      handle: creds.bluesky.handle,
+      sessionJson: creds.bluesky.sessionJson ? encryptSecret(creds.bluesky.sessionJson) : undefined,
+    };
+  }
+  if (creds.mastodon) {
+    result.mastodon = {
+      instanceUrl: creds.mastodon.instanceUrl,
+      accessToken: encryptSecret(creds.mastodon.accessToken),
+      accountId: creds.mastodon.accountId,
+      username: creds.mastodon.username,
+      clientId: encryptSecret(creds.mastodon.clientId),
+      clientSecret: encryptSecret(creds.mastodon.clientSecret),
+    };
+  }
+  if (creds.wix) {
+    result.wix = {
+      accessToken: encryptSecret(creds.wix.accessToken),
+      siteId: creds.wix.siteId,
+      memberId: creds.wix.memberId,
+      publishStatus: creds.wix.publishStatus,
+    };
+  }
+  if (creds.framer) {
+    result.framer = {
+      apiToken: encryptSecret(creds.framer.apiToken),
+      collectionId: creds.framer.collectionId,
+      titleFieldSlug: creds.framer.titleFieldSlug,
+      bodyFieldSlug: creds.framer.bodyFieldSlug,
+      publishStatus: creds.framer.publishStatus,
+    };
+  }
+  if (creds.squarespace) {
+    result.squarespace = {
+      apiKey: encryptSecret(creds.squarespace.apiKey),
+      siteId: creds.squarespace.siteId,
+      publishStatus: creds.squarespace.publishStatus,
+    };
+  }
+  if (creds.contentful) {
+    result.contentful = {
+      accessToken: encryptSecret(creds.contentful.accessToken),
+      spaceId: creds.contentful.spaceId,
+      environmentId: creds.contentful.environmentId,
+      contentTypeId: creds.contentful.contentTypeId,
+      fieldMapping: creds.contentful.fieldMapping,
+    };
+  }
+  if (creds.sanity) {
+    result.sanity = {
+      projectId: creds.sanity.projectId,
+      dataset: creds.sanity.dataset,
+      token: encryptSecret(creds.sanity.token),
+      documentType: creds.sanity.documentType,
+      fieldMapping: creds.sanity.fieldMapping,
+    };
+  }
+  if (creds.strapi) {
+    result.strapi = {
+      baseUrl: creds.strapi.baseUrl,
+      apiToken: encryptSecret(creds.strapi.apiToken),
+      contentType: creds.strapi.contentType,
+      publishStatus: creds.strapi.publishStatus,
+    };
+  }
+  if (creds.beehiiv) {
+    result.beehiiv = {
+      apiKey: encryptSecret(creds.beehiiv.apiKey),
+      publicationId: creds.beehiiv.publicationId,
+    };
+  }
+  if (creds.convertkit) {
+    result.convertkit = {
+      apiSecret: encryptSecret(creds.convertkit.apiSecret),
+      formId: creds.convertkit.formId,
+    };
+  }
+  if (creds.mailchimp) {
+    result.mailchimp = {
+      apiKey: encryptSecret(creds.mailchimp.apiKey),
+      serverPrefix: creds.mailchimp.serverPrefix,
+      listId: creds.mailchimp.listId,
+    };
+  }
+  if (creds.hubspot) {
+    result.hubspot = {
+      accessToken: encryptSecret(creds.hubspot.accessToken),
+      blogId: creds.hubspot.blogId,
+      publishStatus: creds.hubspot.publishStatus,
+    };
+  }
+  if (creds.typo3) {
+    result.typo3 = {
+      connectionType: creds.typo3.connectionType,
+      siteUrl: creds.typo3.siteUrl,
+      siteKey: encryptSecret(creds.typo3.siteKey),
+    };
+  }
   return result;
 }
 
@@ -275,6 +458,7 @@ export function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsInt
       apiToken: tryDecrypt(stored.webflow.apiToken),
       collectionId: stored.webflow.collectionId,
       bodyFieldSlug: stored.webflow.bodyFieldSlug,
+      publishStatus: stored.webflow.publishStatus,
     };
   }
   if (stored.wordpress) {
@@ -383,6 +567,113 @@ export function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsInt
       instagramUsername: stored.meta.instagramUsername,
     };
   }
+  if (stored.bluesky) {
+    result.bluesky = {
+      accessToken: tryDecrypt(stored.bluesky.accessToken),
+      refreshToken: stored.bluesky.refreshToken
+        ? tryDecrypt(stored.bluesky.refreshToken)
+        : undefined,
+      expiresAt: stored.bluesky.expiresAt,
+      did: stored.bluesky.did,
+      handle: stored.bluesky.handle,
+      sessionJson: stored.bluesky.sessionJson
+        ? tryDecrypt(stored.bluesky.sessionJson)
+        : undefined,
+    };
+  }
+  if (stored.mastodon) {
+    result.mastodon = {
+      instanceUrl: stored.mastodon.instanceUrl,
+      accessToken: tryDecrypt(stored.mastodon.accessToken),
+      accountId: stored.mastodon.accountId,
+      username: stored.mastodon.username,
+      clientId: tryDecrypt(stored.mastodon.clientId),
+      clientSecret: tryDecrypt(stored.mastodon.clientSecret),
+    };
+  }
+  if (stored.wix) {
+    result.wix = {
+      accessToken: tryDecrypt(stored.wix.accessToken),
+      siteId: stored.wix.siteId,
+      memberId: stored.wix.memberId,
+      publishStatus: stored.wix.publishStatus,
+    };
+  }
+  if (stored.framer) {
+    result.framer = {
+      apiToken: tryDecrypt(stored.framer.apiToken),
+      collectionId: stored.framer.collectionId,
+      titleFieldSlug: stored.framer.titleFieldSlug,
+      bodyFieldSlug: stored.framer.bodyFieldSlug,
+      publishStatus: stored.framer.publishStatus,
+    };
+  }
+  if (stored.squarespace) {
+    result.squarespace = {
+      apiKey: tryDecrypt(stored.squarespace.apiKey),
+      siteId: stored.squarespace.siteId,
+      publishStatus: stored.squarespace.publishStatus,
+    };
+  }
+  if (stored.contentful) {
+    result.contentful = {
+      accessToken: tryDecrypt(stored.contentful.accessToken),
+      spaceId: stored.contentful.spaceId,
+      environmentId: stored.contentful.environmentId,
+      contentTypeId: stored.contentful.contentTypeId,
+      fieldMapping: stored.contentful.fieldMapping,
+    };
+  }
+  if (stored.sanity) {
+    result.sanity = {
+      projectId: stored.sanity.projectId,
+      dataset: stored.sanity.dataset,
+      token: tryDecrypt(stored.sanity.token),
+      documentType: stored.sanity.documentType,
+      fieldMapping: stored.sanity.fieldMapping,
+    };
+  }
+  if (stored.strapi) {
+    result.strapi = {
+      baseUrl: stored.strapi.baseUrl,
+      apiToken: tryDecrypt(stored.strapi.apiToken),
+      contentType: stored.strapi.contentType,
+      publishStatus: stored.strapi.publishStatus,
+    };
+  }
+  if (stored.beehiiv) {
+    result.beehiiv = {
+      apiKey: tryDecrypt(stored.beehiiv.apiKey),
+      publicationId: stored.beehiiv.publicationId,
+    };
+  }
+  if (stored.convertkit) {
+    result.convertkit = {
+      apiSecret: tryDecrypt(stored.convertkit.apiSecret),
+      formId: stored.convertkit.formId,
+    };
+  }
+  if (stored.mailchimp) {
+    result.mailchimp = {
+      apiKey: tryDecrypt(stored.mailchimp.apiKey),
+      serverPrefix: stored.mailchimp.serverPrefix,
+      listId: stored.mailchimp.listId,
+    };
+  }
+  if (stored.hubspot) {
+    result.hubspot = {
+      accessToken: tryDecrypt(stored.hubspot.accessToken),
+      blogId: stored.hubspot.blogId,
+      publishStatus: stored.hubspot.publishStatus,
+    };
+  }
+  if (stored.typo3) {
+    result.typo3 = {
+      connectionType: stored.typo3.connectionType,
+      siteUrl: stored.typo3.siteUrl,
+      siteKey: tryDecrypt(stored.typo3.siteKey),
+    };
+  }
   return result;
 }
 
@@ -400,6 +691,7 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
       connected: true,
       collectionId: decrypted.webflow.collectionId,
       bodyFieldSlug: decrypted.webflow.bodyFieldSlug,
+      publishStatus: decrypted.webflow.publishStatus ?? "draft",
       apiTokenHint: secretHint(decrypted.webflow.apiToken),
     };
   }
@@ -514,6 +806,99 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
       connected: true,
       instanceUrl: decrypted.mastodon.instanceUrl,
       username: decrypted.mastodon.username,
+    };
+  }
+  if (decrypted.wix) {
+    result.wix = {
+      connected: true,
+      siteId: decrypted.wix.siteId,
+      publishStatus: decrypted.wix.publishStatus ?? "draft",
+      accessTokenHint: secretHint(decrypted.wix.accessToken),
+    };
+  }
+  if (decrypted.framer) {
+    result.framer = {
+      connected: true,
+      collectionId: decrypted.framer.collectionId,
+      titleFieldSlug: decrypted.framer.titleFieldSlug,
+      bodyFieldSlug: decrypted.framer.bodyFieldSlug,
+      publishStatus: decrypted.framer.publishStatus ?? "draft",
+      apiTokenHint: secretHint(decrypted.framer.apiToken),
+    };
+  }
+  if (decrypted.squarespace) {
+    result.squarespace = {
+      connected: true,
+      siteId: decrypted.squarespace.siteId,
+      publishStatus: decrypted.squarespace.publishStatus ?? "draft",
+      apiKeyHint: secretHint(decrypted.squarespace.apiKey),
+    };
+  }
+  if (decrypted.contentful) {
+    result.contentful = {
+      connected: true,
+      spaceId: decrypted.contentful.spaceId,
+      environmentId: decrypted.contentful.environmentId,
+      contentTypeId: decrypted.contentful.contentTypeId,
+      fieldMapping: decrypted.contentful.fieldMapping,
+      accessTokenHint: secretHint(decrypted.contentful.accessToken),
+    };
+  }
+  if (decrypted.sanity) {
+    result.sanity = {
+      connected: true,
+      projectId: decrypted.sanity.projectId,
+      dataset: decrypted.sanity.dataset,
+      documentType: decrypted.sanity.documentType,
+      fieldMapping: decrypted.sanity.fieldMapping,
+      tokenHint: secretHint(decrypted.sanity.token),
+    };
+  }
+  if (decrypted.strapi) {
+    result.strapi = {
+      connected: true,
+      baseUrl: decrypted.strapi.baseUrl,
+      contentType: decrypted.strapi.contentType,
+      publishStatus: decrypted.strapi.publishStatus ?? "draft",
+      apiTokenHint: secretHint(decrypted.strapi.apiToken),
+    };
+  }
+  if (decrypted.beehiiv) {
+    result.beehiiv = {
+      connected: true,
+      publicationId: decrypted.beehiiv.publicationId,
+      apiKeyHint: secretHint(decrypted.beehiiv.apiKey),
+    };
+  }
+  if (decrypted.convertkit) {
+    result.convertkit = {
+      connected: true,
+      formId: decrypted.convertkit.formId,
+      apiSecretHint: secretHint(decrypted.convertkit.apiSecret),
+    };
+  }
+  if (decrypted.mailchimp) {
+    result.mailchimp = {
+      connected: true,
+      serverPrefix: decrypted.mailchimp.serverPrefix,
+      listId: decrypted.mailchimp.listId,
+      apiKeyHint: secretHint(decrypted.mailchimp.apiKey),
+    };
+  }
+  if (decrypted.hubspot) {
+    result.hubspot = {
+      connected: true,
+      blogId: decrypted.hubspot.blogId,
+      publishStatus: decrypted.hubspot.publishStatus ?? "draft",
+      accessTokenHint: secretHint(decrypted.hubspot.accessToken),
+    };
+  }
+  if (decrypted.typo3) {
+    result.typo3 = {
+      connected: true,
+      connectionType: decrypted.typo3.connectionType,
+      siteUrl: decrypted.typo3.siteUrl,
+      siteKeyHint: secretHint(decrypted.typo3.siteKey),
     };
   }
   return result;

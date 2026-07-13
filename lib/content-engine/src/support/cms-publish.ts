@@ -248,6 +248,14 @@ export async function publishPieceToCms(
       );
       return result.url;
     }
+    case "typo3": {
+      if (!creds.typo3) {
+        throw new Error("TYPO3 is not connected. Configure it in Project Settings → Publishing.");
+      }
+      const { publishToTypo3 } = await import("@workspace/connectors/typo3");
+      const result = await publishToTypo3(creds.typo3, piece.title, piece.bodyMarkdown, status);
+      return result.url;
+    }
     default: {
       const exhaustive: never = platform;
       throw new Error(`Unsupported CMS platform: ${exhaustive}`);

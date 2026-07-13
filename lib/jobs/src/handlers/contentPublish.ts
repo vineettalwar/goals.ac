@@ -6,10 +6,11 @@ import type { ContentPublishPayload, ScheduledPublishSweepPayload, PgBoss } from
 import { decryptCmsCredentials, type CmsIntegrationCredentials } from "@workspace/content-engine/support/cms-integrations";
 import { parseAutopilotSettings, wordpressPublishStatus } from "@workspace/content-engine/support/autopilot-scheduler";
 import { publishPieceToSocial, isSocialPlatform } from "@workspace/content-engine/support/social-publish";
-import { publishPieceToCms, publishPieceToWordPress } from "@workspace/content-engine/support/cms-publish";
-import { CMS_PUBLISH_PLATFORMS, type CmsPublishPlatform } from "@workspace/content-engine/support/cms-integrations";
-import { publishToNotion } from "@workspace/connectors/notion";
-import { publishToWebflow } from "@workspace/connectors/webflow";
+import {
+  publishPieceToDestination,
+  publishBlogPieceToPrimaryDestination,
+  resolvePrimaryEspDestination,
+} from "@workspace/content-engine/support/publish-destination";
 import { logger } from "../logger";
 
 const FORMAT_TO_PLATFORM: Record<string, string> = {
@@ -19,7 +20,19 @@ const FORMAT_TO_PLATFORM: Record<string, string> = {
   facebook_post: "facebook",
   bluesky_post: "bluesky",
   mastodon_post: "mastodon",
+  email_sequence: "beehiiv",
 };
+
+function featuredImageFromPiece(piece: {
+  bodyMarkdown: string;
+  pieceMetadata?: { featuredImageUrl?: string } | null;
+}): string | undefined {
+  if (piece.pieceMetadata?.featuredImageUrl) {
+    return piece.pieceMetadata.featuredImageUrl;
+  }
+  const match = piece.bodyMarkdown.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/);
+  return match?.[1];
+}
 
 async function publishPiece(pieceId: number, userId: number): Promise<void> {
   const [piece] = await db
@@ -42,10 +55,18 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
 
   const autopilot = parseAutopilotSettings(project.autopilotSettings);
   const wpStatus = wordpressPublishStatus(autopilot);
-
   const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
   const platform = piece.publishPlatform ?? FORMAT_TO_PLATFORM[piece.formatType];
+  const publishable = {
+    id: piece.id,
+    title: piece.title,
+    bodyMarkdown: piece.bodyMarkdown,
+    targetKeyword: piece.targetKeyword,
+    formatType: piece.formatType,
+  };
+
   let publishedUrl: string | null = null;
+  let publishPlatform = platform ?? piece.publishPlatform;
 
   if (platform && isSocialPlatform(platform)) {
     const result = await publishPieceToSocial(
@@ -60,40 +81,34 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
       creds,
     );
     publishedUrl = result.publishedUrl;
-  } else if (piece.formatType === "blog_post" && creds.wordpress) {
-    publishedUrl = await publishPieceToWordPress(piece, creds, { status: wpStatus });
-  } else if (
-    platform &&
-    CMS_PUBLISH_PLATFORMS.includes(platform as CmsPublishPlatform) &&
-    creds[platform as CmsPublishPlatform]
-  ) {
-    publishedUrl = await publishPieceToCms(
-      platform as CmsPublishPlatform,
-      piece,
-      creds,
-      { status: wpStatus === "publish" ? "published" : "draft" },
-    );
-  } else if (creds.ghost && !platform) {
-    publishedUrl = await publishPieceToCms("ghost", piece, creds, {
-      status: wpStatus === "publish" ? "published" : "draft",
+    publishPlatform = result.publishPlatform;
+  } else if (piece.formatType === "email_sequence") {
+    const espPlatform = resolvePrimaryEspDestination(creds, platform);
+    if (!espPlatform) {
+      throw new Error("No email platform connected for email_sequence format.");
+    }
+    const result = await publishPieceToDestination(espPlatform, publishable, creds);
+    publishedUrl = result.publishedUrl;
+    publishPlatform = result.publishPlatform;
+  } else if (platform) {
+    const result = await publishPieceToDestination(platform, publishable, creds, {
+      status: wpStatus,
+      featuredImageUrl: featuredImageFromPiece(piece),
     });
-  } else if (creds.notion && !platform) {
-    publishedUrl = await publishToNotion(creds.notion.integrationToken, creds.notion.databaseId, piece.title, piece.bodyMarkdown);
-  } else if (creds.webflow && !platform) {
-    publishedUrl = await publishToWebflow(
-      creds.webflow.apiToken,
-      creds.webflow.collectionId,
-      creds.webflow.bodyFieldSlug,
-      piece.title,
-      piece.bodyMarkdown,
-    );
+    publishedUrl = result.publishedUrl;
+    publishPlatform = result.publishPlatform;
   } else {
-    throw new Error(`No publish destination for format ${piece.formatType}`);
+    const result = await publishBlogPieceToPrimaryDestination(publishable, creds, {
+      status: wpStatus,
+      featuredImageUrl: featuredImageFromPiece(piece),
+    });
+    publishedUrl = result.publishedUrl;
+    publishPlatform = result.publishPlatform;
   }
 
   await db
     .update(contentPiecesTable)
-    .set({ status: "published", publishedUrl, publishPlatform: platform ?? piece.publishPlatform, publishError: null })
+    .set({ status: "published", publishedUrl, publishPlatform, publishError: null })
     .where(eq(contentPiecesTable.id, pieceId));
 }
 

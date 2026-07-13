@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import {
   type CmsIntegrationCredentials,
   decryptCmsCredentials,
@@ -27,11 +27,14 @@ function getFrontendOrigin(): string {
     ?? (devDomain ? `https://${devDomain}` : "http://localhost:5173");
 }
 
-async function loadProjectCreds(projectId: number, userId: number): Promise<CmsIntegrationCredentials> {
+async function loadProjectCreds(
+  projectId: number,
+  _userId: number,
+): Promise<CmsIntegrationCredentials> {
   const [project] = await db
     .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
     .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId)))
+    .where(eq(websiteProjectsTable.id, projectId))
     .limit(1);
   if (!project) throw new Error("Project not found");
   return decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
@@ -39,13 +42,13 @@ async function loadProjectCreds(projectId: number, userId: number): Promise<CmsI
 
 async function saveProjectCreds(
   projectId: number,
-  userId: number,
+  _userId: number,
   creds: CmsIntegrationCredentials,
 ): Promise<void> {
   const [project] = await db
     .select({ id: websiteProjectsTable.id })
     .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId)))
+    .where(eq(websiteProjectsTable.id, projectId))
     .limit(1);
   if (!project) throw new Error("Project not found");
   await db
