@@ -4,9 +4,9 @@ import Link from "next/link";
 import { useState } from "react";
 import {
   AdminIntegrationsContent,
-  AdminIntegrationsDialogs,
-  useAdminIntegrationsController,
 } from "@/components/admin/integrations/admin-integrations-panel";
+import { AdminIntegrationsDialogs } from "@/components/admin/integrations/admin-integrations-dialogs";
+import { useAdminIntegrationsController } from "@/components/admin/integrations/use-admin-integrations-controller";
 import {
   IntegrationCategorySkeleton,
   IntegrationTabBadge,

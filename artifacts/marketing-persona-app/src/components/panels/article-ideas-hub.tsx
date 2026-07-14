@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   BarChart3,
@@ -16,14 +17,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { useActiveProject } from "@/context/active-project";
-import { useKeywordIntelligence } from "@/lib/queries";
+import { useActiveProject } from "@/context/use-active-project";
+import { queryKeys, useGscQueries, useGscSyncStatus, useKeywordIntelligence, useSemrushStatus } from "@/lib/queries";
 import { queueOpportunityErrorMessage } from "@/lib/seo/keyword-opportunity-ui";
 import {
   contentLanguageLabel,
   semrushDatabaseLabel,
-} from "@workspace/content-engine/support/content-language";
+} from "@workspace/content-engine/support/content/content-language";
 import type { KeywordOpportunity } from "@/lib/queries/types";
+import { ArticleIdeasOpportunityList } from "./article-ideas-opportunity-list";
 
 export type SourceFilter =
   | "all"
@@ -37,16 +39,7 @@ export type SourceFilter =
   | "competitor_gap"
   | "rank_drop";
 
-const SOURCE_LABELS: Record<string, string> = {
-  semrush: "Semrush",
-  gsc_query: "Search Console",
-  csv_import: "CSV import",
-  google_sheets: "Google Sheets",
-  manual: "Manual",
-  ai_analysis: "AI analysis",
-  competitor_gap: "Competitor gap",
-  rank_drop: "Rank drop",
-};
+const IMPORT_SOURCES = new Set(["csv_import", "google_sheets", "manual"]);
 
 const FILTER_CHIPS: { id: SourceFilter; label: string }[] = [
   { id: "all", label: "All" },
@@ -60,14 +53,6 @@ const FILTER_CHIPS: { id: SourceFilter; label: string }[] = [
   { id: "competitor_gap", label: "Competitor" },
   { id: "rank_drop", label: "Rank drop" },
 ];
-
-const IMPORT_SOURCES = new Set(["csv_import", "google_sheets", "manual"]);
-
-const DIFFICULTY_COLORS = {
-  low: "success" as const,
-  medium: "warning" as const,
-  high: "destructive" as const,
-};
 
 type GscSyncStatus = {
   connected: boolean;
@@ -94,17 +79,6 @@ type GscQueryMetrics = {
   position: number;
 };
 
-function contentStudioHref(projectId: number, opp: KeywordOpportunity): string {
-  const params = new URLSearchParams({
-    create: "1",
-    format: "blog_article",
-    keyword: opp.keyword,
-    title: opp.suggestedTitle,
-    angle: opp.suggestedAngle,
-  });
-  return `/projects/${projectId}/content-studio?${params.toString()}`;
-}
-
 function isSourceFilter(value: string | null): value is SourceFilter {
   return FILTER_CHIPS.some((chip) => chip.id === value);
 }
@@ -119,11 +93,8 @@ export function ArticleIdeasHub({
   onRefetch?: () => void;
 }) {
   const { activeProjectId } = useActiveProject();
+  const queryClient = useQueryClient();
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>(initialSourceFilter);
-  const [gscStatus, setGscStatus] = useState<GscSyncStatus | null>(null);
-  const [semrushStatus, setSemrushStatus] = useState<SemrushStatus | null>(null);
-  const [queryMetrics, setQueryMetrics] = useState<Map<string, GscQueryMetrics>>(new Map());
-  const [statusLoading, setStatusLoading] = useState(false);
   const [discovering, setDiscovering] = useState<string | null>(null);
   const [syncingGsc, setSyncingGsc] = useState(false);
 
@@ -133,35 +104,27 @@ export function ArticleIdeasHub({
     refetch: refetchOpportunities,
   } = useKeywordIntelligence(projectId);
 
-  const loadQueryMetrics = useCallback(async () => {
-    const res = await fetch(`/api/website-projects/${projectId}/gsc-queries?limit=200`);
-    if (!res.ok) return;
-    const data = await res.json();
+  const { data: gscStatus, isFetching: gscFetching } = useGscSyncStatus(projectId);
+  const { data: semrushStatus, isFetching: semrushFetching } = useSemrushStatus(projectId);
+  const { data: gscQueryRows = [] } = useGscQueries(projectId, Boolean(gscStatus?.connected));
+  const statusLoading = gscFetching || semrushFetching;
+
+  const queryMetrics = useMemo(() => {
     const map = new Map<string, GscQueryMetrics>();
-    for (const row of (data.queries ?? []) as GscQueryMetrics[]) {
+    for (const row of gscQueryRows) {
       map.set(row.query.toLowerCase(), row);
     }
-    setQueryMetrics(map);
-  }, [projectId]);
+    return map;
+  }, [gscQueryRows]);
 
-  async function loadStatuses() {
+  const loadStatuses = useCallback(async () => {
     if (!projectId) return;
-    setStatusLoading(true);
-    const [gscRes, semrushRes] = await Promise.all([
-      fetch(`/api/website-projects/${projectId}/search-properties/gsc/sync`),
-      fetch(`/api/website-projects/${projectId}/semrush/status`),
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: queryKeys.gscSyncStatus(projectId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.semrushStatus(projectId) }),
+      queryClient.invalidateQueries({ queryKey: queryKeys.gscQueries(projectId) }),
     ]);
-    setStatusLoading(false);
-    if (gscRes.ok) {
-      setGscStatus(await gscRes.json());
-      await loadQueryMetrics();
-    }
-    if (semrushRes.ok) setSemrushStatus(await semrushRes.json());
-  }
-
-  useEffect(() => {
-    if (projectId) void loadStatuses();
-  }, [projectId]);
+  }, [projectId, queryClient]);
 
   useEffect(() => {
     if (isSourceFilter(initialSourceFilter)) {
@@ -289,7 +252,7 @@ export function ArticleIdeasHub({
                 {gscStatus?.connected && gscStatus.propertyVerified
                   ? `${gscStatus.queryCount.toLocaleString()} queries${
                       gscStatus.lastSyncedAt
-                        ? ` · synced ${new Date(gscStatus.lastSyncedAt).toLocaleDateString()}`
+                        ? ` · synced ${new Date(gscStatus.lastSyncedAt).toLocaleDateString("en-US", { timeZone: "UTC" })}`
                         : ""
                     }`
                   : "Not connected"}
@@ -370,68 +333,13 @@ export function ArticleIdeasHub({
             Import tab.
           </p>
         ) : (
-          <div className="space-y-2">
-            {filtered.map((opp) => {
-              const metrics = queryMetrics.get(opp.keyword.toLowerCase());
-              return (
-                <div
-                  key={opp.id}
-                  className="flex items-start justify-between gap-3 p-3 rounded-lg border border-border"
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-medium">{opp.keyword}</p>
-                      <Badge variant="secondary" className="text-xs">
-                        {SOURCE_LABELS[opp.source] ?? opp.source}
-                      </Badge>
-                      {opp.difficulty && (
-                        <Badge
-                          variant={
-                            DIFFICULTY_COLORS[opp.difficulty as keyof typeof DIFFICULTY_COLORS] ??
-                            "secondary"
-                          }
-                          className="text-xs"
-                        >
-                          {opp.difficulty}
-                        </Badge>
-                      )}
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" />
-                        {opp.opportunityScore}
-                      </span>
-                    </div>
-                    <p className="text-sm mt-1">{opp.suggestedTitle}</p>
-                    <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
-                      {opp.suggestedAngle}
-                    </p>
-                    {(metrics || opp.estimatedVolume) && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {metrics
-                          ? `${metrics.impressions.toLocaleString()} imp · pos ${metrics.position.toFixed(1)} · CTR ${(metrics.ctr * 100).toFixed(1)}%`
-                          : opp.estimatedVolume}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1 shrink-0">
-                    <Button size="sm" variant="outline" onClick={() => handleQueue(opp.id)}>
-                      Queue
-                    </Button>
-                    {activeProjectId != null ? (
-                      <Button asChild size="sm" variant="ghost">
-                        <Link href={contentStudioHref(activeProjectId, opp)}>
-                          <PenLine className="h-3.5 w-3.5 mr-1" />
-                          Studio
-                        </Link>
-                      </Button>
-                    ) : null}
-                    <Button size="sm" variant="ghost" onClick={() => handleDismiss(opp.id)}>
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <ArticleIdeasOpportunityList
+            opportunities={filtered}
+            queryMetrics={queryMetrics}
+            activeProjectId={activeProjectId}
+            onQueue={handleQueue}
+            onDismiss={handleDismiss}
+          />
         )}
       </div>
     </div>

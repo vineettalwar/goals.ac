@@ -59,7 +59,9 @@ export function SocialComposerPanel({
   const [search, setSearch] = useState("");
   const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
   const [connected, setConnected] = useState<Record<string, boolean>>({});
-  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<PlatformId>>(new Set(["linkedin", "twitter"]));
+  const [selectedPlatforms, setSelectedPlatforms] = useState<Set<PlatformId>>(
+    () => new Set(["linkedin", "twitter"]),
+  );
   const [generating, setGenerating] = useState(false);
   const [composed, setComposed] = useState<ComposedPiece[] | null>(null);
 

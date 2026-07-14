@@ -9,7 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
 import { useProjectContent } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
 
@@ -131,8 +131,10 @@ export function ContentStrategiesPanel({ embedded = false }: { embedded?: boolea
           <h2 className="font-semibold">Generate content strategy</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-1.5 sm:col-span-1">
-              <Label>Roadmap</Label>
+              <Label htmlFor="strategy-roadmap">Roadmap</Label>
               <select
+                id="strategy-roadmap"
+                aria-label="Roadmap"
                 className="w-full h-10 rounded-lg border border-input bg-card px-3 text-sm"
                 value={form.roadmapId}
                 onChange={(e) => setForm((p) => ({ ...p, roadmapId: e.target.value }))}
@@ -146,14 +148,16 @@ export function ContentStrategiesPanel({ embedded = false }: { embedded?: boolea
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Month</Label>
+              <Label htmlFor="strategy-month">Month</Label>
               <select
+                id="strategy-month"
+                aria-label="Month"
                 className="w-full h-10 rounded-lg border border-input bg-card px-3 text-sm"
                 value={form.month}
                 onChange={(e) => setForm((p) => ({ ...p, month: parseInt(e.target.value, 10) }))}
               >
                 {MONTH_NAMES.map((m, i) => (
-                  <option key={i} value={i + 1}>
+                  <option key={m} value={i + 1}>
                     {m}
                   </option>
                 ))}
@@ -224,7 +228,7 @@ export function ContentStrategiesPanel({ embedded = false }: { embedded?: boolea
                   {MONTH_NAMES[(s.month ?? 1) - 1]} {s.year}
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {s.industry} · {s.location} · {new Date(s.createdAt).toLocaleDateString()}
+                  {s.industry} · {s.location} · {new Date(s.createdAt).toLocaleDateString("en-US", { timeZone: "UTC" })}
                 </p>
               </div>
               <Link href={`/content-strategy/${s.id}`}>

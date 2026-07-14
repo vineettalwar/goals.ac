@@ -25,12 +25,14 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [conversationId, setConversationId] = useState<number | null>(null);
+  const conversationIdRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (open) setTimeout(() => textareaRef.current?.focus(), 150);
+    if (!open) return;
+    const timerId = window.setTimeout(() => textareaRef.current?.focus(), 150);
+    return () => window.clearTimeout(timerId);
   }, [open]);
 
   useEffect(() => {
@@ -49,12 +51,12 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, slug, conversationId: conversationId ?? undefined }),
+        body: JSON.stringify({ message: text, slug, conversationId: conversationIdRef.current ?? undefined }),
       });
 
       if (!res.ok) throw new Error("Chat failed");
       const data = (await res.json()) as { reply: string; conversationId: number };
-      setConversationId(data.conversationId);
+      conversationIdRef.current = data.conversationId;
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
     } catch {
       setMessages((prev) => [
@@ -99,8 +101,8 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
 
           {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+            {messages.map((msg) => (
+              <div key={`${msg.role}-${msg.content}`} className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
                     msg.role === "user" ? "bg-primary" : "bg-muted border border-border"
@@ -163,7 +165,7 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
       )}
 
       {/* FAB */}
-      <button
+      <button type="button"
         onClick={() => setOpen((v) => !v)}
         className={`fixed bottom-6 right-4 md:right-8 z-50 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-primary-foreground shadow-lg transition-all hover:scale-[1.03] active:scale-[0.97] ${
           open ? "bg-foreground" : "bg-primary"

@@ -45,9 +45,11 @@ function eachDayInMonth(month: Date): Date[] {
   return days;
 }
 
+const WEEK_DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
 function formatTime(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
 }
 
 export function SocialCalendar({
@@ -136,8 +138,7 @@ export function SocialCalendar({
 
   const days = eachDayInMonth(currentMonth);
   const firstDayOfWeek = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1).getDay();
-  const weekDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const monthLabel = currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const monthLabel = currentMonth.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" });
   const todayKey = formatYmd(new Date());
 
   if (loading) {
@@ -173,7 +174,7 @@ export function SocialCalendar({
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="grid grid-cols-7 gap-px bg-border rounded-lg overflow-hidden border">
-          {weekDays.map((d) => (
+          {WEEK_DAY_LABELS.map((d) => (
             <div key={d} className="bg-muted/50 text-center text-xs font-medium text-muted-foreground py-2">
               {d}
             </div>

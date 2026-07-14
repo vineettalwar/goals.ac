@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
 
 interface Analysis {
   competitorName: string;
@@ -81,8 +81,10 @@ export function CompetitorAnalysisPanel({ embedded = false }: { embedded?: boole
             <Input placeholder="e.g. UK" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} />
           </div>
           <div className="space-y-1.5">
-            <Label>Stage</Label>
+            <Label htmlFor="competitor-stage">Stage</Label>
             <select
+              id="competitor-stage"
+              aria-label="Stage"
               className="w-full h-10 rounded-lg border border-border bg-white px-3 text-sm"
               value={form.stage}
               onChange={(e) => setForm((p) => ({ ...p, stage: e.target.value }))}
@@ -121,7 +123,7 @@ export function CompetitorAnalysisPanel({ embedded = false }: { embedded?: boole
             </h3>
             <ul className="space-y-2">
               {analysis.quickWins.map((win, i) => (
-                <li key={i} className="flex gap-2 text-sm">
+                <li key={win} className="flex gap-2 text-sm">
                   <span className="text-primary font-bold shrink-0">{i + 1}.</span>
                   {win}
                 </li>
@@ -141,8 +143,8 @@ function Section({ title, icon, items, color }: { title: string; icon: React.Rea
         {icon} {title}
       </h3>
       <ul className="space-y-1.5">
-        {items.map((item, i) => (
-          <li key={i} className="text-sm flex gap-2">
+        {items.map((item) => (
+          <li key={item} className="text-sm flex gap-2">
             <span className="text-muted-foreground shrink-0">•</span>{item}
           </li>
         ))}

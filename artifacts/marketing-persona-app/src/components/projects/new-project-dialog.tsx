@@ -11,10 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  isQuotaExhaustedPayload,
-  QuotaUpgradePrompt,
-} from "@/components/billing/quota-upgrade-prompt";
+import { isQuotaExhaustedPayload } from "@/components/billing/quota-payload-guards";
+import { QuotaUpgradePrompt } from "@/components/billing/quota-upgrade-prompt";
 
 const schema = z.object({
   name: z.string().min(1, "Project name is required"),

@@ -7,7 +7,7 @@ import { Copy, ExternalLink, MessageSquare } from "lucide-react";
 import { FeatureStatusBadge } from "@/components/shared/feature-status-badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
 
 type Thread = {
   subreddit: string;
@@ -19,6 +19,11 @@ type Thread = {
   numComments?: number;
   source?: string;
 };
+
+function copyReplyToClipboard(text: string) {
+  navigator.clipboard.writeText(text);
+  toast.success("Reply copied to clipboard");
+}
 
 export function RedditDiscoveryPanel({ embedded = false }: { embedded?: boolean }) {
   const { activeProjectId } = useActiveProject();
@@ -44,11 +49,6 @@ export function RedditDiscoveryPanel({ embedded = false }: { embedded?: boolean 
       return;
     }
     setThreads(data.threads ?? []);
-  }
-
-  function copyReply(text: string) {
-    navigator.clipboard.writeText(text);
-    toast.success("Reply copied to clipboard");
   }
 
   if (!activeProjectId) {
@@ -93,8 +93,8 @@ export function RedditDiscoveryPanel({ embedded = false }: { embedded?: boolean 
       )}
 
       <ul className="space-y-4">
-        {threads.map((t, i) => (
-          <li key={i} className="paper-card p-5">
+        {threads.map((t) => (
+          <li key={t.url} className="paper-card p-5">
             <div className="flex items-start justify-between gap-2 mb-2">
               <div>
                 <p className="text-xs text-primary font-medium">{t.subreddit}</p>
@@ -115,7 +115,7 @@ export function RedditDiscoveryPanel({ embedded = false }: { embedded?: boolean 
               </p>
             )}
             <p className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-3">{t.suggestedReply}</p>
-            <Button variant="outline" size="sm" className="mt-3" onClick={() => copyReply(t.suggestedReply)}>
+            <Button variant="outline" size="sm" className="mt-3" onClick={() => copyReplyToClipboard(t.suggestedReply)}>
               <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy reply
             </Button>
           </li>

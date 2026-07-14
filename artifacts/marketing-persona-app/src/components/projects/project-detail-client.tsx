@@ -5,6 +5,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   ExternalLink,
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useProjectContent } from "@/lib/queries";
+import { queryKeys } from "@/lib/queries/keys";
 import {
   isProjectTab,
   type ProjectContent,
@@ -68,10 +70,37 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
   const activeTab: ProjectTab = isProjectTab(tabParam) ? tabParam : "brand";
 
   const [project, setProject] = useState<WebsiteProject>(initialProject);
-  const [rescraping, setRescraping] = useState(false);
-  const scrapePollerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevScrapeStatusRef = useRef(project.scrapeStatus);
 
   const { data: projectContent } = useProjectContent(projectId);
+  const scrapePending = project.scrapeStatus === "pending";
+
+  const { data: polledProject } = useQuery({
+    queryKey: [...queryKeys.websiteProject(projectId), "scrape-poll"],
+    queryFn: () => fetchProject(projectId),
+    enabled: scrapePending,
+    refetchInterval: scrapePending ? 3000 : false,
+  });
+
+  useEffect(() => {
+    if (!polledProject) return;
+
+    const prev = prevScrapeStatusRef.current;
+    const next = polledProject.scrapeStatus;
+    const finishedPending = prev === "pending" && next !== "pending";
+    prevScrapeStatusRef.current = next;
+
+    if (finishedPending) {
+      if (next === "done") {
+        toast.success("Brand profile extracted from your website");
+      } else if (next === "failed") {
+        toast.error("Website scan failed — fill in fields manually");
+      }
+    }
+
+    setProject(polledProject);
+  }, [polledProject]);
+
   const contentCount =
     (projectContent?.seoArticles?.length ?? 0) +
     (projectContent?.contentStrategies?.length ?? 0) +
@@ -84,44 +113,6 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
     return data;
   }, [projectId]);
 
-  useEffect(() => {
-    if (!project) return;
-
-    const isPending = project.scrapeStatus === "pending";
-
-    if (isPending && !scrapePollerRef.current) {
-      scrapePollerRef.current = setInterval(async () => {
-        const updated = await fetchProject(projectId);
-        if (!updated) return;
-        setProject(updated);
-        if (updated.scrapeStatus !== "pending") {
-          if (scrapePollerRef.current) {
-            clearInterval(scrapePollerRef.current);
-            scrapePollerRef.current = null;
-          }
-          setRescraping(false);
-          if (updated.scrapeStatus === "done") {
-            toast.success("Brand profile extracted from your website");
-          } else if (updated.scrapeStatus === "failed") {
-            toast.error("Website scan failed — fill in fields manually");
-          }
-        }
-      }, 3000);
-    }
-
-    if (!isPending && scrapePollerRef.current) {
-      clearInterval(scrapePollerRef.current);
-      scrapePollerRef.current = null;
-    }
-
-    return () => {
-      if (scrapePollerRef.current) {
-        clearInterval(scrapePollerRef.current);
-        scrapePollerRef.current = null;
-      }
-    };
-  }, [project?.scrapeStatus, projectId, project]);
-
   function setTab(tab: ProjectTab) {
     const next = new URLSearchParams(searchParams.toString());
     next.set("tab", tab);
@@ -129,25 +120,22 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
   }
 
   async function handleRescrape() {
-    setRescraping(true);
     setProject((prev) => ({ ...prev, scrapeStatus: "pending" }));
     try {
       const res = await fetch(`/api/website-projects/${projectId}/scrape`, { method: "POST" });
       if (!res.ok) {
         toast.error("Failed to start re-scrape");
-        setRescraping(false);
         await loadProject();
       }
     } catch {
       toast.error("Failed to start re-scrape");
-      setRescraping(false);
       await loadProject();
     }
   }
 
-  const isScraping = project.scrapeStatus === "pending" || rescraping;
+  const isScraping = project.scrapeStatus === "pending";
   const wasAutoFilled = project.scrapeStatus === "done";
-  const scrapeFailed = project.scrapeStatus === "failed" && !rescraping;
+  const scrapeFailed = project.scrapeStatus === "failed";
 
   return (
     <div className="px-8 py-8 max-w-5xl space-y-6">
@@ -230,7 +218,6 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
           wasAutoFilled={wasAutoFilled}
           scrapeFailed={scrapeFailed}
           onRescan={handleRescrape}
-          rescraping={rescraping}
           onProjectUpdate={setProject}
         />
       )}
@@ -242,7 +229,6 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
           wasAutoFilled={wasAutoFilled}
           scrapeFailed={scrapeFailed}
           onRescan={handleRescrape}
-          rescraping={rescraping}
         />
       )}
 

@@ -7,7 +7,7 @@ import { Map, TrendingUp, Zap, CircleCheck, CircleDashed, ChevronDown, ChevronRi
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
 
 interface SupportingTopic {
   title: string;
@@ -176,8 +176,8 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
                 <p className="font-semibold text-sm">Quick wins</p>
               </div>
               <ul className="space-y-1">
-                {map.quickWinKeywords.slice(0, 4).map((kw, i) => (
-                  <li key={i} className="text-xs flex gap-1.5">
+                {map.quickWinKeywords.slice(0, 4).map((kw) => (
+                  <li key={kw} className="text-xs flex gap-1.5">
                     <span className="text-green-600">↗</span>{kw}
                   </li>
                 ))}
@@ -197,8 +197,8 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
             <div className="paper-card rounded-xl p-5">
               <h2 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Top content gaps</h2>
               <div className="flex flex-wrap gap-2">
-                {map.contentGaps.map((gap, i) => (
-                  <div key={i} className="flex items-center gap-1.5 bg-muted rounded-lg px-3 py-1.5 text-sm">
+                {map.contentGaps.map((gap) => (
+                  <div key={gap} className="flex items-center gap-1.5 bg-muted rounded-lg px-3 py-1.5 text-sm">
                     <CircleDashed className="h-3.5 w-3.5 text-muted-foreground" /> {gap}
                   </div>
                 ))}
@@ -209,7 +209,7 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
           <div className="space-y-3">
             {map.clusters.map((cluster, ci) => (
               <div key={ci} className="paper-card rounded-xl overflow-hidden">
-                <button
+                <button type="button"
                   className="w-full p-5 flex items-center gap-4 text-left hover:bg-muted/30 transition-colors"
                   onClick={() => setExpandedCluster(expandedCluster === ci ? null : ci)}
                 >

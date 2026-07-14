@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Copy, KeyRound, Loader2, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,6 +46,7 @@ export function PublicApiKeysPanel({ canManage }: Props) {
   const [creating, setCreating] = useState(false);
   const [rawKey, setRawKey] = useState<string | null>(null);
   const [revokingId, setRevokingId] = useState<number | null>(null);
+  const scopeSet = useMemo(() => new Set(scopes), [scopes]);
 
   const loadKeys = useCallback(async () => {
     setLoading(true);
@@ -161,7 +162,7 @@ export function PublicApiKeysPanel({ canManage }: Props) {
                 </p>
                 {key.lastUsedAt && (
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Last used {new Date(key.lastUsedAt).toLocaleDateString()}
+                    Last used {new Date(key.lastUsedAt).toLocaleDateString("en-US", { timeZone: "UTC" })}
                   </p>
                 )}
               </div>
@@ -222,7 +223,7 @@ export function PublicApiKeysPanel({ canManage }: Props) {
                     <input
                       type="checkbox"
                       className="rounded border-border"
-                      checked={scopes.includes(scope)}
+                      checked={scopeSet.has(scope)}
                       onChange={() => toggleScope(scope)}
                     />
                     {SCOPE_LABELS[scope]}

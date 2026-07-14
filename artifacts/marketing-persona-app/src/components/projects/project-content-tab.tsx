@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BarChart3, FileText, Map, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useProjectContent } from "@/lib/queries";
 import type { ProjectContent } from "@/lib/projects/project-detail-types";
 
 interface Props {
@@ -13,17 +13,9 @@ interface Props {
 }
 
 export function ProjectContentTab({ projectId, initialContent }: Props) {
-  const [content, setContent] = useState<ProjectContent | null>(initialContent ?? null);
-  const [loading, setLoading] = useState(!initialContent);
-
-  useEffect(() => {
-    if (initialContent) return;
-    fetch(`/api/website-projects/${projectId}/content`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setContent(data))
-      .catch(() => setContent(null))
-      .finally(() => setLoading(false));
-  }, [projectId, initialContent]);
+  const { data, isLoading } = useProjectContent(initialContent ? null : projectId);
+  const content = initialContent ?? (data as ProjectContent | undefined) ?? null;
+  const loading = !initialContent && isLoading;
 
   if (loading) {
     return (

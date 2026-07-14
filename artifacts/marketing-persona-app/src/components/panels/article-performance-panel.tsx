@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { contentPiecePath } from "@/lib/projects/content-piece-path";
-import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   ArrowUpDown,
@@ -22,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
 import type { ArticlePerformanceResponse } from "@/lib/integrations/analytics/analytics-property-types";
 
 type SortKey = "sessions" | "clicks";
@@ -61,7 +60,6 @@ function isPublished(article: ArticlePerformanceResponse["articles"][number]): b
 }
 
 export function ArticlePerformancePanel({ embedded = false }: { embedded?: boolean }) {
-  const router = useRouter();
   const { activeProjectId, activeProject, isLoading: projectLoading } = useActiveProject();
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
 
@@ -93,12 +91,6 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
       setLoading(false);
     }
   }, [projectId, startDate, endDate]);
-
-  useEffect(() => {
-    if (!projectLoading && !projectId) {
-      router.replace("/projects");
-    }
-  }, [projectLoading, projectId, router]);
 
   useEffect(() => {
     if (projectId) void load();

@@ -10,7 +10,7 @@ export function StepIndicator({ steps, current }: StepIndicatorProps) {
   return (
     <div className="flex items-center gap-0">
       {steps.map((label, i) => (
-        <div key={i} className="flex items-center">
+        <div key={label} className="flex items-center">
           <div className="flex flex-col items-center gap-1.5">
             <div
               className={cn("step-dot", {

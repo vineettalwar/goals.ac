@@ -18,8 +18,10 @@ import {
   type IntegrationCategoryFilter,
   type IntegrationLayout,
 } from "@/components/projects/publishing-settings-panel";
+import type { PublishingPendingAction } from "@/components/projects/publishing-settings-pending";
 import { ProjectAutomationPanel } from "@/components/projects/project-automation-panel";
 import { ProjectPrimaryDestinationPanel } from "@/components/projects/project-primary-destination-panel";
+import { useCmsIntegrations, useMetaPages } from "@/lib/queries";
 
 interface Props {
   projectId: string;
@@ -43,34 +45,43 @@ export function ProjectPublishingTab({
   categoryFilter = "all",
 }: Props) {
   const searchParams = useSearchParams();
+  const meta = searchParams.get("meta");
+  const metaTokenParam = searchParams.get("token");
+  const metaPageToken = meta === "select_page" ? metaTokenParam : null;
+
+  const {
+    data: cmsIntegrationsQuery = {},
+    isLoading: loading,
+    refetch: refetchIntegrations,
+  } = useCmsIntegrations(projectId);
   const [cmsIntegrations, setCmsIntegrations] = useState<CmsIntegrationStatus>({});
   const [healthStatus, setHealthStatus] = useState<Record<string, { ok: boolean; error?: string }> | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isTestingHealth, setIsTestingHealth] = useState(false);
+  const [pendingAction, setPendingAction] = useState<PublishingPendingAction>(null);
   const [cmsError, setCmsError] = useState<string | null>(null);
   const [cmsSaveSuccess, setCmsSaveSuccess] = useState<string | null>(null);
-  const [metaPageToken, setMetaPageToken] = useState<string | null>(null);
-  const [metaPages, setMetaPages] = useState<MetaPage[]>([]);
-  const [isSelectingMetaPage, setIsSelectingMetaPage] = useState(false);
-  const [isDisconnectingLinkedin, setIsDisconnectingLinkedin] = useState(false);
-  const [isDisconnectingTwitter, setIsDisconnectingTwitter] = useState(false);
-  const [isDisconnectingMeta, setIsDisconnectingMeta] = useState(false);
+  const [metaSelectionCleared, setMetaSelectionCleared] = useState(false);
+
+  useEffect(() => {
+    if (!loading) {
+      setCmsIntegrations(cmsIntegrationsQuery as CmsIntegrationStatus);
+    }
+  }, [cmsIntegrationsQuery, loading]);
+
+  const effectiveMetaPageToken = metaSelectionCleared ? null : metaPageToken;
+  const { data: metaPagesData, isError: metaPagesError } = useMetaPages(effectiveMetaPageToken);
+  const metaPages = (metaPagesData?.pages ?? []) as MetaPage[];
 
   const loadIntegrations = useCallback(async () => {
-    const res = await fetch(`/api/website-projects/${projectId}/cms-integrations`);
-    if (res.ok) setCmsIntegrations(await res.json());
-  }, [projectId]);
+    await refetchIntegrations();
+  }, [refetchIntegrations]);
 
   useEffect(() => {
-    loadIntegrations().finally(() => setLoading(false));
-  }, [loadIntegrations]);
+    if (metaPagesError) toast.error("Failed to load Meta pages");
+  }, [metaPagesError]);
 
   useEffect(() => {
-    const meta = searchParams.get("meta");
-    const token = searchParams.get("token");
     const linkedin = searchParams.get("linkedin");
     const twitter = searchParams.get("twitter");
-
     const bluesky = searchParams.get("bluesky");
     const mastodon = searchParams.get("mastodon");
 
@@ -84,20 +95,10 @@ export function ProjectPublishingTab({
     if (mastodon === "error") toast.error("Mastodon connection failed");
     if (meta === "error") toast.error("Meta connection failed");
     if (meta === "no_pages") toast.error("No Facebook pages found on this account");
-
-    if (meta === "select_page" && token) {
-      setMetaPageToken(token);
-      fetch(`/api/auth/meta/pages?token=${encodeURIComponent(token)}`)
-        .then((r) => (r.ok ? r.json() : null))
-        .then((data) => {
-          if (data?.pages) setMetaPages(data.pages);
-        })
-        .catch(() => toast.error("Failed to load Meta pages"));
-    }
-  }, [searchParams]);
+  }, [searchParams, meta]);
 
   async function onTestHealth() {
-    setIsTestingHealth(true);
+    setPendingAction("testing_health");
     setCmsError(null);
     try {
       const res = await fetch(`/api/website-projects/${projectId}/cms-integrations/test`, { method: "POST" });
@@ -106,7 +107,7 @@ export function ProjectPublishingTab({
     } catch {
       setCmsError("Failed to test connections");
     } finally {
-      setIsTestingHealth(false);
+      setPendingAction(null);
     }
   }
 
@@ -128,16 +129,15 @@ export function ProjectPublishingTab({
 
   async function onSelectMetaPage(pageId: string) {
     if (!metaPageToken) return;
-    setIsSelectingMetaPage(true);
+    setPendingAction("selecting_meta_page");
     const res = await fetch("/api/auth/meta/select-page", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token: metaPageToken, pageId }),
     });
-    setIsSelectingMetaPage(false);
+    setPendingAction(null);
     if (!res.ok) { toast.error("Failed to connect Meta page"); return; }
-    setMetaPageToken(null);
-    setMetaPages([]);
+    setMetaSelectionCleared(true);
     await loadIntegrations();
     toast.success("Meta page connected");
   }
@@ -147,20 +147,20 @@ export function ProjectPublishingTab({
       const sections =
         categoryFilter === "all"
           ? [
-              { count: getCmsDestinations().length },
-              { count: SOCIAL_SETTINGS_COUNT },
-              { count: getEspDestinations().length },
+              { id: "cms", count: getCmsDestinations().length },
+              { id: "social", count: SOCIAL_SETTINGS_COUNT },
+              { id: "esp", count: getEspDestinations().length },
             ]
           : categoryFilter === "cms"
-            ? [{ count: getCmsDestinations().length }]
+            ? [{ id: "cms", count: getCmsDestinations().length }]
             : categoryFilter === "social"
-              ? [{ count: SOCIAL_SETTINGS_COUNT }]
-              : [{ count: getEspDestinations().length }];
+              ? [{ id: "social", count: SOCIAL_SETTINGS_COUNT }]
+              : [{ id: "esp", count: getEspDestinations().length }];
 
       return (
         <div className="space-y-8">
-          {sections.map((section, index) => (
-            <IntegrationCategorySkeleton key={index} tileCount={section.count} compact />
+          {sections.map((section) => (
+            <IntegrationCategorySkeleton key={section.id} tileCount={section.count} compact />
           ))}
         </div>
       );
@@ -195,8 +195,8 @@ export function ProjectPublishingTab({
                 Connect CMS platforms and social accounts to publish Content Studio pieces.
               </p>
             </div>
-            <Button variant="outline" size="sm" onClick={onTestHealth} disabled={isTestingHealth}>
-              {isTestingHealth ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
+            <Button variant="outline" size="sm" onClick={onTestHealth} disabled={pendingAction === "testing_health"}>
+              {pendingAction === "testing_health" ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
               Test connections
             </Button>
           </div>
@@ -217,13 +217,9 @@ export function ProjectPublishingTab({
         healthStatus={healthStatus}
         cmsError={cmsError}
         cmsSaveSuccess={cmsSaveSuccess}
-        isTestingHealth={isTestingHealth}
-        metaPageToken={metaPageToken}
+        pendingAction={pendingAction}
+        metaPageToken={effectiveMetaPageToken}
         metaPages={metaPages}
-        isSelectingMetaPage={isSelectingMetaPage}
-        isDisconnectingLinkedin={isDisconnectingLinkedin}
-        isDisconnectingTwitter={isDisconnectingTwitter}
-        isDisconnectingMeta={isDisconnectingMeta}
         layout={layout}
         categoryFilter={categoryFilter}
         onIntegrationsChange={setCmsIntegrations}
@@ -244,15 +240,16 @@ export function ProjectPublishingTab({
         onTestHealth={onTestHealth}
         onConnectOAuth={onConnectOAuth}
         onDisconnectSocial={async (platform) => {
-          const setDisconnecting =
+          const action: PublishingPendingAction =
             platform === "linkedin"
-              ? setIsDisconnectingLinkedin
+              ? "disconnecting_linkedin"
               : platform === "twitter"
-                ? setIsDisconnectingTwitter
+                ? "disconnecting_twitter"
                 : platform === "meta"
-                  ? setIsDisconnectingMeta
+                  ? "disconnecting_meta"
                   : null;
-          setDisconnecting?.(true);
+          if (!action) return;
+          setPendingAction(action);
           setCmsError(null);
           try {
             const res = await fetch(
@@ -276,7 +273,7 @@ export function ProjectPublishingTab({
             setCmsError(`Failed to disconnect ${platform}`);
             toast.error(`Failed to disconnect ${platform}`);
           } finally {
-            setDisconnecting?.(false);
+            setPendingAction(null);
           }
         }}
         onSelectMetaPage={onSelectMetaPage}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { CheckCircle2, Loader2, ShieldCheck } from "lucide-react";
@@ -121,12 +122,12 @@ export function MfaSettingsPanel() {
             Scan the QR code with your authenticator app, then enter the 6-digit code to confirm.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 items-start">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
+            <Image
               src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(setup.authUri)}`}
               alt="Authenticator QR code"
               width={180}
               height={180}
+              unoptimized
               className="rounded-md border bg-white"
             />
             <div className="space-y-2 text-sm">

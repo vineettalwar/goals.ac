@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
 import { useProjectContent } from "@/lib/queries";
 import { normalizeHttpUrl } from "@/lib/utils/normalize-url";
 
@@ -22,13 +22,13 @@ export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
   const { data: projectContent, isLoading, refetch } = useProjectContent(projectId);
   const [url, setUrl] = useState("");
+  const [urlProjectId, setUrlProjectId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (activeProject?.url && !url) {
-      setUrl(normalizeHttpUrl(activeProject.url));
-    }
-  }, [activeProject?.url, url]);
+  if (activeProject?.url && activeProjectId !== urlProjectId) {
+    setUrlProjectId(activeProjectId);
+    setUrl(normalizeHttpUrl(activeProject.url));
+  }
 
   async function handleAudit(e: React.FormEvent) {
     e.preventDefault();
@@ -140,7 +140,7 @@ export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
                     {audit.url.replace(/^https?:\/\//, "")}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {new Date(audit.createdAt).toLocaleDateString()} · Score{" "}
+                    {new Date(audit.createdAt).toLocaleDateString("en-US", { timeZone: "UTC" })} · Score{" "}
                     <span className="font-semibold text-foreground">{audit.geoScore}/100</span>
                   </p>
                 </div>

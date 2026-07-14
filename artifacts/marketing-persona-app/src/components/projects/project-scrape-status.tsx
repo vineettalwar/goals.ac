@@ -22,7 +22,6 @@ interface ScrapeStatusHeaderProps {
   wasAutoFilled: boolean;
   scrapeFailed: boolean;
   onRescan?: () => void;
-  rescraping?: boolean;
   lastUpdated?: string | null;
   discoverySummary?: string | null;
   title: string;
@@ -34,7 +33,6 @@ export function ScrapeStatusHeader({
   wasAutoFilled,
   scrapeFailed,
   onRescan,
-  rescraping,
   lastUpdated,
   discoverySummary,
   title,
@@ -58,7 +56,6 @@ export function ScrapeStatusHeader({
             variant="outline"
             size="sm"
             onClick={onRescan}
-            disabled={rescraping}
             className="shrink-0 gap-1.5 text-xs"
           >
             <RefreshCw className="w-3.5 h-3.5" />

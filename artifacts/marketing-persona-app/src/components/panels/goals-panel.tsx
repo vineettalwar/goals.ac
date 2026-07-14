@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Plus, Target, Layers, Map, TrendingUp } from "lucide-react";
@@ -10,10 +10,12 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
-import { useActiveProject } from "@/context/active-project";
-import { useBriefs, useGoals } from "@/lib/queries";
+import { useActiveProject } from "@/context/use-active-project";
+import { useBriefs, useGoals, useGscSyncStatus } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
 import type { Brief, Goal } from "@/lib/queries/types";
+import { GoalsPanelBriefsSection } from "./goals-panel-briefs";
+import { formatDisplayDateTime } from "@/lib/format/date";
 
 export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
@@ -25,23 +27,7 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
   const [goalForm, setGoalForm] = useState({ objective: "traffic", targetMetric: "" });
   const [briefForm, setBriefForm] = useState({ workingTitle: "", targetKeywordCluster: "", outline: "" });
   const [compilingGoalId, setCompilingGoalId] = useState<number | null>(null);
-  const [gscStatus, setGscStatus] = useState<{
-    connected: boolean;
-    propertyVerified: boolean;
-    lastSyncedAt: string | null;
-    queryCount: number;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!projectId) {
-      setGscStatus(null);
-      return;
-    }
-    void fetch(`/api/website-projects/${projectId}/search-properties/gsc/sync`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setGscStatus(data))
-      .catch(() => setGscStatus(null));
-  }, [projectId]);
+  const { data: gscStatus = null } = useGscSyncStatus(projectId);
 
   const clusterMap = briefs.reduce<Record<string, Brief[]>>((acc, brief) => {
     const cluster = brief.targetKeywordCluster?.trim() || "Unclustered";
@@ -217,7 +203,7 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
                     <dt className="text-muted-foreground">Last sync</dt>
                     <dd>
                       {gscStatus.lastSyncedAt
-                        ? new Date(gscStatus.lastSyncedAt).toLocaleString()
+                        ? formatDisplayDateTime(gscStatus.lastSyncedAt)
                         : "Not synced yet"}
                     </dd>
                   </div>
@@ -231,105 +217,20 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
             </div>
           </div>
 
-          <div className="paper-card p-6 rounded-xl space-y-4">
-            <h2 className="font-semibold flex items-center gap-2">
-              <Target className="h-4 w-4" /> Goals
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <select
-                className="h-10 rounded-lg border border-input bg-card px-3 text-sm"
-                value={goalForm.objective}
-                onChange={(e) => setGoalForm((p) => ({ ...p, objective: e.target.value }))}
-              >
-                {["traffic", "leads", "sales", "authority"].map((o) => (
-                  <option key={o} value={o}>
-                    {o}
-                  </option>
-                ))}
-              </select>
-              <Input
-                placeholder="Target metric (e.g. 10k monthly visits)"
-                value={goalForm.targetMetric}
-                onChange={(e) => setGoalForm((p) => ({ ...p, targetMetric: e.target.value }))}
-              />
-            </div>
-            <Button size="sm" onClick={createGoal} disabled={!projectId}>
-              <Plus className="h-4 w-4" /> Add goal
-            </Button>
-            <ul className="space-y-2 mt-4">
-              {goals.map((g) => (
-                <li
-                  key={g.id}
-                  className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border text-sm"
-                >
-                  <span className="font-medium capitalize">
-                    {g.objective}: {g.targetMetric}
-                  </span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant="muted">{g.status}</Badge>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={compilingGoalId === g.id}
-                      onClick={() => void compileBriefsForGoal(g.id)}
-                    >
-                      {compilingGoalId === g.id ? "Compiling…" : "Compile briefs"}
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div className="paper-card p-6 rounded-xl space-y-4">
-            <h2 className="font-semibold">Content briefs</h2>
-            <Input
-              placeholder="Working title"
-              value={briefForm.workingTitle}
-              onChange={(e) => setBriefForm((p) => ({ ...p, workingTitle: e.target.value }))}
-            />
-            <Input
-              placeholder="Target keyword cluster"
-              value={briefForm.targetKeywordCluster}
-              onChange={(e) => setBriefForm((p) => ({ ...p, targetKeywordCluster: e.target.value }))}
-            />
-            <Textarea
-              placeholder="Outline (optional)"
-              rows={3}
-              value={briefForm.outline}
-              onChange={(e) => setBriefForm((p) => ({ ...p, outline: e.target.value }))}
-            />
-            <Button size="sm" onClick={createBrief} disabled={!projectId}>
-              <Plus className="h-4 w-4" /> Add brief
-            </Button>
-            <ul className="space-y-2 mt-4">
-              {briefs.map((b) => (
-                <li
-                  key={b.id}
-                  className="flex items-center justify-between gap-3 p-3 rounded-lg border border-border text-sm"
-                >
-                  <div className="min-w-0">
-                    <p className="font-medium">{b.workingTitle}</p>
-                    <p className="text-xs text-muted-foreground">{b.targetKeywordCluster}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant="muted">{b.status}</Badge>
-                    {b.status === "draft" && (
-                      <Button variant="secondary" size="sm" onClick={() => void approveBrief(b.id)}>
-                        Approve
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" asChild disabled={b.status === "draft"}>
-                      <Link href={`/projects/${projectId}/content-studio?briefId=${b.id}`}>
-                        <Layers className="h-3.5 w-3.5" />
-                        Create in Studio
-                      </Link>
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <GoalsPanelBriefsSection
+            projectId={projectId}
+            goals={goals}
+            briefs={briefs}
+            goalForm={goalForm}
+            setGoalForm={setGoalForm}
+            briefForm={briefForm}
+            setBriefForm={setBriefForm}
+            compilingGoalId={compilingGoalId}
+            onCreateGoal={createGoal}
+            onCreateBrief={createBrief}
+            onCompileBriefs={(goalId) => void compileBriefsForGoal(goalId)}
+            onApproveBrief={(briefId) => void approveBrief(briefId)}
+          />
         </>
       )}
     </div>

@@ -21,10 +21,12 @@ function EditableText({
   value,
   onSave,
   className,
+  inputLabel,
 }: {
   value: string;
   onSave: (v: string) => Promise<void>;
   className?: string;
+  inputLabel: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -39,6 +41,7 @@ function EditableText({
       <div className="flex items-center gap-1.5">
         <input
           autoFocus
+          aria-label={inputLabel}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false); }}
@@ -51,7 +54,7 @@ function EditableText({
   }
 
   return (
-    <button
+    <button type="button"
       onClick={() => { setDraft(value); setEditing(true); }}
       className={cn("group flex items-center gap-1.5 text-left hover:text-primary transition-colors", className)}
     >
@@ -90,12 +93,13 @@ function EditableList({
   return (
     <ul className="space-y-1">
       {items.map((item, i) => (
-        <li key={i} className="group flex items-start gap-1.5 text-sm">
+        <li key={item} className="group flex items-start gap-1.5 text-sm">
           <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-muted-foreground" />
           {editingIdx === i ? (
             <div className="flex flex-1 items-center gap-1.5">
               <input
                 autoFocus
+                aria-label={`Edit list item ${i + 1}`}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => { if (e.key === "Enter") saveItem(i); if (e.key === "Escape") setEditingIdx(null); }}
@@ -124,7 +128,7 @@ function EditableList({
         </li>
       ))}
       <li>
-        <button
+        <button type="button"
           onClick={addItem}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
         >
@@ -142,17 +146,20 @@ export function PersonaCard({ persona, onUpdate }: PersonaCardProps) {
         <EditableText
           value={persona.name}
           onSave={(v) => onUpdate(persona.id, "name", v)}
+          inputLabel="Persona name"
           className="text-base font-semibold"
         />
         <div className="flex items-center gap-3 text-sm text-muted-foreground">
           <EditableText
             value={persona.jobTitle}
             onSave={(v) => onUpdate(persona.id, "jobTitle", v)}
+            inputLabel="Job title"
           />
           <span>·</span>
           <EditableText
             value={persona.ageRange}
             onSave={(v) => onUpdate(persona.id, "ageRange", v)}
+            inputLabel="Age range"
           />
         </div>
       </div>
@@ -177,8 +184,8 @@ export function PersonaCard({ persona, onUpdate }: PersonaCardProps) {
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Preferred content</p>
         <div className="flex flex-wrap gap-1.5">
-          {persona.preferredContent.map((c, i) => (
-            <span key={i} className="rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs">
+          {persona.preferredContent.map((c) => (
+            <span key={c} className="rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs">
               {c}
             </span>
           ))}

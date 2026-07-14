@@ -1,40 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
-import { Link2, ExternalLink, Network } from "lucide-react";
+import { Link2, Network } from "lucide-react";
 import { FeatureStatusBadge } from "@/components/shared/feature-status-badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
+import { useInternalLinks } from "@/lib/queries";
 
 type LinkData = {
   coverageScore: number;
   pageCount: number;
   orphanCount: number;
   orphans: { title: string; slug: string }[];
-  suggestions: { fromTitle: string | null; anchorText: string; suggestedSlug: string; rationale: string }[];
+  suggestions: {
+    fromTitle: string | null;
+    anchorText: string;
+    suggestedSlug: string;
+    rationale: string;
+  }[];
 };
 
 export function InternalLinksPanel({ embedded = false }: { embedded?: boolean }) {
   const { activeProjectId, isLoading: projectLoading } = useActiveProject();
-  const [data, setData] = useState<LinkData | null>(null);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!activeProjectId) return;
-    setLoading(true);
-    fetch(`/api/internal-links?projectId=${activeProjectId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.error) toast.error(d.error);
-        else setData(d);
-      })
-      .catch(() => toast.error("Failed to load link graph"))
-      .finally(() => setLoading(false));
-  }, [activeProjectId]);
+  const { data, isLoading } = useInternalLinks(activeProjectId);
+  const linkData = (data as LinkData | undefined) ?? null;
 
   if (!activeProjectId) {
     if (projectLoading) {
@@ -65,42 +56,45 @@ export function InternalLinksPanel({ embedded = false }: { embedded?: boolean })
         </div>
       ) : null}
 
-      {loading ? (
+      {isLoading ? (
         <div className="flex justify-center py-16"><Spinner /></div>
-      ) : data ? (
+      ) : linkData ? (
         <>
           <div className="grid sm:grid-cols-3 gap-4">
             <div className="paper-card p-5">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Coverage</p>
-              <p className="text-3xl font-bold mt-1">{data.coverageScore}%</p>
+              <p className="text-3xl font-bold mt-1">{linkData.coverageScore}%</p>
             </div>
             <div className="paper-card p-5">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Pages tracked</p>
-              <p className="text-3xl font-bold mt-1">{data.pageCount}</p>
+              <p className="text-3xl font-bold mt-1">{linkData.pageCount}</p>
             </div>
             <div className="paper-card p-5">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Orphan pages</p>
-              <p className="text-3xl font-bold mt-1">{data.orphanCount}</p>
+              <p className="text-3xl font-bold mt-1">{linkData.orphanCount}</p>
             </div>
           </div>
 
-          {data.orphans.length > 0 && (
+          {linkData.orphans.length > 0 && (
             <div className="paper-card p-5">
               <h2 className="font-semibold mb-3 flex items-center gap-2"><Link2 className="h-4 w-4" /> Pages without inbound links</h2>
               <ul className="text-sm space-y-2">
-                {data.orphans.slice(0, 10).map((p) => (
+                {linkData.orphans.slice(0, 10).map((p) => (
                   <li key={p.slug} className="text-muted-foreground">{p.title}</li>
                 ))}
               </ul>
             </div>
           )}
 
-          {data.suggestions.length > 0 && (
+          {linkData.suggestions.length > 0 && (
             <div className="paper-card p-5">
               <h2 className="font-semibold mb-3">Suggested internal links</h2>
               <ul className="space-y-3">
-                {data.suggestions.map((s, i) => (
-                  <li key={i} className="text-sm border-b border-border pb-3 last:border-0">
+                {linkData.suggestions.map((s) => (
+                  <li
+                    key={`${s.suggestedSlug}-${s.anchorText}-${s.fromTitle ?? "none"}`}
+                    className="text-sm border-b border-border pb-3 last:border-0"
+                  >
                     <p className="font-medium">{s.anchorText} → {s.suggestedSlug}</p>
                     <p className="text-xs text-muted-foreground mt-1">{s.rationale}</p>
                     {s.fromTitle && <p className="text-xs text-muted-foreground">From: {s.fromTitle}</p>}
