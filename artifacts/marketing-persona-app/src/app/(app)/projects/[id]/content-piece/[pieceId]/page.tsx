@@ -5,7 +5,7 @@ import {
   loadCmsConnectionsForProject,
   loadContentPieceForUser,
 } from "@/lib/server/loaders";
-import { loadStockCredentialContextForProject } from "@workspace/content-engine/support/stock-credentials";
+import { loadStockCredentialContextForProject } from "@workspace/content-engine/support/integrations/stock-credentials";
 import { isStockSearchAvailable } from "@workspace/stock-images";
 
 export default async function ProjectContentPiecePage({
@@ -25,8 +25,10 @@ export default async function ProjectContentPiecePage({
   const piece = await loadContentPieceForUser(pieceId, userId);
   if (!piece || piece.websiteProjectId !== projectId) notFound();
 
-  const cmsConnections = await loadCmsConnectionsForProject(projectId, userId);
-  const stockCredentials = await loadStockCredentialContextForProject(projectId);
+  const [cmsConnections, stockCredentials] = await Promise.all([
+    loadCmsConnectionsForProject(projectId, userId),
+    loadStockCredentialContextForProject(projectId),
+  ]);
 
   return (
     <ContentPieceClient

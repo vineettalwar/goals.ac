@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
-import { ContentStrategyClient } from "@/components/marketing/pages/content-strategy-client";
+import { notFound } from "next/navigation";
+import { db } from "@workspace/db";
+import { contentItemsTable, contentStrategiesTable } from "@workspace/db/schema";
+import { eq } from "drizzle-orm";
+import { ContentStrategyClient } from "@/components/marketing/pages/content/content-strategy-client";
 
 export async function generateMetadata({
   params,
@@ -14,11 +18,39 @@ export async function generateMetadata({
   };
 }
 
+async function loadContentStrategy(id: number) {
+  const [strategy] = await db
+    .select()
+    .from(contentStrategiesTable)
+    .where(eq(contentStrategiesTable.id, id))
+    .limit(1);
+
+  if (!strategy) return null;
+
+  const items = await db
+    .select()
+    .from(contentItemsTable)
+    .where(eq(contentItemsTable.strategyId, id))
+    .orderBy(contentItemsTable.day);
+
+  return {
+    ...strategy,
+    items,
+    createdAt: strategy.createdAt.toISOString(),
+  };
+}
+
 export default async function ContentStrategyPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <ContentStrategyClient id={id} />;
+  const strategyId = Number(id);
+  if (Number.isNaN(strategyId)) notFound();
+
+  const strategy = await loadContentStrategy(strategyId);
+  if (!strategy) notFound();
+
+  return <ContentStrategyClient strategy={strategy} />;
 }

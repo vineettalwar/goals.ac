@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@workspace/db";
 import { geoAuditsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { GeoAuditResultClient } from "@/components/marketing/pages/geo-audit-result-client";
+import { GeoAuditResultClient } from "@/components/marketing/pages/tools/geo-audit-result-client";
 import type { GeoIssue } from "@/components/geo-audit/geo-audit-result-view";
 
 export async function generateMetadata({

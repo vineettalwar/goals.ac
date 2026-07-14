@@ -6,12 +6,11 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { CheckCircle2, ExternalLink, Leaf, XCircle } from "lucide-react";
+import { Leaf } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { StepIndicator } from "@/components/onboarding/step-indicator";
+import { ConnectWordPressForms } from "@/components/onboarding/connect-wordpress-forms";
 import {
   clearAutopilotIntent,
   postAutopilotCompleteRedirect,
@@ -33,6 +32,19 @@ const pluginSchema = z.object({
 
 type ApiFormData = z.infer<typeof apiSchema>;
 type PluginFormData = z.infer<typeof pluginSchema>;
+
+async function markOnboardingComplete() {
+  const companiesRes = await fetch("/api/companies");
+  if (!companiesRes.ok) return;
+  const { companies } = (await companiesRes.json()) as { companies: Array<{ id: number }> };
+  const companyId = companies[0]?.id;
+  if (!companyId) return;
+  await fetch("/api/companies", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id: companyId, data: { onboardingComplete: true } }),
+  });
+}
 
 function ConnectContent() {
   const router = useRouter();
@@ -95,19 +107,6 @@ function ConnectContent() {
     }
 
     setTesting(false);
-  }
-
-  async function markOnboardingComplete() {
-    const companiesRes = await fetch("/api/companies");
-    if (!companiesRes.ok) return;
-    const { companies } = (await companiesRes.json()) as { companies: Array<{ id: number }> };
-    const companyId = companies[0]?.id;
-    if (!companyId) return;
-    await fetch("/api/companies", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: companyId, data: { onboardingComplete: true } }),
-    });
   }
 
   async function saveConnection(payload: Record<string, unknown>) {
@@ -198,167 +197,18 @@ function ConnectContent() {
           ))}
         </div>
 
-        {connectionMethod === "plugin" ? (
-          <form onSubmit={pluginForm.handleSubmit(onSubmitPlugin)}>
-            <div className="paper-card p-8 space-y-5">
-              <div className="space-y-1.5">
-                <Label htmlFor="plugin-siteUrl">WordPress site URL</Label>
-                <Input id="plugin-siteUrl" placeholder="https://yourblog.com" {...pluginForm.register("siteUrl")} />
-                {pluginForm.formState.errors.siteUrl && (
-                  <p className="text-xs text-destructive">{pluginForm.formState.errors.siteUrl.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="siteKey">Site key</Label>
-                  <a
-                    href="https://wordpress.org/plugins/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    Install goals.ac plugin <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-                <Input
-                  id="siteKey"
-                  type="password"
-                  placeholder="From plugin settings"
-                  {...pluginForm.register("siteKey")}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Copy the site key from WordPress → Settings → goals.ac after installing the plugin.
-                </p>
-                {pluginForm.formState.errors.siteKey && (
-                  <p className="text-xs text-destructive">{pluginForm.formState.errors.siteKey.message}</p>
-                )}
-              </div>
-
-              {testResult && (
-                <div
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${testResult.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}
-                >
-                  {testResult.ok ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 shrink-0" /> Plugin connected
-                      {testResult.siteName ? ` (v${testResult.siteName})` : ""}
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-4 w-4 shrink-0" /> {testResult.error}
-                    </>
-                  )}
-                </div>
-              )}
-
-              <Button type="button" variant="outline" onClick={handleTest} disabled={testing} className="w-full">
-                {testing ? (
-                  <>
-                    <Spinner size="sm" /> Testing...
-                  </>
-                ) : (
-                  "Test connection"
-                )}
-              </Button>
-            </div>
-
-            <div className="mt-6 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={handleSkip}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Skip for now
-              </button>
-              <Button type="submit" size="lg" disabled={saving}>
-                {saving ? "Saving..." : "Complete setup →"}
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={apiForm.handleSubmit(onSubmitApi)}>
-            <div className="paper-card p-8 space-y-5">
-              <div className="space-y-1.5">
-                <Label htmlFor="api-siteUrl">WordPress site URL</Label>
-                <Input id="api-siteUrl" placeholder="https://yourblog.com" {...apiForm.register("siteUrl")} />
-                {apiForm.formState.errors.siteUrl && (
-                  <p className="text-xs text-destructive">{apiForm.formState.errors.siteUrl.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="username">WordPress username</Label>
-                <Input id="username" placeholder="admin" {...apiForm.register("username")} />
-                {apiForm.formState.errors.username && (
-                  <p className="text-xs text-destructive">{apiForm.formState.errors.username.message}</p>
-                )}
-              </div>
-
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <Label htmlFor="appPassword">Application password</Label>
-                  <a
-                    href="https://wordpress.org/documentation/article/application-passwords/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    How to create one <ExternalLink className="h-3 w-3" />
-                  </a>
-                </div>
-                <Input
-                  id="appPassword"
-                  type="password"
-                  placeholder="xxxx xxxx xxxx xxxx"
-                  {...apiForm.register("appPassword")}
-                />
-                {apiForm.formState.errors.appPassword && (
-                  <p className="text-xs text-destructive">{apiForm.formState.errors.appPassword.message}</p>
-                )}
-              </div>
-
-              {testResult && (
-                <div
-                  className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm ${testResult.ok ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}
-                >
-                  {testResult.ok ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4 shrink-0" /> Connected as {testResult.siteName}
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-4 w-4 shrink-0" /> {testResult.error}
-                    </>
-                  )}
-                </div>
-              )}
-
-              <Button type="button" variant="outline" onClick={handleTest} disabled={testing} className="w-full">
-                {testing ? (
-                  <>
-                    <Spinner size="sm" /> Testing...
-                  </>
-                ) : (
-                  "Test connection"
-                )}
-              </Button>
-            </div>
-
-            <div className="mt-6 flex items-center justify-between">
-              <button
-                type="button"
-                onClick={handleSkip}
-                className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Skip for now
-              </button>
-              <Button type="submit" size="lg" disabled={saving}>
-                {saving ? "Saving..." : "Complete setup →"}
-              </Button>
-            </div>
-          </form>
-        )}
+        <ConnectWordPressForms
+          connectionMethod={connectionMethod}
+          pluginForm={pluginForm}
+          apiForm={apiForm}
+          testResult={testResult}
+          testing={testing}
+          saving={saving}
+          onTest={handleTest}
+          onSkip={handleSkip}
+          onSubmitPlugin={onSubmitPlugin}
+          onSubmitApi={onSubmitApi}
+        />
       </div>
     </div>
   );

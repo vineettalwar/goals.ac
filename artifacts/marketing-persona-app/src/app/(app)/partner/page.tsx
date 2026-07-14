@@ -33,12 +33,13 @@ export default async function PartnerPage() {
     redirect("/dashboard");
   }
 
-  const projects = await listAccessibleProjects(userId, supportOrganizationId);
-  const membership = await getOrgMembership(userId);
-  const supportOrg =
+  const [projects, membership, supportOrg] = await Promise.all([
+    listAccessibleProjects(userId, supportOrganizationId),
+    getOrgMembership(userId),
     supportOrganizationId != null
-      ? await getOrganizationSupportContext(supportOrganizationId)
-      : null;
+      ? getOrganizationSupportContext(supportOrganizationId)
+      : Promise.resolve(null),
+  ]);
 
   let organizationName = supportOrg?.name ?? null;
   if (!organizationName && membership) {

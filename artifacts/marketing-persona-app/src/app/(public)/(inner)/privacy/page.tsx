@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LegalPageClient } from "@/components/marketing/pages/legal-page-client";
+import { LegalPageClient } from "@/components/marketing/pages/company/legal-page-client";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",

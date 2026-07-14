@@ -24,7 +24,7 @@ export default function GlobalError({
       {error.digest && (
         <p className="mt-1 font-mono text-xs text-muted-foreground">ID: {error.digest}</p>
       )}
-      <button
+      <button type="button"
         onClick={reset}
         className="mt-8 inline-flex items-center gap-2 text-sm bg-primary text-primary-foreground px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
       >

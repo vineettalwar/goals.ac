@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { HelpArticleClient } from "@/components/marketing/pages/help-article-client";
+import { HelpArticleClient } from "@/components/marketing/pages/help/help-article-client";
 import { HELP_ARTICLES, getHelpArticle } from "@/lib/marketing/content/help-articles";
 
 export function generateStaticParams() {

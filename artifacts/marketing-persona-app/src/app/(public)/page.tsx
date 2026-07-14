@@ -6,7 +6,7 @@ import { desc } from "drizzle-orm";
 import type { ShowcaseArticle } from "@/components/marketing/sections/home-marketing-sections";
 
 const HomePageClient = dynamic(
-  () => import("@/components/marketing/pages/home-page-client").then((m) => m.HomePageClient),
+  () => import("@/components/marketing/pages/home/home-page-client").then((m) => m.HomePageClient),
   {
     loading: () => (
       <div className="min-h-screen animate-pulse bg-black">

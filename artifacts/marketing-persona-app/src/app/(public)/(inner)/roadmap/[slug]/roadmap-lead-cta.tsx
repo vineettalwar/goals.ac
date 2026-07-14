@@ -22,7 +22,7 @@ export function RoadmapLeadCTA({ slug }: { slug: string }) {
           <Link href="/signup?next=/strategy/roadmaps" className="hero-cta-primary inline-flex items-center gap-2">
             Generate for my business <ArrowRight className="h-4 w-4" />
           </Link>
-          <button
+          <button type="button"
             onClick={() => setModalOpen(true)}
             className="inline-flex items-center gap-2 border border-white/30 bg-white/10 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-white/20 transition-colors"
           >

@@ -170,13 +170,17 @@ export function TeamManagement({ projects }: TeamManagementProps) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(Object.keys(ROLE_LABELS) as TeamRole[])
-                .filter((r) => r !== "owner")
-                .map((role) => (
-                  <SelectItem key={role} value={role}>
-                    {ROLE_LABELS[role]}
-                  </SelectItem>
-                ))}
+              {(Object.keys(ROLE_LABELS) as TeamRole[]).flatMap((role) =>
+                role === "owner"
+                  ? []
+                  : [
+                      (
+                        <SelectItem key={role} value={role}>
+                          {ROLE_LABELS[role]}
+                        </SelectItem>
+                      ),
+                    ],
+              )}
             </SelectContent>
           </Select>
         </div>

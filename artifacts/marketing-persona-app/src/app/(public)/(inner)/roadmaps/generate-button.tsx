@@ -70,8 +70,10 @@ export function GenerateRoadmapButton() {
           <Input placeholder="e.g. London, UK" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} className="marketing-input-dark" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-white/80">Stage</Label>
+          <Label htmlFor="roadmap-stage" className="text-white/80">Stage</Label>
           <select
+            id="roadmap-stage"
+            aria-label="Stage"
             className="marketing-input-dark"
             value={form.stage}
             onChange={(e) => setForm((p) => ({ ...p, stage: e.target.value }))}

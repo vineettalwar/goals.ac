@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ArticleQualityDemoClient } from "@/components/marketing/pages/article-quality-demo-client";
+import { ArticleQualityDemoClient } from "@/components/marketing/pages/tools/article-quality-demo-client";
 
 export const metadata: Metadata = {
   title: "Article Quality Score | Inspectable SEO Drafts",

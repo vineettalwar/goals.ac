@@ -3,6 +3,7 @@ import "./globals.css";
 import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
 import { getSiteUrl } from "@/lib/marketing/site/site-url";
+import { sanitizeJsonLd } from "@/lib/security/json-ld";
 
 const jakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -56,7 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: sanitizeJsonLd(organizationJsonLd) }}
         />
         <Providers>{children}</Providers>
       </body>

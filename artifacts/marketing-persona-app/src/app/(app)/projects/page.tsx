@@ -33,12 +33,13 @@ export default async function ProjectsPage() {
     redirect("/dashboard");
   }
 
-  const projects = await listAccessibleProjects(userId, supportOrganizationId);
-  const membership = await getOrgMembership(userId);
-  const supportOrg =
+  const [projects, membership, supportOrg] = await Promise.all([
+    listAccessibleProjects(userId, supportOrganizationId),
+    getOrgMembership(userId),
     supportOrganizationId != null
-      ? await getOrganizationSupportContext(supportOrganizationId)
-      : null;
+      ? getOrganizationSupportContext(supportOrganizationId)
+      : Promise.resolve(null),
+  ]);
   const projectCount =
     supportOrg != null
       ? projects.length

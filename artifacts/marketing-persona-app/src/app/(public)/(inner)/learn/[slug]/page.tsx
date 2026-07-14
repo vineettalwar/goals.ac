@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { LearnPostClient } from "@/components/marketing/pages/learn-post-client";
+import { LearnPostClient } from "@/components/marketing/pages/learn/learn-post-client";
 import { getLearnPost, LEARN_POSTS } from "@/lib/marketing/content/learn-posts";
 
 export function generateStaticParams() {

@@ -30,12 +30,13 @@ type FormData = z.infer<typeof schema>;
 
 interface SignupPageClientProps {
   signupsEnabled: boolean;
+  callbackUrl: string | null;
 }
 
-export function SignupPageClient({ signupsEnabled }: SignupPageClientProps) {
+export function SignupPageClient({ signupsEnabled, callbackUrl }: SignupPageClientProps) {
   return (
     <Suspense fallback={<div className="paper-card p-8 animate-pulse h-96 rounded-xl bg-secondary/40" />}>
-      <SignupPageContent signupsEnabled={signupsEnabled} />
+      <SignupPageContent signupsEnabled={signupsEnabled} callbackUrl={callbackUrl} />
     </Suspense>
   );
 }
@@ -65,14 +66,13 @@ function InviteOnlyMessage() {
   );
 }
 
-function SignupPageContent({ signupsEnabled }: SignupPageClientProps) {
+function SignupPageContent({ signupsEnabled, callbackUrl }: SignupPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const roadmapIntent = useRoadmapIntent();
   const signupReferrer = searchParams.get("from")?.trim() || roadmapIntent?.referrer;
   const inviteToken = searchParams.get("token")?.trim() || undefined;
   const inviteEmail = searchParams.get("email")?.trim() || undefined;
-  const callbackUrl = searchParams.get("callbackUrl")?.trim();
   const loginHref = callbackUrl
     ? `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`
     : `/login?${buildAuthRedirectParams(signupReferrer).toString()}`;

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { db } from "@workspace/db";
 import { seoArticlesTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
-import { SuccessStoriesPageClient } from "@/components/marketing/pages/success-stories-page-client";
+import { SuccessStoriesPageClient } from "@/components/marketing/pages/company/success-stories-page-client";
 
 export const metadata: Metadata = {
   title: "Customer Stories | goals.ac",

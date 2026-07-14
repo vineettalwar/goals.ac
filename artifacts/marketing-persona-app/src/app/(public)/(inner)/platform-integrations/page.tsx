@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { IntegrationsDirectoryPageClient } from "@/components/marketing/pages/integrations-directory-page-client";
+import { IntegrationsDirectoryPageClient } from "@/components/marketing/pages/product/integrations-directory-page-client";
 
 export const metadata: Metadata = {
   title: "Integrations | 20+ CMS, ESP & Social Destinations",

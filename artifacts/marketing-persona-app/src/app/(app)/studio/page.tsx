@@ -1,26 +1,14 @@
-"use client";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { ACTIVE_PROJECT_COOKIE } from "@/lib/active-project/cookie";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { useActiveProject } from "@/context/active-project";
-import { Spinner } from "@/components/ui/spinner";
+export default async function StudioRedirectPage() {
+  const cookieStore = await cookies();
+  const projectId = cookieStore.get(ACTIVE_PROJECT_COOKIE)?.value;
 
-export default function StudioRedirectPage() {
-  const router = useRouter();
-  const { activeProjectId, isLoading } = useActiveProject();
+  if (projectId) {
+    redirect(`/projects/${projectId}/content-studio`);
+  }
 
-  useEffect(() => {
-    if (isLoading) return;
-    if (activeProjectId) {
-      router.replace(`/projects/${activeProjectId}/content-studio`);
-      return;
-    }
-    router.replace("/projects");
-  }, [isLoading, activeProjectId, router]);
-
-  return (
-    <div className="flex items-center justify-center p-16">
-      <Spinner size="lg" />
-    </div>
-  );
+  redirect("/projects");
 }

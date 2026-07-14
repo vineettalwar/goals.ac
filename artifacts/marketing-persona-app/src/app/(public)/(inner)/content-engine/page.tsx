@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ContentEngineMarketing } from "@/components/marketing/pages/content-engine-marketing";
+import { ContentEngineMarketing } from "@/components/marketing/pages/product/content-engine-marketing";
 
 export const metadata: Metadata = {
   title: "Content Studio | goals.ac",

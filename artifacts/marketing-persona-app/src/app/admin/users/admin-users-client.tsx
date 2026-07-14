@@ -14,6 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAdminImpersonation } from "@/hooks/use-admin-impersonation";
+import { useAdminOrganizations } from "@/lib/queries";
 
 interface UserRow {
   id: number;
@@ -42,8 +43,8 @@ const STATUS_LABELS: Record<UserRow["status"], string> = {
 
 export function AdminUsersClient() {
   const { impersonateUser, isImpersonating } = useAdminImpersonation();
+  const { data: organizations = [] } = useAdminOrganizations();
   const [users, setUsers] = useState<UserRow[]>([]);
-  const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -71,13 +72,6 @@ export function AdminUsersClient() {
       setLoading(false);
     }
   }, [search, organizationId, platformRole]);
-
-  useEffect(() => {
-    void fetch("/api/admin/organizations?minimal=true")
-      .then((r) => r.json())
-      .then((data: { organizations: OrganizationOption[] }) => setOrganizations(data.organizations))
-      .catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
