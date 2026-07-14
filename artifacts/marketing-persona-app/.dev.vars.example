@@ -1,0 +1,48 @@
+# Copy to .dev.vars for local `pnpm run cf:preview` (Workers runtime).
+# For `next dev`, use the repo-root .env instead — see docs/deploy-cloudflare.md.
+
+NEXTJS_ENV=development
+
+# D1 on Workers — omit or set postgres for local Docker/Neon via DATABASE_URL
+DB_DIALECT=d1
+
+# Required — same values as repo-root .env (Postgres path only when DB_DIALECT=postgres)
+# AUTH_SECRET=
+# NEXTAUTH_URL=http://localhost:8787
+# GEMINI_KEY_ENCRYPTION_SECRET=
+
+# Postgres alternative (when DB_DIALECT=postgres)
+# DATABASE_URL=postgresql://...
+
+# App origin for OAuth callbacks (Bluesky, social)
+# APP_ORIGIN=http://localhost:8787
+
+# Build-time public vars (also set in Workers Builds for production)
+# NEXT_PUBLIC_APP_URL=http://localhost:8787
+# NEXT_PUBLIC_SITE_URL=http://localhost:8787
+# NEXT_PUBLIC_CALENDLY_URL=
+
+# AI
+# GEMINI_API_KEY=
+
+# Cron HTTP backup (see scripts/cron-autopilot.example.sh)
+# CRON_SECRET=
+
+# Caching / rate limits (multi-instance)
+# REDIS_URL=
+
+# Stripe (enable billing in Admin → Integrations after setting secrets)
+# STRIPE_SECRET_KEY=
+# STRIPE_WEBHOOK_SECRET=
+# STRIPE_PRICE_GROWTH_MONTHLY=
+# STRIPE_PRICE_SCALE_MONTHLY=
+# STRIPE_CONNECT_CLIENT_ID=
+# STRIPE_CREDIT_TOPUP_500_PRICE_ID=
+# STRIPE_CREDIT_TOPUP_2000_PRICE_ID=
+
+# Google OAuth (signup + GSC)
+# GOOGLE_CLIENT_ID=
+# GOOGLE_CLIENT_SECRET=
+
+# Email
+# RESEND_API_KEY=

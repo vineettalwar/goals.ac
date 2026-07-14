@@ -1,0 +1,90 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "goals-ac",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2026-07-14",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "global_fetch_strictly_public"
+  ],
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "goals-ac"
+    }
+  ],
+  // Replace placeholder IDs after: node scripts/cf-provision.mjs
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "goals-ac",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "../../lib/db/migrations-d1"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "NEXT_INC_CACHE_R2_BUCKET",
+      "bucket_name": "goals-ac-next-cache"
+    }
+  ],
+  "kv_namespaces": [
+    { "binding": "AI_CACHE", "id": "00000000000000000000000000000001" },
+    { "binding": "RATE_LIMIT", "id": "00000000000000000000000000000002" }
+  ],
+  "images": {
+    "binding": "IMAGES"
+  },
+  "queues": {
+    "producers": [
+      { "binding": "JOBS_QUEUE", "queue": "goals-ac-jobs" }
+    ]
+  },
+  "vars": {
+    "DB_DIALECT": "d1",
+    "NEXTJS_ENV": "production"
+  },
+  "env": {
+    "staging": {
+      "name": "goals-ac-staging",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "goals-ac-staging",
+          "database_id": "00000000-0000-0000-0000-000000000002",
+          "migrations_dir": "../../lib/db/migrations-d1"
+        }
+      ],
+      "r2_buckets": [
+        {
+          "binding": "NEXT_INC_CACHE_R2_BUCKET",
+          "bucket_name": "goals-ac-next-cache-staging"
+        }
+      ],
+      "kv_namespaces": [
+        { "binding": "AI_CACHE", "id": "00000000000000000000000000000003" },
+        { "binding": "RATE_LIMIT", "id": "00000000000000000000000000000004" }
+      ],
+      "queues": {
+        "producers": [
+          { "binding": "JOBS_QUEUE", "queue": "goals-ac-jobs-staging" }
+        ]
+      },
+      "vars": {
+        "DB_DIALECT": "d1",
+        "NEXTJS_ENV": "production"
+      }
+    },
+    "production": {
+      "name": "goals-ac",
+      "vars": {
+        "DB_DIALECT": "d1",
+        "NEXTJS_ENV": "production"
+      }
+    }
+  }
+}
