@@ -3,16 +3,25 @@ import {
   contentPiecesTable,
   briefsTable,
   goalsTable,
+  websiteProjectsTable,
   CONTENT_FORMAT_TYPES,
   type ContentFormatType,
 } from "@workspace/db/schema";
+import type { ContentPieceMetadata } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireProjectAccess } from "@/lib/org/org-access";
 import {
   buildCacheKey,
   type BrandContext,
+  type ContentGenerationContext,
 } from "@workspace/content-engine/content-studio-generator";
+import { decryptCmsCredentials, type CmsIntegrationCredentials } from "@workspace/content-engine/support/cms-integrations";
+import { getDefaultOutputMode } from "@workspace/content-engine/support/platform-output-modes";
+import { resolveDefaultIntendedPlatform } from "@workspace/content-engine/support/intended-destination";
+import { parsePublishingSettings } from "@workspace/content-engine/support/publishing-settings";
 import { loadBrandContextForProject } from "@workspace/content-engine/support/brand-context-loader";
+import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor-generation-context";
+import { normalizeCompetitorUrl } from "@workspace/content-engine/support/competitor-url";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
 import type { AiProviderOptions } from "@workspace/ai-providers";
@@ -24,6 +33,16 @@ export const GenerateBody = z.object({
   angleHint: z.string().optional(),
   plannedDate: z.string().optional(),
   briefId: z.number().int().positive().optional(),
+  /** Optional hint — does not lock publish destination */
+  intendedPublishPlatform: z.string().min(1).optional(),
+  intendedOutputMode: z.string().min(1).optional(),
+  intendedEditorMode: z.enum(["classic", "gutenberg", "elementor", "divi"]).optional(),
+  /** Primary competitor URL to differentiate against for this piece */
+  competitorFocusUrl: z
+    .string()
+    .optional()
+    .transform((raw) => (raw?.trim() ? normalizeCompetitorUrl(raw) : undefined))
+    .pipe(z.string().url().optional()),
 });
 
 export type GenerateBodyInput = z.infer<typeof GenerateBody>;
@@ -91,6 +110,30 @@ export async function loadUserAiSettings(userId: number): Promise<{
 
 export { buildCacheKey };
 
+function connectionOutputMode(
+  platform: string,
+  creds: CmsIntegrationCredentials,
+): string | undefined {
+  switch (platform) {
+    case "wordpress":
+      return creds.wordpress?.outputMode ?? creds.wordpress?.editorMode;
+    case "ghost":
+      return creds.ghost?.outputMode;
+    case "drupal":
+      return creds.drupal?.outputMode;
+    case "typo3":
+      return creds.typo3?.outputMode;
+    case "shopify":
+      return creds.shopify?.outputMode;
+    case "joomla":
+      return creds.joomla?.outputMode;
+    case "webhook":
+      return creds.webhook?.outputMode;
+    default:
+      return undefined;
+  }
+}
+
 export function wordCountFromMarkdown(body: string): number {
   return body.split(/\s+/).filter(Boolean).length;
 }
@@ -118,6 +161,65 @@ export async function loadExistingPieceTitles(projectId: number): Promise<string
   return rows.map((row) => row.title).filter(Boolean);
 }
 
+export async function loadGenerationContext(
+  projectId: number,
+  input: Pick<
+    GenerateBodyInput,
+    | "formatType"
+    | "intendedPublishPlatform"
+    | "intendedOutputMode"
+    | "intendedEditorMode"
+    | "competitorFocusUrl"
+  >,
+): Promise<ContentGenerationContext & { resolvedIntendedPlatform?: string }> {
+  const [project] = await db
+    .select({
+      cmsIntegrations: websiteProjectsTable.cmsIntegrations,
+      publishingSettings: websiteProjectsTable.publishingSettings,
+    })
+    .from(websiteProjectsTable)
+    .where(eq(websiteProjectsTable.id, projectId))
+    .limit(1);
+
+  const creds = decryptCmsCredentials((project?.cmsIntegrations ?? {}) as Record<string, unknown>);
+  const publishing = parsePublishingSettings(project?.publishingSettings);
+  const [existingPieceTitles, competitorContext] = await Promise.all([
+    loadExistingPieceTitles(projectId),
+    loadCompetitorGenerationContext(projectId, input.competitorFocusUrl),
+  ]);
+
+  const resolvedIntendedPlatform =
+    input.intendedPublishPlatform ??
+    resolveDefaultIntendedPlatform(input.formatType, creds, publishing.primaryBlogDestination);
+
+  let intendedOutputMode = input.intendedOutputMode;
+  let intendedEditorMode = input.intendedEditorMode;
+  if (resolvedIntendedPlatform) {
+    const fromConnection = connectionOutputMode(resolvedIntendedPlatform, creds);
+    if (!intendedOutputMode && fromConnection) {
+      intendedOutputMode = fromConnection;
+    }
+    if (!intendedEditorMode && resolvedIntendedPlatform === "wordpress") {
+      const wpMode = creds.wordpress?.editorMode ?? creds.wordpress?.outputMode;
+      if (wpMode) intendedEditorMode = wpMode;
+    }
+  }
+
+  return {
+    existingPieceTitles,
+    intendedPublishPlatform: input.intendedPublishPlatform ?? undefined,
+    intendedOutputMode: input.intendedPublishPlatform
+      ? intendedOutputMode ?? getDefaultOutputMode(resolvedIntendedPlatform ?? "")
+      : undefined,
+    intendedEditorMode: input.intendedPublishPlatform ? intendedEditorMode : undefined,
+    resolvedIntendedPlatform: input.intendedPublishPlatform
+      ? resolvedIntendedPlatform ?? undefined
+      : undefined,
+    competitorPromptBlock: competitorContext.promptBlock || undefined,
+    competitorFocusUrl: competitorContext.focusUrl,
+  };
+}
+
 export async function insertGeneratedContentPiece(params: {
   projectId: number;
   briefId?: number;
@@ -125,8 +227,28 @@ export async function insertGeneratedContentPiece(params: {
   result: GeneratedPieceResult;
   cacheKey: string;
   plannedDate?: string | null;
+  intendedPublishPlatform?: string;
+  intendedOutputMode?: ContentPieceMetadata["intendedOutputMode"];
+  intendedEditorMode?: ContentPieceMetadata["intendedEditorMode"];
 }) {
-  const { projectId, briefId, formatType, result, cacheKey, plannedDate } = params;
+  const {
+    projectId,
+    briefId,
+    formatType,
+    result,
+    cacheKey,
+    plannedDate,
+    intendedPublishPlatform,
+    intendedOutputMode,
+    intendedEditorMode,
+  } = params;
+
+  const pieceMetadata: ContentPieceMetadata = {
+    ...(result.pieceMetadata ?? {}),
+    ...(intendedPublishPlatform ? { intendedPublishPlatform } : {}),
+    ...(intendedOutputMode ? { intendedOutputMode } : {}),
+    ...(intendedEditorMode ? { intendedEditorMode } : {}),
+  };
 
   const [inserted] = await db
     .insert(contentPiecesTable)
@@ -141,7 +263,7 @@ export async function insertGeneratedContentPiece(params: {
       status: "draft",
       cacheKey,
       plannedDate: plannedDate ?? null,
-      pieceMetadata: result.pieceMetadata ?? null,
+      pieceMetadata: Object.keys(pieceMetadata).length > 0 ? pieceMetadata : null,
     })
     .returning();
 

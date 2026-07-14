@@ -2,18 +2,16 @@
 
 import { toast } from "sonner";
 
-export async function startPlanCheckout(): Promise<void> {
-  throw new Error("Paid plans are not available. Add your API key in Settings → AI Providers.");
-}
-
 export function showQuotaExhaustedToast(input: { message: string }): void {
   toast.error(input.message, {
-    description: "Add your Gemini or Bedrock key in Settings → AI Providers for unlimited generations.",
+    description: "Add your Gemini or Bedrock key in Settings → AI Providers. BYOK clients have unlimited generations.",
   });
 }
 
 export function showInsufficientCreditsToast(input: { message: string }): void {
-  toast.error(input.message);
+  toast.error(input.message, {
+    description: "Add your API key in Settings → AI Providers, or contact us to top up platform credits.",
+  });
 }
 
 export function handleAiBillingError(data: {

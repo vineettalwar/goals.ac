@@ -1,7 +1,14 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import {
+  assertOAuthSessionUser,
+  decodeSignedOAuthState,
+  encodeSignedOAuthState,
+  type SignedOAuthPayload,
+} from "@/lib/integrations/oauth-state";
 import { getAccessibleProject } from "@/lib/org/org-access";
+import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { fetchLinkedInAuthorUrn } from "@workspace/connectors/linkedin";
 import { fetchMetaPages, type MetaPageInfo, exchangeMetaLongLivedToken } from "@workspace/connectors/meta";
 import {
@@ -21,15 +28,9 @@ const TWITTER_CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET;
 const META_APP_ID = process.env.META_APP_ID;
 const META_APP_SECRET = process.env.META_APP_SECRET;
 
-export interface OAuthState {
-  projectId: number;
-  userId: number;
+export type OAuthState = SignedOAuthPayload & {
   platform: "linkedin" | "twitter" | "meta" | "bluesky" | "mastodon";
-  codeVerifier?: string;
-  mastodonInstance?: string;
-  mastodonClientId?: string;
-  mastodonClientSecret?: string;
-}
+};
 
 export function getNextApiOrigin(): string {
   const nextAuth = process.env.NEXTAUTH_URL?.replace(/\/$/, "");
@@ -43,16 +44,22 @@ export function getNextFrontendOrigin(): string {
   return getNextApiOrigin();
 }
 
-function encodeState(state: OAuthState): string {
-  return Buffer.from(JSON.stringify(state)).toString("base64url");
+function encodeState(state: Omit<OAuthState, "exp" | "nonce">): string {
+  return encodeSignedOAuthState(state);
 }
 
 export function decodeState(raw: string): OAuthState | null {
-  try {
-    return JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as OAuthState;
-  } catch {
-    return null;
+  const state = decodeSignedOAuthState<OAuthState>(raw);
+  if (!state) return null;
+  return state;
+}
+
+async function validateOAuthState(state: OAuthState | null): Promise<OAuthState> {
+  if (!state) {
+    throw new Error("Invalid OAuth state");
   }
+  await assertOAuthSessionUser(state.userId);
+  return state;
 }
 
 function publishingRedirect(_projectId: number, params: Record<string, string>): never {
@@ -77,8 +84,13 @@ export async function startLinkedInOAuth(projectId: number, userId: number): Pro
 }
 
 export async function handleLinkedInCallback(code: string, stateRaw: string): Promise<never> {
-  const state = decodeState(stateRaw);
-  if (!state || state.platform !== "linkedin") {
+  let state: OAuthState;
+  try {
+    state = await validateOAuthState(decodeState(stateRaw));
+    if (state.platform !== "linkedin") {
+      throw new Error("Invalid OAuth state");
+    }
+  } catch {
     throw new Error("Invalid OAuth state");
   }
 
@@ -147,8 +159,13 @@ export async function startTwitterOAuth(projectId: number, userId: number): Prom
 }
 
 export async function handleTwitterCallback(code: string, stateRaw: string): Promise<never> {
-  const state = decodeState(stateRaw);
-  if (!state || state.platform !== "twitter" || !state.codeVerifier) {
+  let state: OAuthState;
+  try {
+    state = await validateOAuthState(decodeState(stateRaw));
+    if (state.platform !== "twitter" || !state.codeVerifier) {
+      throw new Error("Invalid OAuth state");
+    }
+  } catch {
     throw new Error("Invalid OAuth state");
   }
 
@@ -215,8 +232,13 @@ export async function startMetaOAuth(projectId: number, userId: number): Promise
 }
 
 export async function handleMetaCallback(code: string, stateRaw: string): Promise<never> {
-  const state = decodeState(stateRaw);
-  if (!state || state.platform !== "meta") {
+  let state: OAuthState;
+  try {
+    state = await validateOAuthState(decodeState(stateRaw));
+    if (state.platform !== "meta") {
+      throw new Error("Invalid OAuth state");
+    }
+  } catch {
     throw new Error("Invalid OAuth state");
   }
 
@@ -319,13 +341,28 @@ export async function startMastodonOAuth(
   const redirectUri = `${getNextApiOrigin()}/api/auth/mastodon/callback`;
   const { clientId, clientSecret } = await registerMastodonApp(instanceUrl, redirectUri);
 
+  const mastodonToken = crypto.randomBytes(16).toString("hex");
+  const cookieStore = await cookies();
+  cookieStore.set(`mastodon_oauth_${mastodonToken}`, JSON.stringify({
+    mastodonInstance: instanceUrl,
+    mastodonClientId: clientId,
+    mastodonClientSecret: clientSecret,
+    projectId,
+    userId,
+  }), {
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 10 * 60,
+    path: "/",
+  });
+
   const state = encodeState({
     projectId,
     userId,
     platform: "mastodon",
+    mastodonToken,
     mastodonInstance: instanceUrl,
     mastodonClientId: clientId,
-    mastodonClientSecret: clientSecret,
   });
 
   const params = new URLSearchParams({
@@ -340,25 +377,46 @@ export async function startMastodonOAuth(
 }
 
 export async function handleMastodonCallback(code: string, stateRaw: string): Promise<never> {
-  const state = decodeState(stateRaw);
-  if (
-    !state ||
-    state.platform !== "mastodon" ||
-    !state.mastodonInstance ||
-    !state.mastodonClientId ||
-    !state.mastodonClientSecret
-  ) {
+  let state: OAuthState;
+  try {
+    state = await validateOAuthState(decodeState(stateRaw));
+    if (
+      state.platform !== "mastodon" ||
+      !state.mastodonInstance ||
+      !state.mastodonClientId ||
+      !state.mastodonToken
+    ) {
+      throw new Error("Invalid OAuth state");
+    }
+  } catch {
     throw new Error("Invalid OAuth state");
   }
 
+  const cookieStore = await cookies();
+  const sessionRaw = cookieStore.get(`mastodon_oauth_${state.mastodonToken}`)?.value;
+  if (!sessionRaw) {
+    throw new Error("Mastodon OAuth session expired");
+  }
+  const session = JSON.parse(sessionRaw) as {
+    mastodonInstance: string;
+    mastodonClientId: string;
+    mastodonClientSecret: string;
+    projectId: number;
+    userId: number;
+  };
+  if (session.userId !== state.userId || session.projectId !== state.projectId) {
+    throw new Error("Invalid Mastodon OAuth session");
+  }
+
   try {
+    await assertPublicUrl(session.mastodonInstance);
     const redirectUri = `${getNextApiOrigin()}/api/auth/mastodon/callback`;
-    const tokenRes = await fetch(`${state.mastodonInstance}/oauth/token`, {
+    const tokenRes = await fetch(`${session.mastodonInstance}/oauth/token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        client_id: state.mastodonClientId,
-        client_secret: state.mastodonClientSecret,
+        client_id: session.mastodonClientId,
+        client_secret: session.mastodonClientSecret,
         redirect_uri: redirectUri,
         grant_type: "authorization_code",
         code,
@@ -371,21 +429,22 @@ export async function handleMastodonCallback(code: string, stateRaw: string): Pr
     }
 
     const { fetchMastodonAccount } = await import("@workspace/connectors/mastodon");
-    const account = await fetchMastodonAccount(state.mastodonInstance, tokenData.access_token);
+    const account = await fetchMastodonAccount(session.mastodonInstance, tokenData.access_token);
 
     const project = await getAccessibleProject(state.projectId, state.userId);
     if (!project) throw new Error("Project not found");
 
     const existing = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
     existing.mastodon = {
-      instanceUrl: state.mastodonInstance,
+      instanceUrl: session.mastodonInstance,
       accessToken: tokenData.access_token,
       accountId: account.id,
       username: account.username,
-      clientId: state.mastodonClientId,
-      clientSecret: state.mastodonClientSecret,
+      clientId: session.mastodonClientId,
+      clientSecret: session.mastodonClientSecret,
     };
     await saveProjectCreds(state.projectId, state.userId, existing);
+    cookieStore.delete(`mastodon_oauth_${state.mastodonToken}`);
     publishingRedirect(state.projectId, { mastodon: "connected" });
   } catch {
     publishingRedirect(state.projectId, { mastodon: "error" });

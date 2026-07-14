@@ -5,6 +5,8 @@ import {
   createPortalSession,
   isStripeBillingActive,
   normalizePlanId,
+  planFromStripePriceIdResolved,
+  type PaidPlanId,
   type PlanId,
 } from "@workspace/billing";
 import { eq } from "drizzle-orm";
@@ -107,7 +109,10 @@ export async function applyStripeSubscriptionToOrganization(input: {
     return { ok: false, error: "Organization not found" };
   }
 
-  const targetPlan: PlanId = "starter";
+  const resolvedPlan = input.subscription.priceId
+    ? await planFromStripePriceIdResolved(input.subscription.priceId)
+    : null;
+  const targetPlan: PlanId = resolvedPlan ?? "starter";
 
   await updateOrganizationStripeFields({
     organizationId: input.organizationId,
@@ -130,13 +135,28 @@ export async function applyStripeSubscriptionToOrganization(input: {
   return { ok: true, plan: targetPlan, previousPlan: planResult.previousPlan };
 }
 
-export async function startOrganizationCheckout(_input: {
+export async function startOrganizationCheckout(input: {
   organizationId: number;
-  plan: never;
+  plan: PaidPlanId;
   customerEmail: string;
   customerId?: string | null;
-}): Promise<{ error: string }> {
-  return { error: "Paid plans are not available. Use Starter with your own API key." };
+}): Promise<{ url: string } | { error: string }> {
+  if (!(await isStripeBillingActive())) {
+    return { error: "Stripe billing is not configured on this deployment" };
+  }
+
+  if (input.plan !== "growth") {
+    return { error: "Only the Growth plan is available for self-serve checkout. Contact us for Scale." };
+  }
+
+  return createCheckoutSession({
+    organizationId: input.organizationId,
+    plan: input.plan,
+    customerEmail: input.customerEmail,
+    customerId: input.customerId,
+    successUrl: `${getAppUrl()}/settings?tab=billing&checkout=success`,
+    cancelUrl: `${getAppUrl()}/settings?tab=billing&checkout=cancel`,
+  });
 }
 
 export async function startOrganizationPortal(input: {

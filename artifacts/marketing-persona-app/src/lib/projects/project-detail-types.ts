@@ -9,11 +9,17 @@ export type ScrapeData = Partial<Omit<BrandExtract, "confidence">> & {
 };
 
 export interface ProjectImageSettings {
-  stockProvider?: "unsplash" | "pexels" | "auto";
+  stockProvider?: "auto" | "unsplash" | "pexels";
   autoFeaturedImage?: boolean;
   autoInlineImages?: boolean;
   maxInlineImages?: number;
   includeAttribution?: boolean;
+}
+
+export interface ProjectTranslationSettings {
+  encryptedDeeplApiKey?: string;
+  deeplRefinementEnabled?: boolean;
+  deeplGlossaryId?: string;
 }
 
 export interface ContentStyle {
@@ -26,6 +32,7 @@ export interface ContentStyle {
   humanizationLevel?: "off" | "light" | "strong";
   writingSample?: string | null;
   imageSettings?: ProjectImageSettings;
+  translationSettings?: ProjectTranslationSettings;
 }
 
 export interface BrandProfile {

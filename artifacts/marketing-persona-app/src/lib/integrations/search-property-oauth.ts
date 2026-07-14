@@ -4,6 +4,12 @@ import { searchPropertyConnectionsTable, websiteProjectsTable } from "@workspace
 import type { SearchPropertyProvider } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import {
+  assertOAuthSessionUser,
+  decodeSignedOAuthState,
+  encodeSignedOAuthState,
+  type SignedOAuthPayload,
+} from "@/lib/integrations/oauth-state";
+import {
   encryptStoredTokens,
   exchangeBingCode,
   exchangeGoogleCode,
@@ -12,11 +18,24 @@ import {
 } from "./search-property-client";
 import { assertBingWebmasterEnabled, assertGoogleIntegrationsEnabled } from "../platform/platform-settings";
 
-type OAuthState = {
-  projectId: number;
-  userId: number;
+type OAuthState = SignedOAuthPayload & {
   provider: SearchPropertyProvider;
 };
+
+function encodeState(payload: { projectId: number; userId: number; provider: SearchPropertyProvider }): string {
+  return encodeSignedOAuthState({
+    projectId: payload.projectId,
+    userId: payload.userId,
+    platform: payload.provider,
+    provider: payload.provider,
+  });
+}
+
+export function decodeState(state: string): OAuthState | null {
+  const decoded = decodeSignedOAuthState<OAuthState>(state);
+  if (!decoded) return null;
+  return decoded;
+}
 
 type StoredTokens = {
   accessToken: string;
@@ -24,18 +43,6 @@ type StoredTokens = {
   expiresAt?: number;
   tokenType?: string;
 };
-
-function encodeState(payload: OAuthState): string {
-  return Buffer.from(JSON.stringify(payload)).toString("base64url");
-}
-
-export function decodeState(state: string): OAuthState | null {
-  try {
-    return JSON.parse(Buffer.from(state, "base64url").toString("utf8")) as OAuthState;
-  } catch {
-    return null;
-  }
-}
 
 function appOrigin(): string {
   return process.env.NEXTAUTH_URL ?? "http://localhost:3001";
@@ -158,6 +165,12 @@ export async function handleSearchPropertyCallback(
   const decoded = decodeState(state);
   if (!decoded || decoded.provider !== provider) {
     return new NextResponse("Invalid OAuth state", { status: 400 });
+  }
+
+  try {
+    await assertOAuthSessionUser(decoded.userId);
+  } catch {
+    return new NextResponse("Unauthorized OAuth callback", { status: 401 });
   }
 
   const [project] = await db

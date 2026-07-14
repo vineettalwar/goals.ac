@@ -5,6 +5,12 @@ import type { AnalyticsPropertyProvider } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import {
+  assertOAuthSessionUser,
+  decodeSignedOAuthState,
+  encodeSignedOAuthState,
+  type SignedOAuthPayload,
+} from "@/lib/integrations/oauth-state";
+import {
   encryptStoredTokens,
   exchangeGoogleCode,
   ga4PropertyMatchesProject,
@@ -15,25 +21,24 @@ import {
 } from "./analytics-property-client";
 import { assertGoogleIntegrationsEnabled } from "../platform/platform-settings";
 
-type OAuthState = {
-  projectId: number;
-  userId: number;
+type OAuthState = SignedOAuthPayload & {
   provider: AnalyticsPropertyProvider;
 };
 
-const UNSELECTED_PROPERTY_ID = "";
-
-function encodeState(payload: OAuthState): string {
-  return Buffer.from(JSON.stringify(payload)).toString("base64url");
+function encodeState(payload: { projectId: number; userId: number; provider: AnalyticsPropertyProvider }): string {
+  return encodeSignedOAuthState({
+    projectId: payload.projectId,
+    userId: payload.userId,
+    platform: payload.provider,
+    provider: payload.provider,
+  });
 }
 
 export function decodeAnalyticsOAuthState(state: string): OAuthState | null {
-  try {
-    return JSON.parse(Buffer.from(state, "base64url").toString("utf8")) as OAuthState;
-  } catch {
-    return null;
-  }
+  return decodeSignedOAuthState<OAuthState>(state);
 }
+
+const UNSELECTED_PROPERTY_ID = "";
 
 function appOrigin(): string {
   return process.env.NEXTAUTH_URL ?? "http://localhost:3001";
@@ -131,6 +136,12 @@ export async function handleGoogleAnalyticsCallback(
   const decoded = decodeAnalyticsOAuthState(state);
   if (!decoded || decoded.provider !== "google_analytics_4") {
     return new NextResponse("Invalid OAuth state", { status: 400 });
+  }
+
+  try {
+    await assertOAuthSessionUser(decoded.userId);
+  } catch {
+    return new NextResponse("Unauthorized OAuth callback", { status: 401 });
   }
 
   const [project] = await db

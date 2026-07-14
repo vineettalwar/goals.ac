@@ -2,7 +2,7 @@
 
 export type PlanId = "starter" | "growth" | "scale";
 
-export const OFFERED_PLAN_IDS = ["starter"] as const satisfies readonly PlanId[];
+export const OFFERED_PLAN_IDS = ["starter", "growth"] as const satisfies readonly PlanId[];
 
 export const PLAN_IDS = ["starter", "growth", "scale"] as const satisfies readonly PlanId[];
 
@@ -28,7 +28,7 @@ export interface PlanQuotaLimits {
 /** Default quotas — server enforcement reads admin-configured values from the database. */
 export const DEFAULT_PLAN_QUOTA_LIMITS: Record<PlanId, PlanQuotaLimits> = {
   starter: { articles: 5, roadmaps: 3, sites: 1 },
-  growth: { articles: null, roadmaps: null, sites: null },
+  growth: { articles: 30, roadmaps: 12, sites: 3 },
   scale: { articles: null, roadmaps: null, sites: null },
 };
 

@@ -4,9 +4,26 @@ export type IntegrationEnvStatus = {
   google: boolean;
   bing: boolean;
   social: boolean;
+  linkedin: boolean;
+  twitter: boolean;
+  meta: boolean;
   email: boolean;
   stripe: boolean;
+  unsplash: boolean;
+  pexels: boolean;
 };
+
+export type PlatformIntegrationCategoryId = "billing" | "email" | "media";
+
+export type PlatformIntegrationId =
+  | "stripe"
+  | "resend"
+  | "unsplash"
+  | "pexels";
+
+export type PlatformIntegrationSettingsKey = "stripeBillingEnabled" | "emailEnabled";
+
+export type PlatformIntegrationKind = "credentials" | "env";
 
 export type PlatformIntegrationEnvVar = {
   name: string;
@@ -15,13 +32,37 @@ export type PlatformIntegrationEnvVar = {
 };
 
 export type PlatformIntegrationDefinition = {
-  id: "stripe" | "resend";
+  id: PlatformIntegrationId;
   label: string;
   description: string;
-  settingsKey: "stripeBillingEnabled" | "emailEnabled";
+  category: PlatformIntegrationCategoryId;
+  kind: PlatformIntegrationKind;
+  settingsKey?: PlatformIntegrationSettingsKey;
   envVars: PlatformIntegrationEnvVar[];
   docsUrl?: string;
 };
+
+export const PLATFORM_INTEGRATION_CATEGORIES: {
+  id: PlatformIntegrationCategoryId;
+  label: string;
+  description: string;
+}[] = [
+  {
+    id: "billing",
+    label: "Billing",
+    description: "Checkout, subscriptions, and customer portal.",
+  },
+  {
+    id: "email",
+    label: "Email",
+    description: "Transactional email for password resets and notifications.",
+  },
+  {
+    id: "media",
+    label: "Stock Images",
+    description: "Free platform-wide API keys for keyword-matched article featured images.",
+  },
+];
 
 function envConfigured(name: string): boolean {
   return Boolean(process.env[name]?.trim());
@@ -38,12 +79,32 @@ export function hasBingCredentials(): boolean {
   );
 }
 
-export function hasSocialCredentials(): boolean {
+export function hasLinkedInCredentials(): boolean {
   return Boolean(
-    (process.env.LINKEDIN_CLIENT_ID?.trim() && process.env.LINKEDIN_CLIENT_SECRET?.trim()) ||
-      (process.env.TWITTER_CLIENT_ID?.trim() && process.env.TWITTER_CLIENT_SECRET?.trim()) ||
-      (process.env.META_APP_ID?.trim() && process.env.META_APP_SECRET?.trim()),
+    process.env.LINKEDIN_CLIENT_ID?.trim() && process.env.LINKEDIN_CLIENT_SECRET?.trim(),
   );
+}
+
+export function hasTwitterCredentials(): boolean {
+  return Boolean(
+    process.env.TWITTER_CLIENT_ID?.trim() && process.env.TWITTER_CLIENT_SECRET?.trim(),
+  );
+}
+
+export function hasMetaCredentials(): boolean {
+  return Boolean(process.env.META_APP_ID?.trim() && process.env.META_APP_SECRET?.trim());
+}
+
+export function hasUnsplashCredentials(): boolean {
+  return Boolean(process.env.UNSPLASH_ACCESS_KEY?.trim());
+}
+
+export function hasPexelsCredentials(): boolean {
+  return Boolean(process.env.PEXELS_API_KEY?.trim());
+}
+
+export function hasSocialCredentials(): boolean {
+  return hasLinkedInCredentials() || hasTwitterCredentials() || hasMetaCredentials();
 }
 
 export function hasResendCredentials(): boolean {
@@ -59,8 +120,13 @@ export function getIntegrationEnvStatus(): IntegrationEnvStatus {
     google: hasGoogleCredentials(),
     bing: hasBingCredentials(),
     social: hasSocialCredentials(),
+    linkedin: hasLinkedInCredentials(),
+    twitter: hasTwitterCredentials(),
+    meta: hasMetaCredentials(),
     email: hasResendCredentials(),
     stripe: hasStripeCredentials(),
+    unsplash: hasUnsplashCredentials(),
+    pexels: hasPexelsCredentials(),
   };
 }
 
@@ -92,8 +158,10 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
   return [
     {
       id: "stripe",
+      category: "billing",
+      kind: "credentials",
       label: "Stripe",
-      description: "Self-serve checkout, subscriptions, and customer billing portal.",
+      description: "Connect with Stripe OAuth or API keys for checkout and subscriptions.",
       settingsKey: "stripeBillingEnabled",
       docsUrl: "https://dashboard.stripe.com/apikeys",
       envVars: [
@@ -117,6 +185,8 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
     },
     {
       id: "resend",
+      category: "email",
+      kind: "credentials",
       label: "Resend",
       description: "Transactional email for password resets, invites, and notifications.",
       settingsKey: "emailEnabled",
@@ -124,6 +194,32 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
       envVars: [
         { name: "RESEND_API_KEY", configured: envConfigured("RESEND_API_KEY"), required: true },
         { name: "RESEND_FROM_EMAIL", configured: envConfigured("RESEND_FROM_EMAIL"), required: false },
+      ],
+    },
+    {
+      id: "unsplash",
+      category: "media",
+      kind: "credentials",
+      label: "Unsplash",
+      description: "Free stock photos for article featured images.",
+      docsUrl: "https://unsplash.com/developers",
+      envVars: [
+        {
+          name: "UNSPLASH_ACCESS_KEY",
+          configured: envConfigured("UNSPLASH_ACCESS_KEY"),
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "pexels",
+      category: "media",
+      kind: "credentials",
+      label: "Pexels",
+      description: "Free stock photos for article featured images.",
+      docsUrl: "https://www.pexels.com/api/",
+      envVars: [
+        { name: "PEXELS_API_KEY", configured: envConfigured("PEXELS_API_KEY"), required: true },
       ],
     },
   ];
@@ -135,4 +231,15 @@ export function integrationEnvReady(definition: PlatformIntegrationDefinition): 
     return definition.envVars.some((v) => v.configured);
   }
   return required.every((v) => v.configured);
+}
+
+export function getPlatformIntegrationsByCategory(): {
+  category: (typeof PLATFORM_INTEGRATION_CATEGORIES)[number];
+  integrations: PlatformIntegrationDefinition[];
+}[] {
+  const definitions = getPlatformIntegrationDefinitions();
+  return PLATFORM_INTEGRATION_CATEGORIES.map((category) => ({
+    category,
+    integrations: definitions.filter((integration) => integration.category === category.id),
+  })).filter((group) => group.integrations.length > 0);
 }

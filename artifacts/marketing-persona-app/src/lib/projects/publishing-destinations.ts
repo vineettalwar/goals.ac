@@ -116,6 +116,33 @@ const SOCIAL_FORMAT_DESTINATION: Partial<
   mastodon_post: "mastodon",
 };
 
+export function impliedDestinationForFormat(
+  format: ContentFormatType,
+): PublishDestinationId | null {
+  return SOCIAL_FORMAT_DESTINATION[format] ?? null;
+}
+
+/** Suggest a default intended destination from connections + project primary (optional). */
+export function resolveSuggestedDestination(
+  format: ContentFormatType,
+  connections: CmsConnectionSnapshot,
+  primaryBlogDestination?: string | null,
+): PublishDestinationId | null {
+  const implied = impliedDestinationForFormat(format);
+  if (implied) {
+    const def = getDestination(implied);
+    if (def && !def.exportOnly && def.isConnected(connections)) return implied;
+    return implied;
+  }
+
+  const connected = getConnectedDestinationsForFormat(format, connections);
+  if (primaryBlogDestination) {
+    const match = connected.find((d) => d.id === primaryBlogDestination);
+    if (match) return match.id;
+  }
+  return connected[0]?.id ?? null;
+}
+
 const LONG_FORM_FORMATS: ContentFormatType[] = [
   "blog_post",
   "news_article",
@@ -279,7 +306,7 @@ export const PUBLISHING_DESTINATIONS: PublishDestinationDefinition[] = [
     badgeClassName: "bg-yellow-500 text-black",
     listColorClassName: "bg-yellow-400",
     connectionMethods: ["api"],
-    connectionMethodLabels: { api: "OAuth access token" },
+    connectionMethodLabels: { api: "Access token" },
     isConnected: (c) => !!c.wix,
     matchesFormat: matchesLongForm,
   },
@@ -362,8 +389,8 @@ export const PUBLISHING_DESTINATIONS: PublishDestinationDefinition[] = [
     badgeLetter: "H",
     badgeClassName: "bg-orange-500",
     listColorClassName: "bg-orange-400",
-    connectionMethods: ["oauth"],
-    connectionMethodLabels: { oauth: "Private app token" },
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "Private app token" },
     isConnected: (c) => !!c.hubspot,
     matchesFormat: matchesLongForm,
   },
@@ -434,7 +461,7 @@ export const PUBLISHING_DESTINATIONS: PublishDestinationDefinition[] = [
     listColorClassName: "bg-neutral-500",
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Export only" },
-    isConnected: () => true,
+    isConnected: () => false,
     matchesFormat: matchesLongForm,
     exportOnly: true,
   },
@@ -449,7 +476,7 @@ export const PUBLISHING_DESTINATIONS: PublishDestinationDefinition[] = [
     listColorClassName: "bg-orange-400",
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Export only" },
-    isConnected: () => true,
+    isConnected: () => false,
     matchesFormat: (f) => matchesEmail(f) || matchesLongForm(f),
     exportOnly: true,
   },
@@ -564,6 +591,7 @@ export function countPublishingConnections(
 ): number {
   const keys = new Set<string>();
   for (const destination of PUBLISHING_DESTINATIONS) {
+    if (destination.exportOnly) continue;
     if (destination.isConnected(connections)) {
       keys.add(destination.integrationKey);
     }
@@ -608,8 +636,8 @@ export function getConnectedDestinationsForFormat(
   format: ContentFormatType,
   connections: CmsConnectionSnapshot,
 ): PublishDestinationDefinition[] {
-  return getDestinationsForFormat(format).filter((d) =>
-    d.isConnected(connections),
+  return getDestinationsForFormat(format).filter(
+    (d) => !d.exportOnly && d.isConnected(connections),
   );
 }
 

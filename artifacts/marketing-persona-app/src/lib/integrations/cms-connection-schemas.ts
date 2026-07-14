@@ -1,4 +1,9 @@
 import type { ConnectionMethod, PublishDestinationId } from "../projects/publishing-destinations";
+import {
+  getDefaultOutputMode,
+  getOutputModes,
+  outputModeLabel,
+} from "@workspace/content-engine/support/platform-output-modes";
 
 export type ConnectionFieldType = "text" | "password" | "url" | "number" | "select";
 
@@ -47,6 +52,45 @@ function trim(values: Record<string, string>, key: string): string {
 
 function has(values: Record<string, string>, key: string): boolean {
   return trim(values, key).length > 0;
+}
+
+export function buildOutputModeField(platform: string): ConnectionFieldDef {
+  const options = getOutputModes(platform);
+  const defaultMode = getDefaultOutputMode(platform);
+  return {
+    key: "outputMode",
+    label: "Output format",
+    type: "select",
+    defaultValue: defaultMode,
+    options: options.map((option) => ({ value: option.value, label: option.label })),
+    hint:
+      options.find((option) => option.value === defaultMode)?.hint ??
+      "How goals.ac formats content for this platform.",
+  };
+}
+
+function resolveStoredOutputMode(platform: string, integration: Record<string, unknown>): string {
+  if (platform === "wordpress") {
+    return String(integration.outputMode ?? integration.editorMode ?? getDefaultOutputMode(platform));
+  }
+  return String(integration.outputMode ?? getDefaultOutputMode(platform));
+}
+
+function outputModeDetailRow(
+  platform: string,
+  integration: Record<string, unknown>,
+): ConnectedDetailRow | null {
+  const mode = resolveStoredOutputMode(platform, integration);
+  if (!mode) return null;
+  return { label: "Output format", value: outputModeLabel(platform, mode) };
+}
+
+function appendOutputMode(values: Record<string, string>, platform: string): Record<string, unknown> {
+  const outputMode = trim(values, "outputMode") || getDefaultOutputMode(platform);
+  if (platform === "wordpress") {
+    return { outputMode, editorMode: outputMode };
+  }
+  return { outputMode };
 }
 
 const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnectionSchema>> = {
@@ -164,20 +208,28 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
         required: true,
         when: { connectionMethod: ["plugin"] },
       },
+      {
+        ...buildOutputModeField("wordpress"),
+        when: { connectionMethod: ["api", "plugin"] },
+      },
     ],
-    buildPayload: (values, connectionMethod) =>
-      connectionMethod === "plugin"
+    buildPayload: (values, connectionMethod) => {
+      const modeFields = appendOutputMode(values, "wordpress");
+      return connectionMethod === "plugin"
         ? {
             connectionType: "plugin" as const,
             siteUrl: trim(values, "siteUrl"),
             siteKey: trim(values, "siteKey"),
+            ...modeFields,
           }
         : {
             connectionType: "api" as const,
             siteUrl: trim(values, "siteUrl"),
             username: trim(values, "username"),
             appPassword: trim(values, "appPassword"),
-          },
+            ...modeFields,
+          };
+    },
     canSubmit: (values, connectionMethod) => {
       if (!has(values, "siteUrl")) return false;
       if (connectionMethod === "plugin") return has(values, "siteKey");
@@ -197,6 +249,8 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
       if (integration.usernameHint) {
         rows.push({ label: "Username", value: String(integration.usernameHint) });
       }
+      const outputRow = outputModeDetailRow("wordpress", integration);
+      if (outputRow) rows.push(outputRow);
       return rows;
     },
     resetValues: () => ({
@@ -223,15 +277,22 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
         hint: "Ghost Admin → Settings → Integrations → Add custom integration.",
         required: true,
       },
+      buildOutputModeField("ghost"),
     ],
     buildPayload: (values) => ({
       apiUrl: trim(values, "apiUrl"),
       adminApiKey: trim(values, "adminApiKey"),
+      ...appendOutputMode(values, "ghost"),
     }),
     canSubmit: (values) => has(values, "apiUrl") && has(values, "adminApiKey"),
-    connectedDetails: (integration) => [
-      { label: "API URL", value: String(integration.apiUrl ?? "") },
-    ],
+    connectedDetails: (integration) => {
+      const rows: ConnectedDetailRow[] = [
+        { label: "API URL", value: String(integration.apiUrl ?? "") },
+      ];
+      const outputRow = outputModeDetailRow("ghost", integration);
+      if (outputRow) rows.push(outputRow);
+      return rows;
+    },
     resetValues: () => ({ apiUrl: "", adminApiKey: "" }),
   },
   webhook: {
@@ -249,15 +310,22 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
         type: "password",
         required: true,
       },
+      buildOutputModeField("webhook"),
     ],
     buildPayload: (values) => ({
       url: trim(values, "url"),
       signingSecret: trim(values, "signingSecret"),
+      ...appendOutputMode(values, "webhook"),
     }),
     canSubmit: (values) => has(values, "url") && has(values, "signingSecret"),
-    connectedDetails: (integration) => [
-      { label: "URL", value: String(integration.url ?? "") },
-    ],
+    connectedDetails: (integration) => {
+      const rows: ConnectedDetailRow[] = [
+        { label: "URL", value: String(integration.url ?? "") },
+      ];
+      const outputRow = outputModeDetailRow("webhook", integration);
+      if (outputRow) rows.push(outputRow);
+      return rows;
+    },
     resetValues: () => ({ url: "", signingSecret: "" }),
   },
   shopify: {
@@ -299,6 +367,7 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
         type: "text",
         placeholder: "gid://shopify/Blog/...",
       },
+      buildOutputModeField("shopify"),
     ],
     buildPayload: (values, connectionMethod) => {
       const blogId = trim(values, "blogId");
@@ -314,7 +383,8 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
               shopDomain: trim(values, "shopDomain"),
               accessToken: trim(values, "accessToken"),
             };
-      return blogId ? { ...base, blogId } : base;
+      const payload = { ...base, ...appendOutputMode(values, "shopify") };
+      return blogId ? { ...payload, blogId } : payload;
     },
     canSubmit: (values, connectionMethod) => {
       if (connectionMethod === "plugin") {
@@ -322,16 +392,21 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
       }
       return has(values, "shopDomain") && has(values, "accessToken");
     },
-    connectedDetails: (integration) => [
-      {
-        label: "Method",
-        value: integration.connectionType === "plugin" ? "goals.ac plugin" : "Admin API",
-      },
-      {
-        label: "Site",
-        value: String(integration.siteUrl ?? integration.shopDomain ?? ""),
-      },
-    ],
+    connectedDetails: (integration) => {
+      const rows: ConnectedDetailRow[] = [
+        {
+          label: "Method",
+          value: integration.connectionType === "plugin" ? "goals.ac plugin" : "Admin API",
+        },
+        {
+          label: "Site",
+          value: String(integration.siteUrl ?? integration.shopDomain ?? ""),
+        },
+      ];
+      const outputRow = outputModeDetailRow("shopify", integration);
+      if (outputRow) rows.push(outputRow);
+      return rows;
+    },
     resetValues: () => ({
       shopDomain: "",
       accessToken: "",
@@ -393,13 +468,16 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
         defaultValue: "article",
         when: { connectionMethod: ["api"] },
       },
+      buildOutputModeField("drupal"),
     ],
     buildPayload: (values, connectionMethod) => {
+      const modeFields = appendOutputMode(values, "drupal");
       if (connectionMethod === "plugin") {
         return {
           connectionType: "plugin" as const,
           siteUrl: trim(values, "siteUrl"),
           siteKey: trim(values, "siteKey"),
+          ...modeFields,
         };
       }
       const authType = (trim(values, "authType") || "basic") as "basic" | "bearer";
@@ -407,6 +485,7 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
         connectionType: "api" as const,
         siteUrl: trim(values, "siteUrl"),
         authType,
+        ...modeFields,
       };
       if (authType === "bearer") {
         payload.accessToken = trim(values, "accessToken");
@@ -425,13 +504,18 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
       if (authType === "bearer") return has(values, "accessToken");
       return has(values, "username") && has(values, "password");
     },
-    connectedDetails: (integration) => [
-      {
-        label: "Method",
-        value: integration.connectionType === "plugin" ? "goals.ac plugin" : "JSON:API",
-      },
-      { label: "Site", value: String(integration.siteUrl ?? "") },
-    ],
+    connectedDetails: (integration) => {
+      const rows: ConnectedDetailRow[] = [
+        {
+          label: "Method",
+          value: integration.connectionType === "plugin" ? "goals.ac plugin" : "JSON:API",
+        },
+        { label: "Site", value: String(integration.siteUrl ?? "") },
+      ];
+      const outputRow = outputModeDetailRow("drupal", integration);
+      if (outputRow) rows.push(outputRow);
+      return rows;
+    },
     resetValues: () => ({
       siteUrl: "",
       siteKey: "",
@@ -472,19 +556,23 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
         placeholder: "2",
         when: { connectionMethod: ["api"] },
       },
+      buildOutputModeField("joomla"),
     ],
     buildPayload: (values, connectionMethod) => {
+      const modeFields = appendOutputMode(values, "joomla");
       if (connectionMethod === "plugin") {
         return {
           connectionType: "plugin" as const,
           siteUrl: trim(values, "siteUrl"),
           siteKey: trim(values, "siteKey"),
+          ...modeFields,
         };
       }
       const payload: Record<string, unknown> = {
         connectionType: "api" as const,
         siteUrl: trim(values, "siteUrl"),
         apiToken: trim(values, "apiToken"),
+        ...modeFields,
       };
       const categoryId = trim(values, "categoryId");
       if (categoryId) payload.categoryId = Number(categoryId);
@@ -495,13 +583,18 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
       if (connectionMethod === "plugin") return has(values, "siteKey");
       return has(values, "apiToken");
     },
-    connectedDetails: (integration) => [
-      {
-        label: "Method",
-        value: integration.connectionType === "plugin" ? "goals.ac plugin" : "Web Services API",
-      },
-      { label: "Site", value: String(integration.siteUrl ?? "") },
-    ],
+    connectedDetails: (integration) => {
+      const rows: ConnectedDetailRow[] = [
+        {
+          label: "Method",
+          value: integration.connectionType === "plugin" ? "goals.ac plugin" : "Web Services API",
+        },
+        { label: "Site", value: String(integration.siteUrl ?? "") },
+      ];
+      const outputRow = outputModeDetailRow("joomla", integration);
+      if (outputRow) rows.push(outputRow);
+      return rows;
+    },
     resetValues: () => ({
       siteUrl: "",
       siteKey: "",
@@ -727,18 +820,31 @@ const CMS_CONNECTION_SCHEMAS: Partial<Record<PublishDestinationId, CmsConnection
   },
   typo3: {
     fields: [
-      { key: "siteUrl", label: "TYPO3 site URL", type: "url", required: true },
-      { key: "siteKey", label: "Site key", type: "password", required: true },
+      { key: "siteUrl", label: "TYPO3 site URL", type: "url", placeholder: "https://yoursite.com", required: true },
+      {
+        key: "siteKey",
+        label: "Site key",
+        type: "password",
+        required: true,
+        hint: "Install the goals.ac TYPO3 extension and copy the site key from Extension Manager settings.",
+      },
+      buildOutputModeField("typo3"),
     ],
     buildPayload: (values) => ({
       connectionType: "plugin" as const,
       siteUrl: trim(values, "siteUrl"),
       siteKey: trim(values, "siteKey"),
+      ...appendOutputMode(values, "typo3"),
     }),
     canSubmit: (values) => has(values, "siteUrl") && has(values, "siteKey"),
-    connectedDetails: (integration) => [
-      { label: "Site URL", value: String(integration.siteUrl ?? "") },
-    ],
+    connectedDetails: (integration) => {
+      const rows: ConnectedDetailRow[] = [
+        { label: "Site URL", value: String(integration.siteUrl ?? "") },
+      ];
+      const outputRow = outputModeDetailRow("typo3", integration);
+      if (outputRow) rows.push(outputRow);
+      return rows;
+    },
     resetValues: () => ({ siteUrl: "", siteKey: "" }),
   },
   beehiiv: {

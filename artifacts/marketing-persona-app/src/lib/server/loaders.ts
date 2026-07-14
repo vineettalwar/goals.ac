@@ -12,7 +12,7 @@ import {
   decryptCmsCredentials,
   maskCmsCredentials,
 } from "@workspace/content-engine/support/cms-integrations";
-import { getOrgAiSettingsForUser, hasOrgBedrockCredentials, hasOrgSemrushCredentials } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser, hasOrgAnthropicCredentials, hasOrgBedrockCredentials, hasOrgOpenAICredentials, hasOrgSemrushCredentials } from "@workspace/content-engine/support/org-ai-settings";
 import { decryptSecret } from "@workspace/security/encryption";
 import { getUsageSummaryForUser } from "@/lib/billing/usage";
 import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/platform/ai-providers-status";
@@ -22,6 +22,7 @@ import { getAccessibleProject, getOrgMembership, isSuperAdmin, requireProjectAcc
 import { isSiteAdmin } from "@/lib/org/org-access-shared";
 
 import type { ContentPieceMetadata } from "@workspace/db";
+import { sanitizeAiProse } from "@workspace/content-engine";
 
 export interface ContentPieceRecord {
   id: number;
@@ -36,6 +37,27 @@ export interface ContentPieceRecord {
   publishedUrl: string | null;
   createdAt: string;
   pieceMetadata?: ContentPieceMetadata | null;
+}
+
+function sanitizePieceMetadata(
+  metadata: ContentPieceMetadata | null | undefined,
+): ContentPieceMetadata | null {
+  if (!metadata) return null;
+  return {
+    ...metadata,
+    seoTitle: metadata.seoTitle ? sanitizeAiProse(metadata.seoTitle) : metadata.seoTitle,
+    metaDescription: metadata.metaDescription
+      ? sanitizeAiProse(metadata.metaDescription)
+      : metadata.metaDescription,
+    ogTitle: metadata.ogTitle ? sanitizeAiProse(metadata.ogTitle) : metadata.ogTitle,
+    ogDescription: metadata.ogDescription
+      ? sanitizeAiProse(metadata.ogDescription)
+      : metadata.ogDescription,
+    faqSection: metadata.faqSection?.map((faq) => ({
+      question: sanitizeAiProse(faq.question),
+      answer: sanitizeAiProse(faq.answer),
+    })),
+  };
 }
 
 export const loadContentPieceForUser = cache(async (
@@ -55,17 +77,17 @@ export const loadContentPieceForUser = cache(async (
 
   return {
     id: piece.id,
-    title: piece.title,
+    title: sanitizeAiProse(piece.title),
     formatType: piece.formatType,
     targetKeyword: piece.targetKeyword ?? "",
-    bodyMarkdown: piece.bodyMarkdown ?? "",
+    bodyMarkdown: sanitizeAiProse(piece.bodyMarkdown ?? ""),
     status: piece.status,
     plannedDate: piece.plannedDate ?? null,
     wordCount: piece.wordCount,
     websiteProjectId: piece.websiteProjectId,
     publishedUrl: piece.publishedUrl ?? null,
     createdAt: piece.createdAt.toISOString(),
-    pieceMetadata: piece.pieceMetadata ?? null,
+    pieceMetadata: sanitizePieceMetadata(piece.pieceMetadata),
   };
 });
 
@@ -132,6 +154,8 @@ export interface SettingsInitialData {
     hasPassword: boolean;
   } | null;
   apiKey: { hasKey: boolean; lastFour: string | null };
+  openaiCredentials: { hasKey: boolean; lastFour: string | null };
+  anthropicCredentials: { hasKey: boolean; lastFour: string | null };
   bedrockCredentials: {
     hasCredentials: boolean;
     accessKeyLastFour: string | null;
@@ -174,6 +198,26 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
     }
   }
 
+  const hasOpenAIKey = hasOrgOpenAICredentials(orgSettings);
+  let openaiLastFour: string | null = null;
+  if (orgSettings?.encryptedOpenaiApiKey) {
+    try {
+      openaiLastFour = decryptSecret(orgSettings.encryptedOpenaiApiKey).slice(-4);
+    } catch {
+      openaiLastFour = "••••";
+    }
+  }
+
+  const hasAnthropicKey = hasOrgAnthropicCredentials(orgSettings);
+  let anthropicLastFour: string | null = null;
+  if (orgSettings?.encryptedAnthropicApiKey) {
+    try {
+      anthropicLastFour = decryptSecret(orgSettings.encryptedAnthropicApiKey).slice(-4);
+    } catch {
+      anthropicLastFour = "••••";
+    }
+  }
+
   const hasBedrockCredentials = hasOrgBedrockCredentials(orgSettings);
   let bedrockAccessKeyLastFour: string | null = null;
   if (orgSettings?.encryptedBedrockAccessKeyId) {
@@ -206,6 +250,8 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
   const aiStatus = finalizeAiProviderStatus(aiStatusPayload, {
     hasUserGeminiKey: hasKey,
     hasOrgBedrockKey: hasBedrockCredentials,
+    hasOrgOpenAIKey: hasOpenAIKey,
+    hasOrgAnthropicKey: hasAnthropicKey,
     orgBedrockRegion: orgSettings?.bedrockRegion ?? null,
     orgBedrockModel: orgSettings?.bedrockModel ?? null,
   });
@@ -223,6 +269,8 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
         }
       : null,
     apiKey: { hasKey, lastFour },
+    openaiCredentials: { hasKey: hasOpenAIKey, lastFour: openaiLastFour },
+    anthropicCredentials: { hasKey: hasAnthropicKey, lastFour: anthropicLastFour },
     bedrockCredentials: {
       hasCredentials: hasBedrockCredentials,
       accessKeyLastFour: bedrockAccessKeyLastFour,
