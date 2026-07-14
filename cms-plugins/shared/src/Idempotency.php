@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Idempotent request handling.
  *
@@ -13,10 +14,10 @@
 
 namespace GoalsAC\Shared;
 
-defined('ABSPATH') || defined('JOOMLA') || defined('DRUPAL') || defined('TYPO3') || exit;
+defined('ABSPATH') || defined('_JEXEC') || defined('DRUPAL_ROOT') || defined('TYPO3') || exit;
 
-class Idempotency {
-
+class Idempotency
+{
     public const KEY_HEADER  = 'X-Idempotency-Key';
     public const TTL_SECONDS = 86400; // 24-hour idempotency window
 
@@ -27,7 +28,8 @@ class Idempotency {
      * @param KeyStore $store          CMS-specific key storage.
      * @return array|null The stored result, or null if not found/expired.
      */
-    public static function check(string $idempotencyKey, KeyStore $store): ?array {
+    public static function check(string $idempotencyKey, KeyStore $store): ?array
+    {
         if (empty($idempotencyKey)) {
             return null;
         }
@@ -54,7 +56,8 @@ class Idempotency {
      * @param array  $result         The result to store.
      * @param KeyStore $store        CMS-specific key storage.
      */
-    public static function store(string $idempotencyKey, array $result, KeyStore $store): void {
+    public static function store(string $idempotencyKey, array $result, KeyStore $store): void
+    {
         if (empty($idempotencyKey)) {
             return;
         }

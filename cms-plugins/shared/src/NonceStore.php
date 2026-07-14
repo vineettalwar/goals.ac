@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Nonce storage interface for HMAC replay protection.
  *
@@ -12,10 +13,10 @@
 
 namespace GoalsAC\Shared;
 
-defined('ABSPATH') || defined('JOOMLA') || defined('DRUPAL') || defined('TYPO3') || exit;
+defined('ABSPATH') || defined('_JEXEC') || defined('DRUPAL_ROOT') || defined('TYPO3') || exit;
 
-interface NonceStore {
-
+interface NonceStore
+{
     /**
      * Check if a nonce has been seen within the freshness window.
      */

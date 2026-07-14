@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Idempotency key storage interface.
  *
@@ -12,10 +13,10 @@
 
 namespace GoalsAC\Shared;
 
-defined('ABSPATH') || defined('JOOMLA') || defined('DRUPAL') || defined('TYPO3') || exit;
+defined('ABSPATH') || defined('_JEXEC') || defined('DRUPAL_ROOT') || defined('TYPO3') || exit;
 
-interface KeyStore {
-
+interface KeyStore
+{
     /**
      * Retrieve a stored value by key.
      *

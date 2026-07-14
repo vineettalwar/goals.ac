@@ -1,4 +1,5 @@
 <?php
+
 /**
  * HMAC request authentication with replay protection.
  *
@@ -13,10 +14,10 @@
 
 namespace GoalsAC\Shared;
 
-defined('ABSPATH') || defined('JOOMLA') || defined('DRUPAL') || defined('TYPO3') || exit;
+defined('ABSPATH') || defined('_JEXEC') || defined('DRUPAL_ROOT') || defined('TYPO3') || exit;
 
-class HMACAuth {
-
+class HMACAuth
+{
     public const TIMESTAMP_HEADER  = 'X-Goals-Timestamp';
     public const NONCE_HEADER      = 'X-Goals-Nonce';
     public const SIGNATURE_HEADER  = 'X-Goals-Signature';
@@ -37,7 +38,8 @@ class HMACAuth {
      * @param NonceStore $nonceStore  CMS-specific nonce storage.
      * @return true|\WP_Error|object  True on success, error object on failure.
      */
-    public static function verify(array $request, string $siteKey, NonceStore $nonceStore) {
+    public static function verify(array $request, string $siteKey, NonceStore $nonceStore)
+    {
         $timestamp = $request['timestamp'] ?? '';
         $nonce     = $request['nonce'] ?? '';
         $signature = $request['signature'] ?? '';
@@ -81,7 +83,14 @@ class HMACAuth {
     /**
      * Compute HMAC signature for outbound requests (used by the SaaS-side connector).
      */
-    public static function sign(string $method, string $path, int $timestamp, string $nonce, string $body, string $siteKey): string {
+    public static function sign(
+        string $method,
+        string $path,
+        int $timestamp,
+        string $nonce,
+        string $body,
+        string $siteKey
+    ): string {
         $bodyHash  = hash('sha256', $body);
         $canonical = strtoupper($method) . "\n" . $path . "\n" . $timestamp . "\n" . $nonce . "\n" . $bodyHash;
         return hash_hmac('sha256', $canonical, $siteKey);
@@ -90,7 +99,8 @@ class HMACAuth {
     /**
      * Build the standard auth headers for an outbound request.
      */
-    public static function headers(string $method, string $path, string $body, string $siteKey): array {
+    public static function headers(string $method, string $path, string $body, string $siteKey): array
+    {
         $timestamp = (string) time();
         $nonce     = bin2hex(random_bytes(16));
         $signature = self::sign($method, $path, $timestamp, $nonce, $body, $siteKey);
@@ -106,7 +116,8 @@ class HMACAuth {
      * Create a normalized error object. Each CMS adapter wraps this in its
      * native error type (WP_Error, Exception, etc.).
      */
-    public static function error(string $code, string $message, int $status = 401): object {
+    public static function error(string $code, string $message, int $status = 401): object
+    {
         return (object) [
             'code'    => $code,
             'message' => $message,

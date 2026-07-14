@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Shared contract types for goals.ac CMS plugins.
  *
@@ -10,19 +11,20 @@
 
 namespace GoalsAC\Shared;
 
-defined('ABSPATH') || defined('JOOMLA') || defined('DRUPAL') || defined('TYPO3') || exit;
+defined('ABSPATH') || defined('_JEXEC') || defined('DRUPAL_ROOT') || defined('TYPO3') || exit;
 
 /**
  * Canonical content payload sent by the goals.ac SaaS platform.
  */
-class Contract {
-
+class Contract
+{
     public const VERSION = '0.2.0';
 
     /**
      * Standard capabilities returned by every plugin's health endpoint.
      */
-    public static function defaultCapabilities(): array {
+    public static function defaultCapabilities(): array
+    {
         return [
             'drafts'           => true,
             'scheduling'       => true,
@@ -37,7 +39,8 @@ class Contract {
     /**
      * Standard health response.
      */
-    public static function healthResponse(string $cmsVersion, array $extra = []): array {
+    public static function healthResponse(string $cmsVersion, array $extra = []): array
+    {
         return array_merge([
             'version'      => self::VERSION,
             'cms_version'  => $cmsVersion,
@@ -48,7 +51,8 @@ class Contract {
     /**
      * Standard publish request body fields.
      */
-    public static function expectedPublishFields(): array {
+    public static function expectedPublishFields(): array
+    {
         return [
             'title',
             'content',
@@ -77,7 +81,8 @@ class Contract {
     /**
      * Standard schema request body fields.
      */
-    public static function expectedSchemaFields(): array {
+    public static function expectedSchemaFields(): array
+    {
         return ['json_ld', 'llms_txt'];
     }
 }
