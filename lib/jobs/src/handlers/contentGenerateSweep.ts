@@ -28,14 +28,17 @@ function isProjectSweepPayload(
   return typeof (data as Partial<ContentGenerateSweepPayload>).projectId === "number";
 }
 
+export async function processContentGenerateSweep(data: ContentGenerateSweepJobData): Promise<void> {
+  if (isProjectSweepPayload(data)) {
+    await runAutopilotForProject(data.projectId);
+  } else {
+    await sweepAutopilotProjects();
+  }
+}
+
 export async function registerContentGenerateSweepHandler(boss: PgBoss): Promise<void> {
   await boss.work<ContentGenerateSweepJobData>(QUEUES.contentGenerateSweep, async ([job]) => {
-    const data = job.data;
-    if (isProjectSweepPayload(data)) {
-      await runAutopilotForProject(data.projectId);
-    } else {
-      await sweepAutopilotProjects();
-    }
+    await processContentGenerateSweep(job.data);
   });
 }
 

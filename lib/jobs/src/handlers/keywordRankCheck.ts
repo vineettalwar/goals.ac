@@ -19,14 +19,17 @@ import { logger } from "../logger";
 
 const KEYWORD_RANK_SWEEP_CRON = "0 6 * * *";
 
+export async function processKeywordRankCheck(data: KeywordRankCheckJobData): Promise<void> {
+  if (isSingleKeywordPayload(data)) {
+    await checkSingleKeyword(data.trackedKeywordId);
+  } else {
+    await sweepAllKeywords();
+  }
+}
+
 export async function registerKeywordRankCheckHandler(boss: PgBoss): Promise<void> {
   await boss.work<KeywordRankCheckJobData>(QUEUES.keywordRankCheck, async ([job]) => {
-    const data = job.data;
-    if (isSingleKeywordPayload(data)) {
-      await checkSingleKeyword(data.trackedKeywordId);
-    } else {
-      await sweepAllKeywords();
-    }
+    await processKeywordRankCheck(job.data);
   });
 }
 

@@ -12,14 +12,17 @@ function isProjectPayload(data: Ga4AnalyticsSyncJobData): data is Ga4AnalyticsSy
   return typeof (data as Partial<Ga4AnalyticsSyncPayload>).projectId === "number";
 }
 
+export async function processGa4AnalyticsSync(data: Ga4AnalyticsSyncJobData): Promise<void> {
+  if (isProjectPayload(data)) {
+    await runGa4SyncForProject(data.projectId);
+  } else {
+    await sweepGa4SyncProjects();
+  }
+}
+
 export async function registerGa4AnalyticsSyncHandler(boss: PgBoss): Promise<void> {
   await boss.work<Ga4AnalyticsSyncJobData>(QUEUES.ga4AnalyticsSync, async ([job]) => {
-    const data = job.data;
-    if (isProjectPayload(data)) {
-      await runGa4SyncForProject(data.projectId);
-    } else {
-      await sweepGa4SyncProjects();
-    }
+    await processGa4AnalyticsSync(job.data);
   });
 }
 

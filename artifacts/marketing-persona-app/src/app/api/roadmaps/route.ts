@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { db } from "@workspace/db";
+import { db, ilikeCompat } from "@workspace/db";
 import { roadmapsTable } from "@workspace/db/schema";
-import { and, desc, count, ilike } from "drizzle-orm";
+import { and, desc, count } from "drizzle-orm";
 
 export async function GET(req: Request) {
   try {
@@ -12,8 +12,8 @@ export async function GET(req: Request) {
     const location = searchParams.get("location") ?? undefined;
 
     const conditions = [];
-    if (industry) conditions.push(ilike(roadmapsTable.industry, `%${industry}%`));
-    if (location) conditions.push(ilike(roadmapsTable.location, `%${location}%`));
+    if (industry) conditions.push(ilikeCompat(roadmapsTable.industry, `%${industry}%`));
+    if (location) conditions.push(ilikeCompat(roadmapsTable.location, `%${location}%`));
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 

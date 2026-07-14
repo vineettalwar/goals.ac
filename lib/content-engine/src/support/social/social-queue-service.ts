@@ -1,4 +1,4 @@
-import { db } from "@workspace/db";
+import { db, jsonTextEquals } from "@workspace/db";
 import {
   contentPiecesTable,
   websiteProjectsTable,
@@ -355,7 +355,7 @@ export async function listEvergreenCandidates(now = new Date()): Promise<Content
       and(
         eq(contentPiecesTable.status, "published"),
         inArray(contentPiecesTable.formatType, SOCIAL_FORMAT_LIST),
-        sql`${contentPiecesTable.evergreenConfig}->>'enabled' = 'true'`,
+        jsonTextEquals(contentPiecesTable.evergreenConfig, "enabled", "true"),
       ),
     )
     .limit(50);

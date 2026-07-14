@@ -17,14 +17,19 @@ function isProjectPayload(data: KeywordOpportunitySweepJobData): data is Keyword
   return typeof (data as Partial<KeywordOpportunitySweepPayload>).projectId === "number";
 }
 
+export async function processKeywordOpportunitySweep(
+  data: KeywordOpportunitySweepJobData,
+): Promise<void> {
+  if (isProjectPayload(data)) {
+    await runOpportunityDiscoveryForProject(data.projectId, data.userId);
+  } else {
+    await sweepOpportunityProjects();
+  }
+}
+
 export async function registerKeywordOpportunitySweepHandler(boss: PgBoss): Promise<void> {
   await boss.work<KeywordOpportunitySweepJobData>(QUEUES.keywordOpportunitySweep, async ([job]) => {
-    const data = job.data;
-    if (isProjectPayload(data)) {
-      await runOpportunityDiscoveryForProject(data.projectId, data.userId);
-    } else {
-      await sweepOpportunityProjects();
-    }
+    await processKeywordOpportunitySweep(job.data);
   });
 }
 

@@ -12,14 +12,19 @@ function isSourcePayload(data: ArticleIdeaSourceSyncJobData): data is ArticleIde
   return typeof (data as Partial<ArticleIdeaSourceSyncPayload>).sourceId === "number";
 }
 
+export async function processArticleIdeaSourceSync(
+  data: ArticleIdeaSourceSyncJobData,
+): Promise<void> {
+  if (isSourcePayload(data)) {
+    await runArticleIdeaSourceSync(data.sourceId, data.userId);
+  } else {
+    await sweepArticleIdeaSources();
+  }
+}
+
 export async function registerArticleIdeaSourceSyncHandler(boss: PgBoss): Promise<void> {
   await boss.work<ArticleIdeaSourceSyncJobData>(QUEUES.articleIdeaSourceSync, async ([job]) => {
-    const data = job.data;
-    if (isSourcePayload(data)) {
-      await runArticleIdeaSourceSync(data.sourceId, data.userId);
-    } else {
-      await sweepArticleIdeaSources();
-    }
+    await processArticleIdeaSourceSync(job.data);
   });
 }
 

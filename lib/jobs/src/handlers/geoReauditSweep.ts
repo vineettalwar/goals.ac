@@ -15,14 +15,17 @@ function isProjectPayload(data: GeoReauditJobData): data is GeoReauditPayload {
   return typeof (data as Partial<GeoReauditPayload>).projectId === "number";
 }
 
+export async function processGeoReauditSweep(data: GeoReauditJobData): Promise<void> {
+  if (isProjectPayload(data)) {
+    await reauditProject(data.projectId);
+  } else {
+    await sweepGeoReauditProjects();
+  }
+}
+
 export async function registerGeoReauditSweepHandler(boss: PgBoss): Promise<void> {
   await boss.work<GeoReauditJobData>(QUEUES.geoReauditSweep, async ([job]) => {
-    const data = job.data;
-    if (isProjectPayload(data)) {
-      await reauditProject(data.projectId);
-    } else {
-      await sweepGeoReauditProjects();
-    }
+    await processGeoReauditSweep(job.data);
   });
 }
 

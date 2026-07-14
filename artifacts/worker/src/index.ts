@@ -39,6 +39,7 @@ import {
   SOCIAL_METRICS_SYNC_CRON,
 } from "@workspace/jobs";
 import pino from "pino";
+import { startHealthServer, stopHealthServer } from "./health-server";
 
 const workerLogger = pino({
   level: process.env.LOG_LEVEL ?? "info",
@@ -95,6 +96,7 @@ async function main(): Promise<void> {
   await scheduleCron(QUEUES.socialHistorySync, SOCIAL_HISTORY_SYNC_CRON, {});
   await scheduleCron(QUEUES.socialMetricsSync, SOCIAL_METRICS_SYNC_CRON, {});
 
+  startHealthServer(workerLogger);
   workerLogger.info({ queues: Object.values(QUEUES) }, "Job worker started");
 
   let shuttingDown = false;
@@ -102,7 +104,7 @@ async function main(): Promise<void> {
     if (shuttingDown) return;
     shuttingDown = true;
     workerLogger.info({ signal }, "Worker received shutdown signal");
-    stopBoss()
+    Promise.all([stopHealthServer(), stopBoss()])
       .then(() => process.exit(0))
       .catch((err) => {
         workerLogger.error({ err }, "Error stopping pg-boss");

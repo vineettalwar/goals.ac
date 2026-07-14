@@ -9,12 +9,12 @@
 | Frontend (main app) | React 19, Vite 7, Tailwind CSS v4, shadcn/ui (Radix primitives) |
 | Frontend (marketing) | Next.js 14+ (App Router), NextAuth |
 | Backend API | Express 5, TypeScript 5.9, esbuild |
-| Database | PostgreSQL 17, Drizzle ORM, Zod |
+| Database | PostgreSQL 17 (local/Docker) **or** Cloudflare D1 (production); Drizzle ORM, Zod |
 | AI | Google Gemini 2.5 Flash (`@google/genai`), tiered provider abstraction |
 | CMS Connectors | WordPress, Shopify (GraphQL), Joomla (REST), Drupal (JSON:API), Notion, Webflow, Ghost, Webhook |
 | Auth | JWT (Express app), NextAuth (Next.js app), bcrypt, Google OAuth 2.0 |
 | Caching | Redis (AI output, 24h TTL), in-memory LRU, DB-level content caching (SHA-256 key) |
-| Async Jobs | pg-boss (Postgres-backed queue) |
+| Async Jobs | pg-boss (Postgres only); blocked when `DB_DIALECT=d1` — use Cloudflare Queues or hybrid worker |
 | Logging | Pino |
 | Animation | GSAP, Framer Motion |
 | Charts | Recharts |
@@ -151,13 +151,18 @@ pnpm --filter @workspace/worker run dev                 # Background jobs
 # Manual — legacy stack (optional)
 PORT=8080 pnpm --filter @workspace/api-server run dev  # Legacy Express API
 pnpm --filter @workspace/goals-ac run dev               # Legacy Vite redirect :5173
+
+# Cloudflare Workers preview (D1, no remote provisioning)
+cp artifacts/marketing-persona-app/.dev.vars.example artifacts/marketing-persona-app/.dev.vars
+pnpm run cf:migrate:d1:local && pnpm run cf:seed:d1:local && pnpm run cf:preview  # :8787
 ```
 
 ## Development Workflow
 
 1. Schema changes: edit `lib/db/src/schema/`, run `pnpm --filter @workspace/db run generate`, review SQL, run `pnpm --filter @workspace/db run migrate`, then `cd lib/db && npx tsc --build` to refresh types
-2. API spec changes: edit `lib/api-spec/openapi.yaml`, run `pnpm --filter @workspace/api-spec run codegen`
-3. Always run `pnpm run typecheck` locally before pushing
+2. **D1 prep:** after schema edits, `pnpm --filter @workspace/db run generate:d1`; apply `pnpm run cf:migrate:d1:local`; seed `pnpm run cf:seed:d1:local`. Use `countAsInt`, `ilikeCompat`, `jsonTextAt` from `@workspace/db` in shared query code.
+3. API spec changes: edit `lib/api-spec/openapi.yaml`, run `pnpm --filter @workspace/api-spec run codegen`
+4. Always run `pnpm run typecheck` locally before pushing
 
 **No GitHub CI** — this repo does not use GitHub Actions. Do not add `.github/workflows/`, CI pipelines, or GitHub Actions config unless the user explicitly asks. Validate changes locally (`pnpm run typecheck`, package builds, `docker compose config`) instead.
 

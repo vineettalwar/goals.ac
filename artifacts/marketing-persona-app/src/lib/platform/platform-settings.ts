@@ -55,14 +55,18 @@ function rowToStatus(row: {
 }
 
 export async function getPlatformSettings(): Promise<PlatformStatus> {
-  const [row] = await db
-    .select()
-    .from(platformSettingsTable)
-    .where(eq(platformSettingsTable.id, 1))
-    .limit(1);
+  try {
+    const [row] = await db
+      .select()
+      .from(platformSettingsTable)
+      .where(eq(platformSettingsTable.id, 1))
+      .limit(1);
 
-  if (!row) return DEFAULT_STATUS;
-  return rowToStatus(row);
+    if (!row) return DEFAULT_STATUS;
+    return rowToStatus(row);
+  } catch {
+    return DEFAULT_STATUS;
+  }
 }
 
 export async function updatePlatformSettings(

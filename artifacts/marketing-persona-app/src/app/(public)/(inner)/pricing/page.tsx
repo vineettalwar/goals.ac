@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 import { PricingPageDynamic } from "@/components/marketing/layout/marketing-client-dynamic";
 
 export const metadata: Metadata = {
-  title: "Engagements",
-  description: "Custom SEO, AEO, and GEO consulting for B2B teams. Contact us to discuss scope.",
+  title: "Plans & pricing",
+  description:
+    "Start free on Starter, upgrade to Growth ($49/mo), or add a hands-on GEO/AEO content program. Self-serve studio plus optional consulting.",
   openGraph: {
-    title: "Engagements | goals.ac",
-    description: "Custom SEO, AEO, and GEO consulting for B2B teams. Contact us to discuss scope.",
+    title: "Plans & pricing | goals.ac",
+    description:
+      "Start free on Starter, upgrade to Growth ($49/mo), or add a hands-on GEO/AEO content program.",
   },
 };
 

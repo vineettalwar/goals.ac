@@ -1,7 +1,8 @@
-import { db } from "@workspace/db";
-import { brandVoiceChunksTable } from "@workspace/db/schema";
+import { db, isD1Dialect } from "@workspace/db";
+import { countAsInt } from "@workspace/db";
+import { brandVoiceChunksTable, brandVoiceSourcesTable } from "@workspace/db/schema";
 import { embedText } from "@workspace/ai-providers/embed";
-import { sql, eq } from "drizzle-orm";
+import { sql, eq, and } from "drizzle-orm";
 import { logger } from "../core/logger";
 
 export interface RetrievedBrandPassage {
@@ -32,6 +33,75 @@ function formatVectorForSql(values: number[]): string {
   return `[${values.join(",")}]`;
 }
 
+function cosineSimilarity(a: number[], b: number[]): number {
+  let dot = 0;
+  let normA = 0;
+  let normB = 0;
+  const len = Math.min(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    dot += a[i]! * b[i]!;
+    normA += a[i]! * a[i]!;
+    normB += b[i]! * b[i]!;
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+function parseEmbedding(raw: unknown): number[] | null {
+  if (Array.isArray(raw)) return raw as number[];
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      return Array.isArray(parsed) ? (parsed as number[]) : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+async function retrieveBrandVoicePassagesD1(
+  options: RetrieveBrandVoiceOptions,
+  queryEmbedding: number[],
+): Promise<RetrievedBrandPassage[]> {
+  const { projectId, topK = 5, minSimilarity = 0.72 } = options;
+
+  const rows = await db
+    .select({
+      text: brandVoiceChunksTable.text,
+      embedding: brandVoiceChunksTable.embedding,
+      sourceType: brandVoiceSourcesTable.sourceType,
+      sourceUrl: brandVoiceSourcesTable.sourceUrl,
+      title: brandVoiceSourcesTable.title,
+    })
+    .from(brandVoiceChunksTable)
+    .innerJoin(brandVoiceSourcesTable, eq(brandVoiceSourcesTable.id, brandVoiceChunksTable.sourceId))
+    .where(
+      and(
+        eq(brandVoiceChunksTable.websiteProjectId, projectId),
+        eq(brandVoiceSourcesTable.status, "indexed"),
+      ),
+    );
+
+  const scored: RetrievedBrandPassage[] = [];
+  for (const row of rows) {
+    const embedding = parseEmbedding(row.embedding);
+    if (!embedding) continue;
+    const similarity = cosineSimilarity(queryEmbedding, embedding);
+    const weight = SOURCE_WEIGHT[row.sourceType] ?? 0;
+    const passage: RetrievedBrandPassage = {
+      text: row.text,
+      similarity: similarity + weight,
+      sourceType: row.sourceType,
+      sourceUrl: row.sourceUrl ?? "",
+      title: row.title ?? "",
+    };
+    if (passage.similarity >= minSimilarity) scored.push(passage);
+  }
+
+  return scored.sort((a, b) => b.similarity - a.similarity).slice(0, topK);
+}
+
 export async function retrieveBrandVoicePassages(
   options: RetrieveBrandVoiceOptions,
 ): Promise<RetrievedBrandPassage[]> {
@@ -41,6 +111,11 @@ export async function retrieveBrandVoicePassages(
 
   try {
     const queryEmbedding = await embedText(trimmedQuery, { taskType: "RETRIEVAL_QUERY" });
+
+    if (isD1Dialect()) {
+      return retrieveBrandVoicePassagesD1(options, queryEmbedding);
+    }
+
     const vectorLiteral = formatVectorForSql(queryEmbedding);
 
     const result = await db.execute(sql`
@@ -102,7 +177,7 @@ ${blocks.join("\n\n")}
 
 export async function countBrandVoiceChunks(projectId: number): Promise<number> {
   const [row] = await db
-    .select({ count: sql<number>`count(*)::int` })
+    .select({ count: countAsInt() })
     .from(brandVoiceChunksTable)
     .where(eq(brandVoiceChunksTable.websiteProjectId, projectId));
   return row?.count ?? 0;

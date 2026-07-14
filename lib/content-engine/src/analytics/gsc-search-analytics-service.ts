@@ -1,5 +1,5 @@
 import { and, eq, gte, lte, sql } from "drizzle-orm";
-import { db } from "@workspace/db";
+import { db, countDistinctAsInt } from "@workspace/db";
 import {
   gscSearchQueriesTable,
   searchPropertyConnectionsTable,
@@ -191,7 +191,7 @@ export async function getGscSyncStatus(projectId: number): Promise<{
   const [stats] = await db
     .select({
       lastSyncedAt: sql<string | null>`max(${gscSearchQueriesTable.ingestedAt})`,
-      queryCount: sql<number>`count(distinct ${gscSearchQueriesTable.query})::int`,
+      queryCount: countDistinctAsInt(gscSearchQueriesTable.query),
     })
     .from(gscSearchQueriesTable)
     .where(eq(gscSearchQueriesTable.projectId, projectId));

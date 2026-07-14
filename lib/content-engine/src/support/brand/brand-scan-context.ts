@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
-import { db } from "@workspace/db";
+import { db, sumAsInt } from "@workspace/db";
 import {
   brandProfilesTable,
   gscSearchQueriesTable,
@@ -71,7 +71,7 @@ async function loadGscTopPages(
   const rows = await db
     .select({
       page: gscSearchQueriesTable.page,
-      impressions: sql<number>`sum(${gscSearchQueriesTable.impressions})::int`,
+      impressions: sumAsInt(gscSearchQueriesTable.impressions),
     })
     .from(gscSearchQueriesTable)
     .where(

@@ -16,17 +16,20 @@ function isProjectPayload(data: SocialHistorySyncJobData): data is SocialHistory
   return typeof (data as Partial<SocialHistorySyncPayload>).projectId === "number";
 }
 
+export async function processSocialHistorySync(data: SocialHistorySyncJobData): Promise<void> {
+  if (isProjectPayload(data)) {
+    const platform =
+      data.platform && isValidSocialPlatform(data.platform)
+        ? (data.platform as SocialPlatformId)
+        : undefined;
+    await syncSocialHistory(data.projectId, data.userId, platform);
+  } else {
+    await sweepSocialHistorySyncProjects();
+  }
+}
+
 export async function registerSocialHistorySyncHandler(boss: PgBoss): Promise<void> {
   await boss.work<SocialHistorySyncJobData>(QUEUES.socialHistorySync, async ([job]) => {
-    const data = job.data;
-    if (isProjectPayload(data)) {
-      const platform =
-        data.platform && isValidSocialPlatform(data.platform)
-          ? (data.platform as SocialPlatformId)
-          : undefined;
-      await syncSocialHistory(data.projectId, data.userId, platform);
-    } else {
-      await sweepSocialHistorySyncProjects();
-    }
+    await processSocialHistorySync(job.data);
   });
 }

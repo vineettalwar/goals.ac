@@ -50,6 +50,9 @@
     },
     {
       "path": "./lib/media"
+    },
+    {
+      "path": "./artifacts/goals-ac"
     }
   ]
 }

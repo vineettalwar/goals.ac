@@ -55,6 +55,7 @@ export type PageHeroProps = {
   spotlightImage?: string;
   enableSpotlight?: boolean;
   layout?: "home" | "centered";
+  persistCtas?: boolean;
   overlay?: ReactNode;
   children?: ReactNode;
 };
@@ -70,6 +71,7 @@ export function PageHero({
   spotlightImage,
   enableSpotlight,
   layout = "centered",
+  persistCtas = false,
   overlay,
   children,
 }: PageHeroProps) {
@@ -151,7 +153,7 @@ export function PageHero({
 
           <div
             className={`absolute bottom-10 sm:bottom-24 left-5 right-5 sm:left-auto sm:right-10 md:right-14 max-w-full sm:max-w-[260px] flex flex-col items-start gap-4 sm:gap-5 z-50 hero-anim hero-fade transition-opacity duration-300 ${
-              heroScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
+              heroScrolled && !persistCtas ? "opacity-0 pointer-events-none" : "opacity-100"
             }`}
             style={{ animationDelay: "0.85s" }}
           >
@@ -205,7 +207,7 @@ export function PageHero({
           {ctas.length > 0 && (
             <div
               className={`mt-8 flex flex-col sm:flex-row items-center gap-3 hero-anim hero-fade transition-opacity duration-300 ${
-                heroScrolled ? "opacity-0 pointer-events-none" : "opacity-100"
+                heroScrolled && !persistCtas ? "opacity-0 pointer-events-none" : "opacity-100"
               }`}
               style={{ animationDelay: "0.6s" }}
             >

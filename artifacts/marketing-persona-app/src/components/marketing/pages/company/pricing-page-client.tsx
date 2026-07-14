@@ -19,9 +19,65 @@ import {
   PRODUCT_CTA_SECONDARY,
   PRODUCT_CTA_SECONDARY_HREF,
 } from "@/lib/marketing/site/marketing-contact";
+import {
+  DEFAULT_PLAN_QUOTA_LIMITS,
+  PLAN_DISPLAY_CREDITS,
+  PLAN_DISPLAY_PRICES,
+  PLAN_LABELS,
+  type PlanId,
+} from "@/lib/billing/plans";
 
 const glassCard = cardSurfaceClass("glass");
 const glassCardStatic = cardSurfaceClass("glass", false);
+
+type SaasPlanId = Extract<PlanId, "starter" | "growth" | "scale">;
+
+const SAAS_PLANS: Array<{
+  id: SaasPlanId;
+  description: string;
+  features: string[];
+  featured?: boolean;
+  ctaLabel: string;
+  ctaHref: string;
+}> = [
+  {
+    id: "starter",
+    description: "Self-serve content studio for one site",
+    features: [
+      "1 site, 3 roadmaps/mo",
+      "5 articles/mo on platform key",
+      "CMS + social publishing",
+      "Bring your own AI keys anytime",
+    ],
+    ctaLabel: PRODUCT_CTA_PRIMARY,
+    ctaHref: PRODUCT_CTA_HREF,
+  },
+  {
+    id: "growth",
+    description: "More sites, higher limits, and included AI credits",
+    featured: true,
+    features: [
+      "3 sites, 12 roadmaps/mo",
+      "30 articles/mo on platform key",
+      "500 AI credits/mo included",
+      "Upgrade anytime in Settings → Billing",
+    ],
+    ctaLabel: "Start free, upgrade in app",
+    ctaHref: PRODUCT_CTA_HREF,
+  },
+  {
+    id: "scale",
+    description: "Unlimited scale for agencies and larger teams",
+    features: [
+      "Unlimited sites and roadmaps",
+      "Custom credit packages",
+      "Priority support and SSO options",
+      "Sales-assisted onboarding",
+    ],
+    ctaLabel: CONTACT_CTA_LABEL,
+    ctaHref: CONTACT_HREF,
+  },
+];
 
 const ENGAGEMENTS = [
   {
@@ -58,6 +114,64 @@ const ENGAGEMENTS = [
   },
 ];
 
+function formatQuota(value: number | null, unit: string): string {
+  if (value === null) return `Unlimited ${unit}`;
+  return `${value} ${unit}`;
+}
+
+function SaasPlanCard({ plan }: { plan: (typeof SAAS_PLANS)[number] }) {
+  const quotas = DEFAULT_PLAN_QUOTA_LIMITS[plan.id];
+  const price = PLAN_DISPLAY_PRICES[plan.id] ?? "Custom";
+  const credits = PLAN_DISPLAY_CREDITS[plan.id];
+
+  return (
+    <div
+      className={`rounded-2xl p-8 flex flex-col h-full ${
+        plan.featured
+          ? `${glassCard} ring-2 ring-(--accent-warm) shadow-lg shadow-black/40`
+          : glassCard
+      }`}
+    >
+      {plan.featured && (
+        <span className="text-xs font-semibold uppercase tracking-wide mb-4 text-(--accent-warm)">
+          Most popular
+        </span>
+      )}
+      <p className="text-xs font-semibold uppercase tracking-wide text-white/50">{PLAN_LABELS[plan.id]}</p>
+      <p className="text-3xl font-bold text-white mt-2">{price}</p>
+      <p className="text-sm mt-2 mb-4 text-white/65">{plan.description}</p>
+      {plan.id !== "scale" && (
+        <p className="text-xs text-white/45 mb-4">
+          {formatQuota(quotas.sites, "site")}
+          {quotas.sites === 1 ? "" : "s"}
+          {" · "}
+          {formatQuota(quotas.roadmaps, "roadmap/mo")}
+          {quotas.articles != null && ` · ${formatQuota(quotas.articles, "article/mo")}`}
+          {credits != null && ` · ${credits} AI credits/mo`}
+        </p>
+      )}
+      <ul className="space-y-3 flex-1 mb-8">
+        {plan.features.map((feature) => (
+          <li key={feature} className="flex items-start gap-2.5 text-sm text-white/80">
+            <Check className="h-4 w-4 shrink-0 mt-0.5 text-(--accent-warm)" aria-hidden="true" />
+            {feature}
+          </li>
+        ))}
+      </ul>
+      <Link
+        href={plan.ctaHref}
+        className={`block text-center px-6 py-3 rounded-full font-medium transition-all ${
+          plan.featured
+            ? "bg-(--accent-warm) text-white hover:bg-(--accent-warm-hover)"
+            : "border border-white/30 bg-white/10 text-white hover:bg-white/20"
+        }`}
+      >
+        {plan.ctaLabel}
+      </Link>
+    </div>
+  );
+}
+
 export function PricingPageClient() {
   return (
     <MarketingPageShell
@@ -66,8 +180,9 @@ export function PricingPageClient() {
           badge="Plans"
           titleLine1="Start free"
           titleLine2="scale when ready"
-          description="Use the content studio on your own, or add a hands-on program for research, production, and cross-platform publishing."
+          description="Use the content studio on your own, upgrade to Growth when you need more, or add a hands-on program for research, production, and cross-platform publishing."
           backgroundImage={HERO_IMAGES.pricing.hero}
+          persistCtas
           ctas={[
             { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "primary" },
             { label: PRODUCT_CTA_SECONDARY, href: PRODUCT_CTA_SECONDARY_HREF, variant: "ghost" },
@@ -75,6 +190,31 @@ export function PricingPageClient() {
         />
       }
     >
+      <section className="py-16 bg-black relative z-20 border-t border-white/10">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <EditorialHeading
+              line1="Self-serve"
+              line2="plans"
+              description="Sign up free on Starter. Upgrade to Growth ($49/mo) in Settings → Billing when you need more sites and included AI credits."
+              theme="dark"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {SAAS_PLANS.map((plan) => (
+              <SaasPlanCard key={plan.id} plan={plan} />
+            ))}
+          </div>
+          <p className="text-center text-sm text-white/50 mt-8">
+            All plans support BYOK for AI providers.{" "}
+            <Link href="/settings" className="text-white/80 hover:text-white hover:underline">
+              Manage billing in Settings
+            </Link>{" "}
+            after signup.
+          </p>
+        </div>
+      </section>
+
       <section className="py-16 bg-black relative z-20">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-12">
@@ -105,20 +245,20 @@ export function PricingPageClient() {
                 <ul className="space-y-3 flex-1 mb-8">
                   {engagement.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2.5 text-sm text-white/80">
-                      <Check className="h-4 w-4 shrink-0 mt-0.5 text-(--accent-warm)" />
+                      <Check className="h-4 w-4 shrink-0 mt-0.5 text-(--accent-warm)" aria-hidden="true" />
                       {feature}
                     </li>
                   ))}
                 </ul>
                 <Link
-                  href={PRODUCT_CTA_HREF}
+                  href={CONTACT_HREF}
                   className={`block text-center px-6 py-3 rounded-full font-medium transition-all ${
                     engagement.featured
                       ? "bg-(--accent-warm) text-white hover:bg-(--accent-warm-hover)"
                       : "border border-white/30 bg-white/10 text-white hover:bg-white/20"
                   }`}
                 >
-                  {PRODUCT_CTA_PRIMARY}
+                  {CONTACT_CTA_LABEL}
                 </Link>
               </div>
             ))}
@@ -149,24 +289,30 @@ export function PricingPageClient() {
           <div className={`mt-16 ${glassCardStatic} p-8 overflow-x-auto`}>
             <h3 className="text-lg font-bold mb-6 text-center text-white">Why productized content programs?</h3>
             <table className="w-full text-sm">
+              <caption className="sr-only">
+                Comparison of goals.ac capabilities versus typical agencies or AI tools
+              </caption>
               <thead>
                 <tr className="border-b border-white/10 text-left">
-                  <th className="py-3 pr-4 font-medium text-white/50">Capability</th>
-                  <th className="py-3 px-4 font-medium text-white">goals.ac</th>
-                  <th className="py-3 pl-4 font-medium text-white/50">Typical agency or AI tool</th>
+                  <th scope="col" className="py-3 pr-4 font-medium text-white/50">Capability</th>
+                  <th scope="col" className="py-3 px-4 font-medium text-white">goals.ac</th>
+                  <th scope="col" className="py-3 pl-4 font-medium text-white/50">Typical agency or AI tool</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/10">
                 {[
-                  ["Research-backed SEO briefs", "✓ Built in", "Custom SOW, weeks to start"],
-                  ["Editorial review before publish", "✓ Always", "Varies"],
-                  ["AI visibility (GEO/AEO) tracking", "✓", "Often separate vendor"],
-                  ["CMS integrations (8+)", "✓", "Manual or limited"],
-                  ["Dedicated strategist", "✓ On retainer", "Rotating account manager"],
+                  ["Research-backed SEO briefs", "Built in", "Custom SOW, weeks to start"],
+                  ["Editorial review before publish", "Always", "Varies"],
+                  ["AI visibility (GEO/AEO) tracking", "Included", "Often separate vendor"],
+                  ["CMS + social destinations (16+)", "Included", "Manual or limited"],
+                  ["Dedicated strategist", "On retainer programs", "Rotating account manager"],
                 ].map(([cap, us, them]) => (
                   <tr key={cap} className="even:bg-white/5">
                     <td className="py-3 pr-4 text-white/80">{cap}</td>
-                    <td className="py-3 px-4 font-medium text-(--accent-warm)">{us}</td>
+                    <td className="py-3 px-4 font-medium text-(--accent-warm)">
+                      <span className="sr-only">Yes: </span>
+                      {us}
+                    </td>
                     <td className="py-3 pl-4 text-white/50">{them}</td>
                   </tr>
                 ))}
@@ -188,17 +334,32 @@ export function PricingPageClient() {
           {
             question: "Can I use the studio without a program?",
             answer:
-              "Yes. Sign up free, connect your destinations, and create content on your own. Programs are optional if you want hands-on help.",
+              "Yes. Sign up free on Starter, connect your destinations, and create content on your own. Upgrade to Growth in Settings → Billing, or add a hands-on program if you want our team involved.",
           },
           {
             question: "What can I try before signing up?",
-            answer:
-              "Free GEO audit, article quality demo, and SEO tools. No credit card required.",
+            answer: (
+              <>
+                Try the{" "}
+                <Link href="/geo-audit" className="text-white/80 hover:text-white hover:underline">
+                  free GEO audit
+                </Link>
+                ,{" "}
+                <Link href="/article-quality" className="text-white/80 hover:text-white hover:underline">
+                  article quality demo
+                </Link>
+                , and{" "}
+                <Link href="/free-tools" className="text-white/80 hover:text-white hover:underline">
+                  free SEO tools
+                </Link>
+                . No credit card required.
+              </>
+            ),
           },
           {
             question: "Which platforms can you publish to?",
             answer:
-              "WordPress, Shopify, Notion, Webflow, Ghost, webhooks, plus LinkedIn, X, Facebook, Instagram, Bluesky, and Mastodon.",
+              "WordPress, Shopify, Drupal, Joomla, Notion, Webflow, Ghost, webhooks, plus LinkedIn, X, Facebook, Instagram, Bluesky, and Mastodon.",
             helpHref: "/help/publish-social-content",
           },
         ]}

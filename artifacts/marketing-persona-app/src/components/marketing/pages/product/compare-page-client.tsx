@@ -23,7 +23,7 @@ const ROWS = [
   { feature: "30-day content calendar", goals: true, autopilot: true },
   { feature: "Managed GEO/AEO program", goals: true, autopilot: false },
   { feature: "Consulting-led GEO program", goals: true, autopilot: false },
-  { feature: "No public self-serve checkout", goals: true, autopilot: false },
+  { feature: "Self-serve Growth plan ($49/mo)", goals: true, autopilot: true },
   { feature: "Backlink exchange network", goals: false, autopilot: true },
   { feature: "Internal link hub (white-hat)", goals: true, autopilot: false },
   { feature: "Humanization pipeline", goals: true, autopilot: false },
@@ -98,7 +98,8 @@ export function ComparePageClient() {
           },
           {
             question: "How is goals.ac priced?",
-            answer: "We work through scoped consulting engagements. No public checkout. Try the free GEO audit and article quality demo, then book a call.",
+            answer:
+              "Start free on Starter. Upgrade to Growth ($49/mo) in Settings → Billing for more sites and 500 included AI credits per month. Optional hands-on GEO/AEO programs are scoped on /pricing — book a call for custom work.",
           },
           {
             question: "How do you compare on AI visibility?",

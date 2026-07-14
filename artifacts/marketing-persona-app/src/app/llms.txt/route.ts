@@ -13,7 +13,7 @@ export function GET() {
     "## Product",
     `- [Home](${base}/): Overview of goals.ac`,
     `- [Content Studio](${base}/content-engine): Research, draft, and publish workflow`,
-    `- [Engagements](${base}/pricing): Scoped content programs`,
+    `- [Plans & pricing](${base}/pricing): Starter (free), Growth ($49/mo), and optional hands-on programs`,
     `- [Features](${base}/features): Content studio, autopilot, integrations`,
     `- [Generative Engine Optimization](${base}/generative-engine-optimization): GEO tooling`,
     `- [LLM Visibility](${base}/llm-visibility): Track AI search citations`,

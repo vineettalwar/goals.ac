@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { and, eq, gte, lte, sql, desc } from "drizzle-orm";
-import { db } from "@workspace/db";
+import { db, sumAsInt } from "@workspace/db";
 import { gscSearchQueriesTable } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
@@ -37,8 +37,8 @@ export async function GET(
   const rows = await db
     .select({
       query: gscSearchQueriesTable.query,
-      impressions: sql<number>`sum(${gscSearchQueriesTable.impressions})::int`,
-      clicks: sql<number>`sum(${gscSearchQueriesTable.clicks})::int`,
+      impressions: sumAsInt(gscSearchQueriesTable.impressions),
+      clicks: sumAsInt(gscSearchQueriesTable.clicks),
       ctr: sql<number>`case when sum(${gscSearchQueriesTable.impressions}) > 0 then sum(${gscSearchQueriesTable.clicks})::float / sum(${gscSearchQueriesTable.impressions}) else 0 end`,
       position: sql<number>`case when sum(${gscSearchQueriesTable.impressions}) > 0 then sum(${gscSearchQueriesTable.position} * ${gscSearchQueriesTable.impressions}) / sum(${gscSearchQueriesTable.impressions}) else 0 end`,
     })

@@ -1,5 +1,5 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db } from "@workspace/db";
+import { db, countDistinctAsInt } from "@workspace/db";
 import {
   analyticsPropertyConnectionsTable,
   ga4PageMetricsTable,
@@ -157,7 +157,7 @@ export async function getGa4SyncStatus(projectId: number): Promise<Ga4SyncStatus
   const [stats] = await db
     .select({
       lastSyncedAt: sql<string | null>`max(${ga4PageMetricsTable.ingestedAt})`,
-      pageCount: sql<number>`count(distinct ${ga4PageMetricsTable.pagePath})::int`,
+      pageCount: countDistinctAsInt(ga4PageMetricsTable.pagePath),
     })
     .from(ga4PageMetricsTable)
     .where(eq(ga4PageMetricsTable.projectId, projectId));

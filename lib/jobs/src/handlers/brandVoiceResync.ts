@@ -18,14 +18,17 @@ function isProjectPayload(data: BrandVoiceResyncJobData): data is BrandVoiceResy
   return typeof (data as Partial<BrandVoiceResyncPayload>).projectId === "number";
 }
 
+export async function processBrandVoiceResync(data: BrandVoiceResyncJobData): Promise<void> {
+  if (isProjectPayload(data)) {
+    await runBrandVoiceResyncForProject(data.projectId, data.userId);
+  } else {
+    await sweepBrandVoiceResync();
+  }
+}
+
 export async function registerBrandVoiceResyncHandler(boss: PgBoss): Promise<void> {
   await boss.work<BrandVoiceResyncJobData>(QUEUES.brandVoiceResync, async ([job]) => {
-    const data = job.data;
-    if (isProjectPayload(data)) {
-      await runBrandVoiceResyncForProject(data.projectId, data.userId);
-    } else {
-      await sweepBrandVoiceResync();
-    }
+    await processBrandVoiceResync(job.data);
   });
 }
 

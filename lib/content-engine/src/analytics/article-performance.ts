@@ -1,5 +1,5 @@
 import { and, eq, gte, lte, sql } from "drizzle-orm";
-import { db } from "@workspace/db";
+import { db, coalesceSumAsInt } from "@workspace/db";
 import {
   contentPiecesTable,
   ga4PageMetricsTable,
@@ -89,9 +89,9 @@ export async function getArticlePerformance(
     db
       .select({
         pagePath: ga4PageMetricsTable.pagePath,
-        sessions: sql<number>`coalesce(sum(${ga4PageMetricsTable.sessions}), 0)::int`,
-        users: sql<number>`coalesce(sum(${ga4PageMetricsTable.users}), 0)::int`,
-        pageviews: sql<number>`coalesce(sum(${ga4PageMetricsTable.pageviews}), 0)::int`,
+        sessions: coalesceSumAsInt(ga4PageMetricsTable.sessions),
+        users: coalesceSumAsInt(ga4PageMetricsTable.users),
+        pageviews: coalesceSumAsInt(ga4PageMetricsTable.pageviews),
         engagementRate: sql<number>`CASE WHEN sum(${ga4PageMetricsTable.sessions}) > 0 THEN sum(${ga4PageMetricsTable.engagementRate} * ${ga4PageMetricsTable.sessions}) / sum(${ga4PageMetricsTable.sessions}) ELSE 0 END`,
         avgSessionDuration: sql<number>`CASE WHEN sum(${ga4PageMetricsTable.sessions}) > 0 THEN sum(${ga4PageMetricsTable.avgSessionDuration} * ${ga4PageMetricsTable.sessions}) / sum(${ga4PageMetricsTable.sessions}) ELSE 0 END`,
         bounceRate: sql<number>`CASE WHEN sum(${ga4PageMetricsTable.sessions}) > 0 THEN sum(${ga4PageMetricsTable.bounceRate} * ${ga4PageMetricsTable.sessions}) / sum(${ga4PageMetricsTable.sessions}) ELSE 0 END`,
@@ -108,8 +108,8 @@ export async function getArticlePerformance(
     db
       .select({
         page: gscSearchQueriesTable.page,
-        clicks: sql<number>`coalesce(sum(${gscSearchQueriesTable.clicks}), 0)::int`,
-        impressions: sql<number>`coalesce(sum(${gscSearchQueriesTable.impressions}), 0)::int`,
+        clicks: coalesceSumAsInt(gscSearchQueriesTable.clicks),
+        impressions: coalesceSumAsInt(gscSearchQueriesTable.impressions),
         ctr: sql<number>`CASE WHEN sum(${gscSearchQueriesTable.impressions}) > 0 THEN sum(${gscSearchQueriesTable.clicks})::float / sum(${gscSearchQueriesTable.impressions}) ELSE 0 END`,
         position: sql<number>`CASE WHEN sum(${gscSearchQueriesTable.impressions}) > 0 THEN sum(${gscSearchQueriesTable.position} * ${gscSearchQueriesTable.impressions}) / sum(${gscSearchQueriesTable.impressions}) ELSE 0 END`,
       })

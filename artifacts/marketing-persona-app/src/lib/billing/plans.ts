@@ -12,6 +12,17 @@ export const PLAN_LABELS: Record<PlanId, string> = {
   scale: "Scale",
 };
 
+/** Display prices for marketing UI (mirrors @workspace/billing/plans). */
+export const PLAN_DISPLAY_PRICES: Partial<Record<PlanId, string>> = {
+  starter: "Free",
+  growth: "$49/mo",
+};
+
+/** Monthly platform-key credits included (Growth only). */
+export const PLAN_DISPLAY_CREDITS: Partial<Record<PlanId, number>> = {
+  growth: 500,
+};
+
 export function normalizePlanId(plan: string | null | undefined): PlanId {
   if (plan === "growth" || plan === "scale" || plan === "starter") {
     return plan;

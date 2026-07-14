@@ -1,4 +1,4 @@
-import { db } from "@workspace/db";
+import { db, ilikeCompat } from "@workspace/db";
 import {
   companiesTable,
   orgInvitesTable,
@@ -9,7 +9,7 @@ import {
 } from "@workspace/db/schema";
 import type { OrgSecuritySettings } from "@workspace/db/schema";
 import crypto from "crypto";
-import { and, asc, count, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import {
   ensureWorkspaceForOrganization,
   getBalance,
@@ -985,7 +985,7 @@ export async function listAllUsers(input: ListAllUsersInput = {}): Promise<{
   const conditions = [];
   if (input.search?.trim()) {
     const term = `%${input.search.trim()}%`;
-    conditions.push(or(ilike(usersTable.email, term), ilike(usersTable.name, term)));
+    conditions.push(or(ilikeCompat(usersTable.email, term), ilikeCompat(usersTable.name, term)));
   }
   if (input.platformRole) {
     conditions.push(eq(usersTable.role, input.platformRole));

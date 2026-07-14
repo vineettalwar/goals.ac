@@ -12,14 +12,17 @@ function isProjectPayload(data: SocialMetricsSyncJobData): data is SocialMetrics
   return typeof (data as Partial<SocialMetricsSyncPayload>).projectId === "number";
 }
 
+export async function processSocialMetricsSync(data: SocialMetricsSyncJobData): Promise<void> {
+  if (isProjectPayload(data)) {
+    await runSocialMetricsSyncForProject(data.projectId, data.userId);
+  } else {
+    await sweepSocialMetricsSyncProjects();
+  }
+}
+
 export async function registerSocialMetricsSyncHandler(boss: PgBoss): Promise<void> {
   await boss.work<SocialMetricsSyncJobData>(QUEUES.socialMetricsSync, async ([job]) => {
-    const data = job.data;
-    if (isProjectPayload(data)) {
-      await runSocialMetricsSyncForProject(data.projectId, data.userId);
-    } else {
-      await sweepSocialMetricsSyncProjects();
-    }
+    await processSocialMetricsSync(job.data);
   });
 }
 

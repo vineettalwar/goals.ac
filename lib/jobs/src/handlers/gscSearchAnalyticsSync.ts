@@ -16,14 +16,19 @@ function isProjectPayload(data: GscSearchAnalyticsSyncJobData): data is GscSearc
   return typeof (data as Partial<GscSearchAnalyticsSyncPayload>).projectId === "number";
 }
 
+export async function processGscSearchAnalyticsSync(
+  data: GscSearchAnalyticsSyncJobData,
+): Promise<void> {
+  if (isProjectPayload(data)) {
+    await runGscSyncForProject(data.projectId, data.userId);
+  } else {
+    await sweepGscSyncProjects();
+  }
+}
+
 export async function registerGscSearchAnalyticsSyncHandler(boss: PgBoss): Promise<void> {
   await boss.work<GscSearchAnalyticsSyncJobData>(QUEUES.gscSearchAnalyticsSync, async ([job]) => {
-    const data = job.data;
-    if (isProjectPayload(data)) {
-      await runGscSyncForProject(data.projectId, data.userId);
-    } else {
-      await sweepGscSyncProjects();
-    }
+    await processGscSearchAnalyticsSync(job.data);
   });
 }
 

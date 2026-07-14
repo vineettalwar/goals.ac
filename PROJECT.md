@@ -9,11 +9,11 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 - **Frontend (product):** Next.js 16 App Router, React 19, Tailwind v4, shadcn/ui, NextAuth
 - **Frontend (legacy):** React 19 + Vite 7 (`artifacts/goals-ac`) — redirect shell only
 - **API:** Next.js route handlers (canonical); Express 5 (`artifacts/api-server`) opt-in legacy
-- **Database:** PostgreSQL 17, Drizzle ORM, Zod
+- **Database:** PostgreSQL 17 (Docker/local) **or** Cloudflare D1 (`DB_DIALECT=d1`); Drizzle dual schema
 - **AI:** `@workspace/ai-providers` — Gemini, Bedrock, Ollama; tier routing (`strategy` / `planning` / `execution` / `rapid`)
-- **Jobs:** pg-boss worker (`artifacts/worker`)
+- **Jobs:** pg-boss worker (`artifacts/worker`) — Postgres only; `JobsUnavailableError` when `DB_DIALECT=d1`
 - **Monorepo:** pnpm workspaces, TypeScript project references
-- **Deploy:** Docker Compose locally; production per `docker-compose.yml`
+- **Deploy:** Docker Compose locally; Cloudflare Workers + D1 (`docs/deploy-cloudflare.md`)
 
 ## Architecture Map
 
@@ -23,13 +23,14 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 - `artifacts/marketing-persona-app/src/lib/platform-settings.ts` — platform ops singleton (`platform_settings`)
 - `lib/content-engine/` — content pipeline, brand scraper, CMS publish, AI guards
 - `lib/ai-providers/` — provider abstraction + Bedrock BYOK
-- `lib/db/` — schema, migrations (`0040+` platform/org security, brand memory, MFA)
+- `lib/db/` — schema, migrations (`0040+` platform/org security, brand memory, MFA); D1 mirror at `schema-sqlite/`, `migrations-d1/`
 - `cms-plugins/` — WordPress/Joomla/Drupal/Shopify server-side plugins
 - `lib/keyword-research-provider/` — GSC/Sheets keyword hub (separate feature track)
 
 ## Conventions In Force
 
 - Schema changes: edit `lib/db/src/schema/`, `pnpm --filter @workspace/db run generate`, migrate, `cd lib/db && npx tsc --build`
+- D1: `pnpm --filter @workspace/db run generate:d1` after schema edits; `pnpm run cf:migrate:d1:local` + `cf:seed:d1:local` for Workers preview
 - No GitHub Actions CI — validate with `pnpm run typecheck` locally
 - Org permissions via `hasOrgPermission()` / `requireOrgPermission()` — never ad-hoc role string checks
 - User-facing ops language: **"Platform operations"** — not internal control terminology

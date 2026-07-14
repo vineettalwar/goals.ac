@@ -1,12 +1,13 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { EditorialHeading } from "./editorial-heading";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
 export type FAQItem = {
   question: string;
-  answer: string;
+  answer: ReactNode;
   helpHref?: string;
 };
 
@@ -38,13 +39,13 @@ export function FAQAccordion({
             <details key={faq.question} className={`${glassCard} px-6 py-4 group`}>
               <summary className="text-base font-semibold tracking-normal cursor-pointer list-none flex justify-between items-center text-white">
                 {faq.question}
-                <span className="text-white/50 group-open:rotate-45 transition-transform">
+                <span className="text-white/50 group-open:rotate-45 transition-transform" aria-hidden="true">
                   +
                 </span>
               </summary>
-              <p className="text-sm text-white/65 leading-relaxed tracking-normal mt-3 pb-1">
+              <div className="text-sm text-white/65 leading-relaxed tracking-normal mt-3 pb-1">
                 {faq.answer}
-              </p>
+              </div>
               {faq.helpHref ? (
                 <Link
                   href={faq.helpHref}

@@ -7,6 +7,8 @@
     ".": "./src/index.ts",
     "./queues": "./src/queues.ts",
     "./boss": "./src/boss.ts",
+    "./cf-queues": "./src/cf-queues.ts",
+    "./process-job": "./src/process-job.ts",
     "./handlers": "./src/handlers/index.ts",
     "./handlers/connectionHealthCheck": "./src/handlers/connectionHealthCheck.ts",
     "./handlers/keywordRankCheck": "./src/handlers/keywordRankCheck.ts",

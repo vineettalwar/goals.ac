@@ -69,72 +69,76 @@ async function finalizeGeneratedPieces(params: {
   // manual mode — pieces remain draft for human review
 }
 
+export async function processContentGenerate(payload: ContentGeneratePayload): Promise<void> {
+  const { contentItemId, projectId, userId, generateVariants, schedulePublish, triggeredByAutopilot } =
+    payload;
+  let billingCtx: AiBillingContext | null = null;
+  try {
+    const [userApiKey, aiProviderOptions] = await Promise.all([
+      getDecryptedUserGeminiKey(userId),
+      getUserAiProviderOptions(userId),
+    ]);
+    const usesByok = userUsesByok(userApiKey, aiProviderOptions);
+
+    const billingPrep = await prepareAiBillingSession({
+      userId,
+      tier: "execution",
+      usedByok: usesByok,
+      quotaKind: usesByok ? undefined : "article",
+    });
+
+    if (!billingPrep.ok) {
+      const reason = billingPrep.error.reason;
+      logger.warn({ contentItemId, userId, reason }, "Content generate job skipped: billing denied");
+      throw new Error(`billing_denied:${reason}`);
+    }
+    billingCtx = billingPrep.ctx;
+
+    const result = await generateFromContentItem(contentItemId, projectId, userId, {
+      generateVariants: generateVariants !== false,
+      userApiKey,
+      aiProviderOptions,
+    });
+
+    const [project] = await db
+      .select({ autopilotSettings: websiteProjectsTable.autopilotSettings })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, projectId))
+      .limit(1);
+
+    const settings = parseAutopilotSettings(project?.autopilotSettings);
+    const autoPublish =
+      schedulePublish === true || (triggeredByAutopilot === true && shouldAutoPublish(settings));
+
+    const pieceIds = [result.primaryPieceId, ...result.variantPieceIds];
+    await finalizeGeneratedPieces({ pieceIds, projectId, userId, autoPublish });
+
+    await completeAiBillingSession(billingCtx, {
+      userId,
+      eventType: "content_generation",
+      usedByok: usesByok,
+      tier: "execution",
+      companyId: projectId,
+      promptTokens: result.generationUsage?.promptTokens,
+      outputTokens: result.generationUsage?.outputTokens,
+      totalTokens: result.generationUsage?.totalTokens,
+    });
+
+    logger.info({ contentItemId, autoPublish, ...result }, "Content generate job completed");
+  } catch (err) {
+    if (billingCtx) {
+      await cancelAiBillingSession(
+        billingCtx,
+        err instanceof Error ? err.message : "content_generate_failed",
+      );
+    }
+    logger.error({ err, contentItemId }, "Content generate job failed");
+    throw err;
+  }
+}
+
 export async function registerContentGenerateHandler(boss: PgBoss): Promise<void> {
   await boss.work<ContentGeneratePayload>(QUEUES.contentGenerate, async ([job]) => {
-    const { contentItemId, projectId, userId, generateVariants, schedulePublish, triggeredByAutopilot } =
-      job.data;
-    let billingCtx: AiBillingContext | null = null;
-    try {
-      const [userApiKey, aiProviderOptions] = await Promise.all([
-        getDecryptedUserGeminiKey(userId),
-        getUserAiProviderOptions(userId),
-      ]);
-      const usesByok = userUsesByok(userApiKey, aiProviderOptions);
-
-      const billingPrep = await prepareAiBillingSession({
-        userId,
-        tier: "execution",
-        usedByok: usesByok,
-        quotaKind: usesByok ? undefined : "article",
-      });
-
-      if (!billingPrep.ok) {
-        const reason = billingPrep.error.reason;
-        logger.warn({ contentItemId, userId, reason }, "Content generate job skipped: billing denied");
-        throw new Error(`billing_denied:${reason}`);
-      }
-      billingCtx = billingPrep.ctx;
-
-      const result = await generateFromContentItem(contentItemId, projectId, userId, {
-        generateVariants: generateVariants !== false,
-        userApiKey,
-        aiProviderOptions,
-      });
-
-      const [project] = await db
-        .select({ autopilotSettings: websiteProjectsTable.autopilotSettings })
-        .from(websiteProjectsTable)
-        .where(eq(websiteProjectsTable.id, projectId))
-        .limit(1);
-
-      const settings = parseAutopilotSettings(project?.autopilotSettings);
-      const autoPublish =
-        schedulePublish === true || (triggeredByAutopilot === true && shouldAutoPublish(settings));
-
-      const pieceIds = [result.primaryPieceId, ...result.variantPieceIds];
-      await finalizeGeneratedPieces({ pieceIds, projectId, userId, autoPublish });
-
-      await completeAiBillingSession(billingCtx, {
-        userId,
-        eventType: "content_generation",
-        usedByok: usesByok,
-        tier: "execution",
-        companyId: projectId,
-        promptTokens: result.generationUsage?.promptTokens,
-        outputTokens: result.generationUsage?.outputTokens,
-        totalTokens: result.generationUsage?.totalTokens,
-      });
-
-      logger.info({ contentItemId, autoPublish, ...result }, "Content generate job completed");
-    } catch (err) {
-      if (billingCtx) {
-        await cancelAiBillingSession(
-          billingCtx,
-          err instanceof Error ? err.message : "content_generate_failed",
-        );
-      }
-      logger.error({ err, contentItemId }, "Content generate job failed");
-      throw err;
-    }
+    await processContentGenerate(job.data);
   });
 }

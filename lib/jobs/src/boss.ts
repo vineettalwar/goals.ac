@@ -1,7 +1,27 @@
 import PgBoss from "pg-boss";
+import { sendToCfQueue } from "./cf-queues";
 import type { QueueName, QueuePayloadFor } from "./queues";
 
 const PGBOSS_SCHEMA = "pgboss";
+
+export class JobsUnavailableError extends Error {
+  constructor() {
+    super(
+      "pg-boss jobs require Postgres (DB_DIALECT=postgres). On D1, use Cloudflare Queues or a hybrid Postgres worker — see docs/deploy-cloudflare.md § Background jobs.",
+    );
+    this.name = "JobsUnavailableError";
+  }
+}
+
+function isD1Dialect(): boolean {
+  return process.env.DB_DIALECT?.trim().toLowerCase() === "d1";
+}
+
+function assertPgBossAvailable(): void {
+  if (isD1Dialect()) {
+    throw new JobsUnavailableError();
+  }
+}
 
 let bossPromise: Promise<PgBoss> | null = null;
 
@@ -34,6 +54,7 @@ function createBoss(): PgBoss {
  * in-flight start.
  */
 export async function getBoss(): Promise<PgBoss> {
+  assertPgBossAvailable();
   if (!bossPromise) {
     bossPromise = (async () => {
       const boss = createBoss();
@@ -67,6 +88,14 @@ export async function enqueue<Q extends QueueName>(
   payload: QueuePayloadFor<Q>,
   options?: PgBoss.SendOptions
 ): Promise<string | null> {
+  if (isD1Dialect()) {
+    const delaySeconds =
+      options?.startAfter != null
+        ? Math.max(0, Math.ceil((Number(options.startAfter) - Date.now()) / 1000))
+        : undefined;
+    return sendToCfQueue(queue, payload, delaySeconds ? { delaySeconds } : undefined);
+  }
+
   const boss = await getBoss();
   return boss.send(queue, payload, options ?? {});
 }
@@ -80,6 +109,11 @@ export async function scheduleCron<Q extends QueueName>(
   payload?: QueuePayloadFor<Q>,
   options?: PgBoss.ScheduleOptions
 ): Promise<void> {
+  if (isD1Dialect()) {
+    // Cron sweeps run via Cloudflare Cron Triggers on goals-ac-jobs Worker.
+    return;
+  }
+
   const boss = await getBoss();
   await boss.schedule(queue, cron, payload ?? ({} as QueuePayloadFor<Q>), options);
 }

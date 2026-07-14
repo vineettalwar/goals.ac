@@ -169,69 +169,77 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
   });
 }
 
+export async function processContentPublish(payload: ContentPublishPayload): Promise<void> {
+  const { contentPieceId, userId } = payload;
+  try {
+    await publishPiece(contentPieceId, userId);
+    logger.info({ contentPieceId }, "Content publish job completed");
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Publish failed";
+    await db
+      .update(contentPiecesTable)
+      .set({ publishError: message, status: "ready" })
+      .where(eq(contentPiecesTable.id, contentPieceId));
+    logger.error({ err, contentPieceId }, "Content publish job failed");
+    throw err;
+  }
+}
+
+export async function processScheduledPublishSweep(): Promise<void> {
+  const today = new Date().toISOString().slice(0, 10);
+  const socialDue = await listDueSocialPieces(new Date());
+
+  const blogDue = await db
+    .select({
+      id: contentPiecesTable.id,
+      websiteProjectId: contentPiecesTable.websiteProjectId,
+    })
+    .from(contentPiecesTable)
+    .innerJoin(websiteProjectsTable, eq(contentPiecesTable.websiteProjectId, websiteProjectsTable.id))
+    .where(
+      and(
+        lte(contentPiecesTable.plannedDate, today),
+        eq(contentPiecesTable.status, "ready"),
+        notInArray(contentPiecesTable.formatType, [...SOCIAL_FORMAT_TYPES]),
+      ),
+    );
+
+  const duePieces = [
+    ...socialDue.map((p: { id: number; websiteProjectId: number; userId: number }) => ({
+      id: p.id,
+      websiteProjectId: p.websiteProjectId,
+      userId: p.userId,
+    })),
+    ...(
+      await Promise.all(
+        blogDue.map(async (piece) => {
+          const [project] = await db
+            .select({ userId: websiteProjectsTable.userId })
+            .from(websiteProjectsTable)
+            .where(eq(websiteProjectsTable.id, piece.websiteProjectId))
+            .limit(1);
+          return project ? { id: piece.id, websiteProjectId: piece.websiteProjectId, userId: project.userId } : null;
+        }),
+      )
+    ).filter((p): p is { id: number; websiteProjectId: number; userId: number } => p !== null),
+  ];
+
+  logger.info({ count: duePieces.length, social: socialDue.length, blog: blogDue.length }, "Scheduled publish sweep");
+
+  for (const piece of duePieces) {
+    await enqueue(QUEUES.contentPublish, { contentPieceId: piece.id, userId: piece.userId });
+  }
+}
+
 export async function registerContentPublishHandler(boss: PgBoss): Promise<void> {
   await boss.work<ContentPublishPayload>(QUEUES.contentPublish, async ([job]) => {
-    const { contentPieceId, userId } = job.data;
-    try {
-      await publishPiece(contentPieceId, userId);
-      logger.info({ contentPieceId }, "Content publish job completed");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Publish failed";
-      await db
-        .update(contentPiecesTable)
-        .set({ publishError: message, status: "ready" })
-        .where(eq(contentPiecesTable.id, contentPieceId));
-      logger.error({ err, contentPieceId }, "Content publish job failed");
-      throw err;
-    }
+    await processContentPublish(job.data);
   });
 }
 
 export async function registerScheduledPublishSweepHandler(boss: PgBoss): Promise<void> {
   await boss.work<ScheduledPublishSweepPayload>(QUEUES.scheduledPublishSweep, async () => {
-    const today = new Date().toISOString().slice(0, 10);
-    const socialDue = await listDueSocialPieces(new Date());
-
-    const blogDue = await db
-      .select({
-        id: contentPiecesTable.id,
-        websiteProjectId: contentPiecesTable.websiteProjectId,
-      })
-      .from(contentPiecesTable)
-      .innerJoin(websiteProjectsTable, eq(contentPiecesTable.websiteProjectId, websiteProjectsTable.id))
-      .where(
-        and(
-          lte(contentPiecesTable.plannedDate, today),
-          eq(contentPiecesTable.status, "ready"),
-          notInArray(contentPiecesTable.formatType, [...SOCIAL_FORMAT_TYPES]),
-        ),
-      );
-
-    const duePieces = [
-      ...socialDue.map((p: { id: number; websiteProjectId: number; userId: number }) => ({
-        id: p.id,
-        websiteProjectId: p.websiteProjectId,
-        userId: p.userId,
-      })),
-      ...(
-        await Promise.all(
-          blogDue.map(async (piece) => {
-            const [project] = await db
-              .select({ userId: websiteProjectsTable.userId })
-              .from(websiteProjectsTable)
-              .where(eq(websiteProjectsTable.id, piece.websiteProjectId))
-              .limit(1);
-            return project ? { id: piece.id, websiteProjectId: piece.websiteProjectId, userId: project.userId } : null;
-          }),
-        )
-      ).filter((p): p is { id: number; websiteProjectId: number; userId: number } => p !== null),
-    ];
-
-    logger.info({ count: duePieces.length, social: socialDue.length, blog: blogDue.length }, "Scheduled publish sweep");
-
-    for (const piece of duePieces) {
-      await enqueue(QUEUES.contentPublish, { contentPieceId: piece.id, userId: piece.userId });
-    }
+    await processScheduledPublishSweep();
   });
 }
 

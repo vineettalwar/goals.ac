@@ -19,14 +19,17 @@ function isProjectPayload(data: LlmVisibilityCheckJobData): data is LlmVisibilit
   return typeof (data as Partial<LlmVisibilityCheckPayload>).projectId === "number";
 }
 
+export async function processLlmVisibilityCheck(data: LlmVisibilityCheckJobData): Promise<void> {
+  if (isProjectPayload(data)) {
+    await runVisibilityCheckWithBilling(data.projectId);
+  } else {
+    await sweepLlmVisibilityProjects();
+  }
+}
+
 export async function registerLlmVisibilityCheckHandler(boss: PgBoss): Promise<void> {
   await boss.work<LlmVisibilityCheckJobData>(QUEUES.llmVisibilityCheck, async ([job]) => {
-    const data = job.data;
-    if (isProjectPayload(data)) {
-      await runVisibilityCheckWithBilling(data.projectId);
-    } else {
-      await sweepLlmVisibilityProjects();
-    }
+    await processLlmVisibilityCheck(job.data);
   });
 }
 

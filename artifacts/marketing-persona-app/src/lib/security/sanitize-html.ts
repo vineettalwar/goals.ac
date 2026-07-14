@@ -29,7 +29,7 @@ function sanitizeElement(el: HTMLElement): void {
       el.removeAttribute(name);
       continue;
     }
-    if ((lowerName === "href" || lowerName === "src") && UNSAFE_HREF_SCHEMES.test(value)) {
+    if ((lowerName === "href" || lowerName === "src") && typeof value === "string" && UNSAFE_HREF_SCHEMES.test(value)) {
       el.removeAttribute(name);
     }
   }

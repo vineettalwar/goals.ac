@@ -31,7 +31,11 @@ export function RevealLayer({
 }: RevealLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const revealRef = useRef<HTMLDivElement>(null);
-  const [enabled] = useState(computeRevealEnabled);
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    setEnabled(computeRevealEnabled());
+  }, []);
 
   useEffect(() => {
     if (!enabled) return;

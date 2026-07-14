@@ -30,13 +30,16 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Cloudflare Workers bundle: avoid sharp native bindings; use unoptimized images or CF Images.
   images: {
+    unoptimized: process.env.CF_BUILD === "1",
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "images.pexels.com" },
       { protocol: "https", hostname: "images.higgs.ai" },
     ],
   },
+  serverExternalPackages: ["pg", "pg-cloudflare"],
   experimental: {
     staleTimes: {
       dynamic: 30,
@@ -59,9 +62,21 @@ const nextConfig: NextConfig = {
       "@workspace/jobs/boss": "lib/jobs/src/boss.ts",
       "@workspace/jobs/queues": "lib/jobs/src/queues.ts",
       "@workspace/deepl": "lib/deepl/src/index.ts",
+      ...(process.env.CF_BUILD === "1"
+        ? { sharp: "./sharp-stub.js" }
+        : {}),
     },
   },
   transpilePackages: ["@workspace/db", "@workspace/billing", "@workspace/integrations-gemini-ai", "@workspace/security", "@workspace/ai-providers", "@workspace/connectors", "@workspace/content-engine", "@workspace/deepl", "@workspace/jobs", "@workspace/media", "@workspace/seo-tools", "@workspace/serp-provider"],
+  webpack: (config) => {
+    if (process.env.CF_BUILD === "1") {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        sharp: path.join(appDir, "sharp-stub.js"),
+      };
+    }
+    return config;
+  },
   async redirects() {
     return [
       { source: "/agent", destination: "/projects", permanent: true },
@@ -92,3 +107,6 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
+
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
+initOpenNextCloudflareForDev();

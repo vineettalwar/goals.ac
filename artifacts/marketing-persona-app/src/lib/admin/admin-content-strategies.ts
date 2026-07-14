@@ -1,4 +1,4 @@
-import { db } from "@workspace/db";
+import { db, countAsInt, ilikeCompat } from "@workspace/db";
 import {
   contentItemsTable,
   contentPiecesTable,
@@ -8,7 +8,7 @@ import {
   usersTable,
   websiteProjectsTable,
 } from "@workspace/db/schema";
-import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 
 export type AdminStrategyItemCounts = {
@@ -105,14 +105,14 @@ export async function listAdminContentStrategies(
     const pattern = `%${search}%`;
     conditions.push(
       or(
-        ilike(organizationsTable.name, pattern),
-        ilike(websiteProjectsTable.name, pattern),
-        ilike(websiteProjectsTable.url, pattern),
-        ilike(usersTable.email, pattern),
-        ilike(usersTable.name, pattern),
-        ilike(contentStrategiesTable.industry, pattern),
-        ilike(contentStrategiesTable.location, pattern),
-        ilike(roadmapsTable.slug, pattern),
+        ilikeCompat(organizationsTable.name, pattern),
+        ilikeCompat(websiteProjectsTable.name, pattern),
+        ilikeCompat(websiteProjectsTable.url, pattern),
+        ilikeCompat(usersTable.email, pattern),
+        ilikeCompat(usersTable.name, pattern),
+        ilikeCompat(contentStrategiesTable.industry, pattern),
+        ilikeCompat(contentStrategiesTable.location, pattern),
+        ilikeCompat(roadmapsTable.slug, pattern),
         sql`cast(${contentStrategiesTable.id} as text) = ${search}`,
       )!,
     );
@@ -156,7 +156,7 @@ export async function listAdminContentStrategies(
       .select({
         strategyId: contentItemsTable.strategyId,
         status: contentItemsTable.status,
-        count: sql<number>`count(*)::int`,
+        count: countAsInt(),
       })
       .from(contentItemsTable)
       .where(inArray(contentItemsTable.strategyId, strategyIds))

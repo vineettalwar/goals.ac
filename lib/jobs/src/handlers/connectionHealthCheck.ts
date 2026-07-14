@@ -17,14 +17,19 @@ import { logger } from "../logger";
  *    secret, run the matching connector's test function, and persist the
  *    result on the row.
  */
+export async function processConnectionHealthCheck(
+  data: ConnectionHealthCheckJobData,
+): Promise<void> {
+  if (isSingleConnectionPayload(data)) {
+    await checkSingleConnection(data);
+  } else {
+    await sweepAllConnections();
+  }
+}
+
 export async function registerConnectionHealthCheckHandler(boss: PgBoss): Promise<void> {
   await boss.work<ConnectionHealthCheckJobData>(QUEUES.connectionHealthCheck, async ([job]) => {
-    const data = job.data;
-    if (isSingleConnectionPayload(data)) {
-      await checkSingleConnection(data);
-    } else {
-      await sweepAllConnections();
-    }
+    await processConnectionHealthCheck(job.data);
   });
 }
 

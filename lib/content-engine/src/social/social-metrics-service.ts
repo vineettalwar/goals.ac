@@ -1,5 +1,5 @@
 import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
-import { db } from "@workspace/db";
+import { db, countAsInt } from "@workspace/db";
 import {
   contentPiecesTable,
   socialPostMetricsTable,
@@ -227,7 +227,7 @@ export async function getSocialMetricsSyncStatus(projectId: number): Promise<Soc
   const [stats] = await db
     .select({
       lastSyncedAt: sql<string | null>`max(${socialPostMetricsTable.syncedAt})`,
-      postCount: sql<number>`count(*)::int`,
+      postCount: countAsInt(),
     })
     .from(socialPostMetricsTable)
     .innerJoin(contentPiecesTable, eq(socialPostMetricsTable.contentPieceId, contentPiecesTable.id))
