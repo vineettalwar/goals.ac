@@ -214,7 +214,7 @@ importers:
         version: 2.8.6
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
       express:
         specifier: ^5
         version: 5.2.1
@@ -276,6 +276,31 @@ importers:
       thread-stream:
         specifier: 3.1.0
         version: 3.1.0
+
+  artifacts/cf-jobs-worker:
+    dependencies:
+      '@workspace/content-engine':
+        specifier: workspace:*
+        version: link:../../lib/content-engine
+      '@workspace/db':
+        specifier: workspace:*
+        version: link:../../lib/db
+      '@workspace/jobs':
+        specifier: workspace:*
+        version: link:../../lib/jobs
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^5.20260708.1
+        version: 5.20260713.1
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.3.5
+      typescript:
+        specifier: ~5.9.2
+        version: 5.9.3
+      wrangler:
+        specifier: ^4.110.0
+        version: 4.110.0(@cloudflare/workers-types@5.20260713.1)
 
   artifacts/goals-ac:
     dependencies:
@@ -492,7 +517,7 @@ importers:
         version: 3.10.0(react-hook-form@7.71.2(react@19.1.0))
       '@opennextjs/cloudflare':
         specifier: ^1.20.1
-        version: 1.20.1(next@16.2.10(@playwright/test@1.61.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(wrangler@4.110.0)
+        version: 1.20.1(next@16.2.10(@playwright/test@1.61.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(wrangler@4.110.0(@cloudflare/workers-types@5.20260713.1))
       '@radix-ui/react-dialog':
         specifier: ^1.1.7
         version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -570,7 +595,7 @@ importers:
         version: 2.1.1
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
       framer-motion:
         specifier: 'catalog:'
         version: 12.35.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -646,7 +671,7 @@ importers:
         version: 5.9.3
       wrangler:
         specifier: ^4.110.0
-        version: 4.110.0
+        version: 4.110.0(@cloudflare/workers-types@5.20260713.1)
 
   artifacts/mockup-sandbox:
     devDependencies:
@@ -876,7 +901,7 @@ importers:
         version: link:../security
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -914,7 +939,7 @@ importers:
         version: link:../security
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
       stripe:
         specifier: ^18.4.0
         version: 18.5.0(@types/node@25.3.5)
@@ -982,7 +1007,7 @@ importers:
         version: link:../stock-images
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
       marked:
         specifier: ^18.0.3
         version: 18.0.3
@@ -1013,10 +1038,10 @@ importers:
         version: 3.0.3
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
       drizzle-zod:
         specifier: ^0.8.3
-        version: 0.8.3(drizzle-orm@0.45.1(@types/pg@8.18.0)(pg@8.20.0))(zod@3.25.76)
+        version: 0.8.3(drizzle-orm@0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0))(zod@3.25.76)
       pg:
         specifier: ^8.20.0
         version: 8.20.0
@@ -1094,7 +1119,7 @@ importers:
         version: link:../serp-provider
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
       marked:
         specifier: ^18.0.3
         version: 18.0.3
@@ -1178,7 +1203,7 @@ importers:
         version: link:../security
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
       redis:
         specifier: ^5.12.1
         version: 5.12.1
@@ -1197,7 +1222,7 @@ importers:
         version: link:../lib/db
       drizzle-orm:
         specifier: 'catalog:'
-        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+        version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1708,6 +1733,9 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@cloudflare/workers-types@5.20260713.1':
+    resolution: {integrity: sha512-4YZE9YIzr3iP9eRUV4ekZozLLsYQFFKxmMJfAcsteCuzKJ7RJrLqcCxm1aMzTE9uFcy+D6A89WE+cjJadF2c9g==}
 
   '@commander-js/extra-typings@14.0.0':
     resolution: {integrity: sha512-hIn0ncNaJRLkZrxBIp5AsW/eXEHNKYQBh0aPdoUqNgD+Io3NIykQqpKFyKcuasZhicGaEZJX/JBSIkZ4e5x8Dg==}
@@ -7917,6 +7945,8 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20260708.1':
     optional: true
 
+  '@cloudflare/workers-types@5.20260713.1': {}
+
   '@commander-js/extra-typings@14.0.0(commander@14.0.3)':
     dependencies:
       commander: 14.0.3
@@ -8531,7 +8561,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@opennextjs/cloudflare@1.20.1(next@16.2.10(@playwright/test@1.61.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(wrangler@4.110.0)':
+  '@opennextjs/cloudflare@1.20.1(next@16.2.10(@playwright/test@1.61.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(wrangler@4.110.0(@cloudflare/workers-types@5.20260713.1))':
     dependencies:
       '@ast-grep/napi': 0.40.5
       '@dotenvx/dotenvx': 1.31.0
@@ -8543,7 +8573,7 @@ snapshots:
       glob: 12.0.0
       next: 16.2.10(@playwright/test@1.61.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       ts-tqdm: 0.8.6
-      wrangler: 4.110.0
+      wrangler: 4.110.0(@cloudflare/workers-types@5.20260713.1)
       yargs: 18.0.0
     transitivePeerDependencies:
       - encoding
@@ -10797,14 +10827,15 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.45.1(@types/pg@8.18.0)(pg@8.20.0):
+  drizzle-orm@0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0):
     optionalDependencies:
+      '@cloudflare/workers-types': 5.20260713.1
       '@types/pg': 8.18.0
       pg: 8.20.0
 
-  drizzle-zod@0.8.3(drizzle-orm@0.45.1(@types/pg@8.18.0)(pg@8.20.0))(zod@3.25.76):
+  drizzle-zod@0.8.3(drizzle-orm@0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0))(zod@3.25.76):
     dependencies:
-      drizzle-orm: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+      drizzle-orm: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
       zod: 3.25.76
 
   dunder-proto@1.0.1:
@@ -13400,7 +13431,7 @@ snapshots:
       '@cloudflare/workerd-linux-arm64': 1.20260708.1
       '@cloudflare/workerd-windows-64': 1.20260708.1
 
-  wrangler@4.110.0:
+  wrangler@4.110.0(@cloudflare/workers-types@5.20260713.1):
     dependencies:
       '@cloudflare/kv-asset-handler': 0.5.0
       '@cloudflare/unenv-preset': 2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260708.1)
@@ -13411,6 +13442,7 @@ snapshots:
       unenv: 2.0.0-rc.24
       workerd: 1.20260708.1
     optionalDependencies:
+      '@cloudflare/workers-types': 5.20260713.1
       fsevents: 2.3.3
     transitivePeerDependencies:
       - bufferutil

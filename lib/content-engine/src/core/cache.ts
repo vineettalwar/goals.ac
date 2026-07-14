@@ -1,4 +1,5 @@
 import { createClient } from "redis";
+import { getAiCacheKv } from "./kv-binding";
 import { logger } from "./logger";
 
 export interface CacheAdapter {
@@ -29,6 +30,28 @@ class InMemoryLruCache implements CacheAdapter {
   }
 }
 
+class KvCache implements CacheAdapter {
+  constructor(private readonly kv: NonNullable<ReturnType<typeof getAiCacheKv>>) {}
+
+  async get(key: string): Promise<string | null> {
+    try {
+      return await this.kv.get(key, "text");
+    } catch (err) {
+      logger.warn({ err }, "KV cache GET failed, returning null");
+      return null;
+    }
+  }
+
+  async set(key: string, value: string, ttlMs: number): Promise<void> {
+    try {
+      const expirationTtl = Math.max(1, Math.ceil(ttlMs / 1000));
+      await this.kv.put(key, value, { expirationTtl });
+    } catch (err) {
+      logger.warn({ err }, "KV cache SET failed, skipping cache write");
+    }
+  }
+}
+
 class RedisCache implements CacheAdapter {
   constructor(private readonly client: ReturnType<typeof createClient>) {}
 
@@ -54,6 +77,13 @@ let _cache: CacheAdapter | null = null;
 
 export async function getCache(): Promise<CacheAdapter> {
   if (_cache) return _cache;
+
+  const kv = getAiCacheKv();
+  if (kv) {
+    logger.info("Content cache: using Cloudflare KV");
+    _cache = new KvCache(kv);
+    return _cache;
+  }
 
   const redisUrl = process.env["REDIS_URL"];
   if (redisUrl) {

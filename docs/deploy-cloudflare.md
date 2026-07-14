@@ -1,6 +1,6 @@
 # Deploy goals.ac to Cloudflare
 
-Production target: **Next.js app** (`artifacts/marketing-persona-app`) on **Cloudflare Workers** via [OpenNext](https://opennext.js.org/cloudflare), with **D1** (SQLite at the edge) as the primary database. Docker Compose + Postgres remain the local dev stack.
+Production target: **Next.js app** (`artifacts/marketing-persona-app`) on **Cloudflare Workers** via [OpenNext](https://opennext.js.org/cloudflare), with **D1** as the primary database. Background jobs run on a dedicated **`goals-ac-jobs` Worker** via **Cloudflare Queues** and **Cron Triggers**.
 
 > **Postgres alternative:** Hyperdrive + Neon/pgvector is still supported — set `DB_DIALECT=postgres` and `DATABASE_URL` instead of D1. See [Hyperdrive (optional)](#hyperdrive-postgres-alternative).
 
@@ -8,141 +8,145 @@ Production target: **Next.js app** (`artifacts/marketing-persona-app`) on **Clou
 
 ```mermaid
 flowchart LR
+  subgraph GitHub
+    Repo[goals.ac monorepo]
+  end
   subgraph CF [Cloudflare]
-    Worker[goals-ac Worker\nOpenNext + Next.js 16]
-    D1[(D1 — goals-ac)]
-    R2[(R2 — optional\nNext.js cache)]
-    Queues[Queues — optional\njob offload]
+    Builds[Workers Builds]
+    AppWorker[goals-ac Worker]
+    JobWorker[goals-ac-jobs Worker]
+    D1[(D1)]
+    R2[(R2 cache)]
+    KV[(KV)]
+    Queues[Queues + DLQ]
+    Cron[Cron Triggers]
   end
-  subgraph External [External services]
-    Jobs[pg-boss worker\noptional / legacy]
-    Redis[(Redis — optional)]
-  end
-  Users --> Worker
-  Worker --> D1
-  Worker --> R2
-  Worker --> Queues
-  Worker --> Redis
-  Jobs -.->|postgres path only| D1
+  Repo --> Builds
+  Builds --> AppWorker
+  AppWorker --> D1
+  AppWorker --> R2
+  AppWorker --> KV
+  AppWorker -->|enqueue| Queues
+  Queues --> JobWorker
+  Cron --> JobWorker
+  JobWorker --> D1
 ```
 
 | Component | Cloudflare product | Notes |
 |---|---|---|
-| Next.js app + API routes | Workers + OpenNext | `@opennextjs/cloudflare`, `wrangler.jsonc` |
-| App database | **D1** | `DB` binding, migrations in `lib/db/migrations-d1/` |
+| Next.js app + API routes | Workers + OpenNext | `wrangler.jsonc`, `cf:deploy` |
+| GitHub → deploy | **Workers Builds** | Native Git integration (no GitHub Actions) |
+| App database | **D1** | `DB` binding, `lib/db/migrations-d1/` |
 | Static assets | Workers Assets | `.open-next/assets` |
-| Next.js ISR/cache | **R2** (optional) | Uncomment R2 binding in `wrangler.jsonc` + `open-next.config.ts` |
-| Background jobs | **Queues / Containers** | pg-boss requires Postgres — migrate to Queues or run worker against Postgres |
-| Cron (`/api/cron/*`) | External scheduler | HTTP trigger with `Authorization: Bearer $CRON_SECRET` |
-| AI output cache | Upstash Redis or skip | `REDIS_URL`; in-memory fallback (single instance) |
-| Brand voice vectors | In-app cosine (D1) | Embeddings stored as JSON in D1; pgvector path on Postgres |
+| Next.js ISR/cache | **R2** | `NEXT_INC_CACHE_R2_BUCKET` + `r2IncrementalCache` |
+| AI cache + rate limits | **KV** | `AI_CACHE`, `RATE_LIMIT` bindings (replaces `REDIS_URL` on CF) |
+| Image optimization | **Cloudflare Images** | `IMAGES` binding |
+| Background jobs | **Queues** | Single `goals-ac-jobs` queue with typed envelopes |
+| Job consumer + sweeps | **goals-ac-jobs Worker** | `artifacts/cf-jobs-worker` |
+| Scheduled sweeps | **Cron Triggers** | On jobs Worker (not external HTTP cron) |
+| Brand voice at scale | **Vectorize** (phase 5) | See [Vectorize brand voice](#vectorize-brand-voice) |
 
 ## Prerequisites
 
-1. **Cloudflare account** with Workers enabled (Paid plan recommended).
+1. **Cloudflare account** with Workers Paid plan (bundle size + Queues + Cron).
 2. **Wrangler auth:** `pnpm exec wrangler login`
-3. **D1 database** (one-time):
+3. **Provision resources:**
    ```sh
-   cd artifacts/marketing-persona-app
-   pnpm exec wrangler d1 create goals-ac
+   node scripts/cf-provision.mjs
    ```
-   Copy the returned `database_id` into `wrangler.jsonc` (`d1_databases[0].database_id`).
-4. **Domain** (optional): route `goals.ac` to the Worker in Cloudflare DNS.
+   Paste returned IDs into:
+   - `artifacts/marketing-persona-app/wrangler.jsonc`
+   - `artifacts/cf-jobs-worker/wrangler.jsonc`
+4. **Domain:** Workers → goals-ac → Domains → attach `goals.ac`
 
 ## One-time Cloudflare setup
 
-### 1. D1 database + migrations
+### 1. D1 + migrations
 
-`@workspace/db` ships a SQLite schema (`lib/db/src/schema-sqlite/`) and initial migration (`lib/db/migrations-d1/`).
-
-**Apply migrations (remote):**
 ```sh
-pnpm run cf:migrate:d1
+pnpm run cf:migrate:d1      # remote
+pnpm run cf:seed:d1         # industries + locations (first deploy)
 ```
 
-**Apply migrations (local Wrangler preview DB):**
+After schema changes:
 ```sh
-pnpm run cf:migrate:d1:local
-```
-
-**Regenerate migrations after schema changes:**
-```sh
-# 1. Edit lib/db/src/schema/*.ts (Postgres source of truth)
-# 2. Regenerate SQLite mirror + D1 migration:
 pnpm --filter @workspace/db run generate:d1
-# 3. Apply:
 pnpm run cf:migrate:d1
 ```
 
-Set Worker variable **`DB_DIALECT=d1`** (dashboard → Settings → Variables, or `.dev.vars` for preview). When `DB_DIALECT=d1`, the app uses the `DB` D1 binding via `@workspace/db` — no `DATABASE_URL` required.
+Set **`DB_DIALECT=d1`** in Worker vars (already in `wrangler.jsonc`).
 
-### 2. R2 incremental cache (optional)
+### 2. R2, KV, Queues, Images
+
+`node scripts/cf-provision.mjs` creates:
+- R2: `goals-ac-next-cache` (+ staging)
+- KV: `goals-ac-cache`, `goals-ac-ratelimit` (+ staging)
+- Queues: `goals-ac-jobs`, `goals-ac-jobs-dlq` (+ staging)
+
+Bindings are pre-wired in `wrangler.jsonc`. Enable **Cloudflare Images** on your account in the dashboard.
+
+### 3. Deploy both Workers
 
 ```sh
-pnpm exec wrangler r2 bucket create goals-ac-next-cache
+pnpm run cf:build
+pnpm run cf:deploy -- --env production
+pnpm run cf:deploy:jobs -- --env production
 ```
 
-Uncomment in `wrangler.jsonc` and `open-next.config.ts`, then redeploy.
+### 4. Worker secrets (runtime)
 
-### 3. Worker secrets (runtime)
-
-| Secret / var | Required (D1) | Required (Postgres) |
-|---|---|---|
-| `DB_DIALECT` | `d1` | `postgres` (or omit) |
-| `DATABASE_URL` | No | Yes (Hyperdrive string) |
-| `AUTH_SECRET` | Yes | Yes |
-| `NEXTAUTH_URL` | Yes | Yes |
-| `GEMINI_KEY_ENCRYPTION_SECRET` | Yes | Yes |
-| `GEMINI_API_KEY` | Recommended | Recommended |
-| `CRON_SECRET` | If using cron HTTP | If using cron HTTP |
-| `STRIPE_*` | If billing | If billing |
-| `GOOGLE_CLIENT_*` | If OAuth | If OAuth |
-| `RESEND_API_KEY` | If email | If email |
-| `REDIS_URL` | Optional | Optional |
-
-Use `pnpm exec wrangler secret put AUTH_SECRET` from `artifacts/marketing-persona-app`. Deploy with `--keep-vars` (in `cf:deploy`).
-
-### 4. Cron trigger (autopilot sweep)
-
-Use an external scheduler to call:
-
-```
-GET https://goals.ac/api/cron/generate-articles
-Authorization: Bearer <CRON_SECRET>
-```
-
-Suggested schedule: every 6 hours (`0 */6 * * *`).
-
-### 5. Background jobs
-
-pg-boss is Postgres-native. When `DB_DIALECT=d1`, `@workspace/jobs` throws **`JobsUnavailableError`** on `enqueue()` / `getBoss()` — cron routes and APIs that enqueue background work will fail until migrated.
-
-| Approach | Notes |
+| Secret / var | Required (D1) |
 |---|---|
-| **Cloudflare Queues** | Recommended — replace pg-boss enqueue/consume |
-| **Hybrid worker** | `artifacts/worker` on Fly/Railway with Postgres while app uses D1 (split-brain — use only for isolated job types) |
-| **Postgres path** | `DB_DIALECT=postgres` + Hyperdrive until Queues ships |
+| `AUTH_SECRET` | Yes |
+| `NEXTAUTH_URL` | Yes |
+| `GEMINI_KEY_ENCRYPTION_SECRET` | Yes |
+| `GEMINI_API_KEY` | Recommended |
+| `NEXT_PUBLIC_APP_URL` | Build var (Workers Builds) |
+| `NEXT_PUBLIC_SITE_URL` | Build var |
+| `STRIPE_*`, `GOOGLE_CLIENT_*`, `RESEND_API_KEY` | Feature-gated |
 
-See **[worker-deploy.md](./worker-deploy.md)** for Fly/Railway/Docker instructions, health checks, and cron backup.
+`REDIS_URL` is **not needed** on the Cloudflare path — KV handles cache and rate limits.
+
+```sh
+cd artifacts/marketing-persona-app
+pnpm exec wrangler secret put AUTH_SECRET --env production
+```
+
+Deploy uses `--keep-vars` to preserve dashboard secrets.
+
+### 5. Background jobs (D1 path)
+
+When `DB_DIALECT=d1`, `enqueue()` sends typed job envelopes to the **`JOBS_QUEUE`** binding. The **`goals-ac-jobs`** consumer Worker processes them via `@workspace/jobs/process-job`.
+
+Cron sweeps run on the jobs Worker via **Cron Triggers** — no external scheduler required.
+
+Legacy `artifacts/worker` (pg-boss) remains for local Postgres dev only.
+
+## Workers Builds (GitHub → Cloudflare)
+
+Connect repo: **Workers & Pages → goals-ac → Settings → Builds → Connect GitHub**.
+
+| Setting | Value |
+|---|---|
+| Root directory | `/` (pnpm monorepo root) |
+| Build command | `pnpm install --frozen-lockfile && pnpm run cf:build` |
+| Deploy command | `pnpm --filter @workspace/marketing-persona-app exec opennextjs-cloudflare deploy -- --env production --keep-vars --skipNextBuild` |
+| Non-prod branch | Same with `--env staging` |
+| Build watch paths | `artifacts/marketing-persona-app/**`, `lib/**`, `scripts/patch-turbopack-externals.mjs`, `pnpm-lock.yaml` |
+| Build caching | Enable |
+
+**Build variables:** `CF_BUILD=1`, all `NEXT_PUBLIC_*` needed at build time.
+
+Deploy the jobs Worker separately (or add a second Workers Builds project pointing at `artifacts/cf-jobs-worker`).
 
 ## Hyperdrive (Postgres alternative)
-
-If you prefer Postgres + pgvector (brand voice IVFFlat indexes, pg-boss):
 
 ```sh
 pnpm exec wrangler hyperdrive create goals-ac-db \
   --connection-string="postgresql://USER:PASS@HOST:5432/goalsac"
 ```
 
-Add to `wrangler.jsonc`:
-```jsonc
-"hyperdrive": [{ "binding": "HYPERDRIVE", "id": "<hyperdrive-id>" }]
-```
-
-Set `DB_DIALECT=postgres` and `DATABASE_URL` to the Hyperdrive connection string. Run Postgres migrations:
-```sh
-DATABASE_URL="postgresql://..." pnpm --filter @workspace/db run migrate
-```
+Add to `wrangler.jsonc`, set `DB_DIALECT=postgres`, run Postgres migrations.
 
 ## Local preview (Workers runtime)
 
@@ -150,61 +154,59 @@ DATABASE_URL="postgresql://..." pnpm --filter @workspace/db run migrate
 pnpm install
 cp artifacts/marketing-persona-app/.dev.vars.example \
    artifacts/marketing-persona-app/.dev.vars
-# Set AUTH_SECRET, NEXTAUTH_URL=http://localhost:8787, GEMINI_KEY_ENCRYPTION_SECRET
-# DB_DIALECT=d1 is already in the example
+# AUTH_SECRET, NEXTAUTH_URL=http://localhost:8787, GEMINI_KEY_ENCRYPTION_SECRET
 
 pnpm run cf:migrate:d1:local
 pnpm run cf:seed:d1:local
 pnpm run cf:preview   # http://localhost:8787
 ```
 
-Day-to-day UI work: `pnpm --filter @workspace/marketing-persona-app run dev` (:3001) with repo-root `.env` and Docker Postgres (`DB_DIALECT` unset).
+Day-to-day UI: `pnpm --filter @workspace/marketing-persona-app run dev` (:3001) with Docker Postgres.
 
-## Deploy
+## Deploy commands
 
-```sh
-pnpm install --frozen-lockfile
-pnpm run cf:migrate:d1    # before first deploy / after schema changes
-pnpm run cf:seed:d1       # industries + locations (first deploy)
-pnpm run cf:build         # validates OpenNext worker bundle
-pnpm run cf:deploy
-```
-
-Cloudflare builds use `CF_BUILD=1` (unoptimized images, `sharp-stub.js`) and `scripts/patch-turbopack-externals.mjs`. Auth runs via edge `src/middleware.ts` (not Node `proxy.ts`) until OpenNext supports proxy.
-
-With environment:
-```sh
-pnpm run cf:deploy -- --env production
-```
+| Command | Action |
+|---|---|
+| `pnpm run cf:build` | OpenNext build (validates bundle) |
+| `pnpm run cf:deploy` | Deploy app Worker |
+| `pnpm run cf:deploy:jobs` | Deploy jobs consumer Worker |
+| `pnpm run cf:migrate:d1` | Apply D1 migrations (remote) |
+| `pnpm run cf:seed:d1` | Seed reference data |
+| `node scripts/cf-provision.mjs` | Create CF resources + print IDs |
+| `node scripts/cf-setup.mjs` | Setup checklist |
 
 ## Validate after deploy
 
 ```sh
 curl -sS https://goals.ac/api/platform/status | jq .
+curl -sS https://goals-ac-jobs.<account>.workers.dev/
 pnpm exec wrangler tail --env production
 ```
+
+## Vectorize brand voice
+
+At scale, migrate brand voice retrieval from D1 JSON cosine to **Vectorize**. Stub and config live in `lib/content-engine/src/brand/vectorize-brand-voice.ts`. Enable after jobs on CF are stable.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
-| `D1 binding DB is not configured` | Add `d1_databases` to `wrangler.jsonc`; set `DB_DIALECT=d1` |
+| `D1 binding DB is not configured` | Add `d1_databases` to wrangler; set `DB_DIALECT=d1` |
+| `JOBS_QUEUE binding is not configured` | Add `queues.producers` to app `wrangler.jsonc` |
 | `no such table` | Run `pnpm run cf:migrate:d1` |
-| `DATABASE_URL must be set` | On D1: set `DB_DIALECT=d1`. On Postgres: set `DATABASE_URL` |
-| Worker too large | Workers Paid; enable R2 cache; audit server-only imports |
-| Jobs never run | pg-boss needs Postgres — use Queues or hybrid worker ([worker-deploy.md](./worker-deploy.md)) |
-| `Node.js middleware is not supported` on cf:build | Use `src/middleware.ts` with `runtime = "edge"` — `proxy.ts` is Node-only until OpenNext adapter API |
-| Brand voice slow on D1 | Expected at scale — consider Vectorize or Postgres path |
+| Jobs never run | Deploy `goals-ac-jobs` Worker; check queue consumer + DLQ |
+| Worker too large | Workers Paid; R2 cache enabled; audit server imports |
+| Rate limits not shared | Ensure KV `RATE_LIMIT` binding is set |
+| Brand voice slow on D1 | Expected at scale — enable Vectorize (phase 5) |
 
-## Files (D1)
+## Files
 
 | Path | Purpose |
 |---|---|
-| `lib/db/src/schema-sqlite/` | SQLite/D1 Drizzle schema (generated from Postgres) |
-| `lib/db/migrations-d1/` | D1 SQL migrations |
-| `lib/db/drizzle.d1.config.ts` | Drizzle Kit config for D1 |
-| `lib/db/scripts/convert-pg-schema-to-sqlite.mjs` | Schema sync script |
-| `lib/db/src/dialect.ts` | `DB_DIALECT` detection |
-| `lib/db/src/d1.ts` | D1 Drizzle client factory |
-| `artifacts/marketing-persona-app/wrangler.jsonc` | `DB` D1 binding |
-| Root `cf:migrate:d1` / `cf:migrate:d1:local` | Apply D1 migrations |
+| `artifacts/marketing-persona-app/wrangler.jsonc` | App Worker: D1, R2, KV, Images, Queues producer |
+| `artifacts/cf-jobs-worker/wrangler.jsonc` | Jobs Worker: D1, KV, Queues consumer, Cron |
+| `lib/jobs/src/cf-queues.ts` | Queue producer transport (D1 path) |
+| `lib/jobs/src/process-job.ts` | Shared job dispatcher |
+| `lib/content-engine/src/core/kv-binding.ts` | KV adapter for cache + rate limits |
+| `scripts/cf-provision.mjs` | One-shot resource provisioning |
+| `scripts/cf-setup.mjs` | Setup checklist |

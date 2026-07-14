@@ -1,4 +1,5 @@
 import { createClient } from "redis";
+import { getRateLimitKv } from "./kv-binding";
 import { logger } from "./logger";
 
 type RedisClient = ReturnType<typeof createClient>;
@@ -86,6 +87,39 @@ async function getRedisClient(): Promise<RedisClient | null> {
   return redisInit;
 }
 
+/** Fixed-window counter — atomic across instances when KV or Redis is available. */
+async function checkRateLimitKv(
+  kv: NonNullable<ReturnType<typeof getRateLimitKv>>,
+  key: string,
+  limit: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
+  const now = Date.now();
+  const windowId = Math.floor(now / windowMs);
+  const kvKey = `rl:${key}:${windowId}`;
+
+  const existing = await kv.get(kvKey, "text");
+  const count = (existing ? Number.parseInt(existing, 10) : 0) + 1;
+  const expirationTtl = Math.max(1, Math.ceil(windowMs / 1000));
+  await kv.put(kvKey, String(count), { expirationTtl });
+
+  if (count > limit) {
+    return {
+      allowed: false,
+      remaining: 0,
+      retryAfterSeconds: Math.max(1, Math.ceil(windowMs / 1000)),
+      limit,
+    };
+  }
+
+  return {
+    allowed: true,
+    remaining: Math.max(0, limit - count),
+    retryAfterSeconds: 0,
+    limit,
+  };
+}
+
 /** Fixed-window counter — atomic across instances when Redis is available. */
 async function checkRateLimitRedis(
   client: RedisClient,
@@ -125,6 +159,15 @@ export async function checkRateLimit(
   limit: number,
   windowMs: number,
 ): Promise<RateLimitResult> {
+  const kv = getRateLimitKv();
+  if (kv) {
+    try {
+      return await checkRateLimitKv(kv, key, limit, windowMs);
+    } catch (err) {
+      logger.warn({ err, key }, "KV rate-limit check failed, falling back to in-memory");
+    }
+  }
+
   const client = await getRedisClient();
   if (client) {
     try {

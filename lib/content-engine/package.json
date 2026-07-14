@@ -60,6 +60,7 @@
     "./core/cache": "./src/core/cache.ts",
     "./core/logger": "./src/core/logger.ts",
     "./core/rate-limit": "./src/core/rate-limit.ts",
+    "./core/kv-binding": "./src/core/kv-binding.ts",
     "./core/utils": "./src/core/utils.ts",
     "./ga4-analytics-service": "./src/analytics/ga4-analytics-service.ts",
     "./goal-brief-compiler": "./src/strategy/goal-brief-compiler.ts",
