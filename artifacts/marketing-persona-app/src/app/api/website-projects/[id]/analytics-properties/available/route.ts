@@ -10,7 +10,7 @@ import {
   parseStoredTokens,
   rankProperties,
   resolveAccessToken,
-} from "@/lib/integrations/analytics-property-client";
+} from "@/lib/integrations/analytics/analytics-property-client";
 
 export async function GET(
   _req: Request,

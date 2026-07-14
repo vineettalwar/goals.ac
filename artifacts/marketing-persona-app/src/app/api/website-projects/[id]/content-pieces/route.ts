@@ -142,7 +142,6 @@ export async function POST(
     userId: userId!,
     tier: "execution",
     quotaKind: "article",
-    usedByok: Boolean(userApiKey),
   });
   if (!billingPrep.ok) return billingPrep.response;
 

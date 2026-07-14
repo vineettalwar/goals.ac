@@ -60,7 +60,6 @@ export async function POST(req: Request) {
       userId: userId!,
       tier: "planning",
       quotaKind: "roadmap",
-      usedByok: Boolean(userAiSettings.userApiKey),
     });
     if (!billingPrep.ok) return billingPrep.response;
 

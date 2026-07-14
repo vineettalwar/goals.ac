@@ -4,7 +4,7 @@ import {
   SEARCH_PROPERTY_PROVIDERS,
   searchPropertyConnectionsTable,
 } from "@workspace/db/schema";
-import type { SearchPropertyConnectionsResponse, SearchPropertyProvider } from "@/lib/integrations/search-property-types";
+import type { SearchPropertyConnectionsResponse, SearchPropertyProvider } from "@/lib/integrations/search/search-property-types";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
@@ -12,14 +12,14 @@ import {
   AI_REPORT_LABELS,
   API_INGESTION_NOTES,
   buildAiReportUrl,
-} from "@/lib/integrations/search-property-links";
+} from "@/lib/integrations/search/search-property-links";
 import { z } from "zod";
 import {
   encryptStoredTokens,
   listPropertiesForProvider,
   parseStoredTokens,
   resolveAccessToken,
-} from "@/lib/integrations/search-property-client";
+} from "@/lib/integrations/search/search-property-client";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
 import {
   bingWebmasterAvailable,

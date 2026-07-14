@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getMetaPagesSession } from "@/lib/integrations/social-oauth";
+import { getMetaPagesSession } from "@/lib/integrations/oauth/social-oauth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();

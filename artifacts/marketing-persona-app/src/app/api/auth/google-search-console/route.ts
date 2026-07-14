@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { startGoogleSearchConsoleOAuth } from "@/lib/integrations/search-property-oauth";
+import { startGoogleSearchConsoleOAuth } from "@/lib/integrations/oauth/search-property-oauth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();

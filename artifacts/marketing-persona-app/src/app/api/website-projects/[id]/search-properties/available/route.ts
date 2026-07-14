@@ -4,14 +4,14 @@ import { SEARCH_PROPERTY_PROVIDERS, searchPropertyConnectionsTable, websiteProje
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
-import type { SearchPropertyProvider } from "@/lib/integrations/search-property-types";
+import type { SearchPropertyProvider } from "@/lib/integrations/search/search-property-types";
 import {
   listPropertiesForProvider,
   parseStoredTokens,
   rankProperties,
   resolveAccessToken,
   encryptStoredTokens,
-} from "@/lib/integrations/search-property-client";
+} from "@/lib/integrations/search/search-property-client";
 
 export async function GET(
   req: Request,

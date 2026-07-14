@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
-import { listAdminContentStrategies } from "@/lib/admin-content-strategies";
+import { listAdminContentStrategies } from "@/lib/admin/admin-content-strategies";
 
 export async function GET(req: Request) {
   const admin = await requirePlatformAdminApi();

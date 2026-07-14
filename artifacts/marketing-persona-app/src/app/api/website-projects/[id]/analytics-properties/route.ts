@@ -5,7 +5,7 @@ import {
   analyticsPropertyConnectionsTable,
 } from "@workspace/db/schema";
 import type { AnalyticsPropertyProvider } from "@workspace/db/schema";
-import type { AnalyticsPropertyConnectionsResponse } from "@/lib/integrations/analytics-property-types";
+import type { AnalyticsPropertyConnectionsResponse } from "@/lib/integrations/analytics/analytics-property-types";
 import { and, eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
@@ -16,7 +16,7 @@ import {
   listGa4PropertiesForConnection,
   parseStoredTokens,
   resolveAccessToken,
-} from "@/lib/integrations/analytics-property-client";
+} from "@/lib/integrations/analytics/analytics-property-client";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
 import { googleIntegrationsAvailable } from "@/lib/platform/platform-features";
 

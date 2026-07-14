@@ -54,7 +54,6 @@ export async function POST(
     tier: "execution",
     quotaKind: "article",
     companyId: projectId,
-    usedByok: Boolean(userApiKey),
   });
   if (!billingPrep.ok) return billingPrep.response;
 

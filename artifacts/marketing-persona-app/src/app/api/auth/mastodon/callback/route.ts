@@ -1,4 +1,4 @@
-import { handleMastodonCallback } from "@/lib/integrations/social-oauth";
+import { handleMastodonCallback } from "@/lib/integrations/oauth/social-oauth";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);

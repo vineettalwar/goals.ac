@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { startMetaOAuth } from "@/lib/integrations/social-oauth";
+import { startMetaOAuth } from "@/lib/integrations/oauth/social-oauth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();

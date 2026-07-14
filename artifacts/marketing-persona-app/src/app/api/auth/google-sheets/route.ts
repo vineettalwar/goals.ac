@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
-import { startGoogleSheetsOAuth } from "@/lib/integrations/google-sheets-oauth";
+import { startGoogleSheetsOAuth } from "@/lib/integrations/oauth/google-sheets-oauth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireSiteAdmin();

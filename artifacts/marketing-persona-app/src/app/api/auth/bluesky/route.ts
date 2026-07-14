@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { startBlueskyAuthorize } from "@/lib/integrations/bluesky-oauth";
-import { encodeSignedOAuthState } from "@/lib/integrations/oauth-state";
+import { startBlueskyAuthorize } from "@/lib/integrations/oauth/bluesky-oauth";
+import { encodeSignedOAuthState } from "@/lib/integrations/oauth/oauth-state";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();

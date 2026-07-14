@@ -4,7 +4,7 @@ import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject, requireIntegrationsManage } from "@/lib/org/org-access";
-import { assertCmsIntegrationUrlsSafe } from "@/lib/integrations/validate-cms-urls";
+import { assertCmsIntegrationUrlsSafe } from "@/lib/integrations/cms/validate-cms-urls";
 import {
   type CmsIntegrationCredentials,
   decryptCmsCredentials,

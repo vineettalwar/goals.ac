@@ -61,7 +61,6 @@ export async function POST(
     userId: userId!,
     tier: "rapid",
     quotaKind: "article",
-    usedByok: Boolean(userApiKey),
   });
   if (!billingPrep.ok) return billingPrep.response;
 
@@ -78,6 +77,7 @@ export async function POST(
       existingPieceTitles.filter((title) => title !== piece!.title),
       userApiKey,
       aiProviderOptions,
+      ctx.brand,
     );
 
     const [updated] = await db

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
-import { getAdminContentStrategyDetail } from "@/lib/admin-content-strategies";
+import { getAdminContentStrategyDetail } from "@/lib/admin/admin-content-strategies";
 
 export async function GET(
   _req: Request,

@@ -10,12 +10,12 @@ import {
   completeBlueskyCallback,
   persistBlueskySession,
   getStoredBlueskySession,
-} from "@/lib/integrations/bluesky-oauth";
-import { getNextFrontendOrigin } from "@/lib/integrations/social-oauth";
+} from "@/lib/integrations/oauth/bluesky-oauth";
+import { getNextFrontendOrigin } from "@/lib/integrations/oauth/social-oauth";
 import {
   assertOAuthSessionUser,
   decodeSignedOAuthState,
-} from "@/lib/integrations/oauth-state";
+} from "@/lib/integrations/oauth/oauth-state";
 
 function publishingRedirect(_projectId: number, params: Record<string, string>): never {
   const qs = new URLSearchParams(params).toString();

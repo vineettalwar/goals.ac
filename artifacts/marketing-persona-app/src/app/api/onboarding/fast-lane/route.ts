@@ -44,7 +44,6 @@ async function resolveRoadmapForCompany(industry: string, userId: number, userAp
     userId,
     tier: "planning",
     quotaKind: "roadmap",
-    usedByok: Boolean(userApiKey),
   });
   if (!billingPrep.ok) {
     throw new Error("quota_exhausted");
@@ -161,7 +160,6 @@ export async function POST(req: Request) {
       userId: userId!,
       tier: "strategy",
       quotaKind: "article",
-      usedByok: Boolean(userApiKey),
     });
     if (!billingPrep.ok) return billingPrep.response;
 

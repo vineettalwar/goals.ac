@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { startMastodonOAuth } from "@/lib/integrations/social-oauth";
+import { startMastodonOAuth } from "@/lib/integrations/oauth/social-oauth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();

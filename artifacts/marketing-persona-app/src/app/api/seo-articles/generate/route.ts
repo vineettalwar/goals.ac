@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
 import { generateSeoArticleContent } from "@/lib/ai/seo-content-generator";
 import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
+import { loadBrandContextForProject } from "@workspace/content-engine/support/brand-context-loader";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
@@ -44,12 +45,14 @@ export async function POST(req: Request) {
 
   let validatedProjectId: number | null = null;
   let projectContentStyle: ContentStyle | null = null;
+  let projectBrand = undefined;
 
   if (websiteProjectId) {
     const proj = await getAccessibleProject(websiteProjectId, userId!);
     if (!proj) return NextResponse.json({ error: "Project not found" }, { status: 404 });
     validatedProjectId = websiteProjectId;
     projectContentStyle = proj.contentStyle as ContentStyle | null;
+    projectBrand = (await loadBrandContextForProject(websiteProjectId)) ?? undefined;
   }
 
   const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
@@ -57,7 +60,6 @@ export async function POST(req: Request) {
     userId: userId!,
     tier: "execution",
     quotaKind: "article",
-    usedByok: Boolean(userApiKey),
   });
   if (!billingPrep.ok) return billingPrep.response;
 
@@ -71,6 +73,8 @@ export async function POST(req: Request) {
       userApiKey,
       projectContentStyle,
       aiProviderOptions,
+      validatedProjectId ?? undefined,
+      projectBrand,
     );
 
     const wordCount = articleContent.content.split(/\s+/).filter(Boolean).length;

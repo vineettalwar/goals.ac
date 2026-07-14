@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { startGoogleAnalyticsOAuth } from "@/lib/integrations/analytics-property-oauth";
+import { startGoogleAnalyticsOAuth } from "@/lib/integrations/oauth/analytics-property-oauth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();
