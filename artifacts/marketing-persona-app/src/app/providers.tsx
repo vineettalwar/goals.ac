@@ -4,7 +4,7 @@ import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { useState } from "react";
-import { WebVitalsReporter } from "@/components/web-vitals-reporter";
+import { WebVitalsReporter } from "@/components/app/web-vitals-reporter";
 import { ThemeProvider } from "@/context/theme";
 
 export function Providers({ children }: { children: React.ReactNode }) {

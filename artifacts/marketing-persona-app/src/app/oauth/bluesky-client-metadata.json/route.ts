@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getBlueskyClientMetadata } from "@/lib/integrations/bluesky-oauth";
-import { getNextApiOrigin } from "@/lib/integrations/social-oauth";
+import { getBlueskyClientMetadata } from "@/lib/integrations/oauth/bluesky-oauth";
+import { getNextApiOrigin } from "@/lib/integrations/oauth/social-oauth";
 
 export async function GET() {
   try {

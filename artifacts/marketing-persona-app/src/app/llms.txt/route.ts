@@ -1,6 +1,6 @@
-import { LEARN_POSTS } from "@/lib/marketing/learn-posts";
-import { HELP_ARTICLES } from "@/lib/marketing/help-articles";
-import { getSiteUrl } from "@/lib/marketing/site-url";
+import { LEARN_POSTS } from "@/lib/marketing/content/learn-posts";
+import { HELP_ARTICLES } from "@/lib/marketing/content/help-articles";
+import { getSiteUrl } from "@/lib/marketing/site/site-url";
 
 export function GET() {
   const base = getSiteUrl();
@@ -8,11 +8,12 @@ export function GET() {
   const lines = [
     "# goals.ac",
     "",
-    "> AI-powered B2B content growth engine — persona-driven SEO articles, 12-month roadmaps, GEO audits, and CMS publishing.",
+    "> Cross-platform content studio — research-driven SEO briefs, drafts you approve, and publishing to CMS, social, and email.",
     "",
     "## Product",
     `- [Home](${base}/): Overview of goals.ac`,
-    `- [Engagements](${base}/pricing): SEO, AEO, and GEO consulting`,
+    `- [Content Studio](${base}/content-engine): Research, draft, and publish workflow`,
+    `- [Engagements](${base}/pricing): Scoped content programs`,
     `- [Features](${base}/features): Content studio, autopilot, integrations`,
     `- [Generative Engine Optimization](${base}/generative-engine-optimization): GEO tooling`,
     `- [LLM Visibility](${base}/llm-visibility): Track AI search citations`,
@@ -25,8 +26,7 @@ export function GET() {
     "## Help",
     ...HELP_ARTICLES.slice(0, 12).map((a) => `- [${a.title}](${base}/help/${a.slug})`),
     "",
-    "## Programmatic",
-    `- [Growth roadmaps](${base}/roadmaps): Industry × location SEO roadmaps`,
+    "## Resources",
     `- [Compare AI SEO tools](${base}/compare/ai-seo-tools)`,
     "",
   ];

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
-import { getSiteUrl } from "@/lib/marketing/site-url";
+import { getSiteUrl } from "@/lib/marketing/site/site-url";
 
 const jakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],

@@ -1,11 +1,10 @@
 import type { MetadataRoute } from "next";
 import { db } from "@workspace/db";
-import { roadmapsTable, seoArticlesTable } from "@workspace/db/schema";
+import { seoArticlesTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
-import { LEARN_POSTS } from "@/lib/marketing/learn-posts";
-import { HELP_ARTICLES } from "@/lib/marketing/help-articles";
-import { MARKETING_CASE_STUDIES } from "@/lib/marketing/case-studies";
-import { getSiteUrl } from "@/lib/marketing/site-url";
+import { LEARN_POSTS } from "@/lib/marketing/content/learn-posts";
+import { HELP_ARTICLES } from "@/lib/marketing/content/help-articles";
+import { getSiteUrl } from "@/lib/marketing/site/site-url";
 
 const STATIC_PATHS = [
   "/",
@@ -16,10 +15,14 @@ const STATIC_PATHS = [
   "/solutions",
   "/learn",
   "/help",
-  "/roadmaps",
   "/geo-audit",
   "/article-quality",
   "/free-tools",
+  "/free-tools/meta-checker",
+  "/free-tools/llms-txt",
+  "/free-tools/robots-txt",
+  "/free-tools/sitemap-checker",
+  "/free-tools/serp-preview",
   "/content-engine",
   "/content-strategy",
   "/content-autopilot",
@@ -51,24 +54,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: path === "/" ? 1 : 0.7,
   }));
 
-  let roadmapEntries: MetadataRoute.Sitemap = [];
-  try {
-    const roadmaps = await db
-      .select({ slug: roadmapsTable.slug, updatedAt: roadmapsTable.updatedAt })
-      .from(roadmapsTable)
-      .orderBy(desc(roadmapsTable.updatedAt))
-      .limit(500);
-
-    roadmapEntries = roadmaps.map((r) => ({
-      url: `${base}/roadmap/${r.slug}`,
-      lastModified: r.updatedAt,
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
-    }));
-  } catch {
-    // DB unavailable at build time
-  }
-
   const learnEntries: MetadataRoute.Sitemap = LEARN_POSTS.map((post) => ({
     url: `${base}/learn/${post.slug}`,
     lastModified: now,
@@ -81,13 +66,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: now,
     changeFrequency: "monthly",
     priority: 0.55,
-  }));
-
-  const caseStudyEntries: MetadataRoute.Sitemap = MARKETING_CASE_STUDIES.map((study) => ({
-    url: `${base}/success-stories/${study.slug}`,
-    lastModified: now,
-    changeFrequency: "monthly",
-    priority: 0.65,
   }));
 
   let seoArticleEntries: MetadataRoute.Sitemap = [];
@@ -108,5 +86,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // DB unavailable at build time
   }
 
-  return [...staticEntries, ...roadmapEntries, ...learnEntries, ...helpEntries, ...caseStudyEntries, ...seoArticleEntries];
+  return [...staticEntries, ...learnEntries, ...helpEntries, ...seoArticleEntries];
 }

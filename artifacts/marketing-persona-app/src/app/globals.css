@@ -69,7 +69,7 @@
     @apply border-border box-border;
   }
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased tracking-normal;
   }
   /* App shell scrolls inside <main>, not body — cancel Radix scroll-lock padding. */
   body[data-scroll-locked] {
@@ -78,6 +78,10 @@
   }
   h1, h2, h3, h4, h5, h6 {
     @apply tracking-tight;
+  }
+  /* Uppercase headings are section labels — don't inherit display-tight tracking */
+  :is(h1, h2, h3, h4, h5, h6).uppercase {
+    letter-spacing: 0.06em;
   }
 }
 
@@ -120,6 +124,14 @@
 
   .font-playfair {
     font-family: var(--font-playfair), 'Playfair Display', serif;
+  }
+
+  /* Uppercase section labels — pairs with site-wide .uppercase spacing rules */
+  .marketing-section-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
   .hero-bridge {
@@ -219,12 +231,12 @@
 
   .marketing-input-dark {
     width: 100%;
-    height: 2.75rem;
+    height: 3rem;
     border-radius: 0.5rem;
     border: 1px solid rgba(255, 255, 255, 0.15);
     background: rgba(255, 255, 255, 0.05);
     color: white;
-    padding: 0 0.75rem;
+    padding: 0.625rem 0.875rem;
     font-size: 0.875rem;
     transition: border-color 0.2s ease, background 0.2s ease;
   }
@@ -244,6 +256,7 @@
   .marketing-prose-dark {
     color: rgba(255, 255, 255, 0.75);
     line-height: 1.7;
+    letter-spacing: normal;
   }
 
   .marketing-prose-dark h1,
@@ -310,6 +323,20 @@
 
   .hero-cta-primary:active {
     transform: scale(0.95);
+  }
+
+  /*
+   * WCAG 1.4.12: readable letter-spacing for uppercase text site-wide.
+   * tracking-wide/wider (0.025–0.05em) is too tight at label sizes.
+   */
+  .uppercase.tracking-wide,
+  .uppercase.tracking-wider,
+  .uppercase:not(.tracking-tight):not(.tracking-tighter):not(.tracking-wide):not(.tracking-wider):not(.tracking-widest) {
+    letter-spacing: 0.08em;
+  }
+
+  .uppercase.tracking-widest {
+    letter-spacing: 0.1em;
   }
 }
 
