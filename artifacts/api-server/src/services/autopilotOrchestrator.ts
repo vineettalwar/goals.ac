@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/autopilot-orchestrator";
+export * from "@workspace/content-engine/strategy/autopilot-orchestrator";

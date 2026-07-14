@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/support/user-api-key";
+export * from "@workspace/content-engine/support/ai/user-api-key";

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { requireSiteAdmin } from "../lib/orgAccess";
 import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { resetAiProviderClient } from "@workspace/ai-providers";
 
 const router: IRouter = Router();

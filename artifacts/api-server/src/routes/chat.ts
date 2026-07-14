@@ -4,7 +4,7 @@ import { roadmapsTable, conversations, messages } from "@workspace/db";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod/v4";
 import { optionalAuth } from "../lib/auth";
-import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import { getAiProviderClient } from "@workspace/ai-providers";
 
 const router: IRouter = Router();

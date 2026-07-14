@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/brand-scraper";
+export * from "@workspace/content-engine/brand/brand-scraper";

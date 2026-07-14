@@ -16,7 +16,7 @@ import {
 import { eq, and, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "../lib/auth";
-import { runBrandScrapeWithDiscovery } from "@workspace/content-engine/support/brand-scrape-orchestrator";
+import { runBrandScrapeWithDiscovery } from "@workspace/content-engine/support/brand/brand-scrape-orchestrator";
 import { parseAutopilotSettings } from "../lib/autopilotScheduler";
 import type { AutopilotSettings } from "@workspace/db";
 

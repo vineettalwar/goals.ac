@@ -6,7 +6,7 @@ import { z } from "zod";
 import { hashPassword, comparePassword, signToken, requireAuth, setAuthCookies, clearAuthCookies, REFRESH_TOKEN_COOKIE } from "../lib/auth";
 import { createSession, rotateSession, revokeAllUserSessions, revokeSessionByRefreshToken, REFRESH_TOKEN_TTL_MS } from "../lib/sessions";
 import { sendEmail, buildPasswordResetEmail } from "../services/emailService";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import crypto from "crypto";
 
 const router: IRouter = Router();

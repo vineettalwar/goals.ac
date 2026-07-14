@@ -7,7 +7,7 @@ import { requireSiteAdmin } from "../lib/orgAccess";
 import {
   getOrgAiSettingsForUser,
   hasOrgBedrockCredentials,
-} from "@workspace/content-engine/support/org-ai-settings";
+} from "@workspace/content-engine/support/ai/org-ai-settings";
 import {
   isBedrockEnvConfigured,
   resetAiProviderClient,

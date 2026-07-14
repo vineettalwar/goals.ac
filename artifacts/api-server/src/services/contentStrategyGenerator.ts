@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/content-strategy-generator";
+export * from "@workspace/content-engine/content/content-strategy-generator";

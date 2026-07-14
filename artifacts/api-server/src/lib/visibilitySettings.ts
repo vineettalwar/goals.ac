@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/support/visibility-settings";
+export * from "@workspace/content-engine/support/settings/visibility-settings";

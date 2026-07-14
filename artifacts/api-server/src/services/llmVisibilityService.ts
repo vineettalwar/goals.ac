@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/llm-visibility-service";
+export * from "@workspace/content-engine/strategy/llm-visibility-service";

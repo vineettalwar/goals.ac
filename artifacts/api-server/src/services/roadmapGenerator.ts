@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/roadmap-generator";
+export * from "@workspace/content-engine/strategy/roadmap-generator";

@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/keyword-opportunity-service";
+export * from "@workspace/content-engine/strategy/keyword-opportunity-service";

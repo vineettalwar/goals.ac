@@ -8,13 +8,13 @@ import {
   checkApiKeyRateLimit,
   requireApiKeyScope,
   type AuthenticatedApiKey,
-} from "@workspace/content-engine/support/api-key-auth";
-import { decryptCmsCredentials } from "@workspace/content-engine/support/cms-integrations";
+} from "@workspace/content-engine/support/auth/api-key-auth";
+import { decryptCmsCredentials } from "@workspace/content-engine/support/publishing/cms-integrations";
 import { getAdapterCapabilities, listAdaptedPlatforms } from "@workspace/content-engine/adapters/registry";
 import { renderContentForPlatform, renderAndPublish } from "@workspace/content-engine/adapters/render-service";
-import { resolveEntitlementsForOrg } from "@workspace/content-engine/support/resolve-publish-entitlements";
-import { buildCanonicalContent } from "@workspace/content-engine/canonical-content";
-import { withPublishRecord } from "@workspace/content-engine/support/publish-records";
+import { resolveEntitlementsForOrg } from "@workspace/content-engine/support/publishing/resolve-publish-entitlements";
+import { buildCanonicalContent } from "@workspace/content-engine/content/canonical-content";
+import { withPublishRecord } from "@workspace/content-engine/support/publishing/publish-records";
 
 declare global {
   namespace Express {

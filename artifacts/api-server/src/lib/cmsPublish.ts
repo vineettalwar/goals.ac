@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/support/cms-publish";
+export * from "@workspace/content-engine/support/publishing/cms-publish";
