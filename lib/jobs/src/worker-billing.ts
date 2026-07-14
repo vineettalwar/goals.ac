@@ -1,8 +1,8 @@
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
-import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
+import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
 import {
   cancelAiBillingSession,
   completeAiBillingSession,

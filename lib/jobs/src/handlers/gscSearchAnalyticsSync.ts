@@ -2,8 +2,8 @@ import { QUEUES, type GscSearchAnalyticsSyncJobData, type GscSearchAnalyticsSync
 import {
   syncGscSearchAnalytics,
   sweepGscSyncProjects,
-} from "@workspace/content-engine/gsc-search-analytics-service";
-import { discoverOpportunities } from "@workspace/content-engine/keyword-opportunity-service";
+} from "@workspace/content-engine/analytics/gsc-search-analytics-service";
+import { discoverOpportunities } from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";

@@ -4,7 +4,7 @@ const isProduction = process.env.NODE_ENV === "production";
 const inNextJs = Boolean(process.env.NEXT_RUNTIME);
 
 declare global {
-  // eslint-disable-next-line no-var -- shared with @workspace/content-engine/logger
+  // eslint-disable-next-line no-var -- shared with @workspace/content-engine/core/logger
   var __goalsAcPinoLogger: Logger | undefined;
 }
 

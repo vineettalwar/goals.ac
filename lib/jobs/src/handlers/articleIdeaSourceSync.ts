@@ -2,7 +2,7 @@ import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { articleIdeaSourcesTable, websiteProjectsTable } from "@workspace/db/schema";
 import { QUEUES, type ArticleIdeaSourceSyncJobData, type ArticleIdeaSourceSyncPayload, type PgBoss } from "@workspace/jobs";
-import { syncArticleIdeaSource } from "@workspace/content-engine/article-ideas-import-service";
+import { syncArticleIdeaSource } from "@workspace/content-engine/articles/article-ideas-import-service";
 import { logger } from "../logger";
 
 /** Weekly on Monday at 08:00 UTC */

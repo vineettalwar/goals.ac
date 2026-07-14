@@ -8,7 +8,7 @@ import {
 } from "@workspace/db/schema";
 import { getSerpProvider } from "@workspace/serp-provider";
 import { buildRankDropAlert } from "@workspace/seo-tools/keywordGapAnalyzer";
-import { createRankDropOpportunity } from "@workspace/content-engine/keyword-opportunity-service";
+import { createRankDropOpportunity } from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type {
   KeywordRankCheckJobData,

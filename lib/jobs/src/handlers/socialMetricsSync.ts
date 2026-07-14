@@ -2,7 +2,7 @@ import { QUEUES, type SocialMetricsSyncJobData, type SocialMetricsSyncPayload, t
 import {
   syncSocialPostMetrics,
   sweepSocialMetricsSyncProjects,
-} from "@workspace/content-engine/social-metrics-service";
+} from "@workspace/content-engine/social/social-metrics-service";
 import { logger } from "../logger";
 
 /** Daily at 09:00 UTC */

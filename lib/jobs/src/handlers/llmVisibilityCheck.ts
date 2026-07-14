@@ -2,8 +2,8 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { LlmVisibilityCheckJobData, LlmVisibilityCheckPayload, PgBoss } from "@workspace/jobs";
-import { parseVisibilitySettings } from "@workspace/content-engine/support/visibility-settings";
-import { runVisibilityCheckForProject } from "@workspace/content-engine/llm-visibility-service";
+import { parseVisibilitySettings } from "@workspace/content-engine/support/settings/visibility-settings";
+import { runVisibilityCheckForProject } from "@workspace/content-engine/strategy/llm-visibility-service";
 import {
   cancelWorkerAiBilling,
   completeWorkerAiBilling,

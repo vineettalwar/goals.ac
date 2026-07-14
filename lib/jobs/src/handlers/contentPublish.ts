@@ -3,19 +3,19 @@ import { db } from "@workspace/db";
 import { contentPiecesTable, websiteProjectsTable, SOCIAL_FORMAT_TYPES } from "@workspace/db";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { ContentPublishPayload, ScheduledPublishSweepPayload, PgBoss } from "@workspace/jobs";
-import { decryptCmsCredentials, type CmsIntegrationCredentials } from "@workspace/content-engine/support/cms-integrations";
-import { parseAutopilotSettings, wordpressPublishStatus } from "@workspace/content-engine/support/autopilot-scheduler";
-import { publishPieceToSocial, isSocialPlatform } from "@workspace/content-engine/support/social-publish";
-import { listDueSocialPieces } from "@workspace/content-engine/support/social-queue-service";
-import { featuredImageFromMetadata } from "@workspace/content-engine/article-image-enricher";
+import { decryptCmsCredentials, type CmsIntegrationCredentials } from "@workspace/content-engine/support/publishing/cms-integrations";
+import { parseAutopilotSettings, wordpressPublishStatus } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
+import { publishPieceToSocial, isSocialPlatform } from "@workspace/content-engine/support/social/social-publish";
+import { listDueSocialPieces } from "@workspace/content-engine/support/social/social-queue-service";
+import { featuredImageFromMetadata } from "@workspace/content-engine/articles/article-image-enricher";
 import {
   publishPieceToDestination,
   publishBlogPieceToPrimaryDestination,
   resolvePrimaryEspDestination,
-} from "@workspace/content-engine/support/publish-destination";
-import { withPublishRecord } from "@workspace/content-engine/support/publish-records";
+} from "@workspace/content-engine/support/publishing/publish-destination";
+import { withPublishRecord } from "@workspace/content-engine/support/publishing/publish-records";
 import { logger } from "../logger";
-import { seedSocialPostMetrics } from "@workspace/content-engine/social-metrics-service";
+import { seedSocialPostMetrics } from "@workspace/content-engine/social/social-metrics-service";
 
 const FORMAT_TO_PLATFORM: Record<string, string> = {
   linkedin_post: "linkedin",
@@ -156,7 +156,7 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
   }
 
   const { ingestPublishedContentPiece } = await import(
-    "@workspace/content-engine/support/brand-voice-generation"
+    "@workspace/content-engine/support/brand/brand-voice-generation"
   );
   await ingestPublishedContentPiece(
     piece.websiteProjectId,

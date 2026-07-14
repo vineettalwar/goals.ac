@@ -1,5 +1,5 @@
 import { QUEUES, type BrandVoiceSkillRegenJobData, type PgBoss } from "@workspace/jobs";
-import { regenerateBrandVoiceSkill } from "@workspace/content-engine/brand-voice-skill";
+import { regenerateBrandVoiceSkill } from "@workspace/content-engine/brand/brand-voice-skill";
 import {
   cancelWorkerAiBilling,
   completeWorkerAiBilling,

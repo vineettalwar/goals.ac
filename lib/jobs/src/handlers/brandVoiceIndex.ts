@@ -1,5 +1,5 @@
 import { QUEUES, type BrandVoiceIndexJobData, type PgBoss } from "@workspace/jobs";
-import { indexBrandVoiceSources } from "@workspace/content-engine/brand-voice-indexer";
+import { indexBrandVoiceSources } from "@workspace/content-engine/brand/brand-voice-indexer";
 import {
   cancelWorkerAiBilling,
   completeWorkerAiBilling,

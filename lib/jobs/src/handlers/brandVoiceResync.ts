@@ -6,9 +6,9 @@ import {
   type BrandVoiceResyncPayload,
   type PgBoss,
 } from "@workspace/jobs";
-import { ingestBrandVoiceDocuments } from "@workspace/content-engine/brand-voice-indexer";
-import { loadCmsContentForBrandVoice } from "@workspace/content-engine/support/brand-scan-context";
-import { syncSocialHistory } from "@workspace/content-engine/social-history-sync-service";
+import { ingestBrandVoiceDocuments } from "@workspace/content-engine/brand/brand-voice-indexer";
+import { loadCmsContentForBrandVoice } from "@workspace/content-engine/support/brand/brand-scan-context";
+import { syncSocialHistory } from "@workspace/content-engine/social/social-history-sync-service";
 import { logger } from "../logger";
 
 /** Weekly Monday 09:00 UTC */

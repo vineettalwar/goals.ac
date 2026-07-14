@@ -3,9 +3,9 @@ import { db } from "@workspace/db";
 import { contentPiecesTable, websiteProjectsTable } from "@workspace/db";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { ContentGeneratePayload, PgBoss } from "@workspace/jobs";
-import { generateFromContentItem } from "@workspace/content-engine/autopilot-orchestrator";
-import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
-import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
+import { generateFromContentItem } from "@workspace/content-engine/strategy/autopilot-orchestrator";
+import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
 import {
   cancelAiBillingSession,
   completeAiBillingSession,
@@ -16,7 +16,7 @@ import {
   parseAutopilotSettings,
   shouldAutoPublish,
   todayInTimezone,
-} from "@workspace/content-engine/support/autopilot-scheduler";
+} from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import { logger } from "../logger";
 
 function userUsesByok(

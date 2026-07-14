@@ -11,12 +11,12 @@ import type {
   ContentGenerateSweepPayload,
   PgBoss,
 } from "@workspace/jobs";
-import { computePlannedDate } from "@workspace/content-engine/autopilot-orchestrator";
+import { computePlannedDate } from "@workspace/content-engine/strategy/autopilot-orchestrator";
 import {
   parseAutopilotSettings,
   shouldRunAutopilot,
   todayInTimezone,
-} from "@workspace/content-engine/support/autopilot-scheduler";
+} from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import { logger } from "../logger";
 
 /** Every hour at :30 — handler checks project timezone + preferredRunHour. */

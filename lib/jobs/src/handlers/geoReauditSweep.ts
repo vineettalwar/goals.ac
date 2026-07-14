@@ -5,7 +5,7 @@ import { auditUrl } from "@workspace/seo-tools/geoAuditor";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { GeoReauditJobData, GeoReauditPayload, PgBoss } from "@workspace/jobs";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
-import { parseVisibilitySettings } from "@workspace/content-engine/support/visibility-settings";
+import { parseVisibilitySettings } from "@workspace/content-engine/support/settings/visibility-settings";
 import { logger } from "../logger";
 
 /** Weekly on Sunday at 08:00 UTC */

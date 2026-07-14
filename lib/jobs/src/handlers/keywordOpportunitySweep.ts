@@ -3,11 +3,11 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { KeywordOpportunitySweepJobData, KeywordOpportunitySweepPayload, PgBoss } from "@workspace/jobs";
-import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot-scheduler";
+import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import {
   discoverOpportunities,
   autoQueueHighScoreOpportunities,
-} from "@workspace/content-engine/keyword-opportunity-service";
+} from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { logger } from "../logger";
 
 /** Weekly on Sunday at 09:00 UTC */

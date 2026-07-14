@@ -4,7 +4,7 @@ import {
   type SocialHistorySyncPayload,
   type PgBoss,
 } from "@workspace/jobs";
-import { syncSocialHistory, sweepSocialHistorySyncProjects } from "@workspace/content-engine/social-history-sync-service";
+import { syncSocialHistory, sweepSocialHistorySyncProjects } from "@workspace/content-engine/social/social-history-sync-service";
 import { isValidSocialPlatform } from "@workspace/content-engine/platform-voice";
 import type { SocialPlatformId } from "@workspace/db/schema";
 import { logger } from "../logger";

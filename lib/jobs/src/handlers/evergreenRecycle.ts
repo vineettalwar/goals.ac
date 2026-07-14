@@ -1,7 +1,7 @@
 import type { PgBoss } from "@workspace/jobs";
 import { QUEUES } from "@workspace/jobs";
-import { listEvergreenCandidates, isEvergreenDue } from "@workspace/content-engine/support/social-queue-service";
-import { recycleEvergreenPiece } from "@workspace/content-engine/support/evergreen-recycle";
+import { listEvergreenCandidates, isEvergreenDue } from "@workspace/content-engine/support/social/social-queue-service";
+import { recycleEvergreenPiece } from "@workspace/content-engine/support/content/evergreen-recycle";
 import { logger } from "../logger";
 
 export const EVERGREEN_RECYCLE_SWEEP_CRON = "0 6 * * *";

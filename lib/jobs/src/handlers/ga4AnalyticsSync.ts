@@ -2,7 +2,7 @@ import { QUEUES, type Ga4AnalyticsSyncJobData, type Ga4AnalyticsSyncPayload, typ
 import {
   syncGa4PageMetrics,
   sweepGa4SyncProjects,
-} from "@workspace/content-engine/ga4-analytics-service";
+} from "@workspace/content-engine/analytics/ga4-analytics-service";
 import { logger } from "../logger";
 
 /** Daily at 08:00 UTC (after GSC at 07:00) */
