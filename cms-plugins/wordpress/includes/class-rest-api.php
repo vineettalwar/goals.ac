@@ -199,13 +199,30 @@ class Rest_API {
 			$capabilities['seo_plugin'] = \Goals_AC\Seo_Meta_Mapper::detect_plugin();
 		}
 
+		$detected_builders = array( 'gutenberg' );
+		if ( \defined( 'ELEMENTOR_VERSION' ) || \class_exists( '\Elementor\Plugin' ) ) {
+			$detected_builders[] = 'elementor';
+		}
+		if ( \defined( 'ET_BUILDER_VERSION' ) || \function_exists( 'et_setup_theme' ) ) {
+			$detected_builders[] = 'divi';
+		}
+
+		$recommended = 'classic';
+		if ( \in_array( 'elementor', $detected_builders, true ) ) {
+			$recommended = 'elementor';
+		} elseif ( \in_array( 'gutenberg', $detected_builders, true ) ) {
+			$recommended = 'gutenberg';
+		}
+
 		return $this->with_request_id(
 			\rest_ensure_response(
 				\GoalsAC\Shared\Contract::healthResponse(
 					\get_bloginfo( 'version' ),
 					array(
-						'version'      => GOALS_AC_VERSION,
-						'capabilities' => $capabilities,
+						'version'                  => GOALS_AC_VERSION,
+						'capabilities'             => $capabilities,
+						'detected_builders'        => $detected_builders,
+						'recommended_editor_mode'  => $recommended,
 					)
 				)
 			),

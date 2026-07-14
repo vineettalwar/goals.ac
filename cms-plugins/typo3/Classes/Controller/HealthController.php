@@ -16,6 +16,9 @@ final class HealthController
         return new JsonResponse(
             Contract::healthResponse(TYPO3_version, [
                 'cms' => 'typo3',
+                'output_modes' => ['body_text', 'content_elements'],
+                'recommended_output_mode' => 'body_text',
+                'content_element_types' => ['header', 'text', 'textmedia'],
                 'endpoints' => [
                     'site_graph' => '/goals-ac/v1/site-graph',
                     'content' => '/goals-ac/v1/content',

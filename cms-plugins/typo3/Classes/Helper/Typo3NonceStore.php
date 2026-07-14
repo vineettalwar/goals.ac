@@ -27,11 +27,19 @@ final class Typo3NonceStore implements NonceStore
     public function store(string $nonce, int $expiresAt): void
     {
         $connection = GeneralUtility::makeInstance(ConnectionPool::class)->getConnectionForTable(self::TABLE);
-        $connection->insert(self::TABLE, [
-            'nonce' => $nonce,
-            'expires_at' => $expiresAt,
-            'created_at' => time(),
-        ]);
+        try {
+            $connection->insert(self::TABLE, [
+                'nonce' => $nonce,
+                'expires_at' => $expiresAt,
+                'created_at' => time(),
+            ]);
+        } catch (\Throwable) {
+            // Concurrent duplicate nonce insert — safe to ignore after seen() check.
+        }
+
+        if (random_int(1, 50) === 1) {
+            $this->cleanup();
+        }
     }
 
     public function cleanup(): void

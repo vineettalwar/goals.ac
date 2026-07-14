@@ -208,6 +208,17 @@ class Publish_Handler {
 			\set_post_thumbnail( $post_id, $featured_image_id );
 		}
 
+		$editor_mode = \sanitize_key( $params['editor_mode'] ?? '' );
+		if ( ! empty( $editor_mode ) ) {
+			\update_post_meta( $post_id, '_goals_ac_editor_mode', $editor_mode );
+		}
+
+		$elementor_data = $params['elementor_data'] ?? '';
+		if ( ! empty( $elementor_data ) && \is_string( $elementor_data ) ) {
+			\update_post_meta( $post_id, '_elementor_data', \wp_slash( $elementor_data ) );
+			\update_post_meta( $post_id, '_elementor_edit_mode', 'builder' );
+		}
+
 		$meta = $params['meta'] ?? array();
 		if ( ! empty( $params['seo'] ) && \is_array( $params['seo'] ) ) {
 			$meta = \array_merge( $meta, Seo_Meta_Mapper::map( $params['seo'] ) );

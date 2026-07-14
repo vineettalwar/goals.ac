@@ -24,12 +24,22 @@ final class ApiMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $path = rtrim($request->getUri()->getPath(), '/') ?: '/';
+        $path = $request->getUri()->getPath();
+        if (!str_starts_with($path, '/goals-ac/')) {
+            return $handler->handle($request);
+        }
+
+        $path = rtrim($path, '/') ?: '/';
         $method = strtoupper($request->getMethod());
         $routeKey = $method . ' ' . $path;
 
         if (!isset(self::ROUTES[$routeKey])) {
             return $handler->handle($request);
+        }
+
+        $rawBody = (string)$request->getBody();
+        if (method_exists($request, 'withAttribute')) {
+            $request = $request->withAttribute('goals_ac_request_body', $rawBody);
         }
 
         [$class, $action] = self::ROUTES[$routeKey];

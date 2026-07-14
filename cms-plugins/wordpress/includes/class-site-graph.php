@@ -38,7 +38,7 @@ class Site_Graph {
 			array(
 				'post_type'      => 'post',
 				'post_status'    => 'publish',
-				'posts_per_page' => -1,
+				'posts_per_page' => 500,
 				'orderby'        => 'ID',
 				'order'          => 'ASC',
 			)
@@ -55,8 +55,8 @@ class Site_Graph {
 					'slug'            => $post->post_name,
 					'url'             => \get_permalink( $post->ID ),
 					'excerpt'         => \wp_trim_words( $post->post_content, 30, '...' ),
-					'body'            => \wp_strip_all_tags( $post->post_content ),
-					'contentMarkdown' => \wp_strip_all_tags( $post->post_content ),
+					'body'            => \wp_trim_words( \wp_strip_all_tags( $post->post_content ), 80, '...' ),
+					'contentMarkdown' => \wp_trim_words( \wp_strip_all_tags( $post->post_content ), 80, '...' ),
 					'categories'      => $categories,
 					'tags'            => $tags,
 					'published_at'    => \gmdate( 'c', \strtotime( $post->post_date ) ),

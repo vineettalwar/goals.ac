@@ -39,19 +39,25 @@ class ContentController extends BaseController
         $app    = Factory::getApplication();
         $params = PluginHelper::getPlugin('webservices', 'goalsac')->params ?? new \Joomla\Registry\Registry();
 
-        // Authenticate.
-        if ((int) $params->get('hmac_enabled', 1) === 1) {
-            $siteKey = (string) $params->get('site_key', '');
-            $result  = $this->verifyHmac($app, $siteKey);
+        if ((int) $params->get('hmac_enabled', 1) !== 1 || trim((string) $params->get('site_key', '')) === '') {
+            $app->sendResponse((object) [
+                'error'   => true,
+                'code'    => 'auth_required',
+                'message' => 'HMAC authentication is required.',
+            ], 401);
+            return;
+        }
 
-            if ($result !== true) {
-                $app->sendResponse((object) [
-                    'error'   => true,
-                    'code'    => $result->code,
-                    'message' => $result->message,
-                ], $result->status);
-                return;
-            }
+        $siteKey = (string) $params->get('site_key', '');
+        $result  = $this->verifyHmac($app, $siteKey);
+
+        if ($result !== true) {
+            $app->sendResponse((object) [
+                'error'   => true,
+                'code'    => $result->code,
+                'message' => $result->message,
+            ], $result->status);
+            return;
         }
 
         // Parse request body.

@@ -27,7 +27,7 @@ final class ContentController
             return $cached;
         }
 
-        $body = json_decode((string)$request->getBody(), true);
+        $body = json_decode($this->requestBody($request), true);
         if (!is_array($body)) {
             return new JsonResponse(['error' => 'invalid_json', 'message' => 'Request body must be valid JSON.'], 400);
         }

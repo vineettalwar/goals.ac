@@ -12,10 +12,11 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\DependencyInjection\ContainerInjectionInterface;
 use Drupal\path_alias\AliasManagerInterface;
 use Drupal\Component\Utility\Xss;
-use Drupal\goals_ac\Helper\DrupalNonceStore;
-use Drupal\goals_ac\Helper\DrupalKeyStore;
-use Drupal\goals_ac\Helper\SiteGraph;
-use Drupal\goals_ac\Helper\SchemaInject;
+use GoalsAC\Drupal\Helper\DrupalNonceStore;
+use GoalsAC\Drupal\Helper\DrupalKeyStore;
+use GoalsAC\Drupal\Helper\SiteGraph;
+use GoalsAC\Drupal\Helper\SchemaInject;
+use GoalsAC\Drupal\Helper\LayoutBuilderPublish;
 use GoalsAC\Shared\HMACAuth;
 use GoalsAC\Shared\Idempotency;
 use GoalsAC\Shared\Contract;
@@ -37,6 +38,7 @@ class GoalsAcController extends ControllerBase implements ContainerInjectionInte
     protected DrupalKeyStore $keyStore,
     protected SiteGraph $siteGraph,
     protected SchemaInject $schemaInject,
+    protected LayoutBuilderPublish $layoutBuilderPublish,
     protected ConfigFactoryInterface $configFactory,
     protected AccountProxyInterface $currentUser,
     protected TimeInterface $time,
@@ -53,6 +55,7 @@ class GoalsAcController extends ControllerBase implements ContainerInjectionInte
       $container->get('goals_ac.key_store'),
       $container->get('goals_ac.site_graph'),
       $container->get('goals_ac.schema_inject'),
+      $container->get('goals_ac.layout_builder_publish'),
       $container->get('config.factory'),
       $container->get('current_user'),
       $container->get('datetime.time'),
@@ -266,6 +269,7 @@ class GoalsAcController extends ControllerBase implements ContainerInjectionInte
     $status = $payload['status'] ?? 'draft';
     $slug = $payload['slug'] ?? '';
     $update_id = $payload['update_id'] ?? NULL;
+    $output_mode = (string) ($payload['output_mode'] ?? 'body_html');
 
     if (empty($title)) {
       throw new \InvalidArgumentException('title is required.');
@@ -309,8 +313,16 @@ class GoalsAcController extends ControllerBase implements ContainerInjectionInte
       $node->set('status', $status === 'publish' ? 1 : 0);
     }
 
-    // Set body field.
-    if (!empty($body_value)) {
+    if ($output_mode === 'layout_builder') {
+      $layout = $payload['layout'] ?? NULL;
+      if (!is_array($layout)) {
+        throw new \InvalidArgumentException('layout is required when output_mode is layout_builder.');
+      }
+      $storage_field = (string) ($payload['layout_storage_field'] ?? 'layout_builder__layout');
+      $this->layoutBuilderPublish->apply($node, $layout, $storage_field);
+    }
+    elseif (!empty($body_value)) {
+      // Set body field for body_html and legacy publishes.
       $node->set('body', [
         'value' => $body_value,
         'format' => 'basic_html',
@@ -327,15 +339,12 @@ class GoalsAcController extends ControllerBase implements ContainerInjectionInte
 
     $node->save();
 
-    $nid = $node->id();
     $uuid = $node->uuid();
 
     return [
-      'status' => $is_new ? 'created' : 'updated',
-      'node_id' => $nid,
-      'uuid' => $uuid,
-      'title' => $node->getTitle(),
-      'url' => $node->toUrl()->toString(),
+      'remote_id' => $uuid,
+      'url' => $node->toUrl('canonical', ['absolute' => TRUE])->toString(),
+      'action' => $is_new ? 'created' : 'updated',
     ];
   }
 

@@ -2,22 +2,23 @@ import { createHmac, createHash, timingSafeEqual } from "crypto";
 import type { Request, Response, NextFunction } from "express";
 import { AppError } from "./errors.js";
 
-const HMAC_KEY = process.env.GOALS_AC_HMAC_KEY ?? process.env.GOALS_AC_SITE_KEY ?? "";
+const DEFAULT_HMAC_KEY = process.env.GOALS_AC_HMAC_KEY ?? process.env.GOALS_AC_SITE_KEY ?? "";
 const NONCE_EXPIRY_SEC = 300;
 
 export const GOALS_HEADERS = {
   timestamp: "x-goals-timestamp",
   nonce: "x-goals-nonce",
   signature: "x-goals-signature",
+  shopDomain: "x-goals-shop-domain",
 } as const;
 
 const seenNonces = new Map<string, number>();
 
 function cleanupNonces(): void {
   const now = Math.floor(Date.now() / 1000);
-  for (const [nonce, expiresAt] of seenNonces) {
+  for (const [key, expiresAt] of seenNonces) {
     if (expiresAt <= now) {
-      seenNonces.delete(nonce);
+      seenNonces.delete(key);
     }
   }
 }
@@ -32,16 +33,42 @@ function canonicalize(method: string, path: string, timestamp: string, nonce: st
   return [method.toUpperCase(), path, timestamp, nonce, bodyHash].join("\n");
 }
 
+function resolveShopDomain(req: Request): string {
+  const header = req.headers[GOALS_HEADERS.shopDomain];
+  if (typeof header === "string" && header.trim()) {
+    return header.trim().toLowerCase();
+  }
+  return (process.env.SHOPIFY_SHOP_DOMAIN ?? "").trim().toLowerCase();
+}
+
+function resolveHmacKey(shopDomain: string): string {
+  if (shopDomain) {
+    const envKey = `GOALS_AC_HMAC_KEY_${shopDomain.replace(/[^a-z0-9]/gi, "_").toUpperCase()}`;
+    const perShop = process.env[envKey];
+    if (perShop) return perShop;
+
+    try {
+      const map = JSON.parse(process.env.GOALS_AC_HMAC_KEYS ?? "{}") as Record<string, string>;
+      if (map[shopDomain]) return map[shopDomain];
+    } catch {
+      // ignore malformed JSON
+    }
+  }
+
+  return DEFAULT_HMAC_KEY;
+}
+
 export function sign(
   method: string,
   path: string,
   timestamp: string,
   nonce: string,
   body: string,
+  hmacKey: string = DEFAULT_HMAC_KEY,
 ): string {
   const bodyHash = sha256(body);
   const message = canonicalize(method, path, timestamp, nonce, bodyHash);
-  return createHmac("sha256", HMAC_KEY).update(message).digest("hex");
+  return createHmac("sha256", hmacKey).update(message).digest("hex");
 }
 
 export function verifySignature(
@@ -51,10 +78,11 @@ export function verifySignature(
   nonce: string,
   body: string,
   signature: string,
+  hmacKey: string,
 ): boolean {
   const bodyHash = sha256(body);
   const message = canonicalize(method, path, timestamp, nonce, bodyHash);
-  const expected = createHmac("sha256", HMAC_KEY).update(message).digest("hex");
+  const expected = createHmac("sha256", hmacKey).update(message).digest("hex");
 
   try {
     return timingSafeEqual(Buffer.from(expected, "utf8"), Buffer.from(signature, "utf8"));
@@ -68,11 +96,14 @@ function getRawBody(req: Request): string {
   if (typeof rawBody === "string") {
     return rawBody;
   }
-  return req.method === "GET" || req.method === "HEAD" ? "" : JSON.stringify(req.body ?? "");
+  return req.method === "GET" || req.method === "HEAD" ? "" : JSON.stringify(req.body ?? {});
 }
 
 export function hmacAuth(req: Request, res: Response, next: NextFunction): void {
-  if (!HMAC_KEY) {
+  const shopDomain = resolveShopDomain(req);
+  const hmacKey = resolveHmacKey(shopDomain);
+
+  if (!hmacKey) {
     next(new AppError(500, "HMAC_NOT_CONFIGURED", "HMAC key not configured", false));
     return;
   }
@@ -92,7 +123,8 @@ export function hmacAuth(req: Request, res: Response, next: NextFunction): void 
     return;
   }
 
-  if (seenNonces.has(nonce)) {
+  const nonceKey = shopDomain ? `${shopDomain}:${nonce}` : nonce;
+  if (seenNonces.has(nonceKey)) {
     next(new AppError(401, "AUTH_NONCE_REUSED", "Nonce has already been used"));
     return;
   }
@@ -100,11 +132,11 @@ export function hmacAuth(req: Request, res: Response, next: NextFunction): void 
   const body = getRawBody(req);
   const path = req.baseUrl + req.path;
 
-  if (!verifySignature(req.method, path, timestamp, nonce, body, signature)) {
+  if (!verifySignature(req.method, path, timestamp, nonce, body, signature, hmacKey)) {
     next(new AppError(401, "AUTH_SIGNATURE_INVALID", "Invalid signature"));
     return;
   }
 
-  seenNonces.set(nonce, ts + NONCE_EXPIRY_SEC);
+  seenNonces.set(nonceKey, ts + NONCE_EXPIRY_SEC);
   next();
 }

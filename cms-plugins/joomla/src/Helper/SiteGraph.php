@@ -75,11 +75,16 @@ class SiteGraph
                 $this->db->quoteName('c.modified', 'updated_at'),
             ])
             ->from($this->db->quoteName('#__content', 'c'))
-            ->where($this->db->quoteName('c.state') . ' IN (1, -2)');
+            ->where($this->db->quoteName('c.state') . ' IN (1, -2)')
+            ->order($this->db->quoteName('c.id') . ' ASC')
+            ->setLimit(500);
 
         $rows = $this->db->setQuery($query)->loadObjectList();
 
         $stateMap = [1 => 'publish', 0 => 'draft', -2 => 'trash', 2 => 'archive'];
+
+        $articleIds = array_map(static fn ($row) => (int) $row->id, $rows);
+        $tagsByArticle = $this->getTagsForArticles($articleIds);
 
         $articles = [];
         foreach ($rows as $row) {
@@ -93,7 +98,7 @@ class SiteGraph
                 'content'     => (string) $row->content,
                 'status'      => $stateMap[(int) $row->state_raw] ?? 'publish',
                 'category_id' => (int) $row->category_id,
-                'tags'        => $this->getArticleTags($id),
+                'tags'        => $tagsByArticle[$id] ?? [],
                 'url'         => '/index.php?option=com_content&view=article&id=' . $id . '-' . $alias,
                 'created_at'  => (string) $row->created_at,
                 'updated_at'  => (string) $row->updated_at,
@@ -101,6 +106,42 @@ class SiteGraph
         }
 
         return $articles;
+    }
+
+    /**
+     * @param  int[]  $articleIds
+     * @return array<int, string[]>
+     */
+    private function getTagsForArticles(array $articleIds): array
+    {
+        if ($articleIds === []) {
+            return [];
+        }
+
+        $ids = implode(',', array_map('intval', $articleIds));
+        $query = $this->db->getQuery(true)
+            ->select([
+                $this->db->quoteName('m.content_item_id', 'article_id'),
+                $this->db->quoteName('t.title'),
+            ])
+            ->from($this->db->quoteName('#__contentitem_tag_map', 'm'))
+            ->innerJoin(
+                $this->db->quoteName('#__tags', 't') .
+                ' ON ' . $this->db->quoteName('t.id') . ' = ' . $this->db->quoteName('m.tag_id')
+            )
+            ->where($this->db->quoteName('m.content_item_id') . ' IN (' . $ids . ')')
+            ->where($this->db->quoteName('m.core_type_alias') . ' = ' . $this->db->quote('com_content.article'))
+            ->where($this->db->quoteName('t.published') . ' = 1');
+
+        $rows = $this->db->setQuery($query)->loadObjectList();
+        $tagsByArticle = [];
+        foreach ($rows as $row) {
+            $articleId = (int) $row->article_id;
+            $tagsByArticle[$articleId] ??= [];
+            $tagsByArticle[$articleId][] = (string) $row->title;
+        }
+
+        return $tagsByArticle;
     }
 
     /**

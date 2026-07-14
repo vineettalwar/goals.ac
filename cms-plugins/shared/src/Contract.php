@@ -10,14 +10,14 @@
 
 namespace GoalsAC\Shared;
 
-defined('ABSPATH') || defined('JOOMLA') || defined('DRUPAL') || exit;
+defined('ABSPATH') || defined('JOOMLA') || defined('DRUPAL') || defined('TYPO3') || exit;
 
 /**
  * Canonical content payload sent by the goals.ac SaaS platform.
  */
 class Contract {
 
-    public const VERSION = '0.1.0';
+    public const VERSION = '0.2.0';
 
     /**
      * Standard capabilities returned by every plugin's health endpoint.
@@ -59,6 +59,18 @@ class Contract {
             'featured_image_id',
             'meta',
             'update_id',
+            'output_mode',
+            'editor_mode',
+            'elementor_data',
+            'layout',
+            'layout_data',
+            'layout_storage_field',
+            'content_elements',
+            'replace_strategy',
+            'sections',
+            'metafield_namespace',
+            'metafield_key',
+            'template_suffix',
         ];
     }
 

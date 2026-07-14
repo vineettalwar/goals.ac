@@ -1,16 +1,20 @@
 services:
   goals_ac.nonce_store:
-    class: Drupal\goals_ac\Helper\DrupalNonceStore
+    class: GoalsAC\Drupal\Helper\DrupalNonceStore
     arguments: ['@database']
 
   goals_ac.key_store:
-    class: Drupal\goals_ac\Helper\DrupalKeyStore
+    class: GoalsAC\Drupal\Helper\DrupalKeyStore
     arguments: ['@database']
 
   goals_ac.site_graph:
-    class: Drupal\goals_ac\Helper\SiteGraph
+    class: GoalsAC\Drupal\Helper\SiteGraph
     arguments: ['@entity_type.manager', '@current_user', '@config.factory']
 
   goals_ac.schema_inject:
-    class: Drupal\goals_ac\Helper\SchemaInject
+    class: GoalsAC\Drupal\Helper\SchemaInject
     arguments: ['@state', '@file_system']
+
+  goals_ac.layout_builder_publish:
+    class: GoalsAC\Drupal\Helper\LayoutBuilderPublish
+    arguments: ['@entity_type.manager', '@uuid']

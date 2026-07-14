@@ -19,6 +19,8 @@ use function random_bytes;
 
 trait ApiControllerTrait
 {
+    private ?string $cachedRequestBody = null;
+
     protected function extensionConfig(): array
     {
         try {
@@ -36,8 +38,26 @@ trait ApiControllerTrait
 
     protected function requestPath(ServerRequestInterface $request): string
     {
-        $path = $request->getUri()->getPath();
-        return $path !== '' ? $path : '/';
+        $path = rtrim($request->getUri()->getPath(), '/') ?: '/';
+        return $path;
+    }
+
+    protected function requestBody(ServerRequestInterface $request): string
+    {
+        if ($this->cachedRequestBody !== null) {
+            return $this->cachedRequestBody;
+        }
+
+        if (method_exists($request, 'getAttribute')) {
+            $cached = $request->getAttribute('goals_ac_request_body');
+            if (is_string($cached)) {
+                $this->cachedRequestBody = $cached;
+                return $cached;
+            }
+        }
+
+        $this->cachedRequestBody = (string)$request->getBody();
+        return $this->cachedRequestBody;
     }
 
     protected function requestId(ServerRequestInterface $request): string
@@ -66,7 +86,7 @@ trait ApiControllerTrait
             'timestamp' => $request->getHeaderLine(HMACAuth::TIMESTAMP_HEADER),
             'nonce' => $request->getHeaderLine(HMACAuth::NONCE_HEADER),
             'signature' => $request->getHeaderLine(HMACAuth::SIGNATURE_HEADER),
-            'body' => (string)$request->getBody(),
+            'body' => $this->requestBody($request),
         ], $siteKey, new Typo3NonceStore());
 
         if ($result === true) {

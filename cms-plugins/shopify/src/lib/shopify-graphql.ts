@@ -344,13 +344,12 @@ export async function setMetafield(
   type: string = "json_string",
 ): Promise<{ id: string }> {
   const mutation = `
-    mutation MetafieldSet($input: MetafieldInput!) {
-      metafieldSet(input: $input) {
-        metafield {
+    mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
+      metafieldsSet(metafields: $metafields) {
+        metafields {
           id
           namespace
           key
-          value
         }
         userErrors {
           field
@@ -361,24 +360,182 @@ export async function setMetafield(
   `;
 
   const data = await graphqlRequest<{
-    metafieldSet: {
-      metafield: { id: string } | null;
+    metafieldsSet: {
+      metafields: Array<{ id: string }> | null;
       userErrors: Array<{ field: string[]; message: string }>;
     };
   }>(mutation, {
-    input: {
-      ownerId,
-      namespace,
-      key,
-      value,
-      type,
-    },
+    metafields: [
+      {
+        ownerId,
+        namespace,
+        key,
+        value,
+        type,
+      },
+    ],
   });
 
-  if (data.metafieldSet.userErrors.length > 0) {
-    const errors = data.metafieldSet.userErrors.map((e) => `${e.field.join(".")}: ${e.message}`).join("; ");
+  if (data.metafieldsSet.userErrors.length > 0) {
+    const errors = data.metafieldsSet.userErrors.map((e) => `${e.field.join(".")}: ${e.message}`).join("; ");
     throw new Error(`Metafield set failed: ${errors}`);
   }
 
-  return data.metafieldSet.metafield!;
+  const metafield = data.metafieldsSet.metafields?.[0];
+  if (!metafield) {
+    throw new Error("Metafield set returned null");
+  }
+
+  return metafield;
 }
+
+export async function setArticleMetafield(
+  articleId: string,
+  namespace: string,
+  key: string,
+  value: string,
+  type: string = "json",
+): Promise<{ id: string }> {
+  return setMetafield(articleId, namespace, key, value, type);
+}
+
+export async function setPageMetafield(
+  pageId: string,
+  namespace: string,
+  key: string,
+  value: string,
+  type: string = "json",
+): Promise<{ id: string }> {
+  return setMetafield(pageId, namespace, key, value, type);
+}
+
+export interface CreatePageInput {
+  title: string;
+  handle: string;
+  body?: string;
+  isPublished?: boolean;
+  templateSuffix?: string;
+}
+
+export interface Page {
+  id: string;
+  title: string;
+  handle: string;
+  url: string;
+}
+
+async function buildPageUrl(handle: string): Promise<string> {
+  const shop = await queryShop();
+  const host = shop.primaryDomain?.host;
+  if (!host) return `/pages/${handle}`;
+  return `https://${host}/pages/${handle}`;
+}
+
+export async function createPage(input: CreatePageInput): Promise<{ page: Page }> {
+  const mutation = `
+    mutation PageCreate($page: PageCreateInput!) {
+      pageCreate(page: $page) {
+        page {
+          id
+          title
+          handle
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    page: {
+      title: input.title,
+      handle: input.handle,
+      body: input.body ?? "",
+      isPublished: input.isPublished ?? true,
+      templateSuffix: input.templateSuffix,
+    },
+  };
+
+  const data = await graphqlRequest<{
+    pageCreate: {
+      page: { id: string; title: string; handle: string } | null;
+      userErrors: Array<{ field: string[]; message: string }>;
+    };
+  }>(mutation, variables);
+
+  if (data.pageCreate.userErrors.length > 0) {
+    const errors = data.pageCreate.userErrors.map((e) => `${e.field.join(".")}: ${e.message}`).join("; ");
+    throw new Error(`Page create failed: ${errors}`);
+  }
+
+  if (!data.pageCreate.page) {
+    throw new Error("Page create returned null");
+  }
+
+  const url = await buildPageUrl(data.pageCreate.page.handle);
+  return {
+    page: {
+      ...data.pageCreate.page,
+      url,
+    },
+  };
+}
+
+export async function updatePage(
+  pageId: string,
+  input: Partial<CreatePageInput>,
+): Promise<{ page: Page }> {
+  const mutation = `
+    mutation PageUpdate($id: ID!, $page: PageUpdateInput!) {
+      pageUpdate(id: $id, page: $page) {
+        page {
+          id
+          title
+          handle
+        }
+        userErrors {
+          field
+          message
+        }
+      }
+    }
+  `;
+
+  const variables = {
+    id: pageId,
+    page: {
+      title: input.title,
+      handle: input.handle,
+      body: input.body,
+      isPublished: input.isPublished,
+      templateSuffix: input.templateSuffix,
+    },
+  };
+
+  const data = await graphqlRequest<{
+    pageUpdate: {
+      page: { id: string; title: string; handle: string } | null;
+      userErrors: Array<{ field: string[]; message: string }>;
+    };
+  }>(mutation, variables);
+
+  if (data.pageUpdate.userErrors.length > 0) {
+    const errors = data.pageUpdate.userErrors.map((e) => `${e.field.join(".")}: ${e.message}`).join("; ");
+    throw new Error(`Page update failed: ${errors}`);
+  }
+
+  if (!data.pageUpdate.page) {
+    throw new Error("Page update returned null");
+  }
+
+  const url = await buildPageUrl(data.pageUpdate.page.handle);
+  return {
+    page: {
+      ...data.pageUpdate.page,
+      url,
+    },
+  };
+}
+
