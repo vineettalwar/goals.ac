@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 const monorepoRoot = path.resolve(appDir, "../..");
+const polyfillStub = path.join(appDir, "polyfill-stub.js");
 
 const nextConfig: NextConfig = {
   output: "export",
@@ -13,6 +14,8 @@ const nextConfig: NextConfig = {
   env: {
     MARKETING_STATIC: "1",
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "https://api.goals.ac",
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "",
+    NEXT_PUBLIC_DEPLOY_STAGE: process.env.NEXT_PUBLIC_DEPLOY_STAGE ?? "production",
   },
   turbopack: {
     root: monorepoRoot,
@@ -24,7 +27,18 @@ const nextConfig: NextConfig = {
       "@workspace/jobs/queues": "lib/jobs/src/queues.ts",
       "@workspace/deepl": "lib/deepl/src/index.ts",
       sharp: "./sharp-stub.js",
+      "@/app/root-providers": "./src/app/marketing-providers.tsx",
+      "next/dist/build/polyfills/polyfill-module": "./polyfill-stub.js",
     },
+  },
+  webpack(config, { isServer }) {
+    if (!isServer) {
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        "next/dist/build/polyfills/polyfill-module": polyfillStub,
+      };
+    }
+    return config;
   },
   transpilePackages: [
     "@workspace/cf-edge",

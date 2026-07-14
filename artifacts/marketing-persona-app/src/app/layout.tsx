@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
-import { Providers } from "./providers";
+import { RootProviders } from "@/app/root-providers";
 import { getSiteUrl } from "@/lib/marketing/site/site-url";
+import { MARKETING_CRITICAL_CSS } from "@/lib/marketing/site/marketing-critical-css";
 import { sanitizeJsonLd } from "@/lib/security/json-ld";
 
 const jakartaSans = Plus_Jakarta_Sans({
@@ -27,6 +28,9 @@ export const metadata: Metadata = {
     siteName: "goals.ac",
     type: "website",
   },
+  ...(process.env.MARKETING_STATIC === "1"
+    ? { robots: { index: false, follow: false } }
+    : {}),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -53,13 +57,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://images.higgs.ai" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />
         <link rel="dns-prefetch" href="https://images.higgs.ai" />
+        {process.env.MARKETING_STATIC === "1" && (
+          <style dangerouslySetInnerHTML={{ __html: MARKETING_CRITICAL_CSS }} />
+        )}
       </head>
       <body>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: sanitizeJsonLd(organizationJsonLd) }}
         />
-        <Providers>{children}</Providers>
+        <RootProviders>{children}</RootProviders>
       </body>
     </html>
   );
