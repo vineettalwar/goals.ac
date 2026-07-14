@@ -58,6 +58,7 @@
 
   --accent-warm:             #e8702a;
   --accent-warm-hover:       #d2611f;
+  --accent-warm-foreground:  #1A1A1A;
   --surface-dark:            #1A1A1A;
 
   --sidebar-bg:              #FFFFFF;
@@ -148,6 +149,32 @@
     opacity: 0;
     animation-fill-mode: forwards;
     animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .marketing-reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition:
+      opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .marketing-reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+      opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .scroll-reveal-visible {
+    opacity: 1;
+    transform: translateY(0);
   }
 
   .hero-reveal {
@@ -307,7 +334,7 @@
 
   .hero-cta-primary {
     background: var(--accent-warm);
-    color: white;
+    color: var(--accent-warm-foreground);
     font-size: 0.875rem;
     font-weight: 500;
     padding: 0.75rem 1.75rem;
@@ -375,6 +402,13 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hero-anim,
+  .marketing-reveal,
+  .scroll-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+    animation: none;
+  }
   .hero-zoom {
     animation: none;
     opacity: 1;

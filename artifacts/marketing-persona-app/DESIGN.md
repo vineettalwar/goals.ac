@@ -12,6 +12,7 @@ colors:
   muted-foreground: "#6B6560"
   accent-warm: "#e8702a"
   accent-warm-hover: "#d2611f"
+  accent-warm-foreground: "#1A1A1A"
   surface-dark: "#1A1A1A"
   destructive: "#C0392B"
 typography:
@@ -57,7 +58,7 @@ components:
     padding: "0.5rem 1rem"
   hero-cta-primary:
     backgroundColor: "{colors.accent-warm}"
-    textColor: "#FFFFFF"
+    textColor: "{colors.accent-warm-foreground}"
     rounded: "{rounded.pill}"
     padding: "0.75rem 1.75rem"
   paper-card:
@@ -87,6 +88,7 @@ Stack: Next.js App Router, Radix primitives via shadcn-style `Button`, Lucide ic
 | Brand | `--primary` | `#2D3B2D` | Buttons, rings, active step dots |
 | Muted text | `--muted-foreground` | `#6B6560` | Secondary copy — keep ≥4.5:1 on `--background` |
 | Warm CTA | `--accent-warm` | `#e8702a` | Hero primary CTA on dark photography |
+| Warm CTA text | `--accent-warm-foreground` | `#1A1A1A` | Label on warm CTA — ≥4.5:1 on `--accent-warm` |
 | Dark band | `--surface-dark` | `#1A1A1A` | Marketing section bridges, hero foot |
 | Error | `--destructive` | `#C0392B` | Destructive actions |
 
