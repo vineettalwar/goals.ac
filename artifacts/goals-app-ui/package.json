@@ -1,0 +1,31 @@
+{
+  "name": "@workspace/goals-app-ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pages:deploy": "pnpm run build && pnpm exec wrangler pages deploy dist --project-name=goals-ac-app"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "catalog:",
+    "@workspace/api-client-react": "workspace:*",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router-dom": "^7.14.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
+    "tailwindcss": "catalog:",
+    "typescript": "~5.9.2",
+    "vite": "catalog:",
+    "wrangler": "^4.110.0"
+  }
+}
