@@ -2,22 +2,14 @@ import { setD1Binding } from "@workspace/db";
 import { setKvBindings } from "@workspace/content-engine/core/kv-binding";
 import { processJobEnvelope, type JobEnvelope } from "@workspace/jobs";
 import { QUEUES } from "@workspace/jobs/queues";
-import {
-  KEYWORD_RANK_SWEEP_CRON,
-  CONTENT_GENERATE_SWEEP_CRON,
-  LLM_VISIBILITY_SWEEP_CRON,
-  GEO_REAUDIT_SWEEP_CRON,
-  KEYWORD_OPPORTUNITY_SWEEP_CRON,
-  GSC_SEARCH_ANALYTICS_SYNC_CRON,
-  GA4_ANALYTICS_SYNC_CRON,
-  ARTICLE_IDEA_SOURCE_SYNC_CRON,
-  BRAND_VOICE_RESYNC_CRON,
-  SOCIAL_HISTORY_SYNC_CRON,
-  SOCIAL_METRICS_SYNC_CRON,
-} from "@workspace/jobs/handlers";
+import { CONTENT_GENERATE_SWEEP_CRON } from "@workspace/jobs/handlers";
 
 const CONNECTION_HEALTH_CHECK_CRON = "0 4 * * *";
 const SCHEDULED_PUBLISH_SWEEP_CRON = "*/15 * * * *";
+/** Workers Free allows 5 crons/account — daily bundle at 07:00 UTC */
+const DAILY_SWEEP_CRON = "0 7 * * *";
+/** Weekly bundle — Monday 09:00 UTC */
+const WEEKLY_SWEEP_CRON = "0 9 * * 1";
 
 export interface Env {
   DB: import("@workspace/db").D1DatabaseBinding;
@@ -30,6 +22,33 @@ function wireBindings(env: Env): void {
   setKvBindings({ AI_CACHE: env.AI_CACHE, RATE_LIMIT: env.RATE_LIMIT });
 }
 
+async function runDailySweep(): Promise<void> {
+  const sweeps = [
+    QUEUES.keywordRankCheck,
+    QUEUES.evergreenRecycleSweep,
+    QUEUES.gscSearchAnalyticsSync,
+    QUEUES.ga4AnalyticsSync,
+    QUEUES.socialMetricsSync,
+  ] as const;
+  for (const queue of sweeps) {
+    await processJobEnvelope({ queue, payload: {} });
+  }
+}
+
+async function runWeeklySweep(): Promise<void> {
+  const sweeps = [
+    QUEUES.llmVisibilityCheck,
+    QUEUES.geoReauditSweep,
+    QUEUES.keywordOpportunitySweep,
+    QUEUES.articleIdeaSourceSync,
+    QUEUES.brandVoiceResync,
+    QUEUES.socialHistorySync,
+  ] as const;
+  for (const queue of sweeps) {
+    await processJobEnvelope({ queue, payload: {} });
+  }
+}
+
 async function runCronSweep(cron: string): Promise<void> {
   const sweepByCron: Record<string, () => Promise<void>> = {
     [CONNECTION_HEALTH_CHECK_CRON]: () =>
@@ -38,28 +57,8 @@ async function runCronSweep(cron: string): Promise<void> {
       processJobEnvelope({ queue: QUEUES.scheduledPublishSweep, payload: {} }),
     [CONTENT_GENERATE_SWEEP_CRON]: () =>
       processJobEnvelope({ queue: QUEUES.contentGenerateSweep, payload: {} }),
-    [KEYWORD_RANK_SWEEP_CRON]: async () => {
-      await processJobEnvelope({ queue: QUEUES.keywordRankCheck, payload: {} });
-      await processJobEnvelope({ queue: QUEUES.evergreenRecycleSweep, payload: {} });
-    },
-    [LLM_VISIBILITY_SWEEP_CRON]: () =>
-      processJobEnvelope({ queue: QUEUES.llmVisibilityCheck, payload: {} }),
-    [GEO_REAUDIT_SWEEP_CRON]: () =>
-      processJobEnvelope({ queue: QUEUES.geoReauditSweep, payload: {} }),
-    [KEYWORD_OPPORTUNITY_SWEEP_CRON]: () =>
-      processJobEnvelope({ queue: QUEUES.keywordOpportunitySweep, payload: {} }),
-    [GSC_SEARCH_ANALYTICS_SYNC_CRON]: () =>
-      processJobEnvelope({ queue: QUEUES.gscSearchAnalyticsSync, payload: {} }),
-    [GA4_ANALYTICS_SYNC_CRON]: () =>
-      processJobEnvelope({ queue: QUEUES.ga4AnalyticsSync, payload: {} }),
-    [ARTICLE_IDEA_SOURCE_SYNC_CRON]: () =>
-      processJobEnvelope({ queue: QUEUES.articleIdeaSourceSync, payload: {} }),
-    [BRAND_VOICE_RESYNC_CRON]: () =>
-      processJobEnvelope({ queue: QUEUES.brandVoiceResync, payload: {} }),
-    [SOCIAL_HISTORY_SYNC_CRON]: () =>
-      processJobEnvelope({ queue: QUEUES.socialHistorySync, payload: {} }),
-    [SOCIAL_METRICS_SYNC_CRON]: () =>
-      processJobEnvelope({ queue: QUEUES.socialMetricsSync, payload: {} }),
+    [DAILY_SWEEP_CRON]: runDailySweep,
+    [WEEKLY_SWEEP_CRON]: runWeeklySweep,
   };
 
   const run = sweepByCron[cron];

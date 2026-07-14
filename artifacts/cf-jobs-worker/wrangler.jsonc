@@ -1,20 +1,24 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
+  "account_id": "bdd4b32a0d2c3e380d9b57dbfaa90fe6",
   "name": "goals-ac-jobs",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-14",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "alias": {
+    "sharp": "./src/sharp-stub.ts"
+  },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "goals-ac",
-      "database_id": "00000000-0000-0000-0000-000000000001",
+      "database_id": "09e067c1-7a72-4ce9-85c7-5ec882f87143",
       "migrations_dir": "../../lib/db/migrations-d1"
     }
   ],
   "kv_namespaces": [
-    { "binding": "AI_CACHE", "id": "00000000000000000000000000000001" },
-    { "binding": "RATE_LIMIT", "id": "00000000000000000000000000000002" }
+    { "binding": "AI_CACHE", "id": "d986e00b3e7d43f5a6e5e68ab7b48ea7" },
+    { "binding": "RATE_LIMIT", "id": "f85bddf77d9a49ed8d165529eead2998" }
   ],
   "queues": {
     "consumers": [
@@ -24,66 +28,21 @@
         "max_batch_timeout": 30,
         "max_retries": 5,
         "dead_letter_queue": "goals-ac-jobs-dlq",
-        "max_concurrency": 5
+        "max_concurrency": 3
       }
     ]
   },
+  // Workers Free: max 5 cron triggers per account — consolidated sweeps
   "triggers": {
     "crons": [
-      "0 4 * * *",
       "*/15 * * * *",
       "30 * * * *",
-      "0 6 * * *",
-      "0 7 * * 0",
-      "0 8 * * 0",
-      "0 9 * * 0",
+      "0 4 * * *",
       "0 7 * * *",
-      "0 8 * * *",
-      "0 8 * * 1",
-      "0 9 * * 1",
-      "0 10 * * 1",
-      "0 9 * * *"
+      "0 9 * * 1"
     ]
   },
   "vars": {
     "DB_DIALECT": "d1"
-  },
-  "env": {
-    "staging": {
-      "name": "goals-ac-jobs-staging",
-      "d1_databases": [
-        {
-          "binding": "DB",
-          "database_name": "goals-ac-staging",
-          "database_id": "00000000-0000-0000-0000-000000000002",
-          "migrations_dir": "../../lib/db/migrations-d1"
-        }
-      ],
-      "kv_namespaces": [
-        { "binding": "AI_CACHE", "id": "00000000000000000000000000000003" },
-        { "binding": "RATE_LIMIT", "id": "00000000000000000000000000000004" }
-      ],
-      "queues": {
-        "consumers": [
-          {
-            "queue": "goals-ac-jobs-staging",
-            "max_batch_size": 5,
-            "max_batch_timeout": 30,
-            "max_retries": 5,
-            "dead_letter_queue": "goals-ac-jobs-staging-dlq",
-            "max_concurrency": 3
-          }
-        ]
-      },
-      "vars": {
-        "DB_DIALECT": "d1"
-      }
-    },
-    "production": {
-      "name": "goals-ac-jobs",
-      "vars": {
-        "DB_DIALECT": "d1"
-      }
-    }
   }
 }
