@@ -2,7 +2,7 @@
 export type PlanId = "starter" | "growth" | "scale";
 
 /** Plans customers can subscribe to today. */
-export const OFFERED_PLAN_IDS = ["starter"] as const satisfies readonly PlanId[];
+export const OFFERED_PLAN_IDS = ["starter", "growth"] as const satisfies readonly PlanId[];
 
 /** All plans with quota configuration (includes future tiers). */
 export const PLAN_IDS = ["starter", "growth", "scale"] as const satisfies readonly PlanId[];
@@ -22,14 +22,16 @@ export function normalizePlanId(plan: string | null | undefined): PlanId {
 }
 
 export function isOfferedPlan(plan: string | null | undefined): boolean {
-  return normalizePlanId(plan) === "starter";
+  const id = normalizePlanId(plan);
+  return id === "starter" || id === "growth";
 }
 
-/** @deprecated Paid upgrades are not offered yet — always returns null. */
+/** Paid self-serve or sales-assisted tiers above Starter. */
 export type PaidPlanId = Extract<PlanId, "growth" | "scale">;
 
-/** @deprecated Paid upgrades are not offered yet — always returns null. */
-export function getSuggestedUpgradePlan(_plan?: string | null): PaidPlanId | null {
+/** Suggest Growth when Starter quota is exhausted. Scale remains sales-assisted. */
+export function getSuggestedUpgradePlan(plan?: string | null): PaidPlanId | null {
+  if (normalizePlanId(plan) === "starter") return "growth";
   return null;
 }
 
@@ -38,9 +40,10 @@ export function isPaidPlan(plan: string | null | undefined): boolean {
   return id === "growth" || id === "scale";
 }
 
-/** Display prices for marketing UI — paid tiers TBD. */
+/** Display prices for marketing UI. */
 export const PLAN_DISPLAY_PRICES: Partial<Record<PlanId, string>> = {
   starter: "Free",
+  growth: "$49/mo",
 };
 
 export function getStripePriceIdForPlan(plan: PlanId): string | null {
@@ -78,8 +81,9 @@ export interface PlanQuotaLimits {
  * from `plan_quota_config` via `plan-quota-config.ts`.
  */
 export const DEFAULT_PLAN_QUOTA_LIMITS: Record<PlanId, PlanQuotaLimits> = {
-  starter: { articles: 5, roadmaps: 3, sites: 1 },
-  growth: { articles: null, roadmaps: null, sites: null },
+  /** Consulting-led: no article cap — clients use BYOK; platform key is unmetered by count. */
+  starter: { articles: null, roadmaps: 3, sites: 1 },
+  growth: { articles: null, roadmaps: 12, sites: 3 },
   scale: { articles: null, roadmaps: null, sites: null },
 };
 

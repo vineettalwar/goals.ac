@@ -22,6 +22,7 @@ export interface PlatformResendCredentials {
 
 type StoredPlatformCredentials = {
   encryptedStripeSecretKey: string | null;
+  encryptedStripeConnectAccessToken: string | null;
   encryptedStripeWebhookSecret: string | null;
   stripePriceGrowthMonthly: string | null;
   stripePriceScaleMonthly: string | null;
@@ -58,6 +59,7 @@ async function loadStoredCredentials(): Promise<StoredPlatformCredentials | null
   const [row] = await db
     .select({
       encryptedStripeSecretKey: platformSettingsTable.encryptedStripeSecretKey,
+      encryptedStripeConnectAccessToken: platformSettingsTable.encryptedStripeConnectAccessToken,
       encryptedStripeWebhookSecret: platformSettingsTable.encryptedStripeWebhookSecret,
       stripePriceGrowthMonthly: platformSettingsTable.stripePriceGrowthMonthly,
       stripePriceScaleMonthly: platformSettingsTable.stripePriceScaleMonthly,
@@ -94,9 +96,25 @@ function pickPlain(
   return { value: null, source: null };
 }
 
+function pickStripeSecretKey(row: StoredPlatformCredentials | null): {
+  value: string | null;
+  source: CredentialSource | null;
+} {
+  const fromEnv = envTrim("STRIPE_SECRET_KEY");
+  if (fromEnv) return { value: fromEnv, source: "env" };
+
+  const fromConnect = safeDecrypt(row?.encryptedStripeConnectAccessToken);
+  if (fromConnect) return { value: fromConnect, source: "db" };
+
+  const fromDb = safeDecrypt(row?.encryptedStripeSecretKey);
+  if (fromDb) return { value: fromDb, source: "db" };
+
+  return { value: null, source: null };
+}
+
 export async function resolvePlatformStripeCredentials(): Promise<PlatformStripeCredentials | null> {
   const row = await loadStoredCredentials();
-  const secret = pickSecret(row?.encryptedStripeSecretKey, "STRIPE_SECRET_KEY");
+  const secret = pickStripeSecretKey(row);
   if (!secret.value) return null;
 
   const webhook = pickSecret(row?.encryptedStripeWebhookSecret, "STRIPE_WEBHOOK_SECRET");

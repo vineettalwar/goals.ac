@@ -1,4 +1,4 @@
-import { assertAllowedStockCdnUrl } from "@workspace/stock-images";
+import { assertAllowedStockCdnUrl, isAllowedStockCdnHost } from "@workspace/stock-images";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import sharp from "sharp";
 
@@ -24,7 +24,14 @@ export function slugifyForFilename(text: string): string {
 }
 
 export async function downloadImageBuffer(url: string): Promise<Buffer> {
-  if (url.includes("images.unsplash.com") || url.includes("images.pexels.com") || url.includes("plus.unsplash.com")) {
+  let hostname: string;
+  try {
+    hostname = new URL(url).hostname;
+  } catch {
+    throw new Error("Invalid image URL");
+  }
+
+  if (isAllowedStockCdnHost(hostname)) {
     assertAllowedStockCdnUrl(url);
   } else {
     await assertPublicUrl(url);
