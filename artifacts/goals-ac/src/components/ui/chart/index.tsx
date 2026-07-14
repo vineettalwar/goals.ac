@@ -127,7 +127,7 @@ ${colorConfig
 }
 
 const ChartTooltip = (
-  props: React.ComponentProps<typeof RechartsPrimitive.Tooltip>,
+  props: Omit<React.ComponentProps<typeof RechartsPrimitive.Tooltip>, "ref">,
 ) => {
   const recharts = useRechartsModule()
   if (!recharts) return null
@@ -294,7 +294,7 @@ const ChartTooltipContent = React.forwardRef<
 ChartTooltipContent.displayName = "ChartTooltip"
 
 const ChartLegend = (
-  props: React.ComponentProps<typeof RechartsPrimitive.Legend>,
+  props: Omit<React.ComponentProps<typeof RechartsPrimitive.Legend>, "ref">,
 ) => {
   const recharts = useRechartsModule()
   if (!recharts) return null
