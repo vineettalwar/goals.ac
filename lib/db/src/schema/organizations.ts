@@ -3,6 +3,7 @@ import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { usersTable } from "./users";
 import { companiesTable } from "./companies";
+import type { EncryptedStockCredentialsMap } from "./stock-credentials";
 
 export const organizationsTable = pgTable("organizations", {
   id: serial("id").primaryKey(),
@@ -25,12 +26,18 @@ export const organizationsTable = pgTable("organizations", {
   encryptedBedrockSessionToken: text("encrypted_bedrock_session_token"),
   bedrockRegion: text("bedrock_region"),
   bedrockModel: text("bedrock_model"),
-  /** gemini | bedrock | ollama — in-app preference; env AI_PROVIDER is fallback */
+  encryptedOpenaiApiKey: text("encrypted_openai_api_key"),
+  encryptedAnthropicApiKey: text("encrypted_anthropic_api_key"),
+  /** gemini | bedrock | ollama | openai | anthropic — in-app preference; env AI_PROVIDER is fallback */
   aiProvider: text("ai_provider"),
   ollamaBaseUrl: text("ollama_base_url"),
   ollamaModel: text("ollama_model"),
   encryptedSemrushApiKey: text("encrypted_semrush_api_key"),
   semrushDatabase: text("semrush_database").default("us"),
+  /** Org BYOK DeepL API key (AES-256-GCM ciphertext). */
+  encryptedDeeplApiKey: text("encrypted_deepl_api_key"),
+  /** Org BYOK stock photo API keys by provider id (AES-256-GCM ciphertext per entry). */
+  encryptedStockCredentials: jsonb("encrypted_stock_credentials").$type<EncryptedStockCredentialsMap | null>(),
   suspendedAt: timestamp("suspended_at", { withTimezone: true }),
   suspendedReason: text("suspended_reason"),
   securitySettings: jsonb("security_settings").$type<OrgSecuritySettings | null>(),

@@ -4,8 +4,13 @@ import { z } from "zod/v4";
 import { usersTable } from "./users";
 import { organizationsTable } from "./organizations";
 import type { SocialScheduleSettings, SocialHistorySyncMeta } from "./platform_voices";
+import type { EncryptedStockCredentialsMap } from "./stock-credentials";
 
-export type StockImageProviderSetting = "unsplash" | "pexels" | "auto";
+export type { EncryptedStockCredentialsMap, StockCredentialProviderId } from "./stock-credentials";
+
+import type { StockCredentialProviderId } from "./stock-credentials";
+
+export type StockImageProviderSetting = "auto" | StockCredentialProviderId;
 
 export interface ProjectImageSettings {
   stockProvider?: StockImageProviderSetting;
@@ -13,6 +18,17 @@ export interface ProjectImageSettings {
   autoInlineImages?: boolean;
   maxInlineImages?: number;
   includeAttribution?: boolean;
+  /** Project-level encrypted stock API keys (override org + platform for this site). */
+  encryptedStockCredentials?: EncryptedStockCredentialsMap;
+}
+
+export interface ProjectTranslationSettings {
+  /** Project override; wins over org key */
+  encryptedDeeplApiKey?: string;
+  /** Default true when key resolves and language != en */
+  deeplRefinementEnabled?: boolean;
+  /** Optional DeepL glossary ID for brand terms */
+  deeplGlossaryId?: string;
 }
 
 export interface ContentStyle {
@@ -27,6 +43,7 @@ export interface ContentStyle {
   /** Optional writing sample override for humanizer voice matching */
   writingSample?: string | null;
   imageSettings?: ProjectImageSettings;
+  translationSettings?: ProjectTranslationSettings;
 }
 
 export const DEFAULT_IMAGE_SETTINGS: ProjectImageSettings = {
@@ -79,6 +96,14 @@ export const DEFAULT_VISIBILITY_SETTINGS: VisibilitySettings = {
   geoReauditEnabled: false,
 };
 
+/** Project-level publish defaults (primary CMS, etc.) */
+export interface PublishingSettings {
+  /** Default long-form blog destination when user does not pick one at generation */
+  primaryBlogDestination?: string | null;
+}
+
+export const DEFAULT_PUBLISHING_SETTINGS: PublishingSettings = {};
+
 export const websiteProjectsTable = pgTable("website_projects", {
   id: serial("id").primaryKey(),
   userId: integer("user_id")
@@ -98,6 +123,7 @@ export const websiteProjectsTable = pgTable("website_projects", {
   contentStyle: jsonb("content_style"),
   autopilotSettings: jsonb("autopilot_settings"),
   visibilitySettings: jsonb("visibility_settings"),
+  publishingSettings: jsonb("publishing_settings").$type<PublishingSettings | null>(),
   socialScheduleSettings: jsonb("social_schedule_settings").$type<SocialScheduleSettings | null>(),
   socialHistorySyncMeta: jsonb("social_history_sync_meta").$type<SocialHistorySyncMeta | null>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

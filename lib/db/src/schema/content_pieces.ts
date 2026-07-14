@@ -6,6 +6,7 @@ import { briefsTable } from "./briefs";
 import { contentItemsTable } from "./content_strategies";
 import { usersTable } from "./users";
 import type { ContentPieceApprovalStatus, EvergreenConfig } from "./platform_voices";
+import type { StockCredentialProviderId } from "./stock-credentials";
 
 export const CONTENT_FORMAT_TYPES = [
   "blog_post",
@@ -36,7 +37,7 @@ export type ContentPieceImageRole = "featured" | "inline";
 
 export type ContentPieceImageRef = {
   role: ContentPieceImageRole;
-  provider: "unsplash" | "pexels";
+  provider: StockCredentialProviderId;
   remoteId: string;
   remoteUrl: string;
   alt: string;
@@ -63,6 +64,18 @@ export type ContentPieceMetadata = {
   internalLinkSuggestions?: { anchorText: string; suggestedSlug: string; rationale?: string }[];
   jsonLdSchema?: object;
   humanized?: boolean;
+  /** Markdown infographic template block injected post-generation */
+  hasInfographicBlock?: boolean;
+  deeplRefined?: boolean;
+  deeplTargetLang?: string;
+  /** Optional hint set at generation — pre-selects publish destination */
+  intendedPublishPlatform?: string;
+  /** WordPress-only: preferred editor output when publishing */
+  intendedEditorMode?: "classic" | "gutenberg" | "elementor" | "divi";
+  /** Preferred CMS output format when publishing (platform-specific) */
+  intendedOutputMode?: string;
+  /** Markdown visual summary block injected post-generation */
+  visualSummaryMarkdown?: string;
 };
 
 export const contentPiecesTable = pgTable("content_pieces", {
