@@ -8,15 +8,15 @@ import {
   decodeSignedOAuthState,
   encodeSignedOAuthState,
   type SignedOAuthPayload,
-} from "@/lib/integrations/oauth-state";
+} from "@/lib/integrations/oauth/oauth-state";
 import {
   encryptStoredTokens,
   exchangeBingCode,
   exchangeGoogleCode,
   listPropertiesForProvider,
   propertyMatchesProject,
-} from "./search-property-client";
-import { assertBingWebmasterEnabled, assertGoogleIntegrationsEnabled } from "../platform/platform-settings";
+} from "../search/search-property-client";
+import { assertBingWebmasterEnabled, assertGoogleIntegrationsEnabled } from "../../platform/platform-settings";
 
 type OAuthState = SignedOAuthPayload & {
   provider: SearchPropertyProvider;

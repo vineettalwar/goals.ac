@@ -1,7 +1,7 @@
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { normalizeHost } from "../integrations/search-property-client";
+import { normalizeHost } from "../integrations/search/search-property-client";
 
 export function normalizeProjectHost(url: string): string {
   return normalizeHost(url);

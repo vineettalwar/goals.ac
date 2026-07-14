@@ -1,3 +1,5 @@
+import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
+
 /** Sample article for public quality score demo (B2B SaaS GEO topic). */
 export const ARTICLE_QUALITY_DEMO = {
   brandName: "Acme Analytics",
@@ -26,7 +28,7 @@ export const ARTICLE_QUALITY_DEMO = {
     },
     {
       question: "Does GEO replace traditional SEO?",
-      answer: "No. GEO complements SEO — strong technical SEO still feeds both Google and AI retrieval.",
+      answer: "No. GEO complements SEO. Strong technical SEO still feeds both Google and AI retrieval.",
     },
     {
       question: "What is llms.txt?",
@@ -61,7 +63,7 @@ According to [Google Search Central](https://developers.google.com/search/docs),
 
 ### 1. Title and meta description
 
-Keep titles between 30–60 characters with the primary keyword near the front. Meta descriptions should answer the query in 50–160 characters — not keyword stuffing.
+Keep titles between 30–60 characters with the primary keyword near the front. Meta descriptions should answer the query in 50–160 characters. Skip keyword stuffing.
 
 ### 2. Heading hierarchy
 
@@ -95,11 +97,11 @@ Publish \`llms.txt\` at your domain root listing priority URLs. Pair it with a r
 
 ## Humanization vs generic AI output
 
-Generic drafts list tips without rhythm or point of view. After our humanization pass, the same outline reads like a practitioner wrote it — varied sentence length, concrete examples, and second-person guidance without AI-tell phrases.
+Generic drafts list tips without rhythm or point of view. After our humanization pass, the same outline reads like a practitioner wrote it: varied sentence length, concrete examples, and second-person guidance without AI-tell phrases.
 
 **Before:** "It is important to note that implementing schema markup can be beneficial for visibility."
 
-**After:** "Start with Article + FAQ schema on your top guide — it's the fastest win we see in weekly GEO re-audits."
+**After:** "Start with Article + FAQ schema on your top guide. It's the fastest win we see in weekly GEO re-audits."
 
 ## Start with Acme Analytics
 
@@ -117,7 +119,7 @@ Run a baseline audit at launch, then monthly or after major template changes.
 
 ### Does GEO replace traditional SEO?
 
-No. GEO complements SEO — strong technical SEO still feeds both Google and AI retrieval.
+No. GEO complements SEO. Strong technical SEO still feeds both Google and AI retrieval.
 
 ### What is llms.txt?
 
@@ -126,5 +128,17 @@ A machine-readable index that tells LLM crawlers which pages matter most on your
   humanizationBefore:
     "It is important to note that implementing schema markup can be beneficial for visibility in generative search engines. Organizations should consider adding FAQ sections.",
   humanizationAfter:
-    "Start with Article + FAQ schema on your top guide — it's the fastest win we see in weekly GEO re-audits. Add three real buyer questions, not filler.",
+    "Start with Article + FAQ schema on your top guide. It's the fastest win we see in weekly GEO re-audits. Add three real buyer questions, not filler.",
 };
+
+/** Computed from the sample article using the same rubric as the content editor. */
+export const ARTICLE_QUALITY_DEMO_SCORE = scoreArticleQuality({
+  bodyMarkdown: ARTICLE_QUALITY_DEMO.bodyMarkdown,
+  metaTitle: ARTICLE_QUALITY_DEMO.metaTitle,
+  metaDescription: ARTICLE_QUALITY_DEMO.metaDescription,
+  citations: ARTICLE_QUALITY_DEMO.citations,
+  faqSection: ARTICLE_QUALITY_DEMO.faqSection,
+  jsonLdSchema: ARTICLE_QUALITY_DEMO.jsonLdSchema,
+  internalLinkSuggestions: ARTICLE_QUALITY_DEMO.internalLinkSuggestions,
+  wordCount: ARTICLE_QUALITY_DEMO.wordCount,
+}).total;

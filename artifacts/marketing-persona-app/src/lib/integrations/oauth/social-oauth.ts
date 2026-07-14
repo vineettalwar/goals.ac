@@ -6,7 +6,7 @@ import {
   decodeSignedOAuthState,
   encodeSignedOAuthState,
   type SignedOAuthPayload,
-} from "@/lib/integrations/oauth-state";
+} from "@/lib/integrations/oauth/oauth-state";
 import { getAccessibleProject } from "@/lib/org/org-access";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { fetchLinkedInAuthorUrn } from "@workspace/connectors/linkedin";
@@ -19,7 +19,7 @@ import {
   generatePkce,
   saveProjectCreds,
 } from "@workspace/content-engine/support/social-tokens";
-import { assertSocialPublishingEnabled } from "../platform/platform-settings";
+import { assertSocialPublishingEnabled } from "../../platform/platform-settings";
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
 const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;

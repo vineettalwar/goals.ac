@@ -1,4 +1,4 @@
-import type { ConnectionMethod, PublishDestinationId } from "../projects/publishing-destinations";
+import type { ConnectionMethod, PublishDestinationId } from "../../projects/publishing-destinations";
 import {
   getDefaultOutputMode,
   getOutputModes,

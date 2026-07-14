@@ -1,4 +1,4 @@
-import { LANDER_CONFIG } from "@/lib/marketing/marketing-feature-data";
+import { LANDER_CONFIG } from "@/lib/marketing/site/marketing-feature-data";
 
 export type LanderConfigKey = keyof typeof LANDER_CONFIG;
 
@@ -36,12 +36,8 @@ export const LANDER_ROUTES: Record<LanderConfigKey, string> = {
 export const PRODUCT_NAV: NavLink[] = [
   { label: "Content Engine", href: "/content-engine", description: "Draft and review workflow" },
   { label: "Content Autopilot", href: "/content-autopilot", description: "Automated publishing queue" },
-  { label: "Social Hub", href: "/social-distribution", description: "LinkedIn, X, Meta, and more" },
-  { label: "Search Analytics", href: "/search-analytics", description: "GSC, GA4, and rank tracking" },
-  { label: "Brand Voice", href: "/brand-voice", description: "RAG-backed voice and skill docs" },
   { label: "AI Visibility", href: "/llm-visibility", description: "Track AI brand citations" },
   { label: "CMS Publishing", href: "/cms-publishing", description: "20+ CMS and ESP destinations" },
-  { label: "Integrations", href: "/platform-integrations", description: "Full destination directory" },
   { label: "All features", href: "/features", description: "Full platform overview" },
 ];
 
@@ -68,9 +64,14 @@ export const SOLUTIONS_NAV: SolutionNavItem[] = [
   landerSolution("contentStrategy", "content"),
   landerSolution("socialDistribution", "content"),
   landerSolution("brandVoice", "content"),
-  { label: "Growth Roadmaps", href: "/roadmaps", description: "Free 12-month strategic roadmaps", group: "content" },
-  landerSolution("searchAnalytics", "authority"),
   landerSolution("multilingual", "content"),
+  landerSolution("searchAnalytics", "authority"),
+  {
+    label: "Integrations",
+    href: "/platform-integrations",
+    description: "20+ CMS, ESP, and social destinations",
+    group: "authority",
+  },
   landerSolution("linkBuilding", "authority"),
   landerSolution("redditVisibility", "authority"),
   landerSolution("forAgencies", "teams"),
@@ -79,19 +80,18 @@ export const SOLUTIONS_NAV: SolutionNavItem[] = [
 export const RESOURCES_NAV: NavLink[] = [
   { label: "Help", href: "/help", description: "Setup & publishing guides" },
   { label: "Learn", href: "/learn", description: "SEO & GEO academy" },
-  { label: "Success Stories", href: "/success-stories", description: "Customer results" },
-  { label: "Growth Roadmaps", href: "/roadmaps", description: "Browse public roadmaps" },
+  { label: "Customer Stories", href: "/success-stories", description: "Coming soon. Request a demo." },
   { label: "Compare AI SEO tools", href: "/compare/ai-seo-tools", description: "goals.ac vs autopilot tools" },
   { label: "Product roadmap", href: "/product-roadmap", description: "What we're building next" },
 ];
 
 export const FREE_TOOLS_NAV: NavLink[] = [
   { label: "GEO Audit", href: "/geo-audit" },
-  { label: "Meta checker", href: "/free-tools#meta-checker" },
-  { label: "llms.txt Generator", href: "/free-tools#llms-txt" },
-  { label: "Robots.txt Checker", href: "/free-tools#robots" },
-  { label: "Sitemap Checker", href: "/free-tools#sitemap" },
-  { label: "SERP preview", href: "/free-tools#serp-preview" },
+  { label: "Meta checker", href: "/free-tools/meta-checker" },
+  { label: "llms.txt Generator", href: "/free-tools/llms-txt" },
+  { label: "Robots.txt Checker", href: "/free-tools/robots-txt" },
+  { label: "Sitemap Checker", href: "/free-tools/sitemap-checker" },
+  { label: "SERP preview", href: "/free-tools/serp-preview" },
   { label: "All free tools", href: "/free-tools" },
 ];
 
@@ -112,7 +112,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "AI Visibility", href: "/llm-visibility" },
       { label: "CMS Publishing", href: "/cms-publishing" },
       { label: "Features", href: "/features" },
-      { label: "Engagements", href: "/pricing" },
+      { label: "Plans", href: "/pricing" },
     ],
   },
   {
@@ -134,8 +134,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     links: [
       { label: "Help", href: "/help" },
       { label: "Learn", href: "/learn" },
-      { label: "Success Stories", href: "/success-stories" },
-      { label: "Roadmaps", href: "/roadmaps" },
+      { label: "Customer Stories", href: "/success-stories" },
       { label: "Compare tools", href: "/compare/ai-seo-tools" },
       { label: "Product roadmap", href: "/product-roadmap" },
       { label: "For agencies", href: "/for-agencies" },

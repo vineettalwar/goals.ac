@@ -1,6 +1,6 @@
 import type { SearchPropertyProvider } from "@workspace/db/schema";
 import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
-import { normalizeHttpUrl } from "../utils/normalize-url";
+import { normalizeHttpUrl } from "../../utils/normalize-url";
 
 export type StoredTokens = {
   accessToken: string;

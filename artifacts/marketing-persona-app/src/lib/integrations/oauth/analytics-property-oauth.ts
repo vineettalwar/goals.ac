@@ -9,7 +9,7 @@ import {
   decodeSignedOAuthState,
   encodeSignedOAuthState,
   type SignedOAuthPayload,
-} from "@/lib/integrations/oauth-state";
+} from "@/lib/integrations/oauth/oauth-state";
 import {
   encryptStoredTokens,
   exchangeGoogleCode,
@@ -18,8 +18,8 @@ import {
   listGa4PropertiesForConnection,
   type Ga4PropertySummary,
   type StoredTokens,
-} from "./analytics-property-client";
-import { assertGoogleIntegrationsEnabled } from "../platform/platform-settings";
+} from "../analytics/analytics-property-client";
+import { assertGoogleIntegrationsEnabled } from "../../platform/platform-settings";
 
 type OAuthState = SignedOAuthPayload & {
   provider: AnalyticsPropertyProvider;

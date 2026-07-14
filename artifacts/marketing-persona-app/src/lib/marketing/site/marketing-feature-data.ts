@@ -17,8 +17,14 @@ import {
   Target,
   Zap,
 } from "lucide-react";
-import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
-import { CONTACT_CTA_PRIMARY, CONTACT_CTA_SECONDARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
+import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
+import {
+  CONTACT_HREF,
+  PRODUCT_CTA_HREF,
+  PRODUCT_CTA_PRIMARY,
+  PRODUCT_CTA_SECONDARY,
+  PRODUCT_CTA_SECONDARY_HREF,
+} from "@/lib/marketing/site/marketing-contact";
 
 export const PLATFORM_FEATURES = [
   {
@@ -30,7 +36,7 @@ export const PLATFORM_FEATURES = [
   {
     icon: MapIcon,
     title: "30-day content strategy",
-    desc: "Calendar from your growth roadmap and topical map, not generic topic lists.",
+    desc: "Calendar from keyword research and topical maps, not generic topic lists.",
     status: "live" as const,
   },
   {
@@ -120,7 +126,7 @@ export const LANDER_CONFIG = {
     description:
       "Monitor citation rates across ChatGPT, Perplexity, Claude, and Gemini. See which competitors appear when you don't.",
     heroImage: HERO_IMAGES.features.hero,
-    primaryCta: { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF },
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     secondaryCta: { label: "Run GEO audit", href: "/geo-audit" },
     features: [
       { icon: Eye, title: "Multi-engine tracking", description: "Snapshots for ChatGPT, Perplexity, Claude, and Gemini." },
@@ -130,7 +136,7 @@ export const LANDER_CONFIG = {
     ],
     faq: [
       { question: "Which AI engines do you track?", answer: "ChatGPT, Perplexity, Claude, and Gemini with periodic snapshot checks." },
-      { question: "Do I need a paid plan?", answer: "AI visibility tracking is included in client engagements. Contact us to scope." },
+      { question: "Do I need a paid plan?", answer: "Start free and connect your properties. AI visibility tracking is included when you upgrade or join a scoped program." },
     ],
   },
   rankOnChatgpt: {
@@ -138,8 +144,8 @@ export const LANDER_CONFIG = {
     titleLine1: "Get recommended",
     titleLine2: "by AI assistants",
     description: "Structure content for citation: schema, FAQ, authoritative sources, and topical depth, not keyword stuffing.",
-    heroImage: HERO_IMAGES.features.capabilities,
-    primaryCta: { label: "Build your roadmap", href: "/roadmaps" },
+    heroImage: HERO_IMAGES.geoAudit.hero,
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     secondaryCta: { label: "Free GEO audit", href: "/geo-audit" },
     features: [
       { icon: Search, title: "GEO-ready drafts", description: "JSON-LD, FAQ blocks, and citation-friendly structure." },
@@ -148,7 +154,7 @@ export const LANDER_CONFIG = {
       { icon: FileText, title: "Brand-aligned content", description: "Articles inherit your voice and cross-link your offerings." },
     ],
     faq: [
-      { question: "How long until AI citations?", answer: "Most teams see movement in 4–12 weeks as content publishes and indexes." },
+      { question: "How long until AI citations?", answer: "Typical GEO programs see movement in 4–12 weeks once content publishes and indexes. Timelines vary by niche and site authority." },
       { question: "Is this different from SEO?", answer: "GEO optimizes for AI retrieval and citation. We align both in one workflow." },
     ],
   },
@@ -157,7 +163,7 @@ export const LANDER_CONFIG = {
     titleLine1: "Optimize for",
     titleLine2: "AI search engines",
     description: "GEO audits find schema gaps, weak metadata, and structure issues that hurt ChatGPT, Perplexity, and Google AI visibility.",
-    heroImage: HERO_IMAGES.features.cta,
+    heroImage: HERO_IMAGES.geoAudit.hero,
     primaryCta: { label: "Run free audit", href: "/geo-audit" },
     secondaryCta: { label: "Learn more", href: "/pricing" },
     features: [
@@ -174,13 +180,13 @@ export const LANDER_CONFIG = {
   contentStrategy: {
     badge: "Content Strategy",
     titleLine1: "30-day calendars",
-    titleLine2: "from your roadmap",
-    description: "Turn your 12-month growth roadmap into a prioritized 30-day content calendar with formats, owners, and rationale.",
-    heroImage: HERO_IMAGES.home.workflow,
-    primaryCta: { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF },
-    secondaryCta: { label: "Browse roadmaps", href: "/roadmaps" },
+    titleLine2: "from your research",
+    description: "Turn keyword and competitor research into a prioritized 30-day content calendar with formats, owners, and rationale.",
+    heroImage: HERO_IMAGES.contentStrategy.hero,
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
+    secondaryCta: { label: "Content Studio", href: "/content-engine" },
     features: [
-      { icon: MapIcon, title: "Roadmap-driven", description: "Every item ties back to a strategic phase, not random topics." },
+      { icon: MapIcon, title: "Research-driven", description: "Every item ties back to search intent and gaps, not random topics." },
       { icon: BarChart3, title: "Competitor-informed", description: "Prioritize gaps competitors already rank for." },
       { icon: Zap, title: "One-click generate", description: "Turn calendar items into briefs and drafts." },
       { icon: Network, title: "Topical clusters", description: "Build pillar + supporting article sequences." },
@@ -191,12 +197,13 @@ export const LANDER_CONFIG = {
   },
   autopilot: {
     badge: "Content Autopilot",
-    titleLine1: "Publish on schedule",
-    titleLine2: "with editorial control",
-    description: "Enter your website URL to get 3 expert SEO articles and a 30-day content plan. Daily or weekly generation with manual, draft, or live publish.",
+    titleLine1: "The autopilot engine",
+    titleLine2: "inside our programs",
+    description:
+      "Daily or weekly content generation with manual, draft, or live publish. Included in scoped goals.ac programs, with editorial review before anything goes live.",
     heroImage: HERO_IMAGES.features.hero,
-    primaryCta: { label: "Get 3 articles + 30-day plan", href: "/content-autopilot" },
-    secondaryCta: { label: "Compare vs autopilot SEO tools", href: "/compare/ai-seo-tools" },
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
+    secondaryCta: { label: "Run free GEO audit", href: "/geo-audit" },
     features: [
       { icon: Zap, title: "Flexible cadence", description: "Daily or weekly runs in your timezone." },
       { icon: Shield, title: "Review queue", description: "Inspect every draft before it goes live." },
@@ -204,7 +211,14 @@ export const LANDER_CONFIG = {
       { icon: ClipboardCheck, title: "Quality scores", description: "Per-article scores for structure, citations, and schema." },
     ],
     faq: [
-      { question: "Can I review before publishing?", answer: "Yes. Set publish mode to manual or draft. Live auto-publish is optional." },
+      {
+        question: "Can I review before publishing?",
+        answer: "Yes. Publish mode is manual or draft by default. Live auto-publish is optional and scoped with your strategist.",
+      },
+      {
+        question: "How do I get access?",
+        answer: "Sign up, connect your CMS, and turn on autopilot when you're ready. You choose manual review or draft publish by default.",
+      },
     ],
   },
   cmsPublishing: {
@@ -213,10 +227,10 @@ export const LANDER_CONFIG = {
     titleLine2: "you already work",
     description: "Native integrations for 20+ destinations: WordPress, Shopify, headless CMS, ESPs, social, and webhooks.",
     heroImage: HERO_IMAGES.contentEngine.hero,
-    primaryCta: { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF },
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     secondaryCta: { label: "Content Engine", href: "/content-engine" },
     features: [
-      { icon: Globe, title: "20+ destinations", description: "CMS, ESP, social OAuth, and webhook — more than typical AI SEO tools." },
+      { icon: Globe, title: "20+ destinations", description: "CMS, ESP, social OAuth, and webhook. More than most AI SEO tools ship." },
       { icon: Link2, title: "Site graph sync", description: "Plugins export internal links for smarter suggestions." },
       { icon: Search, title: "Schema injection", description: "JSON-LD and llms.txt pushed via HMAC-secured plugins." },
       { icon: Zap, title: "Autopilot publish", description: "Schedule drafts to go live automatically." },
@@ -231,9 +245,9 @@ export const LANDER_CONFIG = {
     titleLine1: "Authority without",
     titleLine2: "link schemes",
     description:
-      "Build topical authority with internal link clusters and cite-worthy depth. Track link coverage and suggestions in your autopilot dashboard — not rented backlinks from an exchange network.",
-    heroImage: HERO_IMAGES.features.capabilities,
-    primaryCta: { label: CONTACT_CTA_SECONDARY, href: CONTACT_HREF },
+      "Build topical authority with internal link clusters and cite-worthy depth. Track link coverage in your dashboard. We don't rent backlinks from exchange networks.",
+    heroImage: HERO_IMAGES.geoAudit.hero,
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     secondaryCta: { label: "Compare tools", href: "/compare/ai-seo-tools" },
     features: [
       { icon: Network, title: "Internal link graph", description: "See orphan pages, link coverage %, and missing inbound links." },
@@ -253,8 +267,8 @@ export const LANDER_CONFIG = {
     titleLine1: "Find threads",
     titleLine2: "worth joining",
     description: "Discover high-intent Reddit discussions in your niche and get draft reply suggestions. You post manually.",
-    heroImage: HERO_IMAGES.home.signup,
-    primaryCta: { label: CONTACT_CTA_SECONDARY, href: CONTACT_HREF },
+    heroImage: HERO_IMAGES.roadmaps.hero,
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     features: [
       { icon: MessageSquare, title: "Thread discovery", description: "AI finds relevant subreddit posts for your keywords." },
       { icon: Target, title: "Intent scoring", description: "Prioritize threads where buyers ask for recommendations." },
@@ -272,7 +286,7 @@ export const LANDER_CONFIG = {
     titleLine2: "today · 50+ soon",
     description: "Generate native-quality B2B content in 25+ languages. Join the waitlist for localized keyword research.",
     heroImage: HERO_IMAGES.features.hero,
-    primaryCta: { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF },
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     features: [
       { icon: Globe, title: "25+ languages live", description: "English, French, German, Spanish, Italian, Portuguese, Japanese, Korean, Chinese, and more." },
       { icon: PenLine, title: "Brand voice preserved", description: "Tone and glossary apply across languages." },
@@ -290,10 +304,10 @@ export const LANDER_CONFIG = {
     status: "beta" as const,
     titleLine1: "Resell SEO",
     titleLine2: "without building it",
-    description: "Manage multiple client projects from one org workspace — partner rollup, BYOK billing, and per-client autopilot queues.",
+    description: "Manage multiple client projects from one org workspace: partner rollup, BYOK billing, and per-client autopilot queues.",
     heroImage: HERO_IMAGES.pricing.hero,
-    primaryCta: { label: "Partner workspace", href: "/partner" },
-    secondaryCta: { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF },
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
+    secondaryCta: { label: "Content Studio", href: "/content-engine" },
     features: [
       { icon: Globe, title: "Multi-project", description: "Manage client sites from one workspace with rollup metrics." },
       { icon: Key, title: "BYOK", description: "Clients bring their own AI keys for cost control." },
@@ -302,7 +316,7 @@ export const LANDER_CONFIG = {
     ],
     faq: [
       { question: "Is white-label available?", answer: "Full white-label reseller is on the roadmap. Partner workspace is available today for site admins managing multiple client projects." },
-      { question: "How do I access the partner dashboard?", answer: "Sign in as a site admin or owner — Partner appears in the sidebar. Book a discovery call for agency onboarding." },
+      { question: "How do I access the partner dashboard?", answer: "Sign up as a site admin or owner. Partner appears in the sidebar once your org is configured." },
     ],
     waitlistKey: "agency-reseller",
     waitlistTitle: "Agency white-label program",
@@ -312,9 +326,9 @@ export const LANDER_CONFIG = {
     titleLine1: "Distribute content",
     titleLine2: "across social channels",
     description:
-      "Compose, queue, and publish to LinkedIn, X, Facebook, Instagram, Bluesky, and Mastodon — with per-platform voice and analytics.",
-    heroImage: HERO_IMAGES.home.signup,
-    primaryCta: { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF },
+      "Compose, queue, and publish to LinkedIn, X, Facebook, Instagram, Bluesky, and Mastodon. Per-platform voice and analytics included.",
+    heroImage: HERO_IMAGES.roadmaps.hero,
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     secondaryCta: { label: "Content Engine", href: "/content-engine" },
     features: [
       { icon: Share2, title: "6 platforms", description: "OAuth connections per project for LinkedIn, X, Meta, Bluesky, and Mastodon." },
@@ -323,7 +337,7 @@ export const LANDER_CONFIG = {
       { icon: Zap, title: "Repurpose from articles", description: "Turn long-form drafts into social variants in one click." },
     ],
     faq: [
-      { question: "Is this included in engagements?", answer: "Yes. Social Hub is part of the goals.ac platform during client engagements." },
+      { question: "Is this included in engagements?", answer: "Yes. Social Hub is part of the goals.ac platform in scoped programs." },
     ],
   },
   searchAnalytics: {
@@ -332,8 +346,8 @@ export const LANDER_CONFIG = {
     titleLine2: "content delivers",
     description:
       "Connect Google Search Console, Bing Webmaster, and GA4. Track keywords, article ROI, and rank movement in one place.",
-    heroImage: HERO_IMAGES.features.capabilities,
-    primaryCta: { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF },
+    heroImage: HERO_IMAGES.geoAudit.hero,
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     secondaryCta: { label: "Free GEO audit", href: "/geo-audit" },
     features: [
       { icon: BarChart3, title: "GSC + GA4 join", description: "Clicks and on-site engagement per published article." },
@@ -342,7 +356,7 @@ export const LANDER_CONFIG = {
       { icon: Eye, title: "AI visibility tie-in", description: "Connect search performance with LLM citation trends." },
     ],
     faq: [
-      { question: "Do I need separate tools?", answer: "No. Search analytics is built into goals.ac — we connect your properties via OAuth." },
+      { question: "Do I need separate tools?", answer: "No. Search analytics is built into goals.ac. We connect your properties via OAuth." },
     ],
   },
   brandVoice: {
@@ -352,7 +366,7 @@ export const LANDER_CONFIG = {
     description:
       "Scrape your site, ingest CMS posts, and build a RAG-backed voice skill doc. Every draft inherits your tone, glossary, and positioning.",
     heroImage: HERO_IMAGES.contentEngine.hero,
-    primaryCta: { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF },
+    primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     secondaryCta: { label: "Content Engine", href: "/content-engine" },
     features: [
       { icon: PenLine, title: "Editable skill doc", description: "Non-technical reviewers can edit the voice guide in markdown." },
