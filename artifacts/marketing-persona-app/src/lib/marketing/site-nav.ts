@@ -28,13 +28,20 @@ export const LANDER_ROUTES: Record<LanderConfigKey, string> = {
   redditVisibility: "/reddit-visibility",
   multilingual: "/multilingual-content",
   forAgencies: "/for-agencies",
+  socialDistribution: "/social-distribution",
+  searchAnalytics: "/search-analytics",
+  brandVoice: "/brand-voice",
 };
 
 export const PRODUCT_NAV: NavLink[] = [
   { label: "Content Engine", href: "/content-engine", description: "Draft and review workflow" },
   { label: "Content Autopilot", href: "/content-autopilot", description: "Automated publishing queue" },
+  { label: "Social Hub", href: "/social-distribution", description: "LinkedIn, X, Meta, and more" },
+  { label: "Search Analytics", href: "/search-analytics", description: "GSC, GA4, and rank tracking" },
+  { label: "Brand Voice", href: "/brand-voice", description: "RAG-backed voice and skill docs" },
   { label: "AI Visibility", href: "/llm-visibility", description: "Track AI brand citations" },
-  { label: "CMS Publishing", href: "/cms-publishing", description: "WordPress, Shopify, and more" },
+  { label: "CMS Publishing", href: "/cms-publishing", description: "20+ CMS and ESP destinations" },
+  { label: "Integrations", href: "/platform-integrations", description: "Full destination directory" },
   { label: "All features", href: "/features", description: "Full platform overview" },
 ];
 
@@ -59,7 +66,10 @@ export const SOLUTIONS_NAV: SolutionNavItem[] = [
   landerSolution("geo", "ai-search"),
   { label: "GEO Audit", href: "/geo-audit", description: "Free technical scan for AI visibility", group: "ai-search" },
   landerSolution("contentStrategy", "content"),
+  landerSolution("socialDistribution", "content"),
+  landerSolution("brandVoice", "content"),
   { label: "Growth Roadmaps", href: "/roadmaps", description: "Free 12-month strategic roadmaps", group: "content" },
+  landerSolution("searchAnalytics", "authority"),
   landerSolution("multilingual", "content"),
   landerSolution("linkBuilding", "authority"),
   landerSolution("redditVisibility", "authority"),
@@ -96,6 +106,9 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
     links: [
       { label: "Content Engine", href: "/content-engine" },
       { label: "Autopilot", href: "/content-autopilot" },
+      { label: "Social Hub", href: "/social-distribution" },
+      { label: "Search Analytics", href: "/search-analytics" },
+      { label: "Integrations", href: "/platform-integrations" },
       { label: "AI Visibility", href: "/llm-visibility" },
       { label: "CMS Publishing", href: "/cms-publishing" },
       { label: "Features", href: "/features" },

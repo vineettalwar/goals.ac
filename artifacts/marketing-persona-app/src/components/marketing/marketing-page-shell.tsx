@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { MarketingThemeProvider } from "@/lib/marketing/marketing-theme";
 
 type MarketingPageShellProps = {
   hero: ReactNode;
@@ -10,11 +11,13 @@ type MarketingPageShellProps = {
 
 export function MarketingPageShell({ hero, children, overlap = true }: MarketingPageShellProps) {
   return (
-    <div className="min-h-screen bg-background tracking-[-0.02em]">
-      {hero}
-      <div className={`relative bg-background ${overlap ? "-mt-8 sm:-mt-12" : ""}`}>
-        {children}
+    <MarketingThemeProvider>
+      <div className="min-h-screen bg-black tracking-[-0.02em]">
+        {hero}
+        <div className={`relative bg-black ${overlap ? "-mt-8 sm:-mt-12" : ""}`}>
+          {children}
+        </div>
       </div>
-    </div>
+    </MarketingThemeProvider>
   );
 }

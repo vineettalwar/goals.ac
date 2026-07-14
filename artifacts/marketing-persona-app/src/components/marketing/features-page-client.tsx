@@ -31,6 +31,9 @@ import { WaitlistForm } from "@/components/waitlist-form";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 import { useMarketingParallax, useMarketingScrollReveal } from "@/hooks/use-marketing-scroll";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass");
 
 const FEATURE_PILLARS = [
   {
@@ -132,7 +135,7 @@ const BETA_FEATURES = [
   },
   {
     icon: Globe,
-    title: "10 languages",
+    title: "25+ languages",
     desc: "Native-quality B2B content in major European languages.",
   },
 ] as const;
@@ -171,7 +174,7 @@ function FeaturesCapabilitiesSection() {
   useMarketingScrollReveal(paperRef, ".feature-pillar, .feature-row");
 
   return (
-    <section className="relative">
+    <section className="relative bg-black">
       <div ref={headerBandRef} className="relative min-h-[40vh] py-24 overflow-hidden text-white">
         <div
           ref={bgRef}
@@ -195,12 +198,12 @@ function FeaturesCapabilitiesSection() {
         <div className="absolute bottom-0 left-0 right-0 h-32 features-bridge pointer-events-none z-10" aria-hidden />
       </div>
 
-      <div ref={paperRef} className="features-paper py-20 bg-background">
+      <div ref={paperRef} className="py-20 bg-black border-t border-white/10">
         <div className="max-w-5xl mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-12 md:gap-10">
             {FEATURE_PILLARS.map((pillar) => (
               <div key={pillar.title} className="feature-pillar">
-                <h3 className="text-xl font-bold tracking-tight mb-6 text-foreground">{pillar.title}</h3>
+                <h3 className="text-xl font-bold tracking-tight mb-6 text-white">{pillar.title}</h3>
                 <ul className="space-y-6">
                   {pillar.features.map((feature) => {
                     const { icon: Icon, title, desc } = feature;
@@ -208,12 +211,12 @@ function FeaturesCapabilitiesSection() {
                     return (
                     <li key={title} className="feature-row">
                       <div className="flex gap-4">
-                        <div className="shrink-0 mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                        <div className="shrink-0 mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white/80">
                           <Icon className="h-5 w-5" />
                         </div>
                         <div>
-                          <h4 className="text-lg font-semibold text-foreground mb-1.5">{title}</h4>
-                          <p className="text-base text-muted-foreground leading-relaxed">{desc}</p>
+                          <h4 className="text-lg font-semibold text-white mb-1.5">{title}</h4>
+                          <p className="text-base text-white/65 leading-relaxed">{desc}</p>
                           {href && (
                             <Link
                               href={href}
@@ -243,9 +246,8 @@ function BetaComingSoonSection() {
 
   return (
     <MarketingSection
-      variant="paper"
       bordered
-      className="py-20 bg-background"
+      className="py-20"
       titleLine1="Beta and"
       titleLine2="coming soon"
       animate={false}
@@ -254,18 +256,18 @@ function BetaComingSoonSection() {
         <div className="scroll-reveal">
           <div className="flex items-center gap-2 mb-6">
             <FeatureStatusBadge status="beta" />
-            <span className="text-base font-medium">Live with limits</span>
+            <span className="text-base font-medium text-white">Live with limits</span>
           </div>
           <ul className="space-y-6">
             {BETA_FEATURES.map(({ icon: Icon, title, desc }) => (
               <li key={title}>
                 <div className="flex gap-4">
-                  <div className="shrink-0 mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <div className="shrink-0 mt-0.5 inline-flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-white/80">
                     <Icon className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-foreground mb-1.5">{title}</h3>
-                    <p className="text-base text-muted-foreground leading-relaxed">{desc}</p>
+                    <h3 className="text-lg font-semibold text-white mb-1.5">{title}</h3>
+                    <p className="text-base text-white/65 leading-relaxed">{desc}</p>
                   </div>
                 </div>
               </li>
@@ -276,11 +278,11 @@ function BetaComingSoonSection() {
         <div className="scroll-reveal">
           <div className="flex items-center gap-2 mb-6">
             <FeatureStatusBadge status="coming-soon" />
-            <span className="text-base font-medium">Join the waitlist</span>
+            <span className="text-base font-medium text-white">Join the waitlist</span>
           </div>
           <ul className="space-y-3 mb-6">
             {COMING_SOON.map((item) => (
-              <li key={item.key} className="paper-card px-5 py-4 text-base font-medium">
+              <li key={item.key} className={`${glassCard} px-5 py-4 text-base font-medium text-white`}>
                 {item.title}
               </li>
             ))}
@@ -298,19 +300,18 @@ function WorkflowStepsSection() {
 
   return (
     <MarketingSection
-      variant="paper"
       titleLine1="A clear path"
       titleLine2="from research to publish"
       bordered
-      className="py-24 bg-background"
+      className="py-24"
       animate={false}
     >
       <div ref={gridRef} className="grid md:grid-cols-3 gap-6">
         {WORKFLOW_STEPS.map((item) => (
-          <div key={item.step} className="scroll-reveal paper-card rounded-2xl p-6 h-full">
+          <div key={item.step} className={`scroll-reveal ${glassCard} p-6 h-full`}>
             <div className="text-3xl font-bold text-primary mb-3">{item.step}</div>
-            <h3 className="text-lg font-bold mb-2">{item.title}</h3>
-            <p className="text-base text-muted-foreground leading-relaxed">{item.desc}</p>
+            <h3 className="text-lg font-bold mb-2 text-white">{item.title}</h3>
+            <p className="text-base text-white/65 leading-relaxed">{item.desc}</p>
           </div>
         ))}
       </div>
@@ -359,12 +360,12 @@ export function FeaturesPageClient() {
           },
           {
             question: "Can I use my own AI API key?",
-            answer: "Yes. Bring your Gemini key for cost control, or use the platform key.",
+            answer: "Yes. Technical teams can self-serve with BYOK on Starter. Engagements include platform access with editorial oversight.",
           },
           {
-            question: "What's included in the free tier?",
+            question: "What's included before an engagement?",
             answer:
-              "Roadmap generator, basic GEO audit, and limited content generation. No credit card required.",
+              "Free growth roadmaps, GEO audit, and free SEO tools — no credit card required. Full platform access is scoped on a discovery call.",
           },
           {
             question: "How do social integrations work?",

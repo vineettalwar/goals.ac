@@ -131,25 +131,24 @@ export function ContentEngineMarketing() {
       </MarketingSection>
 
       <MarketingSection
-        variant="paper"
         titleLine1="Publish everywhere"
         titleLine2="you work"
         description="Connect your CMS and social accounts once. Keep one review process across every destination."
         bordered
-        className="py-20 bg-background"
+        className="py-20"
       >
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="paper-card paper-card-hover rounded-2xl p-6">
+          <div className={`${glassCard} p-6`}>
             <div className="flex items-center gap-2 mb-5">
               <Globe className="h-5 w-5 text-primary" />
-              <h3 className="font-bold text-lg">CMS &amp; site publishing</h3>
+              <h3 className="font-bold text-lg text-white">CMS &amp; site publishing</h3>
             </div>
             <div className="grid sm:grid-cols-2 gap-2 text-sm">
               {["WordPress", "Shopify", "Drupal", "Joomla", "Notion", "Webflow", "Ghost", "Webhook"].map(
                 (name) => (
                   <div
                     key={name}
-                    className="rounded-lg border border-border bg-white px-3 py-2.5 font-medium"
+                    className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 font-medium text-white"
                   >
                     {name}
                   </div>
@@ -157,22 +156,22 @@ export function ContentEngineMarketing() {
               )}
             </div>
           </div>
-          <div className="paper-card paper-card-hover rounded-2xl p-6">
+          <div className={`${glassCard} p-6`}>
             <div className="flex items-center gap-2 mb-5">
               <Share2 className="h-5 w-5 text-primary" />
-              <h3 className="font-bold text-lg">Social publishing</h3>
+              <h3 className="font-bold text-lg text-white">Social publishing</h3>
             </div>
             <div className="grid sm:grid-cols-2 gap-2 text-sm mb-4">
               {["LinkedIn", "X / Twitter", "Instagram", "Facebook"].map((name) => (
                 <div
                   key={name}
-                  className="rounded-lg border border-border bg-white px-3 py-2.5 font-medium"
+                  className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 font-medium text-white"
                 >
                   {name}
                 </div>
               ))}
             </div>
-            <div className="rounded-lg border border-dashed border-border bg-muted/40 px-3 py-2.5 flex items-start gap-2 text-xs text-muted-foreground">
+            <div className="rounded-lg border border-dashed border-white/10 bg-white/5 px-3 py-2.5 flex items-start gap-2 text-xs text-white/65">
               <Webhook className="h-4 w-4 mt-0.5 shrink-0" />
               Webhook connector sends HMAC-signed JSON to Zapier, Make, n8n, or your own endpoint.
             </div>

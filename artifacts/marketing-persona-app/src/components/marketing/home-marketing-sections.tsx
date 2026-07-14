@@ -13,6 +13,8 @@ import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 import { useMarketingScrollReveal } from "@/hooks/use-marketing-scroll";
 import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
 const HOW_IT_WORKS_STEPS = [
   {
     step: "01",
@@ -31,6 +33,8 @@ const HOW_IT_WORKS_STEPS = [
   },
 ] as const;
 
+const glassCard = cardSurfaceClass("glass");
+
 function HowItWorksSteps() {
   const gridRef = useRef<HTMLDivElement>(null);
   useMarketingScrollReveal(gridRef, ".scroll-reveal");
@@ -38,10 +42,10 @@ function HowItWorksSteps() {
   return (
     <div ref={gridRef} className="grid md:grid-cols-3 gap-6">
       {HOW_IT_WORKS_STEPS.map((item) => (
-        <div key={item.step} className="scroll-reveal paper-card rounded-2xl p-6 h-full">
-          <div className="text-3xl font-bold text-primary mb-3">{item.step}</div>
-          <h3 className="text-lg font-bold mb-2">{item.title}</h3>
-          <p className="text-base text-muted-foreground leading-relaxed">{item.desc}</p>
+        <div key={item.step} className={`scroll-reveal ${glassCard} p-6 h-full`}>
+          <div className="text-3xl font-bold text-(--accent-warm) mb-3">{item.step}</div>
+          <h3 className="text-lg font-bold mb-2 text-white">{item.title}</h3>
+          <p className="text-base text-white/65 leading-relaxed">{item.desc}</p>
         </div>
       ))}
     </div>
@@ -64,12 +68,10 @@ export function HomeMarketingSections() {
       />
 
       <MarketingSection
-        variant="paper"
         bordered
         titleLine1="Traffic growth"
         titleLine2="in three steps"
         description="Business analysis, plan and draft, then review, publish, and track AI visibility."
-        className="py-24 bg-background"
         animate={false}
       >
         <HowItWorksSteps />

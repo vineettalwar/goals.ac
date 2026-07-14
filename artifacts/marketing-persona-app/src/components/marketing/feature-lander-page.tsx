@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { LucideIcon } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
@@ -14,8 +15,14 @@ import { CONTACT_CTA_SECONDARY } from "@/lib/marketing/marketing-contact";
 
 export type LanderConfigKey = keyof typeof LANDER_CONFIG;
 
-export function FeatureLanderByKey({ configKey }: { configKey: LanderConfigKey }) {
-  return <FeatureLanderPage {...LANDER_CONFIG[configKey]} />;
+export function FeatureLanderByKey({
+  configKey,
+  middleContent,
+}: {
+  configKey: LanderConfigKey;
+  middleContent?: ReactNode;
+}) {
+  return <FeatureLanderPage {...LANDER_CONFIG[configKey]} middleContent={middleContent} />;
 }
 
 export type FeatureLanderProps = {
@@ -31,6 +38,7 @@ export type FeatureLanderProps = {
   faq: { question: string; answer: string }[];
   waitlistKey?: string;
   waitlistTitle?: string;
+  middleContent?: ReactNode;
 };
 
 export function FeatureLanderPage({
@@ -46,6 +54,7 @@ export function FeatureLanderPage({
   faq,
   waitlistKey,
   waitlistTitle,
+  middleContent,
 }: FeatureLanderProps) {
   return (
     <MarketingPageShell
@@ -63,14 +72,15 @@ export function FeatureLanderPage({
         />
       }
     >
-      <MarketingSection variant="paper" bordered className="py-20 bg-background" titleLine1="How it" titleLine2="works">
-        <FeatureGrid items={features} surface="paper" columns={features.length <= 4 ? 2 : 3} />
+      <MarketingSection bordered className="py-20" titleLine1="How it" titleLine2="works">
+        <FeatureGrid items={features} columns={features.length <= 4 ? 2 : 3} />
       </MarketingSection>
+
+      {middleContent}
 
       {waitlistKey && (
         <MarketingSection
-          variant="paper"
-          className="py-16 bg-secondary/30"
+          className="py-16"
           titleLine1={waitlistTitle ?? "Get early access"}
           titleLine2="Join the waitlist"
           description="We're building this next. Leave your email and we'll notify you at launch."

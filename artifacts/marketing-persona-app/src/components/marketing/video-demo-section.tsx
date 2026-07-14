@@ -7,26 +7,28 @@ import { EditorialHeading } from "./editorial-heading";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 import { useMarketingScrollReveal } from "@/hooks/use-marketing-scroll";
 import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
 
 const TOUR_STEPS = ["Brand setup", "30-day plan", "Quality score", "CMS publish"];
+const glassCard = cardSurfaceClass("glass", false);
 
 export function VideoDemoSection() {
   const sectionRef = useRef<HTMLElement>(null);
   useMarketingScrollReveal(sectionRef);
 
   return (
-    <section ref={sectionRef} className="py-20 bg-background border-t border-border">
+    <section ref={sectionRef} className="py-20 bg-black border-t border-white/10">
       <div className="max-w-5xl mx-auto px-6">
         <div className="mb-12">
           <EditorialHeading
             line1="See the"
             line2="workflow in action"
             description="Onboarding, roadmap, draft, quality score, and publish. Full editorial control at every step."
-            theme="light"
+            theme="dark"
           />
         </div>
 
-        <div className="scroll-reveal paper-card rounded-2xl overflow-hidden max-w-4xl mx-auto">
+        <div className={`scroll-reveal ${glassCard} overflow-hidden max-w-4xl mx-auto`}>
           <div
             className="relative aspect-video bg-cover bg-center flex items-center justify-center"
             style={{ backgroundImage: `url(${HERO_IMAGES.features.capabilities})` }}
@@ -46,9 +48,9 @@ export function VideoDemoSection() {
               </p>
             </div>
           </div>
-          <div className="grid sm:grid-cols-4 gap-px bg-border">
+          <div className="grid sm:grid-cols-4 gap-px bg-white/10">
             {TOUR_STEPS.map((step) => (
-              <div key={step} className="bg-card p-4 text-center text-sm font-medium text-muted-foreground">
+              <div key={step} className="bg-white/5 p-4 text-center text-sm font-medium text-white/65">
                 {step}
               </div>
             ))}

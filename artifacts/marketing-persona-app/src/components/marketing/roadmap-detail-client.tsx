@@ -7,6 +7,9 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 import { RoadmapChat } from "@/components/roadmap-chat";
 import { RoadmapLeadCTA } from "@/app/(public)/(inner)/roadmap/[slug]/roadmap-lead-cta";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass");
 
 interface Phase {
   title: string;
@@ -58,36 +61,36 @@ export function RoadmapDetailClient({
       <div className="max-w-3xl mx-auto px-6 py-8 space-y-8 pb-32">
         <Link
           href="/roadmaps"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex items-center gap-1.5 text-sm text-white/65 hover:text-white"
         >
           <ArrowLeft className="h-3.5 w-3.5" /> All roadmaps
         </Link>
 
         {content.executiveSummary && (
-          <div className="paper-card rounded-2xl p-6 -mt-4">
-            <h2 className="font-semibold mb-2">Executive Summary</h2>
-            <p className="text-sm leading-relaxed text-muted-foreground">{content.executiveSummary}</p>
+          <div className={`${glassCard} p-6 -mt-4`}>
+            <h2 className="font-semibold mb-2 text-white">Executive Summary</h2>
+            <p className="text-sm leading-relaxed text-white/65">{content.executiveSummary}</p>
           </div>
         )}
 
         <div className="space-y-4">
           {phases.map((phase, i) => (
-            <div key={i} className="paper-card paper-card-hover rounded-2xl p-6 space-y-4">
+            <div key={i} className={`${glassCard} p-6 space-y-4`}>
               <div className="flex items-start gap-4">
                 <div className="step-dot active shrink-0">{i + 1}</div>
                 <div>
-                  <h3 className="font-bold text-lg">{phase.title}</h3>
+                  <h3 className="font-bold text-lg text-white">{phase.title}</h3>
                   <p className="text-sm text-primary font-medium">{phase.timeframe}</p>
                 </div>
               </div>
               {phase.objectives?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-white/50 mb-2">
                     Objectives
                   </h4>
                   <ul className="space-y-1.5">
                     {phase.objectives.map((o, j) => (
-                      <li key={j} className="text-sm flex gap-2">
+                      <li key={j} className="text-sm flex gap-2 text-white/80">
                         <span className="text-primary">•</span>
                         {o}
                       </li>
@@ -97,13 +100,13 @@ export function RoadmapDetailClient({
               )}
               {phase.tactics?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-white/50 mb-2">
                     Tactics
                   </h4>
                   <ul className="space-y-1.5">
                     {phase.tactics.map((t, j) => (
-                      <li key={j} className="text-sm flex gap-2">
-                        <span className="text-muted-foreground">→</span>
+                      <li key={j} className="text-sm flex gap-2 text-white/80">
+                        <span className="text-white/50">→</span>
                         {t}
                       </li>
                     ))}
@@ -112,12 +115,12 @@ export function RoadmapDetailClient({
               )}
               {phase.kpis?.length > 0 && (
                 <div>
-                  <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wide text-white/50 mb-2">
                     KPIs
                   </h4>
                   <div className="flex flex-wrap gap-2">
                     {phase.kpis.map((kpi, j) => (
-                      <span key={j} className="text-xs bg-muted rounded-md px-2.5 py-1">
+                      <span key={j} className="text-xs bg-white/10 rounded-md px-2.5 py-1 text-white/80">
                         {kpi}
                       </span>
                     ))}

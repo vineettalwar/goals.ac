@@ -7,6 +7,9 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import type { LearnPost } from "@/lib/marketing/learn-posts";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass", false);
 
 export function LearnPostClient({ post }: { post: LearnPost }) {
   const paragraphs = post.body.split("\n\n");
@@ -24,16 +27,16 @@ export function LearnPostClient({ post }: { post: LearnPost }) {
         />
       }
     >
-      <MarketingSection variant="paper" className="py-16 bg-background">
-        <Link href="/learn" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-8">
+      <MarketingSection className="py-16">
+        <Link href="/learn" className="inline-flex items-center gap-1 text-sm text-white/65 hover:text-white mb-8">
           <ArrowLeft className="h-4 w-4" /> All guides
         </Link>
-        <article className="prose prose-neutral max-w-3xl mx-auto">
+        <article className={`${glassCard} p-8 marketing-prose-dark max-w-3xl mx-auto`}>
           {paragraphs.map((para, i) => (
-            <p key={i} className="text-muted-foreground leading-relaxed mb-4 whitespace-pre-wrap">
+            <p key={i} className="text-white/65 leading-relaxed mb-4 whitespace-pre-wrap">
               {para.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
                 part.startsWith("**") && part.endsWith("**") ? (
-                  <strong key={j} className="text-foreground font-semibold">{part.slice(2, -2)}</strong>
+                  <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>
                 ) : (
                   part
                 ),
@@ -41,8 +44,8 @@ export function LearnPostClient({ post }: { post: LearnPost }) {
             </p>
           ))}
         </article>
-        <div className="max-w-3xl mx-auto mt-12 paper-card p-6 text-center">
-          <p className="font-medium mb-4">Ready to apply this?</p>
+        <div className={`max-w-3xl mx-auto mt-12 ${glassCard} p-6 text-center`}>
+          <p className="font-medium mb-4 text-white">Ready to apply this?</p>
           <Link href={post.cta.href} className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-full text-sm font-medium hover:opacity-90">
             {post.cta.label}
           </Link>

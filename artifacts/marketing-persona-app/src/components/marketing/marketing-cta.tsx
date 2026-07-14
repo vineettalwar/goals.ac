@@ -28,7 +28,7 @@ export function MarketingCTA({
   titleLine1,
   titleLine2,
   description,
-  variant = "paper",
+  variant = "dark",
   backgroundImage,
   primaryHref = CONTACT_HREF,
   primaryLabel = CONTACT_CTA_PRIMARY,
@@ -41,7 +41,7 @@ export function MarketingCTA({
   return (
     <section
       className={`py-28 relative overflow-hidden border-t ${
-        isDark ? "text-white bg-black" : "bg-background text-foreground border-border"
+        isDark ? "text-white bg-black border-white/10" : "bg-background text-foreground border-border"
       }`}
     >
       {isDark && backgroundImage && <HeroPhotoBg image={backgroundImage} />}

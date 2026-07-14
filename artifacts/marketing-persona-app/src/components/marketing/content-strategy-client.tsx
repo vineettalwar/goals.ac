@@ -8,6 +8,9 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass");
 
 interface ContentItem {
   id: number;
@@ -67,7 +70,7 @@ export function ContentStrategyClient({ id }: { id: string }) {
           />
         }
       >
-        <div className="flex items-center justify-center p-16 text-muted-foreground">
+        <div className="flex items-center justify-center p-16 text-white/65">
           Loading strategy…
         </div>
       </MarketingPageShell>
@@ -113,36 +116,36 @@ export function ContentStrategyClient({ id }: { id: string }) {
         {Object.entries(byWeek)
           .sort(([a], [b]) => Number(a) - Number(b))
           .map(([week, weekItems]) => (
-            <div key={week} className="paper-card paper-card-hover rounded-2xl p-5 space-y-3">
-              <h3 className="font-semibold flex items-center gap-2">
+            <div key={week} className={`${glassCard} p-5 space-y-3`}>
+              <h3 className="font-semibold flex items-center gap-2 text-white">
                 <Calendar className="h-4 w-4 text-primary" />
                 Week {week}{" "}
-                <span className="text-muted-foreground font-normal text-sm">
+                <span className="text-white/65 font-normal text-sm">
                   (Days {(Number(week) - 1) * 7 + 1}–{Math.min(Number(week) * 7, 30)})
                 </span>
               </h3>
               {weekItems
                 .sort((a, b) => a.day - b.day)
                 .map((item) => (
-                  <div key={item.id} className="border border-border rounded-lg p-4 space-y-2">
+                  <div key={item.id} className="border border-white/10 rounded-lg p-4 space-y-2">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-2">
-                        <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="font-medium text-sm">{item.title}</span>
+                        <FileText className="h-4 w-4 text-white/50 shrink-0" />
+                        <span className="font-medium text-sm text-white">{item.title}</span>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-xs text-muted-foreground">Day {item.day}</span>
+                        <span className="text-xs text-white/50">Day {item.day}</span>
                         <Badge variant="muted">{item.format?.replace(/_/g, " ")}</Badge>
                       </div>
                     </div>
                     {item.primaryKeyword && (
-                      <p className="text-xs text-muted-foreground ml-6">
+                      <p className="text-xs text-white/65 ml-6">
                         Keyword:{" "}
-                        <span className="font-medium text-foreground">{item.primaryKeyword}</span>
+                        <span className="font-medium text-white">{item.primaryKeyword}</span>
                       </p>
                     )}
                     {item.topicAngle && (
-                      <p className="text-xs text-muted-foreground ml-6">{item.topicAngle}</p>
+                      <p className="text-xs text-white/65 ml-6">{item.topicAngle}</p>
                     )}
                   </div>
                 ))}

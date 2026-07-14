@@ -6,8 +6,11 @@ import { MarketingPageShell } from "@/components/marketing/marketing-page-shell"
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
 import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 import { SOLUTION_GROUP_LABELS, solutionsByGroup, type SolutionGroup } from "@/lib/marketing/site-nav";
+
+const glassCard = cardSurfaceClass("glass");
 
 export function SolutionsPageClient() {
   const grouped = solutionsByGroup();
@@ -28,14 +31,14 @@ export function SolutionsPageClient() {
         />
       }
     >
-      <MarketingSection variant="paper" bordered className="py-16 bg-background">
+      <MarketingSection bordered className="py-16">
         <div className="space-y-14">
           {(Object.keys(SOLUTION_GROUP_LABELS) as SolutionGroup[]).map((group) => {
             const items = grouped[group];
             if (!items?.length) return null;
             return (
               <div key={group}>
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-white/50 mb-4">
                   {SOLUTION_GROUP_LABELS[group]}
                 </h2>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -43,13 +46,15 @@ export function SolutionsPageClient() {
                     <Link
                       key={item.href}
                       href={item.href}
-                      className="paper-card paper-card-hover p-6 flex flex-col group"
+                      className={`${glassCard} p-6 flex flex-col group`}
                     >
-                      <h3 className="font-bold text-lg group-hover:text-primary transition-colors">{item.label}</h3>
+                      <h3 className="font-bold text-lg text-white group-hover:text-(--accent-warm) transition-colors">
+                        {item.label}
+                      </h3>
                       {item.description && (
-                        <p className="text-sm text-muted-foreground mt-2 flex-1 leading-relaxed">{item.description}</p>
+                        <p className="text-sm text-white/65 mt-2 flex-1 leading-relaxed">{item.description}</p>
                       )}
-                      <span className="inline-flex items-center gap-1 text-xs text-primary mt-4">
+                      <span className="inline-flex items-center gap-1 text-xs text-white/80 mt-4 group-hover:text-white">
                         Learn more <ArrowRight className="h-3 w-3" />
                       </span>
                     </Link>

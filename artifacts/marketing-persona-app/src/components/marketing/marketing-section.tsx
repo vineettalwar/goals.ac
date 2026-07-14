@@ -28,7 +28,7 @@ type MarketingSectionProps = {
 const variantClasses: Record<MarketingSectionVariant, string> = {
   paper: "py-28 bg-background text-foreground",
   image: "py-28 relative overflow-hidden text-white",
-  dark: "py-24 relative overflow-hidden text-white bg-(--surface-dark)",
+  dark: "py-24 relative overflow-hidden text-white bg-black",
 };
 
 export function MarketingSection({
@@ -41,7 +41,7 @@ export function MarketingSection({
   className,
   bordered = false,
   animate = true,
-  variant = "paper",
+  variant = "dark",
   backgroundImage,
   bridgeTop = false,
   bridgeBottom = false,
@@ -97,7 +97,7 @@ export function MarketingSection({
   return (
     <section
       id={id}
-      className={`${resolvedClassName}${bordered && variant === "paper" ? " border-t border-border" : ""}`}
+      className={`${resolvedClassName}${bordered && variant !== "paper" ? " border-t border-white/10" : bordered && variant === "paper" ? " border-t border-border" : ""}`}
     >
       {isDarkTheme && backgroundImage && <HeroPhotoBg image={backgroundImage} />}
 

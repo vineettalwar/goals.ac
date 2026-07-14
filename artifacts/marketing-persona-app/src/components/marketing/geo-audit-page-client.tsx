@@ -40,7 +40,7 @@ export function GeoAuditPageClient() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/geo-audits/generate", {
+      const res = await fetch("/api/public/geo-audits/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: auditUrl }),
@@ -76,7 +76,7 @@ export function GeoAuditPageClient() {
     >
       <HeroOverlapShell id="geo-audit-form">
         <div className="p-8 md:p-10">
-          <div className="inline-flex items-center gap-1.5 rounded-full editorial-badge-light px-2.5 py-0.5 text-[11px] font-semibold mb-4 uppercase tracking-wide">
+          <div className="inline-flex items-center gap-1.5 rounded-full editorial-badge-dark px-2.5 py-0.5 text-[11px] font-semibold mb-4 uppercase tracking-wide">
             No account required
           </div>
           <EditorialHeading
@@ -85,6 +85,7 @@ export function GeoAuditPageClient() {
             description="Enter the exact page URL you want to audit for AI search visibility."
             align="left"
             size="card"
+            theme="dark"
             animate={false}
             className="mb-6"
           />

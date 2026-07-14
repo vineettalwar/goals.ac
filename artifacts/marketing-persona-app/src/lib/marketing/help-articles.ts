@@ -17,6 +17,75 @@ export type HelpArticle = {
 
 export const HELP_ARTICLES: HelpArticle[] = [
   {
+    slug: "connect-wordpress",
+    title: "Connect WordPress to goals.ac",
+    description: "Install the plugin or use application passwords to publish from Content Studio.",
+    category: "Getting started",
+    audience: "user",
+    cta: { label: "CMS publishing", href: "/cms-publishing" },
+    body: `WordPress supports two connection methods: **goals.ac plugin** (recommended) or **REST API** with application passwords.
+
+**Plugin (recommended)**
+1. Install the goals.ac plugin on your WordPress site
+2. Open **Projects** → your project → **Publishing**
+3. Choose WordPress → **Plugin** connection method
+4. Paste your site URL and site key from the plugin settings
+5. Click **Test connection**
+
+**REST API**
+1. In WordPress admin, create an **Application Password** for your user
+2. In goals.ac Publishing tab, choose **REST API**
+3. Enter site URL, username, and application password
+
+Published articles support Gutenberg, Elementor, and Divi output modes per connection.`,
+  },
+  {
+    slug: "connect-shopify",
+    title: "Connect Shopify blog publishing",
+    description: "Publish SEO articles to your Shopify store blog via Admin API or plugin.",
+    category: "Getting started",
+    audience: "user",
+    cta: { label: "Platform integrations", href: "/platform-integrations" },
+    body: `Shopify publishing targets your store's **blog** (Online Store → Blog posts).
+
+**Admin API**
+1. Create a custom app in Shopify Admin with \`write_content\` scope
+2. Copy the Admin API access token
+3. In goals.ac **Publishing**, add Shopify credentials: shop domain + token
+4. Optionally specify a blog ID (first blog is used if omitted)
+
+**Plugin**
+1. Install the goals.ac Shopify app on your store
+2. Connect via site URL + site key in the Publishing tab
+
+Articles publish as HTML with optional meta description and tags.`,
+  },
+  {
+    slug: "connect-headless-cms",
+    title: "Connect headless CMS (Contentful, Sanity, Strapi)",
+    description: "Map fields and publish canonical HTML to your headless content model.",
+    category: "Getting started",
+    audience: "user",
+    cta: { label: "Content Engine", href: "/content-engine" },
+    body: `Headless CMS connections use management tokens and field mapping.
+
+**Contentful**
+1. Create a Management API token with access to your space
+2. Add space ID, environment, and content type ID in Publishing settings
+3. Map title, body, and slug fields (defaults: title, body, slug)
+
+**Sanity**
+1. Create a project token with write access
+2. Add project ID, dataset, and document type
+3. Map fields — slug is stored as Sanity slug object
+
+**Strapi**
+1. Generate an API token for your collection type
+2. Enter Strapi base URL and token
+
+Use **Render preview** on any content piece to verify the payload before publishing.`,
+  },
+  {
     slug: "connect-linkedin",
     title: "Connect LinkedIn to goals.ac",
     description: "Link your LinkedIn account to publish posts from Content Studio.",

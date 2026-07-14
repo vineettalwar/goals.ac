@@ -3,7 +3,7 @@ import { FeatureLanderDynamic } from "@/components/marketing/feature-lander-dyna
 
 export const metadata: Metadata = {
   title: "Multilingual Content — goals.ac",
-  description: "Native-quality SEO content in 10 languages today, 50+ on the roadmap.",
+  description: "Native-quality SEO content in 25+ languages today, 50+ on the roadmap.",
 };
 
 export default function Page() {

@@ -1,3 +1,6 @@
+"use client";
+
+import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
 import { MarketingPageSkeleton } from "@/components/marketing-page-skeleton";
 import type { LanderConfigKey } from "./feature-lander-page";
@@ -7,6 +10,12 @@ const FeatureLanderByKey = dynamic(
   { loading: () => <MarketingPageSkeleton /> },
 );
 
-export function FeatureLanderDynamic({ configKey }: { configKey: LanderConfigKey }) {
-  return <FeatureLanderByKey configKey={configKey} />;
+export function FeatureLanderDynamic({
+  configKey,
+  middleContent,
+}: {
+  configKey: LanderConfigKey;
+  middleContent?: ReactNode;
+}) {
+  return <FeatureLanderByKey configKey={configKey} middleContent={middleContent} />;
 }

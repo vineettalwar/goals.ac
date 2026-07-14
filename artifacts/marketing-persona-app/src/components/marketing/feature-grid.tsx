@@ -1,5 +1,8 @@
+"use client";
+
 import type { LucideIcon } from "lucide-react";
 import { cardSurfaceClass, type MarketingSurface } from "@/lib/marketing/marketing-surfaces";
+import { useMarketingSurface } from "@/lib/marketing/marketing-theme";
 
 export type FeatureItem = {
   icon: LucideIcon;
@@ -13,7 +16,8 @@ type FeatureGridProps = {
   surface?: MarketingSurface;
 };
 
-export function FeatureGrid({ items, columns = 3, surface = "paper" }: FeatureGridProps) {
+export function FeatureGrid({ items, columns = 3, surface: surfaceProp }: FeatureGridProps) {
+  const surface = useMarketingSurface(surfaceProp);
   const gridClass =
     columns === 2
       ? "grid grid-cols-1 sm:grid-cols-2 gap-5"

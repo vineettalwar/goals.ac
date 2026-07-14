@@ -8,6 +8,10 @@ import { HelpArticleBody } from "@/components/marketing/help-article-body";
 import type { HelpArticle, HelpCategory } from "@/lib/marketing/help-articles";
 import { HELP_ARTICLES } from "@/lib/marketing/help-articles";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass", false);
+const glassCardHover = cardSurfaceClass("glass");
 
 const CATEGORY_ICONS: Record<HelpCategory, typeof BookOpen> = {
   "Getting started": BookOpen,
@@ -40,30 +44,30 @@ export function HelpArticleClient({ article }: { article: HelpArticle }) {
       <div className="max-w-3xl mx-auto px-6 py-12 md:py-16">
         <Link
           href="/help"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
+          className="inline-flex items-center gap-1.5 text-sm text-white/65 hover:text-white transition-colors mb-8"
         >
           <ArrowLeft className="h-4 w-4" /> All help articles
         </Link>
 
         <div className="flex flex-wrap items-center gap-2 mb-6">
-          <span className="inline-flex items-center gap-1.5 rounded-full editorial-badge-light px-3 py-1 text-xs font-semibold">
+          <span className="inline-flex items-center gap-1.5 rounded-full editorial-badge-dark px-3 py-1 text-xs font-semibold">
             <CategoryIcon className="h-3.5 w-3.5" />
             {article.category}
           </span>
-          <span className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground capitalize">
+          <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-white/50 capitalize">
             {article.audience === "admin" ? "Admin guide" : "User guide"}
           </span>
         </div>
 
-        <div className="paper-card rounded-2xl p-8 md:p-10">
+        <div className={`${glassCard} p-8 md:p-10 marketing-prose-dark`}>
           <HelpArticleBody body={article.body} />
         </div>
 
         {article.cta ? (
-          <div className="mt-10 paper-card rounded-2xl p-8 md:p-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 bg-linear-to-br from-primary/5 via-transparent to-transparent">
+          <div className={`mt-10 ${glassCard} p-8 md:p-10 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6`}>
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide text-primary mb-1">Next step</p>
-              <p className="text-muted-foreground text-sm">Put this guide into practice in your workspace.</p>
+              <p className="text-white/65 text-sm">Put this guide into practice in your workspace.</p>
             </div>
             <Link
               href={article.cta.href}
@@ -77,7 +81,7 @@ export function HelpArticleClient({ article }: { article: HelpArticle }) {
 
         {related.length > 0 ? (
           <div className="mt-12">
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-white/50 mb-4">
               More in {article.category}
             </h3>
             <div className="grid gap-3">
@@ -85,13 +89,13 @@ export function HelpArticleClient({ article }: { article: HelpArticle }) {
                 <Link
                   key={item.slug}
                   href={`/help/${item.slug}`}
-                  className="paper-card paper-card-hover rounded-xl px-5 py-4 flex items-center justify-between gap-4 group"
+                  className={`${glassCardHover} px-5 py-4 flex items-center justify-between gap-4 group`}
                 >
                   <div>
-                    <p className="font-semibold group-hover:text-primary transition-colors">{item.title}</p>
-                    <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">{item.description}</p>
+                    <p className="font-semibold text-white group-hover:text-primary transition-colors">{item.title}</p>
+                    <p className="text-sm text-white/65 mt-0.5 line-clamp-1">{item.description}</p>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground shrink-0 group-hover:text-primary transition-colors" />
+                  <ArrowRight className="h-4 w-4 text-white/50 shrink-0 group-hover:text-primary transition-colors" />
                 </Link>
               ))}
             </div>

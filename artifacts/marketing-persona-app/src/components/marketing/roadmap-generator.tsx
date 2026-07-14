@@ -85,13 +85,12 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
     );
   };
 
-  const selectClass =
-    "w-full h-11 rounded-lg border border-border bg-white px-3 text-sm focus:outline-hidden focus:ring-2 focus:ring-primary/20";
+  const selectClass = "marketing-input-dark";
 
   return (
     <HeroOverlapShell id="roadmap-generator" sectionRef={ref}>
       <div className="p-8 md:p-12">
-        <div className="inline-flex items-center gap-1.5 rounded-full editorial-badge-light px-2.5 py-0.5 text-[11px] font-semibold mb-4 uppercase tracking-wide">
+        <div className="inline-flex items-center gap-1.5 rounded-full editorial-badge-dark px-2.5 py-0.5 text-[11px] font-semibold mb-4 uppercase tracking-wide">
           Free starter tool
         </div>
         <EditorialHeading
@@ -100,6 +99,7 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
           description="Choose your market and stage, then contact us to build a custom 12-month plan. Browse sample roadmaps in our catalog anytime — no signup required."
           align="left"
           size="card"
+          theme="dark"
           animate={false}
           className="mb-8"
         />
@@ -107,7 +107,7 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
         <form onSubmit={onSubmit} className="space-y-8">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold">Industry</Label>
+              <Label className="text-sm font-semibold text-white/80">Industry</Label>
               <select
                 className={selectClass}
                 value={industry}
@@ -125,7 +125,7 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
               </select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold">Location</Label>
+              <Label className="text-sm font-semibold text-white/80">Location</Label>
               <select
                 className={selectClass}
                 value={location}
@@ -145,7 +145,7 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-semibold">Company Stage</Label>
+            <Label className="text-sm font-semibold text-white/80">Company Stage</Label>
             <select
               className={selectClass}
               value={stage}

@@ -4,6 +4,9 @@ import { MarketingPageShell } from "@/components/marketing/marketing-page-shell"
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass", false);
 
 type SeoArticleClientProps = {
   title: string;
@@ -47,7 +50,7 @@ export function SeoArticleClient({
     >
       <article className="max-w-3xl mx-auto px-6 py-12">
         <div
-          className="paper-card rounded-2xl p-8 prose prose-sm max-w-none leading-relaxed"
+          className={`${glassCard} p-8 marketing-prose-dark max-w-none leading-relaxed`}
           dangerouslySetInnerHTML={{ __html: content }}
         />
       </article>

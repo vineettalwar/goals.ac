@@ -5,6 +5,9 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass");
 
 const VALUES = [
   {
@@ -56,18 +59,17 @@ export function AboutPageClient() {
       </MarketingSection>
 
       <MarketingSection
-        variant="paper"
         badge="What we stand for"
         titleLine1="How we"
         titleLine2="build"
         bordered
-        className="py-28 bg-background"
+        className="py-28"
       >
         <div className="grid md:grid-cols-3 gap-5">
           {VALUES.map(({ title, desc }) => (
-            <div key={title} className="paper-card paper-card-hover rounded-2xl p-6">
-              <h3 className="font-bold mb-2">{title}</h3>
-              <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+            <div key={title} className={`${glassCard} p-6`}>
+              <h3 className="font-bold mb-2 text-white">{title}</h3>
+              <p className="text-sm text-white/65 leading-relaxed">{desc}</p>
             </div>
           ))}
         </div>

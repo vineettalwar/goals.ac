@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
-import { FeatureLanderDynamic } from "@/components/marketing/feature-lander-dynamic";
+import { ContentAutopilotClient } from "./content-autopilot-client";
 
 export const metadata: Metadata = {
   title: "Content Autopilot — goals.ac",
-  description: "Automated content generation with editorial control and flexible publish modes.",
+  description: "Get 3 SEO articles and a 30-day content plan from your website URL. Automated publishing with editorial control.",
 };
 
 export default function Page() {
-  return <FeatureLanderDynamic configKey="autopilot" />;
+  return <ContentAutopilotClient />;
 }

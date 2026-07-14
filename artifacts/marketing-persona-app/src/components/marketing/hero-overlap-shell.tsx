@@ -2,6 +2,7 @@
 
 import type { ReactNode, RefObject } from "react";
 import { motion } from "framer-motion";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
 
 type HeroOverlapShellProps = {
   id?: string;
@@ -21,7 +22,7 @@ export function HeroOverlapShell({ id, children, sectionRef }: HeroOverlapShellP
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.55, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-          className="paper-card overflow-hidden shadow-2xl shadow-black/20 ring-1 ring-black/5"
+          className={`${cardSurfaceClass("glass")} overflow-hidden shadow-2xl shadow-black/40`}
         >
           {children}
         </motion.div>

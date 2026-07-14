@@ -4,6 +4,9 @@ import type { ReactNode } from "react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass", false);
 
 type LegalPageClientProps = {
   titleLine1: string;
@@ -31,7 +34,7 @@ export function LegalPageClient({
       }
     >
       <div className="max-w-3xl mx-auto px-6 py-16">
-        <div className="paper-card rounded-2xl p-8 md:p-10 space-y-8">{children}</div>
+        <div className={`${glassCard} p-8 md:p-10 space-y-8 marketing-prose-dark`}>{children}</div>
       </div>
     </MarketingPageShell>
   );

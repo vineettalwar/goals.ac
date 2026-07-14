@@ -12,6 +12,9 @@ import {
   type HelpCategory,
 } from "@/lib/marketing/help-articles";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass");
 
 const CATEGORY_ICONS: Record<HelpCategory, typeof BookOpen> = {
   "Getting started": BookOpen,
@@ -55,7 +58,7 @@ export function HelpPageClient() {
         ]}
       />
 
-      <MarketingSection variant="paper" bordered className="py-16 bg-background">
+      <MarketingSection bordered className="py-16">
         {HELP_CATEGORIES.map((category) => {
           const articles = getHelpArticlesByCategory(category);
           if (articles.length === 0) return null;
@@ -63,28 +66,28 @@ export function HelpPageClient() {
           return (
             <div key={category} className="mb-12 last:mb-0">
               <div className="flex items-center gap-2.5 mb-5">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 text-white/80">
                   <CategoryIcon className="h-4 w-4" />
                 </div>
-                <h2 className="text-xl font-bold tracking-tight">{category}</h2>
+                <h2 className="text-xl font-bold tracking-tight text-white">{category}</h2>
               </div>
               <div className="grid gap-4">
                 {articles.map((article) => (
                   <Link
                     key={article.slug}
                     href={`/help/${article.slug}`}
-                    className="paper-card paper-card-hover p-6 flex items-start justify-between gap-4 group"
+                    className={`${glassCard} p-6 flex items-start justify-between gap-4 group`}
                   >
                     <div>
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold group-hover:text-primary transition-colors">{article.title}</h3>
-                        <span className="text-xs rounded-full border border-border px-2 py-0.5 text-muted-foreground capitalize">
+                        <h3 className="font-bold text-white group-hover:text-primary transition-colors">{article.title}</h3>
+                        <span className="text-xs rounded-full border border-white/10 px-2 py-0.5 text-white/50 capitalize">
                           {article.audience}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground">{article.description}</p>
+                      <p className="text-sm text-white/65">{article.description}</p>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0 mt-1 group-hover:text-primary" />
+                    <ArrowRight className="h-5 w-5 text-white/50 shrink-0 mt-1 group-hover:text-primary" />
                   </Link>
                 ))}
               </div>

@@ -7,6 +7,9 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { LEARN_POSTS } from "@/lib/marketing/learn-posts";
 import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass");
 
 export function LearnPageClient() {
   return (
@@ -22,19 +25,19 @@ export function LearnPageClient() {
         />
       }
     >
-      <MarketingSection variant="paper" bordered className="py-16 bg-background">
+      <MarketingSection bordered className="py-16">
         <div className="grid gap-4">
           {LEARN_POSTS.map((post) => (
             <Link
               key={post.slug}
               href={`/learn/${post.slug}`}
-              className="paper-card paper-card-hover p-6 flex items-start justify-between gap-4 group"
+              className={`${glassCard} p-6 flex items-start justify-between gap-4 group`}
             >
               <div>
-                <h2 className="font-bold text-lg group-hover:text-primary transition-colors">{post.title}</h2>
-                <p className="text-sm text-muted-foreground mt-1">{post.description}</p>
+                <h2 className="font-bold text-lg text-white group-hover:text-primary transition-colors">{post.title}</h2>
+                <p className="text-sm text-white/65 mt-1">{post.description}</p>
               </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0 mt-1 group-hover:text-primary" />
+              <ArrowRight className="h-5 w-5 text-white/50 shrink-0 mt-1 group-hover:text-primary" />
             </Link>
           ))}
         </div>
