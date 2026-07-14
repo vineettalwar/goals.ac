@@ -1,5 +1,5 @@
 import {
-  modelForTier,
+  modelForProviderTier,
   resolveAiClient,
   resolveProviderId,
   type AiProviderOptions,
@@ -80,7 +80,7 @@ Respond ONLY with a valid JSON object in this exact shape:
 Base analysis on the actual page content. Be specific and tactical, not generic.`;
 
   const providerId = resolveProviderId(aiProviderOptions);
-  const model = providerId === "gemini" ? modelForTier("gemini", "strategy") : undefined;
+  const model = modelForProviderTier(providerId, "strategy");
   const response = await client.generate({
     prompt,
     model,

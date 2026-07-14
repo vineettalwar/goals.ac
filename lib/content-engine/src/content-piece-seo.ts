@@ -47,6 +47,7 @@ export type ContentPieceMetadata = {
   internalLinkSuggestions?: ContentPieceInternalLink[];
   jsonLdSchema?: object;
   humanized?: boolean;
+  hasInfographicBlock?: boolean;
   deeplRefined?: boolean;
   deeplTargetLang?: string;
   visualSummaryMarkdown?: string;

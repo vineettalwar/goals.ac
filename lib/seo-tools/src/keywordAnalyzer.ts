@@ -1,5 +1,5 @@
 import {
-  modelForTier,
+  modelForProviderTier,
   resolveAiClient,
   resolveProviderId,
   type AiProviderOptions,
@@ -96,7 +96,7 @@ Respond ONLY with a valid JSON object in this exact shape:
 Be specific and tactical. Base estimates on realistic B2B SaaS market data.`;
 
   const providerId = resolveProviderId(aiProviderOptions);
-  const model = providerId === "gemini" ? modelForTier("gemini", "planning") : undefined;
+  const model = modelForProviderTier(providerId, "planning");
   const response = await client.generate({
     prompt,
     model,

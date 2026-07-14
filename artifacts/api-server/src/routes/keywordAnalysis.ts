@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import { db, keywordAnalysesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { analyzeKeywords } from "@workspace/seo-tools/keywordAnalyzer";
-import { modelForTier, resolveProviderId } from "@workspace/ai-providers";
+import { modelForProviderTier, resolveProviderId } from "@workspace/ai-providers";
 import { optionalAuth } from "../lib/auth";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
@@ -63,7 +63,7 @@ router.post("/keyword-analysis", optionalAuth, async (req, res) => {
         eventType: "keyword_analysis",
         tier: "planning",
         provider: providerId,
-        model: providerId === "gemini" ? modelForTier("gemini", "planning") : undefined,
+        model: modelForProviderTier(providerId, "planning"),
         usedByok: Boolean(userApiKey),
       });
     }

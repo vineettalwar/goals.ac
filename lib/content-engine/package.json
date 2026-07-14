@@ -69,6 +69,7 @@
     "./brand-voice-chunker": "./src/brand-voice-chunker.ts",
     "./cache": "./src/cache.ts",
     "./rate-limit": "./src/rate-limit.ts",
+    "./reddit-public-search": "./src/reddit-public-search.ts",
     "./semrush-gap-cache": "./src/semrush-gap-cache.ts",
     "./article-image-enricher": "./src/article-image-enricher.ts",
     "./platform-voice": "./src/platform-voice/index.ts",

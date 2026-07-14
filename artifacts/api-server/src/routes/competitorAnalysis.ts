@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import { db, competitorAnalysesTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { analyzeCompetitor } from "@workspace/seo-tools/competitorAnalyzer";
-import { modelForTier, resolveProviderId } from "@workspace/ai-providers";
+import { modelForProviderTier, resolveProviderId } from "@workspace/ai-providers";
 import { optionalAuth } from "../lib/auth";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
@@ -82,7 +82,7 @@ router.post("/competitor-analysis", optionalAuth, async (req, res) => {
         eventType: "competitor_analysis",
         tier: "strategy",
         provider: providerId,
-        model: providerId === "gemini" ? modelForTier("gemini", "strategy") : undefined,
+        model: modelForProviderTier(providerId, "strategy"),
         usedByok: Boolean(userApiKey),
       });
     }
