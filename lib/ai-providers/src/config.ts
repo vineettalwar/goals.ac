@@ -1,4 +1,4 @@
-export type AiProviderId = "gemini" | "bedrock" | "ollama" | "anthropic";
+export type AiProviderId = "gemini" | "bedrock" | "ollama" | "anthropic" | "openai";
 
 export interface BedrockCredentialOptions {
   accessKeyId?: string | null;
@@ -8,11 +8,21 @@ export interface BedrockCredentialOptions {
   model?: string | null;
 }
 
+export interface OpenAICredentialOptions {
+  apiKey?: string | null;
+}
+
+export interface AnthropicCredentialOptions {
+  apiKey?: string | null;
+}
+
 export interface AiProviderOptions {
   providerId?: AiProviderId | null;
   ollamaBaseUrl?: string | null;
   ollamaModel?: string | null;
   bedrock?: BedrockCredentialOptions | null;
+  openai?: OpenAICredentialOptions | null;
+  anthropic?: AnthropicCredentialOptions | null;
 }
 
 export interface ResolvedOllamaConfig {
@@ -26,7 +36,13 @@ function env(key: string): string | undefined {
 }
 
 function normalizeProviderId(value: string | null | undefined): AiProviderId | null {
-  if (value === "gemini" || value === "bedrock" || value === "ollama" || value === "anthropic") {
+  if (
+    value === "gemini" ||
+    value === "bedrock" ||
+    value === "ollama" ||
+    value === "anthropic" ||
+    value === "openai"
+  ) {
     return value;
   }
   return null;
@@ -58,6 +74,9 @@ export function resolveProviderId(options?: AiProviderOptions): AiProviderId {
   }
   if (env("ANTHROPIC_API_KEY")) {
     return "anthropic";
+  }
+  if (env("OPENAI_API_KEY")) {
+    return "openai";
   }
   if (isBedrockEnvConfigured()) {
     return "bedrock";

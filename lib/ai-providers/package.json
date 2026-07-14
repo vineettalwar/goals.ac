@@ -13,6 +13,7 @@
     "./bedrock": "./src/bedrock.ts",
     "./ollama": "./src/ollama.ts",
     "./anthropic": "./src/anthropic.ts",
+    "./openai": "./src/openai.ts",
     "./embed": "./src/embed.ts"
   },
   "dependencies": {

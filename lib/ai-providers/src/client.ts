@@ -142,7 +142,16 @@ async function buildClient(
 
     case "anthropic": {
       const { AnthropicClient } = await import("./anthropic");
-      return AnthropicClient.create();
+      return AnthropicClient.create({
+        apiKey: options?.anthropic?.apiKey,
+      });
+    }
+
+    case "openai": {
+      const { OpenAIClient } = await import("./openai");
+      return OpenAIClient.create({
+        apiKey: options?.openai?.apiKey,
+      });
     }
   }
 }
@@ -159,7 +168,11 @@ export async function getAiProviderClient(options?: AiProviderOptions): Promise<
       ? `ollama:${resolvedOllama.baseUrl}:${resolvedOllama.model}`
       : id === "bedrock" && options?.bedrock?.accessKeyId
         ? `bedrock:${options.bedrock.accessKeyId}:${options.bedrock.region ?? ""}:${options.bedrock.model ?? ""}`
-        : buildAiProviderCacheKey(options);
+        : id === "openai" && options?.openai?.apiKey
+          ? `openai:${options.openai.apiKey.slice(-8)}`
+          : id === "anthropic" && options?.anthropic?.apiKey
+            ? `anthropic:${options.anthropic.apiKey.slice(-8)}`
+            : buildAiProviderCacheKey(options);
 
   const cached = _cache.get(cacheKey);
   if (cached) return cached;

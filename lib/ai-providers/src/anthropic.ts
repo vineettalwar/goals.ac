@@ -14,6 +14,24 @@ interface AnthropicMessageResponse {
   stop_reason?: string;
 }
 
+export function isAnthropicUserKeyError(err: unknown): boolean {
+  if (err && typeof err === "object") {
+    const e = err as Record<string, unknown>;
+    const status = typeof e["status"] === "number" ? e["status"] : null;
+    if (status === 401 || status === 403 || status === 429) return true;
+  }
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return (
+    msg.includes("401") ||
+    msg.includes("403") ||
+    msg.includes("429") ||
+    msg.includes("invalid x-api-key") ||
+    msg.includes("authentication") ||
+    msg.includes("quota") ||
+    msg.includes("rate limit")
+  );
+}
+
 export class AnthropicClient implements AiProviderClient {
   id = "anthropic" as const;
 
@@ -58,7 +76,9 @@ export class AnthropicClient implements AiProviderClient {
 
     if (!response.ok) {
       const errText = await response.text().catch(() => "");
-      throw new Error(`Anthropic API error (${response.status}): ${errText.slice(0, 400)}`);
+      const err = new Error(`Anthropic API error (${response.status}): ${errText.slice(0, 400)}`);
+      (err as Error & { status?: number }).status = response.status;
+      throw err;
     }
 
     const data = (await response.json()) as AnthropicMessageResponse;
