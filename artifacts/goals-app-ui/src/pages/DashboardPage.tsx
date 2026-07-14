@@ -45,7 +45,7 @@ export function DashboardPage() {
   }, [user]);
 
   if (loading) {
-    return <p className="p-8 text-[var(--muted)]">Loading…</p>;
+    return <p className="p-8 text-(--muted)">Loading…</p>;
   }
 
   const hour = new Date().getHours();
@@ -56,7 +56,7 @@ export function DashboardPage() {
       <h1 className="text-2xl font-bold mb-2">
         {greeting}, {user?.name?.split(" ")[0] ?? "there"}
       </h1>
-      <p className="text-sm text-[var(--muted)] mb-8">
+      <p className="text-sm text-(--muted) mb-8">
         Connected to <code className="text-xs">api.goals.ac</code> via the edge gateway.
       </p>
 
@@ -70,14 +70,14 @@ export function DashboardPage() {
 
       <section className="mb-8">
         <h2 className="text-sm font-semibold mb-3">Recent content</h2>
-        <div className="rounded-xl border border-[var(--border)] bg-white divide-y">
+        <div className="rounded-xl border border-(--border) bg-white divide-y">
           {pieces.length === 0 ? (
-            <p className="p-4 text-sm text-[var(--muted)]">No content pieces yet.</p>
+            <p className="p-4 text-sm text-(--muted)">No content pieces yet.</p>
           ) : (
             pieces.map((piece) => (
               <div key={piece.id} className="px-4 py-3 flex justify-between gap-4">
                 <span className="text-sm font-medium truncate">{piece.title}</span>
-                <span className="text-xs text-[var(--muted)] uppercase">{piece.status}</span>
+                <span className="text-xs text-(--muted) uppercase">{piece.status}</span>
               </div>
             ))
           )}
@@ -89,8 +89,8 @@ export function DashboardPage() {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-white p-4">
-      <p className="text-xs text-[var(--muted)]">{label}</p>
+    <div className="rounded-xl border border-(--border) bg-white p-4">
+      <p className="text-xs text-(--muted)">{label}</p>
       <p className="text-2xl font-semibold mt-1">{value}</p>
     </div>
   );

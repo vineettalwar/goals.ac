@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "pages:deploy": "pnpm run build && pnpm exec wrangler pages deploy dist --project-name=goals-ac-app"
+    "pages:deploy": "pnpm run build && CLOUDFLARE_ACCOUNT_ID=bdd4b32a0d2c3e380d9b57dbfaa90fe6 pnpm exec wrangler pages deploy dist --project-name=goals-ac-app"
   },
   "dependencies": {
     "@tanstack/react-query": "catalog:",

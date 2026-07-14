@@ -1,5 +1,43 @@
 import { setBaseUrl } from "@workspace/api-client-react";
 
+type DeployStage = "production" | "staging" | "development";
+
+const STAGE_APP_ORIGINS: Record<DeployStage, string> = {
+  production: "https://app.goals.ac",
+  staging: "https://goals-ac-app.pages.dev",
+  development: "http://localhost:5174",
+};
+
+function resolveDeployStage(): DeployStage {
+  const explicit = import.meta.env.VITE_DEPLOY_STAGE?.trim().toLowerCase();
+  if (explicit === "production" || explicit === "staging" || explicit === "development") {
+    return explicit;
+  }
+  if (import.meta.env.DEV) return "development";
+  return "production";
+}
+
+function appOriginFromHost(host: string): string | null {
+  if (host === "app.goals.ac") return STAGE_APP_ORIGINS.production;
+  if (host.endsWith(".goals-ac-app.pages.dev")) return `https://${host}`;
+  if (host === "localhost" || host === "127.0.0.1") {
+    return import.meta.env.VITE_APP_URL?.trim().replace(/\/+$/, "") || STAGE_APP_ORIGINS.development;
+  }
+  return null;
+}
+
+export function getAppOrigin(): string {
+  const configured = import.meta.env.VITE_APP_URL?.trim().replace(/\/+$/, "");
+  if (configured) return configured;
+
+  if (typeof window !== "undefined") {
+    const fromHost = appOriginFromHost(window.location.hostname);
+    if (fromHost) return fromHost;
+  }
+
+  return STAGE_APP_ORIGINS[resolveDeployStage()];
+}
+
 const apiBase =
   import.meta.env.VITE_API_URL?.trim()?.replace(/\/+$/, "") ||
   (import.meta.env.DEV ? "" : "https://api.goals.ac");
@@ -28,8 +66,5 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 }
 
 export function authLoginUrl(): string {
-  const configured = import.meta.env.VITE_AUTH_URL?.trim();
-  if (configured) return `${configured.replace(/\/$/, "")}/login`;
-  if (import.meta.env.DEV) return "http://localhost:3001/login";
-  return "https://goals.ac/login";
+  return `${getAppOrigin()}/login`;
 }

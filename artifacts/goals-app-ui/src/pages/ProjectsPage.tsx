@@ -28,7 +28,7 @@ export function ProjectsPage() {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load projects"));
   }, [user]);
 
-  if (loading) return <p className="p-8 text-[var(--muted)]">Loading…</p>;
+  if (loading) return <p className="p-8 text-(--muted)">Loading…</p>;
 
   return (
     <div className="px-8 py-8 max-w-4xl">
@@ -39,16 +39,16 @@ export function ProjectsPage() {
           <Link
             key={project.id}
             to={`/projects/${project.id}`}
-            className="block rounded-xl border border-[var(--border)] bg-white p-4 hover:border-[var(--forest)]"
+            className="block rounded-xl border border-(--border) bg-white p-4 hover:border-(--forest)"
           >
             <p className="font-semibold">{project.name}</p>
-            <p className="text-sm text-[var(--muted)] mt-1">
+            <p className="text-sm text-(--muted) mt-1">
               {project.websiteUrl ?? "No website"} · {project.industry ?? "Industry TBD"}
             </p>
           </Link>
         ))}
         {projects.length === 0 ? (
-          <p className="text-sm text-[var(--muted)]">No projects yet. Create one from onboarding.</p>
+          <p className="text-sm text-(--muted)">No projects yet. Create one from onboarding.</p>
         ) : null}
       </div>
     </div>
