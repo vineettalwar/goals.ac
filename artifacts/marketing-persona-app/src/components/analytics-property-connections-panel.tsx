@@ -13,6 +13,7 @@ import {
   IntegrationCategorySection,
   IntegrationIconBox,
   IntegrationTile,
+  IntegrationCategorySkeleton,
 } from "@/components/integration-tile";
 import {
   Select,
@@ -397,9 +398,10 @@ export function AnalyticsPropertyConnectionsPanel({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner size="sm" /> Loading analytics connections…
-      </div>
+      <IntegrationCategorySkeleton
+        tileCount={ANALYTICS_INTEGRATIONS_COUNT}
+        compact={embedded}
+      />
     );
   }
 

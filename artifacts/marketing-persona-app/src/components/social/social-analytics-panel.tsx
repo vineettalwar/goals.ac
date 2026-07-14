@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import { toast } from "sonner";
 import { BarChart3, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -193,7 +194,7 @@ export function SocialAnalyticsPanel({ projectId }: { projectId: string }) {
               {data.rows.map((row) => (
                 <tr key={`${row.contentPieceId}-${row.platform}`} className="border-t">
                   <td className="p-3">
-                    <Link href={`/content-pieces/${row.contentPieceId}`} className="hover:underline font-medium">
+                    <Link href={contentPiecePath(projectId, row.contentPieceId)} className="hover:underline font-medium">
                       {row.title}
                     </Link>
                   </td>

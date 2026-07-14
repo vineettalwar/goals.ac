@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import { toast } from "sonner";
 import { Loader2, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -269,7 +270,7 @@ export function SocialComposerPanel({
                   <p className="font-medium text-sm">{piece.title}</p>
                   <p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-6">{piece.bodyMarkdown}</p>
                   <Button variant="outline" size="sm" asChild>
-                    <Link href={`/content-pieces/${piece.id}`}>Edit in studio</Link>
+                    <Link href={contentPiecePath(projectId, piece.id)}>Edit in studio</Link>
                   </Button>
                 </div>
               );

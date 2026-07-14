@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import { toast } from "sonner";
 import {
   BarChart3,
@@ -401,7 +402,7 @@ export function SocialHubClient({ projectId }: { projectId: string }) {
                       <div>
                         <CardTitle className="text-base">
                           <Link
-                            href={`/content-pieces/${item.id}`}
+                            href={contentPiecePath(projectId, item.id)}
                             className="hover:underline"
                           >
                             {item.title}

@@ -17,6 +17,7 @@ import {
   IntegrationCategorySection,
   IntegrationIconBox,
   IntegrationTile,
+  IntegrationCategorySkeleton,
 } from "@/components/integration-tile";
 import {
   Select,
@@ -451,9 +452,10 @@ export function SearchPropertyConnectionsPanel({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Spinner size="sm" /> Loading search connections…
-      </div>
+      <IntegrationCategorySkeleton
+        tileCount={SEARCH_INTEGRATIONS_COUNT}
+        compact={embedded}
+      />
     );
   }
 

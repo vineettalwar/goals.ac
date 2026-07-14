@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -304,7 +305,7 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
                   <TableCell>
                     <div className="space-y-0.5 min-w-[200px] max-w-[360px]">
                       <Link
-                        href={`/content-piece/${article.contentPieceId}`}
+                        href={contentPiecePath(projectId, article.contentPieceId)}
                         className="font-medium hover:text-primary line-clamp-2"
                       >
                         {article.title}

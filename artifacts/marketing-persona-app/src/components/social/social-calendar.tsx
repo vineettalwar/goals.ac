@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import {
   DndContext,
   DragOverlay,
@@ -198,6 +199,7 @@ export function SocialCalendar({
                   {dayItems.slice(0, 3).map((p) => (
                     <DraggablePost
                       key={p.id}
+                      projectId={projectId}
                       item={p}
                       rescheduling={reschedulingId === p.id}
                     />
@@ -216,7 +218,12 @@ export function SocialCalendar({
           <p className="text-[10px] text-muted-foreground mb-2">Drop here to unschedule</p>
           <div className="flex flex-wrap gap-1 min-h-[40px]">
             {unscheduled.map((p) => (
-              <DraggablePost key={p.id} item={p} rescheduling={reschedulingId === p.id} />
+              <DraggablePost
+                key={p.id}
+                projectId={projectId}
+                item={p}
+                rescheduling={reschedulingId === p.id}
+              />
             ))}
           </div>
         </CalendarDay>
@@ -246,9 +253,11 @@ function CalendarDay({ dateKey, children }: { dateKey: string; children: React.R
 }
 
 function DraggablePost({
+  projectId,
   item,
   rescheduling,
 }: {
+  projectId: string;
   item: SocialCalendarItem;
   rescheduling: boolean;
 }) {
@@ -266,7 +275,7 @@ function DraggablePost({
         rescheduling && "opacity-50",
       )}
     >
-      <Link href={`/content-pieces/${item.id}`} className="font-medium truncate block hover:underline">
+      <Link href={contentPiecePath(projectId, item.id)} className="font-medium truncate block hover:underline">
         {item.title}
       </Link>
       <div className="flex items-center gap-1 mt-0.5 text-muted-foreground">

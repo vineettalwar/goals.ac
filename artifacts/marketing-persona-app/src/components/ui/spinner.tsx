@@ -11,12 +11,13 @@ export function Spinner({ className, size = "md" }: SpinnerProps) {
   return (
     <span
       role="status"
-      aria-hidden="true"
       className={cn(
         "inline-block animate-spin rounded-full border-2 border-border border-t-primary",
         sizes[size],
         className
       )}
-    />
+    >
+      <span className="sr-only">Loading</span>
+    </span>
   );
 }

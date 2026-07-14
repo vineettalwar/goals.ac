@@ -15,6 +15,9 @@ type Thread = {
   url: string;
   intentScore: number;
   suggestedReply: string;
+  score?: number;
+  numComments?: number;
+  source?: string;
 };
 
 export function RedditDiscoveryPanel({ embedded = false }: { embedded?: boolean }) {
@@ -69,11 +72,13 @@ export function RedditDiscoveryPanel({ embedded = false }: { embedded?: boolean 
                 <h1 className="text-2xl font-bold">Reddit Discovery</h1>
                 <FeatureStatusBadge status="beta" />
               </div>
-              <p className="text-sm text-muted-foreground">Find threads and draft replies — you post manually.</p>
+              <p className="text-sm text-muted-foreground">
+                Live threads from Reddit search — AI drafts replies only. You post manually.
+              </p>
             </div>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">Find threads and draft replies — you post manually.</p>
+          <p className="text-sm text-muted-foreground">Live threads from Reddit — AI drafts replies only.</p>
         )}
         <Button onClick={discover} disabled={loading}>
           {loading ? <Spinner size="sm" /> : "Find threads"}
@@ -81,8 +86,9 @@ export function RedditDiscoveryPanel({ embedded = false }: { embedded?: boolean 
       </div>
 
       {threads.length === 0 && !loading && (
-        <div className="paper-card p-8 text-center text-muted-foreground text-sm">
-          Click &quot;Find threads&quot; to discover Reddit discussions relevant to your brand keywords.
+        <div className="paper-card p-8 text-center text-muted-foreground text-sm space-y-2">
+          <p>Click &quot;Find threads&quot; to search Reddit for discussions matching your brand keywords.</p>
+          <p className="text-xs">Results are real posts from Reddit&apos;s public API — not hallucinated URLs.</p>
         </div>
       )}
 
@@ -98,9 +104,16 @@ export function RedditDiscoveryPanel({ embedded = false }: { embedded?: boolean 
                 Intent {t.intentScore}
               </span>
             </div>
-            <a href={t.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline mb-3">
+            <a href={t.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline mb-1">
               Open thread <ExternalLink className="h-3 w-3" />
             </a>
+            {(t.score != null || t.numComments != null) && (
+              <p className="text-xs text-muted-foreground mb-3">
+                {t.score != null ? `${t.score} upvotes` : null}
+                {t.score != null && t.numComments != null ? " · " : null}
+                {t.numComments != null ? `${t.numComments} comments` : null}
+              </p>
+            )}
             <p className="text-sm text-muted-foreground bg-secondary/50 rounded-lg p-3">{t.suggestedReply}</p>
             <Button variant="outline" size="sm" className="mt-3" onClick={() => copyReply(t.suggestedReply)}>
               <Copy className="h-3.5 w-3.5 mr-1.5" /> Copy reply

@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 type ArticleQualityPanelProps = {
   bodyMarkdown: string;
   metaTitle?: string | null;
+  seoTitle?: string | null;
   metaDescription?: string | null;
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  focusKeyword?: string | null;
   citations?: { text: string; url: string }[];
   faqSection?: { question: string; answer: string }[];
   jsonLdSchema?: object | null;
@@ -62,12 +66,45 @@ export function ArticleQualityPanel({
         </div>
       )}
 
-      {props.metaDescription && (
-        <div className="pt-2 border-t border-border">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground mb-1">
-            Meta description
+      {(props.seoTitle || props.metaDescription || props.ogTitle || props.ogDescription) && (
+        <div className="pt-2 border-t border-border space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            SEO metadata
           </p>
-          <p className="text-xs leading-relaxed">{props.metaDescription}</p>
+          {props.seoTitle && (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1">
+                SEO title ({props.seoTitle.length} chars)
+              </p>
+              <p className="text-xs leading-relaxed">{props.seoTitle}</p>
+            </div>
+          )}
+          {props.metaDescription && (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1">
+                Meta description ({props.metaDescription.length} chars)
+              </p>
+              <p className="text-xs leading-relaxed">{props.metaDescription}</p>
+            </div>
+          )}
+          {props.ogTitle && props.ogTitle !== props.seoTitle && (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1">Open Graph title</p>
+              <p className="text-xs leading-relaxed">{props.ogTitle}</p>
+            </div>
+          )}
+          {props.ogDescription && props.ogDescription !== props.metaDescription && (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1">Open Graph description</p>
+              <p className="text-xs leading-relaxed">{props.ogDescription}</p>
+            </div>
+          )}
+          {props.focusKeyword && (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1">Focus keyword</p>
+              <p className="text-xs leading-relaxed">{props.focusKeyword}</p>
+            </div>
+          )}
         </div>
       )}
     </div>
