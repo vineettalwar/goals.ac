@@ -1,0 +1,26 @@
+{
+  "name": "@workspace/cf-edge",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./bindings": "./src/bindings.ts",
+    "./cors": "./src/cors.ts",
+    "./kv-cache": "./src/kv-cache.ts",
+    "./http-mode": "./src/http-mode.ts",
+    "./enqueue-http": "./src/enqueue-http.ts",
+    "./enqueue": "./src/enqueue-http.ts",
+    "./jwt": "./src/jwt.ts",
+    "./wire": "./src/wire.ts"
+  },
+  "dependencies": {
+    "@workspace/db": "workspace:*",
+    "@workspace/jobs": "workspace:*",
+    "next-auth": "^5.0.0-beta.30"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260708.1",
+    "typescript": "~5.9.2"
+  }
+}
