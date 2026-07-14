@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,7 @@ import {
   buildAuthRedirectParams,
   saveRoadmapIntent,
 } from "@/lib/projects/roadmap-intent";
+import { useRoadmapFormOptions } from "@/lib/queries";
 
 const STAGES = [
   { value: "pre-seed", label: "Pre-Seed" },
@@ -32,25 +33,14 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
   const internalRef = useRef<HTMLElement>(null);
   const ref = sectionRef ?? internalRef;
 
-  const [industries, setIndustries] = useState<Industry[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
+  const { data: formOptions, isLoading: loadingOptions } = useRoadmapFormOptions();
+  const industries = formOptions?.industries ?? [];
+  const locations = formOptions?.locations ?? [];
   const [industry, setIndustry] = useState("");
   const [location, setLocation] = useState("");
   const [stage, setStage] = useState<string>(STAGES[0].value);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    Promise.all([fetch("/api/industries"), fetch("/api/locations")])
-      .then(async ([indRes, locRes]) => {
-        const [ind, loc] = await Promise.all([indRes.json(), locRes.json()]);
-        setIndustries(Array.isArray(ind) ? ind : []);
-        setLocations(Array.isArray(loc) ? loc : []);
-      })
-      .catch(() => {})
-      .finally(() => setLoadingOptions(false));
-  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,8 +106,10 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
         <form onSubmit={onSubmit} className="space-y-6">
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-white/80">Industry</Label>
+              <Label htmlFor="roadmap-industry" className="text-sm font-semibold text-white/80">Industry</Label>
               <select
+                id="roadmap-industry"
+                aria-label="Industry"
                 className={selectClass}
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
@@ -134,8 +126,10 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
               </select>
             </div>
             <div className="space-y-2">
-              <Label className="text-sm font-semibold text-white/80">Location</Label>
+              <Label htmlFor="roadmap-location" className="text-sm font-semibold text-white/80">Location</Label>
               <select
+                id="roadmap-location"
+                aria-label="Location"
                 className={selectClass}
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
@@ -154,8 +148,10 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
           </div>
 
           <div className="space-y-2">
-            <Label className="text-sm font-semibold text-white/80">Company Stage</Label>
+            <Label htmlFor="roadmap-company-stage" className="text-sm font-semibold text-white/80">Company Stage</Label>
             <select
+              id="roadmap-company-stage"
+              aria-label="Company stage"
               className={selectClass}
               value={stage}
               onChange={(e) => setStage(e.target.value)}

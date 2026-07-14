@@ -1,4 +1,4 @@
-import type { ContentFormatType } from "@/components/content-studio/content-studio-format-meta";
+import type { ContentFormatType } from "@/components/content-studio/content-studio-format-data";
 
 export type GeoIssueLike = {
   check: string;

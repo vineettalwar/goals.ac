@@ -1,1 +1,1 @@
-export { logger } from "@workspace/content-engine/logger";
+export { logger } from "@workspace/content-engine/core/logger";

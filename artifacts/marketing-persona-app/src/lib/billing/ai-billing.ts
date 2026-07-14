@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import {
   cancelAiBillingSession,
   completeAiBillingSession,

@@ -6,7 +6,7 @@ import {
   encryptStoredTokens,
   exchangeGoogleSheetsCode,
   googleSheetsRedirectUri,
-} from "@workspace/content-engine/support/gsc-connection";
+} from "@workspace/content-engine/support/integrations/gsc-connection";
 import {
   getOrgMembership,
   isSiteAdmin,
@@ -97,13 +97,14 @@ export async function handleGoogleSheetsCallback(
     return new NextResponse("Source not found", { status: 404 });
   }
 
-  const [user] = await db
-    .select({ role: usersTable.role })
-    .from(usersTable)
-    .where(eq(usersTable.id, decoded.userId))
-    .limit(1);
-
-  const membership = await getOrgMembership(decoded.userId);
+  const [[user], membership] = await Promise.all([
+    db
+      .select({ role: usersTable.role })
+      .from(usersTable)
+      .where(eq(usersTable.id, decoded.userId))
+      .limit(1),
+    getOrgMembership(decoded.userId),
+  ]);
   const authorized =
     isSuperAdmin(user?.role) ||
     (isSiteAdmin(membership?.orgRole) &&

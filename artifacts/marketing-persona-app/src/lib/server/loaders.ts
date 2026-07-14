@@ -11,8 +11,8 @@ import {
   type CmsIntegrationCredentials,
   decryptCmsCredentials,
   maskCmsCredentials,
-} from "@workspace/content-engine/support/cms-integrations";
-import { getOrgAiSettingsForUser, hasOrgAnthropicCredentials, hasOrgBedrockCredentials, hasOrgOpenAICredentials, hasOrgSemrushCredentials } from "@workspace/content-engine/support/org-ai-settings";
+} from "@workspace/content-engine/support/publishing/cms-integrations";
+import { getOrgAiSettingsForUser, hasOrgAnthropicCredentials, hasOrgBedrockCredentials, hasOrgOpenAICredentials, hasOrgSemrushCredentials } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { decryptSecret } from "@workspace/security/encryption";
 import { getUsageSummaryForUser } from "@/lib/billing/usage";
 import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/platform/ai-providers-status";

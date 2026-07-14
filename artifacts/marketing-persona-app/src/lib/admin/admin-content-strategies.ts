@@ -9,7 +9,7 @@ import {
   websiteProjectsTable,
 } from "@workspace/db/schema";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
-import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot-scheduler";
+import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 
 export type AdminStrategyItemCounts = {
   total: number;

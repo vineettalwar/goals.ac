@@ -75,7 +75,7 @@ export function RoadmapDetailClient({
 
         <div className="space-y-4">
           {phases.map((phase, i) => (
-            <div key={i} className={`${glassCard} p-6 space-y-4`}>
+            <div key={`${phase.title}-${phase.timeframe}`} className={`${glassCard} p-6 space-y-4`}>
               <div className="flex items-start gap-4">
                 <div className="step-dot active shrink-0">{i + 1}</div>
                 <div>

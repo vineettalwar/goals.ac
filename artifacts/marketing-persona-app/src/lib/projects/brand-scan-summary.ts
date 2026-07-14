@@ -1,4 +1,4 @@
-import type { BrandExtract } from "@workspace/content-engine/brand-extract-types";
+import type { BrandExtract } from "@workspace/content-engine/brand/brand-extract-types";
 
 type DiscoveryMeta = NonNullable<BrandExtract["discoveryMeta"]>;
 

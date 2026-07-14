@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/humanizer";
+export * from "@workspace/content-engine/content/humanizer";

@@ -48,10 +48,10 @@ export function FreeToolsPageClient() {
         <div className="grid md:grid-cols-2 gap-6">
           {TOOLS.map((tool) => (
             <Link key={tool.id} id={tool.id} href={tool.href} className={`${glassCardHover} p-6 block group scroll-mt-24`}>
-              <tool.icon className="h-8 w-8 text-primary mb-3" />
-              <h3 className="font-semibold text-white group-hover:text-primary transition-colors">{tool.title}</h3>
+              <tool.icon className="h-8 w-8 text-(--accent-warm) mb-3" />
+              <h3 className="font-semibold text-white group-hover:text-(--accent-warm) transition-colors">{tool.title}</h3>
               <p className="text-sm text-white/65 mt-1">{tool.desc}</p>
-              <span className="inline-flex items-center gap-1 text-xs text-primary mt-3">
+              <span className="inline-flex items-center gap-1 text-xs text-(--accent-warm) mt-3">
                 Open tool <ArrowRight className="h-3 w-3" />
               </span>
             </Link>

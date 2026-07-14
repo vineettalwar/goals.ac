@@ -4,7 +4,7 @@ import {
   checkApiKeyRateLimit,
   requireApiKeyScope,
   type AuthenticatedApiKey,
-} from "@workspace/content-engine/support/api-key-auth";
+} from "@workspace/content-engine/support/auth/api-key-auth";
 
 export async function withPublicApiKey(
   req: Request,

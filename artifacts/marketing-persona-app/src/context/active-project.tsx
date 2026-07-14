@@ -1,44 +1,34 @@
 "use client";
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
+  useSyncExternalStore,
   useState,
   type ReactNode,
 } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/queries/keys";
 import { fetchWebsiteProjects } from "@/lib/queries/fetchers";
-import type { ProjectSummary } from "@/lib/queries/types";
 import {
   clearActiveProjectCookie,
   setActiveProjectCookie,
 } from "@/lib/active-project/cookie";
 import { removeProjectScopedQueries } from "@/lib/queries/invalidate-project-queries";
+import { ActiveProjectContext } from "./active-project-context";
 
 const STORAGE_KEY = "activeProjectId";
 
-export type { ProjectSummary };
-
-interface ActiveProjectContextValue {
-  projects: ProjectSummary[];
-  activeProjectId: number | null;
-  activeProject: ProjectSummary | null;
-  setActiveProjectId: (id: number | null) => void;
-  isLoading: boolean;
-  refreshProjects: () => Promise<void>;
+function subscribeNoop() {
+  return () => {};
 }
-
-const ActiveProjectContext = createContext<ActiveProjectContextValue | null>(null);
 
 export function ActiveProjectProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [activeProjectId, setActiveProjectIdState] = useState<number | null>(null);
   const [initialized, setInitialized] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
+  const hydrated = useSyncExternalStore(subscribeNoop, () => true, () => false);
 
   const { data: projects = [], isLoading: queryLoading } = useQuery({
     queryKey: queryKeys.websiteProjects,
@@ -48,31 +38,25 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
     if (initialized || queryLoading) return;
 
     const stored = localStorage.getItem(STORAGE_KEY);
     const storedId = stored ? Number.parseInt(stored, 10) : NaN;
     const validStored = projects.find((p) => p.id === storedId);
 
-    let nextId: number | null = null;
-    setActiveProjectIdState((current) => {
-      nextId = validStored
-        ? validStored.id
-        : current && projects.some((p) => p.id === current)
-          ? current
-          : projects[0]?.id ?? null;
-      return nextId;
-    });
+    const nextId = validStored
+      ? validStored.id
+      : activeProjectId && projects.some((p) => p.id === activeProjectId)
+        ? activeProjectId
+        : projects[0]?.id ?? null;
+
+    setActiveProjectIdState(nextId);
 
     if (nextId != null) {
       setActiveProjectCookie(nextId);
     }
     setInitialized(true);
-  }, [initialized, queryLoading, projects]);
+  }, [initialized, queryLoading, projects, activeProjectId]);
 
   const isLoading = !hydrated || queryLoading || !initialized;
 
@@ -120,12 +104,4 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
   return (
     <ActiveProjectContext.Provider value={value}>{children}</ActiveProjectContext.Provider>
   );
-}
-
-export function useActiveProject() {
-  const ctx = useContext(ActiveProjectContext);
-  if (!ctx) {
-    throw new Error("useActiveProject must be used within ActiveProjectProvider");
-  }
-  return ctx;
 }

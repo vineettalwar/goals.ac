@@ -2,7 +2,7 @@
 
 import type { LucideIcon } from "lucide-react";
 import { cardSurfaceClass, type MarketingSurface } from "@/lib/marketing/site/marketing-surfaces";
-import { useMarketingSurface } from "@/lib/marketing/site/marketing-theme";
+import { useMarketingSurface } from "@/lib/marketing/site/use-marketing-theme";
 
 export type FeatureItem = {
   icon: LucideIcon;

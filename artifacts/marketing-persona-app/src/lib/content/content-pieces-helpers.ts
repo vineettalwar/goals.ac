@@ -14,16 +14,16 @@ import {
   buildCacheKey,
   type BrandContext,
   type ContentGenerationContext,
-} from "@workspace/content-engine/content-studio-generator";
-import { decryptCmsCredentials, type CmsIntegrationCredentials } from "@workspace/content-engine/support/cms-integrations";
-import { getDefaultOutputMode } from "@workspace/content-engine/support/platform-output-modes";
-import { resolveDefaultIntendedPlatform } from "@workspace/content-engine/support/intended-destination";
-import { parsePublishingSettings } from "@workspace/content-engine/support/publishing-settings";
-import { loadBrandContextForProject } from "@workspace/content-engine/support/brand-context-loader";
-import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor-generation-context";
-import { normalizeCompetitorUrl } from "@workspace/content-engine/support/competitor-url";
-import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
-import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
+} from "@workspace/content-engine/content/content-studio-generator";
+import { decryptCmsCredentials, type CmsIntegrationCredentials } from "@workspace/content-engine/support/publishing/cms-integrations";
+import { getDefaultOutputMode } from "@workspace/content-engine/support/publishing/platform-output-modes";
+import { resolveDefaultIntendedPlatform } from "@workspace/content-engine/support/publishing/intended-destination";
+import { parsePublishingSettings } from "@workspace/content-engine/support/publishing/publishing-settings";
+import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
+import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor/competitor-generation-context";
+import { normalizeCompetitorUrl } from "@workspace/content-engine/support/competitor/competitor-url";
+import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
 import type { AiProviderOptions } from "@workspace/ai-providers";
 import { z } from "zod";
 
@@ -158,7 +158,7 @@ export async function loadExistingPieceTitles(projectId: number): Promise<string
     .where(eq(contentPiecesTable.websiteProjectId, projectId))
     .orderBy(desc(contentPiecesTable.createdAt))
     .limit(20);
-  return rows.map((row) => row.title).filter(Boolean);
+  return rows.flatMap((row) => (row.title ? [row.title] : []));
 }
 
 export async function loadGenerationContext(

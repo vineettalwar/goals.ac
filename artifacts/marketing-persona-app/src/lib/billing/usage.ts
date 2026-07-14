@@ -1,7 +1,7 @@
 import { db } from "@workspace/db";
 import { usageEventsTable, usersTable, companiesTable, websiteProjectsTable, organizationsTable, organizationMembersTable } from "@workspace/db/schema";
 import { and, eq, gte, sql } from "drizzle-orm";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import {
   checkCountQuota,
   normalizePlanId,
@@ -218,9 +218,8 @@ export async function getUsageSummaryForUser(userId: number): Promise<UsageSumma
 
   const plan = normalizePlanId(membership?.plan ?? user?.plan);
   const usesByok = Boolean(orgSettings?.encryptedGeminiKey);
-  const quota = await resolvePlanArticleQuota(plan);
-
-  const [articlesThisMonth, byokSpendThisMonthUsd] = await Promise.all([
+  const [quota, articlesThisMonth, byokSpendThisMonthUsd] = await Promise.all([
+    resolvePlanArticleQuota(plan),
     getMonthlyArticleCountForUser(userId),
     getMonthlyByokSpendUsd(userId),
   ]);

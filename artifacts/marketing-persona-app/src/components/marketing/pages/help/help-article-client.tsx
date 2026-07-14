@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, Server, Share2 } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
 import { PageHero } from "@/components/marketing/heroes/page-hero";
-import { HelpArticleBody } from "@/components/marketing/pages/help-article-body";
+import { HelpArticleBody } from "@/components/marketing/pages/help/help-article-body";
 import type { HelpArticle, HelpCategory } from "@/lib/marketing/content/help-articles";
 import { HELP_ARTICLES } from "@/lib/marketing/content/help-articles";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";

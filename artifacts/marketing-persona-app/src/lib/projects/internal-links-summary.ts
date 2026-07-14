@@ -1,7 +1,7 @@
 import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { countInternalLinks } from "@workspace/content-engine/content-piece-seo";
+import { countInternalLinks } from "@workspace/content-engine/content/content-piece-seo";
 
 export type ProjectInternalLinkSummary = {
   coverageScore: number;

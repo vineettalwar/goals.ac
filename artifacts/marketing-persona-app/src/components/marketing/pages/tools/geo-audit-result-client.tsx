@@ -94,8 +94,8 @@ export function GeoAuditResultClient({
         <GeoAuditWriteNext recommendations={recommendations} projectId={projectId} />
 
         <div className="space-y-3">
-          {issues.map((issue, i) => (
-            <div key={i} className={`${glassCard} p-5 space-y-2`}>
+          {issues.map((issue) => (
+            <div key={issue.check} className={`${glassCard} p-5 space-y-2`}>
               <div className="flex items-center gap-2">
                 {STATUS_ICONS[issue.status]}
                 <h3 className="font-medium text-sm text-white">{issue.check}</h3>

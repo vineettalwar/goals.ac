@@ -4,6 +4,7 @@ import { MarketingPageShell } from "@/components/marketing/layout/marketing-page
 import { PageHero } from "@/components/marketing/heroes/page-hero";
 import { MarketingCTA } from "@/components/marketing/sections/marketing-cta";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
+import { sanitizeHtml } from "@/lib/security/sanitize-html";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
 const glassCard = cardSurfaceClass("glass", false);
@@ -25,7 +26,7 @@ export function SeoArticleClient({
   wordCount,
   createdAt,
 }: SeoArticleClientProps) {
-  const dateStr = new Date(createdAt).toLocaleDateString("en-GB", {
+  const dateStr = new Date(createdAt).toLocaleDateString("en-GB", { timeZone: "UTC", 
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -51,7 +52,7 @@ export function SeoArticleClient({
       <article className="max-w-3xl mx-auto px-6 py-12">
         <div
           className={`${glassCard} p-8 marketing-prose-dark max-w-none leading-relaxed`}
-          dangerouslySetInnerHTML={{ __html: content }}
+          dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
         />
       </article>
 

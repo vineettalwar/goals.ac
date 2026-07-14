@@ -32,8 +32,8 @@ export function LearnPostClient({ post }: { post: LearnPost }) {
           <ArrowLeft className="h-4 w-4" /> All guides
         </Link>
         <article className={`${glassCard} p-8 marketing-prose-dark max-w-3xl mx-auto`}>
-          {paragraphs.map((para, i) => (
-            <p key={i} className="text-white/65 leading-relaxed mb-4 whitespace-pre-wrap">
+          {paragraphs.map((para) => (
+            <p key={para.slice(0, 64)} className="text-white/65 leading-relaxed mb-4 whitespace-pre-wrap">
               {para.split(/(\*\*[^*]+\*\*)/g).map((part, j) =>
                 part.startsWith("**") && part.endsWith("**") ? (
                   <strong key={j} className="text-white font-semibold">{part.slice(2, -2)}</strong>

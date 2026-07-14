@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { LazyMotion, domAnimation, m } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
 import { HeroPhotoBg } from "../heroes/hero-photo-bg";
@@ -33,6 +33,7 @@ export function DarkCTABand({
   const line1 = titleLine1 ?? title ?? "";
 
   return (
+    <LazyMotion features={domAnimation} strict>
     <section className="py-24 relative overflow-hidden text-white bg-black border-t border-white/10">
       {backgroundImage && <HeroPhotoBg image={backgroundImage} overlayClass="bg-black/60" />}
 
@@ -48,7 +49,7 @@ export function DarkCTABand({
         </div>
 
         {children && (
-          <motion.div
+          <m.div
             variants={staggerContainer}
             initial="hidden"
             whileInView="visible"
@@ -56,11 +57,11 @@ export function DarkCTABand({
             className="mb-12"
           >
             {children}
-          </motion.div>
+          </m.div>
         )}
 
         {(primaryCta || secondaryCta) && (
-          <motion.div
+          <m.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
@@ -81,9 +82,10 @@ export function DarkCTABand({
                 {secondaryCta.label}
               </Link>
             )}
-          </motion.div>
+          </m.div>
         )}
       </div>
     </section>
+    </LazyMotion>
   );
 }

@@ -8,4 +8,4 @@ export {
   RATE_LIMITS,
   getClientIp,
   type RateLimitResult,
-} from "@workspace/content-engine/rate-limit";
+} from "@workspace/content-engine/core/rate-limit";

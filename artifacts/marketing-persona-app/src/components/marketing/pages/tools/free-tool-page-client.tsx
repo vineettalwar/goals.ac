@@ -98,17 +98,17 @@ export function FreeToolPageClient({ slug }: { slug: FreeToolSlug }) {
         <div className="grid md:grid-cols-2 gap-6">
           {otherTools.map((other) => (
             <Link key={other.slug} href={freeToolPath(other.slug)} className={`${glassCardHover} p-6 block group`}>
-              <h3 className="font-semibold text-white group-hover:text-primary transition-colors">{other.title}</h3>
+              <h3 className="font-semibold text-white group-hover:text-(--accent-warm) transition-colors">{other.title}</h3>
               <p className="text-sm text-white/65 mt-1">{other.shortDesc}</p>
-              <span className="inline-flex items-center gap-1 text-xs text-primary mt-3">
+              <span className="inline-flex items-center gap-1 text-xs text-(--accent-warm) mt-3">
                 Open tool <ArrowRight className="h-3 w-3" />
               </span>
             </Link>
           ))}
           <Link href="/free-tools" className={`${glassCardHover} p-6 block group`}>
-            <h3 className="font-semibold text-white group-hover:text-primary transition-colors">All free tools</h3>
+            <h3 className="font-semibold text-white group-hover:text-(--accent-warm) transition-colors">All free tools</h3>
             <p className="text-sm text-white/65 mt-1">GEO audit, article quality score, and every checker in one place.</p>
-            <span className="inline-flex items-center gap-1 text-xs text-primary mt-3">
+            <span className="inline-flex items-center gap-1 text-xs text-(--accent-warm) mt-3">
               Browse tools <ArrowRight className="h-3 w-3" />
             </span>
           </Link>

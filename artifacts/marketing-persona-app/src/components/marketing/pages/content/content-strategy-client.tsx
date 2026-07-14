@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { FileText, Calendar } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
@@ -47,52 +46,11 @@ function groupByWeek(items: ContentItem[]): Record<number, ContentItem[]> {
   }, {});
 }
 
-export function ContentStrategyClient({ id }: { id: string }) {
-  const [strategy, setStrategy] = useState<ContentStrategy | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch(`/api/content-strategies/${id}`)
-      .then((r) => r.json())
-      .then((data) => setStrategy(data.strategy ?? data))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  if (loading) {
-    return (
-      <MarketingPageShell
-        hero={
-          <PageHero
-            badge="Content Strategy"
-            titleLine1="Loading"
-            titleLine2="your plan…"
-            backgroundImage={HERO_IMAGES.contentStrategy.hero}
-          />
-        }
-      >
-        <div className="flex items-center justify-center p-16 text-white/65">
-          Loading strategy…
-        </div>
-      </MarketingPageShell>
-    );
-  }
-
-  if (!strategy) {
-    return (
-      <MarketingPageShell
-        hero={
-          <PageHero
-            badge="Content Strategy"
-            titleLine1="Strategy"
-            titleLine2="not found"
-            backgroundImage={HERO_IMAGES.contentStrategy.hero}
-            ctas={[{ label: "Go home", href: "/", variant: "primary" }]}
-          />
-        }
-      />
-    );
-  }
-
+export function ContentStrategyClient({
+  strategy,
+}: {
+  strategy: ContentStrategy;
+}) {
   const byWeek = groupByWeek(strategy.items ?? []);
   const monthLabel = MONTH_NAMES[(strategy.month ?? 1) - 1];
 

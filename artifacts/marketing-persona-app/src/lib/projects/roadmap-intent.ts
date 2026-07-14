@@ -42,12 +42,16 @@ export function postOnboardingRedirect(): string {
   return readRoadmapIntent() ? GROWTH_ROADMAPS_PATH : "/dashboard";
 }
 
-export function resolvePostLoginRedirect(nextParam?: string | null): string {
-  if (nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//")) {
-    return nextParam;
+export function sanitizeRedirectPath(path: string | null | undefined): string | null {
+  const trimmed = path?.trim();
+  if (trimmed && trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+    return trimmed;
   }
-  if (readRoadmapIntent()) return GROWTH_ROADMAPS_PATH;
-  return "/dashboard";
+  return null;
+}
+
+export function resolvePostLoginRedirect(nextParam?: string | null): string {
+  return sanitizeRedirectPath(nextParam) ?? (readRoadmapIntent() ? GROWTH_ROADMAPS_PATH : "/dashboard");
 }
 
 export function buildAuthRedirectParams(referrer?: string): URLSearchParams {

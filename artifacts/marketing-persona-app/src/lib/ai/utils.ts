@@ -3,4 +3,4 @@ export {
   extractJsonBlock,
   normalizePagePath,
   sanitizeJsonControlChars,
-} from "@workspace/content-engine/utils";
+} from "@workspace/content-engine/core/utils";

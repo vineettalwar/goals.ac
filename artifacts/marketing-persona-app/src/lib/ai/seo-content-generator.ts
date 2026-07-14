@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/seo-content-generator";
+export * from "@workspace/content-engine/content/seo-content-generator";

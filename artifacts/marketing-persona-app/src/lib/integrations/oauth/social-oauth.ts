@@ -14,11 +14,11 @@ import { fetchMetaPages, type MetaPageInfo, exchangeMetaLongLivedToken } from "@
 import {
   decryptCmsCredentials,
   type CmsIntegrationCredentials,
-} from "@workspace/content-engine/support/cms-integrations";
+} from "@workspace/content-engine/support/publishing/cms-integrations";
 import {
   generatePkce,
   saveProjectCreds,
-} from "@workspace/content-engine/support/social-tokens";
+} from "@workspace/content-engine/support/social/social-tokens";
 import { assertSocialPublishingEnabled } from "../../platform/platform-settings";
 
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;

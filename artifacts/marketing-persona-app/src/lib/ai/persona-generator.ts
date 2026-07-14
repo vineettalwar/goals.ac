@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/persona-generator";
+export * from "@workspace/content-engine/strategy/persona-generator";

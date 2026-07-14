@@ -119,32 +119,40 @@ export async function assertPlatformEnabled(): Promise<void> {
 }
 
 export async function assertGoogleIntegrationsEnabled(): Promise<void> {
-  const { googleIntegrationsAvailable } = await import("./platform-features");
-  const settings = await getPlatformSettings();
+  const [{ googleIntegrationsAvailable }, settings] = await Promise.all([
+    import("./platform-features"),
+    getPlatformSettings(),
+  ]);
   if (!googleIntegrationsAvailable(settings)) {
     throw new Error("Google integrations are disabled on this platform.");
   }
 }
 
 export async function assertBingWebmasterEnabled(): Promise<void> {
-  const { bingWebmasterAvailable } = await import("./platform-features");
-  const settings = await getPlatformSettings();
+  const [{ bingWebmasterAvailable }, settings] = await Promise.all([
+    import("./platform-features"),
+    getPlatformSettings(),
+  ]);
   if (!bingWebmasterAvailable(settings)) {
     throw new Error("Bing Webmaster integration is disabled on this platform.");
   }
 }
 
 export async function assertSocialPublishingEnabled(): Promise<void> {
-  const { socialPublishingAvailable } = await import("./platform-features");
-  const settings = await getPlatformSettings();
+  const [{ socialPublishingAvailable }, settings] = await Promise.all([
+    import("./platform-features"),
+    getPlatformSettings(),
+  ]);
   if (!socialPublishingAvailable(settings)) {
     throw new Error("Social publishing is disabled on this platform.");
   }
 }
 
 export async function assertEmailDeliveryEnabled(): Promise<void> {
-  const { hasPlatformResendApiKey } = await import("@workspace/billing");
-  const settings = await getPlatformSettings();
+  const [{ hasPlatformResendApiKey }, settings] = await Promise.all([
+    import("@workspace/billing"),
+    getPlatformSettings(),
+  ]);
   if (!settings.emailEnabled) {
     throw new Error("Transactional email is disabled on this platform.");
   }

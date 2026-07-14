@@ -190,22 +190,22 @@ export async function listGa4PropertiesForConnection(
   accessToken: string,
 ): Promise<Ga4PropertySummary[]> {
   const accountSummaries = await listAccountSummaries(accessToken);
-  const properties: Ga4PropertySummary[] = [];
+  const propertySummaries = accountSummaries.flatMap((account) =>
+    (account.propertySummaries ?? []).flatMap((summary) =>
+      summary.property ? [{ summary, property: summary.property }] : [],
+    ),
+  );
 
-  for (const account of accountSummaries) {
-    for (const summary of account.propertySummaries ?? []) {
-      if (!summary.property) continue;
-      const { streamId, streamUri } = await listWebDataStream(accessToken, summary.property);
-      properties.push({
-        propertyId: summary.property,
-        propertyName: summary.displayName ?? summary.property,
+  return Promise.all(
+    propertySummaries.map(({ summary, property }) =>
+      listWebDataStream(accessToken, property).then(({ streamId, streamUri }) => ({
+        propertyId: property,
+        propertyName: summary.displayName ?? property,
         streamId,
         streamUri,
-      });
-    }
-  }
-
-  return properties;
+      })),
+    ),
+  );
 }
 
 export function rankProperties(projectUrl: string, properties: Ga4PropertySummary[]) {

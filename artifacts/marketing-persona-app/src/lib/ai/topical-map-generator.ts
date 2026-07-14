@@ -1,1 +1,1 @@
-export * from "@workspace/content-engine/topical-map-generator";
+export * from "@workspace/content-engine/strategy/topical-map-generator";

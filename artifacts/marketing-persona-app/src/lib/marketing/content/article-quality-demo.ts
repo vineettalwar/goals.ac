@@ -1,4 +1,4 @@
-import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
+import { scoreArticleQuality } from "@workspace/content-engine/articles/article-quality-score";
 
 /** Sample article for public quality score demo (B2B SaaS GEO topic). */
 export const ARTICLE_QUALITY_DEMO = {

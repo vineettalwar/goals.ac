@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 import { EditorialHeading } from "./editorial-heading";
 import { HeroPhotoBg } from "../heroes/hero-photo-bg";
@@ -97,6 +97,7 @@ export function MarketingSection({
   );
 
   return (
+    <LazyMotion features={domAnimation} strict>
     <section
       id={id}
       className={`${resolvedClassName}${bordered && variant !== "paper" ? " border-t border-white/10" : bordered && variant === "paper" ? " border-t border-border" : ""}`}
@@ -114,7 +115,7 @@ export function MarketingSection({
 
       <div className="relative z-20 max-w-5xl mx-auto px-6">
         {animate && !useEditorial && !prefersReducedMotion ? (
-          <motion.div
+          <m.div
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-80px" }}
@@ -122,15 +123,12 @@ export function MarketingSection({
             transition={fadeUpTransition}
           >
             {body}
-          </motion.div>
+          </m.div>
         ) : (
           body
         )}
       </div>
     </section>
+    </LazyMotion>
   );
-}
-
-export function marketingSectionSurface(variant: MarketingSectionVariant): "paper" | "glass" {
-  return variant === "paper" ? "paper" : "glass";
 }

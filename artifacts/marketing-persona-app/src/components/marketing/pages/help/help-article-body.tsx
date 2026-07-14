@@ -155,9 +155,9 @@ function HelpSectionHeading({ text }: { text: string }) {
 function OrderedSteps({ items }: { items: string[] }) {
   return (
     <ol className="space-y-3 mb-8">
-      {items.map((item, i) => (
+      {items.map((item) => (
         <li
-          key={i}
+          key={item}
           className="flex gap-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3.5 transition-colors hover:bg-muted/50"
         >
           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">
@@ -181,8 +181,8 @@ function BulletList({ items, variant = "default" }: { items: string[]; variant?:
           : "pl-1"
       }`}
     >
-      {items.map((item, i) => (
-        <li key={i} className="flex gap-3 text-[15px] leading-relaxed text-foreground/90">
+      {items.map((item) => (
+        <li key={item} className="flex gap-3 text-[15px] leading-relaxed text-foreground/90">
           <span
             className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${
               isNotes ? "bg-amber-500" : "bg-primary"
@@ -204,14 +204,14 @@ export function HelpArticleBody({ body }: { body: string }) {
       {blocks.map((block, i) => {
         if (block.type === "heading") {
           sectionHeading = block.text;
-          return <HelpSectionHeading key={i} text={block.text} />;
+          return <HelpSectionHeading key={`heading-${block.text}`} text={block.text} />;
         }
 
         if (block.type === "paragraph") {
           const isLead = i === 0;
           return (
             <p
-              key={i}
+              key={`paragraph-${block.text.slice(0, 48)}`}
               className={`leading-relaxed whitespace-pre-wrap ${
                 isLead
                   ? "text-lg text-foreground/90 mb-8 pb-8 border-b border-border/60"
@@ -224,13 +224,13 @@ export function HelpArticleBody({ body }: { body: string }) {
         }
 
         if (block.type === "ordered-list") {
-          return <OrderedSteps key={i} items={block.items} />;
+          return <OrderedSteps key={`ordered-${block.items.join("|").slice(0, 48)}`} items={block.items} />;
         }
 
         if (block.type === "unordered-list") {
           return (
             <BulletList
-              key={i}
+              key={`unordered-${block.items.join("|").slice(0, 48)}`}
               items={block.items}
               variant={sectionHeading && isNotesSection(sectionHeading) ? "notes" : "default"}
             />
@@ -239,7 +239,7 @@ export function HelpArticleBody({ body }: { body: string }) {
 
         return (
           <pre
-            key={i}
+            key={`code-${block.text.slice(0, 48)}`}
             className="mb-8 overflow-x-auto rounded-xl border border-border/60 bg-muted/50 p-4 font-mono text-sm text-foreground"
           >
             {block.text}

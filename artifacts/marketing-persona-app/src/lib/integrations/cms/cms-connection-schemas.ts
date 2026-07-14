@@ -3,7 +3,7 @@ import {
   getDefaultOutputMode,
   getOutputModes,
   outputModeLabel,
-} from "@workspace/content-engine/support/platform-output-modes";
+} from "@workspace/content-engine/support/publishing/platform-output-modes";
 
 export type ConnectionFieldType = "text" | "password" | "url" | "number" | "select";
 

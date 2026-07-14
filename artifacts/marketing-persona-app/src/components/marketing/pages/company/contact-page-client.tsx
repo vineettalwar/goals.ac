@@ -79,6 +79,7 @@ export function ContactPageClient() {
                 src={CALENDLY_EMBED_SRC}
                 title="Book a demo with goals.ac"
                 className="w-full min-h-[630px] border-0"
+                sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
               />
             </div>
 

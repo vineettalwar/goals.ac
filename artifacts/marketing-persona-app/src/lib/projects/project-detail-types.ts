@@ -1,4 +1,4 @@
-import type { BrandExtract, Confidence } from "@workspace/content-engine/brand-extract-types";
+import type { BrandExtract, Confidence } from "@workspace/content-engine/brand/brand-extract-types";
 
 export type { Confidence };
 

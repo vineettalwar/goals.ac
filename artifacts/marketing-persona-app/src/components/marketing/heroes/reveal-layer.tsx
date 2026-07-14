@@ -13,6 +13,14 @@ type RevealLayerProps = {
 
 const ENHANCE_FILTER = "brightness(1.15) saturate(1.35) contrast(1.08)";
 
+function computeRevealEnabled(): boolean {
+  if (typeof window === "undefined") return false;
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+  const narrow = window.innerWidth < 768;
+  return !reducedMotion && !coarsePointer && !narrow;
+}
+
 export function RevealLayer({
   image,
   cursorX,
@@ -23,14 +31,7 @@ export function RevealLayer({
 }: RevealLayerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const revealRef = useRef<HTMLDivElement>(null);
-  const [enabled, setEnabled] = useState(true);
-
-  useEffect(() => {
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
-    const narrow = window.innerWidth < 768;
-    setEnabled(!reducedMotion && !coarsePointer && !narrow);
-  }, []);
+  const [enabled] = useState(computeRevealEnabled);
 
   useEffect(() => {
     if (!enabled) return;
