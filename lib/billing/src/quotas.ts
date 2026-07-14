@@ -1,4 +1,4 @@
-import { db } from "@workspace/db";
+import { db, countAsInt } from "@workspace/db";
 import { usageEventsTable } from "@workspace/db/schema";
 import { and, eq, gte, inArray, sql } from "drizzle-orm";
 import type { PlanId } from "./plans";
@@ -46,7 +46,7 @@ function startOfCurrentMonth(): Date {
 export async function getMonthlyArticleCountForCompany(companyId: number): Promise<number> {
   const monthStart = startOfCurrentMonth();
   const [row] = await db
-    .select({ count: sql<number>`count(*)::int` })
+    .select({ count: countAsInt() })
     .from(usageEventsTable)
     .where(
       and(
@@ -61,7 +61,7 @@ export async function getMonthlyArticleCountForCompany(companyId: number): Promi
 export async function getMonthlyArticleCountForUser(userId: number): Promise<number> {
   const monthStart = startOfCurrentMonth();
   const [row] = await db
-    .select({ count: sql<number>`count(*)::int` })
+    .select({ count: countAsInt() })
     .from(usageEventsTable)
     .where(
       and(
@@ -76,7 +76,7 @@ export async function getMonthlyArticleCountForUser(userId: number): Promise<num
 export async function getMonthlyRoadmapCountForUser(userId: number): Promise<number> {
   const monthStart = startOfCurrentMonth();
   const [row] = await db
-    .select({ count: sql<number>`count(*)::int` })
+    .select({ count: countAsInt() })
     .from(usageEventsTable)
     .where(
       and(

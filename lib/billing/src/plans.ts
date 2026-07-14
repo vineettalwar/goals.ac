@@ -58,10 +58,14 @@ export function isStripeBillingConfigured(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
 }
 
-/** Monthly credit grants per plan — null = no platform credits (BYOK / TBD). */
+/**
+ * Monthly platform-key credit grants on Stripe renewal (invoice.paid).
+ * null = no grant (Starter is free/BYOK; Scale is sales-assisted).
+ * Growth: 500 credits ≈ ~70 execution-tier drafts at platform-key rates (7 credits each).
+ */
 export const PLAN_MONTHLY_CREDITS: Record<PlanId, number | null> = {
   starter: null,
-  growth: null,
+  growth: 500,
   scale: null,
 };
 
@@ -81,9 +85,8 @@ export interface PlanQuotaLimits {
  * from `plan_quota_config` via `plan-quota-config.ts`.
  */
 export const DEFAULT_PLAN_QUOTA_LIMITS: Record<PlanId, PlanQuotaLimits> = {
-  /** Consulting-led: no article cap — clients use BYOK; platform key is unmetered by count. */
-  starter: { articles: null, roadmaps: 3, sites: 1 },
-  growth: { articles: null, roadmaps: 12, sites: 3 },
+  starter: { articles: 5, roadmaps: 3, sites: 1 },
+  growth: { articles: 30, roadmaps: 12, sites: 3 },
   scale: { articles: null, roadmaps: null, sites: null },
 };
 

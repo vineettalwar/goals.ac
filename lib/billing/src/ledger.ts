@@ -1,11 +1,11 @@
 import { and, eq, sql } from "drizzle-orm";
-import { db, creditLedgerTable } from "@workspace/db";
-
-const UNIQUE_VIOLATION = "23505";
-
-function isUniqueViolation(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: unknown }).code === UNIQUE_VIOLATION;
-}
+import {
+  db,
+  creditLedgerTable,
+  advisoryXactLock,
+  isUniqueConstraintError,
+  jsonTextAt,
+} from "@workspace/db";
 
 /** Sum of all ledger rows for a workspace — there is no stored balance, it is always derived. */
 export async function getBalance(workspaceId: number): Promise<number> {
@@ -40,7 +40,7 @@ export async function reserveCredits({
       // per-workspace transaction-scoped advisory lock serializes the
       // check-then-insert critical section instead — concurrent reservations for
       // the same workspace queue up rather than both reading a stale balance.
-      await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`credit_ledger:${workspaceId}`}))`);
+      await advisoryXactLock(tx, `credit_ledger:${workspaceId}`);
 
       const [row] = await tx
         .select({ total: sql<string>`coalesce(sum(${creditLedgerTable.amount}), 0)` })
@@ -63,7 +63,7 @@ export async function reserveCredits({
       return { ok: true } as const;
     });
   } catch (err) {
-    if (isUniqueViolation(err)) {
+    if (isUniqueConstraintError(err)) {
       // The unique index on runId already rejected a duplicate insert — this is
       // a retried/duplicate call for a reservation that already landed, so treat
       // it as an idempotent replay rather than an error.
@@ -101,7 +101,7 @@ export async function settleReservationLines({
   const totalActual = lines.reduce((sum, line) => sum + line.actualAmount, 0);
 
   await db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`credit_ledger:${runId}`}))`);
+    await advisoryXactLock(tx, `credit_ledger:${runId}`);
 
     const [reservation] = await tx
       .select()
@@ -118,7 +118,7 @@ export async function settleReservationLines({
       .from(creditLedgerTable)
       .where(
         and(
-          sql`${creditLedgerTable.meta} ->> 'reservationRunId' = ${runId}`,
+          eq(jsonTextAt(creditLedgerTable.meta, "reservationRunId"), runId),
           sql`${creditLedgerTable.entryType} in ('model_consumption', 'orchestration')`,
         ),
       )
@@ -180,7 +180,7 @@ export interface ReleaseReservationInput {
 
 export async function releaseReservation({ runId, reason }: ReleaseReservationInput): Promise<void> {
   await db.transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`credit_ledger:${runId}`}))`);
+    await advisoryXactLock(tx, `credit_ledger:${runId}`);
 
     const [reservation] = await tx
       .select()
@@ -197,7 +197,7 @@ export async function releaseReservation({ runId, reason }: ReleaseReservationIn
     const [existing] = await tx
       .select({ id: creditLedgerTable.id })
       .from(creditLedgerTable)
-      .where(sql`${creditLedgerTable.meta} ->> 'reservationRunId' = ${runId}`)
+      .where(eq(jsonTextAt(creditLedgerTable.meta, "reservationRunId"), runId))
       .limit(1);
 
     if (existing) return;

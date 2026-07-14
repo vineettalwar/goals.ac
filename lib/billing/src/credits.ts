@@ -1,5 +1,5 @@
-import { and, eq, sql } from "drizzle-orm";
-import { db, creditLedgerTable } from "@workspace/db";
+import { and, eq } from "drizzle-orm";
+import { db, creditLedgerTable, jsonTextAt } from "@workspace/db";
 import { grantCredits } from "./ledger";
 import { listCreditTopUpPacks, type CreditTopUpPack } from "./credit-topup-packs";
 import { getMonthlyCreditsForPlan, type PlanId } from "./plans";
@@ -37,7 +37,7 @@ export async function grantRenewalCreditsForOrganization(
       and(
         eq(creditLedgerTable.workspaceId, workspaceId),
         eq(creditLedgerTable.entryType, "grant"),
-        sql`${creditLedgerTable.meta} ->> 'stripeInvoiceId' = ${input.stripeInvoiceId}`,
+        eq(jsonTextAt(creditLedgerTable.meta, "stripeInvoiceId"), input.stripeInvoiceId),
       ),
     )
     .limit(1);
@@ -88,7 +88,7 @@ export async function grantTopUpCreditsForOrganization(
       and(
         eq(creditLedgerTable.workspaceId, workspaceId),
         eq(creditLedgerTable.entryType, "grant"),
-        sql`${creditLedgerTable.meta} ->> 'stripeCheckoutSessionId' = ${input.stripeCheckoutSessionId}`,
+        eq(jsonTextAt(creditLedgerTable.meta, "stripeCheckoutSessionId"), input.stripeCheckoutSessionId),
       ),
     )
     .limit(1);
