@@ -1,66 +1,57 @@
 "use client";
 
-import { type RefObject } from "react";
-import gsap from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { useGSAP } from "@gsap/react";
-
-gsap.registerPlugin(ScrollTrigger, useGSAP);
+import { type RefObject, useEffect } from "react";
 
 function prefersReducedMotion() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function revealElements(scope: HTMLElement, selector: string) {
+  const elements = scope.querySelectorAll<HTMLElement>(selector);
+  elements.forEach((element, index) => {
+    element.style.transitionDelay = `${index * 80}ms`;
+    element.classList.add("scroll-reveal-visible");
+  });
 }
 
 export function useMarketingScrollReveal(
   scopeRef: RefObject<HTMLElement | null>,
   selector: string = ".scroll-reveal",
 ) {
-  useGSAP(
-    () => {
-      if (prefersReducedMotion()) return;
-      const scope = scopeRef.current;
-      if (!scope) return;
+  useEffect(() => {
+    const scope = scopeRef.current;
+    if (!scope) return;
 
-      gsap.from(selector, {
-        opacity: 0,
-        y: 28,
-        duration: 0.65,
-        stagger: 0.08,
-        ease: "power2.out",
-        scrollTrigger: {
-          trigger: scope,
-          start: "top 82%",
-          once: true,
-        },
-      });
-    },
-    { scope: scopeRef },
-  );
+    const elements = scope.querySelectorAll<HTMLElement>(selector);
+    if (!elements.length) return;
+
+    if (prefersReducedMotion()) {
+      revealElements(scope, selector);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const target = entry.target as HTMLElement;
+          target.classList.add("scroll-reveal-visible");
+          observer.unobserve(target);
+        });
+      },
+      { rootMargin: "0px 0px -18% 0px", threshold: 0.01 },
+    );
+
+    elements.forEach((element) => observer.observe(element));
+    return () => observer.disconnect();
+  }, [scopeRef, selector]);
 }
 
+/** Reserved for hero parallax — no-op without GSAP to keep marketing bundles lean. */
 export function useMarketingParallax(
-  scopeRef: RefObject<HTMLElement | null>,
-  bgRef: RefObject<HTMLElement | null>,
-  yPercent = 18,
+  _scopeRef: RefObject<HTMLElement | null>,
+  _bgRef: RefObject<HTMLElement | null>,
+  _yPercent = 18,
 ) {
-  useGSAP(
-    () => {
-      if (prefersReducedMotion()) return;
-      const scope = scopeRef.current;
-      const bg = bgRef.current;
-      if (!scope || !bg) return;
-
-      gsap.to(bg, {
-        yPercent,
-        ease: "none",
-        scrollTrigger: {
-          trigger: scope,
-          start: "top bottom",
-          end: "bottom top",
-          scrub: true,
-        },
-      });
-    },
-    { scope: scopeRef },
-  );
+  // Intentionally empty: parallax is not used on current marketing routes.
 }

@@ -11,6 +11,8 @@ import {
   saveRoadmapIntent,
 } from "@/lib/projects/roadmap-intent";
 import { useRoadmapFormOptions } from "@/lib/queries";
+import { publicApiUrl } from "@/lib/marketing/site/public-api";
+import { goToSignup } from "@/lib/marketing/site/marketing-contact";
 
 const STAGES = [
   { value: "pre-seed", label: "Pre-Seed" },
@@ -53,7 +55,7 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
     setIsSubmitting(true);
 
     try {
-      const res = await fetch("/api/roadmaps/generate", {
+      const res = await fetch(publicApiUrl("/api/roadmaps/generate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ industry, location, stage }),
@@ -61,7 +63,7 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
 
       if (res.status === 401) {
         saveRoadmapIntent({ industry, location, stage, referrer });
-        router.push(`/signup?${buildAuthRedirectParams(referrer).toString()}`);
+        goToSignup(router, buildAuthRedirectParams(referrer).toString());
         return;
       }
 

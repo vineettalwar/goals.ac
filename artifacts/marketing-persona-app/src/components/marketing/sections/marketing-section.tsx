@@ -1,10 +1,9 @@
 "use client";
 
-import { LazyMotion, domAnimation, m, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 import { EditorialHeading } from "./editorial-heading";
 import { HeroPhotoBg } from "../heroes/hero-photo-bg";
-import { fadeUp, fadeUpTransition } from "@/lib/utils/motion";
+import { MarketingReveal } from "@/components/marketing/motion/marketing-reveal";
 
 export type MarketingSectionVariant = "paper" | "image" | "dark";
 
@@ -49,7 +48,6 @@ export function MarketingSection({
   bridgeBottom = false,
   id,
 }: MarketingSectionProps) {
-  const prefersReducedMotion = useReducedMotion();
   const isDarkTheme = variant === "image" || variant === "dark";
   const resolvedClassName = className ?? variantClasses[variant];
   const useEditorial = Boolean(titleLine1 || titleLine2);
@@ -97,7 +95,6 @@ export function MarketingSection({
   );
 
   return (
-    <LazyMotion features={domAnimation} strict>
     <section
       id={id}
       className={`${resolvedClassName}${bordered && variant !== "paper" ? " border-t border-white/10" : bordered && variant === "paper" ? " border-t border-border" : ""}`}
@@ -114,21 +111,12 @@ export function MarketingSection({
       )}
 
       <div className="relative z-20 max-w-5xl mx-auto px-6">
-        {animate && !useEditorial && !prefersReducedMotion ? (
-          <m.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-80px" }}
-            variants={fadeUp}
-            transition={fadeUpTransition}
-          >
-            {body}
-          </m.div>
+        {animate && !useEditorial ? (
+          <MarketingReveal>{body}</MarketingReveal>
         ) : (
           body
         )}
       </div>
     </section>
-    </LazyMotion>
   );
 }

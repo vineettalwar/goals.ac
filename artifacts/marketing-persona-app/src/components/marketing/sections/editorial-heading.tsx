@@ -1,7 +1,6 @@
 "use client";
 
-import { LazyMotion, domAnimation, m } from "framer-motion";
-import { fadeUp, fadeUpTransition } from "@/lib/utils/motion";
+import { MarketingReveal } from "@/components/marketing/motion/marketing-reveal";
 
 type EditorialHeadingProps = {
   line1: string;
@@ -74,17 +73,5 @@ export function EditorialHeading({
 
   if (!animate) return content;
 
-  return (
-    <LazyMotion features={domAnimation} strict>
-      <m.div
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, margin: "-80px" }}
-        variants={fadeUp}
-        transition={fadeUpTransition}
-      >
-        {content}
-      </m.div>
-    </LazyMotion>
-  );
+  return <MarketingReveal>{content}</MarketingReveal>;
 }

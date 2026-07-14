@@ -1,8 +1,8 @@
 "use client";
 
 import type { ReactNode, RefObject } from "react";
-import { LazyMotion, domAnimation, m } from "framer-motion";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
+import { MarketingReveal } from "@/components/marketing/motion/marketing-reveal";
 
 type HeroOverlapShellProps = {
   id?: string;
@@ -18,16 +18,13 @@ export function HeroOverlapShell({ id, children, sectionRef }: HeroOverlapShellP
       className="py-0 bg-transparent relative z-20 -mt-4 sm:-mt-8"
     >
       <div className="max-w-3xl mx-auto px-6">
-        <LazyMotion features={domAnimation} strict>
-          <m.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.55, delay: 0.15, ease: [0.25, 0.1, 0.25, 1] }}
-            className={`${cardSurfaceClass("glass")} overflow-hidden shadow-2xl shadow-black/40`}
-          >
-            {children}
-          </m.div>
-        </LazyMotion>
+        <MarketingReveal
+          mode="mount"
+          delayMs={150}
+          className={`${cardSurfaceClass("glass")} overflow-hidden shadow-2xl shadow-black/40`}
+        >
+          {children}
+        </MarketingReveal>
       </div>
     </section>
   );

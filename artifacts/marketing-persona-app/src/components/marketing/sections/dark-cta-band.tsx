@@ -1,11 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { LazyMotion, domAnimation, m } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
 import { HeroPhotoBg } from "../heroes/hero-photo-bg";
-import { fadeUp, fadeUpTransition, staggerContainer } from "@/lib/utils/motion";
+import { MarketingReveal } from "@/components/marketing/motion/marketing-reveal";
 
 type DarkCTABandProps = {
   badge?: string;
@@ -33,7 +32,6 @@ export function DarkCTABand({
   const line1 = titleLine1 ?? title ?? "";
 
   return (
-    <LazyMotion features={domAnimation} strict>
     <section className="py-24 relative overflow-hidden text-white bg-black border-t border-white/10">
       {backgroundImage && <HeroPhotoBg image={backgroundImage} overlayClass="bg-black/60" />}
 
@@ -48,27 +46,10 @@ export function DarkCTABand({
           />
         </div>
 
-        {children && (
-          <m.div
-            variants={staggerContainer}
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            className="mb-12"
-          >
-            {children}
-          </m.div>
-        )}
+        {children && <MarketingReveal className="mb-12">{children}</MarketingReveal>}
 
         {(primaryCta || secondaryCta) && (
-          <m.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={fadeUp}
-            transition={fadeUpTransition}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
-          >
+          <MarketingReveal className="flex flex-col sm:flex-row items-center justify-center gap-4">
             {primaryCta && (
               <Link href={primaryCta.href} className="hero-cta-primary inline-flex items-center">
                 {primaryCta.label} <ArrowRight className="ml-2 h-4 w-4" />
@@ -82,10 +63,9 @@ export function DarkCTABand({
                 {secondaryCta.label}
               </Link>
             )}
-          </m.div>
+          </MarketingReveal>
         )}
       </div>
     </section>
-    </LazyMotion>
   );
 }

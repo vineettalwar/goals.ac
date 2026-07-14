@@ -11,7 +11,7 @@ const SPOTLIGHT_R = 260;
 function ctaButtonClass(variant: HeroCta["variant"]) {
   return variant === "ghost"
     ? "border border-white/30 bg-white/10 text-white hover:bg-white/20 text-sm font-medium px-7 py-3 rounded-full transition-all"
-    : "bg-(--accent-warm) hover:bg-(--accent-warm-hover) text-white text-sm font-medium px-7 py-3 rounded-full transition-all hover:scale-[1.03] active:scale-95 hover:shadow-lg hover:shadow-(--accent-warm)/30";
+    : "bg-(--accent-warm) hover:bg-(--accent-warm-hover) text-(--accent-warm-foreground) text-sm font-medium px-7 py-3 rounded-full transition-all hover:scale-[1.03] active:scale-95 hover:shadow-lg hover:shadow-(--accent-warm)/30";
 }
 
 function renderHeroCta(cta: HeroCta, key: string) {
@@ -21,6 +21,13 @@ function renderHeroCta(cta: HeroCta, key: string) {
       <button key={key} type="button" onClick={cta.onClick} className={className}>
         {cta.label}
       </button>
+    );
+  }
+  if (cta.href?.startsWith("http://") || cta.href?.startsWith("https://")) {
+    return (
+      <a key={key} href={cta.href} className={className}>
+        {cta.label}
+      </a>
     );
   }
   if (cta.href?.startsWith("#")) {

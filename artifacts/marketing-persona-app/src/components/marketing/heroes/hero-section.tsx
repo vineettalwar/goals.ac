@@ -2,6 +2,7 @@
 
 import { PageHero } from "./page-hero";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
+import { SIGNUP_HREF } from "@/lib/marketing/site/marketing-contact";
 
 export function HeroSection() {
   return (
@@ -16,7 +17,7 @@ export function HeroSection() {
       spotlightImage={HERO_IMAGES.home.spotlight}
       enableSpotlight
       ctas={[
-        { label: "Start creating", href: "/signup", variant: "primary" },
+        { label: "Start creating", href: SIGNUP_HREF, variant: "primary" },
         { label: "Run free GEO audit", href: "/geo-audit", variant: "ghost" },
       ]}
     />
