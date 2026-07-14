@@ -5,108 +5,43 @@ import { fileURLToPath } from "node:url";
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 const monorepoRoot = path.resolve(appDir, "../..");
 
-const securityHeaders = [
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
-  {
-    key: "X-Frame-Options",
-    value: "DENY",
-  },
-  {
-    key: "X-Content-Type-Options",
-    value: "nosniff",
-  },
-  {
-    key: "Referrer-Policy",
-    value: "strict-origin-when-cross-origin",
-  },
-  {
-    key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=()",
-  },
-];
-
 const nextConfig: NextConfig = {
-  output: "standalone",
-  // Cloudflare Workers bundle: avoid sharp native bindings; use unoptimized images or CF Images.
-  images: {
-    unoptimized: process.env.CF_BUILD === "1",
-    remotePatterns: [
-      { protocol: "https", hostname: "images.unsplash.com" },
-      { protocol: "https", hostname: "images.pexels.com" },
-      { protocol: "https", hostname: "images.higgs.ai" },
-    ],
-  },
-  serverExternalPackages: ["pg", "pg-cloudflare"],
-  experimental: {
-    staleTimes: {
-      dynamic: 30,
-      static: 180,
-    },
-    optimizePackageImports: [
-      "lucide-react",
-      "recharts",
-      "framer-motion",
-      "@radix-ui/react-icons",
-    ],
+  output: "export",
+  distDir: ".marketing-out",
+  trailingSlash: true,
+  images: { unoptimized: true },
+  env: {
+    MARKETING_STATIC: "1",
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "https://api.goals.ac",
   },
   turbopack: {
     root: monorepoRoot,
-    // Turbopack resolves workspace packages from lib/* via the app’s
-    // node_modules; explicit aliases keep @workspace/jobs reachable when
-    // imported from nested packages like @workspace/content-engine.
     resolveAlias: {
+      "@workspace/cf-edge": "lib/cf-edge/src/index.ts",
+      "@workspace/cf-edge/http-mode": "lib/cf-edge/src/http-mode.ts",
       "@workspace/jobs": "lib/jobs/src/index.ts",
       "@workspace/jobs/boss": "lib/jobs/src/boss.ts",
       "@workspace/jobs/queues": "lib/jobs/src/queues.ts",
       "@workspace/deepl": "lib/deepl/src/index.ts",
-      ...(process.env.CF_BUILD === "1"
-        ? { sharp: "./sharp-stub.js" }
-        : {}),
+      sharp: "./sharp-stub.js",
     },
   },
-  transpilePackages: ["@workspace/db", "@workspace/billing", "@workspace/integrations-gemini-ai", "@workspace/security", "@workspace/ai-providers", "@workspace/connectors", "@workspace/content-engine", "@workspace/deepl", "@workspace/jobs", "@workspace/media", "@workspace/seo-tools", "@workspace/serp-provider"],
-  webpack: (config) => {
-    if (process.env.CF_BUILD === "1") {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        sharp: path.join(appDir, "sharp-stub.js"),
-      };
-    }
-    return config;
-  },
-  async redirects() {
-    return [
-      { source: "/agent", destination: "/projects", permanent: true },
-      { source: "/autopilot", destination: "/projects", permanent: true },
-      { source: "/autopilot/:path*", destination: "/projects", permanent: true },
-      { source: "/growth-roadmaps", destination: "/strategy/roadmaps", permanent: true },
-      { source: "/content-strategies", destination: "/strategy/calendar", permanent: true },
-      { source: "/topical-map", destination: "/strategy/topical-map", permanent: true },
-      { source: "/goals", destination: "/strategy/goals", permanent: true },
-      { source: "/keyword-tracking", destination: "/search/keywords", permanent: true },
-      { source: "/search/suggestions", destination: "/search/keywords?tab=ideas", permanent: true },
-      { source: "/ai-visibility", destination: "/search/visibility", permanent: true },
-      { source: "/internal-links", destination: "/search/site", permanent: true },
-      { source: "/competitor-analysis", destination: "/research/competitors", permanent: true },
-      { source: "/reddit-discovery", destination: "/research/reddit", permanent: true },
-      { source: "/search/geo-audit", destination: "/audit", permanent: true },
-      { source: "/search/geo-audit/:id", destination: "/audit/:id", permanent: true },
-    ];
-  },
-  async headers() {
-    return [
-      {
-        source: "/:path*",
-        headers: securityHeaders,
-      },
-    ];
-  },
+  transpilePackages: [
+    "@workspace/cf-edge",
+    "@workspace/db",
+    "@workspace/billing",
+    "@workspace/security",
+    "@workspace/ai-providers",
+    "@workspace/connectors",
+    "@workspace/content-engine",
+    "@workspace/deepl",
+    "@workspace/jobs",
+    "@workspace/media",
+    "@workspace/seo-tools",
+    "@workspace/serp-provider",
+  ],
 };
 
-export default nextConfig;
+// Redirects for static export live in artifacts/marketing-pages/public/_redirects
 
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
-initOpenNextCloudflareForDev();
+export default nextConfig;

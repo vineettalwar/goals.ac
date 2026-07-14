@@ -5,6 +5,12 @@ import { seoArticlesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { SeoArticleClient } from "@/components/marketing/pages/content/seo-article-client";
 
+export function generateStaticParams() {
+  return [{ id: "0" }];
+}
+
+export const dynamicParams = false;
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const numericId = parseInt(id, 10);

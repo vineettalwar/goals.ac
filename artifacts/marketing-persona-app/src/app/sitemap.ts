@@ -43,6 +43,8 @@ const STATIC_PATHS = [
   "/compare/ai-seo-tools",
 ] as const;
 
+export const dynamic = "force-static";
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = getSiteUrl();
   const now = new Date();

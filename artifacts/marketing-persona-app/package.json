@@ -9,8 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit --incremental false",
     "cf:build": "CF_BUILD=1 sh -c 'pnpm run build && node ../../scripts/patch-turbopack-externals.mjs && opennextjs-cloudflare build -- --skipNextBuild'",
     "cf:preview": "CF_BUILD=1 sh -c 'pnpm run cf:build && opennextjs-cloudflare preview'",
-    "cf:deploy": "CF_BUILD=1 sh -c 'pnpm run cf:build && opennextjs-cloudflare deploy -- --keep-vars --skipNextBuild'",
-    "cf:upload": "CF_BUILD=1 sh -c 'pnpm run cf:build && opennextjs-cloudflare upload -- --keep-vars --skipNextBuild'",
+    "cf:deploy": "echo 'ERROR: goals-ac monolith Worker is retired (Free tier). Use pnpm run cf:edge:deploy from repo root.' >&2; exit 1",
     "cf:typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
   },
   "dependencies": {
@@ -32,6 +31,7 @@
     "@tanstack/react-query": "catalog:",
     "@workspace/ai-providers": "workspace:*",
     "@workspace/billing": "workspace:*",
+    "@workspace/cf-edge": "workspace:*",
     "@workspace/connectors": "workspace:*",
     "@workspace/content-engine": "workspace:*",
     "@workspace/db": "workspace:*",

@@ -5,6 +5,12 @@ import { contentItemsTable, contentStrategiesTable } from "@workspace/db/schema"
 import { eq } from "drizzle-orm";
 import { ContentStrategyClient } from "@/components/marketing/pages/content/content-strategy-client";
 
+export function generateStaticParams() {
+  return [{ id: "0" }];
+}
+
+export const dynamicParams = false;
+
 export async function generateMetadata({
   params,
 }: {

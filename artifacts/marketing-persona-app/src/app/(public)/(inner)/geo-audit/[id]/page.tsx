@@ -6,6 +6,12 @@ import { eq } from "drizzle-orm";
 import { GeoAuditResultClient } from "@/components/marketing/pages/tools/geo-audit-result-client";
 import type { GeoIssue } from "@/components/geo-audit/geo-audit-result-view";
 
+export function generateStaticParams() {
+  return [{ id: "0" }];
+}
+
+export const dynamicParams = false;
+
 export async function generateMetadata({
   params,
 }: {

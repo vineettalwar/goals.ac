@@ -27,6 +27,9 @@ export const metadata: Metadata = {
 };
 
 async function loadShowcaseArticle(): Promise<ShowcaseArticle | null> {
+  if (process.env.MARKETING_STATIC === "1") {
+    return null;
+  }
   try {
     const [article] = await db
       .select({

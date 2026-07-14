@@ -2,6 +2,8 @@ import { LEARN_POSTS } from "@/lib/marketing/content/learn-posts";
 import { HELP_ARTICLES } from "@/lib/marketing/content/help-articles";
 import { getSiteUrl } from "@/lib/marketing/site/site-url";
 
+export const dynamic = "force-static";
+
 export function GET() {
   const base = getSiteUrl();
 
