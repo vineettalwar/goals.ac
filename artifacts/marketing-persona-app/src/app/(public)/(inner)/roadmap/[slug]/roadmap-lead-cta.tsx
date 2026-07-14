@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Headphones } from "lucide-react";
 import { LeadCaptureModal } from "@/components/shared/lead-capture-modal";
+import { signupHref } from "@/lib/marketing/site/app-url";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
 const glassCard = cardSurfaceClass("glass", false);
@@ -19,7 +20,11 @@ export function RoadmapLeadCTA({ slug }: { slug: string }) {
           Sign in to generate a version grounded in your brand scan, or talk to us about hands-on strategy.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link href="/signup?next=/strategy/roadmaps" className="hero-cta-primary inline-flex items-center gap-2">
+          <Link
+            href={signupHref("next=/strategy/roadmaps")}
+            prefetch={false}
+            className="hero-cta-primary inline-flex items-center gap-2"
+          >
             Generate for my business <ArrowRight className="h-4 w-4" />
           </Link>
           <button type="button"

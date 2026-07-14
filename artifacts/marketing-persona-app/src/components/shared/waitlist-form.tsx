@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { publicApiUrl } from "@/lib/marketing/site/public-api";
 
 type WaitlistFormProps = {
   featureKey: string;
@@ -22,13 +22,15 @@ export function WaitlistForm({
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isDark = variant === "dark";
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!email.trim()) return;
     setLoading(true);
-    const res = await fetch("/api/waitlist", {
+    setError(null);
+    const res = await fetch(publicApiUrl("/api/waitlist"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: email.trim(), featureKey }),
@@ -36,11 +38,10 @@ export function WaitlistForm({
     setLoading(false);
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      toast.error(data.error ?? "Could not join waitlist");
+      setError(data.error ?? "Could not join waitlist");
       return;
     }
     setDone(true);
-    toast.success("You're on the list — we'll notify you when it's ready.");
   }
 
   if (done) {
@@ -52,8 +53,14 @@ export function WaitlistForm({
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2 max-w-md">
-      <Input
+    <div className="max-w-md space-y-2">
+      {error && (
+        <p className={cn("text-sm", isDark ? "text-red-300" : "text-destructive")} role="alert">
+          {error}
+        </p>
+      )}
+      <form onSubmit={submit} className="flex flex-col sm:flex-row gap-2">
+        <Input
         type="email"
         required
         placeholder={placeholder}
@@ -68,6 +75,7 @@ export function WaitlistForm({
       >
         {loading ? "Joining…" : buttonLabel}
       </Button>
-    </form>
+      </form>
+    </div>
   );
 }

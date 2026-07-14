@@ -7,6 +7,7 @@ import type {
   ProjectSummary,
   TrackedKeyword,
 } from "./types";
+import { publicApiUrl } from "@/lib/marketing/site/public-api";
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -179,7 +180,10 @@ export async function fetchCompetitorContext(projectId: string) {
 }
 
 export async function fetchRoadmapFormOptions() {
-  const [indRes, locRes] = await Promise.all([fetch("/api/industries"), fetch("/api/locations")]);
+  const [indRes, locRes] = await Promise.all([
+    fetch(publicApiUrl("/api/industries")),
+    fetch(publicApiUrl("/api/locations")),
+  ]);
   if (!indRes.ok || !locRes.ok) throw new Error("Failed to load form options");
   const [ind, loc] = await Promise.all([indRes.json(), locRes.json()]);
   return {

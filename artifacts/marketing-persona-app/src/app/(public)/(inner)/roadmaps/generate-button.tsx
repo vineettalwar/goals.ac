@@ -11,6 +11,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { buildAuthRedirectParams, saveRoadmapIntent } from "@/lib/projects/roadmap-intent";
 
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
+import { goToSignup } from "@/lib/marketing/site/marketing-contact";
+import { publicApiUrl } from "@/lib/marketing/site/public-api";
 
 const glassCard = cardSurfaceClass("glass", false);
 
@@ -23,7 +25,7 @@ export function GenerateRoadmapButton() {
   async function handleGenerate() {
     if (!form.industry || !form.location) { toast.error("Industry and location are required"); return; }
     setGenerating(true);
-    const res = await fetch("/api/roadmaps/generate", {
+    const res = await fetch(publicApiUrl("/api/roadmaps/generate"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
@@ -37,7 +39,7 @@ export function GenerateRoadmapButton() {
         referrer: "roadmaps-catalog",
       });
       toast.info("Sign in to generate this roadmap. We'll pre-fill your selections.");
-      router.push(`/signup?${buildAuthRedirectParams("roadmaps-catalog").toString()}`);
+      goToSignup(router, buildAuthRedirectParams("roadmaps-catalog").toString());
       return;
     }
     if (!res.ok) {
