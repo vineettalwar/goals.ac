@@ -10,7 +10,7 @@ import {
   decryptCmsCredentials,
   encryptCmsCredentials,
   maskCmsCredentials,
-} from "@workspace/content-engine/support/cms-integrations";
+} from "@workspace/content-engine/support/publishing/cms-integrations";
 import { z } from "zod";
 
 const fieldMappingSchema = z.object({

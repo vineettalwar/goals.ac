@@ -8,7 +8,7 @@ import { requireProjectAccess } from "@/lib/projects/project-access";
 import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
 import {
   parseSheetUrlOrId,
-} from "@workspace/content-engine/article-ideas-import-service";
+} from "@workspace/content-engine/articles/article-ideas-import-service";
 
 const CreateSourceSchema = z.object({
   label: z.string().min(1),

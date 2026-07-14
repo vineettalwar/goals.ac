@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { repurposeContentPiece } from "@workspace/content-engine/content-studio-generator";
+import { repurposeContentPiece } from "@workspace/content-engine/content/content-studio-generator";
 import {
   assertPieceOwner,
   loadProjectBrand,

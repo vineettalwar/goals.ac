@@ -12,7 +12,7 @@ import {
   loadDeeplCredentialContextForProject,
   maskEncryptedDeeplApiKeyLastFour,
   resolveDeeplCredentialSource,
-} from "@workspace/content-engine/support/deepl-credentials";
+} from "@workspace/content-engine/support/integrations/deepl-credentials";
 import { resolveDeeplApiKey } from "@workspace/deepl";
 
 const DeeplCredentialBody = z.object({
@@ -100,13 +100,14 @@ export async function PATCH(
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  const body = await req.json().catch(() => null);
-
-  const [project] = await db
-    .select({ contentStyle: websiteProjectsTable.contentStyle })
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.id, projectId))
-    .limit(1);
+  const [body, [project]] = await Promise.all([
+    req.json().catch(() => null),
+    db
+      .select({ contentStyle: websiteProjectsTable.contentStyle })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, projectId))
+      .limit(1),
+  ]);
   if (!project) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }

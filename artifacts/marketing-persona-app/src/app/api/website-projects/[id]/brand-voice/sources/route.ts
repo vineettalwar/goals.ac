@@ -4,7 +4,7 @@ import { requireProjectAccess } from "@/lib/projects/project-access";
 import {
   getBrandVoiceSourceStats,
   listBrandVoiceSources,
-} from "@workspace/content-engine/brand-voice-indexer";
+} from "@workspace/content-engine/brand/brand-voice-indexer";
 
 export async function GET(
   _req: Request,

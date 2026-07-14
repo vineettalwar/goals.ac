@@ -4,7 +4,7 @@ import { requireProjectAccess } from "@/lib/projects/project-access";
 import {
   syncSocialPostMetrics,
   getSocialMetricsSyncStatus,
-} from "@workspace/content-engine/social-metrics-service";
+} from "@workspace/content-engine/social/social-metrics-service";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 

@@ -4,8 +4,8 @@ import { requireProjectAccess } from "@/lib/projects/project-access";
 import {
   syncGscSearchAnalytics,
   getGscSyncStatus,
-} from "@workspace/content-engine/gsc-search-analytics-service";
-import { discoverOpportunities } from "@workspace/content-engine/keyword-opportunity-service";
+} from "@workspace/content-engine/analytics/gsc-search-analytics-service";
+import { discoverOpportunities } from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 

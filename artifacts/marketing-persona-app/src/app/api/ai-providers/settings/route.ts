@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { resetAiProviderClient } from "@workspace/ai-providers";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { buildAiProviderStatus, enrichOllamaStatus, toAiProviderOptions } from "@/lib/platform/ai-providers-status";
 
 const PatchBody = z.object({

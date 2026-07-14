@@ -8,7 +8,7 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/org/org-access";
 import { encryptSecret } from "@workspace/security/encryption";
-import { maskStockCredentialLastFour } from "@workspace/content-engine/support/stock-credentials";
+import { maskStockCredentialLastFour } from "@workspace/content-engine/support/integrations/stock-credentials";
 import {
   getPlatformStockImageStatus,
   isStockProviderId,

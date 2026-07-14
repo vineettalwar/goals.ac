@@ -4,7 +4,7 @@ import { requireProjectAccess } from "@/lib/projects/project-access";
 import {
   syncSocialHistory,
   getSocialHistorySyncStatus,
-} from "@workspace/content-engine/social-history-sync-service";
+} from "@workspace/content-engine/social/social-history-sync-service";
 import { isValidSocialPlatform } from "@workspace/content-engine/platform-voice";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";

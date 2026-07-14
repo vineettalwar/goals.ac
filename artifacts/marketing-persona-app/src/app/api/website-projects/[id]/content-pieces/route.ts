@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import {
   generateContentPiece,
   cacheGet,
-} from "@workspace/content-engine/content-studio-generator";
+} from "@workspace/content-engine/content/content-studio-generator";
 import {
   GenerateBody,
   loadProjectBrand,
@@ -137,12 +137,13 @@ export async function POST(
     }
   }
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "execution",
     quotaKind: "article",
-  });
+  }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

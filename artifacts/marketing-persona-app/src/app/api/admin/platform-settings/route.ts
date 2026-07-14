@@ -39,12 +39,13 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const settings = await updatePlatformSettings({
-    ...parsed.data,
-    updatedBy: admin.userId!,
-  });
-
-  const { invalidatePlatformGatesCache } = await import("@workspace/billing");
+  const [settings, { invalidatePlatformGatesCache }] = await Promise.all([
+    updatePlatformSettings({
+      ...parsed.data,
+      updatedBy: admin.userId!,
+    }),
+    import("@workspace/billing"),
+  ]);
   invalidatePlatformGatesCache();
 
   const env = getIntegrationEnvStatus();

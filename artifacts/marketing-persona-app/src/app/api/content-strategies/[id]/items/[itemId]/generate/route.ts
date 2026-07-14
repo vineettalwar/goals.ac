@@ -4,9 +4,9 @@ import { contentStrategiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/org/org-access";
-import { generateFromContentItem } from "@workspace/content-engine/autopilot-orchestrator";
-import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
-import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
+import { generateFromContentItem } from "@workspace/content-engine/strategy/autopilot-orchestrator";
+import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { enqueue, QUEUES } from "@workspace/jobs";
 
@@ -51,15 +51,15 @@ export async function POST(
     return NextResponse.json({ queued: true, contentItemId: itemId }, { status: 202 });
   }
 
-  const [userApiKey, aiProviderOptions] = await Promise.all([
+  const [userApiKey, aiProviderOptions, billingPrep] = await Promise.all([
     getDecryptedUserGeminiKey(userId!),
     getUserAiProviderOptions(userId!),
+    prepareAiBilling({
+      userId: userId!,
+      tier: "execution",
+      quotaKind: "article",
+    }),
   ]);
-  const billingPrep = await prepareAiBilling({
-    userId: userId!,
-    tier: "execution",
-    quotaKind: "article",
-  });
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

@@ -5,7 +5,7 @@ import {
   syncSocialPostMetrics,
   getSocialMetricsSyncStatus,
   getSocialPerformance,
-} from "@workspace/content-engine/social-metrics-service";
+} from "@workspace/content-engine/social/social-metrics-service";
 import { isValidSocialPlatform } from "@workspace/content-engine/platform-voice";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";

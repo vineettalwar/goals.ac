@@ -6,11 +6,11 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
 import { encryptSecret } from "@workspace/security/encryption";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import {
   getOrgEncryptedDeeplApiKey,
   maskEncryptedDeeplApiKeyLastFour,
-} from "@workspace/content-engine/support/deepl-credentials";
+} from "@workspace/content-engine/support/integrations/deepl-credentials";
 
 const DeeplCredentialBody = z.object({
   apiKey: z.string().min(16, "API key is too short"),

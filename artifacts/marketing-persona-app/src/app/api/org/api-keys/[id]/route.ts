@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { apiKeysTable } from "@workspace/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 
 export async function DELETE(
   _req: Request,

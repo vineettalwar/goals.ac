@@ -55,12 +55,13 @@ export async function POST(req: Request) {
       );
     }
 
-    const userAiSettings = await loadUserAiSettings(userId!);
-    const billingPrep = await prepareAiBilling({
+    const [userAiSettings, billingPrep] = await Promise.all([
+      loadUserAiSettings(userId!),
+      prepareAiBilling({
       userId: userId!,
       tier: "planning",
       quotaKind: "roadmap",
-    });
+    }),  ]);
     if (!billingPrep.ok) return billingPrep.response;
 
     let content;

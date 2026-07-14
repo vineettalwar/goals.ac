@@ -12,7 +12,7 @@ import {
   resolveAccessToken,
 } from "@/lib/integrations/analytics/analytics-property-client";
 
-export async function GET(
+export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {

@@ -3,9 +3,9 @@ import { db } from "@workspace/db";
 import { apiKeysTable, type ApiKeyScope } from "@workspace/db/schema";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { generateApiKey } from "@workspace/content-engine/support/api-key-auth";
+import { generateApiKey } from "@workspace/content-engine/support/auth/api-key-auth";
 import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 
 const CreateBody = z.object({
   name: z.string().min(1).max(120),

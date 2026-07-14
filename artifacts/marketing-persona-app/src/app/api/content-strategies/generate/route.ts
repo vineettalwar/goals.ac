@@ -62,12 +62,13 @@ export async function POST(req: Request) {
   const month = parsed.data.month ?? now.getMonth() + 1;
   const year = parsed.data.year ?? now.getFullYear();
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "strategy",
     quotaKind: "article",
-  });
+  }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

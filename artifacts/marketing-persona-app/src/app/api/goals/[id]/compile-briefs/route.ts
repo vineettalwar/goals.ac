@@ -4,7 +4,7 @@ import { briefsTable, goalsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/org/org-access";
-import { compileBriefsFromGoal } from "@workspace/content-engine/goal-brief-compiler";
+import { compileBriefsFromGoal } from "@workspace/content-engine/strategy/goal-brief-compiler";
 import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 
@@ -24,13 +24,14 @@ export async function POST(
   const access = await requireProjectAccess(goal.projectId, userId!);
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "planning",
     quotaKind: "article",
     companyId: goal.projectId,
-  });
+  }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

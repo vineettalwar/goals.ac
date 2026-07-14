@@ -7,11 +7,11 @@ import { z } from "zod";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
 import { encryptSecret } from "@workspace/security/encryption";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import {
   getOrgEncryptedStockCredentials,
   maskStockCredentialLastFour,
-} from "@workspace/content-engine/support/stock-credentials";
+} from "@workspace/content-engine/support/integrations/stock-credentials";
 import {
   getPlatformStockImageStatus,
   isStockProviderId,

@@ -4,8 +4,8 @@ import { Agent } from "@atproto/api";
 import {
   decryptCmsCredentials,
   type CmsIntegrationCredentials,
-} from "@workspace/content-engine/support/cms-integrations";
-import { saveProjectCreds } from "@workspace/content-engine/support/social-tokens";
+} from "@workspace/content-engine/support/publishing/cms-integrations";
+import { saveProjectCreds } from "@workspace/content-engine/support/social/social-tokens";
 import {
   completeBlueskyCallback,
   persistBlueskySession,

@@ -6,7 +6,7 @@ import {
   generateRoadmapStream,
   generateSlug,
 } from "@/lib/ai/roadmap-generator";
-import { loadRoadmapProjectContext } from "@workspace/content-engine/support/roadmap-project-context";
+import { loadRoadmapProjectContext } from "@workspace/content-engine/support/content/roadmap-project-context";
 import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
 import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { requireAuth } from "@/lib/auth/require-auth";
@@ -21,6 +21,12 @@ import {
   prepareAiBilling,
 } from "@/lib/billing/ai-billing";
 import { z } from "zod";
+
+const sseHeaders = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache",
+  Connection: "keep-alive",
+};
 
 const AUTH_REQUIRED_MESSAGE =
   "Sign in to generate a custom roadmap. Browse our free catalog for existing roadmaps.";
@@ -70,12 +76,6 @@ export async function POST(req: Request) {
     }
     validatedProjectId = projectId;
   }
-
-  const sseHeaders = {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
-  };
 
   const slug =
     validatedProjectId != null

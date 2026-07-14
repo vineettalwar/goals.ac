@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/org/org-access";
-import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor-generation-context";
+import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor/competitor-generation-context";
 import { db } from "@workspace/db";
 import { brandProfilesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
@@ -24,13 +24,14 @@ export async function GET(
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  const [brandProfile] = await db
-    .select({ industry: brandProfilesTable.industry })
-    .from(brandProfilesTable)
-    .where(eq(brandProfilesTable.websiteProjectId, projectId))
-    .limit(1);
-
-  const context = await loadCompetitorGenerationContext(projectId);
+  const [[brandProfile], context] = await Promise.all([
+    db
+      .select({ industry: brandProfilesTable.industry })
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, projectId))
+      .limit(1),
+    loadCompetitorGenerationContext(projectId),
+  ]);
 
   return NextResponse.json({
     competitorUrls: context.competitorUrls,

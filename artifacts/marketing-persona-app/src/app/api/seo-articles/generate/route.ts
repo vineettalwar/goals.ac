@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
 import { generateSeoArticleContent } from "@/lib/ai/seo-content-generator";
 import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
-import { loadBrandContextForProject } from "@workspace/content-engine/support/brand-context-loader";
+import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
@@ -55,12 +55,13 @@ export async function POST(req: Request) {
     projectBrand = (await loadBrandContextForProject(websiteProjectId)) ?? undefined;
   }
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "execution",
     quotaKind: "article",
-  });
+  }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

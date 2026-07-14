@@ -5,7 +5,7 @@ import type { PublishingSettings } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
-import { parsePublishingSettings } from "@workspace/content-engine/support/publishing-settings";
+import { parsePublishingSettings } from "@workspace/content-engine/support/publishing/publishing-settings";
 import { z } from "zod";
 
 const PublishingSettingsBody = z.object({

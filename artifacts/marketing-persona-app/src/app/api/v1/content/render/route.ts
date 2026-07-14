@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { decryptCmsCredentials } from "@workspace/content-engine/support/cms-integrations";
+import { decryptCmsCredentials } from "@workspace/content-engine/support/publishing/cms-integrations";
 import { renderContentForPlatform } from "@workspace/content-engine/adapters/render-service";
-import { resolveEntitlementsForOrg } from "@workspace/content-engine/support/resolve-publish-entitlements";
-import { assertProjectInOrg } from "@workspace/content-engine/support/api-key-auth";
+import { resolveEntitlementsForOrg } from "@workspace/content-engine/support/publishing/resolve-publish-entitlements";
+import { assertProjectInOrg } from "@workspace/content-engine/support/auth/api-key-auth";
 import { requireApiKeyScope, withPublicApiKey } from "@/lib/public-api/auth";
 
 export async function POST(req: Request) {

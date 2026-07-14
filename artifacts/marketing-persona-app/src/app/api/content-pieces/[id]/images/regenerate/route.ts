@@ -4,9 +4,9 @@ import { contentPiecesTable, websiteProjectsTable, brandProfilesTable } from "@w
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { assertPieceOwner } from "@/lib/content/content-pieces-helpers";
-import { enrichContentPieceImages, parseImageSettings } from "@workspace/content-engine/article-image-enricher";
-import { loadStockCredentialContextForProject } from "@workspace/content-engine/support/stock-credentials";
-import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
+import { enrichContentPieceImages, parseImageSettings } from "@workspace/content-engine/articles/article-image-enricher";
+import { loadStockCredentialContextForProject } from "@workspace/content-engine/support/integrations/stock-credentials";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import type { ContentStyle } from "@workspace/db/schema/website_projects";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 
@@ -25,17 +25,18 @@ export async function POST(
   if (ownerError === "not_found") return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (ownerError === "forbidden") return NextResponse.json({ error: "Access denied" }, { status: 403 });
 
-  const [project] = await db
-    .select({ contentStyle: websiteProjectsTable.contentStyle })
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.id, piece!.websiteProjectId))
-    .limit(1);
-
-  const [brand] = await db
-    .select({ companyName: brandProfilesTable.companyName })
-    .from(brandProfilesTable)
-    .where(eq(brandProfilesTable.websiteProjectId, piece!.websiteProjectId))
-    .limit(1);
+  const [[project], [brand]] = await Promise.all([
+    db
+      .select({ contentStyle: websiteProjectsTable.contentStyle })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, piece!.websiteProjectId))
+      .limit(1),
+    db
+      .select({ companyName: brandProfilesTable.companyName })
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, piece!.websiteProjectId))
+      .limit(1),
+  ]);
 
   const excludeImageIds =
     piece!.pieceMetadata?.images?.map((img) => `${img.provider}:${img.remoteId}`) ?? [];

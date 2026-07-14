@@ -221,16 +221,17 @@ export async function POST(req: Request) {
     }
   }
 
-  const queued: number[] = [];
-  for (const contentItemId of itemIds) {
-    await enqueue(QUEUES.contentGenerate, {
-      contentItemId,
-      projectId,
-      userId: userId!,
-      generateVariants: false,
-    });
-    queued.push(contentItemId);
-  }
+  const queued = await Promise.all(
+    itemIds.map(async (contentItemId) => {
+      await enqueue(QUEUES.contentGenerate, {
+        contentItemId,
+        projectId,
+        userId: userId!,
+        generateVariants: false,
+      });
+      return contentItemId;
+    }),
+  );
 
   await db
     .update(websiteProjectsTable)

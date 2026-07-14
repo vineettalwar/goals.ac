@@ -4,7 +4,7 @@ import { contentStrategiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
-import { parseAutopilotSettings, shouldAutoPublish } from "@workspace/content-engine/support/autopilot-scheduler";
+import { parseAutopilotSettings, shouldAutoPublish } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import { enqueue, QUEUES } from "@workspace/jobs";
 
 export async function POST(

@@ -3,13 +3,13 @@ import { db } from "@workspace/db";
 import { contentPiecesTable, CONTENT_FORMAT_TYPES } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { repurposeContentPiece } from "@workspace/content-engine/content-studio-generator";
+import { repurposeContentPiece } from "@workspace/content-engine/content/content-studio-generator";
 import {
   loadProjectBrand,
   loadUserAiSettings,
   wordCountFromMarkdown,
 } from "@/lib/content/content-pieces-helpers";
-import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor-generation-context";
+import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor/competitor-generation-context";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
@@ -47,12 +47,13 @@ export async function POST(
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "execution",
     quotaKind: "article",
-  });
+  }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

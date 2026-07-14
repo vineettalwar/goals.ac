@@ -5,7 +5,7 @@ import {
   type CmsIntegrationCredentials,
   decryptCmsCredentials,
   resolveWordPressConnectionType,
-} from "@workspace/content-engine/support/cms-integrations";
+} from "@workspace/content-engine/support/publishing/cms-integrations";
 import {
   type GoalsAcHealthResponse,
   parseAvailableOutputModes,

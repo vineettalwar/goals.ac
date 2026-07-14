@@ -4,7 +4,7 @@ import { keywordOpportunitiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
-import { queueOpportunityToStrategy } from "@workspace/content-engine/keyword-opportunity-service";
+import { queueOpportunityToStrategy } from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { z } from "zod";
 
 export async function POST(

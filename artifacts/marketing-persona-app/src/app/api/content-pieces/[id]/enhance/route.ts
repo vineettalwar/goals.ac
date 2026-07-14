@@ -4,9 +4,9 @@ import { contentPiecesTable } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { enhanceContentPiece } from "@workspace/content-engine/content-piece-enhance";
-import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand-voice-generation";
-import { isSeoLongformFormat } from "@workspace/content-engine/content-piece-seo";
+import { enhanceContentPiece } from "@workspace/content-engine/content/content-piece-enhance";
+import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand/brand-voice-generation";
+import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
 import {
   assertPieceOwner,
   loadProjectBrand,
@@ -54,14 +54,15 @@ export async function POST(
   const ctx = await loadProjectBrand(piece!.websiteProjectId, userId!);
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const existingPieceTitles = await loadExistingPieceTitles(piece!.websiteProjectId);
-
-  const billingPrep = await prepareAiBilling({
-    userId: userId!,
-    tier: "rapid",
-    quotaKind: "article",
-  });
+  const [{ userApiKey, aiProviderOptions }, existingPieceTitles, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    loadExistingPieceTitles(piece!.websiteProjectId),
+    prepareAiBilling({
+      userId: userId!,
+      tier: "rapid",
+      quotaKind: "article",
+    }),
+  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

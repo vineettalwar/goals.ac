@@ -8,7 +8,7 @@ import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
 import {
   getOrgAiSettingsForUser,
   hasOrgSemrushCredentials,
-} from "@workspace/content-engine/support/org-ai-settings";
+} from "@workspace/content-engine/support/ai/org-ai-settings";
 import { SEMRUSH_DATABASES, isSemrushDatabase } from "@workspace/keyword-research-provider";
 import { z } from "zod";
 

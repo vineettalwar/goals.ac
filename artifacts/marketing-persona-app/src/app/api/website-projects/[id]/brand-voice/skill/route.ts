@@ -7,7 +7,7 @@ import {
   getBrandVoiceSkill,
   regenerateBrandVoiceSkill,
   updateBrandVoiceSkill,
-} from "@workspace/content-engine/brand-voice-skill";
+} from "@workspace/content-engine/brand/brand-voice-skill";
 
 export async function GET(
   _req: Request,

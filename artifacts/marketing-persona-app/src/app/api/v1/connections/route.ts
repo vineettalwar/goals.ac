@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { decryptCmsCredentials } from "@workspace/content-engine/support/cms-integrations";
+import { decryptCmsCredentials } from "@workspace/content-engine/support/publishing/cms-integrations";
 import { getAdapterCapabilities, listAdaptedPlatforms } from "@workspace/content-engine/adapters/registry";
-import { assertProjectInOrg } from "@workspace/content-engine/support/api-key-auth";
+import { assertProjectInOrg } from "@workspace/content-engine/support/auth/api-key-auth";
 import { requireApiKeyScope, withPublicApiKey } from "@/lib/public-api/auth";
 
 export async function GET(req: Request) {

@@ -4,8 +4,8 @@ import { keywordOpportunitiesTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
-import { discoverOpportunities } from "@workspace/content-engine/keyword-opportunity-service";
-import { getDecryptedSemrushCredentialsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { discoverOpportunities } from "@workspace/content-engine/strategy/keyword-opportunity-service";
+import { getDecryptedSemrushCredentialsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 

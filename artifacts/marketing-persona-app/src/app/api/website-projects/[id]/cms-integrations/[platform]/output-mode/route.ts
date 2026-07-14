@@ -11,12 +11,12 @@ import {
   encryptCmsCredentials,
   isCmsIntegrationPlatformKey,
   maskCmsCredentials,
-} from "@workspace/content-engine/support/cms-integrations";
+} from "@workspace/content-engine/support/publishing/cms-integrations";
 import {
   assertOutputModeAllowed,
   getOutputModes,
-} from "@workspace/content-engine/support/platform-output-modes";
-import { resolveEntitlementsForProject } from "@workspace/content-engine/support/resolve-publish-entitlements";
+} from "@workspace/content-engine/support/publishing/platform-output-modes";
+import { resolveEntitlementsForProject } from "@workspace/content-engine/support/publishing/resolve-publish-entitlements";
 
 const OutputModeBody = z.object({
   outputMode: z.string().min(1),

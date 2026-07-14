@@ -25,22 +25,23 @@ export async function GET(req: Request) {
   const access = await requireProjectAccess(parsed.data.projectId, userId!);
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
-  const [project] = await db
-    .select()
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.id, parsed.data.projectId))
-    .limit(1);
-
-  const pieces = await db
-    .select({
-      id: contentPiecesTable.id,
-      title: contentPiecesTable.title,
-      status: contentPiecesTable.status,
-      pieceMetadata: contentPiecesTable.pieceMetadata,
-    })
-    .from(contentPiecesTable)
-    .where(eq(contentPiecesTable.websiteProjectId, parsed.data.projectId))
-    .limit(50);
+  const [[project], pieces] = await Promise.all([
+    db
+      .select()
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, parsed.data.projectId))
+      .limit(1),
+    db
+      .select({
+        id: contentPiecesTable.id,
+        title: contentPiecesTable.title,
+        status: contentPiecesTable.status,
+        pieceMetadata: contentPiecesTable.pieceMetadata,
+      })
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.websiteProjectId, parsed.data.projectId))
+      .limit(50),
+  ]);
 
   type PageNode = { id: string; title: string; slug: string; inbound: number; outbound: number; status: string };
   const pages: PageNode[] = [];

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
 import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { z } from "zod";
 
 const schema = z.object({ key: z.string().min(1) });

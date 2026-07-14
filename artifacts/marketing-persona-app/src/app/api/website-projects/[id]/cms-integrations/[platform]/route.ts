@@ -9,7 +9,7 @@ import {
   decryptCmsCredentials,
   encryptCmsCredentials,
   isCmsIntegrationPlatformKey,
-} from "@workspace/content-engine/support/cms-integrations";
+} from "@workspace/content-engine/support/publishing/cms-integrations";
 
 export async function DELETE(
   _req: Request,

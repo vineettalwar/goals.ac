@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
-import { persistSitemapCrawl } from "@workspace/content-engine/support/brand-scan-context";
+import { persistSitemapCrawl } from "@workspace/content-engine/support/brand/brand-scan-context";
 
 export async function POST(
   _req: Request,

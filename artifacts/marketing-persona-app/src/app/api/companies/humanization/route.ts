@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { companiesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { syncCompanyHumanizationToProject } from "@workspace/content-engine/support/brand-context-loader";
+import { syncCompanyHumanizationToProject } from "@workspace/content-engine/support/brand/brand-context-loader";
 import { z } from "zod";
 
 const schema = z.object({

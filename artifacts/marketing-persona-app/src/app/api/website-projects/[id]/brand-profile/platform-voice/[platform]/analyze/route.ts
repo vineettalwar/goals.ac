@@ -3,8 +3,8 @@ import { brandProfilesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
-import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
-import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
+import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
 import {
@@ -49,16 +49,15 @@ export async function POST(
     .limit(1);
   if (!brandProfile) return Response.json({ error: "Brand profile not found" }, { status: 404 });
 
-  const [userApiKey, aiProviderOptions] = await Promise.all([
+  const [userApiKey, aiProviderOptions, billingPrep] = await Promise.all([
     getDecryptedUserGeminiKey(userId!),
     getUserAiProviderOptions(userId!),
+    prepareAiBilling({
+      userId: userId!,
+      tier: "planning",
+      quotaKind: "article",
+    }),
   ]);
-
-  const billingPrep = await prepareAiBilling({
-    userId: userId!,
-    tier: "planning",
-    quotaKind: "article",
-  });
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

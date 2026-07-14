@@ -8,7 +8,7 @@ import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
 import {
   insertArticleIdeas,
   listArticleIdeaImports,
-} from "@workspace/content-engine/article-ideas-import-service";
+} from "@workspace/content-engine/articles/article-ideas-import-service";
 
 const ManualIdeaSchema = z.object({
   keyword: z.string().min(1),

@@ -34,13 +34,14 @@ export async function POST(req: Request) {
 
   if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "planning",
     quotaKind: "article",
     companyId: company.id,
-  });
+  }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

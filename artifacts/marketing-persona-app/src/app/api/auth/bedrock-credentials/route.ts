@@ -8,7 +8,7 @@ import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
 import {
   getOrgAiSettingsForUser,
   hasOrgBedrockCredentials,
-} from "@workspace/content-engine/support/org-ai-settings";
+} from "@workspace/content-engine/support/ai/org-ai-settings";
 import { resetAiProviderClient } from "@workspace/ai-providers";
 import { z } from "zod";
 

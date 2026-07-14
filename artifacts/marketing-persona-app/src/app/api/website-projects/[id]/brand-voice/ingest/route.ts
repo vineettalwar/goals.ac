@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
-import { ingestBrandVoiceDocuments } from "@workspace/content-engine/brand-voice-indexer";
+import { ingestBrandVoiceDocuments } from "@workspace/content-engine/brand/brand-voice-indexer";
 
 const MAX_TEXT_BYTES = 2 * 1024 * 1024;
 const MAX_FILES = 10;

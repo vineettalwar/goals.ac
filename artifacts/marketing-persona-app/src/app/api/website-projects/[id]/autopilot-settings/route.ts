@@ -5,7 +5,7 @@ import type { AutopilotSettings } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
-import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot-scheduler";
+import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import { z } from "zod";
 
 const AutopilotSettingsBody = z.object({

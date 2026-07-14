@@ -17,16 +17,17 @@ export async function GET() {
   const { userId, session, error } = await requireAuth({ skipMfaCheck: true });
   if (error) return error;
 
-  const [user] = await db
-    .select({
-      mfaEnabled: usersTable.mfaEnabled,
-      email: usersTable.email,
-    })
-    .from(usersTable)
-    .where(eq(usersTable.id, userId!))
-    .limit(1);
-
-  const membership = await getOrgMembership(userId!);
+  const [[user], membership] = await Promise.all([
+    db
+      .select({
+        mfaEnabled: usersTable.mfaEnabled,
+        email: usersTable.email,
+      })
+      .from(usersTable)
+      .where(eq(usersTable.id, userId!))
+      .limit(1),
+    getOrgMembership(userId!),
+  ]);
 
   return NextResponse.json({
     enabled: Boolean(user?.mfaEnabled),

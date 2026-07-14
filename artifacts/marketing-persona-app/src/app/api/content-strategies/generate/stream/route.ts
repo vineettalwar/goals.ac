@@ -15,6 +15,12 @@ import {
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
 
+const sseHeaders = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache",
+  Connection: "keep-alive",
+};
+
 const GenerateBody = z.object({
   roadmapId: z.number().int().positive(),
   websiteProjectId: z.number().int().positive().optional(),
@@ -78,21 +84,16 @@ export async function POST(req: Request) {
   const month = parsed.data.month ?? now.getMonth() + 1;
   const year = parsed.data.year ?? now.getFullYear();
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "strategy",
     quotaKind: "article",
-  });
+  }),  ]);
   if (!billingPrep.ok) {
     return billingDeniedResponse(billingPrep);
   }
-
-  const sseHeaders = {
-    "Content-Type": "text/event-stream",
-    "Cache-Control": "no-cache",
-    "Connection": "keep-alive",
-  };
 
   return new Response(
     new ReadableStream({

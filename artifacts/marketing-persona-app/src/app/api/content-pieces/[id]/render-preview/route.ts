@@ -5,9 +5,9 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { assertPieceOwner } from "@/lib/content/content-pieces-helpers";
-import { decryptCmsCredentials } from "@workspace/content-engine/support/cms-integrations";
+import { decryptCmsCredentials } from "@workspace/content-engine/support/publishing/cms-integrations";
 import { renderContentForPlatform } from "@workspace/content-engine/adapters/render-service";
-import { resolveEntitlementsForProject } from "@workspace/content-engine/support/resolve-publish-entitlements";
+import { resolveEntitlementsForProject } from "@workspace/content-engine/support/publishing/resolve-publish-entitlements";
 
 const PreviewBody = z.object({
   platform: z.string().min(1),

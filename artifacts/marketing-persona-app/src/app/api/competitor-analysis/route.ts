@@ -37,12 +37,13 @@ export async function POST(req: Request) {
     if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "planning",
     quotaKind: "article",
-  });
+  }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

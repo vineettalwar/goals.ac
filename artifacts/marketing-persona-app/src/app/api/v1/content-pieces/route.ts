@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { buildCanonicalContent } from "@workspace/content-engine/canonical-content";
-import { assertProjectInOrg } from "@workspace/content-engine/support/api-key-auth";
+import { buildCanonicalContent } from "@workspace/content-engine/content/canonical-content";
+import { assertProjectInOrg } from "@workspace/content-engine/support/auth/api-key-auth";
 import { requireApiKeyScope, withPublicApiKey } from "@/lib/public-api/auth";
 
 export async function POST(req: Request) {

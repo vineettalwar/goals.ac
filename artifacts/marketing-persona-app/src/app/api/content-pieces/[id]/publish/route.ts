@@ -11,21 +11,21 @@ import {
   SOCIAL_PLATFORMS,
   type CmsIntegrationCredentials,
   type SocialPlatform,
-} from "@workspace/content-engine/support/cms-integrations";
+} from "@workspace/content-engine/support/publishing/cms-integrations";
 import {
   isSocialPlatform,
   publishPieceToSocial,
-} from "@workspace/content-engine/support/social-publish";
+} from "@workspace/content-engine/support/social/social-publish";
 import { publishPieceToDestination,
-} from "@workspace/content-engine/support/publish-destination";
-import { resolveEntitlementsForProject } from "@workspace/content-engine/support/resolve-publish-entitlements";
-import { withPublishRecord } from "@workspace/content-engine/support/publish-records";
-import { publishPieceToWordPress } from "@workspace/content-engine/support/cms-publish";
-import { featuredImageFromMetadata } from "@workspace/content-engine/article-image-enricher";
+} from "@workspace/content-engine/support/publishing/publish-destination";
+import { resolveEntitlementsForProject } from "@workspace/content-engine/support/publishing/resolve-publish-entitlements";
+import { withPublishRecord } from "@workspace/content-engine/support/publishing/publish-records";
+import { publishPieceToWordPress } from "@workspace/content-engine/support/publishing/cms-publish";
+import { featuredImageFromMetadata } from "@workspace/content-engine/articles/article-image-enricher";
 import { decryptSecret } from "@workspace/security/encryption";
 import { enqueue, QUEUES } from "@workspace/jobs";
-import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand-voice-generation";
-import { seedSocialPostMetrics } from "@workspace/content-engine/social-metrics-service";
+import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand/brand-voice-generation";
+import { seedSocialPostMetrics } from "@workspace/content-engine/social/social-metrics-service";
 import { z } from "zod";
 
 const ALL_PUBLISH_PLATFORMS = [

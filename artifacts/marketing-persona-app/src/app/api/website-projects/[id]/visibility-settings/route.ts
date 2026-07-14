@@ -5,8 +5,8 @@ import type { VisibilitySettings } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
-import { parseVisibilitySettings } from "@workspace/content-engine/support/visibility-settings";
-import { seedPromptsForProject } from "@workspace/content-engine/llm-visibility-service";
+import { parseVisibilitySettings } from "@workspace/content-engine/support/settings/visibility-settings";
+import { seedPromptsForProject } from "@workspace/content-engine/strategy/llm-visibility-service";
 import { z } from "zod";
 
 const VisibilitySettingsBody = z.object({

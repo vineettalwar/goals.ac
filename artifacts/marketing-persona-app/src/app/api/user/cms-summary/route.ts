@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { listAccessibleProjects } from "@/lib/org/org-access";
 import { getSupportOrganizationId } from "@/lib/org/project-scope";
-import type { CmsIntegrationCredentials } from "@workspace/content-engine/support/cms-integrations";
+import type { CmsIntegrationCredentials } from "@workspace/content-engine/support/publishing/cms-integrations";
 
 export async function GET() {
   const { session, userId, error } = await requireAuth();

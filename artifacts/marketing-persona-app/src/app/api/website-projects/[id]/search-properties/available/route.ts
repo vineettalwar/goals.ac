@@ -13,7 +13,7 @@ import {
   encryptStoredTokens,
 } from "@/lib/integrations/search/search-property-client";
 
-export async function GET(
+export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {

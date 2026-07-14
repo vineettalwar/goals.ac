@@ -3,7 +3,7 @@ import { getAccessibleProject } from "@/lib/org/org-access";
 import {
   listSocialQueue,
   platformForPiece,
-} from "@workspace/content-engine/support/social-queue-service";
+} from "@workspace/content-engine/support/social/social-queue-service";
 import { isValidSocialPlatform } from "@workspace/content-engine/platform-voice";
 import type { ContentPieceApprovalStatus } from "@workspace/db/schema";
 

@@ -4,8 +4,8 @@ import { contentPiecesTable } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { humanizeContentPiece } from "@workspace/content-engine/humanizer";
-import { isSeoLongformFormat } from "@workspace/content-engine/content-piece-seo";
+import { humanizeContentPiece } from "@workspace/content-engine/content/humanizer";
+import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
 import {
   assertPieceOwner,
   loadProjectBrand,
@@ -52,13 +52,13 @@ export async function POST(
   const ctx = await loadProjectBrand(piece!.websiteProjectId, userId!);
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "execution",
     quotaKind: "article",
-  });
+  }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

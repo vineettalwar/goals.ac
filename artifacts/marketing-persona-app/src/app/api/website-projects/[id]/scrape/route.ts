@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
-import { runBrandScrapeWithDiscovery } from "@workspace/content-engine/support/brand-scrape-orchestrator";
+import { runBrandScrapeWithDiscovery } from "@workspace/content-engine/support/brand/brand-scrape-orchestrator";
 
 export async function POST(
   _req: Request,

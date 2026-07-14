@@ -1,9 +1,9 @@
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
-import { loadBrandContextForProject } from "@workspace/content-engine/support/brand-context-loader";
-import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
-import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
-import { createMultiPlatformBundle } from "@workspace/content-engine/support/social-queue-service";
+import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
+import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
+import { createMultiPlatformBundle } from "@workspace/content-engine/support/social/social-queue-service";
 import { isValidSocialPlatform } from "@workspace/content-engine/platform-voice";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
@@ -44,17 +44,16 @@ export async function POST(
     return Response.json({ error: "Select at least one platform" }, { status: 400 });
   }
 
-  const [userApiKey, aiProviderOptions] = await Promise.all([
+  const [userApiKey, aiProviderOptions, billingPrep] = await Promise.all([
     getDecryptedUserGeminiKey(userId!),
     getUserAiProviderOptions(userId!),
+    prepareAiBilling({
+      userId: userId!,
+      tier: "execution",
+      quotaKind: "article",
+      companyId: projectId,
+    }),
   ]);
-
-  const billingPrep = await prepareAiBilling({
-    userId: userId!,
-    tier: "execution",
-    quotaKind: "article",
-    companyId: projectId,
-  });
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

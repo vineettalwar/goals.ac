@@ -3,8 +3,8 @@ import { db, keywordAnalysesTable } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { analyzeKeywords } from "@workspace/seo-tools/keywordAnalyzer";
-import { getDecryptedSemrushCredentialsForUser } from "@workspace/content-engine/support/org-ai-settings";
-import { buildLanguagePromptLine } from "@workspace/content-engine/support/content-language";
+import { getDecryptedSemrushCredentialsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
+import { buildLanguagePromptLine } from "@workspace/content-engine/support/content/content-language";
 import type { ContentStyle } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
@@ -43,12 +43,13 @@ export async function POST(req: Request) {
     contentLanguage = (project?.contentStyle as ContentStyle | null)?.primaryLanguage;
   }
 
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "planning",
     quotaKind: "article",
-  });
+  }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

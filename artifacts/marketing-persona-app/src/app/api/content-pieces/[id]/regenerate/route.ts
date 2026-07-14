@@ -7,7 +7,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import {
   generateContentPiece,
   buildCacheKey,
-} from "@workspace/content-engine/content-studio-generator";
+} from "@workspace/content-engine/content/content-studio-generator";
 import {
   assertPieceOwner,
   loadProjectBrand,
@@ -52,13 +52,13 @@ export async function POST(
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
   const angleHint = parsed.success ? parsed.data.angleHint : undefined;
-  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-
-  const billingPrep = await prepareAiBilling({
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId!),
+    prepareAiBilling({
     userId: userId!,
     tier: "execution",
     quotaKind: "article",
-  });
+  }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

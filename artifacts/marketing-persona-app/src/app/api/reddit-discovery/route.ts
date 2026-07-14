@@ -5,14 +5,14 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
-import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import { cleanAndParse } from "@/lib/ai/utils";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import {
   searchRedditThreads,
   type RedditSearchHit,
-} from "@workspace/content-engine/reddit-public-search";
+} from "@workspace/content-engine/social/reddit-public-search";
 
 const Body = z.object({ projectId: z.number().int().positive() });
 
@@ -74,17 +74,18 @@ export async function POST(req: Request) {
   const access = await requireProjectAccess(parsed.data.projectId, userId!);
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
-  const [project] = await db
-    .select()
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.id, parsed.data.projectId))
-    .limit(1);
-
-  const [brand] = await db
-    .select()
-    .from(brandProfilesTable)
-    .where(eq(brandProfilesTable.websiteProjectId, parsed.data.projectId))
-    .limit(1);
+  const [[project], [brand]] = await Promise.all([
+    db
+      .select()
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, parsed.data.projectId))
+      .limit(1),
+    db
+      .select()
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, parsed.data.projectId))
+      .limit(1),
+  ]);
 
   const keywords = keywordTerms(brand, project?.name ?? "B2B SaaS");
   const industry = brand?.industry ?? "B2B";

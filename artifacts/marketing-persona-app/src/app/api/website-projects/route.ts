@@ -10,7 +10,7 @@ import {
   resolveOrganizationIdForUser,
 } from "@/lib/org/org-access";
 import { getSupportOrganizationId } from "@/lib/org/project-scope";
-import { runBrandScrapeWithDiscovery } from "@workspace/content-engine/support/brand-scrape-orchestrator";
+import { runBrandScrapeWithDiscovery } from "@workspace/content-engine/support/brand/brand-scrape-orchestrator";
 import { logger } from "@/lib/utils/logger";
 import { findDuplicateProjectByUrl } from "@/lib/projects/project-url";
 import { logOrgAudit } from "@/lib/org/org-audit";

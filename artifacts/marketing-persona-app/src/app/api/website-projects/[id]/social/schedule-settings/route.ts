@@ -4,7 +4,7 @@ import type { SocialScheduleSettings } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject, requireSiteAdminAccess } from "@/lib/org/org-access";
-import { parseSocialScheduleSettings } from "@workspace/content-engine/support/social-queue-service";
+import { parseSocialScheduleSettings } from "@workspace/content-engine/support/social/social-queue-service";
 import { z } from "zod";
 
 const PatchBody = z.object({

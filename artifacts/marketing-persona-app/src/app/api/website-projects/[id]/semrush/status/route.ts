@@ -9,13 +9,13 @@ import {
   getDecryptedSemrushCredentialsForUser,
   getOrgAiSettingsForUser,
   hasOrgSemrushCredentials,
-} from "@workspace/content-engine/support/org-ai-settings";
+} from "@workspace/content-engine/support/ai/org-ai-settings";
 import {
   contentLanguageLabel,
   isSemrushDatabaseMismatch,
   semrushDatabaseForLanguage,
-} from "@workspace/content-engine/support/content-language";
-import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot-scheduler";
+} from "@workspace/content-engine/support/content/content-language";
+import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 
 export async function GET(
   _req: Request,
@@ -31,17 +31,18 @@ export async function GET(
   const access = await requireProjectAccess(projectId, userId!);
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
-  const orgSettings = await getOrgAiSettingsForUser(userId!);
-  const credentials = await getDecryptedSemrushCredentialsForUser(userId!);
-
-  const [project] = await db
-    .select({
-      autopilotSettings: websiteProjectsTable.autopilotSettings,
-      contentStyle: websiteProjectsTable.contentStyle,
-    })
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.id, projectId))
-    .limit(1);
+  const [orgSettings, credentials, [project]] = await Promise.all([
+    getOrgAiSettingsForUser(userId!),
+    getDecryptedSemrushCredentialsForUser(userId!),
+    db
+      .select({
+        autopilotSettings: websiteProjectsTable.autopilotSettings,
+        contentStyle: websiteProjectsTable.contentStyle,
+      })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, projectId))
+      .limit(1),
+  ]);
 
   const settings = parseAutopilotSettings(project?.autopilotSettings);
   const primaryLanguage =

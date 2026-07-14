@@ -9,7 +9,7 @@ import {
   validateArticleIdeaRows,
   mapCsvHeaders,
   validateCsvUpload,
-} from "@workspace/content-engine/article-ideas-import-service";
+} from "@workspace/content-engine/articles/article-ideas-import-service";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 
 export async function POST(
@@ -62,16 +62,20 @@ export async function POST(
 
   const headerMapping = mapCsvHeaders(parsed[0]!.map((c) => String(c ?? "")));
   const validated = validateArticleIdeaRows(parsed, headerMapping);
-  const validRows = validated
-    .filter((r) => r.errors.length === 0)
-    .map((r) => ({
-      keyword: r.keyword,
-      suggestedTitle: r.suggestedTitle,
-      suggestedAngle: r.suggestedAngle,
-      estimatedVolume: r.estimatedVolume,
-      intent: r.intent,
-      difficulty: r.difficulty,
-    }));
+  const validRows = validated.flatMap((r) =>
+    r.errors.length === 0
+      ? [
+          {
+            keyword: r.keyword,
+            suggestedTitle: r.suggestedTitle,
+            suggestedAngle: r.suggestedAngle,
+            estimatedVolume: r.estimatedVolume,
+            intent: r.intent,
+            difficulty: r.difficulty,
+          },
+        ]
+      : [],
+  );
 
   const result = await insertArticleIdeas({
     projectId,
