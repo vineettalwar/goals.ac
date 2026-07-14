@@ -10,7 +10,7 @@ import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-a
 import { buildAiProviderStatus, enrichOllamaStatus, toAiProviderOptions } from "@/lib/platform/ai-providers-status";
 
 const PatchBody = z.object({
-  provider: z.enum(["gemini", "bedrock", "ollama"]),
+  provider: z.enum(["gemini", "bedrock", "ollama", "openai", "anthropic"]),
   ollamaBaseUrl: z.string().trim().optional().nullable(),
   ollamaModel: z.string().trim().optional().nullable(),
 });

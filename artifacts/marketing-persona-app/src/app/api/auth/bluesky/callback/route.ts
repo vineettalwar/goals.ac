@@ -12,6 +12,10 @@ import {
   getStoredBlueskySession,
 } from "@/lib/integrations/bluesky-oauth";
 import { getNextFrontendOrigin } from "@/lib/integrations/social-oauth";
+import {
+  assertOAuthSessionUser,
+  decodeSignedOAuthState,
+} from "@/lib/integrations/oauth-state";
 
 function publishingRedirect(_projectId: number, params: Record<string, string>): never {
   const qs = new URLSearchParams(params).toString();
@@ -31,12 +35,13 @@ export async function GET(req: Request) {
   let projectId = 0;
   let userId = 0;
   try {
-    const state = JSON.parse(Buffer.from(stateRaw!, "base64url").toString("utf8")) as {
-      projectId: number;
-      userId: number;
-    };
+    const state = decodeSignedOAuthState(stateRaw!);
+    if (!state || state.platform !== "bluesky") {
+      throw new Error("Invalid OAuth state");
+    }
     projectId = state.projectId;
     userId = state.userId;
+    await assertOAuthSessionUser(userId);
 
     const { session } = await completeBlueskyCallback(url.searchParams);
     const agent = new Agent(session);

@@ -18,10 +18,10 @@ import {
 } from "@workspace/content-engine/support/social-publish";
 import { publishPieceToDestination,
 } from "@workspace/content-engine/support/publish-destination";
+import { resolveEntitlementsForProject } from "@workspace/content-engine/support/resolve-publish-entitlements";
 import { withPublishRecord } from "@workspace/content-engine/support/publish-records";
 import { publishPieceToWordPress } from "@workspace/content-engine/support/cms-publish";
 import { featuredImageFromMetadata } from "@workspace/content-engine/article-image-enricher";
-import { publishToWordPress } from "@workspace/connectors/wordpress";
 import { decryptSecret } from "@workspace/security/encryption";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand-voice-generation";
@@ -48,13 +48,10 @@ const ALL_PUBLISH_PLATFORMS = [
 const PublishBody = z.object({
   platform: z.enum(ALL_PUBLISH_PLATFORMS as unknown as [string, ...string[]]).optional(),
   wordpressConnectionId: z.number().int().positive().optional(),
-  wpSiteUrl: z.string().url().optional(),
-  wpUsername: z.string().optional(),
-  wpAppPassword: z.string().optional(),
   async: z.boolean().optional(),
 }).refine(
-  (d) => d.platform || d.wordpressConnectionId || (d.wpSiteUrl && d.wpUsername && d.wpAppPassword),
-  { message: "Provide platform or WordPress credentials" },
+  (d) => d.platform || d.wordpressConnectionId,
+  { message: "Provide platform or WordPress connection" },
 );
 
 function featuredImageFromPiece(piece: {
@@ -100,11 +97,11 @@ export async function POST(
     .limit(1);
 
   const creds = decryptCmsCredentials((project?.cmsIntegrations ?? {}) as Record<string, unknown>);
+  const entitlements = await resolveEntitlementsForProject(piece!.websiteProjectId, userId!);
 
   const recordProvider =
     parsed.data.platform ??
     (parsed.data.wordpressConnectionId ? "wordpress" : null) ??
-    (parsed.data.wpSiteUrl ? "wordpress" : null) ??
     "auto";
 
   try {
@@ -169,21 +166,11 @@ export async function POST(
           publishedUrl = await publishPieceToWordPress(publishable, wpCreds, {
             status: row.connection.defaultStatus === "draft" ? "draft" : "publish",
           });
-        } else if (parsed.data.wpSiteUrl && parsed.data.wpUsername && parsed.data.wpAppPassword) {
-          const result = await publishToWordPress(
-            {
-              siteUrl: parsed.data.wpSiteUrl,
-              username: parsed.data.wpUsername,
-              appPassword: parsed.data.wpAppPassword,
-            },
-            piece!.title,
-            piece!.bodyMarkdown,
-            "publish",
-          );
-          publishedUrl = result.url;
         } else if (parsed.data.platform) {
           const result = await publishPieceToDestination(parsed.data.platform, publishable, creds, {
             featuredImageUrl: imageUrl,
+            entitlements,
+            idempotencyKey: `piece-${id}`,
           });
           publishedUrl = result.publishedUrl;
           publishPlatform = result.publishPlatform;

@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { startBlueskyAuthorize } from "@/lib/integrations/bluesky-oauth";
-
-function encodeState(payload: { projectId: number; userId: number }): string {
-  return Buffer.from(JSON.stringify({ ...payload, platform: "bluesky" })).toString("base64url");
-}
+import { encodeSignedOAuthState } from "@/lib/integrations/oauth-state";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();
@@ -22,7 +19,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const state = encodeState({ projectId, userId: userId! });
+    const state = encodeSignedOAuthState({ projectId, userId: userId!, platform: "bluesky" });
     const authorizeUrl = await startBlueskyAuthorize(handle, state);
     return NextResponse.redirect(authorizeUrl);
   } catch (err) {

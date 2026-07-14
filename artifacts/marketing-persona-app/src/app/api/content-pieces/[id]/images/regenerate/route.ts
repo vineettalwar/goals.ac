@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { assertPieceOwner } from "@/lib/content/content-pieces-helpers";
 import { enrichContentPieceImages, parseImageSettings } from "@workspace/content-engine/article-image-enricher";
+import { loadStockCredentialContextForProject } from "@workspace/content-engine/support/stock-credentials";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
 import type { ContentStyle } from "@workspace/db/schema/website_projects";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
@@ -56,6 +57,7 @@ export async function POST(
   }
 
   try {
+    const stockCredentials = await loadStockCredentialContextForProject(piece!.websiteProjectId);
     const enriched = await enrichContentPieceImages(
     {
       title: piece!.title,
@@ -69,6 +71,7 @@ export async function POST(
       ai,
       brandName: brand?.companyName ?? undefined,
       excludeImageIds,
+      stockCredentials,
     },
   );
 

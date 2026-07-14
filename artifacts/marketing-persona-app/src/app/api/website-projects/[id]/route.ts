@@ -22,11 +22,17 @@ const ContentStyleBody = z.object({
   writingSample: z.string().max(10000).nullable().optional(),
   imageSettings: z
     .object({
-      stockProvider: z.enum(["unsplash", "pexels", "auto"]).optional(),
+      stockProvider: z.enum(["auto", "unsplash", "pexels"]).optional(),
       autoFeaturedImage: z.boolean().optional(),
       autoInlineImages: z.boolean().optional(),
       maxInlineImages: z.number().int().min(0).max(5).optional(),
       includeAttribution: z.boolean().optional(),
+    })
+    .optional(),
+  translationSettings: z
+    .object({
+      deeplRefinementEnabled: z.boolean().optional(),
+      deeplGlossaryId: z.string().max(128).optional(),
     })
     .optional(),
 });

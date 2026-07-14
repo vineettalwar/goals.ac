@@ -9,6 +9,7 @@ import {
   loadUserAiSettings,
   wordCountFromMarkdown,
 } from "@/lib/content/content-pieces-helpers";
+import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor-generation-context";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
@@ -56,6 +57,7 @@ export async function POST(
   if (!billingPrep.ok) return billingPrep.response;
 
   try {
+    const competitorContext = await loadCompetitorGenerationContext(projectId);
     const result = await repurposeContentPiece(
       parsed.data.targetFormat as ContentFormatType,
       ctx.brand,
@@ -63,6 +65,7 @@ export async function POST(
       parsed.data.targetKeyword,
       userApiKey,
       aiProviderOptions,
+      { competitorPromptBlock: competitorContext.promptBlock || undefined },
     );
 
     const [inserted] = await db

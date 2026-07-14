@@ -15,7 +15,7 @@ import {
   buildCacheKey,
   insertGeneratedContentPiece,
   loadBriefForProject,
-  loadExistingPieceTitles,
+  loadGenerationContext,
 } from "@/lib/content/content-pieces-helpers";
 import {
   billingDeniedResponse,
@@ -61,7 +61,7 @@ export async function POST(
     });
   }
 
-  const { formatType, targetKeyword, angleHint, plannedDate, briefId } = parsed.data;
+  const { formatType, targetKeyword, angleHint, plannedDate, briefId, intendedPublishPlatform, intendedOutputMode, intendedEditorMode, competitorFocusUrl } = parsed.data;
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) {
     return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
@@ -83,8 +83,23 @@ export async function POST(
     }
   }
 
+  const generationContext = await loadGenerationContext(projectId, {
+    formatType,
+    intendedPublishPlatform,
+    intendedOutputMode,
+    intendedEditorMode,
+    competitorFocusUrl,
+  });
+
   const bypassCache = req.headers.get("x-bypass-cache") === "true";
-  const cacheKeyStr = buildCacheKey(formatType, targetKeyword, ctx.brand, angleHint);
+  const cacheKeyStr = buildCacheKey(
+    formatType,
+    targetKeyword,
+    ctx.brand,
+    angleHint,
+    generationContext.intendedPublishPlatform,
+    generationContext.competitorFocusUrl,
+  );
   const encoder = new TextEncoder();
 
   if (!bypassCache) {
@@ -122,6 +137,9 @@ export async function POST(
                 result: aiCached,
                 cacheKey: cacheKeyStr,
                 plannedDate,
+                intendedPublishPlatform: generationContext.resolvedIntendedPlatform,
+                intendedOutputMode: generationContext.intendedOutputMode,
+                intendedEditorMode: generationContext.intendedEditorMode,
               });
               send("done", inserted);
             } catch (err) {
@@ -149,9 +167,6 @@ export async function POST(
     usedByok: Boolean(userApiKey),
   });
   if (!billingPrep.ok) return billingDeniedResponse(billingPrep);
-
-  const existingPieceTitles = await loadExistingPieceTitles(projectId);
-  const generationContext = { existingPieceTitles };
 
   return new Response(
     new ReadableStream({
@@ -196,6 +211,9 @@ export async function POST(
             result,
             cacheKey: cacheKeyStr,
             plannedDate,
+            intendedPublishPlatform: generationContext.resolvedIntendedPlatform,
+            intendedOutputMode: generationContext.intendedOutputMode,
+            intendedEditorMode: generationContext.intendedEditorMode,
           });
 
           await completeAiBilling(billingPrep.ctx, {

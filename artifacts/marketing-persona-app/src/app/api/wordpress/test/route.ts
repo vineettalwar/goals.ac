@@ -4,13 +4,21 @@ import { wordpressConnectionsTable, companiesTable } from "@workspace/db/schema"
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { testWordPressConnection } from "@workspace/connectors/wordpress";
+import { testGoalsAcPluginConnection } from "@workspace/connectors/goals-ac-plugin";
 import { encryptSecret } from "@workspace/security/encryption";
 import { z } from "zod";
 
-const testSchema = z.object({
+const apiTestSchema = z.object({
+  connectionType: z.literal("api").optional(),
   siteUrl: z.string().url(),
   username: z.string().min(1),
   appPassword: z.string().min(1),
+});
+
+const pluginTestSchema = z.object({
+  connectionType: z.literal("plugin"),
+  siteUrl: z.string().url(),
+  siteKey: z.string().min(1),
 });
 
 const saveSchema = z.object({
@@ -68,10 +76,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ connection, testResult });
   }
 
-  // Default: just test credentials
-  const parsed = testSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  const pluginParsed = pluginTestSchema.safeParse(body);
+  if (pluginParsed.success) {
+    const result = await testGoalsAcPluginConnection({
+      siteUrl: pluginParsed.data.siteUrl,
+      siteKey: pluginParsed.data.siteKey,
+      platform: "wordpress",
+    });
+    return NextResponse.json(
+      result.ok
+        ? { ok: true, siteName: result.health?.version }
+        : { ok: false, error: result.error },
+    );
+  }
 
-  const result = await testWordPressConnection(parsed.data);
+  const apiParsed = apiTestSchema.safeParse(body);
+  if (!apiParsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+
+  const result = await testWordPressConnection(apiParsed.data);
   return NextResponse.json(result);
 }

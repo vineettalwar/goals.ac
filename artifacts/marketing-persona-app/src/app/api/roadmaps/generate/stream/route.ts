@@ -1,7 +1,12 @@
 import { db } from "@workspace/db";
 import { roadmapsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { generateRoadmapStream, generateSlug } from "@/lib/ai/roadmap-generator";
+import {
+  generateProjectRoadmapSlug,
+  generateRoadmapStream,
+  generateSlug,
+} from "@/lib/ai/roadmap-generator";
+import { loadRoadmapProjectContext } from "@workspace/content-engine/support/roadmap-project-context";
 import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
 import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { requireAuth } from "@/lib/auth/require-auth";
@@ -72,7 +77,10 @@ export async function POST(req: Request) {
     "Connection": "keep-alive",
   };
 
-  const slug = generateSlug(industry, location, stage);
+  const slug =
+    validatedProjectId != null
+      ? generateProjectRoadmapSlug(industry, location, stage, validatedProjectId)
+      : generateSlug(industry, location, stage);
 
   async function maybePin(roadmapId: number) {
     if (validatedProjectId != null) {
@@ -82,14 +90,43 @@ export async function POST(req: Request) {
     return false;
   }
 
-  const existing = await db
+  if (validatedProjectId == null) {
+    const existing = await db
+      .select()
+      .from(roadmapsTable)
+      .where(eq(roadmapsTable.slug, slug))
+      .limit(1);
+
+    if (existing.length > 0) {
+      const roadmap = existing[0]!;
+      const stream = new ReadableStream({
+        start(controller) {
+          const encoder = new TextEncoder();
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ event: "cached", ...roadmap, pinned: false })}\n\n`,
+            ),
+          );
+          controller.close();
+        },
+      });
+      return new Response(stream, { headers: sseHeaders });
+    }
+
+    return new Response(
+      JSON.stringify({ error: "auth_required", message: AUTH_REQUIRED_MESSAGE }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const existingProjectRoadmap = await db
     .select()
     .from(roadmapsTable)
     .where(eq(roadmapsTable.slug, slug))
     .limit(1);
 
-  if (existing.length > 0) {
-    const roadmap = existing[0]!;
+  if (existingProjectRoadmap.length > 0) {
+    const roadmap = existingProjectRoadmap[0]!;
     const pinned = await maybePin(roadmap.id);
 
     const stream = new ReadableStream({
@@ -104,13 +141,6 @@ export async function POST(req: Request) {
       },
     });
     return new Response(stream, { headers: sseHeaders });
-  }
-
-  if (validatedProjectId == null) {
-    return new Response(
-      JSON.stringify({ error: "auth_required", message: AUTH_REQUIRED_MESSAGE }),
-      { status: 401, headers: { "Content-Type": "application/json" } },
-    );
   }
 
   const usesByok = Boolean(userAiSettings?.userApiKey);
@@ -136,6 +166,10 @@ export async function POST(req: Request) {
 
         try {
           let content;
+          const projectContext = await loadRoadmapProjectContext(
+            validatedProjectId!,
+            authenticatedUserId ?? undefined,
+          );
           try {
             content = await generateRoadmapStream(
               industry,
@@ -146,6 +180,7 @@ export async function POST(req: Request) {
               },
               userAiSettings?.userApiKey,
               userAiSettings?.aiProviderOptions,
+              projectContext ?? undefined,
             );
           } catch {
             await cancelAiBilling(billingPrep.ctx, "generation_failed");

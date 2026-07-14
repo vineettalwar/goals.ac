@@ -9,6 +9,10 @@ import { resolveAiClientForUser } from "@workspace/content-engine/support/resolv
 import { cleanAndParse } from "@/lib/ai/utils";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import {
+  searchRedditThreads,
+  type RedditSearchHit,
+} from "@workspace/content-engine/reddit-public-search";
 
 const Body = z.object({ projectId: z.number().int().positive() });
 
@@ -18,7 +22,39 @@ type RedditThread = {
   url: string;
   intentScore: number;
   suggestedReply: string;
+  score: number;
+  numComments: number;
+  source: "reddit";
 };
+
+function keywordTerms(brand: { primaryKeywords?: string[] | null } | undefined, projectName: string): string[] {
+  const fromBrand = brand?.primaryKeywords?.slice(0, 5) ?? [];
+  if (fromBrand.length > 0) return fromBrand;
+  return projectName.split(/\s+/).filter((w) => w.length > 2).slice(0, 3);
+}
+
+function intentScoreForHit(hit: RedditSearchHit, keywords: string[]): number {
+  const titleLower = hit.title.toLowerCase();
+  const keywordHits = keywords.filter((k) => titleLower.includes(k.toLowerCase())).length;
+  const engagement = Math.min(
+    40,
+    Math.log10(Math.max(hit.score, 1) + 1) * 12 + Math.log10(Math.max(hit.numComments, 1) + 1) * 6,
+  );
+  const relevance = Math.min(60, keywordHits * 18 + (hit.numComments >= 5 ? 12 : 0));
+  return Math.round(Math.min(100, engagement + relevance));
+}
+
+async function findRedditHits(keywords: string[], industry: string): Promise<RedditSearchHit[]> {
+  const primaryQuery = keywords.slice(0, 3).join(" ");
+  let hits = primaryQuery ? await searchRedditThreads(primaryQuery, 8) : [];
+  if (hits.length === 0 && keywords[0]) {
+    hits = await searchRedditThreads(keywords[0], 8);
+  }
+  if (hits.length === 0 && industry) {
+    hits = await searchRedditThreads(`${industry} ${keywords[0] ?? ""}`.trim(), 6);
+  }
+  return hits.slice(0, 6);
+}
 
 export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
@@ -50,13 +86,18 @@ export async function POST(req: Request) {
     .where(eq(brandProfilesTable.websiteProjectId, parsed.data.projectId))
     .limit(1);
 
-  const keywords = brand?.primaryKeywords?.slice(0, 5).join(", ") ?? project?.name ?? "B2B SaaS";
+  const keywords = keywordTerms(brand, project?.name ?? "B2B SaaS");
   const industry = brand?.industry ?? "B2B";
   const audience = brand?.targetAudience ?? "";
 
+  const hits = await findRedditHits(keywords, industry);
+  if (hits.length === 0) {
+    return NextResponse.json({ threads: [], keywords, source: "reddit" });
+  }
+
   const billingPrep = await prepareAiBilling({
     userId: userId!,
-    tier: "planning",
+    tier: "rapid",
     quotaKind: "article",
   });
   if (!billingPrep.ok) return billingPrep.response;
@@ -84,39 +125,63 @@ export async function POST(req: Request) {
     throw err;
   }
 
-  const prompt = `Find 6 realistic Reddit discussion opportunities for a ${industry} company.
-Keywords: ${keywords}
+  const threadBrief = hits.map((h, i) => ({
+    index: i,
+    subreddit: h.subreddit,
+    title: h.title,
+  }));
+
+  const prompt = `Draft helpful Reddit replies for a ${industry} brand.
+Keywords: ${keywords.join(", ")}
 Audience: ${audience}
 Website: ${project?.url ?? ""}
 
-Return JSON: { "threads": [{ "subreddit": "r/name", "title": "thread title", "url": "https://reddit.com/r/...", "intentScore": 1-100, "suggestedReply": "helpful 2-3 sentence reply draft" }] }
-Use plausible subreddit names and search-style thread titles. intentScore reflects buyer intent. Do not invent fake Reddit URLs with specific post IDs — use search URLs like https://www.reddit.com/r/subreddit/search/?q=keyword`;
+Threads (real Reddit posts — do not invent URLs):
+${JSON.stringify(threadBrief)}
+
+Return JSON: { "replies": [{ "index": 0, "suggestedReply": "2-3 sentence helpful reply, not salesy" }] }
+One reply per thread index. Be conversational and value-first.`;
 
   try {
     const response = await client.generate({
       prompt,
       responseMimeType: "application/json",
-      maxOutputTokens: 4096,
+      maxOutputTokens: 2048,
     });
 
     const text = response.text ?? "";
-    let threads: RedditThread[] = [];
+    let replies: Array<{ index: number; suggestedReply: string }> = [];
     try {
-      const data = cleanAndParse<{ threads: RedditThread[] }>(text);
-      threads = data.threads ?? [];
+      const data = cleanAndParse<{ replies: Array<{ index: number; suggestedReply: string }> }>(text);
+      replies = data.replies ?? [];
     } catch {
       await cancelAiBilling(billingPrep.ctx, "parse_failed");
-      return NextResponse.json({ error: "Failed to parse Reddit discovery results" }, { status: 500 });
+      return NextResponse.json({ error: "Failed to parse reply drafts" }, { status: 500 });
     }
+
+    const replyByIndex = new Map(replies.map((r) => [r.index, r.suggestedReply]));
+
+    const threads: RedditThread[] = hits.map((hit, i) => ({
+      subreddit: hit.subreddit.startsWith("r/") ? hit.subreddit : `r/${hit.subreddit}`,
+      title: hit.title,
+      url: hit.url,
+      intentScore: intentScoreForHit(hit, keywords),
+      suggestedReply:
+        replyByIndex.get(i) ??
+        "Share a concise, helpful perspective based on your experience — avoid pitching unless asked.",
+      score: hit.score,
+      numComments: hit.numComments,
+      source: "reddit",
+    }));
 
     await completeAiBilling(billingPrep.ctx, {
       userId: userId!,
       eventType: "reddit_discovery",
       usedByok: billingPrep.usedByok,
-      tier: "planning",
+      tier: "rapid",
     });
 
-    return NextResponse.json({ threads });
+    return NextResponse.json({ threads, keywords, source: "reddit" });
   } catch (err) {
     await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "generation_failed");
     return NextResponse.json({ error: "Reddit discovery failed" }, { status: 500 });

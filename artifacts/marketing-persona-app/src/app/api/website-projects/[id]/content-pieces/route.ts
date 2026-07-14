@@ -15,6 +15,7 @@ import {
   insertGeneratedContentPiece,
   loadBriefForProject,
   loadExistingPieceTitles,
+  loadGenerationContext,
 } from "@/lib/content/content-pieces-helpers";
 import { logger } from "@/lib/utils/logger";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
@@ -80,7 +81,7 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const { formatType, targetKeyword, angleHint, plannedDate, briefId } = parsed.data;
+  const { formatType, targetKeyword, angleHint, plannedDate, briefId, intendedPublishPlatform, intendedOutputMode, intendedEditorMode, competitorFocusUrl } = parsed.data;
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
@@ -89,8 +90,23 @@ export async function POST(
     if (!brief) return NextResponse.json({ error: "Brief not found" }, { status: 404 });
   }
 
+  const generationContext = await loadGenerationContext(projectId, {
+    formatType,
+    intendedPublishPlatform,
+    intendedOutputMode,
+    intendedEditorMode,
+    competitorFocusUrl,
+  });
+
   const bypassCache = req.headers.get("x-bypass-cache") === "true";
-  const cacheKeyStr = buildCacheKey(formatType, targetKeyword, ctx.brand, angleHint);
+  const cacheKeyStr = buildCacheKey(
+    formatType,
+    targetKeyword,
+    ctx.brand,
+    angleHint,
+    generationContext.intendedPublishPlatform,
+    generationContext.competitorFocusUrl,
+  );
 
   if (!bypassCache) {
     const [existing] = await db
@@ -113,6 +129,9 @@ export async function POST(
         result: aiCached,
         cacheKey: cacheKeyStr,
         plannedDate,
+        intendedPublishPlatform: generationContext.resolvedIntendedPlatform,
+        intendedOutputMode: generationContext.intendedOutputMode,
+        intendedEditorMode: generationContext.intendedEditorMode,
       });
       return NextResponse.json(inserted, { status: 201, headers: { "X-Cache": "HIT" } });
     }
@@ -128,7 +147,6 @@ export async function POST(
   if (!billingPrep.ok) return billingPrep.response;
 
   try {
-    const existingPieceTitles = await loadExistingPieceTitles(projectId);
     const result = await generateContentPiece(
       formatType,
       ctx.brand,
@@ -137,7 +155,7 @@ export async function POST(
       bypassCache,
       userApiKey,
       aiProviderOptions,
-      { existingPieceTitles },
+      generationContext,
     );
 
     const inserted = await insertGeneratedContentPiece({
@@ -147,6 +165,9 @@ export async function POST(
       result,
       cacheKey: cacheKeyStr,
       plannedDate,
+      intendedPublishPlatform: generationContext.resolvedIntendedPlatform,
+      intendedOutputMode: generationContext.intendedOutputMode,
+      intendedEditorMode: generationContext.intendedEditorMode,
     });
 
     await completeAiBilling(billingPrep.ctx, {
