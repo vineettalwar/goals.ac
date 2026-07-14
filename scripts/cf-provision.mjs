@@ -7,51 +7,120 @@
  *   node scripts/cf-provision.mjs --dry-run   # print commands only
  */
 import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const root = join(import.meta.dirname, "..");
 const appDir = join(root, "artifacts/marketing-persona-app");
 const dryRun = process.argv.includes("--dry-run");
+const cfAccount = JSON.parse(
+  readFileSync(join(root, "scripts/cloudflare-account.json"), "utf8"),
+);
 
-function wrangler(args) {
+const UUID_RE =
+  /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
+
+function wrangler(args, { allowFail = false } = {}) {
   const cmd = `pnpm exec wrangler ${args}`;
   if (dryRun) {
     console.log(`  ${cmd}`);
     return "";
   }
-  return execSync(cmd, { cwd: appDir, encoding: "utf8" }).trim();
-}
-
-function parseJson(stdout) {
   try {
-    return JSON.parse(stdout);
-  } catch {
-    return null;
+    return execSync(cmd, {
+      cwd: appDir,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        CLOUDFLARE_ACCOUNT_ID: cfAccount.account_id,
+      },
+    }).trim();
+  } catch (err) {
+    const combined = [err.stdout, err.stderr].filter(Boolean).join("\n").trim();
+    if (allowFail) return combined;
+    throw new Error(combined || err.message);
   }
 }
 
+function extractJsonField(stdout, field) {
+  const re = new RegExp(`"${field}"\\s*:\\s*"([^"]+)"`);
+  return stdout.match(re)?.[1] ?? null;
+}
+
+function findD1Id(name) {
+  const out = wrangler(`d1 info ${name}`, { allowFail: true });
+  return out.match(UUID_RE)?.[0] ?? null;
+}
+
 function createD1(name) {
-  const out = wrangler(`d1 create ${name} --json`);
-  const data = parseJson(out);
-  return data?.uuid ?? data?.database_id ?? null;
+  console.log(`→ D1: ${name}`);
+  const out = wrangler(`d1 create ${name}`, { allowFail: true });
+  if (/Successfully created DB/i.test(out)) {
+    return extractJsonField(out, "database_id") ?? findD1Id(name);
+  }
+  if (/already exists|UNIQUE constraint failed/i.test(out)) {
+    console.log(`  already exists — reusing`);
+    return findD1Id(name);
+  }
+  if (out.includes("[ERROR]")) throw new Error(out);
+  return extractJsonField(out, "database_id") ?? findD1Id(name);
+}
+
+function listKvNamespaces() {
+  const out = wrangler("kv namespace list", { allowFail: true });
+  try {
+    return JSON.parse(out);
+  } catch {
+    return [];
+  }
+}
+
+function findKvId(title) {
+  return listKvNamespaces().find((n) => n.title === title)?.id ?? null;
 }
 
 function createKv(title) {
-  const out = wrangler(`kv namespace create "${title}" --json`);
-  const data = parseJson(out);
-  return data?.id ?? null;
+  console.log(`→ KV: ${title}`);
+  const out = wrangler(`kv namespace create "${title}"`, { allowFail: true });
+  if (/Success!/i.test(out)) {
+    return extractJsonField(out, "id") ?? findKvId(title);
+  }
+  if (/already exists|UNIQUE constraint failed/i.test(out)) {
+    console.log(`  already exists — reusing`);
+    return findKvId(title);
+  }
+  if (out.includes("[ERROR]")) throw new Error(out);
+  return extractJsonField(out, "id") ?? findKvId(title);
 }
 
 function createQueue(name) {
-  try {
-    wrangler(`queues create ${name}`);
-  } catch (err) {
-    const msg = String(err?.stderr ?? err?.message ?? err);
-    if (!msg.includes("already exists")) throw err;
+  console.log(`→ Queue: ${name}`);
+  const out = wrangler(`queues create ${name}`, { allowFail: true });
+  if (out.includes("[ERROR]") && !/already exists/i.test(out)) {
+    throw new Error(out);
+  }
+}
+
+function createR2(name) {
+  console.log(`→ R2: ${name}`);
+  const out = wrangler(`r2 bucket create ${name}`, { allowFail: true });
+  if (out.includes("[ERROR]")) {
+    if (/already exists|Bucket name already taken/i.test(out)) {
+      console.log(`  already exists — reusing`);
+      return;
+    }
+    if (/enable R2|code: 10042/i.test(out)) {
+      console.log(
+        `  ⚠ R2 not enabled on ${cfAccount.account_name}. Enable R2 in the dashboard, then re-run.`,
+      );
+      return;
+    }
+    throw new Error(out);
   }
 }
 
 console.log("goals.ac — Cloudflare resource provisioning\n");
+console.log(`Account: ${cfAccount.account_name} (${cfAccount.account_id})\n`);
 
 const resources = {
   d1Production: createD1("goals-ac"),
@@ -63,8 +132,8 @@ const resources = {
 };
 
 if (!dryRun) {
-  wrangler("r2 bucket create goals-ac-next-cache");
-  wrangler("r2 bucket create goals-ac-next-cache-staging");
+  createR2("goals-ac-next-cache");
+  createR2("goals-ac-next-cache-staging");
   createQueue("goals-ac-jobs");
   createQueue("goals-ac-jobs-dlq");
   createQueue("goals-ac-jobs-staging");
@@ -81,6 +150,10 @@ Queues (no ID — use queue names in wrangler.jsonc):
 R2 buckets:
   goals-ac-next-cache
   goals-ac-next-cache-staging
+
+Files to update:
+  artifacts/marketing-persona-app/wrangler.jsonc
+  artifacts/cf-jobs-worker/wrangler.jsonc
 
 Next steps:
   pnpm run cf:migrate:d1

@@ -12,6 +12,9 @@ import { join } from "node:path";
 const root = join(import.meta.dirname, "..");
 const appWrangler = join(root, "artifacts/marketing-persona-app/wrangler.jsonc");
 const jobsWrangler = join(root, "artifacts/cf-jobs-worker/wrangler.jsonc");
+const cfAccount = JSON.parse(
+  readFileSync(join(root, "scripts/cloudflare-account.json"), "utf8"),
+);
 const PLACEHOLDER_D1 = "00000000-0000-0000-0000-000000000001";
 const PLACEHOLDER_KV = "00000000000000000000000000000001";
 
@@ -26,6 +29,21 @@ function fileContains(path, needle) {
 }
 
 console.log("goals.ac — Cloudflare setup checklist\n");
+console.log(`Target account: ${cfAccount.account_name} (${cfAccount.account_id})\n`);
+
+function assertAccountId(path, label) {
+  if (!existsSync(path)) return;
+  const content = readFileSync(path, "utf8");
+  if (!content.includes(`"account_id": "${cfAccount.account_id}"`)) {
+    console.log(`⚠ ${label} is not pinned to ${cfAccount.account_name}.`);
+  } else {
+    console.log(`✓ ${label} account_id → ${cfAccount.account_name}`);
+  }
+}
+
+assertAccountId(appWrangler, "App wrangler.jsonc");
+assertAccountId(jobsWrangler, "Jobs wrangler.jsonc");
+console.log("");
 
 const steps = [
   "1. wrangler login",

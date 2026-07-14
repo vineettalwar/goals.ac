@@ -28,6 +28,9 @@
       "path": "./lib/jobs"
     },
     {
+      "path": "./lib/cf-edge"
+    },
+    {
       "path": "./lib/billing"
     },
     {
@@ -50,6 +53,9 @@
     },
     {
       "path": "./lib/media"
+    },
+    {
+      "path": "./lib/cf-edge"
     },
     {
       "path": "./artifacts/goals-ac"
