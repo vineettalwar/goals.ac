@@ -11,6 +11,20 @@ import {
 } from "@workspace/content-engine/support/publishing/cms-integrations";
 import { ownedProject } from "./project-access";
 
+function requireEncryptionSecret(request: Request): Response | null {
+  if (process.env.GEMINI_KEY_ENCRYPTION_SECRET) return null;
+  return withCors(
+    request,
+    Response.json(
+      {
+        error:
+          "CMS credential encryption is not configured on the API worker (GEMINI_KEY_ENCRYPTION_SECRET).",
+      },
+      { status: 503 },
+    ),
+  );
+}
+
 const cmsIntegrationsBody = z.object({
   notion: z
     .object({
@@ -142,6 +156,9 @@ export async function handleCmsIntegrationsWrite(
 ): Promise<Response | null> {
   const patchMatch = path.match(/^\/api\/website-projects\/(\d+)\/cms-integrations$/);
   if (patchMatch && request.method === "PATCH") {
+    const configError = requireEncryptionSecret(request);
+    if (configError) return configError;
+
     const projectId = Number.parseInt(patchMatch[1]!, 10);
     const project = await ownedProject(projectId, userId);
     if (!project) {
@@ -171,6 +188,9 @@ export async function handleCmsIntegrationsWrite(
 
   const deleteMatch = path.match(/^\/api\/website-projects\/(\d+)\/cms-integrations\/([^/]+)$/);
   if (deleteMatch && request.method === "DELETE") {
+    const configError = requireEncryptionSecret(request);
+    if (configError) return configError;
+
     const projectId = Number.parseInt(deleteMatch[1]!, 10);
     const platform = deleteMatch[2]!;
     if (!CMS_PLATFORMS.has(platform)) {

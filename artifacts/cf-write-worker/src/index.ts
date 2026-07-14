@@ -15,6 +15,7 @@ export interface Env extends CfEdgeBindings {
   CF_EDGE_HTTP: string;
   FORCE_QUEUE_WRITES: string;
   AUTH_SECRET: string;
+  GEMINI_KEY_ENCRYPTION_SECRET: string;
 }
 
 const contentGenerateBody = z.object({

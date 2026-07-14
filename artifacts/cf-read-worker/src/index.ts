@@ -10,6 +10,7 @@ export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
   CF_EDGE_HTTP: string;
   AUTH_SECRET: string;
+  GEMINI_KEY_ENCRYPTION_SECRET: string;
 }
 
 async function requireAuth(request: Request, env: Env) {

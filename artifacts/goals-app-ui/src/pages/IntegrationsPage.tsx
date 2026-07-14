@@ -21,7 +21,8 @@ type CmsRow = { connected?: boolean } & Record<string, unknown>;
 export function IntegrationsPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { projects, projectId, activeProject, error: projectError, setProjectId } = useActiveProject();
+  const { projects, projectId, activeProject, error: projectError, setProjectId, loading: projectsLoading } =
+    useActiveProject();
   const [integrations, setIntegrations] = useState<Record<string, CmsRow>>({});
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -87,7 +88,7 @@ export function IntegrationsPage() {
     }
   }
 
-  if (loading) return <p className="p-8 text-(--muted)">Loading…</p>;
+  if (loading || projectsLoading) return <p className="p-8 text-(--muted)">Loading…</p>;
 
   return (
     <div className="px-8 py-8 max-w-4xl">
