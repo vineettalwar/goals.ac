@@ -3,14 +3,13 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getAccessibleProject } from "@/lib/org/org-access";
+import { getAccessibleProject, requireIntegrationsManage } from "@/lib/org/org-access";
 import {
   type CmsIntegrationCredentials,
   decryptCmsCredentials,
   encryptCmsCredentials,
+  isCmsIntegrationPlatformKey,
 } from "@workspace/content-engine/support/cms-integrations";
-
-const PLATFORMS = ["notion", "webflow", "wordpress", "ghost", "webhook", "shopify", "drupal", "joomla", "linkedin", "twitter", "meta", "bluesky", "mastodon"] as const;
 
 export async function DELETE(
   _req: Request,
@@ -21,8 +20,13 @@ export async function DELETE(
 
   const { id: idStr, platform } = await params;
   const projectId = Number(idStr);
-  if (isNaN(projectId) || !PLATFORMS.includes(platform as typeof PLATFORMS[number])) {
+  if (isNaN(projectId) || !isCmsIntegrationPlatformKey(platform)) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  }
+
+  const manage = await requireIntegrationsManage(userId!, projectId);
+  if (!manage.ok) {
+    return NextResponse.json({ error: manage.error }, { status: manage.status });
   }
 
   const project = await getAccessibleProject(projectId, userId!);

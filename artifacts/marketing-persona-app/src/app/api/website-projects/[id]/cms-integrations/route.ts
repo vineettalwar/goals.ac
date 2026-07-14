@@ -3,7 +3,8 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getAccessibleProject } from "@/lib/org/org-access";
+import { getAccessibleProject, requireIntegrationsManage } from "@/lib/org/org-access";
+import { assertCmsIntegrationUrlsSafe } from "@/lib/integrations/validate-cms-urls";
 import {
   type CmsIntegrationCredentials,
   decryptCmsCredentials,
@@ -19,6 +20,14 @@ const fieldMappingSchema = z.object({
   metaDescriptionField: z.string().optional(),
 });
 
+const wordpressOutputModeSchema = z.enum(["classic", "gutenberg", "elementor", "divi"]);
+const ghostOutputModeSchema = z.enum(["html", "lexical"]);
+const webhookOutputModeSchema = z.enum(["both", "markdown", "html", "full"]);
+const shopifyOutputModeSchema = z.enum(["article_html", "article_metafields", "page_sections"]);
+const drupalOutputModeSchema = z.enum(["body_html", "layout_builder"]);
+const joomlaOutputModeSchema = z.enum(["markdown", "html"]);
+const typo3OutputModeSchema = z.enum(["body_text", "content_elements"]);
+
 const CmsIntegrationsBody = z
   .object({
     notion: z.object({ integrationToken: z.string().min(1), databaseId: z.string().min(1) }).optional(),
@@ -29,22 +38,82 @@ const CmsIntegrationsBody = z
       publishStatus: z.enum(["draft", "live"]).optional(),
     }).optional(),
     wordpress: z.union([
-      z.object({ connectionType: z.literal("api"), siteUrl: z.string().url(), username: z.string().min(1), appPassword: z.string().min(1) }),
-      z.object({ connectionType: z.literal("plugin"), siteUrl: z.string().url(), siteKey: z.string().min(1) }),
+      z.object({
+        connectionType: z.literal("api"),
+        siteUrl: z.string().url(),
+        username: z.string().min(1),
+        appPassword: z.string().min(1),
+        editorMode: wordpressOutputModeSchema.optional(),
+        outputMode: wordpressOutputModeSchema.optional(),
+      }),
+      z.object({
+        connectionType: z.literal("plugin"),
+        siteUrl: z.string().url(),
+        siteKey: z.string().min(1),
+        editorMode: wordpressOutputModeSchema.optional(),
+        outputMode: wordpressOutputModeSchema.optional(),
+      }),
     ]).optional(),
-    ghost: z.object({ apiUrl: z.string().url(), adminApiKey: z.string().min(1) }).optional(),
-    webhook: z.object({ url: z.string().url(), signingSecret: z.string().min(1) }).optional(),
+    ghost: z.object({
+      apiUrl: z.string().url(),
+      adminApiKey: z.string().min(1),
+      outputMode: ghostOutputModeSchema.optional(),
+    }).optional(),
+    webhook: z.object({
+      url: z.string().url(),
+      signingSecret: z.string().min(1),
+      outputMode: webhookOutputModeSchema.optional(),
+    }).optional(),
     shopify: z.union([
-      z.object({ connectionType: z.literal("api"), shopDomain: z.string().min(1), accessToken: z.string().min(1), blogId: z.string().optional() }),
-      z.object({ connectionType: z.literal("plugin"), siteUrl: z.string().url(), siteKey: z.string().min(1), blogId: z.string().optional() }),
+      z.object({
+        connectionType: z.literal("api"),
+        shopDomain: z.string().min(1),
+        accessToken: z.string().min(1),
+        blogId: z.string().optional(),
+        outputMode: shopifyOutputModeSchema.optional(),
+      }),
+      z.object({
+        connectionType: z.literal("plugin"),
+        siteUrl: z.string().url(),
+        siteKey: z.string().min(1),
+        blogId: z.string().optional(),
+        outputMode: shopifyOutputModeSchema.optional(),
+      }),
     ]).optional(),
     drupal: z.union([
-      z.object({ connectionType: z.literal("api"), siteUrl: z.string().url(), authType: z.enum(["basic", "bearer"]).optional(), username: z.string().optional(), password: z.string().optional(), accessToken: z.string().optional(), contentType: z.string().optional() }),
-      z.object({ connectionType: z.literal("plugin"), siteUrl: z.string().url(), siteKey: z.string().min(1), contentType: z.string().optional() }),
+      z.object({
+        connectionType: z.literal("api"),
+        siteUrl: z.string().url(),
+        authType: z.enum(["basic", "bearer"]).optional(),
+        username: z.string().optional(),
+        password: z.string().optional(),
+        accessToken: z.string().optional(),
+        contentType: z.string().optional(),
+        outputMode: drupalOutputModeSchema.optional(),
+      }),
+      z.object({
+        connectionType: z.literal("plugin"),
+        siteUrl: z.string().url(),
+        siteKey: z.string().min(1),
+        contentType: z.string().optional(),
+        outputMode: drupalOutputModeSchema.optional(),
+      }),
     ]).optional(),
     joomla: z.union([
-      z.object({ connectionType: z.literal("api"), siteUrl: z.string().url(), apiToken: z.string().min(1), categoryId: z.number().optional() }),
-      z.object({ connectionType: z.literal("plugin"), siteUrl: z.string().url(), siteKey: z.string().min(1), categoryId: z.number().optional() }),
+      z.object({
+        connectionType: z.literal("api"),
+        siteUrl: z.string().url(),
+        apiToken: z.string().min(1),
+        categoryId: z.number().optional(),
+        outputMode: joomlaOutputModeSchema.optional(),
+      }),
+      z.object({
+        connectionType: z.literal("plugin"),
+        siteUrl: z.string().url(),
+        siteKey: z.string().min(1),
+        categoryId: z.number().optional(),
+        outputMode: joomlaOutputModeSchema.optional(),
+      }),
     ]).optional(),
     wix: z.object({ accessToken: z.string().min(1), siteId: z.string().min(1), memberId: z.string().optional(), publishStatus: z.enum(["draft", "live"]).optional() }).optional(),
     framer: z.object({ apiToken: z.string().min(1), collectionId: z.string().min(1), titleFieldSlug: z.string().min(1), bodyFieldSlug: z.string().min(1), publishStatus: z.enum(["draft", "live"]).optional() }).optional(),
@@ -56,7 +125,12 @@ const CmsIntegrationsBody = z
     convertkit: z.object({ apiSecret: z.string().min(1), formId: z.string().optional() }).optional(),
     mailchimp: z.object({ apiKey: z.string().min(1), serverPrefix: z.string().min(1), listId: z.string().min(1) }).optional(),
     hubspot: z.object({ accessToken: z.string().min(1), blogId: z.string().min(1), publishStatus: z.enum(["draft", "live"]).optional() }).optional(),
-    typo3: z.object({ connectionType: z.literal("plugin"), siteUrl: z.string().url(), siteKey: z.string().min(1) }).optional(),
+    typo3: z.object({
+      connectionType: z.literal("plugin"),
+      siteUrl: z.string().url(),
+      siteKey: z.string().min(1),
+      outputMode: typo3OutputModeSchema.optional(),
+    }).optional(),
   })
   .refine((d) => Object.values(d).some(Boolean), { message: "At least one integration is required" });
 
@@ -95,10 +169,24 @@ export async function PATCH(
   const projectId = Number((await params).id);
   if (isNaN(projectId)) return NextResponse.json({ error: "Invalid project id" }, { status: 400 });
 
+  const manage = await requireIntegrationsManage(userId!, projectId);
+  if (!manage.ok) {
+    return NextResponse.json({ error: manage.error }, { status: manage.status });
+  }
+
   const body = await req.json().catch(() => null);
   const parsed = CmsIntegrationsBody.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
+  }
+
+  try {
+    await assertCmsIntegrationUrlsSafe(parsed.data);
+  } catch (err) {
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Invalid integration URL" },
+      { status: 400 },
+    );
   }
 
   const project = await loadProject(projectId, userId!);
@@ -115,7 +203,14 @@ export async function PATCH(
       publishStatus: parsed.data.webflow.publishStatus ?? "draft",
     };
   }
-  if (parsed.data.wordpress) merged.wordpress = parsed.data.wordpress;
+  if (parsed.data.wordpress) {
+    const wp = parsed.data.wordpress;
+    merged.wordpress = {
+      ...wp,
+      outputMode: wp.outputMode ?? wp.editorMode,
+      editorMode: wp.editorMode ?? wp.outputMode,
+    };
+  }
   if (parsed.data.ghost) merged.ghost = parsed.data.ghost;
   if (parsed.data.webhook) merged.webhook = parsed.data.webhook;
   if (parsed.data.shopify) merged.shopify = parsed.data.shopify;
