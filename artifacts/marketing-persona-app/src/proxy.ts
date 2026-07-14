@@ -38,7 +38,12 @@ const WRITE_API_PREFIXES = [
   "/api/content-pieces",
   "/api/organizations/members",
   "/api/auth/api-key",
+  "/api/auth/openai-credentials",
+  "/api/auth/anthropic-credentials",
   "/api/auth/bedrock-credentials",
+  "/api/auth/semrush-credentials",
+  "/api/auth/stock-credentials",
+  "/api/auth/deepl-credentials",
   "/api/ai-providers/settings",
 ];
 

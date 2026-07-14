@@ -85,3 +85,9 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
   return { client, providerId, usingUserKey: false, source: "platform" };
 }
+
+/** True when the org's selected provider is backed by an org BYOK key/credential. */
+export async function isByokActiveForUser(userId: number): Promise<boolean> {
+  const resolved = await resolveAiClientForUser(userId);
+  return resolved.usingUserKey;
+}
