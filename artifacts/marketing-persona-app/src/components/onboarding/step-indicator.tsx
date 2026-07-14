@@ -33,7 +33,7 @@ export function StepIndicator({ steps, current }: StepIndicatorProps) {
           {i < steps.length - 1 && (
             <div
               className={cn(
-                "h-[1px] w-12 mx-1 mt-[-14px] transition-colors",
+                "h-px w-12 mx-1 mt-[-14px] transition-colors",
                 i < current ? "bg-primary" : "bg-border"
               )}
             />

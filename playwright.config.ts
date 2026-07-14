@@ -16,9 +16,8 @@ export default defineConfig({
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
   ],
   webServer: {
-    command: "pnpm --filter @workspace/goals-ac run dev",
+    command: "pnpm --filter @workspace/marketing-persona-app exec next dev --port 4199 --turbopack",
     url: "http://127.0.0.1:4199",
-    env: { VITE_DEV_SERVER_PORT: "4199" },
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
   },

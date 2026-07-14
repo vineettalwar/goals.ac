@@ -24,7 +24,7 @@ function getApiOrigin(): string {
 function getFrontendOrigin(): string {
   const devDomain = process.env["REPLIT_DEV_DOMAIN"];
   return process.env["APP_ORIGIN"]?.split(",")[0]?.trim().replace(/\/$/, "")
-    ?? (devDomain ? `https://${devDomain}` : "http://localhost:5173");
+    ?? (devDomain ? `https://${devDomain}` : "http://localhost:3001");
 }
 
 async function loadProjectCreds(

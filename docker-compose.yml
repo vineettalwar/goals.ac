@@ -67,7 +67,7 @@ services:
       retries: 10
       start_period: 15s
 
-  # Legacy Vite product app — redirects to Next; opt-in via `--profile legacy`
+  # Legacy redirect shell — opt-in via `docker compose --profile legacy up` (forwards to Next on :3001)
   goals-ac:
     profiles: ["legacy"]
     build:
@@ -75,9 +75,6 @@ services:
       dockerfile: artifacts/goals-ac/Dockerfile
     ports:
       - "5173:8080"
-    depends_on:
-      api-server:
-        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8080/healthz"]
