@@ -1,4 +1,7 @@
-import type { ContentFormatType } from "./content-studio-format-data";
+import type { ContentFormatType, LinkedInArchetypeId, LinkedInHookId } from "./content-studio-format-data";
+import type { CmsConnectionSnapshot, PublishDestinationId } from "@/lib/projects/publishing-destinations";
+import type { ContentPieceRow } from "./content-studio-client";
+import type { BriefContentDraft } from "./use-create-content-modal";
 
 export type CreateContentWizardProps = {
   selectPath: (flow: "create" | "repurpose") => void;
@@ -20,13 +23,13 @@ export type CreateContentWizardProps = {
   keyword: string;
   setKeyword: (v: string) => void;
   selectedFormat: ContentFormatType | null;
-  intendedDestination: string;
-  setIntendedDestination: (v: string) => void;
-  cmsConnections: Record<string, unknown>;
-  linkedinArchetype: string;
-  setLinkedinArchetype: (v: string) => void;
-  linkedinHook: string;
-  setLinkedinHook: (v: string) => void;
+  intendedDestination: PublishDestinationId | "";
+  setIntendedDestination: (v: PublishDestinationId | "") => void;
+  cmsConnections: CmsConnectionSnapshot;
+  linkedinArchetype: LinkedInArchetypeId | "";
+  setLinkedinArchetype: (v: LinkedInArchetypeId | "") => void;
+  linkedinHook: LinkedInHookId | "";
+  setLinkedinHook: (v: LinkedInHookId | "") => void;
   angleHint: string;
   setAngleHint: (v: string) => void;
   plannedDate: string;
@@ -38,4 +41,18 @@ export type CreateContentWizardProps = {
   setBypassCache: (v: boolean) => void;
   competitorFocusUrl: string;
   setCompetitorFocusUrl: (v: string) => void;
+  initialDraft?: BriefContentDraft | null;
+  repurposeFormat: ContentFormatType;
+  setRepurposeFormat: (v: ContentFormatType) => void;
+  repurposeKeyword: string;
+  setRepurposeKeyword: (v: string) => void;
+  repurposeContent: string;
+  setRepurposeContent: (v: string) => void;
+  sourcePieceId: string;
+  setSourcePieceId: (v: string) => void;
+  loadSourcePiece: (id: string) => void;
+  existingPieces: ContentPieceRow[];
+  loadingSourcePiece: boolean;
+  goNextStable: () => void;
+  runGeneration: () => void;
 };

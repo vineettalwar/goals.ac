@@ -647,6 +647,8 @@ const wizardProps = {
   competitorFocusUrl,
   setCompetitorFocusUrl,
   runGeneration,
+  initialDraft,
+  goNext: goNextStable,
 };
 
   return {

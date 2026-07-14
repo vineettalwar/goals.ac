@@ -12,6 +12,8 @@ import { CreateContentCreateSteps } from "./create-content-create-steps";
 import { CreateContentRepurposeSteps } from "./create-content-repurpose-steps";
 import type { WizardStepId } from "./create-content-modal-types";
 
+import type { CreateContentWizardProps } from "./create-content-wizard-props";
+
 export function CreateContentModalShell({
   open,
   handleClose,
@@ -33,7 +35,7 @@ export function CreateContentModalShell({
   progress: number;
   isGeneratingStep: boolean;
   goBack: () => void;
-  wizardProps: Record<string, unknown>;
+  wizardProps: CreateContentWizardProps;
 }) {
   const prefersReducedMotion = useReducedMotion();
 

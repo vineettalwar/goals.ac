@@ -42,13 +42,14 @@ import { cn } from "@/lib/utils";
 import { hostFromUrl } from "@workspace/content-engine/support/competitor/competitor-url";
 import type { WizardStepId } from "./create-content-modal-types";
 import type { CreateContentWizardProps } from "./create-content-wizard-props";
+import type { PublishDestinationId } from "@/lib/projects/publishing-destinations";
 export function CreateContentCreateKeywordSteps({ currentStep, wizard }: { currentStep: WizardStepId; wizard: CreateContentWizardProps }) {
   const {
     selectPath, selectFormat, loadingCompetitors, competitorUrls, competitorAnalyses,
     addCompetitorUrl, newCompetitorUrl, setNewCompetitorUrl, projectId, projectIndustry,
     keyword, setKeyword, selectedFormat, intendedDestination, setIntendedDestination,
     cmsConnections, linkedinArchetype, setLinkedinArchetype, linkedinHook, setLinkedinHook,
-    handleContinue, competitorFocusUrl, setCompetitorFocusUrl,
+    handleContinue, competitorFocusUrl, setCompetitorFocusUrl, initialDraft, goNextStable,
   } = wizard;
 
   return (
@@ -118,7 +119,7 @@ export function CreateContentCreateKeywordSteps({ currentStep, wizard }: { curre
                         type="button"
                         onClick={() => {
                           setLinkedinArchetype(a.id);
-                          goNext();
+                          goNextStable();
                         }}
                         className={cn(
                           "text-left p-4 rounded-xl border transition-all",
@@ -148,7 +149,7 @@ export function CreateContentCreateKeywordSteps({ currentStep, wizard }: { curre
                         type="button"
                         onClick={() => {
                           setLinkedinHook(h.id);
-                          goNext();
+                          goNextStable();
                         }}
                         className={cn(
                           "text-left p-4 rounded-xl border transition-all",

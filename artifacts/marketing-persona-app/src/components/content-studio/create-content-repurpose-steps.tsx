@@ -45,6 +45,7 @@ import { getConnectedDestinationsForFormat } from "@/lib/projects/publishing-des
 import { cn } from "@/lib/utils";
 import { hostFromUrl } from "@workspace/content-engine/support/competitor/competitor-url";
 import type { WizardStepId } from "./create-content-modal-types";
+import type { CreateContentWizardProps } from "./create-content-wizard-props";
 
 
 export function CreateContentRepurposeSteps({
@@ -52,9 +53,8 @@ export function CreateContentRepurposeSteps({
   wizard,
 }: {
   currentStep: WizardStepId;
-  wizard: Record<string, unknown>;
+  wizard: CreateContentWizardProps;
 }) {
-  const w = wizard as Record<string, unknown>;
   const {
     selectPath, selectFormat, loadingCompetitors, competitorUrls, competitorAnalyses,
     addCompetitorUrl, newCompetitorUrl, setNewCompetitorUrl, projectId, projectIndustry,
@@ -63,10 +63,10 @@ export function CreateContentRepurposeSteps({
     angleHint, setAngleHint, plannedDate, setPlannedDate, generating, detectedSections,
     repurposeFormat, setRepurposeFormat, repurposeKeyword, setRepurposeKeyword,
     repurposeContent, setRepurposeContent, sourcePieceId, setSourcePieceId, loadSourcePiece,
-    existingPieces, loadingSourcePiece, goNext, handleContinue,
+    existingPieces, loadingSourcePiece, goNextStable, handleContinue,
     bypassCache, setBypassCache, competitorFocusUrl, setCompetitorFocusUrl,
     runGeneration,
-  } = w;
+  } = wizard;
 
   return (
     <>
@@ -84,7 +84,7 @@ export function CreateContentRepurposeSteps({
                           type="button"
                           onClick={() => {
                             setRepurposeFormat(value as ContentFormatType);
-                            goNext();
+                            goNextStable();
                           }}
                           className={cn(
                             "text-left p-4 rounded-xl border transition-all",
