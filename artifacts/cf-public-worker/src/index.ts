@@ -1,5 +1,5 @@
-import { setD1Binding } from "@workspace/db";
-import { db } from "@workspace/db";
+import { getDb, setD1Binding } from "@workspace/db";
+import type { GoalsD1Database } from "@workspace/db/d1";
 import {
   contactSubmissionsTable,
   industriesTable,
@@ -16,6 +16,11 @@ import { auditUrl } from "@workspace/seo-tools/geoAuditor";
 import { scoreMetaTags } from "@workspace/seo-tools/freeTools";
 import { wireCfEdgeEnv } from "@workspace/cf-edge/wire";
 import { corsPreflight, withCors } from "@workspace/cf-edge/cors";
+import {
+  handleAuthLogin,
+  handleAuthLogout,
+  handleAuthSignup,
+} from "./auth";
 import { kvGetJson, kvPutJson } from "@workspace/cf-edge/kv-cache";
 import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
@@ -24,6 +29,12 @@ import { z } from "zod";
 export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
   CF_EDGE_HTTP: string;
+  AUTH_SECRET: string;
+}
+
+/** D1-only worker — `getDb()` is always SQLite after `setD1Binding()`. */
+function db(): GoalsD1Database {
+  return getDb() as GoalsD1Database;
 }
 
 function clientIp(request: Request): string {
@@ -75,7 +86,7 @@ async function platformStatus(env: Env) {
   let enabled = true;
   let maintenanceMessage: string | null = null;
   try {
-    const [row] = await db
+    const [row] = await db()
       .select()
       .from(platformSettingsTable)
       .where(eq(platformSettingsTable.id, 1));
@@ -133,7 +144,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
     if (path === "/api/industries" && request.method === "GET") {
       const industries = await cachedReference(env, "ref:industries", async () => {
         await seedReferenceDataIfEmpty();
-        return db.select().from(industriesTable).orderBy(asc(industriesTable.name));
+        return db().select().from(industriesTable).orderBy(asc(industriesTable.name));
       });
       return withCors(request, Response.json(industries));
     }
@@ -141,9 +152,32 @@ async function handle(request: Request, env: Env): Promise<Response> {
     if (path === "/api/locations" && request.method === "GET") {
       const locations = await cachedReference(env, "ref:locations", async () => {
         await seedReferenceDataIfEmpty();
-        return db.select().from(locationsTable).orderBy(asc(locationsTable.name));
+        return db().select().from(locationsTable).orderBy(asc(locationsTable.name));
       });
       return withCors(request, Response.json(locations));
+    }
+
+    if (path === "/api/auth/login" && request.method === "POST") {
+      const ip = clientIp(request);
+      if (await rateLimitKv(env, `auth-login:${ip}`, 20, 900)) {
+        return withCors(request, Response.json({ error: "Too many attempts" }, { status: 429 }));
+      }
+      const response = await handleAuthLogin(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/signup" && request.method === "POST") {
+      const ip = clientIp(request);
+      if (await rateLimitKv(env, `auth-signup:${ip}`, 10, 3600)) {
+        return withCors(request, Response.json({ error: "Too many attempts" }, { status: 429 }));
+      }
+      const response = await handleAuthSignup(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/logout" && request.method === "POST") {
+      const response = handleAuthLogout(request);
+      return withCors(request, response);
     }
 
     if (path === "/api/contact" && request.method === "POST") {
@@ -151,7 +185,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
       if (!parsed.success) {
         return withCors(request, Response.json({ error: "Valid email required" }, { status: 400 }));
       }
-      await db.insert(contactSubmissionsTable).values({
+      await db().insert(contactSubmissionsTable).values({
         email: parsed.data.email.toLowerCase(),
         message: parsed.data.message?.trim() || null,
       });
@@ -167,7 +201,7 @@ async function handle(request: Request, env: Env): Promise<Response> {
         );
       }
       try {
-        await db.insert(waitlistSignupsTable).values({
+        await db().insert(waitlistSignupsTable).values({
           email: parsed.data.email.toLowerCase(),
           featureKey: parsed.data.featureKey,
         });
