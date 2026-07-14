@@ -13,7 +13,6 @@ const repoRoot = path.resolve(scriptDir, "..");
 const appDir = path.join(repoRoot, "artifacts/marketing-persona-app");
 const appSrc = path.join(appDir, "src/app");
 const backupRoot = path.join(appDir, ".marketing-build-backup");
-const outDir = path.join(appDir, "out");
 const pagesDist = path.join(repoRoot, "artifacts/marketing-pages/dist");
 const mainConfig = path.join(appDir, "next.config.ts");
 const marketingConfig = path.join(appDir, "next.config.marketing.ts");
@@ -58,6 +57,24 @@ function copyDir(src, dest) {
     if (entry.isDirectory()) copyDir(s, d);
     else fs.copyFileSync(s, d);
   }
+}
+
+/** Next.js may export to `out/` or a custom distDir — read export-detail.json when present. */
+function resolveExportDir() {
+  const detailPath = path.join(appDir, ".next/export-detail.json");
+  if (fs.existsSync(detailPath)) {
+    const detail = JSON.parse(fs.readFileSync(detailPath, "utf8"));
+    if (detail.outDirectory && fs.existsSync(path.join(detail.outDirectory, "index.html"))) {
+      return detail.outDirectory;
+    }
+  }
+
+  for (const name of ["out", ".marketing-out"]) {
+    const candidate = path.join(appDir, name);
+    if (fs.existsSync(path.join(candidate, "index.html"))) return candidate;
+  }
+
+  throw new Error("Static export directory not found after next build");
 }
 
 /** Load stylesheets without blocking first paint — critical CSS is inlined in layout. */
@@ -140,7 +157,11 @@ try {
   }
   fs.copyFileSync(marketingConfig, mainConfig);
 
-  for (const cacheDir of [path.join(appDir, ".next"), path.join(appDir, "out")]) {
+  for (const cacheDir of [
+    path.join(appDir, ".next"),
+    path.join(appDir, "out"),
+    path.join(appDir, ".marketing-out"),
+  ]) {
     rmrf(cacheDir);
   }
 
@@ -159,8 +180,11 @@ try {
     },
   });
 
+  const exportDir = resolveExportDir();
+  console.log(`→ Copying static export from ${path.relative(repoRoot, exportDir)}…`);
+
   rmrf(pagesDist);
-  copyDir(outDir, pagesDist);
+  copyDir(exportDir, pagesDist);
   stripLegacyPolyfills(pagesDist);
   deferCssInStaticExport(pagesDist);
 
