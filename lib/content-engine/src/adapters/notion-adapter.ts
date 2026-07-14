@@ -1,6 +1,6 @@
 import { markdownToNotionBlocks, publishToNotion } from "@workspace/connectors/notion";
-import type { CanonicalContent } from "../canonical-content";
-import type { CmsIntegrationCredentials } from "../support/cms-integrations";
+import type { CanonicalContent } from "../content/canonical-content";
+import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
 import type { CmsAdapter, PlatformPayload, PublishOpts, RenderResult } from "./types";
 
 export const notionAdapter: CmsAdapter = {

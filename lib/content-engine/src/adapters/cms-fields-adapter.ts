@@ -1,8 +1,8 @@
 import { publishToContentful } from "@workspace/connectors/contentful";
 import { publishToSanity } from "@workspace/connectors/sanity";
 import { publishToStrapi } from "@workspace/connectors/strapi";
-import type { CanonicalContent } from "../canonical-content";
-import type { CmsIntegrationCredentials } from "../support/cms-integrations";
+import type { CanonicalContent } from "../content/canonical-content";
+import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
 import { resolveSeoFromCanonical, seoTitle } from "./adapter-helpers";
 import { markdownToHtml } from "./markdown-html";
 import type {

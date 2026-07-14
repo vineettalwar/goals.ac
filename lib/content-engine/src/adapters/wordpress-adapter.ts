@@ -1,10 +1,10 @@
 import { prepareWordPressImages } from "@workspace/connectors/wordpress-images";
 import { publishToWordPress } from "@workspace/connectors/wordpress";
 import { publishToGoalsAcPlugin } from "@workspace/connectors/goals-ac-plugin";
-import type { CanonicalContent } from "../canonical-content";
-import type { CmsIntegrationCredentials, WordPressEditorMode } from "../support/cms-integrations";
-import { resolveWordPressConnectionType } from "../support/cms-integrations";
-import { resolveOutputMode, assertOutputModeAllowed } from "../support/platform-output-modes";
+import type { CanonicalContent } from "../content/canonical-content";
+import type { CmsIntegrationCredentials, WordPressEditorMode } from "../support/publishing/cms-integrations";
+import { resolveWordPressConnectionType } from "../support/publishing/cms-integrations";
+import { resolveOutputMode, assertOutputModeAllowed } from "../support/publishing/platform-output-modes";
 import {
   contentTagsFromCanonical,
   mapSeoToPluginMeta,

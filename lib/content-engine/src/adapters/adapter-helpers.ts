@@ -1,10 +1,10 @@
-import type { CanonicalContent } from "../canonical-content";
+import type { CanonicalContent } from "../content/canonical-content";
 import {
   mapSeoToPluginMeta,
   mapSeoToWordPressRestMeta,
   seoFromPieceMetadata,
   type CanonicalSeoFields,
-} from "../support/seo-field-mapper";
+} from "../support/publishing/seo-field-mapper";
 
 export function contentTagsFromCanonical(content: CanonicalContent): string[] {
   const tags: string[] = [];

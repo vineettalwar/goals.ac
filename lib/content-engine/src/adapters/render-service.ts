@@ -1,8 +1,8 @@
-import { buildCanonicalContent, type CanonicalContent } from "../canonical-content";
-import type { PublishableContentPiece } from "../support/cms-publish";
-import type { CmsIntegrationCredentials, WordPressEditorMode } from "../support/cms-integrations";
-import { resolveOutputMode } from "../support/platform-output-modes";
-import { resolvePublishEntitlements, type PublishEntitlements } from "../support/publish-entitlements";
+import { buildCanonicalContent, type CanonicalContent } from "../content/canonical-content";
+import type { PublishableContentPiece } from "../support/publishing/cms-publish";
+import type { CmsIntegrationCredentials, WordPressEditorMode } from "../support/publishing/cms-integrations";
+import { resolveOutputMode } from "../support/publishing/platform-output-modes";
+import { resolvePublishEntitlements, type PublishEntitlements } from "../support/publishing/publish-entitlements";
 import { getAdapter, getAdapterCapabilities } from "./registry";
 import type { PlatformPayload, RenderOptions, RenderResult } from "./types";
 import { prepareWordPressPayload } from "./wordpress-adapter";

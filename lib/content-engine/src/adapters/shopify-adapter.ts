@@ -1,8 +1,8 @@
 import { publishToGoalsAcPlugin } from "@workspace/connectors/goals-ac-plugin";
 import { publishToShopify } from "@workspace/connectors/shopify";
-import type { CanonicalContent } from "../canonical-content";
-import type { CmsIntegrationCredentials } from "../support/cms-integrations";
-import { getOutputModes, resolveOutputMode } from "../support/platform-output-modes";
+import type { CanonicalContent } from "../content/canonical-content";
+import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
+import { getOutputModes, resolveOutputMode } from "../support/publishing/platform-output-modes";
 import {
   contentTagsFromCanonical,
   mapSeoToPluginMeta,

@@ -1,7 +1,7 @@
 import { publishToWebhook, type WebhookArticlePayload } from "@workspace/connectors/webhook";
-import type { CanonicalContent } from "../canonical-content";
-import type { CmsIntegrationCredentials } from "../support/cms-integrations";
-import { getOutputModes, resolveOutputMode } from "../support/platform-output-modes";
+import type { CanonicalContent } from "../content/canonical-content";
+import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
+import { getOutputModes, resolveOutputMode } from "../support/publishing/platform-output-modes";
 import {
   contentTagsFromCanonical,
   resolveSeoFromCanonical,

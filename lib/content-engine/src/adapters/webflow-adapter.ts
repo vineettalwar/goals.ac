@@ -1,6 +1,6 @@
 import { publishToWebflow, type WebflowPublishStatus } from "@workspace/connectors/webflow";
-import type { CanonicalContent } from "../canonical-content";
-import type { CmsIntegrationCredentials } from "../support/cms-integrations";
+import type { CanonicalContent } from "../content/canonical-content";
+import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
 import { resolveSeoFromCanonical, seoTitle } from "./adapter-helpers";
 import { markdownToHtml } from "./markdown-html";
 import type { CmsAdapter, PlatformPayload, PublishOpts, RenderResult } from "./types";

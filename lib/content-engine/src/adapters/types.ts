@@ -1,9 +1,9 @@
 import type { WebhookArticlePayload } from "@workspace/connectors/webhook";
 import type { NotionBlock } from "@workspace/connectors/notion";
-import type { CanonicalContent } from "../canonical-content";
-import type { CmsIntegrationCredentials } from "../support/cms-integrations";
-import type { WordPressEditorMode } from "../support/cms-integrations";
-import type { PublishEntitlements } from "../support/publish-entitlements";
+import type { CanonicalContent } from "../content/canonical-content";
+import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
+import type { WordPressEditorMode } from "../support/publishing/cms-integrations";
+import type { PublishEntitlements } from "../support/publishing/publish-entitlements";
 
 export type AdapterPlatformId =
   | "wordpress"

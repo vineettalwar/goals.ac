@@ -1,9 +1,9 @@
 import { publishToDrupal } from "@workspace/connectors/drupal";
 import { publishToGoalsAcPlugin } from "@workspace/connectors/goals-ac-plugin";
-import type { CanonicalContent } from "../canonical-content";
-import type { CmsIntegrationCredentials } from "../support/cms-integrations";
-import { getOutputModes, resolveOutputMode } from "../support/platform-output-modes";
-import { mapSeoToPluginMeta } from "../support/seo-field-mapper";
+import type { CanonicalContent } from "../content/canonical-content";
+import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
+import { getOutputModes, resolveOutputMode } from "../support/publishing/platform-output-modes";
+import { mapSeoToPluginMeta } from "../support/publishing/seo-field-mapper";
 import { contentTagsFromCanonical, resolveSeoFromCanonical, seoTitle } from "./adapter-helpers";
 import { markdownToDrupalLayoutSections } from "./drupal-layout-builder";
 import { markdownToHtml } from "./markdown-html";

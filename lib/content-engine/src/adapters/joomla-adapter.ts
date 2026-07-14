@@ -1,10 +1,10 @@
 import { publishToGoalsAcPlugin } from "@workspace/connectors/goals-ac-plugin";
 import { publishToJoomla } from "@workspace/connectors/joomla";
-import type { CanonicalContent } from "../canonical-content";
-import type { CmsIntegrationCredentials } from "../support/cms-integrations";
-import { getOutputModes } from "../support/platform-output-modes";
-import { resolveOutputMode } from "../support/platform-output-modes";
-import { mapSeoToJoomlaMeta, mapSeoToPluginMeta } from "../support/seo-field-mapper";
+import type { CanonicalContent } from "../content/canonical-content";
+import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
+import { getOutputModes } from "../support/publishing/platform-output-modes";
+import { resolveOutputMode } from "../support/publishing/platform-output-modes";
+import { mapSeoToJoomlaMeta, mapSeoToPluginMeta } from "../support/publishing/seo-field-mapper";
 import { contentTagsFromCanonical } from "./adapter-helpers";
 import {
   mapPluginStatus,

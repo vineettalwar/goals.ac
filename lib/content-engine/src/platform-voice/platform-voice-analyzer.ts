@@ -1,7 +1,7 @@
 import { getAiProviderClient, type AiProviderClient, type AiProviderOptions } from "@workspace/ai-providers";
 import type { PlatformVoiceChannel, PlatformVoices, SocialPlatformId } from "@workspace/db/schema";
-import { cleanAndParse } from "../utils";
-import { resolveAiClient } from "../support/resolve-ai-client";
+import { cleanAndParse } from "../core/utils";
+import { resolveAiClient } from "../support/ai/resolve-ai-client";
 import { PLATFORM_CHANNELS, PLATFORM_LABELS } from "./registry";
 import { ensurePlatformVoice } from "./platform-voice-import-service";
 

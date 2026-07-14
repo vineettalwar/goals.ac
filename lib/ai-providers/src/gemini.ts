@@ -76,7 +76,7 @@ export function isUserKeyError(err: unknown): boolean {
 
 /**
  * BYOK resolution by user id: encrypted user key → Replit proxy → platform env key.
- * @deprecated Use `resolveAiClientForUser()` from `@workspace/content-engine/support/resolve-ai-client-for-user`.
+ * @deprecated Use `resolveAiClientForUser()` from `@workspace/content-engine/support/ai/resolve-ai-client-for-user`.
  */
 export async function getAiClientForUser(userId: number): Promise<{ client: GoogleGenAI; source: AiClientSource }> {
   const [user] = await db
