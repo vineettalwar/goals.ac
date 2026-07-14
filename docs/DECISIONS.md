@@ -1,6 +1,27 @@
-# Architecture decisions (append-only)
+## 2026-07-14 — Per-platform CMS content output modes (contract v0.2)
 
-## 2026-07-13 — Semrush org BYOK for keyword research
+**Decision:** Generalize WordPress `editorMode` into a platform-aware `outputMode` registry with native-editor modes for Ghost (Lexical), Drupal (Layout Builder), TYPO3 (content elements), and Shopify (metafields / page sections). Bump shared plugin contract to v0.2 with structured publish payloads.
+
+**Alternatives considered:**
+- HTML-only for all non-WordPress CMS — rejected; misses native editor fidelity
+- Single global `contentFormat` enum — rejected; each CMS ecosystem has different wire formats
+
+**Reason:** Users choose output format once per connection; adapters render canonical Markdown to the format their CMS editor accepts.
+
+**Implications:** `platform-output-modes.ts` is source of truth; integrations UI shows inline output format control; plugins accept `output_mode` + structured fields.
+
+## 2026-07-14 — CmsAdapter render layer for publish
+
+**Decision:** Introduce `CanonicalContent` + per-platform `CmsAdapter.render()` / `publish()` in `lib/content-engine`, with WordPress `editorMode` per connection (classic / gutenberg / elementor / divi).
+
+**Alternatives considered:**
+- Keep ad-hoc `marked()` in each connector — rejected; no preview, no plan gating, no page-builder awareness
+- Full mdast pipeline before ship — rejected; too much scope for v1
+
+**Reason:** One canonical Markdown source, platform-specific wire format at adapter boundary; public API and render preview reuse the same contract.
+
+**Implications:** Adapted platforms (WordPress, Notion, Webflow, Ghost, Webhook, Contentful, Sanity, Strapi) route through `renderAndPublish`; others unchanged. Webhook v2 adds optional `canonical` object for BYOK+. Public API on Express uses `api_keys` table.
+
 
 **Decision:** Store Semrush API credentials per organization (encrypted), not as a platform env var.
 
@@ -49,15 +70,16 @@
 
 ## 2026-07-13 — Stock images: platform API keys + project provider setting
 
-**Decision:** Platform-level `UNSPLASH_ACCESS_KEY` and `PEXELS_API_KEY`; projects choose provider via `contentStyle.imageSettings.stockProvider`.
+**Decision:** Stock images use **copyright-free** APIs only (Unsplash, Pexels) with **platform-wide** env keys (`UNSPLASH_ACCESS_KEY`, `PEXELS_API_KEY`). Projects choose search preference via `contentStyle.imageSettings.stockProvider` (auto / unsplash / pexels). Optional org/project BYOK overrides for Unsplash/Pexels only (higher rate limits or compliance).
 
 **Alternatives considered:**
-- Org BYOK for stock APIs — deferred; matches Semrush pattern but adds settings UI before first customer need
-- Hotlink stock URLs at publish — rejected; images must live on customer WordPress media library or LinkedIn upload
+- Org BYOK for all stock APIs including free Unsplash/Pexels — rejected; free APIs should work out of the box with one platform registration
+- Hotlink stock URLs at publish — rejected; images must be downloaded, compressed to WebP, and sideloaded to customer WordPress media library (or Goals.ac plugin media endpoint) at publish time
+- Paid stock APIs (Getty, Shutterstock) — out of scope; product focuses on copyright-free sources only
 
-**Reason:** Keyword-driven `pickBestStockPhoto()` at generation; WebP sideload to WordPress (`featured_media` / plugin media endpoint) or LinkedIn Images API at publish. Pipeline stays CMS-agnostic; WordPress adapter owns upload.
+**Reason:** Unsplash and Pexels are free for platform integration with clear licensing; keyword-driven `pickBestStockPhoto()` at generation; at publish, `downloadAndOptimizeImage()` (sharp → WebP, max 1920px) uploads to the customer's server and rewrites markdown URLs to hosted media. LinkedIn/Instagram social publish re-optimizes the featured image for platform upload.
 
-**Implications:** Requires at least one stock API key in env. Gutenberg native blocks remain Phase 2; v1 uses sideloaded semantic HTML.
+**Implications:** Requires at least one free stock API key in env for default auto images, or org/project BYOK for Unsplash/Pexels. Optional keys stored in `organizations.encrypted_stock_credentials` (org) and `contentStyle.imageSettings.encryptedStockCredentials` (project). Resolver: project → org → platform env. Settings and Brand tab expose optional Unsplash/Pexels overrides only.
 
 ## 2026-07-13 — Hybrid brand voice RAG + editable skill
 
@@ -96,6 +118,18 @@
 
 **Implications:** Shared `prepareAiBilling` helper in marketing-persona-app; tier pricing constants in `lib/billing/src/pricing.ts`; worker `contentGenerate` uses same flow; cached AI short-circuits skip billing.
 
+## 2026-07-14 — Dual-track GTM: Growth tier self-serve
+
+**Decision:** Re-enable **Growth** as a self-serve paid plan ($49/mo, 30 articles/mo) alongside free Starter, while keeping Scale as sales-assisted. Add fast-lane onboarding (URL → 3 articles + 30-day plan) for SMB autopilot parity vs AutoSEO.
+
+**Alternatives considered:**
+- Consulting-only GTM — rejected for SMB acquisition vs autopilot competitors
+- Copy backlink exchange — rejected (spam-policy risk); white-hat internal links instead
+
+**Reason:** Platform engine already supports daily autopilot and 30-item calendars; gaps were packaging, onboarding friction, and billing — not core generation.
+
+**Implications:** `OFFERED_PLAN_IDS` includes `growth`; Stripe checkout + webhook resolve plan from price ID; `/content-autopilot` URL funnel; compare/pricing pages updated for dual track.
+
 ## 2026-07-14 — Single Starter plan with BYOK
 
 **Decision:** Ship one product plan — **Starter** — with platform-key monthly quotas and **BYOK** (bring your own API key) for unlimited generations. No Growth/Scale paid tiers or Stripe checkout in v1.
@@ -107,3 +141,15 @@
 **Reason:** Simplifies onboarding and admin while the product matures; BYOK is the primary path for power users and aligns with existing org-level credential storage.
 
 **Implications:** `OFFERED_PLAN_IDS` is `["starter"]` only; quotas are stored in `plan_quota_config` and editable at Admin → Plans; code defaults apply when no row exists; BYOK skips all quota checks.
+
+## 2026-07-14 — Platform integration hardening (security, performance, accessibility)
+
+**Decision:** Harden all publishing integrations with signed OAuth state, SSRF validation at credential save, RBAC on integration management, bounded CMS site-graph exports, async-default publish, and shared accessibility fixes on the integration UI.
+
+**Alternatives considered:**
+- Per-integration one-off fixes — rejected; duplicated effort across 27 destinations
+- Rate limiting / WAF at edge — deferred; out of scope for app-layer pass
+
+**Reason:** OAuth CSRF and webhook SSRF were the highest-risk gaps; unbounded site-graph and sync publish caused timeouts on large sites; `ConnectionField` label gaps affected every CMS/ESP form.
+
+**Implications:** `oauth-state.ts` signs callbacks with `AUTH_SECRET`; `requireIntegrationsManage` gates PATCH/DELETE/test; inline WP creds removed from publish API; WP/Joomla/TYPO3 site-graph capped at 500; brand scan caches site-graph 1h; publish UI defaults `async: true`; integration tiles expose status to screen readers.

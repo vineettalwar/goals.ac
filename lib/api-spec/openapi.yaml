@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: publish
+    description: Content publish and render API (API key auth)
   - name: roadmaps
     description: Roadmap generation and retrieval
   - name: leads
@@ -882,7 +884,118 @@ paths:
         "200":
           description: Updated
 
+        "200":
+          description: Updated
+
+  /v1/connections:
+    get:
+      operationId: listPublishConnections
+      tags: [publish]
+      summary: List connected publish destinations for a project
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: projectId
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Connected platforms with adapter capabilities
+
+  /v1/content/render:
+    post:
+      operationId: renderContentForPlatform
+      tags: [publish]
+      summary: Render content for a destination without publishing
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, platform, title, markdown]
+              properties:
+                projectId:
+                  type: integer
+                platform:
+                  type: string
+                title:
+                  type: string
+                markdown:
+                  type: string
+                editorMode:
+                  type: string
+                  enum: [classic, gutenberg, elementor, divi]
+      responses:
+        "200":
+          description: Render preview payload
+
+  /v1/content-pieces/{id}/publish:
+    post:
+      operationId: publishContentPiecePublic
+      tags: [publish]
+      summary: Publish a content piece to a connected destination
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, platform]
+              properties:
+                projectId:
+                  type: integer
+                platform:
+                  type: string
+      responses:
+        "200":
+          description: Published
+
+  /v1/content-pieces:
+    post:
+      operationId: ingestContentDraft
+      tags: [publish]
+      summary: Validate and return canonical content from external markdown
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, title, markdown]
+              properties:
+                projectId:
+                  type: integer
+                title:
+                  type: string
+                markdown:
+                  type: string
+                formatType:
+                  type: string
+      responses:
+        "201":
+          description: Canonical content accepted
+
 components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: http
+      scheme: bearer
+      description: goals.ac API key (gac_…)
   schemas:
     HealthStatus:
       type: object

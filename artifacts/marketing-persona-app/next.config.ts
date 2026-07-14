@@ -63,7 +63,9 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@workspace/db", "@workspace/billing", "@workspace/integrations-gemini-ai", "@workspace/security", "@workspace/ai-providers", "@workspace/connectors", "@workspace/content-engine", "@workspace/jobs", "@workspace/media", "@workspace/seo-tools", "@workspace/serp-provider"],
   async redirects() {
     return [
-      { source: "/agent", destination: "/autopilot", permanent: true },
+      { source: "/agent", destination: "/projects", permanent: true },
+      { source: "/autopilot", destination: "/projects", permanent: true },
+      { source: "/autopilot/:path*", destination: "/projects", permanent: true },
       { source: "/growth-roadmaps", destination: "/strategy/roadmaps", permanent: true },
       { source: "/content-strategies", destination: "/strategy/calendar", permanent: true },
       { source: "/topical-map", destination: "/strategy/topical-map", permanent: true },

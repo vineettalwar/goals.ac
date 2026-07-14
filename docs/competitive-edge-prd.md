@@ -1,18 +1,22 @@
 # Competitive Edge PRD — goals.ac vs BabyLoveGrowth.ai
 
-**Version:** 1.0
+**Version:** 1.1
 **Date:** July 2026
 **Status:** Approved for execution (Phases E1–E3 in progress)
 **Companion doc:** [goldsuite-ac-prd.md](goldsuite-ac-prd.md) (product vision & feature inventory)
+**Competitor teardowns:** [BabyLoveGrowth](./competitors/babylovegrowth-teardown.md) · [AutoSEO](./competitors/getautoseo-teardown.md) · [Parity planner (both)](./competitors/babylovegrowth-parity-planner.md)
 
 ---
 
 ## 1. Executive Summary
 
-goals.ac competes in the "SEO content on autopilot" category. The reference
-competitor is **BabyLoveGrowth.ai** — a $99/month platform serving 1,000+
-businesses that auto-generates and auto-publishes daily SEO articles, builds
-backlinks through an exchange network, and tracks AI search visibility.
+goals.ac competes in the "SEO content on autopilot" category. Primary reference
+competitors:
+
+- **BabyLoveGrowth.ai** — $99/month, 4,000+ businesses, backlink exchange, AI visibility (closest AI/GEO positioning match)
+- **AutoSEO (getautoseo.com)** — $49–$199/month, 2,479+ businesses, daily articles + backlink exchange, ultra-low-friction URL onboarding
+
+**GTM (current):** Consulting-led, partner-only, no public pricing. Product parity work targets partner demos vs BLG and AutoSEO self-serve packaging. Future self-serve hypothesis: [dual-track-gtm.md](competitors/dual-track-gtm.md).
 
 Their most-cited weakness in independent reviews: **content quality requires
 heavy editing**, which silently multiplies the true cost per article. Their
@@ -26,23 +30,25 @@ reaching **integration parity** and shipping the **production hardening**
 
 ---
 
-## 2. Competitor Teardown — BabyLoveGrowth.ai
+## 2. Competitor Teardown — BabyLoveGrowth.ai & AutoSEO
 
-### 2.1 What they ship
+Full research: [babylovegrowth-teardown.md](competitors/babylovegrowth-teardown.md) (hub) · [product](competitors/babylovegrowth-product-teardown.md) · [GTM/pricing](competitors/babylovegrowth-gtm-pricing.md) · [getautoseo-teardown.md](competitors/getautoseo-teardown.md)
 
-| Area | Their offering |
-|---|---|
-| Content engine | 30 SEO + LLM-optimized articles/month, auto-published daily; keyword research, outlines, internal links, images, citations included |
-| Content strategy | Auto-generated 30-day content plan (titles + target keywords) |
-| Integrations | WordPress, Webflow, Shopify, Wix, Ghost, Framer plugin |
-| Backlinks | Contextual backlink exchange network across their customer base |
-| AI visibility | Tracks brand/URL citations inside ChatGPT, Claude, Perplexity, Gemini |
-| GEO | Technical GEO audits (schema errors, meta tags) |
-| Reddit agent | AI agent that finds relevant Reddit conversations for brand mentions |
-| Languages | All major languages with localized keyword research |
-| Pricing | $99/mo (anchored from $247/mo), custom agency plan, 3-day CC-required trial, 90-day traffic money-back guarantee |
+### 2.1 What BLG ships (summary)
 
-### 2.2 Where they are weak (our openings)
+| Area | BabyLoveGrowth | AutoSEO |
+|---|---|---|
+| Content engine | 30 SEO + LLM articles/mo, auto-published daily | ~1 article/day, 1,500–2,500 words |
+| Content strategy | 30-day plan | 30-day plan |
+| Integrations | WP, Webflow, Shopify, Wix, API | ~11 CMS + hosted blog |
+| Backlinks | 4,000+ site exchange ($800+/mo claimed) | Customer exchange (~100 DA/mo) |
+| AI visibility | 4-engine citation dashboard | Marketing positioning |
+| GEO | Technical audit + free lead magnet | Unknown |
+| Reddit | Visibility engine (find threads) | No |
+| Languages | 50+ marketed; 20+ on Grow | 100 |
+| Pricing | $99 / $299/mo public, CC trial | $49 / $99 / $199/mo, no-CC trial |
+
+### 2.2 Where they are weak (goals.ac openings)
 
 | Weakness | Evidence | Our counter |
 |---|---|---|
@@ -53,16 +59,25 @@ reaching **integration parity** and shipping the **production hardening**
 | **CC-gated 3-day trial** | Friction at top of funnel | Free tier (5 articles/mo) + free public tools (roadmaps, GEO audit) as lead gen |
 | **No workspace beyond articles** | Articles only | Full **Content Studio** (20+ formats), growth roadmaps, repurposing |
 
-### 2.3 Where they are ahead (parity gaps we must close)
+### 2.3 Where they are ahead (parity gaps — Jul 2026)
 
-| Their advantage | Our gap | Priority |
+See [babylovegrowth-parity-planner.md](competitors/babylovegrowth-parity-planner.md) for full three-way matrix.
+
+| Their advantage | goals.ac gap | Priority |
 |---|---|---|
-| Shopify, Wix, Ghost, Framer connectors | We have WordPress, Notion, Webflow only | **P0** — Ghost + generic webhook now; Shopify next |
-| Daily autopilot cadence | Cron exists but no per-company schedule control | P1 |
-| AI visibility tracking over time | We have point-in-time GEO audit only | P1 — recurring audit + brand citation tracking |
-| Multilingual with localized keyword research | Language setting exists in content style; not localized research | P2 |
-| Backlink program | None | P2 — white-hat alternative only |
-| Production billing | Static pricing page, no enforcement | **P0** — quota enforcement now, Stripe next |
+| Self-serve public pricing ($99 BLG / $49 AutoSEO) | Consulting-only GTM | Deferred (not current target) |
+| Unified autopilot dashboard | Split across autopilot / visibility / audit | **P0** — Phase 1 |
+| Public article quality scorecard (BLG 95/100) | In-app scorer, not marketed | **P0** — Phase 1 |
+| Backlink exchange narrative | None (by design) | Never — [white-hat-link-strategy.md](competitors/white-hat-link-strategy.md) |
+| Anonymous free GEO audit (BLG) | Auth required on Next route | **P1** — Phase 2 |
+| Per-article infographics | Images only | **P1** — Phase 3 |
+| Agency white-label reseller (BLG) | Waitlist | **P2** — Phase 3 |
+| 50–100 languages | 10 live | **P2** — Phase 3 |
+| Hosted blog fallback (AutoSEO) | None | Deferred |
+
+**Closed since v1.0:** CMS parity — goals.ac now exceeds both (16 CMS + ESP + social + public API). LLM visibility tracking and weekly GEO re-audit are live.
+
+**Openings vs both:** humanization, BYOK transparency, 12-month roadmaps, editorial control, white-hat links, content studio breadth.
 
 ---
 

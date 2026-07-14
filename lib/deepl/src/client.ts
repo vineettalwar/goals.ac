@@ -20,7 +20,7 @@ function deeplApiBase(apiKey: string): string {
     : "https://api.deepl.com";
 }
 
-function authHeaders(apiKey: string): HeadersInit {
+function authHeaders(apiKey: string): Record<string, string> {
   return {
     Authorization: `DeepL-Auth-Key ${apiKey.trim()}`,
     "Content-Type": "application/x-www-form-urlencoded",
