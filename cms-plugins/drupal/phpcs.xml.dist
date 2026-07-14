@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<ruleset name="goals-ac-drupal">
+  <description>Syntax-only PHPCS for goals.ac Drupal module (PSR-style PHP).</description>
+
+  <file>src</file>
+  <file>stubs</file>
+
+  <arg value="n"/>
+  <arg name="extensions" value="php"/>
+
+  <rule ref="Generic.PHP.Syntax"/>
+</ruleset>
