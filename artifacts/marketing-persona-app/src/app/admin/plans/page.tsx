@@ -1,5 +1,5 @@
-import { AdminPlansPanel } from "@/components/admin/admin-plans-panel";
-import { AdminSectionLayout } from "@/components/admin/admin-section-layout";
+import { AdminPlansPanel } from "@/components/admin/platform/admin-plans-panel";
+import { AdminSectionLayout } from "@/components/admin/layout/admin-section-layout";
 
 export default function AdminPlansPage() {
   return (

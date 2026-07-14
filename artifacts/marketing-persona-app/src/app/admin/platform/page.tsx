@@ -1,5 +1,5 @@
-import { AdminSectionLayout } from "@/components/admin/admin-section-layout";
-import { PlatformOperationsPanel } from "@/components/admin/platform-operations-panel";
+import { AdminSectionLayout } from "@/components/admin/layout/admin-section-layout";
+import { PlatformOperationsPanel } from "@/components/admin/platform/platform-operations-panel";
 
 export default function AdminPlatformPage() {
   return (

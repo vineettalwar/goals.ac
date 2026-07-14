@@ -1,4 +1,4 @@
-import { AdminSectionLayout } from "@/components/admin/admin-section-layout";
+import { AdminSectionLayout } from "@/components/admin/layout/admin-section-layout";
 import { AdminContentStrategiesClient } from "./admin-client";
 
 export default function AdminContentStrategiesPage() {

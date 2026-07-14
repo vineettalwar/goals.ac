@@ -1,4 +1,4 @@
-import { AdminSectionLayout } from "@/components/admin/admin-section-layout";
+import { AdminSectionLayout } from "@/components/admin/layout/admin-section-layout";
 
 export default function AdminOrganizationsLayout({ children }: { children: React.ReactNode }) {
   return (

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requirePlatformAdmin } from "@/lib/auth/require-platform-admin";
-import { AdminSidebarNav } from "@/components/admin/admin-sidebar-nav";
-import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
+import { AdminSidebarNav } from "@/components/admin/layout/admin-sidebar-nav";
+import { ImpersonationBanner } from "@/components/admin/layout/impersonation-banner";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },

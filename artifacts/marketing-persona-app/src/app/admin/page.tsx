@@ -1,5 +1,5 @@
-import { AdminSectionLayout } from "@/components/admin/admin-section-layout";
-import { AdminOverviewPanel } from "@/components/admin/admin-overview-panel";
+import { AdminSectionLayout } from "@/components/admin/layout/admin-section-layout";
+import { AdminOverviewPanel } from "@/components/admin/platform/admin-overview-panel";
 import { getAdminOverview } from "@/lib/org/admin-overview";
 
 export default async function AdminPage() {

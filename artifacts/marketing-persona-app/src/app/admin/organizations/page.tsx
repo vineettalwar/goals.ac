@@ -1,4 +1,4 @@
-import { AdminOrganizationsList } from "@/components/admin/admin-organizations-panel";
+import { AdminOrganizationsList } from "@/components/admin/organizations/admin-organizations-panel";
 
 export default function AdminOrganizationsPage() {
   return <AdminOrganizationsList />;

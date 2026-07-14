@@ -1,6 +1,6 @@
 import { Suspense } from "react";
-import { AdminIntegrationsPageClient } from "@/components/admin/admin-integrations-page-client";
-import { IntegrationCategorySkeleton } from "@/components/integration-tile";
+import { AdminIntegrationsPageClient } from "@/components/admin/integrations/admin-integrations-page-client";
+import { IntegrationCategorySkeleton } from "@/components/integrations/integration-tile";
 
 function AdminIntegrationsPageFallback() {
   return (

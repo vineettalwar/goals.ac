@@ -1,5 +1,5 @@
-import { AdminInviteUserCard } from "@/components/admin/admin-invite-user-card";
-import { AdminPendingInvitesPanel } from "@/components/admin/admin-pending-invites-panel";
+import { AdminInviteUserCard } from "@/components/admin/organizations/admin-invite-user-card";
+import { AdminPendingInvitesPanel } from "@/components/admin/organizations/admin-pending-invites-panel";
 
 export default function AdminUsersInvitePage() {
   return (

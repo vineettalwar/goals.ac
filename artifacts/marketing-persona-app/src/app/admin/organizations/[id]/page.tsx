@@ -1,4 +1,4 @@
-import { AdminOrganizationDetailPanel } from "@/components/admin/admin-organization-detail-panel";
+import { AdminOrganizationDetailPanel } from "@/components/admin/organizations/admin-organization-detail-panel";
 
 export default async function AdminOrganizationDetailPage({
   params,
