@@ -155,7 +155,7 @@ function HelpSectionHeading({ text }: { text: string }) {
 function OrderedSteps({ items }: { items: string[] }) {
   return (
     <ol className="space-y-3 mb-8">
-      {items.map((item) => (
+      {items.map((item, i) => (
         <li
           key={item}
           className="flex gap-4 rounded-xl border border-border/60 bg-muted/30 px-4 py-3.5 transition-colors hover:bg-muted/50"
@@ -181,7 +181,7 @@ function BulletList({ items, variant = "default" }: { items: string[]; variant?:
           : "pl-1"
       }`}
     >
-      {items.map((item) => (
+      {items.map((item, i) => (
         <li key={item} className="flex gap-3 text-[15px] leading-relaxed text-foreground/90">
           <span
             className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${

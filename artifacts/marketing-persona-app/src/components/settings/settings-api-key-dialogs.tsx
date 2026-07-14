@@ -5,6 +5,24 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const DEFAULT_BEDROCK_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0";
+
+const SEMRUSH_DATABASES = [
+  { value: "us", label: "United States" },
+  { value: "uk", label: "United Kingdom" },
+  { value: "ca", label: "Canada" },
+  { value: "au", label: "Australia" },
+] as const;
+
 export function SettingsApiKeyDialogs({
   geminiDialogOpen, setGeminiDialogOpen, geminiKeyInput, setGeminiKeyInput, geminiTestResult,
   geminiTesting, geminiSaving, testGeminiKey, saveGeminiKey,
@@ -13,8 +31,65 @@ export function SettingsApiKeyDialogs({
   anthropicDialogOpen, setAnthropicDialogOpen, anthropicKeyInput, setAnthropicKeyInput, anthropicTestResult,
   anthropicTesting, anthropicSaving, testAnthropicKey, saveAnthropicKey,
   bedrockDialogOpen, setBedrockDialogOpen, bedrockForm, setBedrockForm, bedrockTestResult,
-  bedrockTesting, bedrockSaving, testBedrockKey, saveBedrockKey,
-}: any) {
+  bedrockTesting, bedrockSaving, testBedrockCredentials, saveBedrockCredentials,
+  semrushDialogOpen, setSemrushDialogOpen, semrushApiKeyInput, setSemrushApiKeyInput,
+  semrushFormDatabase, setSemrushFormDatabase, semrushTestResult, semrushTesting, semrushSaving,
+  testSemrushCredentials, saveSemrushCredentials,
+  showSemrushDatabaseHint, suggestedSemrushDatabase, activeProject, contentLanguageLabel, semrushDatabaseLabel,
+}: {
+  geminiDialogOpen: boolean;
+  setGeminiDialogOpen: (open: boolean) => void;
+  geminiKeyInput: string;
+  setGeminiKeyInput: (v: string) => void;
+  geminiTestResult: { ok: boolean; error?: string } | null;
+  geminiTesting: boolean;
+  geminiSaving: boolean;
+  testGeminiKey: () => void;
+  saveGeminiKey: () => void;
+  openaiDialogOpen: boolean;
+  setOpenaiDialogOpen: (open: boolean) => void;
+  openaiKeyInput: string;
+  setOpenaiKeyInput: (v: string) => void;
+  openaiTestResult: { ok: boolean; error?: string } | null;
+  openaiTesting: boolean;
+  openaiSaving: boolean;
+  testOpenAIKey: () => void;
+  saveOpenAIKey: () => void;
+  anthropicDialogOpen: boolean;
+  setAnthropicDialogOpen: (open: boolean) => void;
+  anthropicKeyInput: string;
+  setAnthropicKeyInput: (v: string) => void;
+  anthropicTestResult: { ok: boolean; error?: string } | null;
+  anthropicTesting: boolean;
+  anthropicSaving: boolean;
+  testAnthropicKey: () => void;
+  saveAnthropicKey: () => void;
+  bedrockDialogOpen: boolean;
+  setBedrockDialogOpen: (open: boolean) => void;
+  bedrockForm: { accessKeyId: string; secretAccessKey: string; sessionToken: string; region: string; model: string };
+  setBedrockForm: React.Dispatch<React.SetStateAction<{ accessKeyId: string; secretAccessKey: string; sessionToken: string; region: string; model: string }>>;
+  bedrockTestResult: { ok: boolean; error?: string } | null;
+  bedrockTesting: boolean;
+  bedrockSaving: boolean;
+  testBedrockCredentials: () => void;
+  saveBedrockCredentials: () => void;
+  semrushDialogOpen: boolean;
+  setSemrushDialogOpen: (open: boolean) => void;
+  semrushApiKeyInput: string;
+  setSemrushApiKeyInput: (v: string) => void;
+  semrushFormDatabase: string;
+  setSemrushFormDatabase: (v: string) => void;
+  semrushTestResult: { ok: boolean; error?: string } | null;
+  semrushTesting: boolean;
+  semrushSaving: boolean;
+  testSemrushCredentials: () => void;
+  saveSemrushCredentials: () => void;
+  showSemrushDatabaseHint: boolean;
+  suggestedSemrushDatabase: string | null | undefined;
+  activeProject: { primaryLanguage?: string | null } | null | undefined;
+  contentLanguageLabel: (code?: string | null) => string;
+  semrushDatabaseLabel: (db: string) => string;
+}) {
   return (
     <>
       <Dialog open={geminiDialogOpen} onOpenChange={setGeminiDialogOpen}>
@@ -268,8 +343,6 @@ export function SettingsApiKeyDialogs({
           </div>
         </DialogContent>
       </Dialog>
-    </div>
-  );
     </>
   );
 }

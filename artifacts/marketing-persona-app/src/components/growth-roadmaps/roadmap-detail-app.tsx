@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
 import { RoadmapChat } from "@/components/roadmap/roadmap-chat";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
+import { useProjectContent } from "@/lib/queries";
 
 interface Phase {
   title: string;
@@ -43,27 +44,19 @@ export function RoadmapDetailApp({
 }: RoadmapDetailAppProps) {
   const router = useRouter();
   const { activeProjectId } = useActiveProject();
-  const [isPinned, setIsPinned] = useState<boolean | null>(null);
+  const projectId = activeProjectId != null ? String(activeProjectId) : "";
+  const { data: projectContent } = useProjectContent(projectId || null);
   const [pinLoading, setPinLoading] = useState(false);
   const [generatingStrategy, setGeneratingStrategy] = useState(false);
+  const [pinOverride, setPinOverride] = useState<boolean | null>(null);
 
   const phases = content?.phases ?? [];
 
-  useEffect(() => {
-    if (!activeProjectId) {
-      setIsPinned(false);
-      return;
-    }
-    fetch(`/api/website-projects/${activeProjectId}/content`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        const pinned = (data?.roadmaps ?? []).some(
-          (r: { id: number }) => r.id === roadmapId,
-        );
-        setIsPinned(pinned);
-      })
-      .catch(() => setIsPinned(false));
-  }, [activeProjectId, roadmapId]);
+  const isPinnedFromQuery =
+    activeProjectId != null
+      ? ((projectContent?.roadmaps ?? []) as Array<{ id: number }>).some((r) => r.id === roadmapId)
+      : false;
+  const isPinned = pinOverride ?? (activeProjectId ? isPinnedFromQuery : false);
 
   async function togglePin() {
     if (!activeProjectId) {
@@ -81,7 +74,7 @@ export function RoadmapDetailApp({
         toast.error(isPinned ? "Failed to unpin" : "Failed to pin");
         return;
       }
-      setIsPinned(!isPinned);
+      setPinOverride(!isPinned);
       toast.success(isPinned ? "Removed from project" : "Pinned to project");
     } catch {
       toast.error("Something went wrong");
@@ -183,7 +176,7 @@ export function RoadmapDetailApp({
 
       <div className="space-y-4">
         {phases.map((phase, i) => (
-          <div key={i} className="paper-card rounded-xl p-6 space-y-4">
+          <div key={`${phase.title}-${phase.timeframe}`} className="paper-card rounded-xl p-6 space-y-4">
             <div className="flex items-start gap-4">
               <div className="step-dot active shrink-0">{i + 1}</div>
               <div>

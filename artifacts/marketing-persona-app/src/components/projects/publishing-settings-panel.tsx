@@ -100,9 +100,10 @@ import {
   HealthBadge,
   SocialConnectionCard,
   SocialIcon,
+  type CmsIntegrationStatus,
 } from "./publishing-settings-cards";
 import { PublishingSettingsDialogBody } from "./publishing-settings-dialog-body";
-export type { CmsIntegrationStatus } from "./publishing-settings-cards";
+export type { CmsIntegrationStatus };
 
 
 export function PublishingSettingsPanel({

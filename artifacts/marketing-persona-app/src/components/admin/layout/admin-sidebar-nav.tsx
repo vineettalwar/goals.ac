@@ -157,7 +157,7 @@ export function AdminSidebarNav({ userName, userEmail }: AdminSidebarNavProps) {
             <p className="truncate text-xs font-medium">{userName}</p>
             <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
           </div>
-          <button
+          <button type="button"
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="ml-auto shrink-0 text-muted-foreground transition-colors hover:text-foreground"
             title="Sign out"

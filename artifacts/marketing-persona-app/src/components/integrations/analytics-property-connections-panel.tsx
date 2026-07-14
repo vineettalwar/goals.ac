@@ -66,7 +66,9 @@ function PropertyPicker({
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/website-projects/${projectId}/analytics-properties/available`);
+      const res = await fetch(`/api/website-projects/${projectId}/analytics-properties/available`, {
+        method: "POST",
+      });
       if (!res.ok) {
         setError("Could not load GA4 properties from your account.");
         return;
@@ -258,7 +260,7 @@ function ConnectionDetails({
                 ? `${ga4SyncStatus.pageCount.toLocaleString()} page paths indexed`
                 : "No page metrics synced yet"}
               {ga4SyncStatus.lastSyncedAt
-                ? ` · Last sync ${new Date(ga4SyncStatus.lastSyncedAt).toLocaleDateString()}`
+                ? ` · Last sync ${new Date(ga4SyncStatus.lastSyncedAt).toLocaleDateString("en-US", { timeZone: "UTC" })}`
                 : ""}
             </p>
           ) : null}

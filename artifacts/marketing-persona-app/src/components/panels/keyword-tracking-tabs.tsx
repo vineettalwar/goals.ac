@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Spinner } from "@/components/ui/spinner";
 
 const KeywordRankChart = dynamic(
@@ -35,6 +34,13 @@ interface Analysis {
   summary: string;
 }
 
+export type { Analysis };
+
+interface RankSnapshot {
+  checkedAt: string;
+  position: number | null;
+}
+
 export function KeywordRankTrackingTab({
   trackInput,
   onTrackInputChange,
@@ -52,50 +58,47 @@ export function KeywordRankTrackingTab({
   selectedTrackedId: number | null;
   onSelectTracked: (id: number) => void;
   onDeleteTracked: (id: number) => void;
-  snapshots: unknown[];
+  snapshots: RankSnapshot[];
 }) {
   return (
-            <TabsContent value="tracking" className="space-y-6 mt-6">
-      <div className="paper-card p-6 rounded-xl space-y-4">
-        <h2 className="font-semibold flex items-center gap-2">
-          <TrendingUp className="h-4 w-4" /> Rank tracking
-        </h2>
-        <div className="flex gap-2">
-          <Input
-            placeholder="Keyword to track"
-            value={trackInput}
-            onChange={(e) => setTrackInput(e.target.value)}
-          />
-          <Button onClick={onTrackKeyword}>
-            <Plus className="h-4 w-4" />
-          </Button>
-        </div>
-        <div className="space-y-2">
-          {tracked.map((kw) => (
-            <div
-              key={kw.id}
-              className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border"
-            >
-              <button
-                type="button"
-                className="text-left flex-1"
-                onClick={() => onSelectTracked(kw.id)}
-              >
-                <span className="font-medium">{kw.keyword}</span>
-                <span className="text-xs text-muted-foreground ml-2">
-                  {kw.latestSnapshot?.position != null
-                    ? `#${kw.latestSnapshot.position}`
-                    : "—"}
-                </span>
-              </button>
-              <Button variant="ghost" size="icon" onClick={() => onDeleteTracked(kw.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
-        </div>
-        {selectedTrackedId && <KeywordRankChart snapshots={snapshots} />}
+    <div className="paper-card p-6 rounded-xl space-y-4">
+      <h2 className="font-semibold flex items-center gap-2">
+        <TrendingUp className="h-4 w-4" /> Rank tracking
+      </h2>
+      <div className="flex gap-2">
+        <Input
+          placeholder="Keyword to track"
+          value={trackInput}
+          onChange={(e) => onTrackInputChange(e.target.value)}
+        />
+        <Button onClick={onTrackKeyword}>
+          <Plus className="h-4 w-4" />
+        </Button>
       </div>
+      <div className="space-y-2">
+        {tracked.map((kw) => (
+          <div
+            key={kw.id}
+            className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border"
+          >
+            <button
+              type="button"
+              className="text-left flex-1"
+              onClick={() => onSelectTracked(kw.id)}
+            >
+              <span className="font-medium">{kw.keyword}</span>
+              <span className="text-xs text-muted-foreground ml-2">
+                {kw.latestSnapshot?.position != null ? `#${kw.latestSnapshot.position}` : "—"}
+              </span>
+            </button>
+            <Button variant="ghost" size="icon" onClick={() => onDeleteTracked(kw.id)}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
+      {selectedTrackedId != null && <KeywordRankChart snapshots={snapshots} />}
+    </div>
   );
 }
 
@@ -117,7 +120,7 @@ export function KeywordAnalyzerTab({
   onAnalyze: () => void;
 }) {
   return (
-    <TabsContent value="analyzer" className="space-y-6 mt-6">
+    <>
       <div className="paper-card p-6 rounded-xl space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <Search className="h-4 w-4" /> Keyword analysis
@@ -127,7 +130,7 @@ export function KeywordAnalyzerTab({
           <Input
             placeholder="B2B lead generation, SaaS marketing"
             value={keywordInput}
-            onChange={(e) => setKeywordInput(e.target.value)}
+            onChange={(e) => onKeywordInputChange(e.target.value)}
           />
         </div>
         <div className="space-y-1.5">
@@ -135,10 +138,10 @@ export function KeywordAnalyzerTab({
           <Input
             placeholder="https://yoursite.com"
             value={websiteUrl}
-            onChange={(e) => setWebsiteUrl(e.target.value)}
+            onChange={(e) => onWebsiteUrlChange(e.target.value)}
           />
         </div>
-        <Button onClick={handleAnalyze} disabled={loading}>
+        <Button onClick={onAnalyze} disabled={loading}>
           {loading ? (
             <>
               <Spinner size="sm" /> Analyzing…
@@ -148,7 +151,8 @@ export function KeywordAnalyzerTab({
           )}
         </Button>
       </div>
-       {analysis && (
+
+      {analysis && (
         <div className="space-y-4">
           <div className="paper-card rounded-xl p-5">
             <h2 className="font-semibold flex items-center gap-2 mb-2">
@@ -177,15 +181,6 @@ export function KeywordAnalyzerTab({
           ))}
         </div>
       )}
-    </TabsContent>
-          </Tabs>
-        </>
-      )}
-
-      <p className="text-sm text-muted-foreground">
-        Also see{" "}
-        <Link href="/search/visibility" className="text-primary hover:underline">
-          Visibility
-        </Link>{" "}
+    </>
   );
 }

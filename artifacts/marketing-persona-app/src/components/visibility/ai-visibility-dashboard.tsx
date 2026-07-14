@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
 import { useVisibilityData } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
 import { SearchPropertyConnectionsPanel } from "@/components/integrations/search-property-connections-panel";
@@ -108,7 +108,7 @@ function TrackingSettings({
       </div>
       {settings.lastVisibilityCheckAt ? (
         <p className="text-xs text-muted-foreground border-t border-border/60 pt-3">
-          Last check {new Date(settings.lastVisibilityCheckAt).toLocaleString()}
+          Last check {new Date(settings.lastVisibilityCheckAt).toLocaleString("en-US", { timeZone: "UTC" })}
         </p>
       ) : null}
     </div>
@@ -399,17 +399,21 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
 
                 {summary.byEngine.some((e) => e.total > 0) ? (
                   <div className="flex flex-wrap gap-2">
-                    {summary.byEngine
-                      .filter((e) => e.total > 0)
-                      .map((e) => (
-                        <div
-                          key={e.engine}
-                          className="rounded-lg border border-border/80 px-3 py-2 text-sm"
-                        >
-                          <span className="text-muted-foreground">{ENGINE_LABELS[e.engine] ?? e.engine}</span>
-                          <span className="ml-2 font-medium">{e.score}% cited</span>
-                        </div>
-                      ))}
+                    {summary.byEngine.flatMap((e) =>
+                      e.total > 0
+                        ? [
+                            (
+                              <div
+                                key={e.engine}
+                                className="rounded-lg border border-border/80 px-3 py-2 text-sm"
+                              >
+                                <span className="text-muted-foreground">{ENGINE_LABELS[e.engine] ?? e.engine}</span>
+                                <span className="ml-2 font-medium">{e.score}% cited</span>
+                              </div>
+                            ),
+                          ]
+                        : [],
+                    )}
                   </div>
                 ) : null}
 
@@ -438,7 +442,7 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {ENGINE_LABELS[snap.engine] ?? snap.engine} ·{" "}
-                          {new Date(snap.checkedAt).toLocaleString()}
+                          {new Date(snap.checkedAt).toLocaleString("en-US", { timeZone: "UTC" })}
                           {snap.competitorsMentioned?.length > 0 &&
                             ` · Competitors: ${snap.competitorsMentioned.join(", ")}`}
                         </p>

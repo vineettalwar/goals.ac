@@ -158,6 +158,7 @@ export function ProjectBrandProfileFields({
 }
 
 export function ProjectContentStyleFields({
+  projectId,
   styleForm,
   onStyleFormChange,
   stockStatus,
@@ -165,6 +166,7 @@ export function ProjectContentStyleFields({
   styleSaved,
   onSaveStyle,
 }: {
+  projectId: string;
   styleForm: StyleForm;
   onStyleFormChange: (updater: (prev: StyleForm) => StyleForm) => void;
   stockStatus: { configured: boolean; unsplash: boolean; pexels: boolean } | null;
@@ -400,6 +402,57 @@ export function ProjectContentStyleFields({
             <div className="space-y-2">
               {HUMANIZATION_LEVELS.map((level) => (
                 <label
+                  key={level.value}
+                  className="flex items-start gap-3 rounded-lg border border-border p-3 cursor-pointer hover:bg-muted/40"
+                >
+                  <input
+                    type="radio"
+                    name="humanizationLevel"
+                    value={level.value}
+                    checked={styleForm.humanizationLevel === level.value}
+                    onChange={() =>
+                      onStyleFormChange((p) => ({ ...p, humanizationLevel: level.value }))
+                    }
+                    className="mt-1"
+                  />
+                  <span>
+                    <span className="text-sm font-medium">{level.label}</span>
+                    <span className="block text-xs text-muted-foreground">{level.description}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Humanizer writing sample (optional)</Label>
+              <Textarea
+                value={styleForm.writingSample}
+                onChange={(e) => onStyleFormChange((p) => ({ ...p, writingSample: e.target.value }))}
+                placeholder="Paste a few paragraphs you've written. Overrides Brand Voice examples for the humanizer pass only."
+                rows={4}
+                className="resize-none"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <Button onClick={onSaveStyle} disabled={savingStyle}>
+              {savingStyle ? (
+                <>
+                  <Spinner size="sm" className="mr-2" /> Saving...
+                </>
+              ) : (
+                <>
+                  <Save className="mr-2 h-4 w-4" /> Save content style
+                </>
+              )}
+            </Button>
+            {styleSaved && (
+              <span className="text-sm text-emerald-600 dark:text-emerald-400 font-medium">
+                Saved successfully
+              </span>
+            )}
+          </div>
+        </div>
     </div>
   );
 }

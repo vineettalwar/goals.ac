@@ -278,10 +278,6 @@ export function ProjectVoiceForm({
               </span>
             )}
           </div>
-        </div>
-      )}
-    </div>
-  );
     </div>
   );
 }

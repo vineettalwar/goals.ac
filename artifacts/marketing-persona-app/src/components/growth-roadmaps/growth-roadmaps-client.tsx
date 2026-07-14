@@ -9,7 +9,7 @@ import { ArrowRight, ChevronDown, ChevronUp, Map, Pin, PinOff } from "lucide-rea
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import dynamic from "next/dynamic";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
 import { useProjectContent, useRoadmapsCatalog, useWebsiteProject } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
 import { clearRoadmapIntent, readRoadmapIntent, type RoadmapIntent } from "@/lib/projects/roadmap-intent";

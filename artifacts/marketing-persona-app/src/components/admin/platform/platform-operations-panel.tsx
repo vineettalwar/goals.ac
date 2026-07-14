@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { queryKeys, usePlatformSettings } from "@/lib/queries";
 
 interface PlatformSettings {
   platformEnabled: boolean;
@@ -67,20 +69,17 @@ function OperationsSkeleton() {
 }
 
 export function PlatformOperationsPanel() {
-  const [settings, setSettings] = useState<PlatformSettings | null>(null);
+  const queryClient = useQueryClient();
+  const { data: settings, isError } = usePlatformSettings();
   const [message, setMessage] = useState("");
+  const [messageInitialized, setMessageInitialized] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    void fetch("/api/admin/platform-settings")
-      .then((r) => r.json())
-      .then((data: PlatformSettings) => {
-        setSettings(data);
-        setMessage(data.maintenanceMessage ?? "");
-      })
-      .catch(() => setError("Failed to load platform settings"));
-  }, []);
+  if (settings && !messageInitialized) {
+    setMessage(settings.maintenanceMessage ?? "");
+    setMessageInitialized(true);
+  }
 
   async function save(patch: Partial<PlatformSettings>) {
     if (!settings) return;
@@ -97,7 +96,7 @@ export function PlatformOperationsPanel() {
       });
       if (!res.ok) throw new Error("Save failed");
       const data = (await res.json()) as PlatformSettings;
-      setSettings(data);
+      queryClient.setQueryData(queryKeys.platformSettings, data);
     } catch {
       setError("Failed to save settings");
     } finally {
@@ -109,7 +108,12 @@ export function PlatformOperationsPanel() {
     void save({ [key]: checked });
   }
 
-  if (!settings) return <OperationsSkeleton />;
+  if (!settings) {
+    if (isError) {
+      return <p className="text-sm text-destructive">Failed to load platform settings</p>;
+    }
+    return <OperationsSkeleton />;
+  }
 
   return (
     <div className="divide-y divide-border">

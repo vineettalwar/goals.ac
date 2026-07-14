@@ -6,26 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { useOrgSecuritySettings } from "@/lib/queries";
 
 export function OrgSecurityPanel({ canManage }: { canManage: boolean }) {
+  const { data } = useOrgSecuritySettings(canManage);
   const [allowedIps, setAllowedIps] = useState("");
   const [allowCrossProjectEditors, setAllowCrossProjectEditors] = useState(false);
   const [requireMfa, setRequireMfa] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (!canManage) return;
-    void fetch("/api/organizations/security")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data: { securitySettings?: Record<string, unknown> } | null) => {
-        if (!data?.securitySettings) return;
-        setAllowCrossProjectEditors(Boolean(data.securitySettings.allowCrossProjectEditors));
-        setRequireMfa(Boolean(data.securitySettings.requireMfa));
-        const ips = data.securitySettings.allowedIps;
-        if (Array.isArray(ips)) setAllowedIps(ips.join("\n"));
-      })
-      .catch(() => undefined);
-  }, [canManage]);
+    if (!data?.securitySettings) return;
+    setAllowCrossProjectEditors(Boolean(data.securitySettings.allowCrossProjectEditors));
+    setRequireMfa(Boolean(data.securitySettings.requireMfa));
+    const ips = data.securitySettings.allowedIps;
+    if (Array.isArray(ips)) setAllowedIps(ips.join("\n"));
+  }, [data]);
 
   async function save() {
     setSaving(true);

@@ -11,7 +11,7 @@ import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import { Zap, FileText, FolderOpen, ArrowRight, Plus, Eye, Link2, TrendingUp, TrendingDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot-scheduler";
+import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import { loadProjectVisibilitySummary } from "@/lib/projects/project-visibility-summary";
 import { getProjectInternalLinkSummary } from "@/lib/projects/internal-links-summary";
 import { getUsageSummaryForUser } from "@/lib/billing/usage";
@@ -28,6 +28,12 @@ const STATUS_BADGE: Record<string, React.ComponentProps<typeof Badge>["variant"]
   pending: "muted",
   failed: "destructive",
 };
+
+function formatDelta(delta: number | null) {
+  if (delta == null || delta === 0) return null;
+  const sign = delta > 0 ? "+" : "";
+  return `${sign}${delta}`;
+}
 
 export function DashboardStatsSkeleton() {
   return (
@@ -186,11 +192,13 @@ export async function DashboardAutopilotLink({
   userId: number;
   projectId: number;
 }) {
-  const project = await getAccessibleProject(projectId, userId);
+  const [project, visibility] = await Promise.all([
+    getAccessibleProject(projectId, userId),
+    loadProjectVisibilitySummary(projectId),
+  ]);
   if (!project) return null;
 
   const autopilotSettings = parseAutopilotSettings(project.autopilotSettings);
-  const visibility = await loadProjectVisibilitySummary(projectId);
 
   const [strategyRows, pieceStats, scheduledItems, linkSummary, usage] = await Promise.all([
     db
@@ -226,12 +234,6 @@ export async function DashboardAutopilotLink({
   const generating = byStatus.generating ?? 0;
   const drafts = byStatus.draft ?? 0;
   const published = byStatus.published ?? byStatus.ready ?? 0;
-
-  const formatDelta = (delta: number | null) => {
-    if (delta == null || delta === 0) return null;
-    const sign = delta > 0 ? "+" : "";
-    return `${sign}${delta}`;
-  };
 
   const visibilityDeltaLabel = formatDelta(visibility.visibilityDelta);
   const geoDeltaLabel = formatDelta(visibility.geoScoreDelta);

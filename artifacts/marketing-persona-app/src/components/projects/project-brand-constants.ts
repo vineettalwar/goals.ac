@@ -49,15 +49,15 @@ export interface BrandForm {
 }
 
 export interface StyleForm {
-  tonePreset: string;
+  tonePreset: "professional" | "casual" | "technical" | "conversational";
   personaName: string;
   defaultWordCount: number;
   primaryLanguage: string;
   forbiddenWords: string;
-  readingLevel: string;
-  humanizationLevel: string;
+  readingLevel: "general" | "intermediate" | "expert";
+  humanizationLevel: "off" | "light" | "strong";
   writingSample: string;
-  stockProvider: string;
+  stockProvider: "auto" | "unsplash" | "pexels";
   autoInlineImages: boolean;
 }
 
@@ -92,10 +92,8 @@ export function profileToBrandForm(
     targetAudience: sanitized.targetAudience,
     voiceTone: sanitized.voiceTone,
     primaryKeywords: sanitized.primaryKeywords.join(", "),
-    competitorUrls: sanitized.competitorUrls.join("
-"),
+    competitorUrls: sanitized.competitorUrls.join("\n"),
     brandColors: (bp?.brandColors ?? []).join(", "),
-    productOfferings: (bp?.productOfferings ?? []).join("
-"),
+    productOfferings: (bp?.productOfferings ?? []).join("\n"),
   };
 }

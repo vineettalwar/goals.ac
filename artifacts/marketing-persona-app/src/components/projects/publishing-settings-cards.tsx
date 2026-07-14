@@ -620,3 +620,6 @@ function SocialConnectionCard({
       </CardContent>
     </Card>
   );
+}
+
+export { CmsConnectionCard, SocialConnectionCard, SocialIcon, DestinationBadge };

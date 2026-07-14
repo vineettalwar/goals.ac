@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { QuotaUpgradePrompt } from "@/components/billing/quota-upgrade-prompt";
+import { useRoadmapFormOptions } from "@/lib/queries";
 
 type GenerationPhase = "summary" | "phase0" | "phase1" | "phase2";
 
@@ -51,10 +52,13 @@ export function RoadmapGeneratorApp({
 }: RoadmapGeneratorAppProps) {
   const router = useRouter();
 
-  const [industries, setIndustries] = useState<Industry[]>([]);
-  const [locations, setLocations] = useState<Location[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
-  const [optionsError, setOptionsError] = useState<string | null>(null);
+  const { data: formOptions, isLoading: loadingOptions, isError: optionsQueryError } =
+    useRoadmapFormOptions();
+  const industries = formOptions?.industries ?? [];
+  const locations = formOptions?.locations ?? [];
+  const optionsError = optionsQueryError
+    ? "Could not load industry and location options. Refresh and try again."
+    : null;
   const [industry, setIndustry] = useState(defaultIndustry ?? "");
   const [location, setLocation] = useState(defaultLocation ?? "");
   const [stage, setStage] = useState<string>(defaultStage ?? STAGES[1].value);
@@ -76,25 +80,6 @@ export function RoadmapGeneratorApp({
   useEffect(() => {
     if (defaultStage) setStage(defaultStage);
   }, [defaultStage]);
-
-  useEffect(() => {
-    Promise.all([fetch("/api/industries"), fetch("/api/locations")])
-      .then(async ([indRes, locRes]) => {
-        if (!indRes.ok || !locRes.ok) {
-          throw new Error("Failed to load form options");
-        }
-        const [ind, loc] = await Promise.all([indRes.json(), locRes.json()]);
-        setIndustries(Array.isArray(ind) ? ind : []);
-        setLocations(Array.isArray(loc) ? loc : []);
-        setOptionsError(null);
-      })
-      .catch(() => {
-        setIndustries([]);
-        setLocations([]);
-        setOptionsError("Could not load industry and location options. Refresh and try again.");
-      })
-      .finally(() => setLoadingOptions(false));
-  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

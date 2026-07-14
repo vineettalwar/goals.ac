@@ -32,7 +32,7 @@ import {
 import { queryKeys } from "@/lib/queries/keys";
 import { ArticleIdeasHub, type SourceFilter } from "@/components/panels/article-ideas-hub";
 import { ArticleIdeasImportPanel } from "@/components/panels/article-ideas-import-panel";
-import { KeywordAnalyzerTab, KeywordRankTrackingTab } from "@/components/panels/keyword-tracking-tabs";
+import { KeywordAnalyzerTab, KeywordRankTrackingTab, type Analysis } from "@/components/panels/keyword-tracking-tabs";
 
 const RESEARCH_SOURCE_FILTERS = new Set<SourceFilter>([
   "semrush",

@@ -250,6 +250,7 @@ export function ProjectBrandTab({
           </div>
         </div>
         <ProjectContentStyleFields
+          projectId={projectId}
           styleForm={styleForm}
           onStyleFormChange={setStyleForm}
           stockStatus={stockStatus}

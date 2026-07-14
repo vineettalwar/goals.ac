@@ -244,6 +244,7 @@ export function ArticleIdeasImportPanel({
         onManualAdd={() => void handleManualAdd()}
       />
       <ArticleIdeasSheetsSection
+        projectId={projectId}
         sheetLabel={sheetLabel}
         sheetUrl={sheetUrl}
         sheetName={sheetName}

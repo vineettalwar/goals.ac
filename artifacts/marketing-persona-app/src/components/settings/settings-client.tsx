@@ -1112,7 +1112,25 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
         bedrockTestResult={bedrockTestResult}
         bedrockTesting={bedrockTesting}
         bedrockSaving={bedrockSaving}
-        testBedrockKey={testBedrockKey}
-        saveBedrockKey={saveBedrockKey}
+        testBedrockCredentials={testBedrockCredentials}
+        saveBedrockCredentials={saveBedrockCredentials}
+        semrushDialogOpen={semrushDialogOpen}
+        setSemrushDialogOpen={setSemrushDialogOpen}
+        semrushApiKeyInput={semrushApiKeyInput}
+        setSemrushApiKeyInput={setSemrushApiKeyInput}
+        semrushFormDatabase={semrushFormDatabase}
+        setSemrushFormDatabase={setSemrushFormDatabase}
+        semrushTestResult={semrushTestResult}
+        semrushTesting={semrushTesting}
+        semrushSaving={semrushSaving}
+        testSemrushCredentials={testSemrushCredentials}
+        saveSemrushCredentials={saveSemrushCredentials}
+        showSemrushDatabaseHint={showSemrushDatabaseHint}
+        suggestedSemrushDatabase={suggestedSemrushDatabase}
+        activeProject={activeProject}
+        contentLanguageLabel={contentLanguageLabel}
+        semrushDatabaseLabel={semrushDatabaseLabel}
       />
+    </div>
+  );
 }

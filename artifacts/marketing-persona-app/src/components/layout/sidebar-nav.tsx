@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { memo, Suspense, useCallback, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
@@ -30,8 +31,8 @@ import { cn } from "@/lib/utils";
 import { isSuperAdmin, isSiteAdmin, normalizeOrgRole } from "@/lib/org/org-access-shared";
 import { ProjectSwitcher } from "@/components/projects/project-switcher";
 import { Spinner } from "@/components/ui/spinner";
-import { useActiveProject } from "@/context/active-project";
-import { useTheme } from "@/context/theme";
+import { useActiveProject } from "@/context/use-active-project";
+import { useTheme } from "@/context/use-theme";
 import { queryKeys } from "@/lib/queries/keys";
 import {
   fetchGoals,
@@ -116,6 +117,30 @@ const NavItem = memo(function NavItem({ label, href, icon: Icon, active, onInten
         {label}
       </Link>
     </li>
+  );
+});
+
+const SidebarNavEntry = memo(function SidebarNavEntry({
+  item,
+  resolvedHref,
+  active,
+  onPrefetch,
+}: {
+  item: NavItemDef;
+  resolvedHref: string;
+  active: boolean;
+  onPrefetch: (href: string) => void;
+}) {
+  const onIntent = useCallback(() => onPrefetch(resolvedHref), [onPrefetch, resolvedHref]);
+
+  return (
+    <NavItem
+      label={item.label}
+      href={resolvedHref}
+      icon={item.icon}
+      active={active}
+      onIntent={onIntent}
+    />
   );
 });
 
@@ -312,13 +337,12 @@ export function SidebarNav({ userName, userEmail, userRole, orgRole }: SidebarNa
               {section.items.map((item) => {
                 const resolvedHref = resolveHref(item.href);
                 return (
-                  <NavItem
+                  <SidebarNavEntry
                     key={item.label}
-                    label={item.label}
-                    href={resolvedHref}
-                    icon={item.icon}
+                    item={item}
+                    resolvedHref={resolvedHref}
                     active={isActive(item, resolvedHref)}
-                    onIntent={() => prefetchRouteData(resolvedHref)}
+                    onPrefetch={prefetchRouteData}
                   />
                 );
               })}
@@ -332,13 +356,12 @@ export function SidebarNav({ userName, userEmail, userRole, orgRole }: SidebarNa
           {footerItems.map((item) => {
             const resolvedHref = resolveHref(item.href);
             return (
-              <NavItem
+              <SidebarNavEntry
                 key={item.label}
-                label={item.label}
-                href={resolvedHref}
-                icon={item.icon}
+                item={item}
+                resolvedHref={resolvedHref}
                 active={isActive(item, resolvedHref)}
-                onIntent={() => prefetchRouteData(resolvedHref)}
+                onPrefetch={prefetchRouteData}
               />
             );
           })}
@@ -347,10 +370,12 @@ export function SidebarNav({ userName, userEmail, userRole, orgRole }: SidebarNa
       <div className="border-t border-border p-3">
         <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
           {userImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
+            <Image
               src={userImage}
               alt=""
+              width={28}
+              height={28}
+              unoptimized
               className="h-7 w-7 shrink-0 rounded-full object-cover"
             />
           ) : (
@@ -362,14 +387,14 @@ export function SidebarNav({ userName, userEmail, userRole, orgRole }: SidebarNa
             <p className="truncate text-xs font-medium">{userName}</p>
             <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
           </div>
-          <button
+          <button type="button"
             onClick={toggleTheme}
             className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
             title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
           >
             {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
           </button>
-          <button
+          <button type="button"
             onClick={() => signOut({ callbackUrl: "/login" })}
             className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
             title="Sign out"

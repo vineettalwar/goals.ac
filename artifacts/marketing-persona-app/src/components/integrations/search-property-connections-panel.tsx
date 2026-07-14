@@ -84,6 +84,7 @@ function PropertyPicker({
     try {
       const res = await fetch(
         `/api/website-projects/${projectId}/search-properties/available?provider=${provider}`,
+        { method: "POST" },
       );
       if (!res.ok) {
         setError("Could not load verified properties from your account.");
@@ -280,7 +281,7 @@ function ConnectionDetails({
                 ? `${gscSyncStatus.queryCount.toLocaleString()} queries indexed`
                 : "No query data synced yet"}
               {gscSyncStatus.lastSyncedAt
-                ? ` · Last sync ${new Date(gscSyncStatus.lastSyncedAt).toLocaleDateString()}`
+                ? ` · Last sync ${new Date(gscSyncStatus.lastSyncedAt).toLocaleDateString("en-US", { timeZone: "UTC" })}`
                 : ""}
             </p>
           ) : null}

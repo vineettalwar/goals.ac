@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { useRechartsModule } from "@/lib/use-recharts";
 
 interface Snapshot {
   checkedAt: string;
@@ -16,12 +8,18 @@ interface Snapshot {
 }
 
 export function KeywordRankChart({ snapshots }: { snapshots: Snapshot[] }) {
+  const recharts = useRechartsModule();
   const chartData = [...snapshots].reverse().map((s) => ({
-    date: new Date(s.checkedAt).toLocaleDateString(),
+    date: new Date(s.checkedAt).toLocaleDateString("en-US", { timeZone: "UTC" }),
     position: s.position ?? 100,
   }));
 
   if (chartData.length === 0) return null;
+  if (!recharts) {
+    return <div className="h-48 animate-pulse rounded-lg bg-muted/40" />;
+  }
+
+  const { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip } = recharts;
 
   return (
     <div className="h-48">

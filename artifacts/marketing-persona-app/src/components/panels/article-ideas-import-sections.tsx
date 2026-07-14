@@ -91,14 +91,14 @@ export function ArticleIdeasCsvImportSection({
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) void handleFileSelect(file);
+              if (file) onFileSelect(file);
             }}
           />
           <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()}>
             Choose CSV
           </Button>
           {preview && pendingFile && (
-            <Button size="sm" onClick={confirmImport} disabled={importing}>
+            <Button size="sm" onClick={onConfirmImport} disabled={importing}>
               {importing ? <Spinner size="sm" /> : `Import ${pendingFile.name}`}
             </Button>
           )}
@@ -162,23 +162,24 @@ export function ArticleIdeasManualSection({
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
             <Label>Keyword</Label>
-            <Input value={manualKeyword} onChange={(e) => setManualKeyword(e.target.value)} />
+            <Input value={manualKeyword} onChange={(e) => onManualKeywordChange(e.target.value)} />
           </div>
           <div className="space-y-1.5">
             <Label>Article title</Label>
-            <Input value={manualTitle} onChange={(e) => setManualTitle(e.target.value)} />
+            <Input value={manualTitle} onChange={(e) => onManualTitleChange(e.target.value)} />
           </div>
         </div>
         <div className="space-y-1.5">
           <Label>Angle (optional)</Label>
-          <Input value={manualAngle} onChange={(e) => setManualAngle(e.target.value)} />
+          <Input value={manualAngle} onChange={(e) => onManualAngleChange(e.target.value)} />
         </div>
-        <Button onClick={handleManualAdd}>Add idea</Button>
+        <Button onClick={onManualAdd}>Add idea</Button>
       </div>
   );
 }
 
 export function ArticleIdeasSheetsSection({
+  projectId,
   sheetLabel,
   sheetUrl,
   sheetName,
@@ -192,6 +193,7 @@ export function ArticleIdeasSheetsSection({
   onSyncSource,
   onDeleteSource,
 }: {
+  projectId: string;
   sheetLabel: string;
   sheetUrl: string;
   sheetName: string;
@@ -221,7 +223,7 @@ export function ArticleIdeasSheetsSection({
             <Input
               placeholder="Q3 content backlog"
               value={sheetLabel}
-              onChange={(e) => setSheetLabel(e.target.value)}
+              onChange={(e) => onSheetLabelChange(e.target.value)}
             />
           </div>
           <div className="space-y-1.5">
@@ -229,15 +231,15 @@ export function ArticleIdeasSheetsSection({
             <Input
               placeholder="https://docs.google.com/spreadsheets/d/..."
               value={sheetUrl}
-              onChange={(e) => setSheetUrl(e.target.value)}
+              onChange={(e) => onSheetUrlChange(e.target.value)}
             />
           </div>
         </div>
         <div className="space-y-1.5 max-w-xs">
           <Label>Tab name (optional)</Label>
-          <Input value={sheetName} onChange={(e) => setSheetName(e.target.value)} />
+          <Input value={sheetName} onChange={(e) => onSheetNameChange(e.target.value)} />
         </div>
-        <Button onClick={handleCreateSheetSource} disabled={creatingSource}>
+        <Button onClick={onCreateSheetSource} disabled={creatingSource}>
           {creatingSource ? <Spinner size="sm" /> : "Connect Google Sheets"}
         </Button>
 
@@ -262,7 +264,7 @@ export function ArticleIdeasSheetsSection({
                   )}
                 </div>
                 <div className="flex gap-1">
-                  <Button size="sm" variant="outline" onClick={() => handleSyncSource(source.id)}>
+                  <Button size="sm" variant="outline" onClick={() => onSyncSource(source.id)}>
                     <RefreshCw className="h-4 w-4" />
                   </Button>
                   {!source.connected && (
@@ -272,7 +274,7 @@ export function ArticleIdeasSheetsSection({
                       </a>
                     </Button>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => handleDeleteSource(source.id)}>
+                  <Button size="sm" variant="ghost" onClick={() => onDeleteSource(source.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -298,6 +300,6 @@ export function ArticleIdeasSheetsSection({
           ))}
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import { db, generateRoadmapSlug, roadmapsTable } from "@workspace/db";
-import { generateRoadmap } from "@workspace/content-engine/roadmap-generator";
+import { generateRoadmap } from "@workspace/content-engine/strategy/roadmap-generator";
 import { eq } from "drizzle-orm";
 
 interface Combo {

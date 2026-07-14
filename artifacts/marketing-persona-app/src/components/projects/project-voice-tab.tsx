@@ -226,4 +226,8 @@ export function ProjectVoiceTab({
             appendWritingExample={appendWritingExample}
             removeWritingExample={removeWritingExample}
           />
+        </div>
+      )}
+    </div>
+  );
 }

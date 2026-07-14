@@ -28,6 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { PLAN_LABELS, normalizePlanId } from "@/lib/billing/plans";
+import { useAdminOrganizations } from "@/lib/queries";
 import type {
   AdminContentStrategyDetail,
   AdminContentStrategyListRow,
@@ -408,8 +409,8 @@ export function AdminStrategyDetail({
 }
 
 export function AdminStrategiesList({ onSelect }: { onSelect: (id: number) => void }) {
+  const { data: organizations = [] } = useAdminOrganizations();
   const [strategies, setStrategies] = useState<AdminContentStrategyListRow[]>([]);
-  const [organizations, setOrganizations] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [organizationId, setOrganizationId] = useState("all");
@@ -433,15 +434,6 @@ export function AdminStrategiesList({ onSelect }: { onSelect: (id: number) => vo
       setLoading(false);
     }
   }, [search, organizationId, unlinkedOnly]);
-
-  useEffect(() => {
-    void fetch("/api/admin/organizations?minimal=true")
-      .then((r) => r.json())
-      .then((data: { organizations: Array<{ id: number; name: string }> }) =>
-        setOrganizations(data.organizations),
-      )
-      .catch(() => undefined);
-  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {

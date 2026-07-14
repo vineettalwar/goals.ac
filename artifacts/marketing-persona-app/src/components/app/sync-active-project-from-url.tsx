@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useActiveProject } from "@/context/active-project";
+import { useActiveProject } from "@/context/use-active-project";
 
 export function SyncActiveProjectFromUrl({ projectId }: { projectId: string }) {
   const { setActiveProjectId } = useActiveProject();
