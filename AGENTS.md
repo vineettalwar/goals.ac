@@ -172,3 +172,12 @@ pnpm --filter @workspace/goals-ac run dev               # Legacy Vite redirect :
 | `GOOGLE_CLIENT_ID/SECRET` | No | Google OAuth |
 | `RESEND_API_KEY` | No | Email (password resets) |
 | `REDIS_URL` | No | AI output caching |
+
+## Design Context
+
+Impeccable design context for the canonical Next.js app lives in:
+
+- `artifacts/marketing-persona-app/PRODUCT.md` — users, positioning, brand personality, anti-references, accessibility target (WCAG 2.1 AAA where feasible), dual register routing (`(public)` = brand, `(app)` = product)
+- `artifacts/marketing-persona-app/DESIGN.md` — paper/forest-green tokens, typography, surfaces (`paper-card` vs `glass-card`), components
+
+Run design commands from the app directory or with `--target artifacts/marketing-persona-app`. Legacy `docs/design.md` describes the older blue/glass Vite app; prefer `DESIGN.md` for new work.
