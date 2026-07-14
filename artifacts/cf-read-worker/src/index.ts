@@ -5,7 +5,7 @@ import {
   goalsTable,
   usersTable,
 } from "@workspace/db/schema-sqlite";
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc, getTableColumns } from "drizzle-orm";
 import { wireCfEdgeEnv } from "@workspace/cf-edge/wire";
 import { corsPreflight, withCors } from "@workspace/cf-edge/cors";
 import { kvGetJson } from "@workspace/cf-edge/kv-cache";
@@ -83,9 +83,13 @@ export default {
 
       if (path === "/api/goals" && request.method === "GET") {
         const goals = await db
-          .select()
+          .select(getTableColumns(goalsTable))
           .from(goalsTable)
-          .where(eq(goalsTable.userId, userId))
+          .innerJoin(
+            websiteProjectsTable,
+            eq(goalsTable.projectId, websiteProjectsTable.id),
+          )
+          .where(eq(websiteProjectsTable.userId, userId))
           .orderBy(desc(goalsTable.updatedAt));
         return withCors(request, Response.json(goals));
       }
@@ -94,10 +98,20 @@ export default {
       if (contentMatch && request.method === "GET") {
         const id = Number.parseInt(contentMatch[1]!, 10);
         const [piece] = await db
-          .select()
+          .select(getTableColumns(contentPiecesTable))
           .from(contentPiecesTable)
-          .where(eq(contentPiecesTable.id, id));
-        if (!piece || piece.userId !== userId) {
+          .innerJoin(
+            websiteProjectsTable,
+            eq(contentPiecesTable.websiteProjectId, websiteProjectsTable.id),
+          )
+          .where(
+            and(
+              eq(contentPiecesTable.id, id),
+              eq(websiteProjectsTable.userId, userId),
+            ),
+          )
+          .limit(1);
+        if (!piece) {
           return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
         }
         return withCors(request, Response.json(piece));
@@ -105,9 +119,13 @@ export default {
 
       if (path === "/api/content-pieces" && request.method === "GET") {
         const pieces = await db
-          .select()
+          .select(getTableColumns(contentPiecesTable))
           .from(contentPiecesTable)
-          .where(eq(contentPiecesTable.userId, userId))
+          .innerJoin(
+            websiteProjectsTable,
+            eq(contentPiecesTable.websiteProjectId, websiteProjectsTable.id),
+          )
+          .where(eq(websiteProjectsTable.userId, userId))
           .orderBy(desc(contentPiecesTable.updatedAt))
           .limit(100);
         return withCors(request, Response.json(pieces));

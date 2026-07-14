@@ -19,10 +19,10 @@ import { useAppAuthHrefs } from "@/lib/marketing/site/use-app-auth-hrefs";
 import { MarketingLogo } from "@/components/marketing/layout/marketing-logo";
 
 const DEFAULT_PANEL_CLASS =
-  "absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-[240px] max-w-[320px] rounded-xl bg-black/90 backdrop-blur-md border border-white/15 shadow-xl shadow-black/50 p-2 z-200";
+  "absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-[240px] max-w-[320px] rounded-xl bg-neutral-950 border border-white/15 shadow-xl shadow-black/50 p-2 z-200";
 
 const MEGA_PANEL_CLASS =
-  "absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[min(780px,calc(100vw-2rem))] rounded-xl bg-black/90 backdrop-blur-md border border-white/15 shadow-xl shadow-black/50 z-200 overflow-hidden";
+  "absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[min(560px,calc(100vw-2rem))] rounded-xl bg-neutral-950 border border-white/15 shadow-xl shadow-black/50 z-200 overflow-hidden";
 
 const MEGA_GRID_GROUPS: SolutionGroup[] = ["ai-search", "content", "authority"];
 
@@ -83,15 +83,27 @@ function NavDropdown({ label, children, pathname, activePrefixes, panelClassName
   );
 }
 
-function DropdownLink({ item, onNavigate }: { item: NavLink; onNavigate?: () => void }) {
+function DropdownLink({
+  item,
+  onNavigate,
+  compact,
+}: {
+  item: NavLink;
+  onNavigate?: () => void;
+  compact?: boolean;
+}) {
   return (
     <Link
       href={item.href}
       onClick={onNavigate}
-      className="block rounded-lg px-3 py-2 hover:bg-white/10 transition-colors"
+      className={
+        compact
+          ? "block rounded-md px-2 py-1 hover:bg-white/10 transition-colors"
+          : "block rounded-lg px-3 py-2 hover:bg-white/10 transition-colors"
+      }
     >
-      <span className="text-sm font-medium text-white">{item.label}</span>
-      {item.description && (
+      <span className={compact ? "text-sm text-white/90" : "text-sm font-medium text-white"}>{item.label}</span>
+      {!compact && item.description && (
         <span className="block text-xs text-white/50 mt-0.5 leading-snug">{item.description}</span>
       )}
     </Link>
@@ -104,18 +116,18 @@ function SolutionsMegaPanel({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-3 gap-y-2 p-3">
         {MEGA_GRID_GROUPS.map((group) => {
           const items = grouped[group];
           if (!items?.length) return null;
           return (
             <div key={group} className="min-w-0">
-              <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wide text-white/60">
+              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-white/45">
                 {SOLUTION_GROUP_LABELS[group]}
               </p>
-              <div className="space-y-0.5">
+              <div>
                 {items.map((item) => (
-                  <DropdownLink key={item.href} item={item} onNavigate={onNavigate} />
+                  <DropdownLink key={item.href} item={item} onNavigate={onNavigate} compact />
                 ))}
               </div>
             </div>
@@ -123,22 +135,24 @@ function SolutionsMegaPanel({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </div>
 
-      {teamItems.length > 0 && (
-        <div className="border-t border-white/10 px-4 py-3">
-          <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-wide text-white/60">
-            {SOLUTION_GROUP_LABELS.teams}
-          </p>
-          {teamItems.map((item) => (
-            <DropdownLink key={item.href} item={item} onNavigate={onNavigate} />
-          ))}
-        </div>
-      )}
-
-      <div className="border-t border-white/10 px-2 py-2 bg-white/5">
-        <DropdownLink
-          item={{ label: "View all solutions", href: "/solutions", description: "Browse every outcome we help with" }}
-          onNavigate={onNavigate}
-        />
+      <div className="border-t border-white/10 px-3 py-2 flex items-center gap-4">
+        {teamItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={onNavigate}
+            className="text-sm text-white/70 hover:text-white transition-colors"
+          >
+            {item.label}
+          </Link>
+        ))}
+        <Link
+          href="/solutions"
+          onClick={onNavigate}
+          className="text-sm text-white/50 hover:text-white transition-colors ml-auto"
+        >
+          View all →
+        </Link>
       </div>
     </>
   );
