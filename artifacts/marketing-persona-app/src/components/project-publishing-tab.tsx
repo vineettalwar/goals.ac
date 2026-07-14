@@ -6,6 +6,12 @@ import { toast } from "sonner";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { IntegrationCategorySkeleton } from "@/components/integration-tile";
+import {
+  getCmsDestinations,
+  getEspDestinations,
+  SOCIAL_SETTINGS_COUNT,
+} from "@/lib/projects/publishing-destinations";
 import {
   PublishingSettingsPanel,
   type CmsIntegrationStatus,
@@ -13,6 +19,7 @@ import {
   type IntegrationLayout,
 } from "@/components/publishing-settings-panel";
 import { ProjectAutomationPanel } from "@/components/project-automation-panel";
+import { ProjectPrimaryDestinationPanel } from "@/components/project-primary-destination-panel";
 
 interface Props {
   projectId: string;
@@ -45,6 +52,9 @@ export function ProjectPublishingTab({
   const [metaPageToken, setMetaPageToken] = useState<string | null>(null);
   const [metaPages, setMetaPages] = useState<MetaPage[]>([]);
   const [isSelectingMetaPage, setIsSelectingMetaPage] = useState(false);
+  const [isDisconnectingLinkedin, setIsDisconnectingLinkedin] = useState(false);
+  const [isDisconnectingTwitter, setIsDisconnectingTwitter] = useState(false);
+  const [isDisconnectingMeta, setIsDisconnectingMeta] = useState(false);
 
   const loadIntegrations = useCallback(async () => {
     const res = await fetch(`/api/website-projects/${projectId}/cms-integrations`);
@@ -133,6 +143,29 @@ export function ProjectPublishingTab({
   }
 
   if (loading) {
+    if (layout === "grid") {
+      const sections =
+        categoryFilter === "all"
+          ? [
+              { count: getCmsDestinations().length },
+              { count: SOCIAL_SETTINGS_COUNT },
+              { count: getEspDestinations().length },
+            ]
+          : categoryFilter === "cms"
+            ? [{ count: getCmsDestinations().length }]
+            : categoryFilter === "social"
+              ? [{ count: SOCIAL_SETTINGS_COUNT }]
+              : [{ count: getEspDestinations().length }];
+
+      return (
+        <div className="space-y-8">
+          {sections.map((section, index) => (
+            <IntegrationCategorySkeleton key={index} tileCount={section.count} compact />
+          ))}
+        </div>
+      );
+    }
+
     return (
       <div className="flex justify-center p-12">
         <Spinner size="lg" />
@@ -174,6 +207,8 @@ export function ProjectPublishingTab({
           <p className="text-sm text-emerald-600">{cmsSaveSuccess}</p>
         ) : null}
 
+        <ProjectPrimaryDestinationPanel projectId={projectId} cmsConnections={cmsIntegrations} />
+
         <PublishingSettingsPanel
         apiBase=""
         projectId={projectId}
@@ -186,9 +221,9 @@ export function ProjectPublishingTab({
         metaPageToken={metaPageToken}
         metaPages={metaPages}
         isSelectingMetaPage={isSelectingMetaPage}
-        isDisconnectingLinkedin={false}
-        isDisconnectingTwitter={false}
-        isDisconnectingMeta={false}
+        isDisconnectingLinkedin={isDisconnectingLinkedin}
+        isDisconnectingTwitter={isDisconnectingTwitter}
+        isDisconnectingMeta={isDisconnectingMeta}
         layout={layout}
         categoryFilter={categoryFilter}
         onIntegrationsChange={setCmsIntegrations}
@@ -209,9 +244,40 @@ export function ProjectPublishingTab({
         onTestHealth={onTestHealth}
         onConnectOAuth={onConnectOAuth}
         onDisconnectSocial={async (platform) => {
-          await fetch(`/api/website-projects/${projectId}/cms-integrations/${platform}`, { method: "DELETE" });
-          await loadIntegrations();
-          toast.success("Disconnected");
+          const setDisconnecting =
+            platform === "linkedin"
+              ? setIsDisconnectingLinkedin
+              : platform === "twitter"
+                ? setIsDisconnectingTwitter
+                : platform === "meta"
+                  ? setIsDisconnectingMeta
+                  : null;
+          setDisconnecting?.(true);
+          setCmsError(null);
+          try {
+            const res = await fetch(
+              `/api/website-projects/${projectId}/cms-integrations/${platform}`,
+              { method: "DELETE" },
+            );
+            if (!res.ok) throw new Error("Disconnect failed");
+            setCmsIntegrations((prev) => {
+              const next = { ...prev };
+              delete next[platform];
+              return next;
+            });
+            setHealthStatus((prev) => {
+              if (!prev) return prev;
+              const next = { ...prev };
+              delete next[platform];
+              return next;
+            });
+            toast.success("Disconnected");
+          } catch {
+            setCmsError(`Failed to disconnect ${platform}`);
+            toast.error(`Failed to disconnect ${platform}`);
+          } finally {
+            setDisconnecting?.(false);
+          }
         }}
         onSelectMetaPage={onSelectMetaPage}
       />

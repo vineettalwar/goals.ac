@@ -1,12 +1,10 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getSession } from "@/auth";
-import { ContentPieceClient } from "@/components/content-piece-client";
-import {
-  loadCmsConnectionsForProject,
-  loadContentPieceForUser,
-} from "@/lib/server/loaders";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
+import { loadContentPieceForUser } from "@/lib/server/loaders";
 
-export default async function ContentPiecePage({
+/** Legacy flat URL — redirect to project-scoped route. */
+export default async function LegacyContentPieceRedirect({
   params,
 }: {
   params: Promise<{ id: string }>;
@@ -22,13 +20,5 @@ export default async function ContentPiecePage({
   const piece = await loadContentPieceForUser(pieceId, userId);
   if (!piece) notFound();
 
-  const cmsConnections = await loadCmsConnectionsForProject(piece.websiteProjectId, userId);
-
-  return (
-    <ContentPieceClient
-      pieceId={id}
-      initialPiece={piece}
-      initialCmsConnections={cmsConnections}
-    />
-  );
+  redirect(contentPiecePath(piece.websiteProjectId, pieceId));
 }

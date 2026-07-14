@@ -30,7 +30,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import { aiProviderUnavailableMessage } from "@/lib/platform/ai-providers-status";
 import type { AiProviderId } from "@workspace/ai-providers/config";
 import { BrandAiProfileCard } from "./brand-ai-profile-card";
@@ -38,6 +38,8 @@ import { CreateContentModal, type BriefContentDraft } from "./create-content-mod
 import { FormatBadge, StatusBadge, type ContentFormatType } from "./content-studio-format-meta";
 import { ArticlePerformanceBadge } from "./article-performance-badge";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
+import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
+import { cn } from "@/lib/utils";
 
 export { FORMAT_OPTIONS };
 
@@ -179,14 +181,18 @@ export function ContentStudioClient({ projectId }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("newest");
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
   const [reschedulingId, setReschedulingId] = useState<number | null>(null);
+  const [cmsConnections, setCmsConnections] = useState<CmsConnectionSnapshot>({});
+  const [primaryBlogDestination, setPrimaryBlogDestination] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const loadData = useCallback(async () => {
-    const [projRes, piecesRes, legacyRes, aiStatusRes] = await Promise.all([
+    const [projRes, piecesRes, legacyRes, aiStatusRes, cmsRes, publishingRes] = await Promise.all([
       fetch(`/api/website-projects/${projectId}`),
       fetch(`/api/website-projects/${projectId}/content-pieces`),
       fetch(`/api/website-projects/${projectId}/content`),
       fetch("/api/ai-providers/status"),
+      fetch(`/api/website-projects/${projectId}/cms-integrations`),
+      fetch(`/api/website-projects/${projectId}/publishing-settings`),
     ]);
 
     if (projRes.ok) {
@@ -255,6 +261,15 @@ export function ContentStudioClient({ projectId }: Props) {
         })),
       ];
       setLegacyItems(items);
+    }
+
+    if (cmsRes.ok) {
+      setCmsConnections(await cmsRes.json());
+    }
+
+    if (publishingRes.ok) {
+      const settings = (await publishingRes.json()) as { primaryBlogDestination?: string | null };
+      setPrimaryBlogDestination(settings.primaryBlogDestination ?? null);
     }
   }, [projectId]);
 
@@ -538,6 +553,8 @@ export function ContentStudioClient({ projectId }: Props) {
         projectId={projectId}
         existingPieces={pieces}
         initialDraft={briefDraft}
+        cmsConnections={cmsConnections}
+        primaryBlogDestination={primaryBlogDestination}
         onCreated={(piece) => {
           setPieces((prev) => [{ ...piece, source: "studio" }, ...prev.filter((p) => p.id !== piece.id)]);
           setBriefDraft(null);
@@ -589,7 +606,7 @@ function StudioPieceCard({
   return (
     <div className="paper-card rounded-xl p-5 flex items-start justify-between gap-4 group">
       <div className="min-w-0 flex-1">
-        <Link href={`/content-piece/${piece.id}`} className="font-medium hover:text-primary truncate block">
+        <Link href={contentPiecePath(projectId, piece.id)} className="font-medium hover:text-primary truncate block">
           {piece.title}
         </Link>
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -616,7 +633,7 @@ function StudioPieceCard({
         <Button variant="ghost" size="icon" className="h-8 w-8 opacity-0 group-hover:opacity-100" title="Delete" onClick={() => onDelete(piece.id)}>
           <Trash2 className="h-3.5 w-3.5 text-destructive" />
         </Button>
-        <Link href={`/content-piece/${piece.id}`}>
+        <Link href={contentPiecePath(projectId, piece.id)}>
           <Button variant="ghost" size="icon" className="h-8 w-8">
             <ExternalLink className="h-3.5 w-3.5" />
           </Button>

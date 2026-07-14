@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   AlertCircle,
   CheckCircle2,
@@ -37,6 +38,12 @@ import {
   getInitialFormValues,
   type ConnectionFieldDef,
 } from "@/lib/integrations/cms-connection-schemas";
+import {
+  getDefaultOutputMode,
+  getFixedOutputModeLabel,
+  getOutputModes,
+  outputModeLabel,
+} from "@workspace/content-engine/support/platform-output-modes";
 import {
   Dialog,
   DialogContent,
@@ -91,20 +98,39 @@ type MetaPageOption = {
 
 function HealthBadge({
   health,
+  destinationName,
 }: {
-  health?: { ok: boolean; error?: string };
+  health?: {
+    ok: boolean;
+    error?: string;
+    recommendedOutputMode?: string;
+    availableOutputModes?: string[];
+  };
+  destinationName?: string;
 }) {
   if (!health) return null;
+  const message = health.ok
+    ? `${destinationName ? `${destinationName}: ` : ""}Connection healthy`
+    : `${destinationName ? `${destinationName}: ` : ""}${health.error ?? "Connection failed"}`;
   return (
     <div
-      className={`flex items-center gap-1.5 text-xs font-medium mt-1 ${health.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
+      role="status"
+      aria-live="polite"
+      className={`flex flex-col gap-1 text-xs font-medium mt-1 ${health.ok ? "text-emerald-600 dark:text-emerald-400" : "text-red-500 dark:text-red-400"}`}
     >
-      {health.ok ? (
-        <CheckCircle2 className="w-3.5 h-3.5" />
-      ) : (
-        <AlertCircle className="w-3.5 h-3.5" />
-      )}
-      {health.ok ? "Connection healthy" : health.error}
+      <div className="flex items-center gap-1.5">
+        {health.ok ? (
+          <CheckCircle2 className="w-3.5 h-3.5" aria-hidden />
+        ) : (
+          <AlertCircle className="w-3.5 h-3.5" aria-hidden />
+        )}
+        {message}
+      </div>
+      {health.ok && health.recommendedOutputMode ? (
+        <p className="text-muted-foreground font-normal pl-5">
+          Recommended output: {health.recommendedOutputMode}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -137,18 +163,27 @@ function ConnectionField({
   value,
   disabled,
   onChange,
+  destinationId,
 }: {
   field: ConnectionFieldDef;
   value: string;
   disabled: boolean;
   onChange: (value: string) => void;
+  destinationId: string;
 }) {
+  const fieldId = `${destinationId}-${field.key}`;
+  const hintId = field.hint ? `${fieldId}-hint` : undefined;
+  const requiredMark = field.required ? " *" : "";
+
   if (field.type === "select" && field.options) {
     return (
       <div className="space-y-1.5">
-        <Label>{field.label}</Label>
+        <Label id={`${fieldId}-label`}>
+          {field.label}
+          {requiredMark}
+        </Label>
         <Select value={value || field.defaultValue || ""} onValueChange={onChange} disabled={disabled}>
-          <SelectTrigger>
+          <SelectTrigger aria-labelledby={`${fieldId}-label`} aria-required={field.required || undefined} aria-describedby={hintId}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -159,21 +194,130 @@ function ConnectionField({
             ))}
           </SelectContent>
         </Select>
+        {field.hint && (
+          <p id={hintId} className="text-xs text-muted-foreground">
+            {field.hint}
+          </p>
+        )}
       </div>
     );
   }
 
+  const inputType =
+    field.type === "password"
+      ? "password"
+      : field.type === "number"
+        ? "number"
+        : field.type === "url"
+          ? "url"
+          : "text";
+
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium">{field.label}</label>
+      <Label htmlFor={fieldId}>
+        {field.label}
+        {requiredMark}
+      </Label>
       <Input
-        type={field.type === "password" ? "password" : field.type === "number" ? "number" : "text"}
+        id={fieldId}
+        type={inputType}
         placeholder={field.placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
+        required={field.required}
+        aria-required={field.required || undefined}
+        aria-describedby={hintId}
       />
-      {field.hint && <p className="text-xs text-muted-foreground">{field.hint}</p>}
+      {field.hint && (
+        <p id={hintId} className="text-xs text-muted-foreground">
+          {field.hint}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ConnectedOutputModeControl({
+  platform,
+  integration,
+  apiBase,
+  projectId,
+  onUpdated,
+  onError,
+}: {
+  platform: PublishDestinationId;
+  integration: Record<string, unknown>;
+  apiBase: string;
+  projectId: string;
+  onUpdated: (updated: CmsIntegrationStatus) => void;
+  onError: (message: string) => void;
+}) {
+  const fixedLabel = getFixedOutputModeLabel(platform);
+  const modeOptions = getOutputModes(platform);
+  const [isSaving, setIsSaving] = useState(false);
+
+  if (fixedLabel) {
+    return (
+      <div className="flex items-center gap-2">
+        <span className="font-medium text-foreground">Output format:</span>
+        <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+          {fixedLabel}
+        </span>
+      </div>
+    );
+  }
+
+  if (modeOptions.length === 0) return null;
+
+  const currentMode = String(
+    integration.outputMode ?? integration.editorMode ?? getDefaultOutputMode(platform),
+  );
+
+  const handleChange = async (outputMode: string) => {
+    setIsSaving(true);
+    try {
+      const res = await fetch(
+        `${apiBase}/api/website-projects/${projectId}/cms-integrations/${platform}/output-mode`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ outputMode }),
+        },
+      );
+      if (!res.ok) {
+        const data = (await res.json()) as { error?: string };
+        throw new Error(data.error ?? "Failed to update output format");
+      }
+      const updated = (await res.json()) as CmsIntegrationStatus;
+      onUpdated(updated);
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "Failed to update output format");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <Label htmlFor={`${platform}-output-mode`}>Output format</Label>
+      <Select value={currentMode} onValueChange={handleChange} disabled={isSaving}>
+        <SelectTrigger id={`${platform}-output-mode`} className="max-w-md">
+          <SelectValue>{outputModeLabel(platform, currentMode)}</SelectValue>
+        </SelectTrigger>
+        <SelectContent>
+          {modeOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {modeOptions.find((option) => option.value === currentMode)?.hint ? (
+        <p className="text-xs text-muted-foreground">
+          {modeOptions.find((option) => option.value === currentMode)?.hint}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -225,6 +369,13 @@ function CmsConnectionCard({
   const handleSave = async () => {
     if (!schema || !schema.canSubmit(formValues, connectionMethod)) return;
     setIsSaving(true);
+    const selectedOutputMode =
+      (formValues.outputMode ?? formValues.editorMode ?? "").trim() ||
+      getDefaultOutputMode(destination.id);
+    const userPickedOutputMode =
+      Boolean(formValues.outputMode || formValues.editorMode) &&
+      selectedOutputMode !== getDefaultOutputMode(destination.id);
+
     try {
       const res = await fetch(
         `${apiBase}/api/website-projects/${projectId}/cms-integrations`,
@@ -243,7 +394,42 @@ function CmsConnectionCard({
         const data = (await res.json()) as { error?: string };
         throw new Error(data.error ?? "Failed to save");
       }
-      const updated = (await res.json()) as CmsIntegrationStatus;
+      let updated = (await res.json()) as CmsIntegrationStatus;
+
+      if (getOutputModes(destination.id).length > 0 && !userPickedOutputMode) {
+        try {
+          const testRes = await fetch(
+            `${apiBase}/api/website-projects/${projectId}/cms-integrations/test?platform=${destination.integrationKey}`,
+            { method: "POST" },
+          );
+          if (testRes.ok) {
+            const healthData = (await testRes.json()) as Record<
+              string,
+              { ok?: boolean; recommendedOutputMode?: string }
+            >;
+            const recommended = healthData[destination.integrationKey]?.recommendedOutputMode;
+            if (recommended && recommended !== selectedOutputMode) {
+              const patchRes = await fetch(
+                `${apiBase}/api/website-projects/${projectId}/cms-integrations/${destination.integrationKey}/output-mode`,
+                {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ outputMode: recommended }),
+                },
+              );
+              if (patchRes.ok) {
+                updated = (await patchRes.json()) as CmsIntegrationStatus;
+                toast.success(
+                  `Output format set to ${outputModeLabel(destination.id, recommended)} based on your site`,
+                );
+              }
+            }
+          }
+        } catch {
+          // Best-effort — connection still saved
+        }
+      }
+
       onConnected(updated);
       setFormValues(schema.resetValues());
     } catch (err) {
@@ -298,7 +484,10 @@ function CmsConnectionCard({
               className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
             >
               {isDisconnecting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" aria-hidden />
+                  Disconnecting…
+                </>
               ) : (
                 <Unlink className="w-3.5 h-3.5 mr-1.5" />
               )}
@@ -309,8 +498,10 @@ function CmsConnectionCard({
       </CardHeader>
       <CardContent className={embedded ? "px-0 pb-0" : undefined}>
         {integration ? (
-          <div className="space-y-2 text-sm text-muted-foreground">
-            {schema.connectedDetails(integration).map((row) => (
+          <div className="space-y-3 text-sm text-muted-foreground">
+            {schema.connectedDetails(integration)
+              .filter((row) => row.label !== "Output format")
+              .map((row) => (
               <div key={row.label} className="flex items-center gap-2">
                 <span className="font-medium text-foreground">{row.label}:</span>
                 <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono break-all">
@@ -318,7 +509,15 @@ function CmsConnectionCard({
                 </code>
               </div>
             ))}
-            <HealthBadge health={health} />
+            <ConnectedOutputModeControl
+              platform={destination.id}
+              integration={integration}
+              apiBase={apiBase}
+              projectId={projectId}
+              onUpdated={onConnected}
+              onError={onError}
+            />
+            <HealthBadge health={health} destinationName={destination.label} />
             <p className="text-xs text-muted-foreground mt-2">
               To update credentials, disconnect first then re-connect.
             </p>
@@ -348,6 +547,7 @@ function CmsConnectionCard({
             {visibleFields.map((field) => (
               <ConnectionField
                 key={field.key}
+                destinationId={destination.id}
                 field={field}
                 value={formValues[field.key] ?? field.defaultValue ?? ""}
                 disabled={isSaving}
@@ -432,7 +632,10 @@ function SocialConnectionCard({
               className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
             >
               {isDisconnecting ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <>
+                  <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" aria-hidden />
+                  Disconnecting…
+                </>
               ) : (
                 <Unlink className="w-3.5 h-3.5 mr-1.5" />
               )}
@@ -447,7 +650,7 @@ function SocialConnectionCard({
             <p>
               <span className="font-medium text-foreground">Account:</span> {accountLabel}
             </p>
-            <HealthBadge health={health} />
+            <HealthBadge health={health} destinationName={destination.label} />
           </div>
         ) : (
           <Button size="sm" onClick={onConnect}>
@@ -545,14 +748,21 @@ export function PublishingSettingsPanel({
   const statusAlerts = (
     <>
       {cmsError && (
-        <div className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-4 py-3">
-          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+        <div
+          role="alert"
+          className="flex items-start gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-4 py-3"
+        >
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" aria-hidden />
           <span>{cmsError}</span>
         </div>
       )}
       {cmsSaveSuccess && (
-        <div className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 rounded-md px-4 py-3 border border-emerald-200 dark:border-emerald-500/20">
-          <CheckCircle2 className="w-4 h-4 shrink-0" />
+        <div
+          role="status"
+          aria-live="polite"
+          className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 rounded-md px-4 py-3 border border-emerald-200 dark:border-emerald-500/20"
+        >
+          <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden />
           <span>{cmsSaveSuccess}</span>
         </div>
       )}
@@ -607,11 +817,14 @@ export function PublishingSettingsPanel({
                   className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
                 >
                   {isDisconnectingMeta ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" aria-hidden />
+                      Disconnecting…
+                    </>
                   ) : (
-                    <Unlink className="w-3.5 h-3.5 mr-1.5" />
+                    <Unlink className="w-3.5 h-3.5 mr-1.5" aria-hidden />
                   )}
-                  Disconnect
+                  {!isDisconnectingMeta && "Disconnect"}
                 </Button>
               )}
             </div>
@@ -650,7 +863,7 @@ export function PublishingSettingsPanel({
                     {String(metaIntegration.instagramUsername)}
                   </p>
                 ) : null}
-                <HealthBadge health={healthStatus?.meta} />
+                <HealthBadge health={healthStatus?.meta} destinationName="Meta" />
                 {healthStatus?.meta && !healthStatus.meta.ok ? (
                   <Button size="sm" variant="outline" onClick={() => onConnectOAuth("meta")}>
                     <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
@@ -781,7 +994,7 @@ export function PublishingSettingsPanel({
                   <span className="font-medium text-foreground">Account:</span> @
                   {String(blueskyIntegration.handle ?? blueskyIntegration.did ?? "connected")}
                 </p>
-                <HealthBadge health={healthStatus?.bluesky} />
+                <HealthBadge health={healthStatus?.bluesky} destinationName="Bluesky" />
                 {healthStatus?.bluesky && !healthStatus.bluesky.ok ? (
                   <Button
                     size="sm"
@@ -866,7 +1079,7 @@ export function PublishingSettingsPanel({
                   <span className="font-medium text-foreground">Instance:</span>{" "}
                   {String(mastodonIntegration.instanceUrl ?? "")}
                 </p>
-                <HealthBadge health={healthStatus?.mastodon} />
+                <HealthBadge health={healthStatus?.mastodon} destinationName="Mastodon" />
               </div>
             ) : (
               <div className="space-y-3">
@@ -975,11 +1188,11 @@ export function PublishingSettingsPanel({
                           <DestinationBadge destination={destination} />
                         </IntegrationIconBox>
                       }
-                      title={destination.label}
-                      description={destination.description}
-                      connected
-                      summary="Export only"
-                      onClick={() => setActiveDialog(destination.id)}
+                  title={destination.label}
+                  description={destination.description}
+                  connected={false}
+                  summary="Export only"
+                  onClick={() => setActiveDialog(destination.id)}
                     />
                   ))
                 : null}
@@ -1160,11 +1373,14 @@ export function PublishingSettingsPanel({
                 className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
               >
                 {isDisconnectingMeta ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" aria-hidden />
+                    Disconnecting…
+                  </>
                 ) : (
-                  <Unlink className="w-3.5 h-3.5 mr-1.5" />
+                  <Unlink className="w-3.5 h-3.5 mr-1.5" aria-hidden />
                 )}
-                Disconnect
+                {!isDisconnectingMeta && "Disconnect"}
               </Button>
             )}
           </div>
@@ -1203,7 +1419,7 @@ export function PublishingSettingsPanel({
                   {String(metaIntegration.instagramUsername)}
                 </p>
               ) : null}
-              <HealthBadge health={healthStatus?.meta} />
+              <HealthBadge health={healthStatus?.meta} destinationName="Meta" />
               {healthStatus?.meta && !healthStatus.meta.ok ? (
                 <Button size="sm" variant="outline" onClick={() => onConnectOAuth("meta")}>
                   <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
@@ -1258,7 +1474,7 @@ export function PublishingSettingsPanel({
                 <span className="font-medium text-foreground">Account:</span> @
                 {String(blueskyIntegration.handle ?? blueskyIntegration.did ?? "connected")}
               </p>
-              <HealthBadge health={healthStatus?.bluesky} />
+              <HealthBadge health={healthStatus?.bluesky} destinationName="Bluesky" />
               {healthStatus?.bluesky && !healthStatus.bluesky.ok ? (
                 <Button
                   size="sm"
@@ -1339,7 +1555,7 @@ export function PublishingSettingsPanel({
                 <span className="font-medium text-foreground">Instance:</span>{" "}
                 {String(mastodonIntegration.instanceUrl ?? "")}
               </p>
-              <HealthBadge health={healthStatus?.mastodon} />
+              <HealthBadge health={healthStatus?.mastodon} destinationName="Mastodon" />
             </div>
           ) : (
             <div className="space-y-3">

@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import type { ContentFormatType } from "@/lib/projects/publishing-destinations";
 
 type RepurposeStep = "analyzing" | "generating" | "saving";
@@ -34,10 +35,11 @@ interface Props {
   open: boolean;
   onClose: () => void;
   pieceId: number;
+  projectId: number;
   currentFormat: string;
 }
 
-export function ContentPieceRepurposeDialog({ open, onClose, pieceId, currentFormat }: Props) {
+export function ContentPieceRepurposeDialog({ open, onClose, pieceId, projectId, currentFormat }: Props) {
   const router = useRouter();
   const [targetFormat, setTargetFormat] = useState<ContentFormatType | "">("");
   const [isRepurposing, setIsRepurposing] = useState(false);
@@ -108,7 +110,7 @@ export function ContentPieceRepurposeDialog({ open, onClose, pieceId, currentFor
           } else if (eventType === "done") {
             const newPiece = payload as { id: number };
             handleClose();
-            router.push(`/content-piece/${newPiece.id}`);
+            router.push(contentPiecePath(projectId, newPiece.id));
             return;
           } else if (eventType === "error") {
             throw new Error((payload.error as string) ?? "Repurpose failed");

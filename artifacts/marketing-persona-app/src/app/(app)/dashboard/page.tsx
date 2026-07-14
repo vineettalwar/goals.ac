@@ -3,7 +3,7 @@ import { getSession } from "@/auth";
 import {
   DashboardArticlesSkeleton,
   DashboardAutopilotLink,
-  DashboardCompanySubtitle,
+  DashboardProjectSubtitle,
   DashboardDrafts,
   DashboardDraftsSkeleton,
   DashboardProjects,
@@ -11,8 +11,6 @@ import {
   DashboardRecentArticles,
   DashboardStats,
   DashboardStatsSkeleton,
-  DashboardVisibility,
-  DashboardVisibilitySkeleton,
 } from "@/components/dashboard/dashboard-sections";
 import { resolveActiveProjectId } from "@/lib/active-project/server";
 import { getSupportOrganizationId } from "@/lib/org/project-scope";
@@ -37,22 +35,18 @@ export default async function DashboardPage() {
           {greeting}, {session.user.name?.split(" ")[0]}
         </h1>
         <Suspense fallback={null}>
-          <DashboardCompanySubtitle userId={userId} />
+          <DashboardProjectSubtitle userId={userId} projectId={activeProjectId} />
         </Suspense>
       </div>
 
       <Suspense fallback={<DashboardStatsSkeleton />}>
-        <DashboardStats userId={userId} />
+        <DashboardStats userId={userId} projectId={activeProjectId} />
       </Suspense>
 
       {activeProjectId ? (
         <>
           <Suspense fallback={null}>
             <DashboardAutopilotLink userId={userId} projectId={activeProjectId} />
-          </Suspense>
-
-          <Suspense fallback={<DashboardVisibilitySkeleton />}>
-            <DashboardVisibility userId={userId} projectId={activeProjectId} />
           </Suspense>
 
           <Suspense fallback={<DashboardDraftsSkeleton />}>
@@ -62,7 +56,7 @@ export default async function DashboardPage() {
       ) : null}
 
       <Suspense fallback={<DashboardArticlesSkeleton />}>
-        <DashboardRecentArticles userId={userId} />
+        <DashboardRecentArticles userId={userId} projectId={activeProjectId} />
       </Suspense>
 
       {activeProjectId ? (

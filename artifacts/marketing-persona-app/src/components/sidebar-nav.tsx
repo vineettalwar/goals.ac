@@ -21,12 +21,13 @@ import {
   BookOpen,
   ScanSearch,
   Shield,
+  Briefcase,
   Sun,
   Moon,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { isSuperAdmin } from "@/lib/org/org-access-shared";
+import { isSuperAdmin, isSiteAdmin, normalizeOrgRole } from "@/lib/org/org-access-shared";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { Spinner } from "@/components/ui/spinner";
 import { useActiveProject } from "@/context/active-project";
@@ -56,7 +57,7 @@ const NAV_SECTIONS: Array<{ label: string; items: NavItemDef[] }> = [
     items: [
       { label: "Content Studio", href: "__content_studio__", icon: Layers },
       { label: "Social Hub", href: "__social_hub__", icon: Share2 },
-      { label: "Autopilot", href: "/autopilot", icon: Zap },
+      { label: "Autopilot", href: "__autopilot__", icon: Zap },
     ],
   },
   {
@@ -122,9 +123,10 @@ interface SidebarNavProps {
   userName: string;
   userEmail: string;
   userRole?: string | null;
+  orgRole?: string | null;
 }
 
-export function SidebarNav({ userName, userEmail, userRole }: SidebarNavProps) {
+export function SidebarNav({ userName, userEmail, userRole, orgRole }: SidebarNavProps) {
   const pathname = usePathname();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -141,6 +143,9 @@ export function SidebarNav({ userName, userEmail, userRole }: SidebarNavProps) {
     if (href === "__social_hub__") {
       return projectId ? `/projects/${projectId}/social` : "/projects";
     }
+    if (href === "__autopilot__") {
+      return projectId ? `/projects/${projectId}?tab=publishing` : "/projects";
+    }
     return href;
   }
 
@@ -150,6 +155,9 @@ export function SidebarNav({ userName, userEmail, userRole }: SidebarNavProps) {
     }
     if (item.label === "Social Hub") {
       return pathname.includes("/social");
+    }
+    if (item.label === "Autopilot") {
+      return pathname.includes("tab=publishing");
     }
     if (item.matchPrefix) {
       if (item.matchPrefix === "/strategy") {
@@ -168,6 +176,9 @@ export function SidebarNav({ userName, userEmail, userRole }: SidebarNavProps) {
       }
       return pathname === item.matchPrefix || pathname.startsWith(`${item.matchPrefix}/`);
     }
+    if (item.label === "Partner") {
+      return pathname === "/partner" || pathname.startsWith("/partner/");
+    }
     if (item.label === "Projects") {
       return pathname === resolvedHref || pathname.startsWith("/projects/");
     }
@@ -176,6 +187,19 @@ export function SidebarNav({ userName, userEmail, userRole }: SidebarNavProps) {
     }
     return pathname === resolvedHref || pathname.startsWith(`${resolvedHref}/`);
   }
+
+  const showPartnerNav = isSuperAdmin(userRole) || isSiteAdmin(normalizeOrgRole(orgRole));
+
+  const overviewItems: NavItemDef[] = [
+    { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Projects", href: "/projects", icon: FolderOpen },
+    ...(showPartnerNav ? [{ label: "Partner", href: "/partner", icon: Briefcase }] : []),
+  ];
+
+  const navSections: Array<{ label: string; items: NavItemDef[] }> = [
+    { label: "Overview", items: overviewItems },
+    ...NAV_SECTIONS.slice(1),
+  ];
 
   const footerItems: NavItemDef[] = isSuperAdmin(userRole)
     ? [...FOOTER_ITEMS, { label: "Admin", href: "/admin", icon: Shield }]
@@ -279,7 +303,7 @@ export function SidebarNav({ userName, userEmail, userRole }: SidebarNavProps) {
             <ProjectSwitcher />
           </Suspense>
         </div>
-        {NAV_SECTIONS.map((section) => (
+        {navSections.map((section) => (
           <div key={section.label} className="mb-4 last:mb-0">
             <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {section.label}

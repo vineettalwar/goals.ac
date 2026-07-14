@@ -1,6 +1,6 @@
 export function PageSkeleton() {
   return (
-    <div className="px-8 py-8 max-w-4xl space-y-6 animate-pulse">
+    <div className="px-8 py-8 max-w-5xl space-y-6 animate-pulse">
       <div className="space-y-2">
         <div className="h-8 w-48 rounded-lg bg-secondary" />
         <div className="h-4 w-72 max-w-full rounded bg-secondary/70" />

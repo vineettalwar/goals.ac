@@ -192,7 +192,7 @@ export function RoadmapGeneratorApp({
       <div>
         <h2 className="font-semibold">Generate growth roadmap</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          AI-generated 12-month strategy for your market and stage. Saved to this project automatically.
+          AI-generated 12-month strategy tailored to your brand scan, site data, and goals. Saved to this project automatically.
         </p>
       </div>
 
@@ -201,7 +201,7 @@ export function RoadmapGeneratorApp({
           <div className="space-y-2">
             <Label>Industry</Label>
             <Select
-              value={industry || undefined}
+              value={industry}
               onValueChange={setIndustry}
               disabled={loadingOptions || industries.length === 0}
             >
@@ -220,7 +220,7 @@ export function RoadmapGeneratorApp({
           <div className="space-y-2">
             <Label>Location</Label>
             <Select
-              value={location || undefined}
+              value={location}
               onValueChange={setLocation}
               disabled={loadingOptions || locations.length === 0}
             >
@@ -271,15 +271,24 @@ export function RoadmapGeneratorApp({
               Building your roadmap…
             </p>
             {(Object.keys(PHASE_LABELS) as GenerationPhase[]).map((key) => {
+              const phaseOrder = Object.keys(PHASE_LABELS) as GenerationPhase[];
+              const firstIncomplete = phaseOrder.find((k) => !completedPhases.has(k));
               const done = completedPhases.has(key);
+              const isActive = !done && key === firstIncomplete;
               return (
                 <div key={key} className="flex items-center gap-2 text-sm">
                   {done ? (
                     <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                   ) : (
-                    <Circle className="h-4 w-4 text-muted-foreground shrink-0 animate-pulse" />
+                    <Circle
+                      className={`h-4 w-4 shrink-0 ${isActive ? "text-primary animate-pulse" : "text-muted-foreground"}`}
+                    />
                   )}
-                  <span className={done ? "text-foreground" : "text-muted-foreground"}>
+                  <span
+                    className={
+                      done ? "text-foreground" : isActive ? "text-foreground" : "text-muted-foreground"
+                    }
+                  >
                     {PHASE_LABELS[key]}
                   </span>
                 </div>

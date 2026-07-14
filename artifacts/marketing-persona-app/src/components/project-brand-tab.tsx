@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Palette, Save } from "lucide-react";
+import { Palette, Save, CheckCircle2, AlertTriangle } from "lucide-react";
 import { isPlaceholderUrl, sanitizeBrandExtract } from "@workspace/content-engine/brand-extract-sanitize";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrapeFormSkeleton, ScrapeStatusHeader } from "@/components/project-scrape-status";
+import { StockByokPanel } from "@/components/settings/stock-byok-panel";
+import { DeeplByokPanel } from "@/components/settings/deepl-byok-panel";
 import type { ContentStyle, WebsiteProject } from "@/lib/projects/project-detail-types";
 import { formatBrandScanDiscoverySummary } from "@/lib/projects/brand-scan-summary";
 import { SUPPORTED_LANGUAGES } from "@/lib/utils/supported-languages";
@@ -49,9 +51,9 @@ const HUMANIZATION_LEVELS = [
 ] as const;
 
 const STOCK_PROVIDERS = [
-  { value: "auto", label: "Auto (best match from Unsplash + Pexels)" },
-  { value: "unsplash", label: "Unsplash only" },
-  { value: "pexels", label: "Pexels only" },
+  { value: "auto", label: "Auto (Unsplash or Pexels)" },
+  { value: "unsplash", label: "Unsplash" },
+  { value: "pexels", label: "Pexels" },
 ] as const;
 
 function profileToBrandForm(
@@ -143,6 +145,26 @@ export function ProjectBrandTab({
   const [savingStyle, setSavingStyle] = useState(false);
   const [brandSaved, setBrandSaved] = useState(false);
   const [styleSaved, setStyleSaved] = useState(false);
+  const [stockStatus, setStockStatus] = useState<{
+    configured: boolean;
+    unsplash: boolean;
+    pexels: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/platform/stock-images/status")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && typeof data.configured === "boolean") {
+          setStockStatus({
+            configured: data.configured,
+            unsplash: Boolean(data.unsplash),
+            pexels: Boolean(data.pexels),
+          });
+        }
+      })
+      .catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     setBrandForm(profileToBrandForm(project.brandProfile, project.scrapeData));
@@ -261,11 +283,13 @@ export function ProjectBrandTab({
       humanizationLevel: styleForm.humanizationLevel as ContentStyle["humanizationLevel"],
       writingSample: styleForm.writingSample.trim() || null,
       imageSettings: {
-        stockProvider: styleForm.stockProvider as "unsplash" | "pexels" | "auto",
+        ...project.contentStyle?.imageSettings,
+        stockProvider: styleForm.stockProvider as "auto" | "unsplash" | "pexels",
         autoFeaturedImage: true,
         autoInlineImages: styleForm.autoInlineImages,
         maxInlineImages: 2,
       },
+      translationSettings: project.contentStyle?.translationSettings,
     };
     const res = await fetch(`/api/website-projects/${projectId}`, {
       method: "PATCH",
@@ -576,7 +600,7 @@ export function ProjectBrandTab({
                 onValueChange={(value) =>
                   setStyleForm((p) => ({
                     ...p,
-                    stockProvider: value as "unsplash" | "pexels" | "auto",
+                    stockProvider: value as "auto" | "unsplash" | "pexels",
                   }))
                 }
               >
@@ -592,6 +616,31 @@ export function ProjectBrandTab({
                 </SelectContent>
               </Select>
             </div>
+            {stockStatus ? (
+              stockStatus.configured ? (
+                <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-3 py-2.5 text-xs text-muted-foreground">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                  <p>
+                    Platform stock photos are active
+                    {stockStatus.unsplash && stockStatus.pexels
+                      ? " (Unsplash + Pexels)"
+                      : stockStatus.unsplash
+                        ? " (Unsplash)"
+                        : " (Pexels)"}
+                    . New articles will auto-match images to their target keyword.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-start gap-2 rounded-lg border border-dashed border-amber-300/70 bg-amber-50/40 px-3 py-2.5 text-xs text-muted-foreground dark:border-amber-500/30 dark:bg-amber-500/5">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <p>
+                    Stock photos are unavailable. Configure platform keys (UNSPLASH_ACCESS_KEY /
+                    PEXELS_API_KEY), or add organization or project stock API keys in Settings or
+                    this Brand tab.
+                  </p>
+                </div>
+              )
+            ) : null}
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -602,6 +651,21 @@ export function ProjectBrandTab({
               />
               Add inline images in long-form articles (up to 2 per post)
             </label>
+            <StockByokPanel
+              scope="project"
+              projectId={projectId}
+              canManage
+              billingFilter="free"
+              title="Project stock API overrides"
+              description="Optional Unsplash or Pexels keys for this site only. Override organization and platform keys when set."
+            />
+            <DeeplByokPanel
+              scope="project"
+              projectId={projectId}
+              canManage
+              title="DeepL refinement"
+              description="Optional project-level DeepL key override. When configured, non-English drafts are localized after humanization."
+            />
           </div>
 
           <div className="space-y-3">

@@ -18,6 +18,9 @@ import {
   TrendingUp,
   Eye,
   Shuffle,
+  ImageIcon,
+  AlertTriangle,
+  LayoutTemplate,
 } from "lucide-react";
 import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
 import { isSeoLongformFormat } from "@workspace/content-engine/content-piece-seo";
@@ -40,6 +43,7 @@ import {
   type ContentFormatType,
   type PublishDestinationId,
   getConnectedDestinationsForFormat,
+  getDestination,
   getDestinationsForFormat,
   type CmsConnectionSnapshot,
 } from "@/lib/projects/publishing-destinations";
@@ -52,20 +56,32 @@ interface ContentPieceClientProps {
   pieceId: string;
   initialPiece: ContentPieceRecord;
   initialCmsConnections: CmsConnectionSnapshot;
+  stockImagesConfigured: boolean;
 }
 
 function defaultPublishPlatform(
   formatType: string,
   connections: CmsConnectionSnapshot,
+  pieceMetadata?: { intendedPublishPlatform?: string } | null,
 ): PublishDestinationId {
+  const intended = pieceMetadata?.intendedPublishPlatform as PublishDestinationId | undefined;
+  if (intended) {
+    const def = getDestination(intended);
+    if (def && !def.exportOnly && def.isConnected(connections)) return intended;
+  }
   const connected = getConnectedDestinationsForFormat(formatType as ContentFormatType, connections);
-  return connected[0]?.id ?? "wordpress";
+  if (connected[0]) return connected[0].id;
+  const fallback = getDestinationsForFormat(formatType as ContentFormatType).find(
+    (d) => !d.exportOnly,
+  );
+  return fallback?.id ?? "wordpress";
 }
 
 export function ContentPieceClient({
   pieceId,
   initialPiece,
   initialCmsConnections,
+  stockImagesConfigured,
 }: ContentPieceClientProps) {
   const router = useRouter();
   const [piece, setPiece] = useState(initialPiece);
@@ -81,8 +97,13 @@ export function ContentPieceClient({
   const [regenerating, setRegenerating] = useState(false);
   const [repurposeOpen, setRepurposeOpen] = useState(false);
   const [publishPlatform, setPublishPlatform] = useState<PublishDestinationId>(() =>
-    defaultPublishPlatform(initialPiece.formatType, initialCmsConnections),
+    defaultPublishPlatform(initialPiece.formatType, initialCmsConnections, initialPiece.pieceMetadata),
   );
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewJson, setPreviewJson] = useState<unknown>(null);
+  const [previewWarnings, setPreviewWarnings] = useState<{ code: string; message: string }[]>([]);
+  const [previewKind, setPreviewKind] = useState<string | null>(null);
   const [cmsConnections] = useState(initialCmsConnections);
   const [deleting, setDeleting] = useState(false);
   const [enhancing, setEnhancing] = useState(false);
@@ -90,20 +111,30 @@ export function ContentPieceClient({
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const featuredImage = piece.pieceMetadata?.images?.find((img) => img.role === "featured");
+  const supportsStockImages =
+    isSeoLongformFormat(piece.formatType as ContentFormatType) || piece.formatType === "linkedin_post";
 
   const displayBody = editing ? bodyDraft : piece.bodyMarkdown;
   const displayTitle = editing ? titleDraft : piece.title;
+  const seoTitle = piece.pieceMetadata?.seoTitle ?? displayTitle;
   const displayWordCount = useMemo(
     () => (editing ? bodyDraft.split(/\s+/).filter(Boolean).length : piece.wordCount),
     [editing, bodyDraft, piece.wordCount],
   );
+
+  const visualSummaryMarkdown = useMemo(() => {
+    const fromMeta = piece.pieceMetadata?.visualSummaryMarkdown;
+    if (fromMeta) return fromMeta;
+    const match = displayBody.match(/##\s*Visual Summary[\s\S]*?(?=\n##\s|$)/i);
+    return match?.[0] ?? null;
+  }, [piece.pieceMetadata?.visualSummaryMarkdown, displayBody]);
 
   const canEnhance = isSeoLongformFormat(piece.formatType as ContentFormatType);
   const qualityScore = useMemo(
     () =>
       scoreArticleQuality({
         bodyMarkdown: displayBody,
-        metaTitle: displayTitle,
+        metaTitle: seoTitle,
         metaDescription: piece.pieceMetadata?.metaDescription,
         citations: piece.pieceMetadata?.citations,
         faqSection: piece.pieceMetadata?.faqSection,
@@ -111,7 +142,7 @@ export function ContentPieceClient({
         internalLinkSuggestions: piece.pieceMetadata?.internalLinkSuggestions,
         wordCount: displayWordCount,
       }).total,
-    [displayBody, displayTitle, displayWordCount, piece.pieceMetadata],
+    [displayBody, seoTitle, displayTitle, displayWordCount, piece.pieceMetadata],
   );
 
   async function handleSave() {
@@ -204,7 +235,8 @@ export function ContentPieceClient({
     const res = await fetch(`/api/content-pieces/${pieceId}/images/regenerate`, { method: "POST" });
     setRegeneratingImages(false);
     if (!res.ok) {
-      toast.error("Failed to regenerate images");
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      toast.error(data?.error ?? "Failed to regenerate images");
       return;
     }
     const data = (await res.json()) as { piece: ContentPieceRecord };
@@ -212,12 +244,43 @@ export function ContentPieceClient({
     toast.success("Images updated from keyword search");
   }
 
+  async function handlePublishPreview() {
+    setPreviewLoading(true);
+    setPreviewHtml(null);
+    setPreviewJson(null);
+    setPreviewWarnings([]);
+    setPreviewKind(null);
+    const res = await fetch(`/api/content-pieces/${pieceId}/render-preview`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        platform: publishPlatform,
+        outputMode: piece.pieceMetadata?.intendedOutputMode ?? piece.pieceMetadata?.intendedEditorMode,
+      }),
+    });
+    setPreviewLoading(false);
+    if (!res.ok) {
+      toast.error("Failed to load publish preview");
+      return;
+    }
+    const data = (await res.json()) as {
+      payloadKind?: string;
+      previewHtml?: string;
+      previewJson?: unknown;
+      warnings?: { code: string; message: string }[];
+    };
+    setPreviewKind(data.payloadKind ?? null);
+    setPreviewHtml(data.previewHtml ?? null);
+    setPreviewJson(data.previewJson ?? null);
+    setPreviewWarnings(data.warnings ?? []);
+  }
+
   async function handlePublish() {
     setPublishing(true);
     const res = await fetch(`/api/content-pieces/${pieceId}/publish`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ platform: publishPlatform }),
+      body: JSON.stringify({ platform: publishPlatform, async: true }),
     });
     setPublishing(false);
     if (!res.ok) {
@@ -225,6 +288,10 @@ export function ContentPieceClient({
       return;
     }
     const updated = await res.json();
+    if (updated.queued) {
+      toast.success(`Publishing to ${publishPlatform} — running in the background`);
+      return;
+    }
     setPiece((prev) => (prev ? { ...prev, status: "published", ...(updated.piece ?? updated) } : prev));
     toast.success(`Published to ${publishPlatform}`);
   }
@@ -331,6 +398,9 @@ export function ContentPieceClient({
                 <p className="text-xs text-muted-foreground line-clamp-2">{featuredImage.alt}</p>
                 <p className="text-xs text-muted-foreground">
                   {featuredImage.provider} · score {featuredImage.rankScore.toFixed(2)}
+                  {featuredImage.publishedUrl
+                    ? " · hosted on your site"
+                    : " · uploaded as compressed WebP to your site on publish"}
                 </p>
                 <Button
                   type="button"
@@ -343,6 +413,42 @@ export function ContentPieceClient({
                   {regeneratingImages ? "Finding image…" : "Pick another image"}
                 </Button>
               </div>
+            </div>
+          ) : supportsStockImages ? (
+            <div className="paper-card rounded-xl p-4 space-y-3">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                  <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-medium">Featured image</p>
+                  <p className="text-xs text-muted-foreground">
+                    {stockImagesConfigured
+                      ? "Search Unsplash or Pexels for a copyright-free photo. On publish, we download, compress to WebP, and upload it to your site."
+                      : "Stock photo search is unavailable until platform API keys are configured."}
+                  </p>
+                </div>
+              </div>
+              {stockImagesConfigured ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={regeneratingImages}
+                  onClick={regenerateImages}
+                >
+                  <RefreshCw className={cn("h-3.5 w-3.5", regeneratingImages && "animate-spin")} />
+                  {regeneratingImages ? "Finding image…" : "Add featured image"}
+                </Button>
+              ) : (
+                <div className="flex items-start gap-2 rounded-lg border border-dashed border-amber-300/70 bg-amber-50/40 px-3 py-2.5 text-xs text-muted-foreground dark:border-amber-500/30 dark:bg-amber-500/5">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                  <p>
+                    Ask your admin to set UNSPLASH_ACCESS_KEY and/or PEXELS_API_KEY in the server
+                    environment, then return here to add images.
+                  </p>
+                </div>
+              )}
             </div>
           ) : null}
           <div className="paper-card rounded-xl overflow-hidden">
@@ -489,11 +595,27 @@ export function ContentPieceClient({
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-6">
+          {visualSummaryMarkdown && canEnhance && (
+            <div className="paper-card p-4 rounded-xl space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <LayoutTemplate className="h-4 w-4 text-primary" />
+                Visual summary
+              </div>
+              <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+                <ContentMarkdown>{visualSummaryMarkdown}</ContentMarkdown>
+              </div>
+            </div>
+          )}
+
           {displayBody && (
             <ArticleQualityPanel
               bodyMarkdown={displayBody}
               metaTitle={displayTitle}
+              seoTitle={piece.pieceMetadata?.seoTitle}
               metaDescription={piece.pieceMetadata?.metaDescription}
+              ogTitle={piece.pieceMetadata?.ogTitle}
+              ogDescription={piece.pieceMetadata?.ogDescription}
+              focusKeyword={piece.pieceMetadata?.focusKeyword ?? piece.targetKeyword}
               citations={piece.pieceMetadata?.citations}
               faqSection={piece.pieceMetadata?.faqSection}
               jsonLdSchema={piece.pieceMetadata?.jsonLdSchema}
@@ -516,21 +638,67 @@ export function ContentPieceClient({
               </SelectTrigger>
               <SelectContent>
                 {publishDestinations.map((d) => (
-                  <SelectItem key={d.id} value={d.id} disabled={!d.isConnected(cmsConnections)}>
+                  <SelectItem
+                    key={d.id}
+                    value={d.id}
+                    disabled={d.exportOnly || !d.isConnected(cmsConnections)}
+                  >
                     {d.label}
-                    {!d.isConnected(cmsConnections) ? " (not connected)" : ""}
+                    {d.exportOnly
+                      ? " (export only)"
+                      : !d.isConnected(cmsConnections)
+                        ? " (not connected)"
+                        : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button
-              className="w-full"
-              size="sm"
-              onClick={handlePublish}
-              disabled={publishing || connectedDestinations.length === 0}
-            >
-              <Send className="h-4 w-4" /> {publishing ? "Publishing…" : "Publish"}
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1"
+                size="sm"
+                onClick={handlePublishPreview}
+                disabled={previewLoading || connectedDestinations.length === 0}
+              >
+                <Eye className="h-4 w-4" /> {previewLoading ? "Previewing…" : "Preview"}
+              </Button>
+              <Button
+                className="flex-1"
+                size="sm"
+                onClick={handlePublish}
+                disabled={publishing || connectedDestinations.length === 0}
+              >
+                <Send className="h-4 w-4" /> {publishing ? "Publishing…" : "Publish"}
+              </Button>
+            </div>
+            {(previewKind || previewWarnings.length > 0) && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2 text-xs">
+                {previewKind && (
+                  <p className="text-muted-foreground">
+                    Destination format: <span className="font-medium text-foreground">{previewKind}</span>
+                  </p>
+                )}
+                {previewWarnings.map((w) => (
+                  <p key={w.code} className="flex gap-1.5 text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                    {w.message}
+                  </p>
+                ))}
+                {previewHtml && (
+                  <div
+                    className="prose prose-sm dark:prose-invert max-w-none max-h-48 overflow-y-auto border-t border-border pt-2 mt-2"
+                    dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  />
+                )}
+                {!previewHtml && previewJson != null && (
+                  <pre className="max-h-48 overflow-y-auto border-t border-border pt-2 mt-2 text-[11px] font-mono whitespace-pre-wrap break-all">
+                    {JSON.stringify(previewJson, null, 2)}
+                  </pre>
+                )}
+              </div>
+            )}
             {connectedDestinations.length === 0 && (
               <Link
                 href="/integrations"
@@ -547,6 +715,7 @@ export function ContentPieceClient({
         open={repurposeOpen}
         onClose={() => setRepurposeOpen(false)}
         pieceId={piece.id}
+        projectId={piece.websiteProjectId}
         currentFormat={piece.formatType}
       />
     </div>
