@@ -5,7 +5,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./d1": "./src/d1.ts",
+    "./active-schema": "./src/active-schema.ts",
     "./schema": "./src/schema/index.ts",
+    "./schema-sqlite": "./src/schema-sqlite/index.ts",
     "./schema/search_property_connections": "./src/schema/search_property_connections.ts",
     "./schema/*": "./src/schema/*.ts",
     "./migrate": "./src/migrate.ts",
@@ -13,7 +16,12 @@
   },
   "scripts": {
     "generate": "drizzle-kit generate --config ./drizzle.config.ts",
+    "generate:d1": "node ./scripts/convert-pg-schema-to-sqlite.mjs && drizzle-kit generate --config ./drizzle.d1.config.ts",
     "migrate": "tsx ./src/run-migrate.ts",
+    "migrate:d1": "tsx ./src/migrate-d1.ts",
+    "migrate:d1:local": "tsx ./src/migrate-d1.ts --local",
+    "seed:d1": "tsx ./src/run-seed-d1.ts",
+    "seed:d1:local": "tsx ./src/run-seed-d1.ts --local",
     "seed": "tsx ./src/seed.ts",
     "seed-test-user": "tsx ./src/seed-test-user.ts",
     "push": "drizzle-kit push --config ./drizzle.config.ts",

@@ -11,7 +11,8 @@
  */
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";
-import { db, usersTable, companiesTable, marketingPersonasTable } from "./index";
+import { getPostgresDb } from "./postgres";
+import { usersTable, companiesTable, marketingPersonasTable } from "./schema";
 
 const DEMO_EMAIL = "demo@gold.edu";
 const DEMO_PASSWORD = "GoldSuite2026!";
@@ -19,6 +20,7 @@ const DEMO_NAME = "Demo User";
 
 async function seedTestUser() {
   console.log("Seeding demo test user...");
+  const db = getPostgresDb();
 
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 

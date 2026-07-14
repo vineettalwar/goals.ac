@@ -1,17 +1,19 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "./schema";
-
-const { Pool } = pg;
-
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Export it in your shell or add it to a `.env` or `.env.local` file at the repository root (used by migrate/seed).",
-  );
-}
-
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
+export { db, getDb, setD1Binding, type GoalsDatabase } from "./db-instance";
+export { getDbDialect, isD1Dialect, type DbDialect } from "./dialect";
+export { createD1Db, type D1DatabaseBinding, type GoalsD1Database } from "./d1";
+export { getPostgresDb, getPostgresPool, closePostgresPool } from "./postgres";
+export {
+  countAsInt,
+  countDistinctAsInt,
+  sumAsInt,
+  coalesceSumAsInt,
+  ilikeCompat,
+  jsonTextAt,
+  jsonTextEquals,
+  advisoryXactLock,
+  isUniqueConstraintError,
+  isJobsUnavailable,
+} from "./sql-compat";
 
 export * from "./schema";
 export * from "./slugify";
