@@ -20,28 +20,9 @@ export function setKvBindings(bindings: {
 }
 
 export function getAiCacheKv(): KvNamespaceBinding | null {
-  if (aiCacheKv) return aiCacheKv;
-  return resolveKvFromContext()?.AI_CACHE ?? null;
+  return aiCacheKv;
 }
 
 export function getRateLimitKv(): KvNamespaceBinding | null {
-  if (rateLimitKv) return rateLimitKv;
-  return resolveKvFromContext()?.RATE_LIMIT ?? null;
-}
-
-function resolveKvFromContext(): { AI_CACHE?: KvNamespaceBinding; RATE_LIMIT?: KvNamespaceBinding } | null {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getCloudflareContext } = require("@opennextjs/cloudflare") as {
-      getCloudflareContext: () => {
-        env: { AI_CACHE?: KvNamespaceBinding; RATE_LIMIT?: KvNamespaceBinding };
-      };
-    };
-    const { env } = getCloudflareContext();
-    if (env?.AI_CACHE) aiCacheKv = env.AI_CACHE;
-    if (env?.RATE_LIMIT) rateLimitKv = env.RATE_LIMIT;
-    return env ?? null;
-  } catch {
-    return null;
-  }
+  return rateLimitKv;
 }
