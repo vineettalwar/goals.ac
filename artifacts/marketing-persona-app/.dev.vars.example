@@ -6,6 +6,9 @@ NEXTJS_ENV=development
 # D1 on Workers — omit or set postgres for local Docker/Neon via DATABASE_URL
 DB_DIALECT=d1
 
+# Cloudflare bindings (AI_CACHE, RATE_LIMIT, JOBS_QUEUE) are wired via wrangler.jsonc
+# in cf:preview — no env vars needed for KV/Queues on Workers.
+
 # Required — same values as repo-root .env (Postgres path only when DB_DIALECT=postgres)
 # AUTH_SECRET=
 # NEXTAUTH_URL=http://localhost:8787
