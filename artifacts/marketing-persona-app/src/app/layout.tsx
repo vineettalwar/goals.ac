@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import { RootProviders } from "@/app/root-providers";
+import { getSession } from "@/auth";
 import { getSiteUrl } from "@/lib/marketing/site/site-url";
 import { MARKETING_CRITICAL_CSS } from "@/lib/marketing/site/marketing-critical-css";
 import { sanitizeJsonLd } from "@/lib/security/json-ld";
@@ -33,7 +34,8 @@ export const metadata: Metadata = {
     : {}),
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = process.env.MARKETING_STATIC === "1" ? null : await getSession();
   const siteUrl = getSiteUrl();
   const organizationJsonLd = {
     "@context": "https://schema.org",
@@ -66,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: sanitizeJsonLd(organizationJsonLd) }}
         />
-        <RootProviders>{children}</RootProviders>
+        <RootProviders session={session}>{children}</RootProviders>
       </body>
     </html>
   );

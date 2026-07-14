@@ -1,21 +1,56 @@
+import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 import type { NextConfig } from "next";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+initOpenNextCloudflareForDev();
+
 const appDir = path.dirname(fileURLToPath(import.meta.url));
 const monorepoRoot = path.resolve(appDir, "../..");
-const polyfillStub = path.join(appDir, "polyfill-stub.js");
+
+const securityHeaders = [
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
+  },
+  {
+    key: "X-Frame-Options",
+    value: "DENY",
+  },
+  {
+    key: "X-Content-Type-Options",
+    value: "nosniff",
+  },
+  {
+    key: "Referrer-Policy",
+    value: "strict-origin-when-cross-origin",
+  },
+  {
+    key: "Permissions-Policy",
+    value: "camera=(), microphone=(), geolocation=()",
+  },
+];
 
 const nextConfig: NextConfig = {
-  output: "export",
-  distDir: ".marketing-out",
-  trailingSlash: true,
-  images: { unoptimized: true },
-  env: {
-    MARKETING_STATIC: "1",
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "https://api.goals.ac",
-    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "",
-    NEXT_PUBLIC_DEPLOY_STAGE: process.env.NEXT_PUBLIC_DEPLOY_STAGE ?? "production",
+  output: "standalone",
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "images.unsplash.com" },
+      { protocol: "https", hostname: "images.pexels.com" },
+      { protocol: "https", hostname: "images.higgs.ai" },
+    ],
+  },
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+    optimizePackageImports: [
+      "lucide-react",
+      "recharts",
+      "framer-motion",
+      "@radix-ui/react-icons",
+    ],
   },
   turbopack: {
     root: monorepoRoot,
@@ -26,26 +61,13 @@ const nextConfig: NextConfig = {
       "@workspace/jobs/boss": "lib/jobs/src/boss.ts",
       "@workspace/jobs/queues": "lib/jobs/src/queues.ts",
       "@workspace/deepl": "lib/deepl/src/index.ts",
-      sharp: "./sharp-stub.js",
-      "@/app/root-providers": "./src/app/marketing-providers.tsx",
-      "next/dist/build/polyfills/polyfill-module": {
-        browser: "./polyfill-stub.js",
-      },
     },
-  },
-  webpack(config, { isServer }) {
-    if (!isServer) {
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        "next/dist/build/polyfills/polyfill-module": polyfillStub,
-      };
-    }
-    return config;
   },
   transpilePackages: [
     "@workspace/cf-edge",
     "@workspace/db",
     "@workspace/billing",
+    "@workspace/integrations-gemini-ai",
     "@workspace/security",
     "@workspace/ai-providers",
     "@workspace/connectors",
@@ -56,8 +78,33 @@ const nextConfig: NextConfig = {
     "@workspace/seo-tools",
     "@workspace/serp-provider",
   ],
+  async redirects() {
+    return [
+      { source: "/agent", destination: "/projects", permanent: true },
+      { source: "/autopilot", destination: "/projects", permanent: true },
+      { source: "/autopilot/:path*", destination: "/projects", permanent: true },
+      { source: "/growth-roadmaps", destination: "/strategy/roadmaps", permanent: true },
+      { source: "/content-strategies", destination: "/strategy/calendar", permanent: true },
+      { source: "/topical-map", destination: "/strategy/topical-map", permanent: true },
+      { source: "/goals", destination: "/strategy/goals", permanent: true },
+      { source: "/keyword-tracking", destination: "/search/keywords", permanent: true },
+      { source: "/search/suggestions", destination: "/search/keywords?tab=ideas", permanent: true },
+      { source: "/ai-visibility", destination: "/search/visibility", permanent: true },
+      { source: "/internal-links", destination: "/search/site", permanent: true },
+      { source: "/competitor-analysis", destination: "/research/competitors", permanent: true },
+      { source: "/reddit-discovery", destination: "/research/reddit", permanent: true },
+      { source: "/search/geo-audit", destination: "/audit", permanent: true },
+      { source: "/search/geo-audit/:id", destination: "/audit/:id", permanent: true },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: securityHeaders,
+      },
+    ];
+  },
 };
-
-// Redirects for static export live in artifacts/marketing-pages/public/_redirects
 
 export default nextConfig;

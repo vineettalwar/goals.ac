@@ -1,5 +1,6 @@
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-import { setD1Binding } from "@workspace/db";
+import { getCloudflareContext } from "@opennextjs/cloudflare/cloudflare-context";
+// Edge-safe deep import — `@workspace/db` barrel pulls pg/postgres (Node crypto).
+import { setD1Binding } from "@workspace/db/d1-binding";
 import { setJobsQueueBinding } from "@workspace/jobs/cf-queues";
 import { setKvBindings } from "@workspace/content-engine/core/kv-binding";
 

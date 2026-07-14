@@ -2,19 +2,17 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/auth";
 import { apiFetch } from "@/lib/api";
-
-type Project = {
-  id: number;
-  name: string;
-  websiteUrl: string | null;
-  industry: string | null;
-  updatedAt: string;
-};
+import {
+  formatProjectUrl,
+  formatTimestamp,
+  type ContentPiece,
+  type WebsiteProject,
+} from "@/types/api";
 
 export function ProjectsPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<WebsiteProject[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -23,7 +21,7 @@ export function ProjectsPage() {
 
   useEffect(() => {
     if (!user) return;
-    void apiFetch<Project[]>("/api/website-projects")
+    void apiFetch<WebsiteProject[]>("/api/website-projects")
       .then(setProjects)
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load projects"));
   }, [user]);
@@ -43,14 +41,17 @@ export function ProjectsPage() {
           >
             <p className="font-semibold">{project.name}</p>
             <p className="text-sm text-(--muted) mt-1">
-              {project.websiteUrl ?? "No website"} · {project.industry ?? "Industry TBD"}
+              {formatProjectUrl(project)} · Updated {formatTimestamp(project.updatedAt)}
             </p>
           </Link>
         ))}
         {projects.length === 0 ? (
-          <p className="text-sm text-(--muted)">No projects yet. Create one from onboarding.</p>
+          <p className="text-sm text-(--muted)">No projects yet.</p>
         ) : null}
       </div>
     </div>
   );
 }
+
+// Re-export types used by dashboard
+export type { ContentPiece, WebsiteProject };

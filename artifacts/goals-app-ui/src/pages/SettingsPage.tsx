@@ -13,8 +13,9 @@ export function SettingsPage() {
         <Row label="API origin" value={import.meta.env.VITE_API_URL ?? "https://api.goals.ac"} />
       </div>
       <p className="text-xs text-(--muted) mt-4">
-        Full settings (AI keys, integrations) remain in the Next.js app until all routes are ported
-        to the edge gateway.
+        AI keys and advanced integration setup are still being ported to the edge app. Use{" "}
+        <code className="text-xs">pnpm --filter @workspace/marketing-persona-app run dev</code> locally
+        for the full settings experience.
       </p>
     </div>
   );

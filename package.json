@@ -26,6 +26,7 @@
     "cf:migrate:d1:local": "pnpm --filter @workspace/db run migrate:d1:local",
     "cf:seed:d1": "pnpm --filter @workspace/db run seed:d1",
     "cf:seed:d1:local": "pnpm --filter @workspace/db run seed:d1:local",
+    "cf:sync-pg-to-d1": "pnpm --filter @workspace/db run sync-pg-to-d1",
     "cf:setup": "node scripts/cf-setup.mjs",
     "cf:pages:git-setup": "node scripts/cf-pages-git-setup.mjs",
     "cf:typegen": "pnpm --filter @workspace/marketing-persona-app run cf:typegen",

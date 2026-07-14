@@ -8,6 +8,7 @@ import { kvPutJson } from "@workspace/cf-edge/kv-cache";
 import { verifySessionClaims } from "@workspace/cf-edge/jwt";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
 import { z } from "zod";
+import { handleCmsIntegrationsWrite } from "./cms-integrations";
 
 export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
@@ -62,6 +63,9 @@ export default {
     const userId = Number.parseInt(session.id, 10);
 
     try {
+      const cmsHandled = await handleCmsIntegrationsWrite(request, path, userId);
+      if (cmsHandled) return cmsHandled;
+
       if (path === "/api/content-pieces/generate" && request.method === "POST") {
         const parsed = contentGenerateBody.safeParse(await request.json().catch(() => null));
         if (!parsed.success) {

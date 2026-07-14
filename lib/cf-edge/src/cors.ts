@@ -2,8 +2,10 @@ const DEFAULT_ORIGINS = [
   "https://goals.ac",
   "https://www.goals.ac",
   "https://app.goals.ac",
+  "https://goals-ac-app.pages.dev",
   "http://localhost:3001",
   "http://localhost:5173",
+  "http://localhost:5174",
   "http://localhost:8787",
 ];
 
@@ -18,7 +20,11 @@ export function corsHeaders(
     "Access-Control-Allow-Headers": "Content-Type, Authorization, Cookie",
     "Access-Control-Allow-Credentials": "true",
   };
-  if (origin && allowed.has(origin)) {
+  const originAllowed =
+    origin &&
+    (allowed.has(origin) ||
+      /^https:\/\/[a-z0-9-]+\.goals-ac-app\.pages\.dev$/i.test(origin));
+  if (originAllowed) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers.Vary = "Origin";
   }

@@ -11,6 +11,7 @@ const PUBLIC_PREFIXES = [
   "/api/platform/status",
   "/api/industries",
   "/api/locations",
+  "/api/plans",
   "/api/contact",
   "/api/waitlist",
   "/api/auth/login",
@@ -41,6 +42,9 @@ function isReadPath(path: string, method: string): boolean {
 function isWritePath(path: string, method: string): boolean {
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return false;
   if (WRITE_PREFIXES.some((p) => path === p || path.startsWith(p))) return true;
+  if (path.includes("/cms-integrations") && (method === "PATCH" || method === "DELETE")) {
+    return true;
+  }
   if (path.includes("/publish") && method === "POST") return true;
   if (path.includes("/scrape") && method === "POST") return true;
   if (path.includes("/sync") && method === "POST") return true;
@@ -81,7 +85,7 @@ export default {
     } else if (isReadPath(path, request.method)) {
       target = env.READ;
     } else {
-      target = env.READ;
+      target = env.WRITE;
     }
 
     const response = await target.fetch(request);

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Check } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
@@ -9,6 +10,7 @@ import { FAQAccordion } from "@/components/marketing/sections/faq-accordion";
 import { MarketingCTA } from "@/components/marketing/sections/marketing-cta";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
+import { publicApiUrl } from "@/lib/marketing/site/public-api";
 import {
   CONTACT_CTA_LABEL,
   CONTACT_EMAIL,
@@ -26,6 +28,7 @@ import {
   PLAN_LABELS,
   type PlanId,
 } from "@/lib/billing/plans";
+import type { PublicPlanCatalog } from "@workspace/billing/public-plans";
 
 const glassCard = cardSurfaceClass("glass");
 const glassCardStatic = cardSurfaceClass("glass", false);
@@ -119,10 +122,17 @@ function formatQuota(value: number | null, unit: string): string {
   return `${value} ${unit}`;
 }
 
-function SaasPlanCard({ plan }: { plan: (typeof SAAS_PLANS)[number] }) {
-  const quotas = DEFAULT_PLAN_QUOTA_LIMITS[plan.id];
-  const price = PLAN_DISPLAY_PRICES[plan.id] ?? "Custom";
-  const credits = PLAN_DISPLAY_CREDITS[plan.id];
+function SaasPlanCard({
+  plan,
+  catalog,
+}: {
+  plan: (typeof SAAS_PLANS)[number];
+  catalog: PublicPlanCatalog | null;
+}) {
+  const entry = catalog?.plans.find((row) => row.id === plan.id);
+  const quotas = entry?.quotas ?? DEFAULT_PLAN_QUOTA_LIMITS[plan.id];
+  const price = entry?.price ?? PLAN_DISPLAY_PRICES[plan.id] ?? "Custom";
+  const credits = entry?.credits ?? PLAN_DISPLAY_CREDITS[plan.id];
 
   return (
     <div
@@ -173,6 +183,30 @@ function SaasPlanCard({ plan }: { plan: (typeof SAAS_PLANS)[number] }) {
 }
 
 export function PricingPageClient() {
+  const [catalog, setCatalog] = useState<PublicPlanCatalog | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(publicApiUrl("/api/plans"))
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: PublicPlanCatalog | null) => {
+        if (!cancelled && data?.plans?.length) setCatalog(data);
+      })
+      .catch(() => {
+        // Fall back to bundled defaults when the public API is unreachable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const growthPrice = useMemo(() => {
+    const growth = catalog?.plans.find((plan) => plan.id === "growth");
+    return growth?.price ?? PLAN_DISPLAY_PRICES.growth ?? "$49/mo";
+  }, [catalog]);
+
+  const selfServeDescription = `Sign up free on Starter. Upgrade to Growth (${growthPrice}) in Settings → Billing when you need more sites and included AI credits.`;
+
   return (
     <MarketingPageShell
       hero={
@@ -196,13 +230,13 @@ export function PricingPageClient() {
             <EditorialHeading
               line1="Self-serve"
               line2="plans"
-              description="Sign up free on Starter. Upgrade to Growth ($49/mo) in Settings → Billing when you need more sites and included AI credits."
+              description={selfServeDescription}
               theme="dark"
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
             {SAAS_PLANS.map((plan) => (
-              <SaasPlanCard key={plan.id} plan={plan} />
+              <SaasPlanCard key={plan.id} plan={plan} catalog={catalog} />
             ))}
           </div>
           <p className="text-center text-sm text-white/50 mt-8">

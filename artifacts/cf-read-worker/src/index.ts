@@ -1,16 +1,10 @@
-import { setD1Binding, db } from "@workspace/db";
-import {
-  websiteProjectsTable,
-  contentPiecesTable,
-  goalsTable,
-  usersTable,
-} from "@workspace/db/schema-sqlite";
-import { and, eq, desc, getTableColumns } from "drizzle-orm";
+import { setD1Binding } from "@workspace/db";
 import { wireCfEdgeEnv } from "@workspace/cf-edge/wire";
 import { corsPreflight, withCors } from "@workspace/cf-edge/cors";
 import { kvGetJson } from "@workspace/cf-edge/kv-cache";
 import { verifySessionClaims } from "@workspace/cf-edge/jwt";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
+import { handleAuthenticatedRead } from "./api-routes";
 
 export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
@@ -54,83 +48,8 @@ export default {
     const userId = Number.parseInt(session.id, 10);
 
     try {
-      if (path === "/api/auth/me" && request.method === "GET") {
-        const [user] = await db
-          .select({
-            id: usersTable.id,
-            email: usersTable.email,
-            name: usersTable.name,
-            role: usersTable.role,
-            avatarUrl: usersTable.avatarUrl,
-          })
-          .from(usersTable)
-          .where(eq(usersTable.id, userId))
-          .limit(1);
-        if (!user) {
-          return withCors(request, Response.json({ error: "User not found" }, { status: 404 }));
-        }
-        return withCors(request, Response.json({ user }));
-      }
-
-      if (path === "/api/website-projects" && request.method === "GET") {
-        const projects = await db
-          .select()
-          .from(websiteProjectsTable)
-          .where(eq(websiteProjectsTable.userId, userId))
-          .orderBy(desc(websiteProjectsTable.updatedAt));
-        return withCors(request, Response.json(projects));
-      }
-
-      if (path === "/api/goals" && request.method === "GET") {
-        const goals = await db
-          .select(getTableColumns(goalsTable))
-          .from(goalsTable)
-          .innerJoin(
-            websiteProjectsTable,
-            eq(goalsTable.projectId, websiteProjectsTable.id),
-          )
-          .where(eq(websiteProjectsTable.userId, userId))
-          .orderBy(desc(goalsTable.updatedAt));
-        return withCors(request, Response.json(goals));
-      }
-
-      const contentMatch = path.match(/^\/api\/content-pieces\/(\d+)$/);
-      if (contentMatch && request.method === "GET") {
-        const id = Number.parseInt(contentMatch[1]!, 10);
-        const [piece] = await db
-          .select(getTableColumns(contentPiecesTable))
-          .from(contentPiecesTable)
-          .innerJoin(
-            websiteProjectsTable,
-            eq(contentPiecesTable.websiteProjectId, websiteProjectsTable.id),
-          )
-          .where(
-            and(
-              eq(contentPiecesTable.id, id),
-              eq(websiteProjectsTable.userId, userId),
-            ),
-          )
-          .limit(1);
-        if (!piece) {
-          return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
-        }
-        return withCors(request, Response.json(piece));
-      }
-
-      if (path === "/api/content-pieces" && request.method === "GET") {
-        const pieces = await db
-          .select(getTableColumns(contentPiecesTable))
-          .from(contentPiecesTable)
-          .innerJoin(
-            websiteProjectsTable,
-            eq(contentPiecesTable.websiteProjectId, websiteProjectsTable.id),
-          )
-          .where(eq(websiteProjectsTable.userId, userId))
-          .orderBy(desc(contentPiecesTable.updatedAt))
-          .limit(100);
-        return withCors(request, Response.json(pieces));
-      }
-
+      const handled = await handleAuthenticatedRead(request, path, userId);
+      if (handled) return handled;
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
     } catch (err) {
       console.error("[goals-ac-read]", path, err);

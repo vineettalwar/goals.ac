@@ -4,10 +4,19 @@ import {
   contactSubmissionsTable,
   industriesTable,
   locationsTable,
+  planQuotaConfigTable,
   platformSettingsTable,
   waitlistSignupsTable,
 } from "@workspace/db/schema-sqlite";
 import { seedReferenceDataIfEmpty } from "@workspace/db/reference-data";
+import {
+  DEFAULT_PLAN_QUOTA_LIMITS,
+  PLAN_IDS,
+  normalizePlanId,
+  type PlanId,
+  type PlanQuotaLimits,
+} from "@workspace/billing/plans";
+import { buildPublicPlanCatalog } from "@workspace/billing/public-plans";
 import { asc, eq } from "drizzle-orm";
 import { sendToCfQueue } from "@workspace/jobs/cf-queues";
 import { QUEUES } from "@workspace/jobs/queues";
@@ -60,6 +69,28 @@ async function rateLimitKv(
   if (count >= limit) return true;
   await kv.put(rk, String(count + 1), { expirationTtl: windowSec + 5 });
   return false;
+}
+
+async function loadPlanQuotaLimits(): Promise<Record<PlanId, PlanQuotaLimits>> {
+  const limits = Object.fromEntries(
+    PLAN_IDS.map((planId) => [planId, { ...DEFAULT_PLAN_QUOTA_LIMITS[planId] }]),
+  ) as Record<PlanId, PlanQuotaLimits>;
+
+  try {
+    const rows = await db().select().from(planQuotaConfigTable);
+    for (const row of rows) {
+      const planId = normalizePlanId(row.planId);
+      limits[planId] = {
+        articles: row.articlesPerMonth,
+        roadmaps: row.roadmapsPerMonth,
+        sites: row.sites,
+      };
+    }
+  } catch {
+    // Unmigrated or empty plan_quota_config — use code defaults.
+  }
+
+  return limits;
 }
 
 async function cachedReference<T>(
@@ -155,6 +186,17 @@ async function handle(request: Request, env: Env): Promise<Response> {
         return db().select().from(locationsTable).orderBy(asc(locationsTable.name));
       });
       return withCors(request, Response.json(locations));
+    }
+
+    if (path === "/api/plans" && request.method === "GET") {
+      const catalog = await cachedReference(env, "ref:plans:v1", async () => {
+        const limits = await loadPlanQuotaLimits();
+        return buildPublicPlanCatalog(limits);
+      });
+      return withCors(
+        request,
+        Response.json(catalog, { headers: { "Cache-Control": "public, max-age=300" } }),
+      );
     }
 
     if (path === "/api/auth/login" && request.method === "POST") {

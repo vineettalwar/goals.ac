@@ -12,6 +12,8 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(scriptDir, "..");
 const appDir = path.join(repoRoot, "artifacts/marketing-persona-app");
 const appSrc = path.join(appDir, "src/app");
+const middlewarePath = path.join(appDir, "src/middleware.ts");
+const middlewareBackup = path.join(appDir, ".marketing-build-backup/middleware.ts.bak");
 const backupRoot = path.join(appDir, ".marketing-build-backup");
 const pagesDist = path.join(repoRoot, "artifacts/marketing-pages/dist");
 const mainConfig = path.join(appDir, "next.config.ts");
@@ -150,6 +152,10 @@ for (const dir of HIDE_DIRS) {
   fs.renameSync(src, dest);
 }
 
+if (fs.existsSync(middlewarePath)) {
+  fs.renameSync(middlewarePath, middlewareBackup);
+}
+
 try {
   console.log("→ Swapping next.config.ts for marketing export…");
   if (fs.existsSync(mainConfig)) {
@@ -211,6 +217,10 @@ try {
       if (fs.existsSync(restore)) rmrf(restore);
       fs.renameSync(backed, restore);
     }
+  }
+  if (fs.existsSync(middlewareBackup)) {
+    if (fs.existsSync(middlewarePath)) fs.unlinkSync(middlewarePath);
+    fs.renameSync(middlewareBackup, middlewarePath);
   }
   rmrf(backupRoot);
 }

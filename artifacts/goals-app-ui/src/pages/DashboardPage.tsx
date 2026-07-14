@@ -1,26 +1,17 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/auth";
 import { apiFetch } from "@/lib/api";
-
-type Project = {
-  id: number;
-  name: string;
-  websiteUrl: string | null;
-  updatedAt: string;
-};
-
-type ContentPiece = {
-  id: number;
-  title: string;
-  status: string;
-  updatedAt: string;
-};
+import {
+  formatTimestamp,
+  type ContentPiece,
+  type WebsiteProject,
+} from "@/types/api";
 
 export function DashboardPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<WebsiteProject[]>([]);
   const [pieces, setPieces] = useState<ContentPiece[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -33,7 +24,7 @@ export function DashboardPage() {
     void (async () => {
       try {
         const [projectRows, pieceRows] = await Promise.all([
-          apiFetch<Project[]>("/api/website-projects"),
+          apiFetch<WebsiteProject[]>("/api/website-projects"),
           apiFetch<ContentPiece[]>("/api/content-pieces"),
         ]);
         setProjects(projectRows);
@@ -69,20 +60,49 @@ export function DashboardPage() {
       </section>
 
       <section className="mb-8">
-        <h2 className="text-sm font-semibold mb-3">Recent content</h2>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold">Recent content</h2>
+          <Link to="/studio" className="text-xs font-medium text-(--forest)">
+            Open studio
+          </Link>
+        </div>
         <div className="rounded-xl border border-(--border) bg-white divide-y">
           {pieces.length === 0 ? (
             <p className="p-4 text-sm text-(--muted)">No content pieces yet.</p>
           ) : (
             pieces.map((piece) => (
-              <div key={piece.id} className="px-4 py-3 flex justify-between gap-4">
+              <Link
+                key={piece.id}
+                to={`/content-piece/${piece.id}`}
+                className="flex justify-between gap-4 px-4 py-3 hover:bg-[#f5f3ef]"
+              >
                 <span className="text-sm font-medium truncate">{piece.title}</span>
-                <span className="text-xs text-(--muted) uppercase">{piece.status}</span>
-              </div>
+                <span className="text-xs text-(--muted) uppercase shrink-0">{piece.status}</span>
+              </Link>
             ))
           )}
         </div>
       </section>
+
+      {projects.length > 0 ? (
+        <section>
+          <h2 className="text-sm font-semibold mb-3">Your projects</h2>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {projects.map((project) => (
+              <Link
+                key={project.id}
+                to={`/projects/${project.id}`}
+                className="rounded-xl border border-(--border) bg-white p-4 hover:border-(--forest)"
+              >
+                <p className="font-medium text-sm">{project.name}</p>
+                <p className="text-xs text-(--muted) mt-1">
+                  Updated {formatTimestamp(project.updatedAt)}
+                </p>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

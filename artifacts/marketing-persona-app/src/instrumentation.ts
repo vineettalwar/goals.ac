@@ -1,4 +1,6 @@
 export async function register() {
-  const { initCfBindings } = await import("@/lib/init-cf-bindings");
-  initCfBindings();
+  if (process.env.NEXT_RUNTIME !== "nodejs") return;
+
+  const { registerNodeInstrumentation } = await import("./instrumentation-node");
+  await registerNodeInstrumentation();
 }

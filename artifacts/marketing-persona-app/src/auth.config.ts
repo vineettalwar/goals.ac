@@ -9,6 +9,7 @@ function normalizeOrgRole(role: string | null | undefined): "owner" | "site_admi
 
 /** Lightweight auth config — no DB, bcrypt, or Node-only modules. Used by proxy. */
 export const authConfig = {
+  trustHost: true,
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",

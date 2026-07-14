@@ -320,6 +320,9 @@ importers:
 
   artifacts/cf-public-worker:
     dependencies:
+      '@workspace/billing':
+        specifier: workspace:*
+        version: link:../../lib/billing
       '@workspace/cf-edge':
         specifier: workspace:*
         version: link:../../lib/cf-edge
@@ -363,6 +366,9 @@ importers:
       '@workspace/cf-edge':
         specifier: workspace:*
         version: link:../../lib/cf-edge
+      '@workspace/content-engine':
+        specifier: workspace:*
+        version: link:../../lib/content-engine
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
@@ -388,12 +394,18 @@ importers:
       '@workspace/cf-edge':
         specifier: workspace:*
         version: link:../../lib/cf-edge
+      '@workspace/content-engine':
+        specifier: workspace:*
+        version: link:../../lib/content-engine
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
       '@workspace/jobs':
         specifier: workspace:*
         version: link:../../lib/jobs
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
       next-auth:
         specifier: ^5.0.0-beta.30
         version: 5.0.0-beta.31(next@16.2.10(@playwright/test@1.61.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@19.1.0)
