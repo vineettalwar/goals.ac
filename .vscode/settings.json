@@ -87,10 +87,17 @@
     "wordpress"
   ],
   "intelephense.environment.phpVersion": "8.1.0",
+  "intelephense.environment.constants": {
+    "DRUPAL_ROOT": "/var/www/html",
+    "_JEXEC": true,
+    "TYPO3": true
+  },
   "intelephense.environment.includePaths": [
     "cms-plugins/wordpress/vendor/php-stubs/wordpress-stubs",
     "cms-plugins/shared/src",
+    "cms-plugins/drupal/src",
     "cms-plugins/typo3/stubs",
+    "cms-plugins/drupal/stubs/drupal-constants.php",
     "cms-plugins/drupal/stubs"
   ],
   "intelephense.files.exclude": [
@@ -102,11 +109,11 @@
   "phpcs.executablePath": "${workspaceFolder}/cms-plugins/wordpress/vendor/bin/phpcs",
   "phpcs.showSources": true,
   "phpcs.ignorePatterns": [
-    "*/vendor/*",
-    "*/node_modules/*",
-    "cms-plugins/joomla/**",
-    "cms-plugins/drupal/**",
-    "cms-plugins/shared/**"
+    "**/vendor/**",
+    "**/node_modules/**",
+    "**/cms-plugins/drupal/**",
+    "**/cms-plugins/joomla/**",
+    "**/cms-plugins/typo3/**"
   ],
   "cSpell.words": [
     "ABSPATH",
