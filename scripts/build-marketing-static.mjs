@@ -13,7 +13,7 @@ const repoRoot = path.resolve(scriptDir, "..");
 const appDir = path.join(repoRoot, "artifacts/marketing-persona-app");
 const appSrc = path.join(appDir, "src/app");
 const backupRoot = path.join(appDir, ".marketing-build-backup");
-const outDir = path.join(appDir, ".marketing-out");
+const outDir = path.join(appDir, "out");
 const pagesDist = path.join(repoRoot, "artifacts/marketing-pages/dist");
 const mainConfig = path.join(appDir, "next.config.ts");
 const marketingConfig = path.join(appDir, "next.config.marketing.ts");
@@ -60,6 +60,61 @@ function copyDir(src, dest) {
   }
 }
 
+/** Load stylesheets without blocking first paint — critical CSS is inlined in layout. */
+function deferRenderBlockingCss(html) {
+  return html.replace(
+    /<link rel="stylesheet" href="([^"]+)"([^>]*)\/?>/g,
+    (_, href, attrs) => {
+      const attrSuffix = attrs.trim() ? ` ${attrs.trim()}` : "";
+      return (
+        `<link rel="preload" href="${href}" as="style" onload="this.onload=null;this.rel='stylesheet'"${attrSuffix}>` +
+        `<noscript><link rel="stylesheet" href="${href}"${attrSuffix}></noscript>`
+      );
+    },
+  );
+}
+
+function walkHtmlFiles(dir, visitor) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkHtmlFiles(fullPath, visitor);
+      continue;
+    }
+    if (entry.name.endsWith(".html")) visitor(fullPath);
+  }
+}
+
+function deferCssInStaticExport(distDir) {
+  walkHtmlFiles(distDir, (filePath) => {
+    const html = fs.readFileSync(filePath, "utf8");
+    const next = deferRenderBlockingCss(html);
+    if (next !== html) fs.writeFileSync(filePath, next);
+  });
+}
+
+/** Next.js injects polyfill-module unconditionally; strip it for modern-browser targets. */
+function stripLegacyPolyfills(distDir) {
+  const polyfillPath = path.join(
+    appDir,
+    "node_modules/next/dist/build/polyfills/polyfill-module.js",
+  );
+  if (!fs.existsSync(polyfillPath)) return;
+
+  const snippet = fs.readFileSync(polyfillPath, "utf8").trim();
+  const chunksDir = path.join(distDir, "_next/static/chunks");
+  if (!fs.existsSync(chunksDir)) return;
+
+  for (const entry of fs.readdirSync(chunksDir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith(".js")) continue;
+    const filePath = path.join(chunksDir, entry.name);
+    const code = fs.readFileSync(filePath, "utf8");
+    if (!code.includes(snippet)) continue;
+    fs.writeFileSync(filePath, code.replace(snippet, ""));
+    console.log(`  stripped legacy polyfills from _next/static/chunks/${entry.name}`);
+  }
+}
+
 console.log("→ Hiding non-marketing app routes…");
 rmrf(backupRoot);
 fs.mkdirSync(backupRoot, { recursive: true });
@@ -78,7 +133,7 @@ try {
   }
   fs.copyFileSync(marketingConfig, mainConfig);
 
-  for (const cacheDir of [path.join(appDir, ".next"), path.join(appDir, ".marketing-out")]) {
+  for (const cacheDir of [path.join(appDir, ".next"), path.join(appDir, "out")]) {
     rmrf(cacheDir);
   }
 
@@ -90,15 +145,26 @@ try {
       ...process.env,
       MARKETING_STATIC: "1",
       NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL ?? "https://api.goals.ac",
+      NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL ?? "",
+      NEXT_PUBLIC_DEPLOY_STAGE: process.env.NEXT_PUBLIC_DEPLOY_STAGE ?? "production",
+      NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL ?? "https://goals.ac",
+      NEXTAUTH_URL: process.env.NEXTAUTH_URL ?? "https://goals.ac",
     },
   });
 
   rmrf(pagesDist);
   copyDir(outDir, pagesDist);
+  stripLegacyPolyfills(pagesDist);
+  deferCssInStaticExport(pagesDist);
 
   const redirectsSrc = path.join(repoRoot, "artifacts/marketing-pages/public/_redirects");
   if (fs.existsSync(redirectsSrc)) {
     fs.copyFileSync(redirectsSrc, path.join(pagesDist, "_redirects"));
+  }
+
+  const headersSrc = path.join(repoRoot, "artifacts/marketing-pages/public/_headers");
+  if (fs.existsSync(headersSrc)) {
+    fs.copyFileSync(headersSrc, path.join(pagesDist, "_headers"));
   }
 
   console.log(`✓ Marketing static export → ${pagesDist}`);
