@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OrgSecurityPanel } from "@/components/org-security-panel";
+import { MfaSettingsPanel } from "@/components/mfa/mfa-settings-panel";
 import { StockByokPanel } from "@/components/settings/stock-byok-panel";
 import { DeeplByokPanel } from "@/components/settings/deepl-byok-panel";
 import { PublicApiKeysPanel } from "@/components/settings/public-api-keys-panel";
@@ -1041,6 +1042,7 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
         </TabsContent>
 
         <TabsContent value="security" className="space-y-6">
+          <MfaSettingsPanel />
           <OrgSecurityPanel canManage={canManageAiSettings} />
           <div className="paper-card p-6 space-y-4">
             <h2 className="font-semibold">Change password</h2>

@@ -6,6 +6,7 @@ import { decryptCmsCredentials } from "@workspace/content-engine/support/cms-int
 import { renderAndPublish } from "@workspace/content-engine/adapters/render-service";
 import { resolveEntitlementsForOrg } from "@workspace/content-engine/support/resolve-publish-entitlements";
 import { assertProjectInOrg } from "@workspace/content-engine/support/api-key-auth";
+import { withPublishRecord } from "@workspace/content-engine/support/publish-records";
 import { requireApiKeyScope, withPublicApiKey } from "@/lib/public-api/auth";
 
 export async function POST(
@@ -50,35 +51,53 @@ export async function POST(
     const creds = decryptCmsCredentials((project?.cmsIntegrations ?? {}) as Record<string, unknown>);
     const entitlements = await resolveEntitlementsForOrg(key.organizationId);
 
-    const result = await renderAndPublish({
-      piece: {
-        id: piece.id,
-        title: piece.title,
-        bodyMarkdown: piece.bodyMarkdown,
-        targetKeyword: piece.targetKeyword,
-        formatType: piece.formatType,
-        pieceMetadata: piece.pieceMetadata,
+    let publishWarnings: Awaited<ReturnType<typeof renderAndPublish>>["warnings"] = [];
+
+    const publishOutcome = await withPublishRecord(
+      {
+        contentPieceId: pieceId,
+        websiteProjectId: body.projectId,
+        provider: body.platform,
       },
-      platform: body.platform,
-      creds,
-      entitlements,
-      idempotencyKey: `api-piece-${pieceId}`,
-    });
+      async (idempotencyKey) => {
+        const result = await renderAndPublish({
+          piece: {
+            id: piece.id,
+            title: piece.title,
+            bodyMarkdown: piece.bodyMarkdown,
+            targetKeyword: piece.targetKeyword,
+            formatType: piece.formatType,
+            pieceMetadata: piece.pieceMetadata,
+          },
+          platform: body.platform!,
+          creds,
+          entitlements,
+          idempotencyKey,
+        });
+
+        publishWarnings = result.warnings;
+
+        return {
+          publishedUrl: result.url,
+          publishPlatform: body.platform!,
+        };
+      },
+    );
 
     await db
       .update(contentPiecesTable)
       .set({
         status: "published",
-        publishedUrl: result.url,
+        publishedUrl: publishOutcome.publishedUrl,
         publishPlatform: body.platform,
         publishError: null,
       })
       .where(eq(contentPiecesTable.id, pieceId));
 
     return NextResponse.json({
-      publishedUrl: result.url,
+      publishedUrl: publishOutcome.publishedUrl,
       platform: body.platform,
-      warnings: result.warnings,
+      warnings: publishWarnings,
     });
   });
 }

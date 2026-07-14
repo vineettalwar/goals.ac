@@ -46,6 +46,9 @@
       "path": "./lib/stock-images"
     },
     {
+      "path": "./lib/deepl"
+    },
+    {
       "path": "./lib/media"
     }
   ]

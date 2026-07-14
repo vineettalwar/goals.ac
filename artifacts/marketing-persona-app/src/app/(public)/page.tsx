@@ -5,11 +5,11 @@ const HomePageClient = dynamic(
   () => import("@/components/marketing/home-page-client").then((m) => m.HomePageClient),
   {
     loading: () => (
-      <div className="min-h-screen animate-pulse bg-background">
-        <div className="h-[70vh] bg-secondary/30" />
+      <div className="min-h-screen animate-pulse bg-black">
+        <div className="h-[70vh] bg-white/5" />
         <div className="mx-auto max-w-5xl px-6 py-16 space-y-6">
-          <div className="h-8 w-64 rounded bg-secondary/50" />
-          <div className="h-4 w-full max-w-xl rounded bg-secondary/40" />
+          <div className="h-8 w-64 rounded bg-white/10" />
+          <div className="h-4 w-full max-w-xl rounded bg-white/5" />
         </div>
       </div>
     ),

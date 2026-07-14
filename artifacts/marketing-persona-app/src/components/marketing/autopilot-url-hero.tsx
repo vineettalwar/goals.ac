@@ -46,16 +46,16 @@ export function AutopilotUrlHero() {
           placeholder="https://yourwebsite.com"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          className="h-12 text-base bg-background/95"
+          className="h-12 text-base marketing-input-dark"
           aria-label="Your website URL"
         />
-        <Button type="submit" size="lg" className="h-12 shrink-0 gap-2">
+        <Button type="submit" size="lg" className="h-12 shrink-0 gap-2 hero-cta-primary border-0">
           Get 3 articles + 30-day plan
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
-      {error && <p className="mt-2 text-sm text-destructive text-center">{error}</p>}
-      <p className="mt-3 text-center text-xs text-muted-foreground">
+      {error && <p className="mt-2 text-sm text-red-400 text-center">{error}</p>}
+      <p className="mt-3 text-center text-xs text-white/50">
         Free to start · No credit card · Expert articles on autopilot
       </p>
     </form>

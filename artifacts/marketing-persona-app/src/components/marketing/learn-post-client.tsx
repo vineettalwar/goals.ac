@@ -46,7 +46,7 @@ export function LearnPostClient({ post }: { post: LearnPost }) {
         </article>
         <div className={`max-w-3xl mx-auto mt-12 ${glassCard} p-6 text-center`}>
           <p className="font-medium mb-4 text-white">Ready to apply this?</p>
-          <Link href={post.cta.href} className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2.5 rounded-full text-sm font-medium hover:opacity-90">
+          <Link href={post.cta.href} className="hero-cta-primary inline-flex items-center gap-2">
             {post.cta.label}
           </Link>
         </div>

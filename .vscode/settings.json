@@ -57,6 +57,7 @@
     "Phar",
     "posix",
     "pspell",
+    "random",
     "readline",
     "Reflection",
     "session",
@@ -89,7 +90,8 @@
   "intelephense.environment.includePaths": [
     "cms-plugins/wordpress/vendor/php-stubs/wordpress-stubs",
     "cms-plugins/shared/src",
-    "cms-plugins/typo3/stubs"
+    "cms-plugins/typo3/stubs",
+    "cms-plugins/drupal/stubs"
   ],
   "intelephense.files.exclude": [
     "**/vendor/**",
@@ -108,6 +110,7 @@
   ],
   "cSpell.words": [
     "ABSPATH",
+    "goalsac",
     "aioseo",
     "BYOK",
     "dbDelta",
@@ -118,6 +121,7 @@
     "metadesc",
     "rankmath",
     "Semrush",
+    "nums",
     "seopress",
     "wpseo",
     "yoast"

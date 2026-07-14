@@ -55,7 +55,7 @@ function NavDropdown({ label, children, pathname, activePrefixes }: DropdownProp
         <ChevronDown className={`h-3.5 w-3.5 transition-transform ${open ? "rotate-180" : ""}`} />
       </button>
       {open && (
-        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-[240px] max-w-[320px] rounded-xl bg-white/95 backdrop-blur-md border border-white/40 shadow-xl p-2 z-200">
+        <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-[240px] max-w-[320px] rounded-xl bg-black/90 backdrop-blur-md border border-white/15 shadow-xl shadow-black/50 p-2 z-200">
           {children}
         </div>
       )}
@@ -68,11 +68,11 @@ function DropdownLink({ item, onNavigate }: { item: NavLink; onNavigate?: () => 
     <Link
       href={item.href}
       onClick={onNavigate}
-      className="block rounded-lg px-3 py-2 hover:bg-black/5 transition-colors"
+      className="block rounded-lg px-3 py-2 hover:bg-white/10 transition-colors"
     >
-      <span className="text-sm font-medium text-gray-900">{item.label}</span>
+      <span className="text-sm font-medium text-white">{item.label}</span>
       {item.description && (
-        <span className="block text-xs text-gray-500 mt-0.5 leading-snug">{item.description}</span>
+        <span className="block text-xs text-white/50 mt-0.5 leading-snug">{item.description}</span>
       )}
     </Link>
   );
@@ -95,7 +95,7 @@ function SolutionsDropdownContent({ onNavigate }: { onNavigate?: () => void }) {
         if (!items?.length) return null;
         return (
           <div key={group} className="mb-1 last:mb-0">
-            <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+            <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-white/40">
               {SOLUTION_GROUP_LABELS[group]}
             </p>
             {items.map((item) => (
@@ -104,7 +104,7 @@ function SolutionsDropdownContent({ onNavigate }: { onNavigate?: () => void }) {
           </div>
         );
       })}
-      <div className="border-t border-gray-100 mt-1 pt-1">
+      <div className="border-t border-white/10 mt-1 pt-1">
         <DropdownLink item={{ label: "View all solutions", href: "/solutions" }} onNavigate={onNavigate} />
       </div>
     </div>

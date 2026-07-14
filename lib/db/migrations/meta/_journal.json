@@ -442,6 +442,13 @@
       "when": 1783918000000,
       "tag": "0061_org_openai_anthropic_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1783920000000,
+      "tag": "0062_org_deepl_credentials",
+      "breakpoints": true
     }
   ]
 }

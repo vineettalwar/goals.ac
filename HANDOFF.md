@@ -1,6 +1,42 @@
 # Session Handoff
 
-## Sprint remainder implementation (2026-07-14)
+## CMS content output modes (2026-07-14)
+
+### Done
+- **Contract v0.2:** `output_mode` + structured payloads (`layout`, `content_elements`, `sections`) in `goals-ac-plugin.ts` + `cms-plugins/shared/Contract.php`
+- **Registry:** `lib/content-engine/src/support/platform-output-modes.ts` — per-platform modes, defaults, entitlement gating
+- **Adapters:** WordPress (fix persistence), Ghost Lexical, Drupal Layout Builder, TYPO3 content elements, Shopify metafields/page sections, Webhook format toggles, Joomla markdown/html
+- **Plugins updated:** TYPO3 `ContentPublisher`, Drupal `LayoutBuilderPublish`, Shopify content route + GraphQL metafields
+- **UI:** `/integrations` inline output format select on connected cards; `PATCH .../cms-integrations/[platform]/output-mode`
+- **Publish path:** `render-service` resolves `outputMode` from connection → piece metadata → default
+- **Docs:** `docs/DECISIONS.md`, `docs/cms-plugins/shopify-theme-sections.md`, learn post updated
+
+### Verify
+- `cd lib/content-engine && npx tsc --noEmit` — adapter files clean (pre-existing db export errors elsewhere)
+- `pnpm --filter @workspace/marketing-persona-app run typecheck` — pass
+- Manual: `/integrations` → change output format inline → publish preview on content piece
+- Manual per platform: Ghost Lexical, TYPO3 CE, Drupal LB, Shopify metafields (needs dev stores)
+
+### Next (optional)
+- Ghost Lexical inline images inside paragraphs (standalone image lines supported)
+- TYPO3 FAL sys_file references for textmedia (currently embeds img in bodytext HTML)
+- Shopify theme app block (vs manual Liquid snippet)
+- Publish history showing output mode used
+
+### Done (2026-07-14 follow-up)
+- Plugin health test returns `recommendedOutputMode` + `availableOutputModes`
+- Auto-apply recommended output format on CMS connect (when user did not pick a non-default mode)
+- Ghost Lexical image cards for standalone `![alt](url)` markdown lines
+- Content piece preview shows JSON when no HTML preview available
+
+### Done (2026-07-14 finish-dev)
+- DeepL migration `0062_org_deepl_credentials` registered in Drizzle journal (migrate applies 0056–0062)
+- Public API v1 publish writes `publish_records` via `withPublishRecord` (Next + Express)
+- MFA setup panel in Settings → Security; session verify dialog when org requires 2FA
+- `MfaComplianceGate` blocks app until setup complete when org mandates MFA
+
+---
+
 
 ### Done
 - **Sprint B:** Admin org detail — correct plan badge, suspend/unsuspend; pending invites table with revoke (`DELETE /api/admin/invites/[id]`); MFA/session controls remain hidden (IP allowlist + cross-project editors only)
@@ -22,11 +58,10 @@
 - **publish_records:** `withPublishRecord` helper wired into sync publish API + `contentPublish` worker job
 - **Billing UI:** Settings → Billing shows credit balance, monthly grant, and Stripe top-up pack buttons
 - **TYPO3:** `ApiMiddleware` + `Configuration/RequestMiddlewares.php`; HMAC controllers for health/site-graph/content/schema; `ContentPublisher` maps pages + `tt_content` records; nonce/idempotency tables
-- **MFA:** TOTP primitives (`lib/security/totp`), `/api/auth/mfa/{setup,confirm,verify}`, `assertMfaCompliance` in `requireAuth`, org `requireMfa` toggle in security panel, session `mfaVerified` JWT flag
+- **MFA:** TOTP primitives + API routes + Settings setup panel + session verify gate (`MfaComplianceGate`)
 
 ### Next (optional)
 - Publish history UI from `publish_records`
-- MFA setup UI in Settings + login challenge screen
 - TYPO3 docker dev environment
 
 ### Next (optional, prior)

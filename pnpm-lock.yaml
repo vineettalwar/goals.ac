@@ -158,6 +158,9 @@ importers:
       '@playwright/test':
         specifier: ^1.61.1
         version: 1.61.1
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.3.5
       prettier:
         specifier: ^3.8.1
         version: 3.8.1
@@ -556,6 +559,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/deepl':
+        specifier: workspace:*
+        version: link:../../lib/deepl
       '@workspace/integrations-gemini-ai':
         specifier: workspace:*
         version: link:../../lib/integrations-gemini-ai
@@ -577,6 +583,9 @@ importers:
       '@workspace/serp-provider':
         specifier: workspace:*
         version: link:../../lib/serp-provider
+      '@workspace/stock-images':
+        specifier: workspace:*
+        version: link:../../lib/stock-images
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
@@ -998,6 +1007,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../db
+      '@workspace/deepl':
+        specifier: workspace:*
+        version: link:../deepl
       '@workspace/jobs':
         specifier: workspace:*
         version: link:../jobs
@@ -1078,6 +1090,16 @@ importers:
       tsx:
         specifier: 'catalog:'
         version: 4.21.0
+
+  lib/deepl:
+    dependencies:
+      '@workspace/security':
+        specifier: workspace:*
+        version: link:../security
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.3.5
 
   lib/integrations-gemini-ai:
     dependencies:
@@ -1196,9 +1218,15 @@ importers:
 
   lib/stock-images:
     dependencies:
+      '@workspace/db':
+        specifier: workspace:*
+        version: link:../db
       '@workspace/security':
         specifier: workspace:*
         version: link:../security
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
       redis:
         specifier: ^5.12.1
         version: 5.12.1

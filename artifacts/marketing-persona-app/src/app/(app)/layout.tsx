@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { ActiveProjectProvider } from "@/context/active-project";
 import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
+import { MfaComplianceGate } from "@/components/mfa/mfa-compliance-gate";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -30,7 +31,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <ImpersonationBanner />
-          <main className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
+          <MfaComplianceGate>
+            <main className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
+          </MfaComplianceGate>
         </div>
       </div>
     </ActiveProjectProvider>
