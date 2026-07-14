@@ -338,6 +338,9 @@ importers:
       '@workspace/seo-tools':
         specifier: workspace:*
         version: link:../../lib/seo-tools
+      bcryptjs:
+        specifier: ^3.0.3
+        version: 3.0.3
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)

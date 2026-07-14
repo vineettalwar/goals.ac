@@ -12,6 +12,7 @@
     "./enqueue-http": "./src/enqueue-http.ts",
     "./enqueue": "./src/enqueue-http.ts",
     "./jwt": "./src/jwt.ts",
+    "./session-cookie": "./src/session-cookie.ts",
     "./wire": "./src/wire.ts"
   },
   "dependencies": {

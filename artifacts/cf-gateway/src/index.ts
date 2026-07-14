@@ -13,6 +13,9 @@ const PUBLIC_PREFIXES = [
   "/api/locations",
   "/api/contact",
   "/api/waitlist",
+  "/api/auth/login",
+  "/api/auth/signup",
+  "/api/auth/logout",
   "/api/public/",
   "/api/tools/",
 ];
