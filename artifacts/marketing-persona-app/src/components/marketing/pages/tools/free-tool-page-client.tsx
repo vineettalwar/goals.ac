@@ -13,6 +13,7 @@ import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
 import { CONTACT_CTA_LABEL, CONTACT_HREF, PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 import { FREE_TOOLS, FREE_TOOL_LIST, freeToolPath, type FreeToolSlug } from "@/lib/marketing/site/free-tools";
+import { publicApiUrl } from "@/lib/marketing/site/public-api";
 
 const glassCard = cardSurfaceClass("glass", false);
 const glassCardHover = cardSurfaceClass("glass");
@@ -44,7 +45,7 @@ function UrlTool({ api }: { api: string }) {
     setLoading(true);
     setError(null);
     setResult(null);
-    const res = await fetch(api, {
+    const res = await fetch(publicApiUrl(api), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url }),

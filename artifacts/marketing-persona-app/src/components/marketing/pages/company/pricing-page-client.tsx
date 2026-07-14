@@ -162,7 +162,7 @@ function SaasPlanCard({ plan }: { plan: (typeof SAAS_PLANS)[number] }) {
         href={plan.ctaHref}
         className={`block text-center px-6 py-3 rounded-full font-medium transition-all ${
           plan.featured
-            ? "bg-(--accent-warm) text-white hover:bg-(--accent-warm-hover)"
+            ? "bg-(--accent-warm) text-(--accent-warm-foreground) hover:bg-(--accent-warm-hover)"
             : "border border-white/30 bg-white/10 text-white hover:bg-white/20"
         }`}
       >
@@ -254,7 +254,7 @@ export function PricingPageClient() {
                   href={CONTACT_HREF}
                   className={`block text-center px-6 py-3 rounded-full font-medium transition-all ${
                     engagement.featured
-                      ? "bg-(--accent-warm) text-white hover:bg-(--accent-warm-hover)"
+                      ? "bg-(--accent-warm) text-(--accent-warm-foreground) hover:bg-(--accent-warm-hover)"
                       : "border border-white/30 bg-white/10 text-white hover:bg-white/20"
                   }`}
                 >

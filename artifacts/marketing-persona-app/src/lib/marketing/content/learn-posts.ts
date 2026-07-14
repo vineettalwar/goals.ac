@@ -1,3 +1,5 @@
+import { SIGNUP_HREF } from "@/lib/marketing/site/marketing-contact";
+
 export type LearnPost = {
   slug: string;
   title: string;
@@ -170,7 +172,7 @@ AI systems and Google use structured data to understand entities, answers, and c
     slug: "semrush-byok-keywords",
     title: "Semrush BYOK for Keyword Gaps",
     description: "Bring your own Semrush API key for competitive gap data.",
-    cta: { label: "Start creating", href: "/signup" },
+    cta: { label: "Start creating", href: SIGNUP_HREF },
     body: `Organization admins can add a Semrush API key in **Settings → AI Providers**. Gap discovery caches results 24h to conserve API units.
 
 Without Semrush, goals.ac still surfaces GSC-based opportunities and AI-estimated clusters.`,

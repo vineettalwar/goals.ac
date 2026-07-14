@@ -16,6 +16,7 @@ import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
 import { CONTACT_CTA_LABEL, CONTACT_HREF, PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
 import { normalizeHttpUrl } from "@/lib/utils/normalize-url";
+import { publicApiUrl } from "@/lib/marketing/site/public-api";
 
 const CHECKS = ["Title & Meta", "Schema.org", "H1/H2 structure", "Open Graph"];
 
@@ -46,7 +47,7 @@ export function GeoAuditPageClient() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/public/geo-audits/generate", {
+      const res = await fetch(publicApiUrl("/api/public/geo-audits/generate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: auditUrl }),

@@ -1,6 +1,5 @@
 "use client";
 
-import { useSession } from "next-auth/react";
 import {
   BookOpen,
   CheckCircle2,
@@ -29,10 +28,6 @@ import { MarketingCTA } from "@/components/marketing/sections/marketing-cta";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
 import { PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
-
-import { getSiteUrl } from "@/lib/marketing/site/site-url";
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? getSiteUrl();
 
 const FORMAT_CATEGORIES = [
   {
@@ -79,9 +74,8 @@ const FORMAT_CATEGORIES = [
 const glassCard = cardSurfaceClass("glass");
 
 export function ContentEngineMarketing() {
-  const { data: session } = useSession();
-  const appCta = session ? `${APP_URL}/dashboard` : PRODUCT_CTA_HREF;
-  const appLabel = session ? "Open content studio" : PRODUCT_CTA_PRIMARY;
+  const appCta = PRODUCT_CTA_HREF;
+  const appLabel = PRODUCT_CTA_PRIMARY;
 
   return (
     <MarketingPageShell

@@ -1,9 +1,23 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
 import { HeroSection } from "@/components/marketing/heroes/hero-section";
-import { WorkflowSection } from "@/components/marketing/sections/workflow-section";
-import { HomeMarketingSections, type ShowcaseArticle } from "@/components/marketing/sections/home-marketing-sections";
+import type { ShowcaseArticle } from "@/components/marketing/sections/home-marketing-sections";
+
+const WorkflowSection = dynamic(
+  () =>
+    import("@/components/marketing/sections/workflow-section").then((module) => module.WorkflowSection),
+  { loading: () => null },
+);
+
+const HomeMarketingSections = dynamic(
+  () =>
+    import("@/components/marketing/sections/home-marketing-sections").then(
+      (module) => module.HomeMarketingSections,
+    ),
+  { loading: () => null },
+);
 
 type HomePageClientProps = {
   showcaseArticle?: ShowcaseArticle | null;

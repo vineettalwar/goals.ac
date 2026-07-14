@@ -17,6 +17,7 @@ import {
   PRODUCT_CTA_HREF,
   PRODUCT_CTA_PRIMARY,
 } from "@/lib/marketing/site/marketing-contact";
+import { publicApiUrl } from "@/lib/marketing/site/public-api";
 
 const DEFAULT_CALENDLY_URL = "https://calendly.com/vineetsktalwar";
 const glassCard = cardSurfaceClass("glass", false);
@@ -41,7 +42,7 @@ export function ContactPageClient() {
   async function submitMessage(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading");
-    const res = await fetch("/api/contact", {
+    const res = await fetch(publicApiUrl("/api/contact"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, message: message.trim() || undefined }),

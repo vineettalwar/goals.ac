@@ -2,8 +2,8 @@
 const unsplash = (path: string, w = 1600) =>
   `https://images.unsplash.com/${path}?auto=format&fit=crop&w=${w}&q=85`;
 
-const higgs = (url: string, w = 1280) =>
-  `https://images.higgs.ai/?default=1&output=webp&url=${encodeURIComponent(url)}&w=${w}&q=85`;
+const higgs = (url: string, w = 1200, q = 70) =>
+  `https://images.higgs.ai/?default=1&output=webp&url=${encodeURIComponent(url)}&w=${w}&q=${q}`;
 
 const HIGGS_BASE =
   "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260609_195923_b0ba8ace-1d1d-4f2c-9a28-1ab84b330680.png";
