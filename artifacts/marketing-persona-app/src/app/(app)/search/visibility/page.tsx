@@ -1,8 +1,8 @@
 import dynamic from "next/dynamic";
-import { PageSkeleton } from "@/components/page-skeleton";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 
 const AiVisibilityDashboard = dynamic(
-  () => import("@/components/ai-visibility-dashboard").then((m) => m.AiVisibilityDashboard),
+  () => import("@/components/visibility/ai-visibility-dashboard").then((m) => m.AiVisibilityDashboard),
   { loading: () => <PageSkeleton /> },
 );
 

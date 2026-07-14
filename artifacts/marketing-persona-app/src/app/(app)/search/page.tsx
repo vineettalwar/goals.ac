@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { PageSkeleton } from "@/components/page-skeleton";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 
 const KeywordTrackingPanel = dynamic(
   () => import("@/components/panels/keyword-tracking-panel").then((m) => m.KeywordTrackingPanel),

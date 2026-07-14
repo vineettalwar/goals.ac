@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { PageSkeleton } from "@/components/page-skeleton";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 
 const GoalsPanel = dynamic(
   () => import("@/components/panels/goals-panel").then((m) => m.GoalsPanel),

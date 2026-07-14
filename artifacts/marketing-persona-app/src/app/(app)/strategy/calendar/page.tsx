@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { PageSkeleton } from "@/components/page-skeleton";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 
 const ContentStrategiesPanel = dynamic(
   () => import("@/components/panels/content-strategies-panel").then((m) => m.ContentStrategiesPanel),
