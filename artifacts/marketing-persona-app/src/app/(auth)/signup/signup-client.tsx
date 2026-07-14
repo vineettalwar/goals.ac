@@ -15,11 +15,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { buildAuthRedirectParams } from "@/lib/projects/roadmap-intent";
 import { useRoadmapIntent } from "@/hooks/use-roadmap-intent";
 import {
-  CONTACT_CTA_PRIMARY,
+  CONTACT_CTA_LABEL,
   CONTACT_EMAIL,
   CONTACT_HREF,
   CONTACT_MAILTO,
-} from "@/lib/marketing/marketing-contact";
+} from "@/lib/marketing/site/marketing-contact";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -45,11 +45,11 @@ function InviteOnlyMessage() {
     <div className="paper-card p-8 text-center">
       <h1 className="text-2xl font-bold">Invite only</h1>
       <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-        goals.ac is available to clients by invitation. Interested in SEO, AEO, or GEO consulting?
+        goals.ac is in early access. Start creating in the content studio, or reach out if you need a hand.
       </p>
       <div className="mt-8 flex flex-col gap-3">
         <Button asChild className="w-full">
-          <Link href={CONTACT_HREF}>{CONTACT_CTA_PRIMARY}</Link>
+          <Link href={CONTACT_HREF}>{CONTACT_CTA_LABEL}</Link>
         </Button>
         <Button asChild variant="outline" className="w-full">
           <a href={CONTACT_MAILTO}>Email {CONTACT_EMAIL}</a>

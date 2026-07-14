@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Eye, Leaf, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { StepIndicator } from "@/components/step-indicator";
+import { StepIndicator } from "@/components/onboarding/step-indicator";
 import { setActiveProjectCookie } from "@/lib/active-project/cookie";
 import {
   clearAutopilotIntent,

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { StepIndicator } from "@/components/step-indicator";
+import { StepIndicator } from "@/components/onboarding/step-indicator";
 import { readRoadmapIntent } from "@/lib/projects/roadmap-intent";
 import {
   readAutopilotIntent,

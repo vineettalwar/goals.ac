@@ -6,8 +6,8 @@ import { Leaf, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { StepIndicator } from "@/components/step-indicator";
-import { PersonaCard } from "@/components/persona-card";
+import { StepIndicator } from "@/components/onboarding/step-indicator";
+import { PersonaCard } from "@/components/onboarding/persona-card";
 
 interface Persona {
   id: number;

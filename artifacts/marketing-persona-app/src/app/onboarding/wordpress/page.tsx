@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { StepIndicator } from "@/components/step-indicator";
+import { StepIndicator } from "@/components/onboarding/step-indicator";
 import { postOnboardingRedirect } from "@/lib/projects/roadmap-intent";
 
 const schema = z.object({

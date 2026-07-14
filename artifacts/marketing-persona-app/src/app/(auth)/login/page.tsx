@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { resolvePostLoginRedirect } from "@/lib/projects/roadmap-intent";
 import { useRoadmapIntent } from "@/hooks/use-roadmap-intent";
-import { CONTACT_CTA_SECONDARY, CONTACT_EMAIL, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
+import { CONTACT_CTA_LABEL, CONTACT_EMAIL, CONTACT_HREF } from "@/lib/marketing/site/marketing-contact";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -66,7 +66,7 @@ function LoginPageContent() {
         <h1 className="text-2xl font-bold">Sign in</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {roadmapIntent
-            ? `Sign in to generate your ${roadmapIntent.industry} roadmap for ${roadmapIntent.location}.`
+            ? "Sign in to continue in the content studio."
             : "Welcome back"}
         </p>
       </div>
@@ -104,7 +104,7 @@ function LoginPageContent() {
       <p className="mt-6 text-center text-sm text-muted-foreground">
         Need access?{" "}
         <Link href={CONTACT_HREF} className="font-medium text-foreground hover:underline">
-          {CONTACT_CTA_SECONDARY}
+          {CONTACT_CTA_LABEL}
         </Link>
         {" "}or email{" "}
         <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-foreground hover:underline">
