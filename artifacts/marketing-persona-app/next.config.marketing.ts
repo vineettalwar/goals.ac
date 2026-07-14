@@ -28,7 +28,9 @@ const nextConfig: NextConfig = {
       "@workspace/deepl": "lib/deepl/src/index.ts",
       sharp: "./sharp-stub.js",
       "@/app/root-providers": "./src/app/marketing-providers.tsx",
-      "next/dist/build/polyfills/polyfill-module": "./polyfill-stub.js",
+      "next/dist/build/polyfills/polyfill-module": {
+        browser: "./polyfill-stub.js",
+      },
     },
   },
   webpack(config, { isServer }) {

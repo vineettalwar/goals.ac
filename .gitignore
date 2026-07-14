@@ -64,6 +64,7 @@ next-env.d.ts
 
 # Marketing static export (generated — scripts/build-marketing-static.mjs)
 artifacts/marketing-persona-app/.marketing-out/
+artifacts/marketing-persona-app/out/
 artifacts/marketing-persona-app/.marketing-build-backup/
 artifacts/marketing-pages/dist/
 

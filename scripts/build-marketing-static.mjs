@@ -95,23 +95,30 @@ function deferCssInStaticExport(distDir) {
 
 /** Next.js injects polyfill-module unconditionally; strip it for modern-browser targets. */
 function stripLegacyPolyfills(distDir) {
-  const polyfillPath = path.join(
-    appDir,
-    "node_modules/next/dist/build/polyfills/polyfill-module.js",
-  );
-  if (!fs.existsSync(polyfillPath)) return;
-
-  const snippet = fs.readFileSync(polyfillPath, "utf8").trim();
   const chunksDir = path.join(distDir, "_next/static/chunks");
   if (!fs.existsSync(chunksDir)) return;
+
+  const startMarker =
+    '"trimStart"in String.prototype||(String.prototype.trimStart=String.prototype.trimLeft)';
+  const endPattern =
+    /"canParse"in URL\|\|\(URL\.canParse=function\([^)]+\)\{try\{[^}]+\}catch\([^)]+\)\{return!1\}\}\)/;
 
   for (const entry of fs.readdirSync(chunksDir, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith(".js")) continue;
     const filePath = path.join(chunksDir, entry.name);
     const code = fs.readFileSync(filePath, "utf8");
-    if (!code.includes(snippet)) continue;
-    fs.writeFileSync(filePath, code.replace(snippet, ""));
-    console.log(`  stripped legacy polyfills from _next/static/chunks/${entry.name}`);
+    const start = code.indexOf(startMarker);
+    if (start < 0) continue;
+
+    const tail = code.slice(start);
+    const endMatch = tail.match(endPattern);
+    if (!endMatch || endMatch.index === undefined) continue;
+
+    const end = start + endMatch.index + endMatch[0].length;
+    fs.writeFileSync(filePath, code.slice(0, start) + code.slice(end));
+    console.log(
+      `  stripped ${end - start} B legacy polyfills from _next/static/chunks/${entry.name}`,
+    );
   }
 }
 
