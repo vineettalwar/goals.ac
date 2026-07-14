@@ -7,8 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { useAuth } from "@/context/auth";
-import { useActiveProject } from "@/context/active-project";
+import { useAuth } from "@/context/use-auth";
+import { useActiveProject } from "@/context/use-active-project";
 import {
   Loader2,
   RefreshCw,
@@ -17,17 +17,7 @@ import {
   CheckCircle2,
   ExternalLink,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts";
+import { AiVisibilitySummary } from "./ai-visibility-summary";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
@@ -47,47 +37,7 @@ interface VisibilitySummary {
   competitorMentions: Array<{ name: string; count: number }>;
   geoScoreTrend: Array<{ date: string; score: number }>;
   latestGeoScore: number | null;
-  recentSnapshots: Array<{
-    id: number;
-    prompt: string;
-    engine: string;
-    cited: boolean;
-    competitorsMentioned: string[];
-    checkedAt: string;
-  }>;
-}
-
-const ENGINE_LABELS: Record<string, string> = {
-  chatgpt: "ChatGPT",
-  perplexity: "Perplexity",
-  claude: "Claude",
-  gemini: "Gemini",
-};
-
-function ScoreRing({ score }: { score: number }) {
-  const color =
-    score >= 60 ? "text-emerald-500" : score >= 30 ? "text-amber-500" : "text-red-500";
-  return (
-    <div className="relative w-28 h-28 flex items-center justify-center">
-      <svg className="w-full h-full -rotate-90" viewBox="0 0 36 36">
-        <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="2" className="text-muted/30" />
-        <circle
-          cx="18"
-          cy="18"
-          r="15.5"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          strokeDasharray={`${score} 100`}
-          className={color}
-        />
-      </svg>
-      <div className="absolute text-center">
-        <span className={`text-2xl font-bold ${color}`}>{score}</span>
-        <p className="text-[10px] text-muted-foreground">visibility</p>
-      </div>
-    </div>
-  );
+  recentSnapshots: Array<{ id: number; prompt: string; engine: string; cited: boolean; competitorsMentioned: string[]; checkedAt: string }>;
 }
 
 export default function AiVisibility() {
@@ -291,155 +241,7 @@ export default function AiVisibility() {
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
               </div>
             ) : summary ? (
-              <>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <Card>
-                    <CardContent className="pt-6 flex flex-col items-center">
-                      <ScoreRing score={summary.visibilityScore} />
-                      <p className="text-sm text-muted-foreground mt-2 text-center">
-                        {summary.promptCount} prompts tracked
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4" /> GEO score
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-3xl font-bold">
-                        {summary.latestGeoScore ?? "—"}
-                        {summary.latestGeoScore != null && (
-                          <span className="text-base font-normal text-muted-foreground">/100</span>
-                        )}
-                      </p>
-                      <Link
-                        to="/geo-audit"
-                        className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-2 inline-flex items-center gap-1"
-                      >
-                        Run manual audit <ExternalLink className="w-3 h-3" />
-                      </Link>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">By engine</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {summary.byEngine.map((e) => (
-                        <div key={e.engine} className="flex items-center justify-between text-sm">
-                          <span>{ENGINE_LABELS[e.engine] ?? e.engine}</span>
-                          <Badge variant="secondary">{e.score}% cited</Badge>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {summary.trend.length > 1 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Visibility over time</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-64">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={summary.trend}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                          <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                          <Tooltip />
-                          <Line type="monotone" dataKey="score" stroke="#8b5cf6" strokeWidth={2} dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {summary.geoScoreTrend.length > 1 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">GEO score trend</CardTitle>
-                    </CardHeader>
-                    <CardContent className="h-56">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={summary.geoScoreTrend}>
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                          <XAxis dataKey="date" tick={{ fontSize: 11 }} />
-                          <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} />
-                          <Tooltip />
-                          <Line type="monotone" dataKey="score" stroke="#10b981" strokeWidth={2} dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {summary.competitorMentions.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Competitor mentions in AI answers</CardTitle>
-                      <CardDescription>
-                        How often competitors appear when your brand does not
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="h-56">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={summary.competitorMentions.slice(0, 8)} layout="vertical">
-                          <CartesianGrid strokeDasharray="3 3" className="stroke-border/50" />
-                          <XAxis type="number" tick={{ fontSize: 11 }} />
-                          <YAxis type="category" dataKey="name" width={80} tick={{ fontSize: 11 }} />
-                          <Tooltip />
-                          <Bar dataKey="count" fill="#f59e0b" radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {summary.recentSnapshots.length > 0 && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">Recent checks</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {summary.recentSnapshots.map((snap) => (
-                        <div key={snap.id} className="rounded-lg border px-4 py-3 text-sm space-y-1">
-                          <div className="flex items-start justify-between gap-2">
-                            <p className="font-medium line-clamp-2">{snap.prompt}</p>
-                            {snap.cited ? (
-                              <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 shrink-0">
-                                <CheckCircle2 className="w-3 h-3 mr-1" /> Cited
-                              </Badge>
-                            ) : (
-                              <Badge variant="secondary" className="shrink-0">Not cited</Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {ENGINE_LABELS[snap.engine] ?? snap.engine} ·{" "}
-                            {new Date(snap.checkedAt).toLocaleString()}
-                            {snap.competitorsMentioned.length > 0 &&
-                              ` · Competitors: ${snap.competitorsMentioned.join(", ")}`}
-                          </p>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                )}
-
-                {summary.promptCount === 0 && (
-                  <Card>
-                    <CardContent className="py-8 text-center space-y-3">
-                      <p className="text-sm text-muted-foreground">
-                        No prompts yet. Add competitor URLs and keywords in your brand profile, then enable tracking.
-                      </p>
-                      <Button asChild variant="outline" size="sm">
-                        <Link to={`/projects/${activeProjectId}/brand`}>Edit brand profile</Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                )}
-              </>
+              <AiVisibilitySummary summary={summary} activeProjectId={activeProjectId} />
             ) : null}
           </>
         )}

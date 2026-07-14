@@ -36,6 +36,10 @@ import {
   type ConnectionFieldDef,
 } from "@/lib/cms-connection-schemas";
 import {
+  isPublishingActionPending,
+  type PublishingPendingAction,
+} from "@/components/publishing-settings-pending";
+import {
   type ConnectionMethod,
   type PublishDestinationDefinition,
   type PublishDestinationId,
@@ -132,8 +136,9 @@ function ConnectionField({
 
   return (
     <div className="space-y-1.5">
-      <label className="text-sm font-medium">{field.label}</label>
+      <label htmlFor={field.key} className="text-sm font-medium">{field.label}</label>
       <Input
+        id={field.key}
         type={field.type === "password" ? "password" : field.type === "number" ? "number" : "text"}
         placeholder={field.placeholder}
         value={value}
@@ -167,7 +172,7 @@ function CmsConnectionCard({
   onError: (message: string) => void;
 }) {
   const schema = getCmsConnectionSchema(destination.id);
-  const [connectionMethod, setConnectionMethod] = useState<ConnectionMethod>(
+  const [connectionMethod, setConnectionMethod] = useState<ConnectionMethod>(() =>
     getDefaultConnectionMethod(destination.id),
   );
   const [formValues, setFormValues] = useState<Record<string, string>>(() =>
@@ -435,13 +440,9 @@ export function PublishingSettingsPanel({
   healthStatus,
   cmsError,
   cmsSaveSuccess,
-  isTestingHealth,
+  pendingAction,
   metaPageToken,
   metaPages,
-  isSelectingMetaPage,
-  isDisconnectingLinkedin,
-  isDisconnectingTwitter,
-  isDisconnectingMeta,
   onIntegrationsChange,
   onHealthKeyRemove,
   onError,
@@ -458,13 +459,9 @@ export function PublishingSettingsPanel({
   healthStatus: Record<string, { ok: boolean; error?: string }> | null;
   cmsError: string | null;
   cmsSaveSuccess: string | null;
-  isTestingHealth: boolean;
+  pendingAction: PublishingPendingAction;
   metaPageToken: string | null;
   metaPages: MetaPageOption[];
-  isSelectingMetaPage: boolean;
-  isDisconnectingLinkedin: boolean;
-  isDisconnectingTwitter: boolean;
-  isDisconnectingMeta: boolean;
   onIntegrationsChange: (updated: CmsIntegrationStatus) => void;
   onHealthKeyRemove: (key: string) => void;
   onError: (message: string) => void;
@@ -514,8 +511,8 @@ export function PublishingSettingsPanel({
       )}
       {hasAnyPublishingConnection(cmsIntegrations) && (
         <div className="flex items-center justify-end">
-          <Button variant="outline" size="sm" onClick={onTestHealth} disabled={isTestingHealth}>
-            {isTestingHealth ? (
+          <Button variant="outline" size="sm" onClick={onTestHealth} disabled={isPublishingActionPending(pendingAction, "testing_health")}>
+            {isPublishingActionPending(pendingAction, "testing_health") ? (
               <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
             ) : (
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
@@ -554,8 +551,8 @@ export function PublishingSettingsPanel({
           projectId={projectId}
           isDisconnecting={
             destination.id === "linkedin"
-              ? isDisconnectingLinkedin
-              : isDisconnectingTwitter
+              ? isPublishingActionPending(pendingAction, "disconnecting_linkedin")
+              : isPublishingActionPending(pendingAction, "disconnecting_twitter")
           }
           onConnect={() => {
             if (destination.oauthPath) onConnectOAuth(destination.oauthPath);
@@ -590,10 +587,10 @@ export function PublishingSettingsPanel({
                 variant="outline"
                 size="sm"
                 onClick={() => onDisconnectSocial("meta")}
-                disabled={isDisconnectingMeta}
+                disabled={isPublishingActionPending(pendingAction, "disconnecting_meta")}
                 className="shrink-0 text-destructive border-destructive/30 hover:bg-destructive/5"
               >
-                {isDisconnectingMeta ? (
+                {isPublishingActionPending(pendingAction, "disconnecting_meta") ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
                   <Unlink className="w-3.5 h-3.5 mr-1.5" />
@@ -613,7 +610,7 @@ export function PublishingSettingsPanel({
                   variant="outline"
                   size="sm"
                   className="w-full justify-start"
-                  disabled={isSelectingMetaPage}
+                  disabled={isPublishingActionPending(pendingAction, "selecting_meta_page")}
                   onClick={() => onSelectMetaPage(page.pageId)}
                 >
                   <span className="font-medium">{page.pageName}</span>

@@ -1,62 +1,64 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import { useAuth } from "./auth";
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "./use-auth";
+import { ActiveProjectContext, type ProjectSummary } from "./active-project-context";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-export interface ProjectSummary {
-  id: number;
-  name: string;
-  url: string;
-  crawlStatus: string;
+async function fetchWebsiteProjects(token: string): Promise<ProjectSummary[]> {
+  const res = await fetch(`${API_BASE}/api/website-projects`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error("Failed to load projects");
+  return res.json() as Promise<ProjectSummary[]>;
 }
-
-interface ActiveProjectContextValue {
-  projects: ProjectSummary[];
-  activeProjectId: number | null;
-  setActiveProjectId: (id: number | null) => void;
-  isLoading: boolean;
-}
-
-const ActiveProjectContext = createContext<ActiveProjectContextValue | null>(null);
 
 export function ActiveProjectProvider({ children }: { children: ReactNode }) {
   const { user, token } = useAuth();
-  const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [activeProjectId, setActiveProjectIdState] = useState<number | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  const { data: projects = [], isLoading: queryLoading } = useQuery({
+    queryKey: ["website-projects", token],
+    queryFn: () => fetchWebsiteProjects(token!),
+    enabled: Boolean(user && token),
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     if (!user || !token) {
-      setProjects([]);
       setActiveProjectIdState(null);
+      setInitialized(false);
       return;
     }
 
-    setIsLoading(true);
-    fetch(`${API_BASE}/api/website-projects`, { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.json())
-      .then((data: ProjectSummary[]) => {
-        setProjects(data);
-        if (data.length > 0 && !activeProjectId) {
-          setActiveProjectIdState(data[0].id);
-        }
-      })
-      .catch(() => {})
-      .finally(() => setIsLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, token]);
+    if (queryLoading || initialized) return;
 
-  const setActiveProjectId = (id: number | null) => setActiveProjectIdState(id);
+    if (projects.length > 0 && activeProjectId == null) {
+      setActiveProjectIdState(projects[0].id);
+    }
+    setInitialized(true);
+  }, [user, token, queryLoading, initialized, projects, activeProjectId]);
+
+  const isLoading = Boolean(user && token) && (queryLoading || !initialized);
+
+  const setActiveProjectId = useCallback((id: number | null) => {
+    setActiveProjectIdState(id);
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      projects: user && token ? projects : [],
+      activeProjectId: user && token ? activeProjectId : null,
+      setActiveProjectId,
+      isLoading,
+    }),
+    [user, token, projects, activeProjectId, setActiveProjectId, isLoading],
+  );
 
   return (
-    <ActiveProjectContext.Provider value={{ projects, activeProjectId, setActiveProjectId, isLoading }}>
+    <ActiveProjectContext.Provider value={value}>
       {children}
     </ActiveProjectContext.Provider>
   );
-}
-
-export function useActiveProject() {
-  const ctx = useContext(ActiveProjectContext);
-  if (!ctx) throw new Error("useActiveProject must be used within ActiveProjectProvider");
-  return ctx;
 }

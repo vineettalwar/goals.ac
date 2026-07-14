@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AppLayout } from "@/components/app-layout";
-import { useAuth } from "@/context/auth";
+import { useAuth } from "@/context/use-auth";
 import {
   useListContentStrategies,
   getListContentStrategiesQueryKey,

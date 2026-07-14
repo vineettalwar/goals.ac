@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { LazyMotion, domAnimation, m, AnimatePresence } from "framer-motion";
 import { MessageCircle, X, Send, Loader2, User, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,14 +25,14 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [conversationId, setConversationId] = useState<number | null>(null);
+  const conversationIdRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (open) {
-      setTimeout(() => textareaRef.current?.focus(), 150);
-    }
+    if (!open) return;
+    const timerId = window.setTimeout(() => textareaRef.current?.focus(), 150);
+    return () => window.clearTimeout(timerId);
   }, [open]);
 
   useEffect(() => {
@@ -51,12 +51,12 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
       const res = await fetch(`${API_BASE}/api/roadmaps/${slug}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, conversationId: conversationId ?? undefined }),
+        body: JSON.stringify({ message: text, conversationId: conversationIdRef.current ?? undefined }),
       });
 
       if (!res.ok) throw new Error("Chat request failed");
       const data = await res.json() as { reply: string; conversationId: number };
-      setConversationId(data.conversationId);
+      conversationIdRef.current = data.conversationId;
       setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
     } catch {
       setMessages((prev) => [
@@ -77,9 +77,10 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
 
   return (
     <>
+      <LazyMotion features={domAnimation} strict>
       <AnimatePresence>
         {open && (
-          <motion.div
+          <m.div
             initial={{ opacity: 0, y: 24, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 24, scale: 0.96 }}
@@ -103,8 +104,8 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
-              {messages.map((msg, i) => (
-                <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
+              {messages.map((msg) => (
+                <div key={`${msg.role}-${msg.content}`} className={`flex gap-2.5 ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
                     msg.role === "user"
                       ? "bg-blue-600"
@@ -158,11 +159,11 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
               </div>
               <p className="text-[11px] text-muted-foreground mt-1.5 text-center">Press Enter to send, Shift+Enter for new line</p>
             </div>
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
 
-      <motion.button
+      <m.button
         onClick={() => setOpen((v) => !v)}
         className={`fixed bottom-6 right-4 md:right-8 z-50 flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium text-white shadow-lg transition-colors ${
           open
@@ -183,7 +184,8 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
             Ask AI
           </>
         )}
-      </motion.button>
+      </m.button>
+      </LazyMotion>
     </>
   );
 }

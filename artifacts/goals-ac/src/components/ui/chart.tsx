@@ -1,7 +1,17 @@
 import * as React from "react"
-import * as RechartsPrimitive from "recharts"
+import type * as RechartsPrimitive from "recharts"
 
 import { cn } from "@/lib/utils"
+
+function useRechartsModule() {
+  const [module, setModule] = React.useState<typeof import("recharts") | null>(null)
+
+  React.useEffect(() => {
+    void import("recharts").then(setModule)
+  }, [])
+
+  return module
+}
 
 // Format: { THEME_NAME: CSS_SELECTOR }
 const THEMES = { light: "", dark: ".dark" } as const
@@ -43,9 +53,27 @@ const ChartContainer = React.forwardRef<
 >(({ id, className, children, config, ...props }, ref) => {
   const uniqueId = React.useId()
   const chartId = `chart-${id || uniqueId.replace(/:/g, "")}`
+  const recharts = useRechartsModule()
+  const contextValue = React.useMemo(() => ({ config }), [config])
+
+  if (!recharts) {
+    return (
+      <div
+        data-chart={chartId}
+        ref={ref}
+        className={cn(
+          "flex aspect-video animate-pulse justify-center rounded-lg bg-muted/30 text-xs",
+          className
+        )}
+        {...props}
+      />
+    )
+  }
+
+  const ResponsiveContainer = recharts.ResponsiveContainer
 
   return (
-    <ChartContext.Provider value={{ config }}>
+    <ChartContext.Provider value={contextValue}>
       <div
         data-chart={chartId}
         ref={ref}
@@ -56,9 +84,9 @@ const ChartContainer = React.forwardRef<
         {...props}
       >
         <ChartStyle id={chartId} config={config} />
-        <RechartsPrimitive.ResponsiveContainer>
+        <ResponsiveContainer>
           {children}
-        </RechartsPrimitive.ResponsiveContainer>
+        </ResponsiveContainer>
       </div>
     </ChartContext.Provider>
   )
@@ -98,7 +126,13 @@ ${colorConfig
   )
 }
 
-const ChartTooltip = RechartsPrimitive.Tooltip
+const ChartTooltip = (
+  props: React.ComponentProps<typeof RechartsPrimitive.Tooltip>,
+) => {
+  const recharts = useRechartsModule()
+  if (!recharts) return null
+  return <recharts.Tooltip {...props} />
+}
 
 const ChartTooltipContent = React.forwardRef<
   HTMLDivElement,
@@ -183,14 +217,15 @@ const ChartTooltipContent = React.forwardRef<
       >
         {!nestLabel ? tooltipLabel : null}
         <div className="grid gap-1.5">
-          {payload
-            .filter((item) => item.type !== "none")
-            .map((item, index) => {
-              const key = `${nameKey || item.name || item.dataKey || "value"}`
-              const itemConfig = getPayloadConfigFromPayload(config, item, key)
-              const indicatorColor = color || item.payload.fill || item.color
+          {payload.flatMap((item, index) => {
+            if (item.type === "none") return []
 
-              return (
+            const key = `${nameKey || item.name || item.dataKey || "value"}`
+            const itemConfig = getPayloadConfigFromPayload(config, item, key)
+            const indicatorColor = color || item.payload.fill || item.color
+
+            return [
+              (
                 <div
                   key={item.dataKey}
                   className={cn(
@@ -247,8 +282,9 @@ const ChartTooltipContent = React.forwardRef<
                     </>
                   )}
                 </div>
-              )
-            })}
+              ),
+            ]
+          })}
         </div>
       </div>
     )
@@ -256,7 +292,13 @@ const ChartTooltipContent = React.forwardRef<
 )
 ChartTooltipContent.displayName = "ChartTooltip"
 
-const ChartLegend = RechartsPrimitive.Legend
+const ChartLegend = (
+  props: React.ComponentProps<typeof RechartsPrimitive.Legend>,
+) => {
+  const recharts = useRechartsModule()
+  if (!recharts) return null
+  return <recharts.Legend {...props} />
+}
 
 const ChartLegendContent = React.forwardRef<
   HTMLDivElement,
@@ -285,13 +327,14 @@ const ChartLegendContent = React.forwardRef<
           className
         )}
       >
-        {payload
-          .filter((item) => item.type !== "none")
-          .map((item) => {
-            const key = `${nameKey || item.dataKey || "value"}`
-            const itemConfig = getPayloadConfigFromPayload(config, item, key)
+        {payload.flatMap((item) => {
+          if (item.type === "none") return []
 
-            return (
+          const key = `${nameKey || item.dataKey || "value"}`
+          const itemConfig = getPayloadConfigFromPayload(config, item, key)
+
+          return [
+            (
               <div
                 key={item.value}
                 className={cn(
@@ -310,8 +353,9 @@ const ChartLegendContent = React.forwardRef<
                 )}
                 {itemConfig?.label}
               </div>
-            )
-          })}
+            ),
+          ]
+        })}
       </div>
     )
   }

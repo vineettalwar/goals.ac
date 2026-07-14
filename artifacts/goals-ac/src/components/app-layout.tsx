@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/auth";
-import { useTheme } from "@/context/theme";
+import { useAuth } from "@/context/use-auth";
+import { useTheme } from "@/context/use-theme";
 import { Logo } from "@/components/logo";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -134,6 +134,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
             <button
+              type="button"
               onClick={toggleTheme}
               aria-label="Toggle theme"
               className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -141,6 +142,7 @@ export function AppLayout({ children }: AppLayoutProps) {
               {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
             </button>
             <button
+              type="button"
               onClick={handleLogout}
               aria-label="Sign out"
               className="rounded-md p-1.5 text-muted-foreground hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-400/10 transition-colors"

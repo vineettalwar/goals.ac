@@ -11,9 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/context/auth";
+import { useAuth } from "@/context/use-auth";
 import { Loader2, Plus, Globe, ExternalLink, Trash2, Clock, CheckCircle2, XCircle, FileText, ArrowRight } from "lucide-react";
-import { WIZARD_DONE_KEY } from "@/pages/onboarding";
+import { DashboardProjectsGrid, type WebsiteProject } from "./dashboard-projects-grid";
+
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 interface DraftPiece {
   id: number;
@@ -25,41 +27,11 @@ interface DraftPiece {
   createdAt: string;
 }
 
-const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-interface WebsiteProject {
-  id: number;
-  name: string;
-  url: string;
-  sitemapUrl: string | null;
-  pageCount: number;
-  crawlStatus: string;
-  createdAt: string;
-}
-
 const addProjectSchema = z.object({
   name: z.string().min(1, "Project name is required"),
   url: z.string().url("Must be a valid URL (e.g., https://example.com)"),
 });
 type AddProjectForm = z.infer<typeof addProjectSchema>;
-
-function CrawlStatusBadge({ status }: { status: string }) {
-  if (status === "done") return (
-    <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25">
-      <CheckCircle2 className="w-3 h-3 mr-1" />Crawled
-    </Badge>
-  );
-  if (status === "failed") return (
-    <Badge className="bg-red-100 text-red-700 border-red-200 dark:bg-red-500/15 dark:text-red-300 dark:border-red-500/25">
-      <XCircle className="w-3 h-3 mr-1" />Failed
-    </Badge>
-  );
-  return (
-    <Badge className="bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/25">
-      <Clock className="w-3 h-3 mr-1" />Crawling...
-    </Badge>
-  );
-}
 
 export default function Dashboard() {
   const { user, token } = useAuth();
@@ -260,7 +232,7 @@ export default function Dashboard() {
                   {drafts.length} draft{drafts.length !== 1 ? "s" : ""} need your review
                 </span>
               </div>
-              <button
+              <button type="button"
                 onClick={() => setDraftsExpanded((v) => !v)}
                 className="text-xs text-amber-700 dark:text-amber-400 hover:underline"
               >
@@ -283,7 +255,7 @@ export default function Dashboard() {
                 </Link>
               ))}
               {!draftsExpanded && drafts.length > 3 && (
-                <button
+                <button type="button"
                   onClick={() => setDraftsExpanded(true)}
                   className="text-xs text-amber-600 dark:text-amber-400 hover:underline px-3 py-1"
                 >
@@ -318,54 +290,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
-            {projects.map((project) => (
-              <Card key={project.id} className="group border shadow-none card-hover-glow">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                      <CardTitle className="text-lg truncate">{project.name}</CardTitle>
-                      <a
-                        href={project.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mt-1"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <ExternalLink className="w-3 h-3 shrink-0" />
-                        <span className="truncate">{project.url.replace(/^https?:\/\//, "")}</span>
-                      </a>
-                    </div>
-                    <CrawlStatusBadge status={project.crawlStatus} />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      {project.pageCount > 0 ? (
-                        <span>{project.pageCount} pages found</span>
-                      ) : (
-                        <span>Sitemap analysis pending</span>
-                      )}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-red-600 hover:bg-red-100 dark:hover:text-red-400 dark:hover:bg-red-500/10"
-                        onClick={() => setDeleteConfirmId(project.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" asChild className="border bg-blue-100 text-blue-700 border-blue-200 hover:bg-blue-200 dark:bg-blue-500/20 dark:text-blue-300 dark:border-blue-500/30 dark:hover:bg-blue-500/30">
-                        <Link to={`/projects/${project.id}`}>Open</Link>
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+          <DashboardProjectsGrid projects={projects} onDeleteRequest={setDeleteConfirmId} />
         )}
       </div>
 

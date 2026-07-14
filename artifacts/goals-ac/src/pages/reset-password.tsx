@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ShieldCheck, AlertCircle } from "lucide-react";
-import { useAuth } from "@/context/auth";
+import { useAuth } from "@/context/use-auth";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 

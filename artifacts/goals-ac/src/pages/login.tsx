@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/context/auth";
+import { useAuth } from "@/context/use-auth";
 import { Loader2 } from "lucide-react";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -23,6 +23,10 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
+
+function handleGoogleLogin() {
+  window.location.href = `${API_BASE}/api/auth/google`;
+}
 
 function GoogleIcon() {
   return (
@@ -59,10 +63,6 @@ export default function Login() {
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     }
-  };
-
-  const handleGoogleLogin = () => {
-    window.location.href = `${API_BASE}/api/auth/google`;
   };
 
   return (
