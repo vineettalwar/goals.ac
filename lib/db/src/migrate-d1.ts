@@ -7,6 +7,7 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { wranglerChildEnv } from "./cf-wrangler-env.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../..");
@@ -29,13 +30,13 @@ const args = [
   databaseName,
   "--config",
   wranglerConfig,
-  ...(local ? ["--local"] : []),
+  ...(local ? ["--local"] : ["--remote"]),
 ];
 
 const result = spawnSync(wranglerBin, args.slice(1), {
   cwd: repoRoot,
   stdio: "inherit",
-  env: process.env,
+  env: wranglerChildEnv(wranglerConfig),
 });
 
 if (result.status !== 0) {

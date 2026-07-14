@@ -11,6 +11,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildReferenceDataSeedSql } from "./reference-data-constants.js";
+import { wranglerChildEnv } from "./cf-wrangler-env.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, "../../..");
@@ -42,7 +43,7 @@ try {
       tmpFile,
       ...(local ? ["--local"] : ["--remote"]),
     ],
-    { cwd: repoRoot, stdio: "inherit", env: process.env },
+    { cwd: repoRoot, stdio: "inherit", env: wranglerChildEnv(wranglerConfig) },
   );
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
