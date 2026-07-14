@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Copy, ExternalLink, MessageSquare } from "lucide-react";
-import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { FeatureStatusBadge } from "@/components/shared/feature-status-badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useActiveProject } from "@/context/active-project";

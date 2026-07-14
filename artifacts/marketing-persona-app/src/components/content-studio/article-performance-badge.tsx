@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { BarChart3, MousePointerClick } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import type { ArticlePerformanceResponse } from "@/lib/integrations/analytics-property-types";
+import type { ArticlePerformanceResponse } from "@/lib/integrations/analytics/analytics-property-types";
 
 function formatYmd(d: Date): string {
   const y = d.getFullYear();

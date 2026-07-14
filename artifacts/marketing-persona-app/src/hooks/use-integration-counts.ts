@@ -7,8 +7,8 @@ import {
   countSocialConnections,
   type CmsConnectionSnapshot,
 } from "@/lib/projects/publishing-destinations";
-import type { SearchPropertyConnectionsResponse } from "@/lib/integrations/search-property-types";
-import type { AnalyticsPropertyConnectionsResponse } from "@/lib/integrations/analytics-property-types";
+import type { SearchPropertyConnectionsResponse } from "@/lib/integrations/search/search-property-types";
+import type { AnalyticsPropertyConnectionsResponse } from "@/lib/integrations/analytics/analytics-property-types";
 
 export type IntegrationCounts = {
   cms: number;

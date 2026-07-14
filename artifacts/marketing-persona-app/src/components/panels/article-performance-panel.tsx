@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { PageSkeleton } from "@/components/page-skeleton";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import {
   Table,
   TableBody,
@@ -23,7 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useActiveProject } from "@/context/active-project";
-import type { ArticlePerformanceResponse } from "@/lib/integrations/analytics-property-types";
+import type { ArticlePerformanceResponse } from "@/lib/integrations/analytics/analytics-property-types";
 
 type SortKey = "sessions" | "clicks";
 

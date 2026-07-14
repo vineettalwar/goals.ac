@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { PageSkeleton } from "@/components/page-skeleton";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import { useActiveProject } from "@/context/active-project";
 import { useProjectContent } from "@/lib/queries";
 import { normalizeHttpUrl } from "@/lib/utils/normalize-url";

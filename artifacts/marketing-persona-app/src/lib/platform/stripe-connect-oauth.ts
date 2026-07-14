@@ -5,7 +5,7 @@ import { platformSettingsTable } from "@workspace/db/schema";
 import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
 import { eq } from "drizzle-orm";
 import { invalidateStripeClientCache } from "@workspace/billing";
-import { getNextApiOrigin } from "@/lib/integrations/social-oauth";
+import { getNextApiOrigin } from "@/lib/integrations/oauth/social-oauth";
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 

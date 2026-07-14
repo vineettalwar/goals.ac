@@ -81,7 +81,7 @@ export async function fetchVisibilitySummary(projectId: string) {
 }
 
 export async function fetchSearchProperties(projectId: string) {
-  return fetchJson<import("@/lib/integrations/search-property-types").SearchPropertyConnectionsResponse>(
+  return fetchJson<import("@/lib/integrations/search/search-property-types").SearchPropertyConnectionsResponse>(
     `/api/website-projects/${projectId}/search-properties`,
   );
 }

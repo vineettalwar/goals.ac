@@ -21,7 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { PageSkeleton } from "@/components/page-skeleton";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useActiveProject } from "@/context/active-project";
 import {
@@ -34,7 +34,7 @@ import { ArticleIdeasHub, type SourceFilter } from "@/components/panels/article-
 import { ArticleIdeasImportPanel } from "@/components/panels/article-ideas-import-panel";
 
 const KeywordRankChart = dynamic(
-  () => import("@/components/keyword-rank-chart").then((m) => m.KeywordRankChart),
+  () => import("@/components/visibility/keyword-rank-chart").then((m) => m.KeywordRankChart),
   { loading: () => <div className="h-48 animate-pulse rounded-lg bg-secondary/50" /> },
 );
 

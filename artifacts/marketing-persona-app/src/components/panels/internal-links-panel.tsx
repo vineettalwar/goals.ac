@@ -4,10 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Link2, ExternalLink, Network } from "lucide-react";
-import { FeatureStatusBadge } from "@/components/feature-status-badge";
+import { FeatureStatusBadge } from "@/components/shared/feature-status-badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { PageSkeleton } from "@/components/page-skeleton";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import { useActiveProject } from "@/context/active-project";
 
 type LinkData = {

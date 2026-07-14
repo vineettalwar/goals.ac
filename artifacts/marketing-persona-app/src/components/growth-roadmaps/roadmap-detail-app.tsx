@@ -8,7 +8,7 @@ import { ArrowLeft, Calendar, Pin, PinOff, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Badge } from "@/components/ui/badge";
-import { RoadmapChat } from "@/components/roadmap-chat";
+import { RoadmapChat } from "@/components/roadmap/roadmap-chat";
 import { useActiveProject } from "@/context/active-project";
 
 interface Phase {
