@@ -33,5 +33,6 @@ export * from "./support/social-queue-service";
 export * from "./support/evergreen-recycle";
 export * from "./platform-voice";
 export * from "./support/publish-destination";
+export * from "./support/publish-records";
 export * from "./support/esp-publish";
 export * from "./support/content-language";

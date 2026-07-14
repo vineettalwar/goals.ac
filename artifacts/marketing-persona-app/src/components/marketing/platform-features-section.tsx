@@ -4,8 +4,8 @@ import Link from "next/link";
 import { useRef } from "react";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
-import { getPlatformFeaturePillars } from "@/lib/marketing-feature-data";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { getPlatformFeaturePillars } from "@/lib/marketing/marketing-feature-data";
 import { useMarketingParallax, useMarketingScrollReveal } from "@/hooks/use-marketing-scroll";
 
 const pillars = getPlatformFeaturePillars();

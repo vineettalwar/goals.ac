@@ -9,8 +9,9 @@ import { ArticleExampleSection } from "./article-example-section";
 import { WorkflowSection } from "./workflow-section";
 import { FAQAccordion } from "./faq-accordion";
 import { MarketingCTA } from "./marketing-cta";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 import { useMarketingScrollReveal } from "@/hooks/use-marketing-scroll";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 const HOW_IT_WORKS_STEPS = [
   {
@@ -84,7 +85,7 @@ export function HomeMarketingSections() {
           {
             question: "How is this different from autopilot SEO tools?",
             answer:
-              "Most tools optimize for volume and link exchanges. goals.ac leads with 12-month strategy, editorial review, and white-hat internal linking at a fraction of the price.",
+              "We lead with 12-month strategy, editorial review, and white-hat internal linking — delivered as a scoped consulting engagement.",
           },
           {
             question: "Do you use backlink exchange networks?",
@@ -92,9 +93,9 @@ export function HomeMarketingSections() {
               "No. We build authority with content clusters, internal links, and GEO-ready pages, not paid link schemes that risk Google penalties.",
           },
           {
-            question: "Is the roadmap generator really free?",
+            question: "Is the roadmap generator free to browse?",
             answer:
-              "Yes. A free account unlocks custom roadmap generation. Browsing our public roadmap catalog is free with no signup.",
+              "Yes. Our public roadmap catalog is free with no signup. Custom roadmap generation is part of client engagements.",
           },
           {
             question: "What's a GEO audit?",
@@ -111,12 +112,12 @@ export function HomeMarketingSections() {
       />
 
       <DarkCTABand
-        badge="Free with signup"
+        badge="For clients"
         titleLine1="Continue from roadmap"
         titleLine2="to execution"
-        description="Save your roadmap, analyze competitors, track AI visibility, and turn priorities into briefs and drafts."
+        description="Competitor analysis, AI visibility tracking, and content production — scoped as part of your engagement."
         backgroundImage={HERO_IMAGES.home.signup}
-        primaryCta={{ label: "Create free account", href: "/signup" }}
+        primaryCta={{ label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF }}
         secondaryCta={{ label: "Sign in", href: "/login" }}
       >
         <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import { syncGa4PageMetrics, getGa4SyncStatus } from "@workspace/content-engine/ga4-analytics-service";
 import { enqueue, QUEUES } from "@workspace/jobs";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 
 export async function POST(
   req: Request,

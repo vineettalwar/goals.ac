@@ -1,7 +1,7 @@
 "use client";
 
 import { HubPageLayout } from "@/components/hub-page-layout";
-import { RESEARCH_TABS } from "@/lib/hub-tabs";
+import { RESEARCH_TABS } from "@/lib/projects/hub-tabs";
 
 export default function ResearchLayout({ children }: { children: React.ReactNode }) {
   return (

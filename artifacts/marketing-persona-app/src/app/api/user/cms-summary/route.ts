@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { listAccessibleProjects } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { listAccessibleProjects } from "@/lib/org/org-access";
+import { getSupportOrganizationId } from "@/lib/org/project-scope";
 import type { CmsIntegrationCredentials } from "@workspace/content-engine/support/cms-integrations";
 
 export async function GET() {
-  const { userId, error } = await requireAuth();
+  const { session, userId, error } = await requireAuth();
   if (error) return error;
 
-  const projects = await listAccessibleProjects(userId!);
+  const projects = await listAccessibleProjects(userId!, getSupportOrganizationId(session));
 
   let hasNotion = false;
   let hasWebflow = false;

@@ -31,13 +31,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
-import { aiProviderUnavailableMessage } from "@/lib/ai-providers-status";
+import { aiProviderUnavailableMessage } from "@/lib/platform/ai-providers-status";
 import type { AiProviderId } from "@workspace/ai-providers/config";
 import { BrandAiProfileCard } from "./brand-ai-profile-card";
 import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
 import { FormatBadge, StatusBadge, type ContentFormatType } from "./content-studio-format-meta";
 import { ArticlePerformanceBadge } from "./article-performance-badge";
-import { FORMAT_OPTIONS } from "@/lib/content-format-options";
+import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 
 export { FORMAT_OPTIONS };
 

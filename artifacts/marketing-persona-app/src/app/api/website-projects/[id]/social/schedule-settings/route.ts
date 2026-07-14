@@ -2,8 +2,8 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import type { SocialScheduleSettings } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject, requireSiteAdminAccess } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject, requireSiteAdminAccess } from "@/lib/org/org-access";
 import { parseSocialScheduleSettings } from "@workspace/content-engine/support/social-queue-service";
 import { z } from "zod";
 

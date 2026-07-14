@@ -4,11 +4,13 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { handleAiBillingError } from "@/lib/billing/quota-checkout";
+import { isAiBillingDeniedPayload } from "@/components/billing/quota-upgrade-prompt";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
-import { aiProviderUnavailableMessage } from "@/lib/ai-providers-status";
+import { aiProviderUnavailableMessage } from "@/lib/platform/ai-providers-status";
 import type { AiProviderId } from "@workspace/ai-providers/config";
 
 type Idea = {
@@ -106,7 +108,15 @@ export function ContentAgentPanel({ companyId }: ContentAgentPanelProps) {
     setLoadingBuildKeyword(null);
 
     if (!res.ok) {
-      toast.error("Could not build article from this topic.");
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        message?: string;
+      };
+      if (res.status === 402 && isAiBillingDeniedPayload(body)) {
+        handleAiBillingError(body);
+        return;
+      }
+      toast.error(body.message ?? "Could not build article from this topic.");
       return;
     }
 

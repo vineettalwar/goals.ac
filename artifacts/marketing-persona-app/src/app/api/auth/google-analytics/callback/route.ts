@@ -1,4 +1,4 @@
-import { handleGoogleAnalyticsCallback } from "@/lib/analytics-property-oauth";
+import { handleGoogleAnalyticsCallback } from "@/lib/integrations/analytics-property-oauth";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);

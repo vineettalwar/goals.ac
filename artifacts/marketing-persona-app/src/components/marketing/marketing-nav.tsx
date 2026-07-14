@@ -13,7 +13,8 @@ import {
   type NavLink,
   type SolutionGroup,
   type SolutionNavItem,
-} from "@/lib/site-nav";
+} from "@/lib/marketing/site-nav";
+import { CONTACT_CTA_SECONDARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 type DropdownProps = {
   label: string;
@@ -175,7 +176,7 @@ export function MarketingNav() {
                 : "px-3 py-1.5 rounded-full text-sm font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors"
             }
           >
-            Pricing
+            Engagements
           </Link>
 
           <NavDropdown label="Resources" pathname={pathname} activePrefixes={resourcesPrefixes}>
@@ -201,10 +202,10 @@ export function MarketingNav() {
             Sign in
           </Link>
           <Link
-            href="/signup"
+            href={CONTACT_HREF}
             className="bg-white text-gray-900 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-gray-100 transition-colors"
           >
-            Get started
+            {CONTACT_CTA_SECONDARY}
           </Link>
         </div>
 
@@ -229,7 +230,7 @@ export function MarketingNav() {
               <p className="text-xs text-white/50 uppercase tracking-wide mb-2">More</p>
               <div className="flex flex-col gap-1">
                 <Link href="/pricing" onClick={() => setMobileOpen(false)} className="text-white text-lg py-2 border-b border-white/10">
-                  Pricing
+                  Engagements
                 </Link>
                 <Link href="/contact" onClick={() => setMobileOpen(false)} className="text-white text-lg py-2 border-b border-white/10">
                   Contact
@@ -237,8 +238,8 @@ export function MarketingNav() {
               </div>
             </div>
             <div className="flex flex-col gap-3 pt-4">
-              <Link href="/signup" onClick={() => setMobileOpen(false)} className="bg-white text-gray-900 text-center font-semibold py-3 rounded-full">
-                Get started
+              <Link href={CONTACT_HREF} onClick={() => setMobileOpen(false)} className="bg-white text-gray-900 text-center font-semibold py-3 rounded-full">
+                {CONTACT_CTA_SECONDARY}
               </Link>
               <Link href="/login" onClick={() => setMobileOpen(false)} className="text-white/80 text-center py-2">
                 Sign in

@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { companiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { ensureOrganizationForUser } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { ensureOrganizationForUser } from "@/lib/org/org-access";
 import { z } from "zod";
 
 const createSchema = z.object({

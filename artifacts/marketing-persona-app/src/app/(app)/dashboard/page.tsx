@@ -14,14 +14,18 @@ import {
   DashboardVisibility,
   DashboardVisibilitySkeleton,
 } from "@/components/dashboard/dashboard-sections";
-import { resolveActiveProjectId } from "@/lib/active-project-server";
+import { resolveActiveProjectId } from "@/lib/active-project/server";
+import { getSupportOrganizationId } from "@/lib/org/project-scope";
 
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session) return null;
 
   const userId = parseInt(session.user.id, 10);
-  const activeProjectId = await resolveActiveProjectId(userId);
+  const activeProjectId = await resolveActiveProjectId(
+    userId,
+    getSupportOrganizationId(session),
+  );
   const hour = new Date().getHours();
   const greeting =
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";

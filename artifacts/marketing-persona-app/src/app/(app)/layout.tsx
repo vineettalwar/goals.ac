@@ -13,7 +13,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const session = await getSession();
   if (!session) redirect("/login");
 
-  if (session.user.companyId == null && !session.impersonation) {
+  if (session.user.companyId == null && !session.impersonation && !session.supportOrganization) {
     redirect("/onboarding");
   }
 

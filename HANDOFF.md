@@ -1,5 +1,80 @@
 # Session Handoff
 
+## Sprint remainder implementation (2026-07-14)
+
+### Done
+- **Sprint B:** Admin org detail — correct plan badge, suspend/unsuspend; pending invites table with revoke (`DELETE /api/admin/invites/[id]`); MFA/session controls remain hidden (IP allowlist + cross-project editors only)
+- **Sprint C:** Goals panel cluster map (briefs grouped by keyword cluster) + GSC progress placeholder card
+- **Sprint A:** Token passthrough on compile-briefs, topical-map, content-strategy item generate (where `generationUsage` available)
+- **Sprint D:** Legacy company autopilot moved to pg-boss (`legacyCompanyAutopilot` queue); cron only enqueues; api-server no longer builds `worker.mjs` (`start:worker` delegates to `@workspace/worker`); goals-ac `predev` deprecation warning
+- **Sprint E:** `publish_records` schema + migration `0055`; Anthropic provider (`lib/ai-providers/src/anthropic.ts`); credit top-up checkout API + Stripe webhook grant; TYPO3 `ContentController` stub; `credit-topup-packs` + anthropic unit tests
+- **Pre-existing:** `lib/api-zod` duplicate export typecheck fixed (export api only)
+
+### Verify
+- `pnpm run typecheck:libs` — pass
+- `pnpm run test:unit` — 83 tests pass
+- `pnpm --filter @workspace/db run migrate` — applies `0055_publish_records`
+- Admin: `/admin/organizations/[id]`, `/admin/users/invite` (pending + revoke)
+- Goals: `/strategy/goals` — cluster map + GSC cards
+- Cron: `GET /api/cron/generate-articles` enqueues sweeps only
+
+### Done (optional follow-ups, 2026-07-14)
+- **publish_records:** `withPublishRecord` helper wired into sync publish API + `contentPublish` worker job
+- **Billing UI:** Settings → Billing shows credit balance, monthly grant, and Stripe top-up pack buttons
+- **TYPO3:** `ApiMiddleware` + `Configuration/RequestMiddlewares.php`; HMAC controllers for health/site-graph/content/schema; `ContentPublisher` maps pages + `tt_content` records; nonce/idempotency tables
+- **MFA:** TOTP primitives (`lib/security/totp`), `/api/auth/mfa/{setup,confirm,verify}`, `assertMfaCompliance` in `requireAuth`, org `requireMfa` toggle in security panel, session `mfaVerified` JWT flag
+
+### Next (optional)
+- Publish history UI from `publish_records`
+- MFA setup UI in Settings + login challenge screen
+- TYPO3 docker dev environment
+
+### Next (optional, prior)
+- Wire `publish_records` rows from publish pipeline
+- Settings UI for credit top-up packs
+- Full TYPO3 record mapping + routes registration
+- Org-level MFA enforcement when auth supports TOTP gate
+
+---
+
+## Gap audit remediation (2026-07-14)
+
+### Done
+- **Billing matrix:** Wired `prepareAiBilling` on images/regenerate, social/composer; worker billing via `lib/jobs/src/worker-billing.ts` for brand voice + LLM visibility jobs; removed false billing on voice/analyze; expanded `ARTICLE_QUOTA_EVENT_TYPES`; added `quotaKind: "article"` on chat, SEO tools, personas, topical-map; past-due subscription block; solo users without org no longer hard-blocked
+- **Tests:** `lib/billing/src/pricing.test.ts`, `quotas.test.ts` (80 unit tests pass)
+- **Admin/trust:** `canManageAiSettings` includes org owners; admin plan PATCH blocks when Stripe customer/subscription on file (unless `force`); billing tab shows platform-key usage quota
+- **Phase 1 goals:** `lib/content-engine/src/goal-brief-compiler.ts`, `POST /api/goals/[id]/compile-briefs`, brief approval gate on content stream, goals panel compile/approve UI, onboarding goal-first step
+- **Consolidation:** Cron enqueues `contentGenerateSweep`; `artifacts/goals-ac/DEPRECATED.md`; api-server worker marked deprecated; fixed tsconfig cycle (content-engine ↔ jobs)
+- **Docs:** Updated `docs/architecture-roadmap.md` §1/§2/§9, `docs/memory.md`
+
+### Verify
+- `pnpm run test:unit` — 80 tests pass
+- `pnpm --filter @workspace/marketing-persona-app run typecheck` — pass
+- Root `pnpm run typecheck` still fails on pre-existing `lib/api-zod` duplicate export errors (unchanged)
+
+---
+
+## Credit consumption wiring (2026-07-14)
+
+### Done
+- PRD: `docs/prd/credit-consumption-wiring.md`; decision in `docs/DECISIONS.md`
+- Billing primitives: `lib/billing/src/pricing.ts`, `consumption.ts`, `session.ts`, `quotas.ts`, multi-line `settleReservationLines`
+- App helper: `artifacts/marketing-persona-app/src/lib/ai-billing.ts` (`prepareAiBilling` / `completeAiBilling` / `cancelAiBilling`)
+- Wired ~27 Next.js AI routes + cron autopilot + worker `contentGenerate`
+- Dual enforce: growth/scale platform-key = count quota **and** credit reserve; starter = count quota only; BYOK paid = orchestration credits
+- `GET /api/billing/credits`; client `handleAiBillingError` for `insufficient_credits`
+
+### Verify
+- `pnpm --filter @workspace/marketing-persona-app run typecheck` — passes
+- `cd lib/billing && npx tsc --build` — passes
+
+### Next (optional)
+- Retire count quotas after credit enforcement proves stable
+- Settings UI credit balance display
+- Credit expiry + Stripe metered top-ups
+
+---
+
 ## Sitemap brand voice discovery (2026-07-13)
 
 ### Done

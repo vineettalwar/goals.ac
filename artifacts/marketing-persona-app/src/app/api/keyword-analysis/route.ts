@@ -6,9 +6,10 @@ import { analyzeKeywords } from "@workspace/seo-tools/keywordAnalyzer";
 import { getDecryptedSemrushCredentialsForUser } from "@workspace/content-engine/support/org-ai-settings";
 import { buildLanguagePromptLine } from "@workspace/content-engine/support/content-language";
 import type { ContentStyle } from "@workspace/db/schema";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
-import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
+import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
 
 const KeywordAnalysisBody = z.object({
@@ -43,25 +44,48 @@ export async function POST(req: Request) {
   }
 
   const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const semrushCredentials = await getDecryptedSemrushCredentialsForUser(userId!);
-  const analysis = await analyzeKeywords({
-    keywords: parsed.data.keywords,
-    websiteUrl: parsed.data.websiteUrl,
-    userApiKey,
-    aiProviderOptions,
-    semrushCredentials,
-    languagePromptLine: buildLanguagePromptLine(contentLanguage),
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "planning",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
   });
+  if (!billingPrep.ok) return billingPrep.response;
 
-  const [saved] = await db
-    .insert(keywordAnalysesTable)
-    .values({
-      websiteProjectId: parsed.data.websiteProjectId ?? null,
+  try {
+    const semrushCredentials = await getDecryptedSemrushCredentialsForUser(userId!);
+    const analysis = await analyzeKeywords({
       keywords: parsed.data.keywords,
-      websiteUrl: parsed.data.websiteUrl ?? null,
-      result: analysis,
-    })
-    .returning();
+      websiteUrl: parsed.data.websiteUrl,
+      userApiKey,
+      aiProviderOptions,
+      semrushCredentials,
+      languagePromptLine: buildLanguagePromptLine(contentLanguage),
+    });
 
-  return NextResponse.json({ id: saved.id, ...analysis }, { status: 201 });
+    const [saved] = await db
+      .insert(keywordAnalysesTable)
+      .values({
+        websiteProjectId: parsed.data.websiteProjectId ?? null,
+        keywords: parsed.data.keywords,
+        websiteUrl: parsed.data.websiteUrl ?? null,
+        result: analysis,
+      })
+      .returning();
+
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "keyword_analysis",
+      usedByok: billingPrep.usedByok,
+      tier: "planning",
+    });
+
+    return NextResponse.json({ id: saved.id, ...analysis }, { status: 201 });
+  } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "analysis_failed");
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Keyword analysis failed" },
+      { status: 500 },
+    );
+  }
 }

@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/org/org-access";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();

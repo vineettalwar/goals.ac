@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { keywordRankAlertsTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 
 export async function GET(
   _req: Request,

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FOOTER_COLUMNS } from "@/lib/site-nav";
+import { FOOTER_COLUMNS } from "@/lib/marketing/site-nav";
 
 export function MarketingFooter() {
   return (

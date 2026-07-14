@@ -10,8 +10,8 @@ import {
   HELP_CATEGORIES,
   getHelpArticlesByCategory,
   type HelpCategory,
-} from "@/lib/help-articles";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+} from "@/lib/marketing/help-articles";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 
 const CATEGORY_ICONS: Record<HelpCategory, typeof BookOpen> = {
   "Getting started": BookOpen,

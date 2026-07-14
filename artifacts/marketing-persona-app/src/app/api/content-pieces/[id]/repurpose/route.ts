@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { repurposeContentPiece } from "@workspace/content-engine/content-studio-generator";
 import {
   assertPieceOwner,
   loadProjectBrand,
   loadUserAiSettings,
   wordCountFromMarkdown,
-} from "@/lib/content-pieces-helpers";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+} from "@/lib/content/content-pieces-helpers";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
 import { CONTENT_FORMAT_TYPES } from "@workspace/db/schema";
 
@@ -53,6 +54,14 @@ export async function POST(
   const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
   const sourceContent = parsed.data.existingContent ?? piece!.bodyMarkdown ?? "";
 
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "execution",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
     const result = await repurposeContentPiece(
       parsed.data.targetFormat as ContentFormatType,
@@ -76,8 +85,16 @@ export async function POST(
       })
       .returning();
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "content_repurpose",
+      usedByok: billingPrep.usedByok,
+      tier: "execution",
+    });
+
     return NextResponse.json(inserted, { status: 201 });
   } catch {
+    await cancelAiBilling(billingPrep.ctx);
     return NextResponse.json({ error: "Repurpose failed" }, { status: 503 });
   }
 }

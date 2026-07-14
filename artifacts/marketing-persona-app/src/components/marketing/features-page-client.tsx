@@ -28,7 +28,8 @@ import { VideoDemoSection } from "@/components/marketing/video-demo-section";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
 import { FeatureStatusBadge } from "@/components/feature-status-badge";
 import { WaitlistForm } from "@/components/waitlist-form";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 import { useMarketingParallax, useMarketingScrollReveal } from "@/hooks/use-marketing-scroll";
 
 const FEATURE_PILLARS = [
@@ -327,7 +328,7 @@ export function FeaturesPageClient() {
           description="Everything autopilot SEO tools offer, plus roadmaps, editorial control, and white-hat authority building."
           backgroundImage={HERO_IMAGES.features.hero}
           ctas={[
-            { label: "Start free", href: "/signup", variant: "primary" },
+            { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF, variant: "primary" },
             { label: "Compare tools", href: "/compare/ai-seo-tools", variant: "ghost" },
           ]}
         />
@@ -341,9 +342,9 @@ export function FeaturesPageClient() {
       <DarkCTABand
         titleLine1="Ready to test"
         titleLine2="your first workflow?"
-        description="Create your account and start building publish-ready articles with quality scores."
+        description="Book a discovery call to see how strategy-first content production fits your team."
         backgroundImage={HERO_IMAGES.features.cta}
-        primaryCta={{ label: "Start free", href: "/signup" }}
+        primaryCta={{ label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF }}
         secondaryCta={{ label: "Free tools", href: "/free-tools" }}
       />
 

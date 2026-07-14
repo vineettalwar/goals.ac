@@ -1,4 +1,4 @@
-import { handleLinkedInCallback } from "@/lib/social-oauth";
+import { handleLinkedInCallback } from "@/lib/integrations/social-oauth";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);

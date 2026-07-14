@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { companiesTable, marketingPersonasTable, scheduledArticlesTable, usersTable } from "@workspace/db/schema";
+import { companiesTable, marketingPersonasTable, scheduledArticlesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { generateArticle } from "@/lib/ai/article-generator";
 import { humanizeArticle } from "@/lib/ai/humanizer";
 import { loadBrandContextForCompany } from "@workspace/content-engine/support/brand-context-loader";
@@ -11,8 +11,8 @@ import {
   resolveWritingSample,
 } from "@workspace/content-engine/brand-voice";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
-import { getMonthlyArticleCount, getPlanQuota, recordUsage } from "@/lib/usage";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
 
 const schema = z.object({
@@ -55,31 +55,13 @@ export async function POST(req: Request) {
 
   if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });
 
-  const [owner] = await db
-    .select({ plan: usersTable.plan, encryptedGeminiKey: usersTable.encryptedGeminiKey })
-    .from(usersTable)
-    .where(eq(usersTable.id, userId!))
-    .limit(1);
-
-  const usesByok = Boolean(owner?.encryptedGeminiKey);
-  if (!usesByok) {
-    const quota = getPlanQuota(owner?.plan);
-    if (quota !== null) {
-      const articlesThisMonth = await getMonthlyArticleCount(company.id);
-      if (articlesThisMonth >= quota) {
-        return NextResponse.json(
-          {
-            error: "quota_exhausted",
-            message: `You've used all ${quota} article generations included in your ${owner?.plan ?? "starter"} plan this month. Upgrade your plan or add your own Gemini API key for unlimited generations.`,
-            plan: owner?.plan ?? "starter",
-            quota,
-            articlesThisMonth,
-          },
-          { status: 402 }
-        );
-      }
-    }
-  }
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "execution",
+    quotaKind: "article",
+    companyId: company.id,
+  });
+  if (!billingPrep.ok) return billingPrep.response;
 
   let persona = null;
   if (parsed.data.personaId) {
@@ -195,14 +177,14 @@ export async function POST(req: Request) {
       .where(eq(scheduledArticlesTable.id, article.id))
       .returning();
 
-    await recordUsage({
+    await completeAiBilling(billingPrep.ctx, {
       userId: userId!,
       companyId: company.id,
       eventType: "article_generation",
       promptTokens: generated.generationUsage?.promptTokens,
       outputTokens: generated.generationUsage?.outputTokens,
       totalTokens: generated.generationUsage?.totalTokens,
-      usedByok: source === "user-key",
+      usedByok: billingPrep.usedByok,
       provider: providerId,
       model: providerId === "gemini" ? "gemini-2.5-flash" : undefined,
       tier: "execution",
@@ -217,6 +199,7 @@ export async function POST(req: Request) {
       },
     }, { status: 201 });
   } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "generation_failed");
     await db
       .update(scheduledArticlesTable)
       .set({ status: "failed", errorMessage: err instanceof Error ? err.message : "Generation failed" })

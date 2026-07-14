@@ -11,7 +11,7 @@ import {
   keywordAnalysesTable,
 } from "@workspace/db/schema";
 import { eq, inArray } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { signOut } from "@/auth";
 
 export async function DELETE() {

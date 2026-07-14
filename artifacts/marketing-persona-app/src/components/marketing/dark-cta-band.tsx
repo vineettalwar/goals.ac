@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
 import { HeroPhotoBg } from "./hero-photo-bg";
-import { fadeUp, fadeUpTransition, staggerContainer } from "@/lib/motion";
+import { fadeUp, fadeUpTransition, staggerContainer } from "@/lib/utils/motion";
 
 type DarkCTABandProps = {
   badge?: string;

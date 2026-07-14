@@ -5,8 +5,8 @@ import { ArrowLeft } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
-import type { LearnPost } from "@/lib/learn-posts";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import type { LearnPost } from "@/lib/marketing/learn-posts";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 
 export function LearnPostClient({ post }: { post: LearnPost }) {
   const paragraphs = post.body.split("\n\n");

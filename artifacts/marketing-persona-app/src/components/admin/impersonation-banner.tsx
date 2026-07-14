@@ -10,14 +10,20 @@ export function ImpersonationBanner() {
   const router = useRouter();
   const [stopping, setStopping] = useState(false);
 
-  if (!session?.impersonation) return null;
+  const isImpersonating = Boolean(session?.impersonation);
+  const supportOrg = session?.supportOrganization;
 
-  async function stopImpersonation() {
+  if (!isImpersonating && !supportOrg) return null;
+
+  async function exitView() {
     setStopping(true);
     try {
       await fetch("/api/admin/impersonate", { method: "DELETE" });
-      await update({ stopImpersonation: true });
-      router.push("/admin/users");
+      await update({
+        stopImpersonation: true,
+        stopSupportOrganization: true,
+      });
+      router.push("/admin/organizations");
       router.refresh();
     } finally {
       setStopping(false);
@@ -28,16 +34,24 @@ export function ImpersonationBanner() {
     <div className="sticky top-0 z-50 border-b border-amber-500/40 bg-amber-500/10 px-4 py-2">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4">
         <p className="text-sm">
-          Viewing as <strong>{session.user.name}</strong> ({session.user.email})
-          <span className="text-muted-foreground">
-            {" "}
-            — admin: {session.impersonation.adminName}
-          </span>
+          {supportOrg ? (
+            <>
+              Managing <strong>{supportOrg.name}</strong> as platform admin
+            </>
+          ) : (
+            <>
+              Viewing as <strong>{session?.user.name}</strong> ({session?.user.email})
+              <span className="text-muted-foreground">
+                {" "}
+                — admin: {session?.impersonation?.adminName}
+              </span>
+            </>
+          )}
         </p>
         <Button
           size="sm"
           variant="outline"
-          onClick={() => void stopImpersonation()}
+          onClick={() => void exitView()}
           disabled={stopping}
         >
           {stopping ? "Exiting…" : "Exit view"}

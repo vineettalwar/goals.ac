@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import {
   pinRoadmapToProject,
   unpinRoadmapFromProject,
   verifyProjectOwnership,
   verifyRoadmapExists,
-} from "@/lib/pin-roadmap-to-project";
+} from "@/lib/projects/pin-roadmap-to-project";
 
 type RouteParams = { params: Promise<{ id: string; roadmapId: string }> };
 

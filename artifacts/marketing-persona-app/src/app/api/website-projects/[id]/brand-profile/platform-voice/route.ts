@@ -1,8 +1,8 @@
 import { db } from "@workspace/db";
 import { brandProfilesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import {
   PLATFORM_CHANNELS,
   PLATFORM_LABELS,

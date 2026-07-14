@@ -30,7 +30,7 @@ import type {
   SearchPropertyConnectionStatus,
   SearchPropertyConnectionsResponse,
   SearchPropertyProvider,
-} from "@/lib/search-property-types";
+} from "@/lib/integrations/search-property-types";
 
 const PROVIDER_META = {
   google_search_console: {

@@ -133,6 +133,11 @@ export interface ContentPieceResult {
   }[];
   json_ld_schema?: object;
   pieceMetadata?: ContentPieceMetadata;
+  generationUsage?: {
+    promptTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
 }
 
 export type ContentGenerationContext = {
@@ -682,6 +687,12 @@ function validateResult(result: unknown, format: ContentFormatType): asserts res
     throw new Error("body_markdown too short");
 }
 
+function estimateUsageFromText(prompt: string, output: string) {
+  const promptTokens = Math.ceil(prompt.length / 4);
+  const outputTokens = Math.ceil(output.length / 4);
+  return { promptTokens, outputTokens, totalTokens: promptTokens + outputTokens };
+}
+
 async function generateWithClient(
   ai: AiProviderClient,
   format: ContentFormatType,
@@ -709,7 +720,11 @@ async function generateWithClient(
 
       const parsed = cleanAndParse(rawText);
       validateResult(parsed, format);
-      return postProcessGeneratedResult(parsed, format, brand, ai);
+      const processed = postProcessGeneratedResult(parsed, format, brand, ai);
+      return {
+        ...processed,
+        generationUsage: response.usage ?? estimateUsageFromText(prompt, rawText),
+      };
     } catch (err) {
       lastError = err;
       logger.warn(
@@ -757,7 +772,6 @@ async function generateWithClientStream(
           if (text) emit(text);
         }
       } else {
-        // Fallback: non-streaming generate
         const result = await ai.generate({
           prompt,
           systemInstruction: aiOptions.systemInstruction,
@@ -771,7 +785,11 @@ async function generateWithClientStream(
 
       const parsed = cleanAndParse(accumulated);
       validateResult(parsed, format);
-      return postProcessGeneratedResult(parsed, format, brand, ai);
+      const processed = postProcessGeneratedResult(parsed, format, brand, ai);
+      return {
+        ...processed,
+        generationUsage: estimateUsageFromText(prompt, accumulated),
+      };
     } catch (err) {
       lastError = err;
       logger.warn(

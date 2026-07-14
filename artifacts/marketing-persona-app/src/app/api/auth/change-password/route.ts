@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 

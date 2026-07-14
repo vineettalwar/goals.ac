@@ -4,9 +4,10 @@ import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
 import { DarkCTABand } from "@/components/marketing/dark-cta-band";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 import { GeoAuditWriteNext } from "@/components/geo-audit-write-next";
-import { geoAuditContentRecommendations } from "@/lib/geo-audit-content-recommendations";
+import { geoAuditContentRecommendations } from "@/lib/content/geo-audit-content-recommendations";
 import type { GeoIssue } from "@/components/geo-audit-result-view";
 
 const STATUS_ICONS = {
@@ -111,9 +112,9 @@ export function GeoAuditResultClient({
       <DarkCTABand
         titleLine1="Want to fix these"
         titleLine2="issues automatically?"
-        description="Sign up and let goals.ac generate AI-optimised content for your site."
+        description="Book a discovery call and we'll help fix these issues as part of your GEO engagement."
         backgroundImage={HERO_IMAGES.geoAuditResult.cta}
-        primaryCta={{ label: "Get started free", href: "/signup" }}
+        primaryCta={{ label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF }}
       />
     </MarketingPageShell>
   );

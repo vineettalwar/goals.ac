@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import {
   OrgMemberRoleSchema,
   removeOrganizationMember,
   requireSiteAdminAccess,
   updateOrganizationMember,
-} from "@/lib/org-access";
-import { logOrgAudit } from "@/lib/org-audit";
+} from "@/lib/org/org-access";
+import { logOrgAudit } from "@/lib/org/org-audit";
 
 const PatchMemberBody = z.object({
   role: OrgMemberRoleSchema,

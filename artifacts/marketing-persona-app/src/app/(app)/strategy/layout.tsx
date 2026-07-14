@@ -1,7 +1,7 @@
 "use client";
 
 import { HubPageLayout } from "@/components/hub-page-layout";
-import { STRATEGY_TABS } from "@/lib/hub-tabs";
+import { STRATEGY_TABS } from "@/lib/projects/hub-tabs";
 
 export default function StrategyLayout({ children }: { children: React.ReactNode }) {
   return (

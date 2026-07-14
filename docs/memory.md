@@ -4,15 +4,15 @@ Living document capturing architectural decisions, historical context, and lesso
 
 ---
 
-## Why JWT over Sessions
+## Why JWT over Sessions (legacy Express / Vite only)
 
-**Decision**: Auth uses stateless JWTs stored in `localStorage`, not server-side sessions or cookies.
+**Decision**: The legacy Express API (`artifacts/api-server`) and Vite app (`artifacts/goals-ac`) use stateless JWTs. The **canonical Next.js product** (`marketing-persona-app`) uses **NextAuth sessions**.
 
 **Reasoning**: The API server is a stateless Express service that may run multiple instances. Sessions would require a shared session store (Redis), adding infrastructure complexity. JWTs are self-contained, simplify horizontal scaling, and work naturally with the monorepo's separate frontend + backend. The 30-day expiry trades security for UX convenience — this is a SaaS tool, not a banking app.
 
-**Trade-off**: JWTs cannot be invalidated server-side without a blocklist. Password changes do not invalidate existing tokens. Acceptable for this use case.
+**Trade-off**: JWTs cannot be invalidated server-side without a blocklist. Password changes do not invalidate existing tokens. Acceptable for legacy opt-in surfaces only.
 
-**File**: `artifacts/api-server/src/lib/auth.ts`
+**File**: `artifacts/api-server/src/lib/auth.ts`, `artifacts/marketing-persona-app/src/auth.ts`
 
 ---
 
@@ -179,6 +179,21 @@ The `buildContentStyleContext(style)` function in `contentStudioGenerator.ts` tu
 | `AI_INTEGRATIONS_GEMINI_BASE_URL` | Replit AI Integrations proxy base URL | Auto-injected on Replit |
 | `RESEND_FROM_EMAIL` | From address for transactional emails | Optional (default: noreply@goals.ac) |
 
+---
+
+## Billing: AI metering wired (2026-07-14)
+
+**Status:** Starter plan enforces monthly count quotas on all AI surfaces (routes + pg-boss workers). BYOK bypasses quotas. Credit ledger reserve/settle disabled until paid tiers return.
+
+**Flow:** `prepareAiBilling` → count quota check → AI call → `recordUsage` via `completeAiBilling`. Workers use `lib/jobs/src/worker-billing.ts`.
+
+**Key files:**
+- `lib/billing/src/session.ts` — quota + past-due subscription guard
+- `lib/billing/src/quotas.ts` — expanded `ARTICLE_QUOTA_EVENT_TYPES`
+- `artifacts/marketing-persona-app/src/lib/ai-billing.ts` — HTTP wrapper
+- `lib/content-engine/src/goal-brief-compiler.ts` — goal → brief compilation
+
+**Goal pipeline:** Onboarding goal step → `POST /api/goals/[id]/compile-briefs` → brief approval → content generation with `briefId`.
 ---
 
 ## Historical Gotchas

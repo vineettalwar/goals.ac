@@ -3,8 +3,8 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import type { ContentStyle } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import {
   getDecryptedSemrushCredentialsForUser,
   getOrgAiSettingsForUser,

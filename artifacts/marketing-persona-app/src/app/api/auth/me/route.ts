@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/org-ai-settings";
 import { z } from "zod";
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
-  avatarUrl: z.string().url().optional(),
+  avatarUrl: z.union([z.string().url(), z.literal(""), z.null()]).optional(),
 });
 
 export async function GET() {
@@ -56,11 +56,22 @@ export async function PATCH(req: Request) {
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
+  const updates: { name?: string; avatarUrl?: string | null } = {};
+  if (parsed.data.name !== undefined) updates.name = parsed.data.name;
+  if (parsed.data.avatarUrl !== undefined) {
+    updates.avatarUrl = parsed.data.avatarUrl === "" ? null : parsed.data.avatarUrl;
+  }
+
   const [user] = await db
     .update(usersTable)
-    .set(parsed.data)
+    .set(updates)
     .where(eq(usersTable.id, userId!))
-    .returning({ id: usersTable.id, name: usersTable.name, email: usersTable.email });
+    .returning({
+      id: usersTable.id,
+      name: usersTable.name,
+      email: usersTable.email,
+      avatarUrl: usersTable.avatarUrl,
+    });
 
   return NextResponse.json({ user });
 }

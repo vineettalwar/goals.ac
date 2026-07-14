@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CheckCircle, XCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GeoAuditWriteNext } from "@/components/geo-audit-write-next";
-import { geoAuditContentRecommendations } from "@/lib/geo-audit-content-recommendations";
+import { geoAuditContentRecommendations } from "@/lib/content/geo-audit-content-recommendations";
 
 export interface GeoIssue {
   check: string;

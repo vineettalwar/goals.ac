@@ -6,8 +6,8 @@ import { MarketingPageShell } from "@/components/marketing/marketing-page-shell"
 import { PageHero } from "@/components/marketing/page-hero";
 import { RoadmapGenerator } from "@/components/marketing/roadmap-generator";
 import { MarketingSection } from "@/components/marketing/marketing-section";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
-import { ROADMAPS_PAGE_REFERRER } from "@/lib/roadmap-intent";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { ROADMAPS_PAGE_REFERRER } from "@/lib/projects/roadmap-intent";
 
 type RoadmapItem = {
   id: number;

@@ -1,6 +1,6 @@
-import { LEARN_POSTS } from "@/lib/learn-posts";
-import { HELP_ARTICLES } from "@/lib/help-articles";
-import { getSiteUrl } from "@/lib/site-url";
+import { LEARN_POSTS } from "@/lib/marketing/learn-posts";
+import { HELP_ARTICLES } from "@/lib/marketing/help-articles";
+import { getSiteUrl } from "@/lib/marketing/site-url";
 
 export function GET() {
   const base = getSiteUrl();
@@ -12,7 +12,7 @@ export function GET() {
     "",
     "## Product",
     `- [Home](${base}/): Overview of goals.ac`,
-    `- [Pricing](${base}/pricing): Plans and credits`,
+    `- [Engagements](${base}/pricing): SEO, AEO, and GEO consulting`,
     `- [Features](${base}/features): Content studio, autopilot, integrations`,
     `- [Generative Engine Optimization](${base}/generative-engine-optimization): GEO tooling`,
     `- [LLM Visibility](${base}/llm-visibility): Track AI search citations`,

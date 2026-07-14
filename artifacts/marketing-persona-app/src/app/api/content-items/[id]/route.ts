@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentItemsTable, contentStrategiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/org/org-access";
 import { z } from "zod";
 
 const PatchBody = z.object({

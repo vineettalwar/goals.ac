@@ -9,10 +9,9 @@ import { Label } from "@/components/ui/label";
 import { HeroOverlapShell } from "./hero-overlap-shell";
 import { EditorialHeading } from "./editorial-heading";
 import {
-  buildAuthRedirectParams,
   GROWTH_ROADMAPS_PATH,
   saveRoadmapIntent,
-} from "@/lib/roadmap-intent";
+} from "@/lib/projects/roadmap-intent";
 
 const STAGES = [
   { value: "pre-seed", label: "Pre-Seed" },
@@ -39,7 +38,7 @@ function saveIntentAndGetDestination(
 ): string {
   saveRoadmapIntent({ industry, location, stage, referrer });
   if (isAuthenticated) return GROWTH_ROADMAPS_PATH;
-  return `/signup?${buildAuthRedirectParams(referrer).toString()}`;
+  return "/contact";
 }
 
 export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps) {
@@ -98,7 +97,7 @@ export function RoadmapGenerator({ sectionRef, referrer }: RoadmapGeneratorProps
         <EditorialHeading
           line1="Generate your"
           line2="2026 Growth Roadmap"
-          description="Choose your market and stage, then create a free account to build a custom 12-month plan. Browse sample roadmaps in our catalog anytime, no signup required."
+          description="Choose your market and stage, then contact us to build a custom 12-month plan. Browse sample roadmaps in our catalog anytime — no signup required."
           align="left"
           size="card"
           animate={false}

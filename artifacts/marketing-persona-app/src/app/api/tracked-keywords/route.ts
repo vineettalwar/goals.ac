@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { db, trackedKeywordsTable, keywordRankSnapshotsTable } from "@workspace/db";
 import { eq, desc, and, inArray } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import { isSerpConfigured } from "@workspace/serp-provider";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { z } from "zod";

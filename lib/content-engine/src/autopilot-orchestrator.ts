@@ -71,6 +71,11 @@ async function loadBrandContext(projectId: number): Promise<BrandContext> {
 export interface GenerateFromItemResult {
   primaryPieceId: number;
   variantPieceIds: number[];
+  generationUsage?: {
+    promptTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
 }
 
 export async function generateFromContentItem(
@@ -174,5 +179,9 @@ export async function generateFromContentItem(
     .set({ status: "prepared" })
     .where(eq(contentItemsTable.id, item.id));
 
-  return { primaryPieceId: primary.id, variantPieceIds };
+  return {
+    primaryPieceId: primary.id,
+    variantPieceIds,
+    generationUsage: generated.generationUsage,
+  };
 }

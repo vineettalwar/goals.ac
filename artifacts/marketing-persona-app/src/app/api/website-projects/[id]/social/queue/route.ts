@@ -1,5 +1,5 @@
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import {
   listSocialQueue,
   platformForPiece,

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Playfair_Display, Plus_Jakarta_Sans } from "next/font/google";
 import { Providers } from "./providers";
-import { getSiteUrl } from "@/lib/site-url";
+import { getSiteUrl } from "@/lib/marketing/site-url";
 
 const jakartaSans = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -41,8 +41,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   };
 
   return (
-    <html lang="en" className={`${jakartaSans.variable} ${playfairDisplay.variable}`}>
+    <html lang="en" className={`${jakartaSans.variable} ${playfairDisplay.variable}`} suppressHydrationWarning>
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var s=localStorage.getItem('theme');if(s==='dark'||(!s&&window.matchMedia('(prefers-color-scheme: dark)').matches)){document.documentElement.classList.add('dark');}}catch(e){}})();`,
+          }}
+        />
         <link rel="preconnect" href="https://images.unsplash.com" />
         <link rel="preconnect" href="https://images.higgs.ai" />
         <link rel="dns-prefetch" href="https://images.unsplash.com" />

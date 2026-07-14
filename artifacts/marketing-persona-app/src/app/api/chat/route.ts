@@ -4,7 +4,9 @@ import { roadmapsTable, conversations, messages } from "@workspace/db/schema";
 import { eq, asc } from "drizzle-orm";
 import { z } from "zod";
 import { getAiProviderClient } from "@workspace/ai-providers";
-import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 
 const ChatBody = z.object({
   message: z.string().min(1).max(2000),
@@ -60,6 +62,9 @@ export async function POST(req: Request) {
   );
   if (limited) return limited;
 
+  const { userId, error: authError } = await requireAuth();
+  if (authError) return authError;
+
   const body = await req.json().catch(() => null);
   const parsed = ChatBody.safeParse(body);
   if (!parsed.success) {
@@ -68,17 +73,24 @@ export async function POST(req: Request) {
 
   const { message, conversationId, slug } = parsed.data;
 
+  const [roadmap] = await db
+    .select()
+    .from(roadmapsTable)
+    .where(eq(roadmapsTable.slug, slug))
+    .limit(1);
+
+  if (!roadmap) {
+    return NextResponse.json({ error: "Roadmap not found" }, { status: 404 });
+  }
+
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "rapid",
+    quotaKind: "article",
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
-    const [roadmap] = await db
-      .select()
-      .from(roadmapsTable)
-      .where(eq(roadmapsTable.slug, slug))
-      .limit(1);
-
-    if (!roadmap) {
-      return NextResponse.json({ error: "Roadmap not found" }, { status: 404 });
-    }
-
     const client = await getAiProviderClient();
 
     let convId = conversationId;
@@ -111,8 +123,19 @@ export async function POST(req: Request) {
 
     await db.insert(messages).values({ conversationId: convId, role: "assistant", content: reply });
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "chat",
+      usedByok: billingPrep.usedByok,
+      tier: "rapid",
+      promptTokens: response.usage?.promptTokens,
+      outputTokens: response.usage?.outputTokens,
+      totalTokens: response.usage?.totalTokens,
+    });
+
     return NextResponse.json({ reply, conversationId: convId });
   } catch {
+    await cancelAiBilling(billingPrep.ctx, "generation_failed");
     return NextResponse.json({ error: "Failed to get response" }, { status: 500 });
   }
 }

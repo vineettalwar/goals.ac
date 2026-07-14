@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 import { RoadmapChat } from "@/components/roadmap-chat";
 import { RoadmapLeadCTA } from "@/app/(public)/(inner)/roadmap/[slug]/roadmap-lead-cta";
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScanSearch } from "lucide-react";
 import type { BrandExtract } from "@workspace/content-engine/brand-extract-types";
-import { formatBrandScanDiscoverySummary } from "@/lib/brand-scan-summary";
+import { formatBrandScanDiscoverySummary } from "@/lib/projects/brand-scan-summary";
 
 interface BrandProfileSummary {
   scrapeStatus: string;

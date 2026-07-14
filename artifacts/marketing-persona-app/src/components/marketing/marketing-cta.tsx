@@ -5,7 +5,8 @@ import { motion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
 import { HeroPhotoBg } from "./hero-photo-bg";
-import { fadeUp, fadeUpTransition } from "@/lib/motion";
+import { fadeUp, fadeUpTransition } from "@/lib/utils/motion";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 type MarketingCTAProps = {
   badge?: string;
@@ -29,8 +30,8 @@ export function MarketingCTA({
   description,
   variant = "paper",
   backgroundImage,
-  primaryHref = "/signup",
-  primaryLabel = "Start for free",
+  primaryHref = CONTACT_HREF,
+  primaryLabel = CONTACT_CTA_PRIMARY,
   secondaryHref,
   secondaryLabel,
 }: MarketingCTAProps) {

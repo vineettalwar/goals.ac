@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { db } from "@workspace/db";
 import { contentStrategiesTable, contentItemsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireProjectAccess } from "@/lib/org-access";
+import { requireProjectAccess } from "@/lib/org/org-access";
 
 export async function GET(
   _req: Request,

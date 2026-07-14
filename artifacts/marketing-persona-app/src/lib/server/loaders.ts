@@ -14,11 +14,12 @@ import {
 } from "@workspace/content-engine/support/cms-integrations";
 import { getOrgAiSettingsForUser, hasOrgBedrockCredentials, hasOrgSemrushCredentials } from "@workspace/content-engine/support/org-ai-settings";
 import { decryptSecret } from "@workspace/security/encryption";
-import { getUsageSummaryForUser } from "@/lib/usage";
-import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/ai-providers-status";
-import type { CmsConnectionSnapshot } from "@/lib/publishing-destinations";
-import type { WebsiteProject } from "@/lib/project-detail-types";
-import { getAccessibleProject, getOrgMembership, isSuperAdmin, requireProjectAccess } from "@/lib/org-access";
+import { getUsageSummaryForUser } from "@/lib/billing/usage";
+import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/platform/ai-providers-status";
+import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
+import type { WebsiteProject } from "@/lib/projects/project-detail-types";
+import { getAccessibleProject, getOrgMembership, isSuperAdmin, requireProjectAccess } from "@/lib/org/org-access";
+import { isSiteAdmin } from "@/lib/org/org-access-shared";
 
 import type { ContentPieceMetadata } from "@workspace/db";
 
@@ -29,6 +30,7 @@ export interface ContentPieceRecord {
   targetKeyword: string;
   bodyMarkdown: string;
   status: string;
+  plannedDate: string | null;
   wordCount: number;
   websiteProjectId: number;
   publishedUrl: string | null;
@@ -58,6 +60,7 @@ export const loadContentPieceForUser = cache(async (
     targetKeyword: piece.targetKeyword ?? "",
     bodyMarkdown: piece.bodyMarkdown ?? "",
     status: piece.status,
+    plannedDate: piece.plannedDate ?? null,
     wordCount: piece.wordCount,
     websiteProjectId: piece.websiteProjectId,
     publishedUrl: piece.publishedUrl ?? null,
@@ -208,7 +211,7 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
   });
 
   const canManageAiSettings =
-    membership?.orgRole === "site_admin" || isSuperAdmin(user?.role);
+    isSiteAdmin(membership?.orgRole) || isSuperAdmin(user?.role);
 
   return {
     usage,

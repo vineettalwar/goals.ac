@@ -36,7 +36,7 @@ import {
   getCmsConnectionSchema,
   getInitialFormValues,
   type ConnectionFieldDef,
-} from "@/lib/cms-connection-schemas";
+} from "@/lib/integrations/cms-connection-schemas";
 import {
   Dialog,
   DialogContent,
@@ -65,7 +65,7 @@ import {
   hasAnyPublishingConnection,
   SOCIAL_SETTINGS_COUNT,
   supportsMultipleConnectionMethods,
-} from "@/lib/publishing-destinations";
+} from "@/lib/projects/publishing-destinations";
 
 export type IntegrationLayout = "stacked" | "grid";
 export type IntegrationCategoryFilter = "all" | "cms" | "social" | "esp";

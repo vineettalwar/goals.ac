@@ -4,11 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./plans": "./src/plans.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "@workspace/security": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "stripe": "^18.4.0"
   },
   "devDependencies": {
     "@types/node": "catalog:"

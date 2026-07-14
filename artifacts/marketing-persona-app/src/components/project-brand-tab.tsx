@@ -17,9 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ScrapeFormSkeleton, ScrapeStatusHeader } from "@/components/project-scrape-status";
-import type { ContentStyle, WebsiteProject } from "@/lib/project-detail-types";
-import { formatBrandScanDiscoverySummary } from "@/lib/brand-scan-summary";
-import { SUPPORTED_LANGUAGES } from "@/lib/supported-languages";
+import type { ContentStyle, WebsiteProject } from "@/lib/projects/project-detail-types";
+import { formatBrandScanDiscoverySummary } from "@/lib/projects/brand-scan-summary";
+import { SUPPORTED_LANGUAGES } from "@/lib/utils/supported-languages";
 
 const TONE_PRESETS = [
   { value: "professional", label: "Professional" },

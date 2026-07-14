@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useRef } from "react";
 import { Play } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 import { useMarketingScrollReveal } from "@/hooks/use-marketing-scroll";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 const TOUR_STEPS = ["Brand setup", "30-day plan", "Quality score", "CMS publish"];
 
@@ -38,10 +39,10 @@ export function VideoDemoSection() {
               <p className="text-white font-semibold text-lg">2-minute product walkthrough</p>
               <p className="text-white/70 text-base mt-2 max-w-md mx-auto">
                 Video demo coming soon.{" "}
-                <Link href="/signup" className="text-white underline hover:no-underline">
-                  Start free
+                <Link href={CONTACT_HREF} className="text-white underline hover:no-underline">
+                  {CONTACT_CTA_PRIMARY.toLowerCase()}
                 </Link>{" "}
-                to explore the workflow live.
+                to explore the workflow.
               </p>
             </div>
           </div>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { LearnPostClient } from "@/components/marketing/learn-post-client";
-import { getLearnPost, LEARN_POSTS } from "@/lib/learn-posts";
+import { getLearnPost, LEARN_POSTS } from "@/lib/marketing/learn-posts";
 
 export function generateStaticParams() {
   return LEARN_POSTS.map((p) => ({ slug: p.slug }));

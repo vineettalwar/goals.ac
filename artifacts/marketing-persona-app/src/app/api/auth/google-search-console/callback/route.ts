@@ -1,4 +1,4 @@
-import { handleSearchPropertyCallback } from "@/lib/search-property-oauth";
+import { handleSearchPropertyCallback } from "@/lib/integrations/search-property-oauth";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);

@@ -1,20 +1,32 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePlatformAdminApi } from "@/lib/require-platform-admin";
-import { getPlatformSettings, updatePlatformSettings } from "@/lib/platform-settings";
+import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
+import { getPlatformSettings, updatePlatformSettings } from "@/lib/platform/platform-settings";
+import { getIntegrationEnvStatus, getPlatformIntegrationDefinitions } from "@/lib/platform/platform-features";
 
 const updateSchema = z.object({
   platformEnabled: z.boolean().optional(),
   aiGenerationEnabled: z.boolean().optional(),
   maintenanceMessage: z.string().nullable().optional(),
+  signupsEnabled: z.boolean().optional(),
+  stripeBillingEnabled: z.boolean().optional(),
+  googleIntegrationsEnabled: z.boolean().optional(),
+  bingWebmasterEnabled: z.boolean().optional(),
+  socialPublishingEnabled: z.boolean().optional(),
+  emailEnabled: z.boolean().optional(),
 });
 
 export async function GET() {
   const admin = await requirePlatformAdminApi();
   if (admin.error) return admin.error;
 
-  const settings = await getPlatformSettings();
-  return NextResponse.json(settings);
+  const [settings, env, integrations] = await Promise.all([
+    getPlatformSettings(),
+    Promise.resolve(getIntegrationEnvStatus()),
+    Promise.resolve(getPlatformIntegrationDefinitions()),
+  ]);
+
+  return NextResponse.json({ ...settings, env, integrations });
 }
 
 export async function PATCH(req: Request) {
@@ -32,5 +44,10 @@ export async function PATCH(req: Request) {
     updatedBy: admin.userId!,
   });
 
-  return NextResponse.json(settings);
+  const { invalidatePlatformGatesCache } = await import("@workspace/billing");
+  invalidatePlatformGatesCache();
+
+  const env = getIntegrationEnvStatus();
+  const integrations = getPlatformIntegrationDefinitions();
+  return NextResponse.json({ ...settings, env, integrations });
 }

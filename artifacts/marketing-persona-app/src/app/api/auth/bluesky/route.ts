@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { startBlueskyAuthorize } from "@/lib/bluesky-oauth";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { startBlueskyAuthorize } from "@/lib/integrations/bluesky-oauth";
 
 function encodeState(payload: { projectId: number; userId: number }): string {
   return Buffer.from(JSON.stringify({ ...payload, platform: "bluesky" })).toString("base64url");

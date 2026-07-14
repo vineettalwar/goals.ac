@@ -2,13 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { websiteProjectsTable, brandProfilesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import {
   getAccessibleProject,
   requireProjectAccess,
   requireSiteAdminAccess,
-} from "@/lib/org-access";
-import { findDuplicateProjectByUrl } from "@/lib/project-url";
+} from "@/lib/org/org-access";
+import { findDuplicateProjectByUrl } from "@/lib/projects/project-url";
 import { z } from "zod";
 
 const ContentStyleBody = z.object({

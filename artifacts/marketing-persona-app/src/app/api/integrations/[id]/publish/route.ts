@@ -3,7 +3,7 @@ import { marked } from "marked";
 import { db } from "@workspace/db";
 import { integrationConnectionsTable, companiesTable, scheduledArticlesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { decryptSecret } from "@workspace/security/encryption";
 import { publishToGhost } from "@workspace/connectors/ghost";
 import { publishToWebhook, type WebhookArticlePayload } from "@workspace/connectors/webhook";

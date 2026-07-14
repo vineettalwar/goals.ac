@@ -2,15 +2,21 @@ import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
 import { CONTENT_FORMAT_TYPES } from "@workspace/db/schema";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { repurposeContentPiece } from "@workspace/content-engine/content-studio-generator";
 import {
   assertPieceOwner,
   loadProjectBrand,
   loadUserAiSettings,
   wordCountFromMarkdown,
-} from "@/lib/content-pieces-helpers";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+} from "@/lib/content/content-pieces-helpers";
+import {
+  billingDeniedResponse,
+  cancelAiBilling,
+  completeAiBilling,
+  prepareAiBilling,
+} from "@/lib/billing/ai-billing";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
 
 const RepurposeBody = z.object({
@@ -52,55 +58,72 @@ export async function POST(
   const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
   const sourceContent = parsed.data.existingContent ?? piece!.bodyMarkdown ?? "";
 
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "execution",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingDeniedResponse(billingPrep);
+
   const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (event: string, data: unknown) => {
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-      };
+  return new Response(
+    new ReadableStream({
+      async start(controller) {
+        const send = (event: string, data: unknown) => {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        };
 
-      try {
-        send("step", { step: "analyzing", label: "Analyzing source content" });
-        send("step", { step: "generating", label: "Generating repurposed content" });
+        try {
+          send("step", { step: "analyzing", label: "Analyzing source content" });
+          send("step", { step: "generating", label: "Generating repurposed content" });
 
-        const result = await repurposeContentPiece(
-          parsed.data.targetFormat as ContentFormatType,
-          projectCtx.brand,
-          sourceContent,
-          piece!.targetKeyword ?? "",
-          userApiKey,
-          aiProviderOptions,
-        );
+          const result = await repurposeContentPiece(
+            parsed.data.targetFormat as ContentFormatType,
+            projectCtx.brand,
+            sourceContent,
+            piece!.targetKeyword ?? "",
+            userApiKey,
+            aiProviderOptions,
+          );
 
-        send("step", { step: "saving", label: "Saving new piece" });
+          send("step", { step: "saving", label: "Saving new piece" });
 
-        const [inserted] = await db
-          .insert(contentPiecesTable)
-          .values({
-            websiteProjectId: piece!.websiteProjectId,
-            formatType: parsed.data.targetFormat as ContentFormatType,
-            title: result.title,
-            targetKeyword: result.target_keyword,
-            bodyMarkdown: result.body_markdown,
-            wordCount: wordCountFromMarkdown(result.body_markdown),
-            status: "draft",
-          })
-          .returning();
+          const [inserted] = await db
+            .insert(contentPiecesTable)
+            .values({
+              websiteProjectId: piece!.websiteProjectId,
+              formatType: parsed.data.targetFormat as ContentFormatType,
+              title: result.title,
+              targetKeyword: result.target_keyword,
+              bodyMarkdown: result.body_markdown,
+              wordCount: wordCountFromMarkdown(result.body_markdown),
+              status: "draft",
+            })
+            .returning();
 
-        send("done", inserted);
-      } catch (err) {
-        send("error", { error: err instanceof Error ? err.message : "Failed to repurpose content" });
-      } finally {
-        controller.close();
-      }
+          await completeAiBilling(billingPrep.ctx, {
+            userId: userId!,
+            eventType: "content_repurpose",
+            usedByok: billingPrep.usedByok,
+            tier: "execution",
+          });
+
+          send("done", inserted);
+        } catch (err) {
+          await cancelAiBilling(billingPrep.ctx);
+          send("error", { error: err instanceof Error ? err.message : "Failed to repurpose content" });
+        } finally {
+          controller.close();
+        }
+      },
+    }),
+    {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
     },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
-  });
+  );
 }

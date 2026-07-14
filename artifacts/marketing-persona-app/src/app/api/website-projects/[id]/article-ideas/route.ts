@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
-import { requireSiteAdmin } from "@/lib/require-site-admin";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
+import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
 import {
   insertArticleIdeas,
   listArticleIdeaImports,

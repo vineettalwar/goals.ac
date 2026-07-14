@@ -3,11 +3,12 @@ import { db } from "@workspace/db";
 import { contentStrategiesTable, contentItemsTable, roadmapsTable } from "@workspace/db/schema";
 import type { ContentStyle } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import { generateContentStrategy } from "@/lib/ai/content-strategy-generator";
-import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
 
 const GenerateBody = z.object({
@@ -61,8 +62,16 @@ export async function POST(req: Request) {
   const month = parsed.data.month ?? now.getMonth() + 1;
   const year = parsed.data.year ?? now.getFullYear();
 
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "strategy",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
-    const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
     const items = await generateContentStrategy(
       industry,
       location,
@@ -95,8 +104,16 @@ export async function POST(req: Request) {
       .where(eq(contentItemsTable.strategyId, strategy.id))
       .orderBy(contentItemsTable.day);
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "content_strategy_generation",
+      usedByok: billingPrep.usedByok,
+      tier: "strategy",
+    });
+
     return NextResponse.json({ strategy: { ...strategy, items: savedItems } }, { status: 201 });
   } catch {
+    await cancelAiBilling(billingPrep.ctx, "generation_failed");
     return NextResponse.json({ error: "Failed to generate content strategy" }, { status: 500 });
   }
 }

@@ -23,7 +23,7 @@ import {
   type ProjectContent,
   type ProjectTab,
   type WebsiteProject,
-} from "@/lib/project-detail-types";
+} from "@/lib/projects/project-detail-types";
 
 const ProjectBrandTab = dynamic(
   () => import("@/components/project-brand-tab").then((m) => m.ProjectBrandTab),

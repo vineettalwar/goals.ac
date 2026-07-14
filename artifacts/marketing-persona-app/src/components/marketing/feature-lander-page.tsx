@@ -9,7 +9,8 @@ import { FAQAccordion } from "@/components/marketing/faq-accordion";
 import { DarkCTABand } from "@/components/marketing/dark-cta-band";
 import { FeatureStatusBadge, type FeatureStatus } from "@/components/feature-status-badge";
 import { WaitlistForm } from "@/components/waitlist-form";
-import { LANDER_CONFIG } from "@/lib/marketing-feature-data";
+import { LANDER_CONFIG } from "@/lib/marketing/marketing-feature-data";
+import { CONTACT_CTA_SECONDARY } from "@/lib/marketing/marketing-contact";
 
 export type LanderConfigKey = keyof typeof LANDER_CONFIG;
 
@@ -79,10 +80,10 @@ export function FeatureLanderPage({
       )}
 
       <DarkCTABand
-        badge="Start free"
+        badge={CONTACT_CTA_SECONDARY}
         titleLine1="Ready to"
-        titleLine2="try goals.ac?"
-        description="Create your account and connect your site in minutes."
+        titleLine2="work together?"
+        description="Book a discovery call and we'll scope an SEO, AEO, or GEO program for your team."
         backgroundImage={heroImage}
         primaryCta={{ label: primaryCta.label, href: primaryCta.href }}
         secondaryCta={secondaryCta}

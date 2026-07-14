@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { isSiteAdmin } from "@/lib/org-access-shared";
+import { isSiteAdmin } from "@/lib/org/org-access-shared";
 
 type ImportPreviewRow = {
   rowNumber: number;

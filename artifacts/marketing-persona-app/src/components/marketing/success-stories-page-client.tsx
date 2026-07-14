@@ -6,7 +6,8 @@ import { MarketingPageShell } from "@/components/marketing/marketing-page-shell"
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { WaitlistForm } from "@/components/waitlist-form";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 export type PublicArticleExample = {
   id: number;
@@ -43,7 +44,7 @@ export function SuccessStoriesPageClient({ articles, roadmaps }: Props) {
           description="Real customer case studies coming soon. Explore public examples and share your results."
           backgroundImage={HERO_IMAGES.roadmaps.hero}
           ctas={[
-            { label: "Start free", href: "/signup", variant: "primary" },
+            { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF, variant: "primary" },
             { label: "Browse roadmaps", href: "/roadmaps", variant: "ghost" },
           ]}
         />
@@ -106,8 +107,8 @@ export function SuccessStoriesPageClient({ articles, roadmaps }: Props) {
       <MarketingSection variant="paper" className="py-16 bg-secondary/20" titleLine1="Share your" titleLine2="results">
         <p className="text-muted-foreground mb-6 max-w-xl">Using goals.ac? Join the waitlist to be featured in our next success story.</p>
         <WaitlistForm featureKey="success-story" buttonLabel="Share my results" />
-        <Link href="/signup" className="inline-flex items-center gap-1 text-sm text-primary mt-8 hover:underline">
-          Or start free today <ArrowRight className="h-4 w-4" />
+        <Link href={CONTACT_HREF} className="inline-flex items-center gap-1 text-sm text-primary mt-8 hover:underline">
+          Or {CONTACT_CTA_PRIMARY.toLowerCase()} <ArrowRight className="h-4 w-4" />
         </Link>
       </MarketingSection>
     </MarketingPageShell>

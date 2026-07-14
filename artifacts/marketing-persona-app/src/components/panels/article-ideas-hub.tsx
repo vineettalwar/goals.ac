@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useActiveProject } from "@/context/active-project";
 import { useKeywordIntelligence } from "@/lib/queries";
-import { queueOpportunityErrorMessage } from "@/lib/keyword-opportunity-ui";
+import { queueOpportunityErrorMessage } from "@/lib/seo/keyword-opportunity-ui";
 import {
   contentLanguageLabel,
   semrushDatabaseLabel,

@@ -75,21 +75,30 @@ export async function reserveCredits({
 
 export type SettlementEntryType = "model_consumption" | "orchestration";
 
-export interface SettleReservationInput {
-  runId: string;
+export interface SettlementLine {
+  entryType: SettlementEntryType;
   /** Positive actual cost incurred. */
   actualAmount: number;
-  entryType: SettlementEntryType;
+}
+
+export interface SettleReservationLinesInput {
+  runId: string;
+  lines: SettlementLine[];
   usageEventId?: number;
 }
 
-export async function settleReservation({
+export async function settleReservationLines({
   runId,
-  actualAmount,
-  entryType,
+  lines,
   usageEventId,
-}: SettleReservationInput): Promise<void> {
-  if (actualAmount < 0) throw new Error("settleReservation: actualAmount must be non-negative");
+}: SettleReservationLinesInput): Promise<void> {
+  for (const line of lines) {
+    if (line.actualAmount < 0) {
+      throw new Error("settleReservationLines: actualAmount must be non-negative");
+    }
+  }
+
+  const totalActual = lines.reduce((sum, line) => sum + line.actualAmount, 0);
 
   await db.transaction(async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`credit_ledger:${runId}`}))`);
@@ -101,22 +110,38 @@ export async function settleReservation({
       .limit(1);
 
     if (!reservation) {
-      throw new Error(`settleReservation: no reservation found for runId "${runId}"`);
+      throw new Error(`settleReservationLines: no reservation found for runId "${runId}"`);
     }
+
+    const [existingConsumption] = await tx
+      .select({ id: creditLedgerTable.id })
+      .from(creditLedgerTable)
+      .where(
+        and(
+          sql`${creditLedgerTable.meta} ->> 'reservationRunId' = ${runId}`,
+          sql`${creditLedgerTable.entryType} in ('model_consumption', 'orchestration')`,
+        ),
+      )
+      .limit(1);
+
+    if (existingConsumption) return;
 
     const reservedAmount = Math.abs(reservation.amount);
 
-    // Settlement rows can't reuse runId (the unique index forbids two rows
-    // sharing it), so the link back to the reservation lives in meta instead.
-    await tx.insert(creditLedgerTable).values({
-      workspaceId: reservation.workspaceId,
-      entryType,
-      amount: -actualAmount,
-      usageEventId: usageEventId ?? null,
-      meta: { reservationRunId: runId },
-    });
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]!;
+      if (line.actualAmount === 0) continue;
 
-    const releaseAmount = reservedAmount - actualAmount;
+      await tx.insert(creditLedgerTable).values({
+        workspaceId: reservation.workspaceId,
+        entryType: line.entryType,
+        amount: -line.actualAmount,
+        usageEventId: i === 0 ? (usageEventId ?? null) : null,
+        meta: { reservationRunId: runId },
+      });
+    }
+
+    const releaseAmount = reservedAmount - totalActual;
     if (releaseAmount > 0) {
       await tx.insert(creditLedgerTable).values({
         workspaceId: reservation.workspaceId,
@@ -125,12 +150,26 @@ export async function settleReservation({
         meta: { reservationRunId: runId },
       });
     } else if (releaseAmount < 0) {
-      // Cost overrun: actual consumption exceeded the reservation estimate.
-      // Settle at the real cost and issue no release — never release a negative amount.
       console.warn(
-        `settleReservation: actualAmount (${actualAmount}) exceeded reservedAmount (${reservedAmount}) for runId "${runId}"; settled at actual cost, no release issued`,
+        `settleReservationLines: total actual (${totalActual}) exceeded reservedAmount (${reservedAmount}) for runId "${runId}"; settled at actual cost, no release issued`,
       );
     }
+  });
+}
+
+export interface SettleReservationInput {
+  runId: string;
+  /** Positive actual cost incurred. */
+  actualAmount: number;
+  entryType: SettlementEntryType;
+  usageEventId?: number;
+}
+
+export async function settleReservation(input: SettleReservationInput): Promise<void> {
+  await settleReservationLines({
+    runId: input.runId,
+    lines: [{ entryType: input.entryType, actualAmount: input.actualAmount }],
+    usageEventId: input.usageEventId,
   });
 }
 

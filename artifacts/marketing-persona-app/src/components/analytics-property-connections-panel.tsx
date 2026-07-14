@@ -27,7 +27,7 @@ import type {
   AnalyticsPropertyProvider,
   AvailableAnalyticsPropertiesResponse,
   Ga4SyncStatus,
-} from "@/lib/analytics-property-types";
+} from "@/lib/integrations/analytics-property-types";
 
 const PROVIDER_META = {
   google_analytics_4: {

@@ -138,7 +138,12 @@ export default auth(async (req) => {
     }
   }
 
-  if (isImpersonating && pathname.startsWith("/api/") && isWriteApiPath(pathname)) {
+  if (
+    isImpersonating &&
+    !isSuperAdmin(adminRole) &&
+    pathname.startsWith("/api/") &&
+    isWriteApiPath(pathname)
+  ) {
     return NextResponse.json(
       { error: "Write operations are disabled while impersonating" },
       { status: 403 },

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handleGoogleSheetsCallback } from "@/lib/google-sheets-oauth";
+import { handleGoogleSheetsCallback } from "@/lib/integrations/google-sheets-oauth";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);

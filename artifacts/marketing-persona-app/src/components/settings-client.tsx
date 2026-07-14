@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,6 +19,7 @@ import {
   Loader2,
   Cloud,
   BarChart3,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,8 +46,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SettingsBillingPanel } from "@/components/settings-billing-panel";
 
-const profileSchema = z.object({ name: z.string().min(1) });
+const profileSchema = z.object({
+  name: z.string().min(1),
+  avatarUrl: z.union([z.string().url("Must be a valid URL"), z.literal("")]).optional(),
+});
 const passwordSchema = z.object({
   currentPassword: z.string().min(1),
   newPassword: z.string().min(8, "At least 8 characters"),
@@ -59,6 +65,12 @@ interface UsageSummary {
   usesByok: boolean;
   byokSpendThisMonthUsd: number;
 }
+
+const PLAN_LABELS: Record<UsageSummary["plan"], string> = {
+  starter: "Starter",
+  growth: "Growth",
+  scale: "Scale",
+};
 
 interface AiProviderStatus {
   activeProvider: string;
@@ -110,20 +122,15 @@ const SEMRUSH_DATABASES = [
   { value: "fr", label: "France" },
 ] as const;
 
-const PLAN_LABELS: Record<UsageSummary["plan"], string> = {
-  starter: "Starter",
-  growth: "Growth",
-  scale: "Scale",
-};
-
 interface SettingsClientProps {
   initialData?: import("@/lib/server/loaders").SettingsInitialData;
 }
 
 export function SettingsClient({ initialData }: SettingsClientProps) {
   const { data: session, update } = useSession();
+  const searchParams = useSearchParams();
   const { activeProject } = useActiveProject();
-  const [activeTab, setActiveTab] = useState("profile");
+  const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") ?? "profile");
   const [usage, setUsage] = useState<UsageSummary | null>(initialData?.usage ?? null);
   const [usageLoading, setUsageLoading] = useState(!initialData);
   const [hasGeminiKey, setHasGeminiKey] = useState(initialData?.me?.hasGeminiKey ?? false);
@@ -203,9 +210,17 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
       session?.user?.role === "super_admin" ||
       session?.user?.role === "admin");
 
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    if (tab) setActiveTab(tab);
+  }, [searchParams]);
+
   const profileForm = useForm({
     resolver: zodResolver(profileSchema),
-    values: { name: session?.user.name ?? "" },
+    values: {
+      name: session?.user.name ?? "",
+      avatarUrl: session?.user.image ?? "",
+    },
   });
   const passwordForm = useForm({
     resolver: zodResolver(passwordSchema),
@@ -262,14 +277,20 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
     });
   }, [initialData]);
 
-  async function saveProfile(data: { name: string }) {
+  async function saveProfile(data: { name: string; avatarUrl?: string }) {
+    const payload: { name: string; avatarUrl?: string | null } = { name: data.name };
+    if (data.avatarUrl !== undefined) {
+      payload.avatarUrl = data.avatarUrl === "" ? null : data.avatarUrl;
+    }
     const res = await fetch("/api/auth/me", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: data.name }),
+      body: JSON.stringify(payload),
     });
     if (!res.ok) { toast.error("Failed to save"); return; }
-    await update({ name: data.name });
+    const body = (await res.json()) as { user?: { name?: string; avatarUrl?: string | null } };
+    const avatarUrl = body.user?.avatarUrl ?? (data.avatarUrl === "" ? undefined : data.avatarUrl);
+    await update({ name: data.name, image: avatarUrl ?? undefined });
     toast.success("Profile updated");
   }
 
@@ -519,6 +540,7 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
           {!isGoogleOnly && (
             <TabsTrigger value="security"><Shield className="w-4 h-4 mr-1.5" />Security</TabsTrigger>
           )}
+          <TabsTrigger value="billing"><CreditCard className="w-4 h-4 mr-1.5" />Billing</TabsTrigger>
           <TabsTrigger value="account"><AlertTriangle className="w-4 h-4 mr-1.5" />Account</TabsTrigger>
         </TabsList>
 
@@ -533,6 +555,17 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
               <Label htmlFor="name">Display name</Label>
               <Input id="name" {...profileForm.register("name")} />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="avatarUrl">Avatar URL</Label>
+              <Input
+                id="avatarUrl"
+                placeholder="https://example.com/photo.jpg"
+                {...profileForm.register("avatarUrl")}
+              />
+              <p className="text-xs text-muted-foreground">
+                Paste a publicly accessible image URL. Leave blank to use your initials.
+              </p>
+            </div>
             <Button onClick={profileForm.handleSubmit(saveProfile)}>Save changes</Button>
           </div>
 
@@ -540,15 +573,29 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
             <h2 className="font-semibold">Usage this month</h2>
             {usageLoading && <p className="text-sm text-muted-foreground">Loading usage…</p>}
             {usage && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase">Articles</p>
                   <p className="text-2xl font-bold">{usage.articlesThisMonth}</p>
+                  {!usage.usesByok && usage.quota != null && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {usage.quotaRemaining ?? 0} of {usage.quota} remaining (platform key)
+                    </p>
+                  )}
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase">Plan</p>
                   <p className="text-2xl font-bold">{PLAN_LABELS[usage.plan]}</p>
                 </div>
+                {usage.usesByok && (
+                  <div className="col-span-2 sm:col-span-1">
+                    <p className="text-xs text-muted-foreground uppercase">AI key</p>
+                    <p className="text-sm font-medium flex items-center gap-1.5 mt-1">
+                      <KeyRound className="h-4 w-4 text-primary" />
+                      BYOK — unlimited
+                    </p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -795,6 +842,12 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
             <Button variant="outline" onClick={passwordForm.handleSubmit(changePassword)}>Change password</Button>
             <Link href="/forgot-password" className="text-sm text-primary hover:underline block">Forgot password?</Link>
           </div>
+        </TabsContent>
+
+        <TabsContent value="billing" className="space-y-6">
+          <Suspense fallback={<p className="text-sm text-muted-foreground">Loading billing…</p>}>
+            <SettingsBillingPanel />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="account">

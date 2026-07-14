@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { assertPieceOwner } from "@/lib/content-pieces-helpers";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { assertPieceOwner } from "@/lib/content/content-pieces-helpers";
 import { z } from "zod";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

@@ -351,6 +351,55 @@
       "when": 1783892000000,
       "tag": "0048_social_sync_metrics",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1783894000000,
+      "tag": "0049_stripe_billing",
+      "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1783896000000,
+      "tag": "0050_workspace_organization",
+      "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1783898000000,
+      "tag": "0051_stripe_billing_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1783900000000,
+      "tag": "0052_plan_quota_config",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1783902000000,
+      "tag": "0053_platform_feature_flags",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "7",
+      "when": 1783904000000,
+      "tag": "0054_platform_integration_credentials",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1783906000000,
+      "tag": "0055_publish_records",
+      "breakpoints": true
     }
   ]
 }

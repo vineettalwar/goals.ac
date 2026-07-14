@@ -4,7 +4,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import type { ReactNode } from "react";
 import { EditorialHeading } from "./editorial-heading";
 import { HeroPhotoBg } from "./hero-photo-bg";
-import { fadeUp, fadeUpTransition } from "@/lib/motion";
+import { fadeUp, fadeUpTransition } from "@/lib/utils/motion";
 
 export type MarketingSectionVariant = "paper" | "image" | "dark";
 

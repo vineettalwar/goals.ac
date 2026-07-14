@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { assertPieceOwner } from "@/lib/content-pieces-helpers";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { assertPieceOwner } from "@/lib/content/content-pieces-helpers";
 import { submitPieceForReview } from "@workspace/content-engine/support/social-queue-service";
 
 export async function POST(

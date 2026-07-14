@@ -83,3 +83,27 @@
 
 **Implications:** Social Hub adds Calendar, Compose, Analytics tabs; weekly `social-history-sync` and daily `social-metrics-sync` crons; Meta OAuth scopes extended for read (`pages_read_engagement`, `instagram_basic`); `bestTimeMode: analytics` reads synced engagement windows.
 
+## 2026-07-14 — Dual enforcement: count quotas + credit ledger
+
+**Decision:** Wire `reserveCredits` / `settleReservation` into all AI generation routes with **dual enforcement** on growth/scale platform-key calls: existing monthly count quotas **and** credit balance checks both must pass.
+
+**Alternatives considered:**
+- Credits-only — simpler long-term but removes overlap safety during rollout
+- MVP on 4 metered routes only — faster but leaves most AI surfaces unbilled
+- Two sequential `settleReservation` calls — risks double-settle; rejected for single transactional multi-line settle
+
+**Reason:** Renewal grants already land in `credit_ledger`; consumption must debit for billing accuracy. Dual enforce preserves familiar quota UX while credits become the durable meter. Starter keeps count quotas only (no monthly credit grants); BYOK on paid plans debits orchestration credits only.
+
+**Implications:** Shared `prepareAiBilling` helper in marketing-persona-app; tier pricing constants in `lib/billing/src/pricing.ts`; worker `contentGenerate` uses same flow; cached AI short-circuits skip billing.
+
+## 2026-07-14 — Single Starter plan with BYOK
+
+**Decision:** Ship one product plan — **Starter** — with platform-key monthly quotas and **BYOK** (bring your own API key) for unlimited generations. No Growth/Scale paid tiers or Stripe checkout in v1.
+
+**Alternatives considered:**
+- Keep Growth/Scale with credit ledger — deferred until paid billing is ready
+- Platform-key unlimited on Starter — rejected; quotas bound platform AI cost
+
+**Reason:** Simplifies onboarding and admin while the product matures; BYOK is the primary path for power users and aligns with existing org-level credential storage.
+
+**Implications:** `OFFERED_PLAN_IDS` is `["starter"]` only; quotas are stored in `plan_quota_config` and editable at Admin → Plans; code defaults apply when no row exists; BYOK skips all quota checks.

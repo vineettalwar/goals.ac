@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import {
   generateContentPiece,
+  cacheGet,
 } from "@workspace/content-engine/content-studio-generator";
 import {
   GenerateBody,
@@ -14,9 +15,10 @@ import {
   insertGeneratedContentPiece,
   loadBriefForProject,
   loadExistingPieceTitles,
-} from "@/lib/content-pieces-helpers";
-import { logger } from "@/lib/logger";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+} from "@/lib/content/content-pieces-helpers";
+import { logger } from "@/lib/utils/logger";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 
 const ALLOWED_STATUSES = ["draft", "ready", "published"] as const;
 
@@ -101,8 +103,31 @@ export async function POST(
     }
   }
 
+  if (!bypassCache) {
+    const aiCached = await cacheGet(cacheKeyStr);
+    if (aiCached) {
+      const inserted = await insertGeneratedContentPiece({
+        projectId,
+        briefId,
+        formatType,
+        result: aiCached,
+        cacheKey: cacheKeyStr,
+        plannedDate,
+      });
+      return NextResponse.json(inserted, { status: 201, headers: { "X-Cache": "HIT" } });
+    }
+  }
+
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "execution",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
-    const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
     const existingPieceTitles = await loadExistingPieceTitles(projectId);
     const result = await generateContentPiece(
       formatType,
@@ -124,8 +149,19 @@ export async function POST(
       plannedDate,
     });
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "content_generation",
+      usedByok: billingPrep.usedByok,
+      tier: "execution",
+      promptTokens: result.generationUsage?.promptTokens,
+      outputTokens: result.generationUsage?.outputTokens,
+      totalTokens: result.generationUsage?.totalTokens,
+    });
+
     return NextResponse.json(inserted, { status: 201 });
   } catch (err) {
+    await cancelAiBilling(billingPrep.ctx);
     logger.error({ err, projectId, formatType, targetKeyword }, "Content piece generation failed");
     const message =
       err instanceof Error && err.message

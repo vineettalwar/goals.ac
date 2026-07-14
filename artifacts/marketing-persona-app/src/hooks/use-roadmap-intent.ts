@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { readRoadmapIntent, type RoadmapIntent } from "@/lib/roadmap-intent";
+import { readRoadmapIntent, type RoadmapIntent } from "@/lib/projects/roadmap-intent";
 
 /** Reads sessionStorage roadmap intent after mount to avoid SSR hydration mismatches. */
 export function useRoadmapIntent(): RoadmapIntent | null {

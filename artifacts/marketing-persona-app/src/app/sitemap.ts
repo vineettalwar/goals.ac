@@ -2,9 +2,9 @@ import type { MetadataRoute } from "next";
 import { db } from "@workspace/db";
 import { roadmapsTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
-import { LEARN_POSTS } from "@/lib/learn-posts";
-import { HELP_ARTICLES } from "@/lib/help-articles";
-import { getSiteUrl } from "@/lib/site-url";
+import { LEARN_POSTS } from "@/lib/marketing/learn-posts";
+import { HELP_ARTICLES } from "@/lib/marketing/help-articles";
+import { getSiteUrl } from "@/lib/marketing/site-url";
 
 const STATIC_PATHS = [
   "/",

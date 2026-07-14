@@ -1,4 +1,4 @@
-export type AiProviderId = "gemini" | "bedrock" | "ollama";
+export type AiProviderId = "gemini" | "bedrock" | "ollama" | "anthropic";
 
 export interface BedrockCredentialOptions {
   accessKeyId?: string | null;
@@ -26,7 +26,9 @@ function env(key: string): string | undefined {
 }
 
 function normalizeProviderId(value: string | null | undefined): AiProviderId | null {
-  if (value === "gemini" || value === "bedrock" || value === "ollama") return value;
+  if (value === "gemini" || value === "bedrock" || value === "ollama" || value === "anthropic") {
+    return value;
+  }
   return null;
 }
 
@@ -53,6 +55,9 @@ export function resolveProviderId(options?: AiProviderOptions): AiProviderId {
 
   if (env("GEMINI_API_KEY") || env("AI_INTEGRATIONS_GEMINI_API_KEY")) {
     return "gemini";
+  }
+  if (env("ANTHROPIC_API_KEY")) {
+    return "anthropic";
   }
   if (isBedrockEnvConfigured()) {
     return "bedrock";

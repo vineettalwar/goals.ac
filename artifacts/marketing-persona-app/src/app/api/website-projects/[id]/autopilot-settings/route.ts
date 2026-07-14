@@ -3,8 +3,8 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import type { AutopilotSettings } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot-scheduler";
 import { z } from "zod";
 

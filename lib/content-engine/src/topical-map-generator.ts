@@ -24,6 +24,11 @@ export interface TopicalMapResult {
   quickWinKeywords: string[];   // low-difficulty, uncovered
   contentGaps: string[];        // high-value topics missing
   recommendedNextArticle: string;
+  generationUsage?: {
+    promptTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
 }
 
 export interface GenerateTopicalMapOptions {
@@ -94,5 +99,6 @@ Be specific to this company's niche. Realistic volume estimates. Focus on keywor
   });
 
   const raw = response.text ?? "";
-  return cleanAndParse<TopicalMapResult>(raw);
+  const parsed = cleanAndParse<Omit<TopicalMapResult, "generationUsage">>(raw);
+  return { ...parsed, generationUsage: response.usage };
 }

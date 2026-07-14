@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { getOrgAiSettingsForUser, hasOrgBedrockCredentials } from "@workspace/content-engine/support/org-ai-settings";
-import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/ai-providers-status";
+import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/platform/ai-providers-status";
 
 function toStatusInput(
   settings: Awaited<ReturnType<typeof getOrgAiSettingsForUser>>,

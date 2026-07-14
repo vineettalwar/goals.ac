@@ -3,14 +3,14 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import {
   addOrganizationMember,
   listOrganizationMembers,
   OrgMemberRoleSchema,
   requireSiteAdminAccess,
-} from "@/lib/org-access";
-import { logOrgAudit } from "@/lib/org-audit";
+} from "@/lib/org/org-access";
+import { logOrgAudit } from "@/lib/org/org-audit";
 
 function clientIp(req: Request): string | undefined {
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined;

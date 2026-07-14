@@ -3,11 +3,12 @@ import { db } from "@workspace/db";
 import { brandProfilesTable, websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
 import { cleanAndParse } from "@/lib/ai/utils";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 
 const Body = z.object({ projectId: z.number().int().positive() });
 
@@ -53,10 +54,18 @@ export async function POST(req: Request) {
   const industry = brand?.industry ?? "B2B";
   const audience = brand?.targetAudience ?? "";
 
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "planning",
+    quotaKind: "article",
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   let client: Awaited<ReturnType<typeof resolveAiClientForUser>>["client"];
   try {
     ({ client } = await resolveAiClientForUser(userId!));
   } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, "ai_unavailable");
     const msg = err instanceof Error ? err.message : String(err);
     if (
       msg.includes("not configured") ||
@@ -83,20 +92,33 @@ Website: ${project?.url ?? ""}
 Return JSON: { "threads": [{ "subreddit": "r/name", "title": "thread title", "url": "https://reddit.com/r/...", "intentScore": 1-100, "suggestedReply": "helpful 2-3 sentence reply draft" }] }
 Use plausible subreddit names and search-style thread titles. intentScore reflects buyer intent. Do not invent fake Reddit URLs with specific post IDs — use search URLs like https://www.reddit.com/r/subreddit/search/?q=keyword`;
 
-  const response = await client.generate({
-    prompt,
-    responseMimeType: "application/json",
-    maxOutputTokens: 4096,
-  });
-
-  const text = response.text ?? "";
-  let threads: RedditThread[] = [];
   try {
-    const data = cleanAndParse<{ threads: RedditThread[] }>(text);
-    threads = data.threads ?? [];
-  } catch {
-    return NextResponse.json({ error: "Failed to parse Reddit discovery results" }, { status: 500 });
-  }
+    const response = await client.generate({
+      prompt,
+      responseMimeType: "application/json",
+      maxOutputTokens: 4096,
+    });
 
-  return NextResponse.json({ threads });
+    const text = response.text ?? "";
+    let threads: RedditThread[] = [];
+    try {
+      const data = cleanAndParse<{ threads: RedditThread[] }>(text);
+      threads = data.threads ?? [];
+    } catch {
+      await cancelAiBilling(billingPrep.ctx, "parse_failed");
+      return NextResponse.json({ error: "Failed to parse Reddit discovery results" }, { status: 500 });
+    }
+
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "reddit_discovery",
+      usedByok: billingPrep.usedByok,
+      tier: "planning",
+    });
+
+    return NextResponse.json({ threads });
+  } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "generation_failed");
+    return NextResponse.json({ error: "Reddit discovery failed" }, { status: 500 });
+  }
 }

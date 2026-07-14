@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
-import { requireSiteAdmin } from "@/lib/require-site-admin";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
+import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
 import {
   insertArticleIdeas,
   parseCsvText,
@@ -10,7 +10,7 @@ import {
   mapCsvHeaders,
   validateCsvUpload,
 } from "@workspace/content-engine/article-ideas-import-service";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 
 export async function POST(
   req: Request,

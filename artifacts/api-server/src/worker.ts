@@ -1,4 +1,8 @@
 /**
+ * @deprecated Use `artifacts/worker` (`pnpm --filter @workspace/worker run dev`) as the
+ * canonical pg-boss worker. This duplicate entrypoint remains for legacy `--profile legacy`
+ * Docker setups only.
+ *
  * Standalone job-worker entrypoint (roadmap §2 backlog item 6, §7).
  *
  * Deliberately NOT imported by `src/index.ts` — the HTTP API and the job

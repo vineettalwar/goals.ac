@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 
 type LegalPageClientProps = {
   titleLine1: string;

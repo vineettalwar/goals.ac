@@ -8,8 +8,8 @@ import {
   companiesTable,
 } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import { z } from "zod";
 
 const Query = z.object({ projectId: z.coerce.number().int().positive() });

@@ -31,6 +31,8 @@ export const authConfig = {
         impersonatorRole?: string;
         impersonatorEmail?: string;
         impersonatorName?: string;
+        supportOrganizationId?: number | null;
+        supportOrganizationName?: string | null;
       };
 
       session.user = {
@@ -51,6 +53,12 @@ export const authConfig = {
           }
         : null;
       session.impersonatorRole = authToken.impersonatorRole ?? null;
+      session.supportOrganization = authToken.supportOrganizationId
+        ? {
+            id: authToken.supportOrganizationId,
+            name: authToken.supportOrganizationName ?? "",
+          }
+        : null;
 
       return session;
     },
@@ -65,5 +73,9 @@ declare module "next-auth" {
       adminName: string;
     } | null;
     impersonatorRole?: string | null;
+    supportOrganization?: {
+      id: number;
+      name: string;
+    } | null;
   }
 }

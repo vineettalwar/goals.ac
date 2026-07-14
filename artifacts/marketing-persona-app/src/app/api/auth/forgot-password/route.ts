@@ -4,8 +4,8 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
-import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
-import { buildPasswordResetEmail, sendEmail } from "@/lib/email";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { buildPasswordResetEmail, sendEmail } from "@/lib/utils/email";
 
 const schema = z.object({ email: z.string().email() });
 

@@ -2,9 +2,9 @@ import { NextResponse } from "next/server";
 import { db, geoAuditsTable } from "@workspace/db";
 import { auditUrl } from "@workspace/seo-tools/geoAuditor";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
-import { normalizeHttpUrl } from "@/lib/normalize-url";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
+import { normalizeHttpUrl } from "@/lib/utils/normalize-url";
 import { z } from "zod";
 
 const CreateBody = z.object({

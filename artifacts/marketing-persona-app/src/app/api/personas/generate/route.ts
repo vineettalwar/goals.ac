@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { companiesTable, marketingPersonasTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { generatePersonas } from "@/lib/ai/persona-generator";
-import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({ companyId: z.number() });
@@ -34,32 +35,53 @@ export async function POST(req: Request) {
   if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });
 
   const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "planning",
+    quotaKind: "article",
+    companyId: company.id,
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
 
-  const generated = await generatePersonas(
-    {
-      companyName: company.name,
-      websiteUrl: company.websiteUrl,
-      industry: company.industry,
-      description: company.description,
-      targetAudience: company.targetAudience,
-    },
-    { userApiKey, aiProviderOptions },
-  );
+  try {
+    const generated = await generatePersonas(
+      {
+        companyName: company.name,
+        websiteUrl: company.websiteUrl,
+        industry: company.industry,
+        description: company.description,
+        targetAudience: company.targetAudience,
+      },
+      { userApiKey, aiProviderOptions },
+    );
 
-  const rows = await db
-    .insert(marketingPersonasTable)
-    .values(
-      generated.map((p) => ({
-        companyId: company.id,
-        name: p.name,
-        ageRange: p.ageRange,
-        jobTitle: p.jobTitle,
-        painPoints: p.painPoints,
-        goals: p.goals,
-        preferredContent: p.preferredContent,
-      }))
-    )
-    .returning();
+    const rows = await db
+      .insert(marketingPersonasTable)
+      .values(
+        generated.map((p) => ({
+          companyId: company.id,
+          name: p.name,
+          ageRange: p.ageRange,
+          jobTitle: p.jobTitle,
+          painPoints: p.painPoints,
+          goals: p.goals,
+          preferredContent: p.preferredContent,
+        }))
+      )
+      .returning();
 
-  return NextResponse.json({ personas: rows }, { status: 201 });
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      companyId: company.id,
+      eventType: "persona_generation",
+      usedByok: billingPrep.usedByok,
+      tier: "planning",
+    });
+
+    return NextResponse.json({ personas: rows }, { status: 201 });
+  } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "generation_failed");
+    return NextResponse.json({ error: "Failed to generate personas" }, { status: 500 });
+  }
 }

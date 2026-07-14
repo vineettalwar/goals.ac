@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { seoArticlesTable } from "@workspace/db/schema";
 import type { ContentStyle } from "@workspace/db/schema";
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import { generateSeoArticleContent } from "@/lib/ai/seo-content-generator";
-import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
 
 const GenerateBody = z.object({
@@ -51,8 +52,16 @@ export async function POST(req: Request) {
     projectContentStyle = proj.contentStyle as ContentStyle | null;
   }
 
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "execution",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
-    const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
     const articleContent = await generateSeoArticleContent(
       brandName,
       websiteUrl,
@@ -86,8 +95,16 @@ export async function POST(req: Request) {
       })
       .returning();
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "seo_article_generation",
+      usedByok: billingPrep.usedByok,
+      tier: "execution",
+    });
+
     return NextResponse.json(inserted, { status: 201 });
   } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, "generation_failed");
     return NextResponse.json({ error: "Failed to generate SEO article. Please try again." }, { status: 503 });
   }
 }

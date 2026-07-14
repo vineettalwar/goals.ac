@@ -4,7 +4,7 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 
 const schema = z.object({
   token: z.string().min(1),

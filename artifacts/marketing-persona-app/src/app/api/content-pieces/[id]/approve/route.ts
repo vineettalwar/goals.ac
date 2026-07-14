@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { assertPieceOwner } from "@/lib/content-pieces-helpers";
-import { requireSiteAdminAccess } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { assertPieceOwner } from "@/lib/content/content-pieces-helpers";
+import { requireSiteAdminAccess } from "@/lib/org/org-access";
 import { approvePiece } from "@workspace/content-engine/support/social-queue-service";
 
 export async function POST(

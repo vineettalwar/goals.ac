@@ -8,13 +8,18 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Leaf, Plus, X } from "lucide-react";
-import { SUPPORTED_LANGUAGES } from "@/lib/supported-languages";
+import { SUPPORTED_LANGUAGES } from "@/lib/utils/supported-languages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StepIndicator } from "@/components/step-indicator";
-import { readRoadmapIntent } from "@/lib/roadmap-intent";
+import { readRoadmapIntent } from "@/lib/projects/roadmap-intent";
+
+const goalSchema = z.object({
+  objective: z.enum(["traffic", "leads", "sales", "authority"]),
+  targetMetric: z.string().min(5, "Describe what success looks like"),
+});
 
 const schema = z.object({
   name: z.string().min(1, "Company name is required"),
@@ -51,6 +56,8 @@ export default function OnboardingPage() {
   }, [router]);
 
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(0);
+  const [goalIntent, setGoalIntent] = useState({ objective: "traffic" as const, targetMetric: "" });
   const [competitors, setCompetitors] = useState<string[]>([""]);
   const [language, setLanguage] = useState("en");
 
@@ -99,11 +106,25 @@ export default function OnboardingPage() {
     });
 
     if (readRoadmapIntent()) {
-      await fetch("/api/website-projects", {
+      const projectRes = await fetch("/api/website-projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name: data.name, url: data.websiteUrl, contentStyle: { primaryLanguage: language } }),
-      }).catch(() => {});
+      }).catch(() => null);
+
+      if (projectRes?.ok) {
+        const { project } = (await projectRes.json()) as { project: { id: number } };
+        await fetch("/api/goals", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            projectId: project.id,
+            objective: goalIntent.objective,
+            targetMetric: goalIntent.targetMetric,
+            status: "active",
+          }),
+        }).catch(() => {});
+      }
     }
 
     router.push(`/onboarding/personas?companyId=${company.id}`);
@@ -120,13 +141,68 @@ export default function OnboardingPage() {
             </div>
             <span className="text-lg font-semibold">goals.ac</span>
           </div>
-          <StepIndicator steps={["Company", "Personas", "WordPress"]} current={0} />
-          <h1 className="mt-8 text-3xl font-bold">Tell us about your company</h1>
+          <StepIndicator steps={["Goal", "Company", "Personas", "WordPress"]} current={step} />
+          <h1 className="mt-8 text-3xl font-bold">
+            {step === 0 ? "What are you trying to achieve?" : "Tell us about your company"}
+          </h1>
           <p className="mt-2 text-muted-foreground">
-            We&apos;ll use this to generate marketing personas and write SEO articles tailored to your audience.
+            {step === 0
+              ? "Define your primary business outcome before we connect tools or generate content."
+              : "We'll use this to generate marketing personas and write SEO articles tailored to your audience."}
           </p>
         </div>
 
+        {step === 0 ? (
+          <div className="paper-card p-8 space-y-6">
+            <div className="space-y-1.5">
+              <Label htmlFor="objective">Primary objective</Label>
+              <select
+                id="objective"
+                className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"
+                value={goalIntent.objective}
+                onChange={(e) =>
+                  setGoalIntent((prev) => ({
+                    ...prev,
+                    objective: e.target.value as typeof goalIntent.objective,
+                  }))
+                }
+              >
+                {["traffic", "leads", "sales", "authority"].map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="targetMetric">Target metric</Label>
+              <Textarea
+                id="targetMetric"
+                placeholder="e.g. 10,000 organic visits/month or 200 qualified leads/quarter"
+                rows={3}
+                value={goalIntent.targetMetric}
+                onChange={(e) => setGoalIntent((prev) => ({ ...prev, targetMetric: e.target.value }))}
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                size="lg"
+                disabled={goalIntent.targetMetric.trim().length < 5}
+                onClick={() => {
+                  const parsed = goalSchema.safeParse(goalIntent);
+                  if (!parsed.success) {
+                    toast.error(parsed.error.errors[0]?.message ?? "Invalid goal");
+                    return;
+                  }
+                  setStep(1);
+                }}
+              >
+                Continue →
+              </Button>
+            </div>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="paper-card p-8 space-y-6">
             <div className="grid grid-cols-2 gap-4">
@@ -230,12 +306,16 @@ export default function OnboardingPage() {
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex justify-between">
+            <Button type="button" variant="outline" size="lg" onClick={() => setStep(0)}>
+              ← Back
+            </Button>
             <Button type="submit" disabled={loading} size="lg">
               {loading ? "Saving..." : "Continue →"}
             </Button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );

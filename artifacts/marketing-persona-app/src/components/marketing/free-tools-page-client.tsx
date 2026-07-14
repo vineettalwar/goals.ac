@@ -9,7 +9,8 @@ import { MarketingSection } from "@/components/marketing/marketing-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 const TOOLS = [
   { id: "geo-audit", icon: Search, title: "GEO Audit", desc: "Full technical scan for AI search visibility.", href: "/geo-audit", live: true },
@@ -82,9 +83,9 @@ export function FreeToolsPageClient() {
           badge="Free tools"
           titleLine1="SEO & GEO"
           titleLine2="free tools"
-          description="No account required. Audit, check, and preview, then upgrade to the full platform."
+          description="No account required. Audit, check, and preview — then contact us for a full engagement."
           backgroundImage={HERO_IMAGES.geoAudit.hero}
-          ctas={[{ label: "Start free", href: "/signup", variant: "primary" }]}
+          ctas={[{ label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF, variant: "primary" }]}
         />
       }
     >

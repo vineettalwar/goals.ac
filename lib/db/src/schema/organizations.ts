@@ -9,6 +9,12 @@ export const organizationsTable = pgTable("organizations", {
   name: text("name").notNull(),
   /** starter | growth | scale — billing tier for site limits and quotas */
   plan: text("plan").notNull().default("starter"),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  /** Stripe subscription status: active, past_due, canceled, trialing, etc. */
+  subscriptionStatus: text("subscription_status"),
+  stripePriceId: text("stripe_price_id"),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
   ownerId: integer("owner_id")
     .notNull()
     .references(() => usersTable.id, { onDelete: "cascade" }),
@@ -33,6 +39,7 @@ export const organizationsTable = pgTable("organizations", {
 }, (table) => [
   index("organizations_owner_id_idx").on(table.ownerId),
   index("organizations_company_id_idx").on(table.companyId),
+  index("organizations_stripe_customer_id_idx").on(table.stripeCustomerId),
 ]);
 
 export type OrgSecuritySettings = {

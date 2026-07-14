@@ -21,6 +21,7 @@
     "./handlers/articleIdeaSourceSync": "./src/handlers/articleIdeaSourceSync.ts"
   },
   "dependencies": {
+    "@workspace/billing": "workspace:*",
     "@workspace/connectors": "workspace:*",
     "@workspace/content-engine": "workspace:*",
     "@workspace/db": "workspace:*",

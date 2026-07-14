@@ -2,17 +2,18 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import type { ContentStyle } from "@workspace/db/schema";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import {
   assertCanCreateProject,
   ensureOrganizationForUser,
   listAccessibleProjects,
   resolveOrganizationIdForUser,
-} from "@/lib/org-access";
+} from "@/lib/org/org-access";
+import { getSupportOrganizationId } from "@/lib/org/project-scope";
 import { runBrandScrapeWithDiscovery } from "@workspace/content-engine/support/brand-scrape-orchestrator";
-import { logger } from "@/lib/logger";
-import { findDuplicateProjectByUrl } from "@/lib/project-url";
-import { logOrgAudit } from "@/lib/org-audit";
+import { logger } from "@/lib/utils/logger";
+import { findDuplicateProjectByUrl } from "@/lib/projects/project-url";
+import { logOrgAudit } from "@/lib/org/org-audit";
 import { z } from "zod";
 
 const CreateProjectBody = z.object({
@@ -25,11 +26,11 @@ function clientIp(req: Request): string | undefined {
 }
 
 export async function GET() {
-  const { userId, error } = await requireAuth();
+  const { session, userId, error } = await requireAuth();
   if (error) return error;
 
   try {
-    const projects = await listAccessibleProjects(userId!);
+    const projects = await listAccessibleProjects(userId!, getSupportOrganizationId(session));
     return NextResponse.json(
       projects.map((project) => ({
         id: project.id,
@@ -71,7 +72,11 @@ export async function POST(req: Request) {
     const quotaCheck = await assertCanCreateProject(userId!, organizationId);
     if (!quotaCheck.ok) {
       return NextResponse.json(
-        { error: quotaCheck.code ?? quotaCheck.error, message: quotaCheck.error },
+        {
+          error: quotaCheck.code ?? "quota_exhausted",
+          message: quotaCheck.error,
+          plan: quotaCheck.plan,
+        },
         { status: quotaCheck.status },
       );
     }

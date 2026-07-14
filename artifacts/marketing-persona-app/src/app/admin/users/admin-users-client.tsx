@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useAdminImpersonation } from "@/hooks/use-admin-impersonation";
 
 interface UserRow {
   id: number;
@@ -42,13 +41,11 @@ const STATUS_LABELS: Record<UserRow["status"], string> = {
 };
 
 export function AdminUsersClient() {
-  const router = useRouter();
-  const { update } = useSession();
+  const { impersonateUser, isImpersonating } = useAdminImpersonation();
   const [users, setUsers] = useState<UserRow[]>([]);
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [impersonatingId, setImpersonatingId] = useState<number | null>(null);
 
   const [search, setSearch] = useState("");
   const [organizationId, setOrganizationId] = useState("all");
@@ -76,7 +73,7 @@ export function AdminUsersClient() {
   }, [search, organizationId, platformRole]);
 
   useEffect(() => {
-    void fetch("/api/admin/organizations")
+    void fetch("/api/admin/organizations?minimal=true")
       .then((r) => r.json())
       .then((data: { organizations: OrganizationOption[] }) => setOrganizations(data.organizations))
       .catch(() => undefined);
@@ -88,33 +85,6 @@ export function AdminUsersClient() {
     }, 250);
     return () => clearTimeout(timer);
   }, [loadUsers]);
-
-  async function viewAsUser(userId: number) {
-    setImpersonatingId(userId);
-    try {
-      const res = await fetch("/api/admin/impersonate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        toast.error(data.error ?? "Failed to impersonate user");
-        return;
-      }
-
-      await update({
-        impersonateUserId: data.impersonateUserId,
-        impersonator: data.impersonator,
-      });
-      router.push("/dashboard");
-      router.refresh();
-    } catch {
-      toast.error("Failed to impersonate user");
-    } finally {
-      setImpersonatingId(null);
-    }
-  }
 
   return (
     <div className="space-y-4">
@@ -216,10 +186,10 @@ export function AdminUsersClient() {
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={impersonatingId === user.id}
-                          onClick={() => void viewAsUser(user.id)}
+                          disabled={isImpersonating(user.id)}
+                          onClick={() => void impersonateUser(user.id)}
                         >
-                          {impersonatingId === user.id ? "Starting…" : "View as user"}
+                          {isImpersonating(user.id) ? "Starting…" : "View as user"}
                         </Button>
                       ) : (
                         <span className="text-xs text-muted-foreground">—</span>

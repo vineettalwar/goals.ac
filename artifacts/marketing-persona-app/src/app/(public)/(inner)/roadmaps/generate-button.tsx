@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { buildAuthRedirectParams, saveRoadmapIntent } from "@/lib/roadmap-intent";
+import { saveRoadmapIntent } from "@/lib/projects/roadmap-intent";
+import { CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 export function GenerateRoadmapButton() {
   const router = useRouter();
@@ -32,7 +33,8 @@ export function GenerateRoadmapButton() {
         stage: form.stage,
         referrer: "roadmaps-catalog",
       });
-      router.push(`/signup?${buildAuthRedirectParams("roadmaps-catalog").toString()}`);
+      toast.info("Custom roadmaps are available to clients. Contact us to get started.");
+      router.push(CONTACT_HREF);
       return;
     }
     if (!res.ok) {

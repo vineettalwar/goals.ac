@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { PricingPageDynamic } from "@/components/marketing/marketing-client-dynamic";
 
 export const metadata: Metadata = {
-  title: "Pricing",
-  description: "Pricing TBD. Explore goals.ac tiers for AI content, GEO audits, and autopilot publishing. Contact us for early access.",
+  title: "Engagements",
+  description: "Custom SEO, AEO, and GEO consulting for B2B teams. Contact us to discuss scope.",
   openGraph: {
-    title: "Pricing | goals.ac",
-    description: "Pricing TBD. Explore goals.ac tiers for AI content, GEO audits, and autopilot publishing.",
+    title: "Engagements | goals.ac",
+    description: "Custom SEO, AEO, and GEO consulting for B2B teams. Contact us to discuss scope.",
   },
 };
 

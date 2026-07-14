@@ -17,5 +17,9 @@
     "psr-4": {
       "GoalsAc\\Typo3\\": "Classes/"
     }
+  },
+  "scripts": {
+    "lint": "phpcs",
+    "lint:fix": "phpcbf"
   }
 }

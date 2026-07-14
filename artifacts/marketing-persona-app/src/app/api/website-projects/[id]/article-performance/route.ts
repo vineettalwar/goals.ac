@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import { getArticlePerformance } from "@workspace/content-engine/article-performance";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

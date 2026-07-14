@@ -12,8 +12,8 @@ import { Zap, FileText, Users, FolderOpen, ArrowRight, Plus, Eye } from "lucide-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot-scheduler";
-import { loadProjectVisibilitySummary } from "@/lib/project-visibility-summary";
-import { getAccessibleProject, requireProjectAccess } from "@/lib/org-access";
+import { loadProjectVisibilitySummary } from "@/lib/projects/project-visibility-summary";
+import { getAccessibleProject, requireProjectAccess } from "@/lib/org/org-access";
 
 const STATUS_BADGE: Record<string, React.ComponentProps<typeof Badge>["variant"]> = {
   ready: "success",
@@ -281,10 +281,10 @@ export async function DashboardDrafts({
   if (drafts.length === 0) return null;
 
   return (
-    <div className="mb-8 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-900/10 p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <FileText className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-        <span className="font-semibold text-sm text-amber-800 dark:text-amber-300">
+    <div className="mb-8 paper-card border-l-4 border-l-(--accent-warm) p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <FileText className="h-4 w-4 text-(--accent-warm)" />
+        <span className="text-sm font-semibold text-foreground">
           {drafts.length} draft{drafts.length !== 1 ? "s" : ""} need your review
         </span>
       </div>
@@ -293,18 +293,18 @@ export async function DashboardDrafts({
           <Link
             key={draft.id}
             href={`/content-piece/${draft.id}`}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-800/20 transition-colors group"
+            className="group flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-secondary/60"
           >
-            <FileText className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400 shrink-0" />
-            <span className="text-sm font-medium text-amber-900 dark:text-amber-200 truncate flex-1">
+            <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="flex-1 truncate text-sm font-medium text-foreground">
               {draft.title}
             </span>
             {draft.projectName && (
-              <span className="text-xs text-amber-600 dark:text-amber-400 shrink-0">
+              <span className="shrink-0 text-xs text-muted-foreground">
                 {draft.projectName}
               </span>
             )}
-            <ArrowRight className="h-3.5 w-3.5 text-amber-400 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
+            <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
           </Link>
         ))}
       </div>

@@ -4,7 +4,7 @@ import { MarketingPageShell } from "@/components/marketing/marketing-page-shell"
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 
 const VALUES = [
   {

@@ -1,7 +1,7 @@
 import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import {
   generateContentPiece,
   cacheGet,
@@ -16,9 +16,21 @@ import {
   insertGeneratedContentPiece,
   loadBriefForProject,
   loadExistingPieceTitles,
-} from "@/lib/content-pieces-helpers";
-import { logger } from "@/lib/logger";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+} from "@/lib/content/content-pieces-helpers";
+import {
+  billingDeniedResponse,
+  cancelAiBilling,
+  completeAiBilling,
+  prepareAiBilling,
+} from "@/lib/billing/ai-billing";
+import { logger } from "@/lib/utils/logger";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+
+const sseHeaders = {
+  "Content-Type": "text/event-stream",
+  "Cache-Control": "no-cache",
+  Connection: "keep-alive",
+};
 
 export async function POST(
   req: Request,
@@ -60,107 +72,157 @@ export async function POST(
     if (!brief) {
       return new Response(JSON.stringify({ error: "Brief not found" }), { status: 404 });
     }
+    if (brief.status !== "approved" && brief.status !== "generating" && brief.status !== "done") {
+      return new Response(
+        JSON.stringify({
+          error: "brief_not_approved",
+          message: "Approve this brief in Goals & Briefs before generating content.",
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
   }
 
+  const bypassCache = req.headers.get("x-bypass-cache") === "true";
+  const cacheKeyStr = buildCacheKey(formatType, targetKeyword, ctx.brand, angleHint);
   const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (event: string, data: unknown) => {
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-      };
 
-      try {
-        const bypassCache = req.headers.get("x-bypass-cache") === "true";
-        const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-        const cacheKeyStr = buildCacheKey(formatType, targetKeyword, ctx.brand, angleHint);
-        const existingPieceTitles = await loadExistingPieceTitles(projectId);
-        const generationContext = { existingPieceTitles };
-
-        if (!bypassCache) {
-          const [existing] = await db
-            .select()
-            .from(contentPiecesTable)
-            .where(and(eq(contentPiecesTable.websiteProjectId, projectId), eq(contentPiecesTable.cacheKey, cacheKeyStr)))
-            .limit(1);
-          if (existing) {
-            send("cached", existing);
+  if (!bypassCache) {
+    const [existing] = await db
+      .select()
+      .from(contentPiecesTable)
+      .where(and(eq(contentPiecesTable.websiteProjectId, projectId), eq(contentPiecesTable.cacheKey, cacheKeyStr)))
+      .limit(1);
+    if (existing) {
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode(`event: cached\ndata: ${JSON.stringify(existing)}\n\n`));
             controller.close();
-            return;
-          }
+          },
+        }),
+        { headers: sseHeaders },
+      );
+    }
 
-          const aiCached = await cacheGet(cacheKeyStr);
-          if (aiCached) {
-            send("chunk", { text: aiCached.body_markdown });
-            const inserted = await insertGeneratedContentPiece({
-              projectId,
-              briefId,
-              formatType,
-              result: aiCached,
-              cacheKey: cacheKeyStr,
-              plannedDate,
-            });
-            send("done", inserted);
-            controller.close();
-            return;
-          }
-        }
+    const aiCached = await cacheGet(cacheKeyStr);
+    if (aiCached) {
+      return new Response(
+        new ReadableStream({
+          async start(controller) {
+            const send = (event: string, data: unknown) => {
+              controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+            };
+            try {
+              send("chunk", { text: aiCached.body_markdown });
+              const inserted = await insertGeneratedContentPiece({
+                projectId,
+                briefId,
+                formatType,
+                result: aiCached,
+                cacheKey: cacheKeyStr,
+                plannedDate,
+              });
+              send("done", inserted);
+            } catch (err) {
+              logger.error({ err, projectId, formatType, targetKeyword }, "Content piece generation failed");
+              const message =
+                err instanceof Error && err.message
+                  ? err.message
+                  : "Generation failed. Please try again.";
+              send("error", { error: message });
+            } finally {
+              controller.close();
+            }
+          },
+        }),
+        { headers: sseHeaders },
+      );
+    }
+  }
 
-        let result;
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "execution",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingDeniedResponse(billingPrep);
+
+  const existingPieceTitles = await loadExistingPieceTitles(projectId);
+  const generationContext = { existingPieceTitles };
+
+  return new Response(
+    new ReadableStream({
+      async start(controller) {
+        const send = (event: string, data: unknown) => {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        };
+
         try {
-          result = await generateContentPieceStream(
+          let result;
+          try {
+            result = await generateContentPieceStream(
+              formatType,
+              ctx.brand,
+              targetKeyword,
+              (chunk) => send("chunk", { text: chunk }),
+              angleHint,
+              userApiKey,
+              aiProviderOptions,
+              generationContext,
+            );
+          } catch (streamErr) {
+            logger.warn({ err: streamErr, projectId, formatType }, "Stream generation failed, falling back");
+            result = await generateContentPiece(
+              formatType,
+              ctx.brand,
+              targetKeyword,
+              angleHint,
+              true,
+              userApiKey,
+              aiProviderOptions,
+              generationContext,
+            );
+          }
+
+          await cacheSet(cacheKeyStr, result);
+
+          const inserted = await insertGeneratedContentPiece({
+            projectId,
+            briefId,
             formatType,
-            ctx.brand,
-            targetKeyword,
-            (chunk) => send("chunk", { text: chunk }),
-            angleHint,
-            userApiKey,
-            aiProviderOptions,
-            generationContext,
-          );
-        } catch (streamErr) {
-          logger.warn({ err: streamErr, projectId, formatType }, "Stream generation failed, falling back");
-          result = await generateContentPiece(
-            formatType,
-            ctx.brand,
-            targetKeyword,
-            angleHint,
-            true,
-            userApiKey,
-            aiProviderOptions,
-            generationContext,
-          );
+            result,
+            cacheKey: cacheKeyStr,
+            plannedDate,
+          });
+
+          await completeAiBilling(billingPrep.ctx, {
+            userId: userId!,
+            eventType: "content_generation",
+            usedByok: billingPrep.usedByok,
+            tier: "execution",
+            companyId: projectId,
+            promptTokens: result.generationUsage?.promptTokens,
+            outputTokens: result.generationUsage?.outputTokens,
+            totalTokens: result.generationUsage?.totalTokens,
+          });
+
+          send("done", inserted);
+        } catch (err) {
+          await cancelAiBilling(billingPrep.ctx);
+          logger.error({ err, projectId, formatType, targetKeyword }, "Content piece generation failed");
+          const message =
+            err instanceof Error && err.message
+              ? err.message
+              : "Generation failed. Please try again.";
+          send("error", { error: message });
+        } finally {
+          controller.close();
         }
-
-        await cacheSet(cacheKeyStr, result);
-
-        const inserted = await insertGeneratedContentPiece({
-          projectId,
-          briefId,
-          formatType,
-          result,
-          cacheKey: cacheKeyStr,
-          plannedDate,
-        });
-
-        send("done", inserted);
-        controller.close();
-      } catch (err) {
-        logger.error({ err, projectId, formatType, targetKeyword }, "Content piece generation failed");
-        const message =
-          err instanceof Error && err.message
-            ? err.message
-            : "Generation failed. Please try again.";
-        send("error", { error: message });
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      Connection: "keep-alive",
-    },
-  });
+      },
+    }),
+    { headers: sseHeaders },
+  );
 }

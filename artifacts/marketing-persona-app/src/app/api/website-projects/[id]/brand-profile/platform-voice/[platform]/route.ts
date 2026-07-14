@@ -2,8 +2,8 @@ import { db } from "@workspace/db";
 import { brandProfilesTable } from "@workspace/db/schema";
 import type { PlatformVoiceChannel } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import { z } from "zod";
 import {
   ensurePlatformVoice,

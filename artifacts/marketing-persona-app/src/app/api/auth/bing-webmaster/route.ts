@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { startBingWebmasterOAuth } from "@/lib/search-property-oauth";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { startBingWebmasterOAuth } from "@/lib/integrations/search-property-oauth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    return startBingWebmasterOAuth(projectId, userId!);
+    return await startBingWebmasterOAuth(projectId, userId!);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Bing Webmaster OAuth failed" },

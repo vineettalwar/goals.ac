@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { db, trackedKeywordsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 
 export async function DELETE(
   _req: Request,

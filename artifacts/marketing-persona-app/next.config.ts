@@ -60,7 +60,7 @@ const nextConfig: NextConfig = {
       "@workspace/jobs/queues": "lib/jobs/src/queues.ts",
     },
   },
-  transpilePackages: ["@workspace/db", "@workspace/integrations-gemini-ai", "@workspace/security", "@workspace/ai-providers", "@workspace/connectors", "@workspace/content-engine", "@workspace/jobs", "@workspace/media", "@workspace/seo-tools", "@workspace/serp-provider"],
+  transpilePackages: ["@workspace/db", "@workspace/billing", "@workspace/integrations-gemini-ai", "@workspace/security", "@workspace/ai-providers", "@workspace/connectors", "@workspace/content-engine", "@workspace/jobs", "@workspace/media", "@workspace/seo-tools", "@workspace/serp-provider"],
   async redirects() {
     return [
       { source: "/agent", destination: "/autopilot", permanent: true },

@@ -5,9 +5,9 @@ import { ArrowLeft, ArrowRight, BookOpen, Server, Share2 } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
 import { HelpArticleBody } from "@/components/marketing/help-article-body";
-import type { HelpArticle, HelpCategory } from "@/lib/help-articles";
-import { HELP_ARTICLES } from "@/lib/help-articles";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import type { HelpArticle, HelpCategory } from "@/lib/marketing/help-articles";
+import { HELP_ARTICLES } from "@/lib/marketing/help-articles";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 
 const CATEGORY_ICONS: Record<HelpCategory, typeof BookOpen> = {
   "Getting started": BookOpen,

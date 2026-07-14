@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { getUsageSummaryForUser } from "@/lib/usage";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getUsageSummaryForUser } from "@/lib/billing/usage";
 
 export async function GET() {
   const { userId, error } = await requireAuth();

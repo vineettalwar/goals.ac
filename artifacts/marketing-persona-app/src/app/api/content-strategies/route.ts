@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentStrategiesTable, usersTable } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();

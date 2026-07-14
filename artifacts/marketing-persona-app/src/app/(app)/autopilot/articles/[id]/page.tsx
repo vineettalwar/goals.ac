@@ -2,14 +2,15 @@ import { getSession } from "@/auth";
 import { db } from "@workspace/db";
 import { scheduledArticlesTable, companiesTable, wordpressConnectionsTable, brandProfilesTable, websiteProjectsTable, type ContentStyle } from "@workspace/db/schema";
 import { eq, and, inArray } from "drizzle-orm";
-import { listAccessibleProjectIds } from "@/lib/org-access";
+import { listAccessibleProjectIds } from "@/lib/org/org-access";
+import { getSupportOrganizationId } from "@/lib/org/project-scope";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { ArticleActions } from "./article-actions";
 import { ArticleQualityPanel } from "@/components/article-quality-panel";
 import { BrandTailoringPanel } from "@/components/brand-tailoring-panel";
-import { languageLabel } from "@/lib/supported-languages";
+import { languageLabel } from "@/lib/utils/supported-languages";
 import { ArrowLeft, ExternalLink, Clock, Target, BookOpen, Link2, Wallet } from "lucide-react";
 
 interface ArticleMetadata {
@@ -42,6 +43,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   const session = await getSession();
   if (!session) return null;
   const userId = parseInt(session.user.id, 10);
+  const companyId = session.user.companyId;
 
   const rows = await db
     .select({
@@ -52,7 +54,14 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
     .from(scheduledArticlesTable)
     .innerJoin(companiesTable, eq(companiesTable.id, scheduledArticlesTable.companyId))
     .leftJoin(wordpressConnectionsTable, eq(wordpressConnectionsTable.companyId, companiesTable.id))
-    .where(and(eq(scheduledArticlesTable.id, parseInt(id, 10)), eq(companiesTable.userId, userId)))
+    .where(
+      and(
+        eq(scheduledArticlesTable.id, parseInt(id, 10)),
+        companyId != null
+          ? eq(scheduledArticlesTable.companyId, companyId)
+          : eq(companiesTable.userId, userId),
+      ),
+    )
     .limit(1);
 
   const row = rows[0];
@@ -61,7 +70,10 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
   const { article, wp } = row;
   const meta = (article.articleMetadata ?? {}) as ArticleMetadata;
 
-  const accessibleProjectIds = await listAccessibleProjectIds(userId);
+  const accessibleProjectIds = await listAccessibleProjectIds(
+    userId,
+    getSupportOrganizationId(session),
+  );
   const brandRows =
     accessibleProjectIds.length > 0
       ? await db

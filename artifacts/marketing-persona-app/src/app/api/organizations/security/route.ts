@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { OrgSecuritySettings } from "@workspace/db/schema";
-import { requireSiteAdminAccess, updateOrgSecuritySettings } from "@/lib/org-access";
-import { requireAuth } from "@/lib/require-auth";
-import { logOrgAudit } from "@/lib/org-audit";
+import { requireSiteAdminAccess, updateOrgSecuritySettings } from "@/lib/org/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { logOrgAudit } from "@/lib/org/org-audit";
 
 const securitySchema = z.object({
   requireMfa: z.boolean().optional(),

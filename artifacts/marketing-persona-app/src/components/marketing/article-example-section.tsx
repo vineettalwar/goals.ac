@@ -5,6 +5,7 @@ import { useRef } from "react";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
 import { useMarketingScrollReveal } from "@/hooks/use-marketing-scroll";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 const DEMO_SCORE = 92;
 const VOICE_TAGS = ["evidence-based", "founder-friendly", "action-oriented"];
@@ -70,10 +71,10 @@ export function ArticleExampleSection() {
                 <li>1,847 words</li>
               </ul>
               <Link
-                href="/signup"
+                href={CONTACT_HREF}
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-primary hover:underline"
               >
-                Generate yours <ArrowRight className="h-4 w-4" />
+                {CONTACT_CTA_PRIMARY} <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </div>

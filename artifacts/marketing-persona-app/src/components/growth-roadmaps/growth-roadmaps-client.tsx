@@ -12,7 +12,7 @@ import dynamic from "next/dynamic";
 import { useActiveProject } from "@/context/active-project";
 import { useProjectContent, useRoadmapsCatalog, useWebsiteProject } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
-import { clearRoadmapIntent, readRoadmapIntent, type RoadmapIntent } from "@/lib/roadmap-intent";
+import { clearRoadmapIntent, readRoadmapIntent, type RoadmapIntent } from "@/lib/projects/roadmap-intent";
 
 const RoadmapGeneratorApp = dynamic(
   () => import("./roadmap-generator-app").then((m) => m.RoadmapGeneratorApp),

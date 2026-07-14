@@ -8,8 +8,8 @@ import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { authConfig } from "@/auth.config";
-import { getCompanyIdForUser } from "@/lib/user-company";
-import { getOrgMembership, type OrgMemberRole } from "@/lib/org-access";
+import { getCompanyIdForUser } from "@/lib/org/user-company";
+import { getOrgMembership, type OrgMemberRole } from "@/lib/org/org-access";
 
 type AuthToken = {
   id?: string;
@@ -19,10 +19,13 @@ type AuthToken = {
   companyId?: number | null;
   organizationId?: number | null;
   orgRole?: OrgMemberRole | null;
+  mfaVerified?: boolean;
   impersonatorId?: string;
   impersonatorRole?: string;
   impersonatorEmail?: string;
   impersonatorName?: string;
+  supportOrganizationId?: number | null;
+  supportOrganizationName?: string | null;
 };
 
 declare module "next-auth" {
@@ -37,12 +40,17 @@ declare module "next-auth" {
       organizationId: number | null;
       orgRole: OrgMemberRole | null;
     };
+    mfaVerified?: boolean;
     impersonation?: {
       adminId: string;
       adminEmail: string;
       adminName: string;
     } | null;
     impersonatorRole?: string | null;
+    supportOrganization?: {
+      id: number;
+      name: string;
+    } | null;
   }
   interface User {
     role?: string;
@@ -61,6 +69,7 @@ async function applyUserContextToToken(authToken: AuthToken, userId: number) {
       email: usersTable.email,
       name: usersTable.name,
       role: usersTable.role,
+      mfaEnabled: usersTable.mfaEnabled,
     })
     .from(usersTable)
     .where(eq(usersTable.id, userId))
@@ -76,6 +85,7 @@ async function applyUserContextToToken(authToken: AuthToken, userId: number) {
   const membership = await getOrgMembership(user.id);
   authToken.organizationId = membership?.organizationId ?? null;
   authToken.orgRole = membership?.orgRole ?? null;
+  authToken.mfaVerified = !user.mfaEnabled;
 }
 
 const nextAuth = NextAuth({
@@ -120,6 +130,16 @@ const nextAuth = NextAuth({
       : []),
   ],
   callbacks: {
+    async signIn({ account }) {
+      if (account?.provider === "google") {
+        const { getPlatformSettings } = await import("@/lib/platform/platform-settings");
+        const { googleIntegrationsAvailable } = await import("@/lib/platform/platform-features");
+        if (!googleIntegrationsAvailable(await getPlatformSettings())) {
+          return false;
+        }
+      }
+      return true;
+    },
     async jwt({ token, user, account, trigger, session }) {
       const authToken = token as typeof token & AuthToken;
 
@@ -128,6 +148,15 @@ const nextAuth = NextAuth({
         authToken.role = user.role ?? "user";
         authToken.email = user.email ?? undefined;
         authToken.name = user.name ?? undefined;
+        authToken.picture = user.image ?? undefined;
+
+        const numericUserId = parseInt(String(user.id), 10);
+        const [dbUser] = await db
+          .select({ mfaEnabled: usersTable.mfaEnabled })
+          .from(usersTable)
+          .where(eq(usersTable.id, numericUserId))
+          .limit(1);
+        authToken.mfaVerified = !dbUser?.mfaEnabled;
       }
 
       if (trigger === "update") {
@@ -135,10 +164,31 @@ const nextAuth = NextAuth({
           companyId?: number | null;
           organizationId?: number | null;
           orgRole?: OrgMemberRole | null;
+          mfaVerified?: boolean;
           impersonateUserId?: string;
           impersonator?: { id: string; email: string; name: string; role: string };
           stopImpersonation?: boolean;
+          supportOrganizationId?: number | null;
+          supportOrganizationName?: string | null;
+          stopSupportOrganization?: boolean;
+          name?: string;
+          image?: string | null;
         } | undefined;
+
+        if (update?.name !== undefined) {
+          authToken.name = update.name;
+        }
+        if (update?.image !== undefined) {
+          authToken.picture = update.image ?? undefined;
+        }
+
+        if (update?.stopSupportOrganization) {
+          delete authToken.supportOrganizationId;
+          delete authToken.supportOrganizationName;
+          const adminId = parseInt(String(authToken.id), 10);
+          await applyUserContextToToken(authToken, adminId);
+          return authToken;
+        }
 
         if (update?.stopImpersonation && authToken.impersonatorId) {
           const adminId = parseInt(authToken.impersonatorId, 10);
@@ -150,9 +200,28 @@ const nextAuth = NextAuth({
           return authToken;
         }
 
+        if (update?.supportOrganizationId !== undefined) {
+          delete authToken.impersonatorId;
+          delete authToken.impersonatorRole;
+          delete authToken.impersonatorEmail;
+          delete authToken.impersonatorName;
+
+          authToken.supportOrganizationId = update.supportOrganizationId;
+          authToken.supportOrganizationName = update.supportOrganizationName ?? null;
+          authToken.organizationId = update.supportOrganizationId;
+          authToken.orgRole = "owner";
+          if (update.companyId !== undefined) {
+            authToken.companyId = update.companyId;
+          }
+          return authToken;
+        }
+
         if (update?.impersonateUserId) {
           const targetId = parseInt(update.impersonateUserId, 10);
           const impersonator = update.impersonator;
+
+          delete authToken.supportOrganizationId;
+          delete authToken.supportOrganizationName;
 
           if (!authToken.impersonatorId) {
             authToken.impersonatorId = impersonator?.id ?? authToken.id;
@@ -173,6 +242,9 @@ const nextAuth = NextAuth({
         }
         if (update?.orgRole !== undefined) {
           authToken.orgRole = update.orgRole;
+        }
+        if (update?.mfaVerified === true) {
+          authToken.mfaVerified = true;
         }
       } else if (user || authToken.companyId === undefined || authToken.organizationId === undefined) {
         const userId = user?.id ?? authToken.id;
@@ -207,10 +279,12 @@ const nextAuth = NextAuth({
       session.user.id = token.id as string;
       session.user.email = (authToken.email as string) ?? session.user.email;
       session.user.name = (authToken.name as string) ?? session.user.name;
+      session.user.image = (authToken.picture as string | undefined) ?? session.user.image;
       session.user.role = token.role as string;
       session.user.companyId = authToken.companyId ?? null;
       session.user.organizationId = authToken.organizationId ?? null;
       session.user.orgRole = authToken.orgRole ?? null;
+      session.mfaVerified = authToken.mfaVerified ?? true;
       session.impersonation = authToken.impersonatorId
         ? {
             adminId: authToken.impersonatorId,
@@ -219,6 +293,12 @@ const nextAuth = NextAuth({
           }
         : null;
       session.impersonatorRole = authToken.impersonatorRole ?? null;
+      session.supportOrganization = authToken.supportOrganizationId
+        ? {
+            id: authToken.supportOrganizationId,
+            name: authToken.supportOrganizationName ?? "",
+          }
+        : null;
       return session;
     },
   },

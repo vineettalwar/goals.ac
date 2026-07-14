@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import {
   getBrandVoiceSkill,
   regenerateBrandVoiceSkill,
@@ -82,7 +83,27 @@ export async function POST(
     return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  const regenerated = await regenerateBrandVoiceSkill(projectId);
-  const skill = await getBrandVoiceSkill(projectId);
-  return NextResponse.json({ ...skill, regenerated: Boolean(regenerated) });
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "planning",
+    quotaKind: "article",
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
+  try {
+    const regenerated = await regenerateBrandVoiceSkill(projectId);
+    const skill = await getBrandVoiceSkill(projectId);
+
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "brand_voice_skill",
+      usedByok: billingPrep.usedByok,
+      tier: "planning",
+    });
+
+    return NextResponse.json({ ...skill, regenerated: Boolean(regenerated) });
+  } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "generation_failed");
+    return NextResponse.json({ error: "Failed to regenerate brand voice skill" }, { status: 500 });
+  }
 }

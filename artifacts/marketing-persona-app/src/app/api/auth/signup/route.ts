@@ -4,8 +4,10 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
-import { acceptOrgInvite } from "@/lib/org-access";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { acceptOrgInvite } from "@/lib/org/org-access";
+import { getPlatformSettings } from "@/lib/platform/platform-settings";
+import { publicSignupsAvailable } from "@/lib/platform/platform-features";
 
 const signupSchema = z.object({
   name: z.string().min(1),
@@ -31,6 +33,11 @@ export async function POST(req: Request) {
   }
 
   const { name, email, password, referrer, inviteToken } = parsed.data;
+
+  const settings = await getPlatformSettings();
+  if (!publicSignupsAvailable(settings) && !inviteToken) {
+    return NextResponse.json({ error: "Signups are invite-only" }, { status: 403 });
+  }
 
   const [existing] = await db
     .select({ id: usersTable.id })

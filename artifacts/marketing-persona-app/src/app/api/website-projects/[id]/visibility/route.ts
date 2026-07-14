@@ -7,8 +7,8 @@ import {
   geoAuditsTable,
 } from "@workspace/db/schema";
 import { eq, desc, gte, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import { parseVisibilitySettings } from "@workspace/content-engine/support/visibility-settings";
 import {
   seedPromptsForProject,

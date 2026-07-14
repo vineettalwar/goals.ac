@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { enhanceContentPiece } from "@workspace/content-engine/content-piece-enhance";
 import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand-voice-generation";
 import { isSeoLongformFormat } from "@workspace/content-engine/content-piece-seo";
@@ -13,8 +13,9 @@ import {
   loadUserAiSettings,
   loadExistingPieceTitles,
   wordCountFromMarkdown,
-} from "@/lib/content-pieces-helpers";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+} from "@/lib/content/content-pieces-helpers";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 
 export async function POST(
   _req: Request,
@@ -56,6 +57,14 @@ export async function POST(
   const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
   const existingPieceTitles = await loadExistingPieceTitles(piece!.websiteProjectId);
 
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "rapid",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
     const result = await enhanceContentPiece(
       {
@@ -92,8 +101,16 @@ export async function POST(
       updated?.publishedUrl ?? null,
     ).catch(() => {});
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "content_enhance",
+      usedByok: billingPrep.usedByok,
+      tier: "rapid",
+    });
+
     return NextResponse.json(updated);
   } catch (err) {
+    await cancelAiBilling(billingPrep.ctx);
     const message = err instanceof Error ? err.message : "Enhancement failed";
     return NextResponse.json({ error: message }, { status: 503 });
   }

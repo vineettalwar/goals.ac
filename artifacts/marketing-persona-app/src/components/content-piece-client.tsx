@@ -16,6 +16,8 @@ import {
   CheckCircle2,
   FileCode2,
   TrendingUp,
+  Eye,
+  Shuffle,
 } from "lucide-react";
 import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
 import { isSeoLongformFormat } from "@workspace/content-engine/content-piece-seo";
@@ -33,16 +35,17 @@ import {
 import { ContentMarkdown } from "@/components/content-markdown";
 import { MarkdownToolbar } from "@/components/markdown-toolbar";
 import { ArticleQualityPanel } from "@/components/article-quality-panel";
-import { FORMAT_OPTIONS } from "@/lib/content-format-options";
+import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import {
   type ContentFormatType,
   type PublishDestinationId,
   getConnectedDestinationsForFormat,
   getDestinationsForFormat,
   type CmsConnectionSnapshot,
-} from "@/lib/publishing-destinations";
+} from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRecord } from "@/lib/server/loaders";
 import { ArticlePerformanceBadge } from "@/components/content-studio/article-performance-badge";
+import { ContentPieceRepurposeDialog } from "@/components/content-piece-repurpose-dialog";
 import { cn } from "@/lib/utils";
 
 interface ContentPieceClientProps {
@@ -69,12 +72,14 @@ export function ContentPieceClient({
   const [publishing, setPublishing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [editingPreview, setEditingPreview] = useState(false);
   const [bodyDraft, setBodyDraft] = useState(initialPiece.bodyMarkdown ?? "");
   const [titleDraft, setTitleDraft] = useState(initialPiece.title ?? "");
+  const [statusDraft, setStatusDraft] = useState(initialPiece.status);
+  const [plannedDateDraft, setPlannedDateDraft] = useState(initialPiece.plannedDate ?? "");
   const [saving, setSaving] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
-  const [repurposeFormat, setRepurposeFormat] = useState("");
-  const [repurposing, setRepurposing] = useState(false);
+  const [repurposeOpen, setRepurposeOpen] = useState(false);
   const [publishPlatform, setPublishPlatform] = useState<PublishDestinationId>(() =>
     defaultPublishPlatform(initialPiece.formatType, initialCmsConnections),
   );
@@ -111,10 +116,18 @@ export function ContentPieceClient({
 
   async function handleSave() {
     setSaving(true);
+    const payload: Record<string, unknown> = {
+      title: titleDraft,
+      bodyMarkdown: bodyDraft,
+      plannedDate: plannedDateDraft || null,
+    };
+    if (piece.status !== "published") {
+      payload.status = statusDraft;
+    }
     const res = await fetch(`/api/content-pieces/${pieceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title: titleDraft, bodyMarkdown: bodyDraft }),
+      body: JSON.stringify(payload),
     });
     setSaving(false);
     if (!res.ok) {
@@ -123,14 +136,29 @@ export function ContentPieceClient({
     }
     const updated = await res.json();
     setPiece(updated);
+    setStatusDraft(updated.status);
+    setPlannedDateDraft(updated.plannedDate ?? "");
     setEditing(false);
+    setEditingPreview(false);
     toast.success("Saved");
   }
 
   function cancelEdit() {
     setTitleDraft(piece.title);
     setBodyDraft(piece.bodyMarkdown);
+    setStatusDraft(piece.status);
+    setPlannedDateDraft(piece.plannedDate ?? "");
     setEditing(false);
+    setEditingPreview(false);
+  }
+
+  function startEdit() {
+    setTitleDraft(piece.title);
+    setBodyDraft(piece.bodyMarkdown);
+    setStatusDraft(piece.status);
+    setPlannedDateDraft(piece.plannedDate ?? "");
+    setEditingPreview(false);
+    setEditing(true);
   }
 
   async function handleRegenerate() {
@@ -146,7 +174,10 @@ export function ContentPieceClient({
     setPiece(updated);
     setBodyDraft(updated.bodyMarkdown);
     setTitleDraft(updated.title);
+    setStatusDraft(updated.status);
+    setPlannedDateDraft(updated.plannedDate ?? "");
     setEditing(false);
+    setEditingPreview(false);
     toast.success("Regenerated");
   }
 
@@ -164,28 +195,8 @@ export function ContentPieceClient({
     setBodyDraft(updated.bodyMarkdown);
     setTitleDraft(updated.title);
     setEditing(false);
+    setEditingPreview(false);
     toast.success("Quality enhanced — FAQ, citations, and links added");
-  }
-
-  async function handleRepurpose() {
-    if (!repurposeFormat) {
-      toast.error("Select a target format");
-      return;
-    }
-    setRepurposing(true);
-    const res = await fetch(`/api/content-pieces/${pieceId}/repurpose`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targetFormat: repurposeFormat }),
-    });
-    setRepurposing(false);
-    if (!res.ok) {
-      toast.error("Repurpose failed");
-      return;
-    }
-    const newPiece = await res.json();
-    toast.success("Repurposed — opening new piece");
-    router.push(`/content-piece/${newPiece.id}`);
   }
 
   async function regenerateImages() {
@@ -284,6 +295,9 @@ export function ContentPieceClient({
             {piece.targetKeyword && <Badge variant="muted">{piece.targetKeyword}</Badge>}
             <span className="text-xs text-muted-foreground">{displayWordCount.toLocaleString()} words</span>
             <Badge variant={piece.status === "published" ? "success" : "muted"}>{piece.status}</Badge>
+            {piece.plannedDate && !editing && (
+              <span className="text-xs text-muted-foreground">Planned {piece.plannedDate}</span>
+            )}
             <ArticlePerformanceBadge
               projectId={String(piece.websiteProjectId)}
               contentPieceId={piece.id}
@@ -335,11 +349,18 @@ export function ContentPieceClient({
             <div className="flex items-center justify-between gap-3 border-b border-border px-4 py-2.5 bg-muted/30">
               <div className="flex flex-wrap items-center gap-1.5">
                 {!editing ? (
-                  <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                  <Button variant="outline" size="sm" onClick={startEdit}>
                     <Pencil className="h-3.5 w-3.5" /> Edit
                   </Button>
                 ) : (
                   <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditingPreview((v) => !v)}
+                    >
+                      <Eye className="h-3.5 w-3.5" /> {editingPreview ? "Edit" : "Preview"}
+                    </Button>
                     <Button size="sm" onClick={handleSave} disabled={saving}>
                       <Save className="h-3.5 w-3.5" /> {saving ? "Saving…" : "Save"}
                     </Button>
@@ -348,6 +369,9 @@ export function ContentPieceClient({
                     </Button>
                   </>
                 )}
+                <Button variant="outline" size="sm" onClick={() => setRepurposeOpen(true)}>
+                  <Shuffle className="h-3.5 w-3.5" /> Repurpose
+                </Button>
                 <Button variant="outline" size="sm" onClick={handleCopy}>
                   {copied ? (
                     <>
@@ -392,27 +416,65 @@ export function ContentPieceClient({
             </div>
 
             {editing ? (
-              <div className="grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border min-h-[520px]">
-                <div className="p-4">
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <Label className="text-xs text-muted-foreground">Markdown source</Label>
-                    <MarkdownToolbar
-                      textareaRef={bodyTextareaRef}
-                      value={bodyDraft}
-                      onChange={setBodyDraft}
+              <div className="min-h-[520px]">
+                <div className="grid sm:grid-cols-2 gap-4 px-4 py-3 border-b border-border bg-muted/20">
+                  {piece.status !== "published" && (
+                    <div className="space-y-1.5">
+                      <Label htmlFor="edit-status" className="text-xs text-muted-foreground">
+                        Status
+                      </Label>
+                      <Select value={statusDraft} onValueChange={setStatusDraft}>
+                        <SelectTrigger id="edit-status">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="draft">Draft</SelectItem>
+                          <SelectItem value="ready">Ready</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-planned-date" className="text-xs text-muted-foreground">
+                      Planned date (optional)
+                    </Label>
+                    <input
+                      id="edit-planned-date"
+                      type="date"
+                      value={plannedDateDraft}
+                      onChange={(e) => setPlannedDateDraft(e.target.value)}
+                      className="flex h-9 w-full rounded-lg border border-input bg-background px-3 py-1 text-sm"
                     />
                   </div>
-                  <Textarea
-                    ref={bodyTextareaRef}
-                    className="min-h-[460px] font-mono text-sm leading-relaxed resize-none border-0 shadow-none focus-visible:ring-0 p-0"
-                    value={bodyDraft}
-                    onChange={(e) => setBodyDraft(e.target.value)}
-                  />
                 </div>
-                <div className="p-6 bg-muted/10 overflow-y-auto max-h-[640px]">
-                  <Label className="text-xs text-muted-foreground mb-3 block">Live preview</Label>
-                  <ContentMarkdown>{bodyDraft || "_Start writing to see formatted preview._"}</ContentMarkdown>
-                </div>
+                {editingPreview ? (
+                  <div className="px-6 py-8 lg:px-10 lg:py-10">
+                    <ContentMarkdown>{bodyDraft || "_Nothing to preview yet._"}</ContentMarkdown>
+                  </div>
+                ) : (
+                  <div className="grid lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-border">
+                    <div className="p-4">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <Label className="text-xs text-muted-foreground">Markdown source</Label>
+                        <MarkdownToolbar
+                          textareaRef={bodyTextareaRef}
+                          value={bodyDraft}
+                          onChange={setBodyDraft}
+                        />
+                      </div>
+                      <Textarea
+                        ref={bodyTextareaRef}
+                        className="min-h-[460px] font-mono text-sm leading-relaxed resize-none border-0 shadow-none focus-visible:ring-0 p-0"
+                        value={bodyDraft}
+                        onChange={(e) => setBodyDraft(e.target.value)}
+                      />
+                    </div>
+                    <div className="p-6 bg-muted/10 overflow-y-auto max-h-[640px]">
+                      <Label className="text-xs text-muted-foreground mb-3 block">Live preview</Label>
+                      <ContentMarkdown>{bodyDraft || "_Start writing to see formatted preview._"}</ContentMarkdown>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="px-6 py-8 lg:px-10 lg:py-10">
@@ -478,27 +540,15 @@ export function ContentPieceClient({
               </Link>
             )}
           </div>
-
-          <div className="paper-card p-4 rounded-xl space-y-3">
-            <Label className="text-sm font-medium">Repurpose</Label>
-            <Select value={repurposeFormat} onValueChange={setRepurposeFormat}>
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select format…" />
-              </SelectTrigger>
-              <SelectContent>
-                {FORMAT_OPTIONS.filter((o) => o.value !== piece.formatType).map((o) => (
-                  <SelectItem key={o.value} value={o.value}>
-                    {o.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button className="w-full" size="sm" onClick={handleRepurpose} disabled={repurposing}>
-              Repurpose
-            </Button>
-          </div>
         </aside>
       </div>
+
+      <ContentPieceRepurposeDialog
+        open={repurposeOpen}
+        onClose={() => setRepurposeOpen(false)}
+        pieceId={piece.id}
+        currentFormat={piece.formatType}
+      />
     </div>
   );
 }

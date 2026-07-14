@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  isQuotaExhaustedPayload,
+  QuotaUpgradePrompt,
+} from "@/components/billing/quota-upgrade-prompt";
 
 const schema = z.object({
   name: z.string().min(1, "Project name is required"),
@@ -26,6 +30,9 @@ interface NewProjectDialogProps {
 
 export function NewProjectDialog({ open, onOpenChange, onCreated }: NewProjectDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [quotaError, setQuotaError] = useState<{
+    message: string;
+  } | null>(null);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -33,6 +40,7 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: NewProjectDi
 
   async function onSubmit(data: FormData) {
     setLoading(true);
+    setQuotaError(null);
     const res = await fetch("/api/website-projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -41,6 +49,12 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: NewProjectDi
     setLoading(false);
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
+      if (res.status === 402 && isQuotaExhaustedPayload(body)) {
+        setQuotaError({
+          message: body.message ?? "Site quota exhausted. Add your API key in Settings for more capacity.",
+        });
+        return;
+      }
       const message =
         (body as { message?: string }).message ??
         (body as { error?: string }).error ??
@@ -100,6 +114,9 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: NewProjectDi
                 )}
               </Button>
             </div>
+            {quotaError && (
+              <QuotaUpgradePrompt message={quotaError.message} />
+            )}
           </form>
         </Dialog.Content>
       </Dialog.Portal>

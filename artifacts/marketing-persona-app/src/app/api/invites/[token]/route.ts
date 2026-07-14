@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { acceptOrgInvite, getInviteByToken } from "@/lib/org-access";
-import { logOrgAudit } from "@/lib/org-audit";
-import { requireAuth } from "@/lib/require-auth";
+import { acceptOrgInvite, getInviteByToken } from "@/lib/org/org-access";
+import { logOrgAudit } from "@/lib/org/org-audit";
+import { requireAuth } from "@/lib/auth/require-auth";
 
 type RouteContext = { params: Promise<{ token: string }> };
 

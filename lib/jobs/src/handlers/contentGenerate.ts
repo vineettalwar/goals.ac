@@ -7,11 +7,27 @@ import { generateFromContentItem } from "@workspace/content-engine/autopilot-orc
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
 import {
+  cancelAiBillingSession,
+  completeAiBillingSession,
+  prepareAiBillingSession,
+  type AiBillingContext,
+} from "@workspace/billing";
+import {
   parseAutopilotSettings,
   shouldAutoPublish,
   todayInTimezone,
 } from "@workspace/content-engine/support/autopilot-scheduler";
 import { logger } from "../logger";
+
+function userUsesByok(
+  userApiKey: string | null,
+  aiProviderOptions: Awaited<ReturnType<typeof getUserAiProviderOptions>>,
+): boolean {
+  if (userApiKey) return true;
+  return Boolean(
+    aiProviderOptions.bedrock?.accessKeyId && aiProviderOptions.bedrock?.secretAccessKey,
+  );
+}
 
 async function finalizeGeneratedPieces(params: {
   pieceIds: number[];
@@ -57,11 +73,28 @@ export async function registerContentGenerateHandler(boss: PgBoss): Promise<void
   await boss.work<ContentGeneratePayload>(QUEUES.contentGenerate, async ([job]) => {
     const { contentItemId, projectId, userId, generateVariants, schedulePublish, triggeredByAutopilot } =
       job.data;
+    let billingCtx: AiBillingContext | null = null;
     try {
       const [userApiKey, aiProviderOptions] = await Promise.all([
         getDecryptedUserGeminiKey(userId),
         getUserAiProviderOptions(userId),
       ]);
+      const usesByok = userUsesByok(userApiKey, aiProviderOptions);
+
+      const billingPrep = await prepareAiBillingSession({
+        userId,
+        tier: "execution",
+        usedByok: usesByok,
+        quotaKind: usesByok ? undefined : "article",
+      });
+
+      if (!billingPrep.ok) {
+        const reason = billingPrep.error.reason;
+        logger.warn({ contentItemId, userId, reason }, "Content generate job skipped: billing denied");
+        throw new Error(`billing_denied:${reason}`);
+      }
+      billingCtx = billingPrep.ctx;
+
       const result = await generateFromContentItem(contentItemId, projectId, userId, {
         generateVariants: generateVariants !== false,
         userApiKey,
@@ -81,8 +114,25 @@ export async function registerContentGenerateHandler(boss: PgBoss): Promise<void
       const pieceIds = [result.primaryPieceId, ...result.variantPieceIds];
       await finalizeGeneratedPieces({ pieceIds, projectId, userId, autoPublish });
 
+      await completeAiBillingSession(billingCtx, {
+        userId,
+        eventType: "content_generation",
+        usedByok: usesByok,
+        tier: "execution",
+        companyId: projectId,
+        promptTokens: result.generationUsage?.promptTokens,
+        outputTokens: result.generationUsage?.outputTokens,
+        totalTokens: result.generationUsage?.totalTokens,
+      });
+
       logger.info({ contentItemId, autoPublish, ...result }, "Content generate job completed");
     } catch (err) {
+      if (billingCtx) {
+        await cancelAiBillingSession(
+          billingCtx,
+          err instanceof Error ? err.message : "content_generate_failed",
+        );
+      }
       logger.error({ err, contentItemId }, "Content generate job failed");
       throw err;
     }

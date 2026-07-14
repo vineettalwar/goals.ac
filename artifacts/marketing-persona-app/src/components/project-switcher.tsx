@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Globe, Plus } from "lucide-react";
 import { useActiveProject } from "@/context/active-project";
-import { navigationTargetForActiveProject } from "@/lib/active-project-routing";
+import { navigationTargetForActiveProject } from "@/lib/active-project/routing";
 import { NewProjectDialog } from "@/components/new-project-dialog";
 import {
   Select,

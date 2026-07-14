@@ -8,12 +8,14 @@ import { NewProjectButton } from "./new-project-button";
 import { ProjectList } from "./project-list";
 import {
   countOrganizationProjects,
+  getOrganizationSupportContext,
   getOrgMembership,
   isSiteAdmin,
   isSuperAdmin,
   listAccessibleProjects,
-} from "@/lib/org-access";
-import { getProjectQuota } from "@/lib/usage";
+} from "@/lib/org/org-access";
+import { getSupportOrganizationId } from "@/lib/org/project-scope";
+import { resolvePlanProjectQuota } from "@workspace/billing";
 import { TeamManagement } from "./team-management";
 
 export default async function ProjectsPage() {
@@ -21,23 +23,34 @@ export default async function ProjectsPage() {
   if (!session) return null;
 
   const userId = parseInt(session.user.id, 10);
+  const supportOrganizationId = getSupportOrganizationId(session);
   const canManageAllSites =
-    isSuperAdmin(session.user.role) || isSiteAdmin(session.user.orgRole);
+    isSuperAdmin(session.user.role) ||
+    isSiteAdmin(session.user.orgRole) ||
+    supportOrganizationId != null;
 
   if (!canManageAllSites) {
     redirect("/dashboard");
   }
 
-  const projects = await listAccessibleProjects(userId);
+  const projects = await listAccessibleProjects(userId, supportOrganizationId);
   const membership = await getOrgMembership(userId);
-  const projectCount =
-    membership && !isSuperAdmin(session.user.role)
-      ? await countOrganizationProjects(membership.organizationId)
-      : projects.length;
-  const quota =
-    membership && !isSuperAdmin(session.user.role)
-      ? getProjectQuota(membership.organizationPlan)
+  const supportOrg =
+    supportOrganizationId != null
+      ? await getOrganizationSupportContext(supportOrganizationId)
       : null;
+  const projectCount =
+    supportOrg != null
+      ? projects.length
+      : membership && !isSuperAdmin(session.user.role)
+        ? await countOrganizationProjects(membership.organizationId)
+        : projects.length;
+  const quota =
+    supportOrg != null
+      ? await resolvePlanProjectQuota(supportOrg.plan)
+      : membership && !isSuperAdmin(session.user.role)
+        ? await resolvePlanProjectQuota(membership.organizationPlan)
+        : null;
 
   const rows = await Promise.all(
     projects.map(async (project) => {

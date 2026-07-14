@@ -85,16 +85,18 @@
     "zlib",
     "wordpress"
   ],
+  "intelephense.environment.phpVersion": "8.1.0",
   "intelephense.environment.includePaths": [
     "cms-plugins/wordpress/vendor/php-stubs/wordpress-stubs",
-    "cms-plugins/shared/src"
+    "cms-plugins/shared/src",
+    "cms-plugins/typo3/stubs"
   ],
   "intelephense.files.exclude": [
     "**/vendor/**",
     "**/node_modules/**"
   ],
   "phpcs.enable": true,
-  "phpcs.standard": "phpcs.xml",
+  "phpcs.standard": "Automatic",
   "phpcs.executablePath": "${workspaceFolder}/cms-plugins/wordpress/vendor/bin/phpcs",
   "phpcs.showSources": true,
   "phpcs.ignorePatterns": [
@@ -111,6 +113,8 @@
     "dbDelta",
     "focuskw",
     "gmdate",
+    "jsonld",
+    "llms",
     "metadesc",
     "rankmath",
     "Semrush",

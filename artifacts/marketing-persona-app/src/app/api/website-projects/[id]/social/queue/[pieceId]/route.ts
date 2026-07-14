@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import { scheduleSocialPiece } from "@workspace/content-engine/support/social-queue-service";
 import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";

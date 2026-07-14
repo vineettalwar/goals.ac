@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { HelpArticleClient } from "@/components/marketing/help-article-client";
-import { HELP_ARTICLES, getHelpArticle } from "@/lib/help-articles";
+import { HELP_ARTICLES, getHelpArticle } from "@/lib/marketing/help-articles";
 
 export function generateStaticParams() {
   return HELP_ARTICLES.map((a) => ({ slug: a.slug }));

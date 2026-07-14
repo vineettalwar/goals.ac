@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentPiecesTable, websiteProjectsTable, brandProfilesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { assertPieceOwner } from "@/lib/content-pieces-helpers";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { assertPieceOwner } from "@/lib/content/content-pieces-helpers";
 import { enrichContentPieceImages, parseImageSettings } from "@workspace/content-engine/article-image-enricher";
-import { resolveAiClient } from "@workspace/content-engine/support/resolve-ai-client";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
 import type { ContentStyle } from "@workspace/db/schema/website_projects";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 
 export async function POST(
   _req: Request,
@@ -38,14 +39,24 @@ export async function POST(
   const excludeImageIds =
     piece!.pieceMetadata?.images?.map((img) => `${img.provider}:${img.remoteId}`) ?? [];
 
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "rapid",
+    quotaKind: "article",
+    companyId: piece!.websiteProjectId,
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   let ai;
   try {
-    ai = await resolveAiClient();
+    const resolved = await resolveAiClientForUser(userId!);
+    ai = resolved.client;
   } catch {
     ai = undefined;
   }
 
-  const enriched = await enrichContentPieceImages(
+  try {
+    const enriched = await enrichContentPieceImages(
     {
       title: piece!.title,
       target_keyword: piece!.targetKeyword,
@@ -61,17 +72,30 @@ export async function POST(
     },
   );
 
-  const wordCount = enriched.body_markdown.split(/\s+/).filter(Boolean).length;
+    const wordCount = enriched.body_markdown.split(/\s+/).filter(Boolean).length;
 
-  const [updated] = await db
-    .update(contentPiecesTable)
-    .set({
-      bodyMarkdown: enriched.body_markdown,
-      pieceMetadata: enriched.pieceMetadata,
-      wordCount,
-    })
-    .where(eq(contentPiecesTable.id, id))
-    .returning();
+    const [updated] = await db
+      .update(contentPiecesTable)
+      .set({
+        bodyMarkdown: enriched.body_markdown,
+        pieceMetadata: enriched.pieceMetadata,
+        wordCount,
+      })
+      .where(eq(contentPiecesTable.id, id))
+      .returning();
 
-  return NextResponse.json({ piece: updated });
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "image_regeneration",
+      usedByok: billingPrep.usedByok,
+      tier: "rapid",
+      companyId: piece!.websiteProjectId,
+    });
+
+    return NextResponse.json({ piece: updated });
+  } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "image_regeneration_failed");
+    const message = err instanceof Error ? err.message : "Image regeneration failed";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }

@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
-    "dev:worker": "export NODE_ENV=development && pnpm run build && pnpm run start:worker",
+    "dev:worker": "pnpm --filter @workspace/worker run dev",
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
-    "start:worker": "node --enable-source-maps ./dist/worker.mjs",
+    "start:worker": "pnpm --filter @workspace/worker run start",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

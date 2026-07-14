@@ -7,7 +7,8 @@ import { FormatBadge } from "@/components/content-studio/content-studio-format-m
 import {
   contentStudioCreateHref,
   type GeoContentRecommendation,
-} from "@/lib/geo-audit-content-recommendations";
+} from "@/lib/content/geo-audit-content-recommendations";
+import { CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 type GeoAuditWriteNextProps = {
   recommendations: GeoContentRecommendation[];
@@ -61,8 +62,8 @@ export function GeoAuditWriteNext({ recommendations, projectId }: GeoAuditWriteN
             </Button>
           ) : (
             <Button size="sm" asChild variant="outline">
-              <Link href={`/signup?callbackUrl=${encodeURIComponent("/audit")}`}>
-                Sign up to create
+              <Link href={CONTACT_HREF}>
+                Contact us to create
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
             </Button>

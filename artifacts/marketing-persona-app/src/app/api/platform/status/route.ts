@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getPlatformSettings } from "@/lib/platform-settings";
+import { getPlatformSettings } from "@/lib/platform/platform-settings";
 
 export const dynamic = "force-dynamic";
 

@@ -1,10 +1,11 @@
 import { db } from "@workspace/db";
 import { brandProfilesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
 import {
   analyzeAllPlatformChannels,
@@ -53,6 +54,14 @@ export async function POST(
     getUserAiProviderOptions(userId!),
   ]);
 
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "planning",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
     let platformVoices = brandProfile.platformVoices;
     if (parsed.data.allChannels) {
@@ -65,6 +74,7 @@ export async function POST(
     } else {
       const channel = parsed.data.channel ?? PLATFORM_CHANNELS[platformRaw][0];
       if (!isValidChannel(platformRaw, channel)) {
+        await cancelAiBilling(billingPrep.ctx, "invalid_channel");
         return Response.json({ error: "Invalid channel for platform" }, { status: 400 });
       }
       const result = await analyzePlatformVoiceChannel({
@@ -83,11 +93,19 @@ export async function POST(
       .where(eq(brandProfilesTable.websiteProjectId, projectId))
       .returning();
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "platform_voice_analysis",
+      usedByok: billingPrep.usedByok,
+      tier: "planning",
+    });
+
     return Response.json({
       platform: platformRaw,
       profile: updated?.platformVoices?.[platformRaw] ?? null,
     });
   } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "analysis_failed");
     const message = err instanceof Error ? err.message : "Analysis failed";
     return Response.json({ error: message }, { status: 400 });
   }

@@ -544,6 +544,9 @@ importers:
       '@workspace/ai-providers':
         specifier: workspace:*
         version: link:../../lib/ai-providers
+      '@workspace/billing':
+        specifier: workspace:*
+        version: link:../../lib/billing
       '@workspace/connectors':
         specifier: workspace:*
         version: link:../../lib/connectors
@@ -945,9 +948,15 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../db
+      '@workspace/security':
+        specifier: workspace:*
+        version: link:../security
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.1(@types/pg@8.18.0)(pg@8.20.0)
+      stripe:
+        specifier: ^18.4.0
+        version: 18.5.0(@types/node@25.3.5)
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -980,6 +989,9 @@ importers:
       '@workspace/ai-providers':
         specifier: workspace:*
         version: link:../ai-providers
+      '@workspace/billing':
+        specifier: workspace:*
+        version: link:../billing
       '@workspace/connectors':
         specifier: workspace:*
         version: link:../connectors
@@ -1085,6 +1097,9 @@ importers:
 
   lib/jobs:
     dependencies:
+      '@workspace/billing':
+        specifier: workspace:*
+        version: link:../billing
       '@workspace/connectors':
         specifier: workspace:*
         version: link:../connectors
@@ -5766,6 +5781,15 @@ packages:
   strip-json-comments@5.0.3:
     resolution: {integrity: sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw==}
     engines: {node: '>=14.16'}
+
+  stripe@18.5.0:
+    resolution: {integrity: sha512-Hp+wFiEQtCB0LlNgcFh5uVyKznpDjzyUZ+CNVEf+I3fhlYvh7rZruIg+jOwzJRCpy0ZTPMjlzm7J2/M2N6d+DA==}
+    engines: {node: '>=12.*'}
+    peerDependencies:
+      '@types/node': '>=12.x.x'
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
 
   strnum@2.4.1:
     resolution: {integrity: sha512-M9eUSMT2dCB2cTNPG7UYj6KuK7RJR2SN2+yCV/fTW3xzTCS6EaGZ5pSMgDIjB7r8zSfTGk+dvvn9rTjpVS9Mwg==}
@@ -11351,6 +11375,12 @@ snapshots:
   strip-final-newline@4.0.0: {}
 
   strip-json-comments@5.0.3: {}
+
+  stripe@18.5.0(@types/node@25.3.5):
+    dependencies:
+      qs: 6.15.3
+    optionalDependencies:
+      '@types/node': 25.3.5
 
   strnum@2.4.1:
     dependencies:

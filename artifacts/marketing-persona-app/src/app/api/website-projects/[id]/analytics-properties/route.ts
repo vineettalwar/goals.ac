@@ -5,10 +5,10 @@ import {
   analyticsPropertyConnectionsTable,
 } from "@workspace/db/schema";
 import type { AnalyticsPropertyProvider } from "@workspace/db/schema";
-import type { AnalyticsPropertyConnectionsResponse } from "@/lib/analytics-property-types";
+import type { AnalyticsPropertyConnectionsResponse } from "@/lib/integrations/analytics-property-types";
 import { and, eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import { z } from "zod";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import {
@@ -16,7 +16,9 @@ import {
   listGa4PropertiesForConnection,
   parseStoredTokens,
   resolveAccessToken,
-} from "@/lib/analytics-property-client";
+} from "@/lib/integrations/analytics-property-client";
+import { getPlatformSettings } from "@/lib/platform/platform-settings";
+import { googleIntegrationsAvailable } from "@/lib/platform/platform-features";
 
 const UNSELECTED_PROPERTY_ID = "";
 
@@ -96,10 +98,11 @@ export async function GET(
     return row ? serializeConnection(row) : emptyStatus(provider);
   });
 
+  const settings = await getPlatformSettings();
   const payload: AnalyticsPropertyConnectionsResponse = {
     connections,
     oauthConfigured: {
-      googleAnalytics4: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+      googleAnalytics4: googleIntegrationsAvailable(settings),
     },
   };
 

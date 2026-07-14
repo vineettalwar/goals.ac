@@ -36,14 +36,14 @@ Both write to the same database with different auth systems and duplicated busin
 | # | Gap | Evidence | Severity |
 |---|-----|----------|----------|
 | 1 | **Duplicated app split** (above) | Two encryption libs, two publisher sets, two auth systems | 🔴 Blocks everything |
-| 2 | **No async job system** | All AI generation runs synchronously inside the HTTP request (SSE). Autopilot is a bare Next.js cron route. No retries, no scheduled publishing, no long-running orchestration | 🔴 Blocks Phase 3 |
-| 3 | **Single AI provider, hardwired** | Gemini via `@google/genai` is baked into every generator. BYOK = "bring your own *Gemini* key" only. No provider abstraction, no model routing | 🔴 Blocks agent hierarchy |
+| 2 | **Async jobs partial** | pg-boss worker (`artifacts/worker`) with 18 queues; project autopilot via `contentGenerateSweep`. Legacy company autopilot cron still runs inline AI; many SSE routes still in-request | 🟠 Phase 3 |
+| 3 | **AI provider abstraction shipped** | `@workspace/ai-providers` routes Gemini/Bedrock/Ollama by tier. Claude/OpenAI providers and prompt caching not yet wired | 🟡 Agent hierarchy |
 | 4 | **Fragmented connector model** | WordPress already uses REST + Application Passwords in both apps, but the Express API takes credentials **per-publish and never stores them**, while the Next app stores them encrypted; Notion/Webflow live in a JSONB column on `website_projects`, Ghost/Webhook in a separate `integration_connections` table. Three storage patterns, no common interface | 🟠 Blocks Phase 2 |
-| 5 | **No billing engine** | Plan quotas exist but there is no Stripe integration, no credit ledger, no subscription lifecycle. The hybrid subscription+credits model has no substrate | 🟠 Blocks revenue |
+| 5 | **Billing: Starter count quotas** | v1 product is Starter-only (BYOK). All AI routes + workers record `usage_events` with count-quota enforcement on platform key. Credit ledger exists for future paid tiers; `shouldReserveCredits` disabled until Growth/Scale return | 🟡 Revenue (future tiers) |
 | 6 | **BYOK key handling is v1** | Single static secret (SHA-256 of one env var) encrypts *everything*: user AI keys, Notion tokens, Webflow tokens, Ghost keys. No key versioning, no rotation path, no audit log, keys decrypted in the web process. In the JWT-based `goals-ac` app: JWTs in localStorage, 30-day, non-revocable (`marketing-persona-app` uses NextAuth sessions) | 🟠 Trust/compliance risk |
-| 7 | **No goal layer** | Generation is keyword/format-driven ("write a blog post about X"). There is no table, model, or flow that captures a *business goal* (traffic/leads/sales) and compiles it into briefs. The product is named goals.ac and has no goals entity | 🟠 Blocks Phase 1 vision |
-| 8 | **No tests, no CI, thin observability** | `pnpm typecheck` is the only gate. Pino logging exists; no error tracking, tracing, or metrics | 🟡 Compounds with scale |
-| 9 | **No CMS plugins** | Publishing is push-only via external APIs. No WordPress plugin, no TYPO3/Drupal/Joomla story, no site-side capabilities (preview, schema injection, internal-link graph) | 🟡 Phase 2 work |
+| 7 | **Goal layer partial** | `goals` / `briefs` schema + CRUD UI + `compileBriefsFromGoal` API + brief approval gate before generation. Onboarding re-anchored on goal definition. Full strategy memo / GSC progress tracking still open | 🟡 Phase 1 UX |
+| 8 | **Thin test coverage** | Vitest unit tests in `lib/*` + billing quota/pricing tests; one Playwright e2e. No CI (by design). `pnpm typecheck` + `pnpm test:unit` are local gates | 🟡 Compounds with scale |
+| 9 | **CMS plugins partial** | WordPress, Drupal, Joomla, Shopify plugins + shared HMAC contract; TYPO3 health-only. SaaS `lib/connectors` + `goals-ac-plugin` client. `publish_records` + unified credential storage still open | 🟡 Phase 2 work |
 
 ---
 
@@ -79,9 +79,9 @@ artifacts/
 1. **Extract `lib/security`, `lib/ai-providers`, `lib/connectors`** from the duplicated code. This extraction is mechanical and low-risk *because it changes no ciphertext format, key derivation, or env var* — the envelope-encryption upgrade in §7 is a separate, carefully-migrated step, not part of this move. — **done**
 2. **Auth hardening — scoped to the JWT-based `goals-ac`/`api-server` surface** (`marketing-persona-app` already uses NextAuth sessions): move its JWT from localStorage to httpOnly cookies, add refresh-token rotation and server-side revocation (a `sessions` table — the "cannot invalidate on password change" trade-off documented in `docs/memory.md` is not acceptable for a product that stores third-party CMS credentials). As consolidation retires the Vite app, its users migrate onto the Next app's NextAuth sessions; the Express server keeps token auth only for the future public API (API keys, not user JWTs). — **done**
 3. **Account hierarchy**: formalize `workspace → project → goal → brief → content piece`. Today `users → website_projects → content` exists; add `goals` and `briefs` tables (schema in §4) and a `workspaces` table even if v1 is 1:1 with users — retrofitting teams later is far more painful. — **done**
-4. **Finish the onboarding wizard** (already in progress, Task #43) but re-anchor it on goal definition: *"What are you trying to achieve?"* before *"connect your CMS."* — **not started**
-5. **Billing skeleton**: Stripe subscriptions + a `credit_ledger` table (append-only: grants, consumption referencing `usage_events`, expiry). Quotas already enforce server-side; wire them to real plans. — **ledger schema + `@workspace/billing` reserve/settle/release service done; Stripe integration + route wiring pending**
-6. **Job queue (pg-boss)** running in the Express worker; move autopilot generation off the cron route onto it. This is the load-bearing wall for Phases 2 and 3 — pull it forward. — **done**
+4. **Finish the onboarding wizard** — goal definition step added before company profile (2026-07-14). Personas + WordPress steps remain. — **partially done**
+5. **Billing skeleton**: Starter count quotas on all AI surfaces; credit ledger reserved for future paid tiers. — **partially done** (see §9)
+6. **Job queue (pg-boss)** — canonical worker at `artifacts/worker`; cron enqueues `contentGenerateSweep`. Legacy company autopilot cron still inline. — **partially done**
 
 ---
 
@@ -321,6 +321,16 @@ Implementation notes for `lib/ai-providers`:
 | Monthly grant / top-up / expiry / reservation / release | `grant`, `topup`, `expiry`, `reserve`, `release` entries (see §6 item 6 for the reservation flow) |
 
 Every consumption entry references its `usage_events` row (or job ID for non-AI work), so any invoice line can be traced to the exact generation that caused it.
+
+### Current implementation status (2026-07-14)
+
+| Layer | Status | Files |
+|---|---|---|
+| **Grants (credit in)** | Scaffolded — Stripe webhooks exist; v1 product is Starter-only (no monthly credit grants) | `artifacts/marketing-persona-app/src/app/api/webhooks/stripe/route.ts`, `lib/billing/src/credits.ts` |
+| **Consumption metering** | Wired — all AI routes + background workers call `prepareAiBilling` / `prepareAiBillingSession`; `usage_events` on success | `lib/billing/src/session.ts`, `artifacts/marketing-persona-app/src/lib/ai-billing.ts`, `lib/jobs/src/worker-billing.ts` |
+| **Enforcement** | Starter platform-key: monthly **count quotas** on all AI surfaces (articles + roadmaps). BYOK bypasses quotas. Past-due Stripe subscriptions block platform-key AI | `lib/billing/src/quotas.ts`, `lib/billing/src/session.ts` |
+
+Credit ledger reserve/settle remains disabled (`shouldReserveCredits → false`) until paid tiers ship. Re-enable when Growth/Scale return.
 
 ---
 

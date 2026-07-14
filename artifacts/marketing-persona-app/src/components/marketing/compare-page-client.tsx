@@ -7,7 +7,8 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { FAQAccordion } from "@/components/marketing/faq-accordion";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { CONTACT_CTA_PRIMARY, CONTACT_CTA_SECONDARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 const ROWS = [
   { feature: "12-month growth roadmaps", goals: true, autopilot: false },
@@ -21,7 +22,7 @@ const ROWS = [
   { feature: "Reddit auto-posting", goals: false, autopilot: "partial" as const },
   { feature: "18 content formats", goals: true, autopilot: false },
   { feature: "BYOK (bring your own AI key)", goals: true, autopilot: false },
-  { feature: "Starting price", goals: "$0 / $49", autopilot: "$99+" },
+  { feature: "Dedicated strategist", goals: true, autopilot: false },
 ];
 
 function Cell({ value }: { value: boolean | string }) {
@@ -39,11 +40,11 @@ export function ComparePageClient() {
           badge="Comparison"
           titleLine1="goals.ac vs"
           titleLine2="AI SEO autopilot tools"
-          description="Honest comparison on strategy depth, editorial control, link building approach, and price."
+          description="Honest comparison on strategy depth, editorial control, and link building approach."
           backgroundImage={HERO_IMAGES.features.hero}
           ctas={[
-            { label: "Start free", href: "/signup", variant: "primary" },
-            { label: "See pricing", href: "/pricing", variant: "ghost" },
+            { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF, variant: "primary" },
+            { label: "Learn more", href: "/pricing", variant: "ghost" },
           ]}
         />
       }
@@ -82,14 +83,14 @@ export function ComparePageClient() {
         items={[
           { question: "Why not use a backlink exchange?", answer: "Link exchanges risk Google penalties and don't build real topical authority. We focus on content clusters and internal linking." },
           { question: "Is goals.ac fully automated?", answer: "Autopilot is optional. You can review every draft, use manual publish mode, and inspect quality scores before going live." },
-          { question: "What about price?", answer: "Growth is $49/mo vs $99+ for comparable autopilot tools, with strategy roadmaps included free." },
+          { question: "What about pricing?", answer: "Every engagement is scoped on a discovery call. We combine consulting strategy with platform delivery — no self-serve tiers." },
         ]}
       />
 
       <MarketingCTA
         titleLine1="Try the"
         titleLine2="strategy-first approach"
-        description="Start free. Build a roadmap, run a GEO audit, and generate your first draft."
+        description="Book a discovery call. We'll scope a strategy-first SEO, AEO, and GEO program for your team."
         variant="dark"
         backgroundImage={HERO_IMAGES.features.footer}
         secondaryHref="/free-tools"

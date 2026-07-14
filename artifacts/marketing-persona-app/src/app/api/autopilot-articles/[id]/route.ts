@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { scheduledArticlesTable, companiesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { z } from "zod";
 
 const updateSchema = z.object({

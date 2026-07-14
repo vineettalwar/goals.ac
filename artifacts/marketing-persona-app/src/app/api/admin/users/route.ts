@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { listAllUsers } from "@/lib/org-access";
-import { requirePlatformAdminApi } from "@/lib/require-platform-admin";
+import { listAllUsers } from "@/lib/org/org-access";
+import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
 
 const QuerySchema = z.object({
   search: z.string().optional(),

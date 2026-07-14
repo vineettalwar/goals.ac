@@ -2,9 +2,10 @@ import { NextResponse } from "next/server";
 import { db, competitorAnalysesTable } from "@workspace/db";
 import { analyzeCompetitor } from "@workspace/seo-tools/competitorAnalyzer";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
-import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
+import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
 
 const AnalyzeBody = z.object({
@@ -37,26 +38,49 @@ export async function POST(req: Request) {
   }
 
   const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
-  const analysis = await analyzeCompetitor({
-    competitorUrl: parsed.data.competitorUrl,
-    industry: parsed.data.industry,
-    location: parsed.data.location,
-    stage: parsed.data.stage,
-    userApiKey,
-    aiProviderOptions,
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "planning",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
   });
+  if (!billingPrep.ok) return billingPrep.response;
 
-  const [saved] = await db
-    .insert(competitorAnalysesTable)
-    .values({
+  try {
+    const analysis = await analyzeCompetitor({
       competitorUrl: parsed.data.competitorUrl,
       industry: parsed.data.industry,
       location: parsed.data.location,
       stage: parsed.data.stage,
-      websiteProjectId: parsed.data.websiteProjectId ?? null,
-      result: analysis,
-    })
-    .returning();
+      userApiKey,
+      aiProviderOptions,
+    });
 
-  return NextResponse.json(saved);
+    const [saved] = await db
+      .insert(competitorAnalysesTable)
+      .values({
+        competitorUrl: parsed.data.competitorUrl,
+        industry: parsed.data.industry,
+        location: parsed.data.location,
+        stage: parsed.data.stage,
+        websiteProjectId: parsed.data.websiteProjectId ?? null,
+        result: analysis,
+      })
+      .returning();
+
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "competitor_analysis",
+      usedByok: billingPrep.usedByok,
+      tier: "planning",
+    });
+
+    return NextResponse.json(saved);
+  } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "analysis_failed");
+    return NextResponse.json(
+      { error: err instanceof Error ? err.message : "Analysis failed" },
+      { status: 500 },
+    );
+  }
 }

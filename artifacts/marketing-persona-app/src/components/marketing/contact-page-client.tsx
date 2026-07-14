@@ -9,7 +9,8 @@ import { MarketingSection } from "@/components/marketing/marketing-section";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { CONTACT_CTA_PRIMARY, CONTACT_CTA_SECONDARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 const DEFAULT_CALENDLY_URL = "https://calendly.com/vineetsktalwar";
 
@@ -54,9 +55,9 @@ export function ContactPageClient() {
           badge="Contact"
           titleLine1="Talk to us"
           titleLine2="or book a demo"
-          description="Questions about pricing, agencies, or enterprise? We'd love to hear from you."
+          description="Questions about SEO, AEO, or GEO consulting? Book a discovery call or send us a message."
           backgroundImage={HERO_IMAGES.pricing.hero}
-          ctas={[{ label: "Start free", href: "/signup", variant: "ghost" }]}
+          ctas={[{ label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF, variant: "primary" }]}
         />
       }
     >
@@ -105,13 +106,13 @@ export function ContactPageClient() {
             <div className="paper-card p-6 rounded-2xl space-y-4">
               <h3 className="font-semibold">Email us</h3>
               <a
-                href="mailto:hello@goals.ac"
+                href="mailto:contact@vineet.de"
                 className="flex items-center gap-2 text-sm text-primary hover:underline"
               >
                 <Mail className="h-4 w-4" />
-                hello@goals.ac
+                contact@vineet.de
               </a>
-              <p className="text-xs text-muted-foreground">Sales, demos, and general inquiries</p>
+              <p className="text-xs text-muted-foreground">Sales, demos, and consulting inquiries</p>
             </div>
             <div className="paper-card p-6 rounded-2xl space-y-3 text-sm">
               <p>
@@ -130,7 +131,7 @@ export function ContactPageClient() {
             <div className="text-sm text-muted-foreground space-y-2">
               <p>
                 <Link href="/pricing" className="text-primary hover:underline">
-                  View pricing
+                  View engagements
                 </Link>
               </p>
               <p>

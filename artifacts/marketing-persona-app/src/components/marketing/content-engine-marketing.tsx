@@ -26,8 +26,9 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { DarkCTABand } from "@/components/marketing/dark-cta-band";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
-import { cardSurfaceClass } from "@/lib/marketing-surfaces";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:5174";
 
@@ -77,8 +78,8 @@ const glassCard = cardSurfaceClass("glass");
 
 export function ContentEngineMarketing() {
   const { data: session } = useSession();
-  const appCta = session ? `${APP_URL}/dashboard` : "/signup";
-  const appLabel = session ? "Open app" : "Start free";
+  const appCta = session ? `${APP_URL}/dashboard` : CONTACT_HREF;
+  const appLabel = session ? "Open app" : CONTACT_CTA_PRIMARY;
 
   return (
     <MarketingPageShell
@@ -91,7 +92,7 @@ export function ContentEngineMarketing() {
           backgroundImage={HERO_IMAGES.contentEngine.hero}
           ctas={[
             { label: appLabel, href: appCta, variant: "primary" },
-            { label: "See pricing", href: "/pricing", variant: "ghost" },
+            { label: "Learn more", href: "/pricing", variant: "ghost" },
           ]}
         />
       }
@@ -207,11 +208,11 @@ export function ContentEngineMarketing() {
       <MarketingCTA
         titleLine1="Plan topics, draft content,"
         titleLine2="publish without switching tools"
-        description="Free to start. Connect a project, set your brand voice, and generate your first draft in minutes."
+        description="Book a discovery call to scope content production as part of your SEO, AEO, or GEO engagement."
         variant="dark"
         backgroundImage={HERO_IMAGES.contentEngine.footer}
         primaryHref={appCta}
-        primaryLabel={session ? "Open content studio" : "Create free account"}
+        primaryLabel={session ? "Open content studio" : CONTACT_CTA_PRIMARY}
         secondaryHref="/"
         secondaryLabel="← Try the free roadmap first"
       />

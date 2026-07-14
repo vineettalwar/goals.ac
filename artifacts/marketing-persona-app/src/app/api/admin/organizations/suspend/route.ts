@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requirePlatformAdminApi } from "@/lib/require-platform-admin";
-import { suspendOrganization, unsuspendOrganization } from "@/lib/org-access";
-import { logOrgAudit } from "@/lib/org-audit";
+import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
+import { suspendOrganization, unsuspendOrganization } from "@/lib/org/org-access";
+import { logOrgAudit } from "@/lib/org/org-audit";
 
 const suspendSchema = z.object({
   organizationId: z.number().int().positive(),

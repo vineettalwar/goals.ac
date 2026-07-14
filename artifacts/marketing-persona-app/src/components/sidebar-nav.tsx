@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { memo, Suspense, useCallback, useEffect } from "react";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   LayoutDashboard,
@@ -21,13 +21,16 @@ import {
   BookOpen,
   ScanSearch,
   Shield,
+  Sun,
+  Moon,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { isSuperAdmin } from "@/lib/org-access-shared";
+import { isSuperAdmin } from "@/lib/org/org-access-shared";
 import { ProjectSwitcher } from "@/components/project-switcher";
 import { Spinner } from "@/components/ui/spinner";
 import { useActiveProject } from "@/context/active-project";
+import { useTheme } from "@/context/theme";
 import { queryKeys } from "@/lib/queries/keys";
 import {
   fetchGoals,
@@ -126,6 +129,9 @@ export function SidebarNav({ userName, userEmail, userRole }: SidebarNavProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { activeProjectId } = useActiveProject();
+  const { theme, toggleTheme } = useTheme();
+  const { data: session } = useSession();
+  const userImage = session?.user?.image;
 
   function resolveHref(href: string) {
     const projectId = projectIdFromPathname(pathname) ?? activeProjectId;
@@ -316,16 +322,32 @@ export function SidebarNav({ userName, userEmail, userRole }: SidebarNavProps) {
       </div>
       <div className="border-t border-border p-3">
         <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">
-            {userName.charAt(0).toUpperCase()}
-          </div>
+          {userImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={userImage}
+              alt=""
+              className="h-7 w-7 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">
+              {userName.charAt(0).toUpperCase()}
+            </div>
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-medium">{userName}</p>
             <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
           </div>
           <button
+            onClick={toggleTheme}
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+            title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
+          </button>
+          <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="ml-auto shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
             title="Sign out"
           >
             <LogOut className="h-3.5 w-3.5" />

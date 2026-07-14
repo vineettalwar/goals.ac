@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { roadmapsTable, usersTable } from "@workspace/db/schema";
+import { roadmapsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { generateRoadmap, generateSlug } from "@/lib/ai/roadmap-generator";
-import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
-import { requireAuth } from "@/lib/require-auth";
-import {
-  getMonthlyRoadmapCountForUser,
-  getRoadmapQuota,
-  recordUsage,
-} from "@/lib/usage";
+import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
+import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
 
 const AUTH_REQUIRED_MESSAGE =
@@ -58,36 +55,26 @@ export async function POST(req: Request) {
       );
     }
 
-    const [owner] = await db
-      .select({ plan: usersTable.plan, encryptedGeminiKey: usersTable.encryptedGeminiKey })
-      .from(usersTable)
-      .where(eq(usersTable.id, userId!))
-      .limit(1);
-
-    const usesByok = Boolean(owner?.encryptedGeminiKey);
-    if (!usesByok) {
-      const quota = getRoadmapQuota(owner?.plan);
-      if (quota !== null) {
-        const roadmapsThisMonth = await getMonthlyRoadmapCountForUser(userId!);
-        if (roadmapsThisMonth >= quota) {
-          return NextResponse.json(
-            {
-              error: "quota_exhausted",
-              message: `You've used all ${quota} roadmap generations included in your ${owner?.plan ?? "starter"} plan this month. Upgrade your plan or add your own Gemini API key for unlimited generations.`,
-              plan: owner?.plan ?? "starter",
-              quota,
-              roadmapsThisMonth,
-            },
-            { status: 402 },
-          );
-        }
-      }
-    }
+    const userAiSettings = await loadUserAiSettings(userId!);
+    const billingPrep = await prepareAiBilling({
+      userId: userId!,
+      tier: "planning",
+      quotaKind: "roadmap",
+      usedByok: Boolean(userAiSettings.userApiKey),
+    });
+    if (!billingPrep.ok) return billingPrep.response;
 
     let content;
     try {
-      content = await generateRoadmap(industry, location, stage);
+      content = await generateRoadmap(
+        industry,
+        location,
+        stage,
+        userAiSettings.userApiKey ?? undefined,
+        userAiSettings.aiProviderOptions,
+      );
     } catch {
+      await cancelAiBilling(billingPrep.ctx, "generation_failed");
       return NextResponse.json(
         { error: "Roadmap generation temporarily unavailable. Please try again shortly." },
         { status: 503 },
@@ -101,13 +88,16 @@ export async function POST(req: Request) {
       .returning();
 
     if (inserted) {
-      await recordUsage({
+      await completeAiBilling(billingPrep.ctx, {
         userId: userId!,
         eventType: "roadmap_generation",
-        usedByok: usesByok,
+        usedByok: billingPrep.usedByok,
+        tier: "planning",
       });
       return NextResponse.json(inserted);
     }
+
+    await cancelAiBilling(billingPrep.ctx, "race_conflict");
 
     const [race] = await db
       .select()

@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "sonner";
 import { useState } from "react";
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
+import { ThemeProvider } from "@/context/theme";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -23,11 +24,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <SessionProvider>
-      <QueryClientProvider client={queryClient}>
-        {children}
-        <WebVitalsReporter />
-        <Toaster position="bottom-right" richColors />
-      </QueryClientProvider>
+      <ThemeProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          <WebVitalsReporter />
+          <Toaster position="bottom-right" richColors />
+        </QueryClientProvider>
+      </ThemeProvider>
     </SessionProvider>
   );
 }

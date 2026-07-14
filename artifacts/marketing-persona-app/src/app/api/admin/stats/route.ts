@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getPlatformStats } from "@/lib/platform-stats";
-import { requirePlatformAdminApi } from "@/lib/require-platform-admin";
+import { getPlatformStats } from "@/lib/platform/platform-stats";
+import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
 
 export async function GET() {
   const { error } = await requirePlatformAdminApi();

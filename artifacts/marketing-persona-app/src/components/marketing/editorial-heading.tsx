@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { fadeUp, fadeUpTransition } from "@/lib/motion";
+import { fadeUp, fadeUpTransition } from "@/lib/utils/motion";
 
 type EditorialHeadingProps = {
   line1: string;

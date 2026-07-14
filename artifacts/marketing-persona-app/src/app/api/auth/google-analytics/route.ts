@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { startGoogleAnalyticsOAuth } from "@/lib/analytics-property-oauth";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { startGoogleAnalyticsOAuth } from "@/lib/integrations/analytics-property-oauth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();
@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    return startGoogleAnalyticsOAuth(projectId, userId!);
+    return await startGoogleAnalyticsOAuth(projectId, userId!);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Google Analytics OAuth failed" },

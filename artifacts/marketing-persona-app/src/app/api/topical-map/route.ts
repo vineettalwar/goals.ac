@@ -2,12 +2,13 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { companiesTable, scheduledArticlesTable, brandProfilesTable, websiteProjectsTable, contentPiecesTable, seoArticlesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { generateTopicalMap } from "@/lib/ai/topical-map-generator";
-import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
-import { logger } from "@/lib/logger";
-import type { ScrapeData } from "@/lib/project-detail-types";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { logger } from "@/lib/utils/logger";
+import type { ScrapeData } from "@/lib/projects/project-detail-types";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
 
 const Body = z.object({
@@ -106,16 +107,40 @@ export async function POST(req: Request) {
     }
 
     const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+    const billingPrep = await prepareAiBilling({
+      userId: userId!,
+      tier: "planning",
+      quotaKind: "article",
+      companyId: companyId,
+      usedByok: Boolean(userApiKey),
+    });
+    if (!billingPrep.ok) return billingPrep.response;
 
-    const result = await generateTopicalMap(
-      {
-        company: companyData,
-        existingArticleTitles: existingTitles,
-      },
-      { userApiKey, aiProviderOptions },
-    );
+    try {
+      const result = await generateTopicalMap(
+        {
+          company: companyData,
+          existingArticleTitles: existingTitles,
+        },
+        { userApiKey, aiProviderOptions },
+      );
 
-    return NextResponse.json({ map: result });
+      await completeAiBilling(billingPrep.ctx, {
+        userId: userId!,
+        companyId: companyId ?? undefined,
+        eventType: "topical_map",
+        usedByok: billingPrep.usedByok,
+        tier: "planning",
+        promptTokens: result.generationUsage?.promptTokens,
+        outputTokens: result.generationUsage?.outputTokens,
+        totalTokens: result.generationUsage?.totalTokens,
+      });
+
+      return NextResponse.json({ map: result });
+    } catch (genErr) {
+      await cancelAiBilling(billingPrep.ctx, "generation_failed");
+      throw genErr;
+    }
   } catch (err) {
     logger.error({ err, companyId, websiteProjectId }, "Topical map generation failed");
     return NextResponse.json({ error: "Failed to generate topical map" }, { status: 500 });

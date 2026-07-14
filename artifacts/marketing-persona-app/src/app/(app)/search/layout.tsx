@@ -1,7 +1,7 @@
 "use client";
 
 import { HubPageLayout } from "@/components/hub-page-layout";
-import { SEARCH_TABS } from "@/lib/hub-tabs";
+import { SEARCH_TABS } from "@/lib/projects/hub-tabs";
 
 export default function SearchLayout({ children }: { children: React.ReactNode }) {
   return (

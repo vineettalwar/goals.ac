@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import type { HubTab } from "@/lib/hub-tabs";
+import type { HubTab } from "@/lib/projects/hub-tabs";
 
 interface HubPageLayoutProps {
   title: string;

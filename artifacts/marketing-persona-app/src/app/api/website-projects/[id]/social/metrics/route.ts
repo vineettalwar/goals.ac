@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import {
   syncSocialPostMetrics,
   getSocialMetricsSyncStatus,
@@ -8,7 +8,7 @@ import {
 } from "@workspace/content-engine/social-metrics-service";
 import { isValidSocialPlatform } from "@workspace/content-engine/platform-voice";
 import { enqueue, QUEUES } from "@workspace/jobs";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import type { SocialPlatformId } from "@workspace/db/schema";
 
 export async function GET(

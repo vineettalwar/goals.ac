@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import {
   generateContentPiece,
   buildCacheKey,
@@ -14,8 +14,9 @@ import {
   loadUserAiSettings,
   wordCountFromMarkdown,
   loadExistingPieceTitles,
-} from "@/lib/content-pieces-helpers";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+} from "@/lib/content/content-pieces-helpers";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
 
 const RegenerateBody = z.object({
@@ -53,6 +54,14 @@ export async function POST(
   const angleHint = parsed.success ? parsed.data.angleHint : undefined;
   const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
 
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "execution",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
     const existingPieceTitles = await loadExistingPieceTitles(piece!.websiteProjectId);
     const result = await generateContentPiece(
@@ -82,8 +91,19 @@ export async function POST(
       .where(eq(contentPiecesTable.id, id))
       .returning();
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "content_regenerate",
+      usedByok: billingPrep.usedByok,
+      tier: "execution",
+      promptTokens: result.generationUsage?.promptTokens,
+      outputTokens: result.generationUsage?.outputTokens,
+      totalTokens: result.generationUsage?.totalTokens,
+    });
+
     return NextResponse.json(updated);
   } catch {
+    await cancelAiBilling(billingPrep.ctx);
     return NextResponse.json({ error: "Regeneration failed" }, { status: 503 });
   }
 }

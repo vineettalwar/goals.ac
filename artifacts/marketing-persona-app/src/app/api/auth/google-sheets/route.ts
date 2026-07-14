@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { requireSiteAdmin } from "@/lib/require-site-admin";
-import { startGoogleSheetsOAuth } from "@/lib/google-sheets-oauth";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
+import { startGoogleSheetsOAuth } from "@/lib/integrations/google-sheets-oauth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireSiteAdmin();
@@ -18,7 +18,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    return startGoogleSheetsOAuth(projectId, sourceId, userId!);
+    return await startGoogleSheetsOAuth(projectId, sourceId, userId!);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Google Sheets OAuth failed" },

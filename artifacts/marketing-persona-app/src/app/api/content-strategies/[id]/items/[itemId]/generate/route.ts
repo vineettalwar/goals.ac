@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentStrategiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/org/org-access";
 import { generateFromContentItem } from "@workspace/content-engine/autopilot-orchestrator";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { enqueue, QUEUES } from "@workspace/jobs";
 
 export async function POST(
@@ -50,19 +51,37 @@ export async function POST(
     return NextResponse.json({ queued: true, contentItemId: itemId }, { status: 202 });
   }
 
+  const [userApiKey, aiProviderOptions] = await Promise.all([
+    getDecryptedUserGeminiKey(userId!),
+    getUserAiProviderOptions(userId!),
+  ]);
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "execution",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
-    const [userApiKey, aiProviderOptions] = await Promise.all([
-      getDecryptedUserGeminiKey(userId!),
-      getUserAiProviderOptions(userId!),
-    ]);
     const result = await generateFromContentItem(
       itemId,
       strategy.websiteProjectId,
       userId!,
       { generateVariants, userApiKey, aiProviderOptions },
     );
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "content_generation",
+      usedByok: billingPrep.usedByok,
+      tier: "execution",
+      promptTokens: result.generationUsage?.promptTokens,
+      outputTokens: result.generationUsage?.outputTokens,
+      totalTokens: result.generationUsage?.totalTokens,
+    });
     return NextResponse.json(result, { status: 201 });
   } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "generation_failed");
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Generation failed" },
       { status: 502 },

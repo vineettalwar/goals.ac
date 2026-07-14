@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { getKeywordResearchProvider } from "@workspace/keyword-research-provider";
 import { isSemrushDatabase } from "@workspace/keyword-research-provider";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
 
 const SemrushTestBody = z.object({

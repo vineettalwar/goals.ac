@@ -22,7 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useActiveProject } from "@/context/active-project";
-import type { ArticlePerformanceResponse } from "@/lib/analytics-property-types";
+import type { ArticlePerformanceResponse } from "@/lib/integrations/analytics-property-types";
 
 type SortKey = "sessions" | "clicks";
 

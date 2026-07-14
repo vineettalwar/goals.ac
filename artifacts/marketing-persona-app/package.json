@@ -29,6 +29,7 @@
     "@radix-ui/react-toast": "^1.2.7",
     "@tanstack/react-query": "catalog:",
     "@workspace/ai-providers": "workspace:*",
+    "@workspace/billing": "workspace:*",
     "@workspace/connectors": "workspace:*",
     "@workspace/content-engine": "workspace:*",
     "@workspace/db": "workspace:*",

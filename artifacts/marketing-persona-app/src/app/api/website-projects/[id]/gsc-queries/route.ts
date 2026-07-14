@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { and, eq, gte, lte, sql, desc } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { gscSearchQueriesTable } from "@workspace/db/schema";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import { defaultSyncDateRange } from "@workspace/seo-tools/gscSearchAnalytics";
 
 export async function GET(

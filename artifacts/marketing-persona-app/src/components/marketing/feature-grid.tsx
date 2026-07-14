@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { cardSurfaceClass, type MarketingSurface } from "@/lib/marketing-surfaces";
+import { cardSurfaceClass, type MarketingSurface } from "@/lib/marketing/marketing-surfaces";
 
 export type FeatureItem = {
   icon: LucideIcon;

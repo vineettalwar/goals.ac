@@ -13,9 +13,9 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
 import { HeroOverlapShell } from "@/components/marketing/hero-overlap-shell";
 import { EditorialHeading } from "@/components/marketing/editorial-heading";
-import { cardSurfaceClass } from "@/lib/marketing-surfaces";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
-import { normalizeHttpUrl } from "@/lib/normalize-url";
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { normalizeHttpUrl } from "@/lib/utils/normalize-url";
 
 const CHECKS = ["Title & Meta", "Schema.org", "H1/H2 structure", "Open Graph"];
 

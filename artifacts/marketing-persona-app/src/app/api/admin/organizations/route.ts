@@ -4,9 +4,9 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { listAllOrganizations, onboardOrganizationAsAdmin } from "@/lib/org-access";
-import { requirePlatformAdminApi } from "@/lib/require-platform-admin";
-import type { PlanId } from "@/lib/usage";
+import { listAllOrganizations, listOrganizationOptions, onboardOrganizationAsAdmin } from "@/lib/org/org-access";
+import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
+import type { PlanId } from "@/lib/billing/usage";
 
 const CreateOrgBody = z
   .object({
@@ -15,7 +15,7 @@ const CreateOrgBody = z
     createUserIfMissing: z.boolean().optional().default(false),
     temporaryPassword: z.string().min(8).optional(),
     organizationName: z.string().min(1),
-    plan: z.enum(["starter", "growth", "scale"]).default("starter"),
+    plan: z.literal("starter").default("starter"),
     company: z
       .object({
         name: z.string().min(1),
@@ -51,9 +51,15 @@ const CreateOrgBody = z
     }
   });
 
-export async function GET() {
+export async function GET(req: Request) {
   const { error } = await requirePlatformAdminApi();
   if (error) return error;
+
+  const { searchParams } = new URL(req.url);
+  if (searchParams.get("minimal") === "true") {
+    const organizations = await listOrganizationOptions();
+    return NextResponse.json({ organizations });
+  }
 
   const organizations = await listAllOrganizations();
   return NextResponse.json({ organizations });

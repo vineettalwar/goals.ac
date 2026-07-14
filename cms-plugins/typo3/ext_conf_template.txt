@@ -1,0 +1,8 @@
+# cat=basic; type=string; label=Site key (HMAC shared secret)
+siteKey =
+
+# cat=basic; type=int+; label=Parent page UID for new blog posts
+parentPageUid = 1
+
+# cat=basic; type=int+; label=Storage PID for idempotency / nonce tables
+storagePid = 0

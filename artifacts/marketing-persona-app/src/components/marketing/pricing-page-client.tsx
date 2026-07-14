@@ -7,63 +7,47 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { EditorialHeading } from "@/components/marketing/editorial-heading";
 import { FAQAccordion } from "@/components/marketing/faq-accordion";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import {
+  CONTACT_CTA_PRIMARY,
+  CONTACT_EMAIL,
+  CONTACT_HREF,
+  CONTACT_MAILTO,
+} from "@/lib/marketing/marketing-contact";
 
-const PLANS = [
+const ENGAGEMENTS = [
   {
-    name: "Starter",
-    price: "TBD",
-    period: "",
-    description: "Perfect for exploring goals.ac",
+    name: "GEO Audit Sprint",
+    description: "Baseline assessment of your AI search visibility",
     features: [
-      "Growth roadmaps",
-      "Website projects",
-      "Content pieces",
-      "GEO audit (basic)",
-      "Community support",
+      "AI visibility audit across ChatGPT, Perplexity, and Google AI Overviews",
+      "Competitor GEO scan",
+      "90-day action plan",
+      "Executive summary and recommendations",
     ],
-    cta: "Join waitlist",
-    href: "/signup",
-    featured: false,
   },
   {
-    name: "Growth",
-    price: "TBD",
-    period: "",
-    description: "For startups serious about content",
-    features: [
-      "Unlimited roadmaps",
-      "Multiple website projects",
-      "Content Studio",
-      "Marketing personas",
-      "WordPress auto-publish",
-      "Full GEO audit",
-      "AI visibility tracking",
-      "Competitor analysis",
-      "Content Autopilot",
-      "Priority support",
-    ],
-    cta: "Contact us",
-    href: "/contact",
+    name: "AEO Foundation",
+    description: "Strategy and content program for answer-engine visibility",
     featured: true,
+    features: [
+      "12-month growth roadmap",
+      "Monthly content calendar and briefs",
+      "GEO and AEO performance reporting",
+      "CMS publishing setup and support",
+      "Editorial review before every publish",
+    ],
   },
   {
-    name: "Scale",
-    price: "TBD",
-    period: "",
-    description: "For teams and agencies",
+    name: "Full GEO Program",
+    description: "End-to-end visibility management for scaling teams",
     features: [
-      "Everything in Growth",
-      "Unlimited projects",
-      "Multi-site publishing",
-      "Org roles & team access",
-      "Keyword tracking",
-      "Admin dashboard",
-      "Dedicated support",
+      "Everything in AEO Foundation",
+      "Ongoing content production and repurposing",
+      "Multi-site CMS publishing",
+      "Keyword and AI citation tracking",
+      "Dedicated strategist and priority support",
     ],
-    cta: "Contact us",
-    href: "/contact",
-    featured: false,
   },
 ];
 
@@ -72,14 +56,14 @@ export function PricingPageClient() {
     <MarketingPageShell
       hero={
         <PageHero
-          badge="Pricing"
-          titleLine1="Plans that scale"
-          titleLine2="with your pipeline"
-          description="Pricing is being finalized. Join early access or talk to us about your team."
+          badge="Engagements"
+          titleLine1="SEO, AEO & GEO consulting"
+          titleLine2="for B2B teams"
+          description="Scoped consulting engagements — from baseline audits to full visibility programs. We run strategy; goals.ac runs delivery."
           backgroundImage={HERO_IMAGES.pricing.hero}
           ctas={[
-            { label: "Start free", href: "/signup", variant: "primary" },
-            { label: "Contact us", href: "/contact", variant: "ghost" },
+            { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF, variant: "primary" },
+            { label: "See how we work", href: "/features", variant: "ghost" },
           ]}
         />
       }
@@ -88,90 +72,83 @@ export function PricingPageClient() {
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-12">
             <EditorialHeading
-              line1="Pricing"
-              line2="coming soon"
-              description="We're finalizing plans. Feature tiers below show what we're building. Exact pricing TBD."
+              line1="How we"
+              line2="work with clients"
+              description="Every engagement is scoped to your market, CMS, and goals. Pricing is discussed on a discovery call — no one-size-fits-all tiers."
             />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {PLANS.map((plan) => (
+            {ENGAGEMENTS.map((engagement) => (
               <div
-                key={plan.name}
+                key={engagement.name}
                 className={`rounded-2xl p-8 flex flex-col paper-card-hover ${
-                  plan.featured
+                  engagement.featured
                     ? "bg-primary text-primary-foreground shadow-lg ring-2 ring-(--accent-warm) ring-offset-2 ring-offset-background"
                     : "paper-card"
                 }`}
               >
-                {plan.featured && (
+                {engagement.featured && (
                   <span className="text-xs font-semibold uppercase tracking-wide mb-4 opacity-70">
-                    Most popular
+                    Most common
                   </span>
                 )}
-                <h2 className="text-xl font-bold">{plan.name}</h2>
-                <div className="mt-2 mb-1">
-                  <span className="text-4xl font-bold">{plan.price}</span>
-                  {plan.period && (
-                    <span
-                      className={`text-sm ${plan.featured ? "opacity-70" : "text-muted-foreground"}`}
-                    >
-                      {plan.period}
-                    </span>
-                  )}
-                </div>
+                <h2 className="text-xl font-bold">{engagement.name}</h2>
                 <p
-                  className={`text-sm mb-6 ${plan.featured ? "opacity-80" : "text-muted-foreground"}`}
+                  className={`text-sm mt-2 mb-6 ${engagement.featured ? "opacity-80" : "text-muted-foreground"}`}
                 >
-                  {plan.description}
+                  {engagement.description}
                 </p>
                 <ul className="space-y-3 flex-1 mb-8">
-                  {plan.features.map((feature) => (
+                  {engagement.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2.5 text-sm">
                       <Check
-                        className={`h-4 w-4 shrink-0 mt-0.5 ${plan.featured ? "opacity-80" : "text-primary"}`}
+                        className={`h-4 w-4 shrink-0 mt-0.5 ${engagement.featured ? "opacity-80" : "text-primary"}`}
                       />
                       {feature}
                     </li>
                   ))}
                 </ul>
                 <Link
-                  href={plan.href}
-                  className={`text-center px-6 py-3 rounded-full font-medium transition-all ${
-                    plan.featured
+                  href={CONTACT_HREF}
+                  className={`block text-center px-6 py-3 rounded-full font-medium transition-all ${
+                    engagement.featured
                       ? "bg-(--accent-warm) text-white hover:bg-(--accent-warm-hover)"
                       : "bg-primary text-primary-foreground hover:opacity-90"
                   }`}
                 >
-                  {plan.cta}
+                  Contact us to scope
                 </Link>
               </div>
             ))}
           </div>
           <p className="text-center text-sm text-muted-foreground mt-10">
-            Pricing TBD · early access available · no link schemes. Questions?{" "}
-            <Link href="/contact" className="text-primary hover:underline">
-              Contact us
+            Questions?{" "}
+            <Link href={CONTACT_HREF} className="text-primary hover:underline">
+              Book a discovery call
             </Link>
+            {" "}or{" "}
+            <a href={CONTACT_MAILTO} className="text-primary hover:underline">
+              email {CONTACT_EMAIL}
+            </a>
           </p>
 
           <div className="mt-16 paper-card rounded-2xl p-8 overflow-x-auto">
-            <h3 className="text-lg font-bold mb-6 text-center">vs typical AI SEO autopilot tools</h3>
+            <h3 className="text-lg font-bold mb-6 text-center">Why productized consulting?</h3>
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border text-left">
                   <th className="py-3 pr-4 font-medium text-muted-foreground">Capability</th>
                   <th className="py-3 px-4 font-medium">goals.ac</th>
-                  <th className="py-3 pl-4 font-medium text-muted-foreground">Typical autopilot SEO</th>
+                  <th className="py-3 pl-4 font-medium text-muted-foreground">Typical agency or AI tool</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
                 {[
-                  ["12-month strategy roadmaps", "✓", "✗"],
-                  ["Editorial review before publish", "✓ Always", "Limited"],
-                  ["AI visibility tracking", "✓", "✓"],
-                  ["Backlink exchange network", "✗ White-hat only", "✓"],
-                  ["CMS integrations (8+)", "✓", "4–5"],
-                  ["Pricing", "TBD", "$99+/mo"],
+                  ["12-month strategy roadmaps", "✓ Built in", "Custom SOW, weeks to start"],
+                  ["Editorial review before publish", "✓ Always", "Varies"],
+                  ["AI visibility (GEO/AEO) tracking", "✓", "Often separate vendor"],
+                  ["CMS integrations (8+)", "✓", "Manual or limited"],
+                  ["Dedicated strategist", "✓ On retainer", "Rotating account manager"],
                 ].map(([cap, us, them]) => (
                   <tr key={cap}>
                     <td className="py-3 pr-4">{cap}</td>
@@ -186,21 +163,21 @@ export function PricingPageClient() {
       </section>
 
       <FAQAccordion
-        titleLine1="Pricing"
+        titleLine1="Common"
         titleLine2="questions"
         items={[
           {
-            question: "When will pricing be available?",
+            question: "How do I get access?",
             answer:
-              "We're finalizing tiers and billing. Join the waitlist or contact us for early access. We'll notify you before paid plans launch.",
+              "Book a discovery call. We'll scope your market, CMS, and goals, then send a proposal. Accepted clients receive a platform invite.",
           },
           {
-            question: "Is the roadmap generator free?",
+            question: "Is the roadmap generator free to browse?",
             answer:
-              "Browsing our public roadmap catalog is free with no signup. Signed-in users can generate custom roadmaps during early access.",
+              "Yes. Our public roadmap catalog is free with no signup. Custom roadmap generation is part of client engagements.",
           },
           {
-            question: "Which platforms can I publish to?",
+            question: "Which platforms can you publish to?",
             answer:
               "WordPress, Shopify, Notion, Webflow, Ghost, webhooks, plus LinkedIn, X, Facebook, Instagram, Bluesky, and Mastodon.",
             helpHref: "/help/publish-social-content",
@@ -209,14 +186,14 @@ export function PricingPageClient() {
       />
 
       <MarketingCTA
-        titleLine1="Start with a"
-        titleLine2="free roadmap"
-        description="No credit card required. Generate your 12-month growth plan in minutes."
-        primaryLabel="Create free account"
+        titleLine1="Ready to improve"
+        titleLine2="your AI visibility?"
+        description="Book a 30-minute discovery call — we'll scope what fits."
+        primaryLabel={CONTACT_CTA_PRIMARY}
         variant="dark"
         backgroundImage={HERO_IMAGES.pricing.footer}
-        secondaryHref="/contact"
-        secondaryLabel="Contact us about pricing →"
+        secondaryHref={CONTACT_MAILTO}
+        secondaryLabel={`Email ${CONTACT_EMAIL} →`}
       />
     </MarketingPageShell>
   );

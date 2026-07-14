@@ -1,7 +1,5 @@
-import { requirePlatformAdmin } from "@/lib/require-platform-admin";
-import { AdminOrganizationsClient } from "./admin-organizations-client";
+import { AdminOrganizationsList } from "@/components/admin/admin-organizations-panel";
 
-export default async function AdminOrganizationsPage() {
-  await requirePlatformAdmin();
-  return <AdminOrganizationsClient />;
+export default function AdminOrganizationsPage() {
+  return <AdminOrganizationsList />;
 }

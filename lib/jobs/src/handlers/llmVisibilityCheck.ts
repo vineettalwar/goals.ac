@@ -4,6 +4,12 @@ import { QUEUES, enqueue } from "@workspace/jobs";
 import type { LlmVisibilityCheckJobData, LlmVisibilityCheckPayload, PgBoss } from "@workspace/jobs";
 import { parseVisibilitySettings } from "@workspace/content-engine/support/visibility-settings";
 import { runVisibilityCheckForProject } from "@workspace/content-engine/llm-visibility-service";
+import {
+  cancelWorkerAiBilling,
+  completeWorkerAiBilling,
+  prepareWorkerAiBilling,
+  resolveProjectOwnerUserId,
+} from "../worker-billing";
 import { logger } from "../logger";
 
 /** Weekly on Sunday at 07:00 UTC */
@@ -17,11 +23,41 @@ export async function registerLlmVisibilityCheckHandler(boss: PgBoss): Promise<v
   await boss.work<LlmVisibilityCheckJobData>(QUEUES.llmVisibilityCheck, async ([job]) => {
     const data = job.data;
     if (isProjectPayload(data)) {
-      await runVisibilityCheckForProject(data.projectId);
+      await runVisibilityCheckWithBilling(data.projectId);
     } else {
       await sweepLlmVisibilityProjects();
     }
   });
+}
+
+async function runVisibilityCheckWithBilling(projectId: number): Promise<void> {
+  const userId = await resolveProjectOwnerUserId(projectId);
+  if (!userId) {
+    logger.warn({ projectId }, "LLM visibility check: project owner not found");
+    return;
+  }
+
+  const billing = await prepareWorkerAiBilling({
+    userId,
+    tier: "planning",
+    quotaKind: "article",
+  });
+  if (!billing.ok) {
+    logger.warn({ projectId, reason: billing.reason }, "LLM visibility check skipped: billing denied");
+    return;
+  }
+
+  try {
+    await runVisibilityCheckForProject(projectId);
+    await completeWorkerAiBilling(billing.session, {
+      userId,
+      eventType: "llm_visibility_check",
+      companyId: projectId,
+    });
+  } catch (err) {
+    await cancelWorkerAiBilling(billing.session, err instanceof Error ? err.message : "llm_visibility_failed");
+    throw err;
+  }
 }
 
 async function sweepLlmVisibilityProjects(): Promise<void> {

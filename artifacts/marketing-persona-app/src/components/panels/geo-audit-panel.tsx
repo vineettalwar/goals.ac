@@ -12,7 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { PageSkeleton } from "@/components/page-skeleton";
 import { useActiveProject } from "@/context/active-project";
 import { useProjectContent } from "@/lib/queries";
-import { normalizeHttpUrl } from "@/lib/normalize-url";
+import { normalizeHttpUrl } from "@/lib/utils/normalize-url";
 
 const CHECKS = ["Title & Meta", "Schema.org", "H1/H2 structure", "Open Graph"];
 

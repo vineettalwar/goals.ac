@@ -5,8 +5,8 @@ import { ArrowRight } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
-import { LEARN_POSTS } from "@/lib/learn-posts";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { LEARN_POSTS } from "@/lib/marketing/learn-posts";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 
 export function LearnPageClient() {
   return (

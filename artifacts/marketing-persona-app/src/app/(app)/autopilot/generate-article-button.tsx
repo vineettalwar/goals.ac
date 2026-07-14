@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { handleAiBillingError } from "@/lib/billing/quota-checkout";
+import { isAiBillingDeniedPayload } from "@/components/billing/quota-upgrade-prompt";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -22,7 +24,15 @@ export function GenerateArticleButton({ companyId }: { companyId: number }) {
     setLoading(false);
 
     if (!res.ok) {
-      toast.error("Article generation failed. Try again.");
+      const body = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        message?: string;
+      };
+      if (res.status === 402 && isAiBillingDeniedPayload(body)) {
+        handleAiBillingError(body);
+        return;
+      }
+      toast.error(body.message ?? "Article generation failed. Try again.");
       return;
     }
 

@@ -5,8 +5,9 @@ import { ArrowRight } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
-import { SOLUTION_GROUP_LABELS, solutionsByGroup, type SolutionGroup } from "@/lib/site-nav";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
+import { SOLUTION_GROUP_LABELS, solutionsByGroup, type SolutionGroup } from "@/lib/marketing/site-nav";
 
 export function SolutionsPageClient() {
   const grouped = solutionsByGroup();
@@ -21,7 +22,7 @@ export function SolutionsPageClient() {
           description="Whether you need AI citations, content at scale, or agency workflows, pick the path that matches your goal."
           backgroundImage={HERO_IMAGES.features.capabilities}
           ctas={[
-            { label: "Start free", href: "/signup", variant: "primary" },
+            { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF, variant: "primary" },
             { label: "Browse features", href: "/features", variant: "ghost" },
           ]}
         />

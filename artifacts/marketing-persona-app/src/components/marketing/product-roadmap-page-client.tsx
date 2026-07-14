@@ -6,7 +6,8 @@ import { WaitlistForm } from "@/components/waitlist-form";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingSection } from "@/components/marketing/marketing-section";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 const ROADMAP = [
   { name: "Internal Link Hub", status: "beta" as const, href: "/link-building" },
@@ -29,7 +30,7 @@ export function ProductRoadmapPageClient() {
           titleLine2="building next"
           description="Live features, beta releases, and coming-soon items. Vote with the waitlist."
           backgroundImage={HERO_IMAGES.features.cta}
-          ctas={[{ label: "Start free", href: "/signup", variant: "primary" }]}
+          ctas={[{ label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF, variant: "primary" }]}
         />
       }
     >

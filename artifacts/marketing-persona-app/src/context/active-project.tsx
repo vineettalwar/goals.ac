@@ -16,7 +16,7 @@ import type { ProjectSummary } from "@/lib/queries/types";
 import {
   clearActiveProjectCookie,
   setActiveProjectCookie,
-} from "@/lib/active-project-cookie";
+} from "@/lib/active-project/cookie";
 import { removeProjectScopedQueries } from "@/lib/queries/invalidate-project-queries";
 
 const STORAGE_KEY = "activeProjectId";

@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { organizationsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireSiteAdmin } from "@/lib/require-site-admin";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireSiteAdmin } from "@/lib/auth/require-site-admin";
 import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
 import {
   getOrgAiSettingsForUser,

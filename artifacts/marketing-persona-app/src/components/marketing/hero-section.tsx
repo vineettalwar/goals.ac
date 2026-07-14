@@ -1,7 +1,7 @@
 "use client";
 
 import { PageHero } from "./page-hero";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
 
 type HeroSectionProps = {
   onCtaClick?: () => void;

@@ -13,6 +13,7 @@ import {
   publishBlogPieceToPrimaryDestination,
   resolvePrimaryEspDestination,
 } from "@workspace/content-engine/support/publish-destination";
+import { withPublishRecord } from "@workspace/content-engine/support/publish-records";
 import { logger } from "../logger";
 import { seedSocialPostMetrics } from "@workspace/content-engine/social-metrics-service";
 
@@ -73,46 +74,73 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
   let publishPlatform = platform ?? piece.publishPlatform;
   let remotePostId: string | undefined;
 
-  if (platform && isSocialPlatform(platform)) {
-    const result = await publishPieceToSocial(
-      platform,
-      {
-        id: piece.id,
-        title: piece.title,
-        bodyMarkdown: piece.bodyMarkdown,
-        websiteProjectId: piece.websiteProjectId,
-        featuredImageUrl: imageUrl,
-        pieceMetadata: piece.pieceMetadata,
-      },
-      userId,
-      creds,
-    );
-    publishedUrl = result.publishedUrl;
-    publishPlatform = result.publishPlatform;
-    remotePostId = result.remotePostId;
-  } else if (piece.formatType === "email_sequence") {
-    const espPlatform = resolvePrimaryEspDestination(creds, platform);
-    if (!espPlatform) {
-      throw new Error("No email platform connected for email_sequence format.");
+  const runPublish = async (): Promise<{
+    publishedUrl: string;
+    publishPlatform: string;
+    remotePostId?: string;
+  }> => {
+    if (platform && isSocialPlatform(platform)) {
+      const result = await publishPieceToSocial(
+        platform,
+        {
+          id: piece.id,
+          title: piece.title,
+          bodyMarkdown: piece.bodyMarkdown,
+          websiteProjectId: piece.websiteProjectId,
+          featuredImageUrl: imageUrl,
+          pieceMetadata: piece.pieceMetadata,
+        },
+        userId,
+        creds,
+      );
+      return {
+        publishedUrl: result.publishedUrl,
+        publishPlatform: result.publishPlatform,
+        remotePostId: result.remotePostId,
+      };
     }
-    const result = await publishPieceToDestination(espPlatform, publishable, creds);
-    publishedUrl = result.publishedUrl;
-    publishPlatform = result.publishPlatform;
-  } else if (platform) {
-    const result = await publishPieceToDestination(platform, publishable, creds, {
-      status: wpStatus,
-      featuredImageUrl: featuredImageFromPiece(piece),
-    });
-    publishedUrl = result.publishedUrl;
-    publishPlatform = result.publishPlatform;
-  } else {
+    if (piece.formatType === "email_sequence") {
+      const espPlatform = resolvePrimaryEspDestination(creds, platform);
+      if (!espPlatform) {
+        throw new Error("No email platform connected for email_sequence format.");
+      }
+      const result = await publishPieceToDestination(espPlatform, publishable, creds);
+      return { publishedUrl: result.publishedUrl, publishPlatform: result.publishPlatform };
+    }
+    if (platform) {
+      const result = await publishPieceToDestination(platform, publishable, creds, {
+        status: wpStatus,
+        featuredImageUrl: featuredImageFromPiece(piece),
+      });
+      return { publishedUrl: result.publishedUrl, publishPlatform: result.publishPlatform };
+    }
     const result = await publishBlogPieceToPrimaryDestination(publishable, creds, {
       status: wpStatus,
       featuredImageUrl: featuredImageFromPiece(piece),
     });
-    publishedUrl = result.publishedUrl;
-    publishPlatform = result.publishPlatform;
-  }
+    return { publishedUrl: result.publishedUrl, publishPlatform: result.publishPlatform };
+  };
+
+  const recordProvider = platform ?? piece.publishPlatform ?? "auto";
+  const publishOutcome = await withPublishRecord(
+    {
+      contentPieceId: pieceId,
+      websiteProjectId: piece.websiteProjectId,
+      provider: recordProvider,
+    },
+    async () => {
+      const result = await runPublish();
+      return {
+        publishedUrl: result.publishedUrl,
+        publishPlatform: result.publishPlatform,
+        remotePostId: result.remotePostId,
+      };
+    },
+  );
+
+  publishedUrl = publishOutcome.publishedUrl;
+  publishPlatform = publishOutcome.publishPlatform;
+  remotePostId = publishOutcome.remotePostId;
 
   await db
     .update(contentPiecesTable)

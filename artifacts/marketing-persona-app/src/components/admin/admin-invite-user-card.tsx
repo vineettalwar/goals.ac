@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Send } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +27,13 @@ interface ProjectOption {
 
 const ROLES = ["owner", "site_admin", "editor", "viewer"] as const;
 const ROLES_NEEDING_PROJECT = ["editor", "viewer"] as const;
+
+const ROLE_HINTS: Record<(typeof ROLES)[number], string> = {
+  owner: "Full org control including billing and members",
+  site_admin: "Manage projects, integrations, and team access",
+  editor: "Create and publish content for one assigned project",
+  viewer: "Read-only access to one assigned project",
+};
 
 export function AdminInviteUserCard() {
   const [organizations, setOrganizations] = useState<OrganizationOption[]>([]);
@@ -120,85 +128,96 @@ export function AdminInviteUserCard() {
     }
   }
 
+  if (loading) {
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-10 rounded-md bg-secondary/70" />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="h-10 rounded-md bg-secondary/70" />
+          <div className="h-10 rounded-md bg-secondary/70" />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="paper-card p-5 space-y-4">
-      <div>
-        <h2 className="font-medium">Invite user</h2>
-        <p className="text-sm text-muted-foreground">
-          Send an email invitation to join an organization on the platform.
-        </p>
+    <div className="space-y-4">
+      <div className="space-y-1.5">
+        <Label htmlFor="invite-email">Email</Label>
+        <Input
+          id="invite-email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="user@company.com"
+        />
       </div>
 
-      {loading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="invite-email">Email</Label>
-            <Input
-              id="invite-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@company.com"
-            />
-          </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-1.5">
+          <Label>Organization</Label>
+          <Select value={organizationId} onValueChange={setOrganizationId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select organization" />
+            </SelectTrigger>
+            <SelectContent>
+              {organizations.map((org) => (
+                <SelectItem key={org.id} value={String(org.id)}>
+                  {org.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-          <div className="space-y-1.5">
-            <Label>Organization</Label>
-            <Select value={organizationId} onValueChange={setOrganizationId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select organization" />
-              </SelectTrigger>
-              <SelectContent>
-                {organizations.map((org) => (
-                  <SelectItem key={org.id} value={String(org.id)}>
-                    {org.name}
+        <div className="space-y-1.5">
+          <Label>Role</Label>
+          <Select value={role} onValueChange={(v) => setRole(v as (typeof ROLES)[number])}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ROLES.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r.replace("_", " ")}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{ROLE_HINTS[role]}</p>
+        </div>
+      </div>
+
+      {ROLES_NEEDING_PROJECT.includes(role as (typeof ROLES_NEEDING_PROJECT)[number]) && (
+        <div className="space-y-1.5">
+          <Label>Assigned project</Label>
+          <Select value={assignedProjectId} onValueChange={setAssignedProjectId}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select project" />
+            </SelectTrigger>
+            <SelectContent>
+              {orgProjects.length === 0 ? (
+                <SelectItem value="__none" disabled>
+                  No projects in this organization
+                </SelectItem>
+              ) : (
+                orgProjects.map((project) => (
+                  <SelectItem key={project.id} value={String(project.id)}>
+                    {project.name}
                   </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Role</Label>
-            <Select value={role} onValueChange={(v) => setRole(v as (typeof ROLES)[number])}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {ROLES.map((r) => (
-                  <SelectItem key={r} value={r}>
-                    {r.replace("_", " ")}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {ROLES_NEEDING_PROJECT.includes(role as (typeof ROLES_NEEDING_PROJECT)[number]) && (
-            <div className="space-y-1.5">
-              <Label>Assigned project</Label>
-              <Select value={assignedProjectId} onValueChange={setAssignedProjectId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {orgProjects.map((project) => (
-                    <SelectItem key={project.id} value={String(project.id)}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
+                ))
+              )}
+            </SelectContent>
+          </Select>
         </div>
       )}
 
-      <Button onClick={() => void sendInvite()} disabled={submitting || loading}>
-        {submitting ? "Sending…" : "Send invitation"}
-      </Button>
+      <div className="flex justify-end pt-1">
+        <Button onClick={() => void sendInvite()} disabled={submitting}>
+          <Send className="mr-2 h-4 w-4" />
+          {submitting ? "Sending…" : "Send invitation"}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { handleTwitterCallback } from "@/lib/social-oauth";
+import { handleTwitterCallback } from "@/lib/integrations/social-oauth";
 
 export async function GET(req: Request) {
   const url = new URL(req.url);

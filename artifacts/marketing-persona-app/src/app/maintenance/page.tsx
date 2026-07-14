@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getPlatformSettings } from "@/lib/platform-settings";
+import { getPlatformSettings } from "@/lib/platform/platform-settings";
 
 export default async function MaintenancePage() {
   const settings = await getPlatformSettings();

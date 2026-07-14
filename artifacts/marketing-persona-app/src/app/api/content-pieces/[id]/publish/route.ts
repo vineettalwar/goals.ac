@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentPiecesTable, websiteProjectsTable, wordpressConnectionsTable, companiesTable } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { assertPieceOwner } from "@/lib/content-pieces-helpers";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { assertPieceOwner } from "@/lib/content/content-pieces-helpers";
 import {
   decryptCmsCredentials,
   ESP_PUBLISH_PLATFORMS,
@@ -18,6 +18,7 @@ import {
 } from "@workspace/content-engine/support/social-publish";
 import { publishPieceToDestination,
 } from "@workspace/content-engine/support/publish-destination";
+import { withPublishRecord } from "@workspace/content-engine/support/publish-records";
 import { publishPieceToWordPress } from "@workspace/content-engine/support/cms-publish";
 import { featuredImageFromMetadata } from "@workspace/content-engine/article-image-enricher";
 import { publishToWordPress } from "@workspace/connectors/wordpress";
@@ -100,81 +101,101 @@ export async function POST(
 
   const creds = decryptCmsCredentials((project?.cmsIntegrations ?? {}) as Record<string, unknown>);
 
+  const recordProvider =
+    parsed.data.platform ??
+    (parsed.data.wordpressConnectionId ? "wordpress" : null) ??
+    (parsed.data.wpSiteUrl ? "wordpress" : null) ??
+    "auto";
+
   try {
-    let publishedUrl: string;
-    let publishPlatform = parsed.data.platform ?? "wordpress";
-    let remotePostId: string | undefined;
-    const publishable = {
-      id: piece!.id,
-      title: piece!.title,
-      bodyMarkdown: piece!.bodyMarkdown,
-      targetKeyword: piece!.targetKeyword,
-      formatType: piece!.formatType,
-      pieceMetadata: piece!.pieceMetadata,
-    };
-    const imageUrl = featuredImageFromPiece(piece!);
-
-    if (parsed.data.platform && isSocialPlatform(parsed.data.platform)) {
-      const socialResult = await publishPieceToSocial(
-        parsed.data.platform as SocialPlatform,
-        {
-          ...publishable,
-          websiteProjectId: piece!.websiteProjectId,
-          featuredImageUrl: imageUrl,
+    const publishOutcome = await withPublishRecord(
+      {
+        contentPieceId: id,
+        websiteProjectId: piece!.websiteProjectId,
+        provider: recordProvider,
+        connectionId: parsed.data.wordpressConnectionId ?? null,
+      },
+      async () => {
+        let publishedUrl: string;
+        let publishPlatform = parsed.data.platform ?? "wordpress";
+        let remotePostId: string | undefined;
+        const publishable = {
+          id: piece!.id,
+          title: piece!.title,
+          bodyMarkdown: piece!.bodyMarkdown,
+          targetKeyword: piece!.targetKeyword,
+          formatType: piece!.formatType,
           pieceMetadata: piece!.pieceMetadata,
-        },
-        userId!,
-        creds,
-      );
-      publishedUrl = socialResult.publishedUrl;
-      publishPlatform = socialResult.publishPlatform;
-      remotePostId = socialResult.remotePostId;
-    } else if (parsed.data.wordpressConnectionId) {
-      const [row] = await db
-        .select({ connection: wordpressConnectionsTable })
-        .from(wordpressConnectionsTable)
-        .innerJoin(companiesTable, eq(companiesTable.id, wordpressConnectionsTable.companyId))
-        .where(
-          and(
-            eq(wordpressConnectionsTable.id, parsed.data.wordpressConnectionId),
-            eq(companiesTable.userId, userId!),
-          ),
-        )
-        .limit(1);
+        };
+        const imageUrl = featuredImageFromPiece(piece!);
 
-      if (!row) return NextResponse.json({ error: "WordPress connection not found" }, { status: 404 });
+        if (parsed.data.platform && isSocialPlatform(parsed.data.platform)) {
+          const socialResult = await publishPieceToSocial(
+            parsed.data.platform as SocialPlatform,
+            {
+              ...publishable,
+              websiteProjectId: piece!.websiteProjectId,
+              featuredImageUrl: imageUrl,
+              pieceMetadata: piece!.pieceMetadata,
+            },
+            userId!,
+            creds,
+          );
+          publishedUrl = socialResult.publishedUrl;
+          publishPlatform = socialResult.publishPlatform;
+          remotePostId = socialResult.remotePostId;
+        } else if (parsed.data.wordpressConnectionId) {
+          const [row] = await db
+            .select({ connection: wordpressConnectionsTable })
+            .from(wordpressConnectionsTable)
+            .innerJoin(companiesTable, eq(companiesTable.id, wordpressConnectionsTable.companyId))
+            .where(
+              and(
+                eq(wordpressConnectionsTable.id, parsed.data.wordpressConnectionId),
+                eq(companiesTable.userId, userId!),
+              ),
+            )
+            .limit(1);
 
-      const wpCreds: CmsIntegrationCredentials = {
-        wordpress: {
-          siteUrl: row.connection.siteUrl,
-          username: row.connection.username,
-          appPassword: decryptSecret(row.connection.encryptedAppPassword),
-        },
-      };
-      publishedUrl = await publishPieceToWordPress(publishable, wpCreds, {
-        status: row.connection.defaultStatus === "draft" ? "draft" : "publish",
-      });
-    } else if (parsed.data.wpSiteUrl && parsed.data.wpUsername && parsed.data.wpAppPassword) {
-      const result = await publishToWordPress(
-        {
-          siteUrl: parsed.data.wpSiteUrl,
-          username: parsed.data.wpUsername,
-          appPassword: parsed.data.wpAppPassword,
-        },
-        piece!.title,
-        piece!.bodyMarkdown,
-        "publish",
-      );
-      publishedUrl = result.url;
-    } else if (parsed.data.platform) {
-      const result = await publishPieceToDestination(parsed.data.platform, publishable, creds, {
-        featuredImageUrl: imageUrl,
-      });
-      publishedUrl = result.publishedUrl;
-      publishPlatform = result.publishPlatform;
-    } else {
-      return NextResponse.json({ error: "Platform not connected" }, { status: 400 });
-    }
+          if (!row) throw new Error("WordPress connection not found");
+
+          const wpCreds: CmsIntegrationCredentials = {
+            wordpress: {
+              siteUrl: row.connection.siteUrl,
+              username: row.connection.username,
+              appPassword: decryptSecret(row.connection.encryptedAppPassword),
+            },
+          };
+          publishedUrl = await publishPieceToWordPress(publishable, wpCreds, {
+            status: row.connection.defaultStatus === "draft" ? "draft" : "publish",
+          });
+        } else if (parsed.data.wpSiteUrl && parsed.data.wpUsername && parsed.data.wpAppPassword) {
+          const result = await publishToWordPress(
+            {
+              siteUrl: parsed.data.wpSiteUrl,
+              username: parsed.data.wpUsername,
+              appPassword: parsed.data.wpAppPassword,
+            },
+            piece!.title,
+            piece!.bodyMarkdown,
+            "publish",
+          );
+          publishedUrl = result.url;
+        } else if (parsed.data.platform) {
+          const result = await publishPieceToDestination(parsed.data.platform, publishable, creds, {
+            featuredImageUrl: imageUrl,
+          });
+          publishedUrl = result.publishedUrl;
+          publishPlatform = result.publishPlatform;
+        } else {
+          throw new Error("Platform not connected");
+        }
+
+        return { publishedUrl, publishPlatform, remotePostId };
+      },
+    );
+
+    const { publishedUrl, publishPlatform, remotePostId } = publishOutcome;
 
     const [updated] = await db
       .update(contentPiecesTable)

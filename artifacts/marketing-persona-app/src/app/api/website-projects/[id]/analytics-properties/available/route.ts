@@ -2,15 +2,15 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { analyticsPropertyConnectionsTable, websiteProjectsTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import {
   encryptStoredTokens,
   listGa4PropertiesForConnection,
   parseStoredTokens,
   rankProperties,
   resolveAccessToken,
-} from "@/lib/analytics-property-client";
+} from "@/lib/integrations/analytics-property-client";
 
 export async function GET(
   _req: Request,

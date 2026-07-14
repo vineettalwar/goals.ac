@@ -54,3 +54,4 @@ export {
   registerSocialMetricsSyncHandler,
   SOCIAL_METRICS_SYNC_CRON,
 } from "./socialMetricsSync";
+export { registerLegacyCompanyAutopilotHandler } from "./legacyCompanyAutopilot";

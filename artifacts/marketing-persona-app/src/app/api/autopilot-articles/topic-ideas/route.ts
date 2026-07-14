@@ -3,13 +3,14 @@ import { db } from "@workspace/db";
 import { companiesTable, marketingPersonasTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
 import { resolveProviderId } from "@workspace/ai-providers";
 import { cleanAndParse } from "@/lib/ai/utils";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
-import { aiProviderUnavailableMessage } from "@/lib/ai-providers-status";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { aiProviderUnavailableMessage } from "@/lib/platform/ai-providers-status";
 
 const schema = z.object({
   companyId: z.number(),
@@ -67,6 +68,14 @@ export async function POST(req: Request) {
     .limit(1);
 
   const count = parsed.data.count ?? 6;
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "rapid",
+    quotaKind: "article",
+    companyId: company.id,
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   const aiProviderOptions = await getUserAiProviderOptions(userId!);
   const resolvedProviderId = resolveProviderId(aiProviderOptions);
 
@@ -74,6 +83,7 @@ export async function POST(req: Request) {
   try {
     clientConfig = await resolveAiClientForUser(userId!);
   } catch {
+    await cancelAiBilling(billingPrep.ctx, "ai_unavailable");
     return NextResponse.json(
       {
         error: "ai_unavailable",
@@ -134,11 +144,21 @@ Constraints:
     const parsedIdeas = cleanAndParse<TopicIdeasResponse>(response.text);
     const ideas = Array.isArray(parsedIdeas.ideas) ? parsedIdeas.ideas.slice(0, count) : [];
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      companyId: company.id,
+      eventType: "topic_ideas",
+      usedByok: billingPrep.usedByok,
+      tier: "rapid",
+      provider: providerId,
+    });
+
     return NextResponse.json({
       ideas,
       generation: { source, provider: providerId },
     });
   } catch {
+    await cancelAiBilling(billingPrep.ctx, "generation_failed");
     return NextResponse.json(
       {
         error: "generation_failed",

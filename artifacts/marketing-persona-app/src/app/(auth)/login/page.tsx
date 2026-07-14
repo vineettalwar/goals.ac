@@ -12,8 +12,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { buildAuthRedirectParams, resolvePostLoginRedirect } from "@/lib/roadmap-intent";
+import { resolvePostLoginRedirect } from "@/lib/projects/roadmap-intent";
 import { useRoadmapIntent } from "@/hooks/use-roadmap-intent";
+import { CONTACT_CTA_SECONDARY, CONTACT_EMAIL, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -34,8 +35,6 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next");
   const roadmapIntent = useRoadmapIntent();
-  const signupReferrer = searchParams.get("from")?.trim() || roadmapIntent?.referrer;
-  const signupHref = `/signup?${buildAuthRedirectParams(signupReferrer).toString()}`;
   const [loading, setLoading] = useState(false);
   const {
     register,
@@ -103,10 +102,14 @@ function LoginPageContent() {
       </form>
 
       <p className="mt-6 text-center text-sm text-muted-foreground">
-        No account?{" "}
-        <Link href={signupHref} className="font-medium text-foreground hover:underline">
-          Create one
+        Need access?{" "}
+        <Link href={CONTACT_HREF} className="font-medium text-foreground hover:underline">
+          {CONTACT_CTA_SECONDARY}
         </Link>
+        {" "}or email{" "}
+        <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-foreground hover:underline">
+          {CONTACT_EMAIL}
+        </a>
       </p>
     </div>
   );

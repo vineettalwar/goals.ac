@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createUserGeminiClient } from "@workspace/ai-providers";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { z } from "zod";
 
 const ApiKeyBody = z.object({

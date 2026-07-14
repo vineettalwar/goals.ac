@@ -1,7 +1,5 @@
-import { requirePlatformAdmin } from "@/lib/require-platform-admin";
-import { AdminUsersPageClient } from "./admin-users-page-client";
+import { AdminUsersClient } from "./admin-users-client";
 
-export default async function AdminUsersPage() {
-  await requirePlatformAdmin();
-  return <AdminUsersPageClient />;
+export default function AdminUsersPage() {
+  return <AdminUsersClient />;
 }

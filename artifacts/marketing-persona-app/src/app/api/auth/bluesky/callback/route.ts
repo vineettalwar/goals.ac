@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getAccessibleProject } from "@/lib/org-access";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import { Agent } from "@atproto/api";
 import {
   decryptCmsCredentials,
@@ -10,8 +10,8 @@ import {
   completeBlueskyCallback,
   persistBlueskySession,
   getStoredBlueskySession,
-} from "@/lib/bluesky-oauth";
-import { getNextFrontendOrigin } from "@/lib/social-oauth";
+} from "@/lib/integrations/bluesky-oauth";
+import { getNextFrontendOrigin } from "@/lib/integrations/social-oauth";
 
 function publishingRedirect(_projectId: number, params: Record<string, string>): never {
   const qs = new URLSearchParams(params).toString();

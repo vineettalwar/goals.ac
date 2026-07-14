@@ -11,13 +11,13 @@
   "include": ["src"],
   "references": [
     { "path": "../db" },
+    { "path": "../billing" },
     { "path": "../security" },
     { "path": "../ai-providers" },
     { "path": "../connectors" },
     { "path": "../seo-tools" },
     { "path": "../keyword-research-provider" },
     { "path": "../stock-images" },
-    { "path": "../media" },
-    { "path": "../jobs" }
+    { "path": "../media" }
   ]
 }

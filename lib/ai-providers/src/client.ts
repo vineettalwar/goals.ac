@@ -23,6 +23,11 @@ export interface GenerateParams {
 
 export interface GenerateResult {
   text: string;
+  usage?: {
+    promptTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
+  };
 }
 
 export interface AiProviderClient {
@@ -53,7 +58,20 @@ class GeminiClient implements AiProviderClient {
             : undefined,
       },
     });
-    return { text: response.text ?? "" };
+    const usageMeta = (response as { usageMetadata?: { promptTokenCount?: number; candidatesTokenCount?: number; totalTokenCount?: number } }).usageMetadata;
+    const promptTokens = usageMeta?.promptTokenCount;
+    const outputTokens = usageMeta?.candidatesTokenCount;
+    return {
+      text: response.text ?? "",
+      usage:
+        promptTokens != null || outputTokens != null
+          ? {
+              promptTokens,
+              outputTokens,
+              totalTokens: usageMeta?.totalTokenCount ?? (promptTokens ?? 0) + (outputTokens ?? 0),
+            }
+          : undefined,
+    };
   }
 
   async *generateStream(params: GenerateParams): AsyncGenerator<string> {
@@ -120,6 +138,11 @@ async function buildClient(
         );
       }
       return OllamaClient.create(ollama);
+    }
+
+    case "anthropic": {
+      const { AnthropicClient } = await import("./anthropic");
+      return AnthropicClient.create();
     }
   }
 }

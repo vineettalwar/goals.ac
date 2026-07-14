@@ -2,16 +2,16 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { SEARCH_PROPERTY_PROVIDERS, searchPropertyConnectionsTable, websiteProjectsTable } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
-import type { SearchPropertyProvider } from "@/lib/search-property-types";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
+import type { SearchPropertyProvider } from "@/lib/integrations/search-property-types";
 import {
   listPropertiesForProvider,
   parseStoredTokens,
   rankProperties,
   resolveAccessToken,
   encryptStoredTokens,
-} from "@/lib/search-property-client";
+} from "@/lib/integrations/search-property-client";
 
 export async function GET(
   req: Request,

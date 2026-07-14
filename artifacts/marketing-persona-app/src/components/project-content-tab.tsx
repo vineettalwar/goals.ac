@@ -5,7 +5,7 @@ import Link from "next/link";
 import { BarChart3, FileText, Map, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import type { ProjectContent } from "@/lib/project-detail-types";
+import type { ProjectContent } from "@/lib/projects/project-detail-types";
 
 interface Props {
   projectId: string;

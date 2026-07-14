@@ -6,7 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { MarketingPageShell } from "@/components/marketing/marketing-page-shell";
 import { PageHero } from "@/components/marketing/page-hero";
 import { MarketingCTA } from "@/components/marketing/marketing-cta";
-import { HERO_IMAGES } from "@/lib/marketing-hero-images";
+import { HERO_IMAGES } from "@/lib/marketing/marketing-hero-images";
+import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
 interface ContentItem {
   id: number;
@@ -102,7 +103,7 @@ export function ContentStrategyClient({ id }: { id: string }) {
           description={`${strategy.stage} stage · ${(strategy.items ?? []).length} planned pieces`}
           backgroundImage={HERO_IMAGES.contentStrategy.hero}
           ctas={[
-            { label: "Start free", href: "/signup", variant: "primary" },
+            { label: CONTACT_CTA_PRIMARY, href: CONTACT_HREF, variant: "primary" },
             { label: "Content engine", href: "/content-engine", variant: "ghost" },
           ]}
         />
@@ -155,7 +156,7 @@ export function ContentStrategyClient({ id }: { id: string }) {
         description="Connect your CMS and generate drafts from each item in your strategy."
         variant="dark"
         backgroundImage={HERO_IMAGES.contentStrategy.footer}
-        primaryLabel="Create free account"
+        primaryLabel={CONTACT_CTA_PRIMARY}
       />
     </MarketingPageShell>
   );

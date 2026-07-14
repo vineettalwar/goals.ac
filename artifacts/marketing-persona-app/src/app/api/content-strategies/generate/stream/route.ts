@@ -2,11 +2,17 @@ import { db } from "@workspace/db";
 import { contentStrategiesTable, contentItemsTable, roadmapsTable } from "@workspace/db/schema";
 import type { ContentStyle } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import { generateContentStrategyWithProgress } from "@/lib/ai/content-strategy-generator";
-import { loadUserAiSettings } from "@/lib/content-pieces-helpers";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
+import {
+  billingDeniedResponse,
+  cancelAiBilling,
+  completeAiBilling,
+  prepareAiBilling,
+} from "@/lib/billing/ai-billing";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
 
 const GenerateBody = z.object({
@@ -72,6 +78,17 @@ export async function POST(req: Request) {
   const month = parsed.data.month ?? now.getMonth() + 1;
   const year = parsed.data.year ?? now.getFullYear();
 
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "strategy",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) {
+    return billingDeniedResponse(billingPrep);
+  }
+
   const sseHeaders = {
     "Content-Type": "text/event-stream",
     "Cache-Control": "no-cache",
@@ -89,7 +106,6 @@ export async function POST(req: Request) {
         }
 
         try {
-          const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
           let items;
           try {
             items = await generateContentStrategyWithProgress(
@@ -104,6 +120,7 @@ export async function POST(req: Request) {
               aiProviderOptions,
             );
           } catch (err) {
+            await cancelAiBilling(billingPrep.ctx, "generation_failed");
             send("error", { error: "Content strategy generation temporarily unavailable. Please try again." });
             controller.close();
             return;
@@ -140,9 +157,17 @@ export async function POST(req: Request) {
             .where(eq(contentItemsTable.strategyId, strategy.id))
             .orderBy(contentItemsTable.day);
 
+          await completeAiBilling(billingPrep.ctx, {
+            userId: userId!,
+            eventType: "content_strategy_generation",
+            usedByok: billingPrep.usedByok,
+            tier: "strategy",
+          });
+
           send("done", { ...strategy, items: contentItems });
           controller.close();
         } catch (err) {
+          await cancelAiBilling(billingPrep.ctx, "stream_error");
           try {
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify({ event: "error", error: "Internal server error" })}\n\n`),

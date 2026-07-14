@@ -84,6 +84,34 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
   const [repurposeKeyword, setRepurposeKeyword] = useState("");
   const [repurposeContent, setRepurposeContent] = useState("");
   const [sourcePieceId, setSourcePieceId] = useState("");
+  const [loadingSourcePiece, setLoadingSourcePiece] = useState(false);
+
+  async function loadSourcePiece(id: string) {
+    setSourcePieceId(id);
+    const summary = existingPieces.find((p) => String(p.id) === id);
+    if (summary) {
+      setRepurposeKeyword(summary.targetKeyword);
+    }
+    if (!id) {
+      setRepurposeContent("");
+      return;
+    }
+    setLoadingSourcePiece(true);
+    try {
+      const res = await fetch(`/api/content-pieces/${id}`);
+      if (res.ok) {
+        const full = (await res.json()) as { bodyMarkdown?: string; title?: string; targetKeyword?: string };
+        setRepurposeContent(full.bodyMarkdown ?? "");
+        if (full.targetKeyword) setRepurposeKeyword(full.targetKeyword);
+      } else {
+        toast.error("Failed to load content piece");
+      }
+    } catch {
+      toast.error("Failed to load content piece");
+    } finally {
+      setLoadingSourcePiece(false);
+    }
+  }
 
   function reset() {
     setStep("format");
@@ -554,14 +582,8 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
                 <Label>Load from existing piece</Label>
                 <Select
                   value={sourcePieceId}
-                  onValueChange={(id) => {
-                    setSourcePieceId(id);
-                    const piece = existingPieces.find((p) => String(p.id) === id);
-                    if (piece) {
-                      setRepurposeKeyword(piece.targetKeyword);
-                      setRepurposeContent(`[${piece.title}]\nKeyword: ${piece.targetKeyword}`);
-                    }
-                  }}
+                  onValueChange={(id) => void loadSourcePiece(id)}
+                  disabled={loadingSourcePiece}
                 >
                   <SelectTrigger><SelectValue placeholder="Paste content below…" /></SelectTrigger>
                   <SelectContent>
@@ -570,6 +592,9 @@ export function CreateContentModal({ open, onClose, projectId, existingPieces, o
                     ))}
                   </SelectContent>
                 </Select>
+                {loadingSourcePiece && (
+                  <p className="text-xs text-muted-foreground">Loading content…</p>
+                )}
               </div>
             )}
 

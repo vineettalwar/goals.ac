@@ -2,14 +2,15 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { contentPiecesTable, CONTENT_FORMAT_TYPES } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
-import { requireAuth } from "@/lib/require-auth";
+import { requireAuth } from "@/lib/auth/require-auth";
 import { repurposeContentPiece } from "@workspace/content-engine/content-studio-generator";
 import {
   loadProjectBrand,
   loadUserAiSettings,
   wordCountFromMarkdown,
-} from "@/lib/content-pieces-helpers";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+} from "@/lib/content/content-pieces-helpers";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
 
 const RepurposeFromTextBody = z.object({
@@ -45,8 +46,16 @@ export async function POST(
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "execution",
+    quotaKind: "article",
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
-    const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId!);
     const result = await repurposeContentPiece(
       parsed.data.targetFormat as ContentFormatType,
       ctx.brand,
@@ -69,8 +78,16 @@ export async function POST(
       })
       .returning();
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "content_repurpose",
+      usedByok: billingPrep.usedByok,
+      tier: "execution",
+    });
+
     return NextResponse.json(inserted, { status: 201 });
   } catch {
+    await cancelAiBilling(billingPrep.ctx);
     return NextResponse.json({ error: "Failed to repurpose content" }, { status: 503 });
   }
 }

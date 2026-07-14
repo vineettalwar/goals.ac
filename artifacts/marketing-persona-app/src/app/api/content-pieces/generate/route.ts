@@ -3,10 +3,11 @@ import { db } from "@workspace/db";
 import { contentPiecesTable, CONTENT_FORMAT_TYPES } from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { generateContentPiece, buildCacheKey } from "@/lib/ai/content-studio-generator";
-import { loadProjectBrand } from "@/lib/content-pieces-helpers";
-import { rateLimitResponse, RATE_LIMITS } from "@/lib/rate-limit";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { generateContentPiece, buildCacheKey, cacheGet } from "@/lib/ai/content-studio-generator";
+import { loadProjectBrand } from "@/lib/content/content-pieces-helpers";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
 
 const GenerateBody = z.object({
@@ -54,26 +55,66 @@ export async function POST(req: Request) {
       return NextResponse.json(existing, { headers: { "X-Cache": "HIT" } });
     }
 
-    const result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint);
-    const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
+    const aiCached = await cacheGet(cacheKeyStr);
+    if (aiCached) {
+      const wordCount = aiCached.body_markdown.split(/\s+/).filter(Boolean).length;
+      const [inserted] = await db
+        .insert(contentPiecesTable)
+        .values({
+          websiteProjectId,
+          formatType: formatType as ContentFormatType,
+          title: aiCached.title,
+          targetKeyword: aiCached.target_keyword,
+          bodyMarkdown: aiCached.body_markdown,
+          wordCount,
+          status: "draft",
+          cacheKey: cacheKeyStr,
+          plannedDate: plannedDate ?? null,
+          pieceMetadata: aiCached.pieceMetadata ?? null,
+        })
+        .returning();
+      return NextResponse.json(inserted, { status: 201, headers: { "X-Cache": "HIT" } });
+    }
 
-    const [inserted] = await db
-      .insert(contentPiecesTable)
-      .values({
-        websiteProjectId,
-        formatType: formatType as ContentFormatType,
-        title: result.title,
-        targetKeyword: result.target_keyword,
-        bodyMarkdown: result.body_markdown,
-        wordCount,
-        status: "draft",
-        cacheKey: cacheKeyStr,
-        plannedDate: plannedDate ?? null,
-        pieceMetadata: result.pieceMetadata ?? null,
-      })
-      .returning();
+    const billingPrep = await prepareAiBilling({
+      userId: userId!,
+      tier: "execution",
+      quotaKind: "article",
+    });
+    if (!billingPrep.ok) return billingPrep.response;
 
-    return NextResponse.json(inserted, { status: 201 });
+    try {
+      const result = await generateContentPiece(formatType as ContentFormatType, brand, targetKeyword, angleHint);
+      const wordCount = result.body_markdown.split(/\s+/).filter(Boolean).length;
+
+      const [inserted] = await db
+        .insert(contentPiecesTable)
+        .values({
+          websiteProjectId,
+          formatType: formatType as ContentFormatType,
+          title: result.title,
+          targetKeyword: result.target_keyword,
+          bodyMarkdown: result.body_markdown,
+          wordCount,
+          status: "draft",
+          cacheKey: cacheKeyStr,
+          plannedDate: plannedDate ?? null,
+          pieceMetadata: result.pieceMetadata ?? null,
+        })
+        .returning();
+
+      await completeAiBilling(billingPrep.ctx, {
+        userId: userId!,
+        eventType: "content_generation",
+        usedByok: billingPrep.usedByok,
+        tier: "execution",
+      });
+
+      return NextResponse.json(inserted, { status: 201 });
+    } catch (err) {
+      await cancelAiBilling(billingPrep.ctx);
+      throw err;
+    }
   } catch (err) {
     return NextResponse.json({ error: "Failed to generate content. Please try again." }, { status: 503 });
   }

@@ -60,6 +60,12 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 - Article performance API joining `published_url` to GA4 page paths + GSC clicks
 - Integrations GA4 tile, Search → Performance dashboard, Content Studio metrics badges
 
+**Done (credit consumption wiring):**
+- `lib/billing` pricing + `prepareAiBillingSession` / multi-line `settleReservationLines`
+- All AI generation routes + worker `contentGenerate` debit ledger on success
+- Dual enforcement: count quotas + credit balance on growth/scale platform-key calls
+- `GET /api/billing/credits` balance endpoint
+
 **In progress / scaffolded:**
 - MFA TOTP (schema + settings UI; verification not enforced yet)
 - SSO/OIDC (not started)

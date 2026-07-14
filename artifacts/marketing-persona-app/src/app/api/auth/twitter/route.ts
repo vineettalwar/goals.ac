@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/require-auth";
-import { startTwitterOAuth } from "@/lib/social-oauth";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { startTwitterOAuth } from "@/lib/integrations/social-oauth";
 
 export async function GET(req: Request) {
   const { userId, error } = await requireAuth();
@@ -12,11 +12,12 @@ export async function GET(req: Request) {
   }
 
   try {
-    startTwitterOAuth(projectId, userId!);
+    await startTwitterOAuth(projectId, userId!);
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "X OAuth failed" },
       { status: 503 },
     );
   }
+  return NextResponse.json({ error: "OAuth redirect failed" }, { status: 500 });
 }

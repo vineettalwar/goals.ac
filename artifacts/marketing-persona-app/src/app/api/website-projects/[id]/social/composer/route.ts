@@ -1,10 +1,11 @@
-import { requireAuth } from "@/lib/require-auth";
-import { getAccessibleProject } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import { loadBrandContextForProject } from "@workspace/content-engine/support/brand-context-loader";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
 import { createMultiPlatformBundle } from "@workspace/content-engine/support/social-queue-service";
 import { isValidSocialPlatform } from "@workspace/content-engine/platform-voice";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { z } from "zod";
 
 const ComposerBody = z.object({
@@ -48,6 +49,15 @@ export async function POST(
     getUserAiProviderOptions(userId!),
   ]);
 
+  const billingPrep = await prepareAiBilling({
+    userId: userId!,
+    tier: "execution",
+    quotaKind: "article",
+    companyId: projectId,
+    usedByok: Boolean(userApiKey),
+  });
+  if (!billingPrep.ok) return billingPrep.response;
+
   try {
     const pieces = await createMultiPlatformBundle({
       projectId,
@@ -58,6 +68,14 @@ export async function POST(
       aiProviderOptions,
     });
 
+    await completeAiBilling(billingPrep.ctx, {
+      userId: userId!,
+      eventType: "social_composer",
+      usedByok: billingPrep.usedByok,
+      tier: "execution",
+      companyId: projectId,
+    });
+
     return Response.json({
       pieces: pieces.map((p) => ({
         ...p,
@@ -65,6 +83,7 @@ export async function POST(
       })),
     });
   } catch (err) {
+    await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "social_composer_failed");
     const message = err instanceof Error ? err.message : "Composer failed";
     return Response.json({ error: message }, { status: 400 });
   }

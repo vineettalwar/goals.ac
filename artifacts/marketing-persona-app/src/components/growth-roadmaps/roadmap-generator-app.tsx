@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { QuotaUpgradePrompt } from "@/components/billing/quota-upgrade-prompt";
 
 type GenerationPhase = "summary" | "phase0" | "phase1" | "phase2";
 
@@ -59,7 +60,9 @@ export function RoadmapGeneratorApp({
   const [stage, setStage] = useState<string>(defaultStage ?? STAGES[1].value);
   const [isPending, setIsPending] = useState(false);
   const [completedPhases, setCompletedPhases] = useState<Set<GenerationPhase>>(new Set());
-  const [generationError, setGenerationError] = useState<string | null>(null);
+  const [generationError, setGenerationError] = useState<{
+    message: string;
+  } | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
@@ -96,7 +99,7 @@ export function RoadmapGeneratorApp({
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!industry || !location || !stage) {
-      setGenerationError("Please select industry, location, and stage.");
+      setGenerationError({ message: "Please select industry, location, and stage." });
       return;
     }
 
@@ -121,13 +124,16 @@ export function RoadmapGeneratorApp({
           error?: string;
           message?: string;
         };
-        if (errJson.error === "quota_exhausted") {
-          setGenerationError(
-            errJson.message ??
-              "You've reached your monthly roadmap limit. Upgrade your plan or add your Gemini API key in Settings.",
-          );
+        if (errJson.error === "quota_exhausted" || errJson.error === "insufficient_credits") {
+          setGenerationError({
+            message:
+              errJson.message ??
+              "You've reached your monthly roadmap limit on the platform key. Add your API key in Settings → AI Providers.",
+          });
         } else {
-          setGenerationError(errJson.message ?? errJson.error ?? "Generation failed");
+          setGenerationError({
+            message: errJson.message ?? errJson.error ?? "Generation failed",
+          });
         }
         setIsPending(false);
         return;
@@ -166,7 +172,7 @@ export function RoadmapGeneratorApp({
             router.push(`/growth-roadmaps/${payload.slug}`);
             return;
           } else if (payload.event === "error") {
-            setGenerationError(payload.error ?? "Generation failed");
+            setGenerationError({ message: payload.error ?? "Generation failed" });
             setIsPending(false);
             return;
           }
@@ -175,7 +181,7 @@ export function RoadmapGeneratorApp({
       setIsPending(false);
     } catch (err: unknown) {
       if ((err as { name?: string }).name !== "AbortError") {
-        setGenerationError("Roadmap generation failed. Please try again.");
+        setGenerationError({ message: "Roadmap generation failed. Please try again." });
         setIsPending(false);
       }
     }
@@ -287,7 +293,7 @@ export function RoadmapGeneratorApp({
         )}
 
         {generationError && (
-          <p className="text-sm text-destructive text-center">{generationError}</p>
+          <QuotaUpgradePrompt message={generationError.message} />
         )}
       </form>
     </div>

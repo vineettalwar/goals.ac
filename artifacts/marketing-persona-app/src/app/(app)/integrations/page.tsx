@@ -15,7 +15,7 @@ import {
 } from "@/hooks/use-integration-counts";
 import { SEARCH_INTEGRATIONS_COUNT } from "@/components/search-property-connections-panel";
 import { ANALYTICS_INTEGRATIONS_COUNT } from "@/components/analytics-property-connections-panel";
-import { getCmsDestinations, getEspDestinations, SOCIAL_SETTINGS_COUNT } from "@/lib/publishing-destinations";
+import { getCmsDestinations, getEspDestinations, SOCIAL_SETTINGS_COUNT } from "@/lib/projects/publishing-destinations";
 
 type IntegrationsTab = "all" | IntegrationCategoryFilter | "search";
 

@@ -12,8 +12,8 @@ import {
   roadmapsTable,
 } from "@workspace/db/schema";
 import { eq, desc, inArray, and } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/org-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/org/org-access";
 
 export async function GET(
   _req: Request,

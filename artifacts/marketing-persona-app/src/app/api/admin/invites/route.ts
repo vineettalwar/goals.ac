@@ -7,10 +7,10 @@ import {
   createOrgInvite,
   listPendingInvites,
   OrgMemberRoleSchema,
-} from "@/lib/org-access";
-import { logOrgAudit } from "@/lib/org-audit";
-import { buildOrgInviteEmail, sendEmail } from "@/lib/email";
-import { requirePlatformAdminApi } from "@/lib/require-platform-admin";
+} from "@/lib/org/org-access";
+import { logOrgAudit } from "@/lib/org/org-audit";
+import { buildOrgInviteEmail, sendEmail } from "@/lib/utils/email";
+import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
 
 const CreateInviteBody = z.object({
   email: z.string().email(),

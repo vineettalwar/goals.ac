@@ -26,6 +26,7 @@
     "./llm-visibility-service": "./src/llm-visibility-service.ts",
     "./persona-generator": "./src/persona-generator.ts",
     "./article-generator": "./src/article-generator.ts",
+    "./legacy-company-autopilot": "./src/legacy-company-autopilot.ts",
     "./article-quality-score": "./src/article-quality-score.ts",
     "./humanizer": "./src/humanizer.ts",
     "./brand-voice": "./src/brand-voice.ts",
@@ -50,6 +51,7 @@
     "./support/social-tokens": "./src/support/social-tokens.ts",
     "./support/social-publish": "./src/support/social-publish.ts",
     "./support/publish-destination": "./src/support/publish-destination.ts",
+    "./support/publish-records": "./src/support/publish-records.ts",
     "./support/esp-publish": "./src/support/esp-publish.ts",
     "./support/brand-scrape-orchestrator": "./src/support/brand-scrape-orchestrator.ts",
     "./support/brand-scan-context": "./src/support/brand-scan-context.ts",
@@ -67,11 +69,13 @@
     "./support/social-queue-service": "./src/support/social-queue-service.ts",
     "./support/evergreen-recycle": "./src/support/evergreen-recycle.ts",
     "./social-history-sync-service": "./src/social-history-sync-service.ts",
-    "./social-metrics-service": "./src/social-metrics-service.ts"
+    "./social-metrics-service": "./src/social-metrics-service.ts",
+    "./goal-brief-compiler": "./src/goal-brief-compiler.ts"
   },
   "dependencies": {
     "@google/genai": "^1.44.0",
     "@workspace/ai-providers": "workspace:*",
+    "@workspace/billing": "workspace:*",
     "@workspace/connectors": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/jobs": "workspace:*",

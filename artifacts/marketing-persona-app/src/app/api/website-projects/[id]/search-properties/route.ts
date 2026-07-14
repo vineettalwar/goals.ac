@@ -4,22 +4,27 @@ import {
   SEARCH_PROPERTY_PROVIDERS,
   searchPropertyConnectionsTable,
 } from "@workspace/db/schema";
-import type { SearchPropertyConnectionsResponse, SearchPropertyProvider } from "@/lib/search-property-types";
+import type { SearchPropertyConnectionsResponse, SearchPropertyProvider } from "@/lib/integrations/search-property-types";
 import { and, eq } from "drizzle-orm";
-import { requireAuth } from "@/lib/require-auth";
-import { requireProjectAccess } from "@/lib/project-access";
+import { requireAuth } from "@/lib/auth/require-auth";
+import { requireProjectAccess } from "@/lib/projects/project-access";
 import {
   AI_REPORT_LABELS,
   API_INGESTION_NOTES,
   buildAiReportUrl,
-} from "@/lib/search-property-links";
+} from "@/lib/integrations/search-property-links";
 import { z } from "zod";
 import {
   encryptStoredTokens,
   listPropertiesForProvider,
   parseStoredTokens,
   resolveAccessToken,
-} from "@/lib/search-property-client";
+} from "@/lib/integrations/search-property-client";
+import { getPlatformSettings } from "@/lib/platform/platform-settings";
+import {
+  bingWebmasterAvailable,
+  googleIntegrationsAvailable,
+} from "@/lib/platform/platform-features";
 
 function serializeConnection(row: {
   provider: string;
@@ -93,11 +98,12 @@ export async function GET(
     return row ? serializeConnection(row) : emptyStatus(provider);
   });
 
+  const settings = await getPlatformSettings();
   const payload: SearchPropertyConnectionsResponse = {
     connections,
     oauthConfigured: {
-      googleSearchConsole: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-      bingWebmaster: Boolean(process.env.BING_WEBMASTER_CLIENT_ID && process.env.BING_WEBMASTER_CLIENT_SECRET),
+      googleSearchConsole: googleIntegrationsAvailable(settings),
+      bingWebmaster: bingWebmasterAvailable(settings),
     },
   };
 

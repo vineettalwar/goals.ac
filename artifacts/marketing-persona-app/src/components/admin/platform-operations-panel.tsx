@@ -10,6 +10,60 @@ interface PlatformSettings {
   platformEnabled: boolean;
   aiGenerationEnabled: boolean;
   maintenanceMessage: string | null;
+  signupsEnabled: boolean;
+}
+
+type ToggleKey = keyof Pick<
+  PlatformSettings,
+  "platformEnabled" | "aiGenerationEnabled" | "signupsEnabled"
+>;
+
+interface ToggleRowProps {
+  id: string;
+  label: string;
+  description: string;
+  checked: boolean;
+  disabled?: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}
+
+function ToggleRow({
+  id,
+  label,
+  description,
+  checked,
+  disabled,
+  onCheckedChange,
+}: ToggleRowProps) {
+  return (
+    <div className="flex items-center justify-between gap-6 py-4 first:pt-0">
+      <div className="min-w-0">
+        <Label htmlFor={id} className="text-sm font-medium">
+          {label}
+        </Label>
+        <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>
+      </div>
+      <Switch
+        id={id}
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onCheckedChange}
+      />
+    </div>
+  );
+}
+
+function OperationsSkeleton() {
+  return (
+    <div className="space-y-0 divide-y divide-border animate-pulse">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <div key={i} className="py-4">
+          <div className="h-4 w-32 rounded bg-secondary/70" />
+          <div className="mt-2 h-3 w-48 rounded bg-secondary/70" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function PlatformOperationsPanel() {
@@ -51,64 +105,71 @@ export function PlatformOperationsPanel() {
     }
   }
 
-  if (!settings) {
-    return <p className="text-sm text-muted-foreground">Loading platform settings…</p>;
+  function toggle(key: ToggleKey, checked: boolean) {
+    void save({ [key]: checked });
   }
 
+  if (!settings) return <OperationsSkeleton />;
+
   return (
-    <div className="paper-card p-5 space-y-5">
-      <div>
-        <h2 className="font-semibold">Platform operations</h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Manage public access and AI service availability.
-        </p>
-      </div>
+    <div className="divide-y divide-border">
+      <p className="pb-4 text-xs text-muted-foreground">
+        System-wide access and feature gates. Stripe and Resend are managed under Admin →
+        Integrations.
+      </p>
 
-      <div className="flex items-center justify-between gap-4">
+      <ToggleRow
+        id="platform-enabled"
+        label="Public access"
+        description="When off, visitors see the maintenance page."
+        checked={settings.platformEnabled}
+        disabled={saving}
+        onCheckedChange={(checked) => toggle("platformEnabled", checked)}
+      />
+
+      <ToggleRow
+        id="ai-enabled"
+        label="AI services"
+        description="Pauses generation, scanning, and autopilot jobs."
+        checked={settings.aiGenerationEnabled}
+        disabled={saving}
+        onCheckedChange={(checked) => toggle("aiGenerationEnabled", checked)}
+      />
+
+      <ToggleRow
+        id="signups-enabled"
+        label="Public signups"
+        description="Allow self-serve account creation without an invite link."
+        checked={settings.signupsEnabled}
+        disabled={saving}
+        onCheckedChange={(checked) => toggle("signupsEnabled", checked)}
+      />
+
+      <div className="space-y-3 py-4 pb-0">
         <div>
-          <Label htmlFor="platform-enabled">Public access</Label>
-          <p className="text-xs text-muted-foreground">
-            When off, visitors see the scheduled maintenance page.
+          <Label htmlFor="maintenance-message" className="text-sm font-medium">
+            Maintenance notice
+          </Label>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            Shown when public access is off.
           </p>
         </div>
-        <Switch
-          id="platform-enabled"
-          checked={settings.platformEnabled}
-          disabled={saving}
-          onCheckedChange={(checked) => void save({ platformEnabled: checked })}
-        />
-      </div>
-
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <Label htmlFor="ai-enabled">AI services</Label>
-          <p className="text-xs text-muted-foreground">
-            Pauses content generation, website scanning, and autopilot jobs.
-          </p>
-        </div>
-        <Switch
-          id="ai-enabled"
-          checked={settings.aiGenerationEnabled}
-          disabled={saving}
-          onCheckedChange={(checked) => void save({ aiGenerationEnabled: checked })}
-        />
-      </div>
-
-      <div className="space-y-2">
-        <Label htmlFor="maintenance-message">Maintenance notice (optional)</Label>
         <Textarea
           id="maintenance-message"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           rows={3}
-          placeholder="Message shown on the maintenance page"
+          placeholder="We're performing scheduled maintenance. Back shortly."
+          className="resize-none"
         />
-        <Button size="sm" variant="outline" disabled={saving} onClick={() => void save({})}>
-          Save notice
-        </Button>
+        <div className="flex justify-end">
+          <Button size="sm" variant="ghost" disabled={saving} onClick={() => void save({})}>
+            {saving ? "Saving…" : "Save notice"}
+          </Button>
+        </div>
       </div>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="pt-2 text-sm text-destructive">{error}</p>}
     </div>
   );
 }
