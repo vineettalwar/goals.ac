@@ -1,0 +1,16 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "account_id": "bdd4b32a0d2c3e380d9b57dbfaa90fe6",
+  "name": "goals-ac-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-14",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "services": [
+    { "binding": "PUBLIC", "service": "goals-ac-public" },
+    { "binding": "READ", "service": "goals-ac-read" },
+    { "binding": "WRITE", "service": "goals-ac-write" }
+  ],
+  "vars": {
+    "CF_EDGE_HTTP": "1"
+  }
+}

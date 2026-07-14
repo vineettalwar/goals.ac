@@ -1,0 +1,27 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "account_id": "bdd4b32a0d2c3e380d9b57dbfaa90fe6",
+  "name": "goals-ac-write",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-14",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "goals-ac",
+      "database_id": "09e067c1-7a72-4ce9-85c7-5ec882f87143",
+      "migrations_dir": "../../lib/db/migrations-d1"
+    }
+  ],
+  "kv_namespaces": [
+    { "binding": "AI_CACHE", "id": "d986e00b3e7d43f5a6e5e68ab7b48ea7" }
+  ],
+  "queues": {
+    "producers": [{ "binding": "JOBS_QUEUE", "queue": "goals-ac-jobs" }]
+  },
+  "vars": {
+    "DB_DIALECT": "d1",
+    "CF_EDGE_HTTP": "1",
+    "FORCE_QUEUE_WRITES": "1"
+  }
+}

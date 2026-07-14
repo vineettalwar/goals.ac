@@ -1,0 +1,24 @@
+{
+  "name": "@workspace/cf-write-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:production": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@workspace/cf-edge": "workspace:*",
+    "@workspace/db": "workspace:*",
+    "@workspace/jobs": "workspace:*",
+    "next-auth": "^5.0.0-beta.30",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260708.1",
+    "typescript": "~5.9.2",
+    "wrangler": "^4.110.0"
+  }
+}

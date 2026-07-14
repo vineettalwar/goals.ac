@@ -1,0 +1,27 @@
+{
+  "name": "@workspace/cf-public-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:production": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@workspace/cf-edge": "workspace:*",
+    "@workspace/content-engine": "workspace:*",
+    "@workspace/db": "workspace:*",
+    "@workspace/jobs": "workspace:*",
+    "@workspace/security": "workspace:*",
+    "@workspace/seo-tools": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260708.1",
+    "typescript": "~5.9.2",
+    "wrangler": "^4.110.0"
+  }
+}
