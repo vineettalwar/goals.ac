@@ -10,7 +10,7 @@ import {
   Shield,
   type LucideIcon,
 } from "lucide-react";
-import { ADMIN_NAV_ITEMS, isAdminNavActive } from "@/components/admin/admin-nav-config";
+import { ADMIN_NAV_ITEMS, isAdminNavActive } from "@/components/admin/layout/admin-nav-config";
 import { cn } from "@/lib/utils";
 
 type NavItemDef = {

@@ -6,11 +6,11 @@ import {
   AdminIntegrationsContent,
   AdminIntegrationsDialogs,
   useAdminIntegrationsController,
-} from "@/components/admin/admin-integrations-panel";
+} from "@/components/admin/integrations/admin-integrations-panel";
 import {
   IntegrationCategorySkeleton,
   IntegrationTabBadge,
-} from "@/components/integration-tile";
+} from "@/components/integrations/integration-tile";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {

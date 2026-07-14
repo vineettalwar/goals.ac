@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { PlatformIntegrationBrandIcon } from "@/components/platform-integration-brand-icon";
+import { PlatformIntegrationBrandIcon } from "@/components/integrations/platform-integration-brand-icon";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,7 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import {
   IntegrationIconBox,
   IntegrationTile,
-} from "@/components/integration-tile";
+} from "@/components/integrations/integration-tile";
 import type { PlatformIntegrationStatus } from "@/lib/platform/platform-integration-secrets";
 import {
   getPlatformIntegrationsByCategory,

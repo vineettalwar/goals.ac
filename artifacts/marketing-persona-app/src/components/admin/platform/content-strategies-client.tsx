@@ -31,7 +31,7 @@ import { PLAN_LABELS, normalizePlanId } from "@/lib/billing/plans";
 import type {
   AdminContentStrategyDetail,
   AdminContentStrategyListRow,
-} from "@/lib/admin-content-strategies";
+} from "@/lib/admin/admin-content-strategies";
 
 const MONTH_NAMES = [
   "January",

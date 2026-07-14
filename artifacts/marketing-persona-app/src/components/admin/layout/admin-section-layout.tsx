@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { AdminSubnav, type AdminSubnavItem } from "@/components/admin/admin-subnav";
+import { AdminSubnav, type AdminSubnavItem } from "@/components/admin/layout/admin-subnav";
 
 interface AdminSectionLayoutProps {
   title: string;
