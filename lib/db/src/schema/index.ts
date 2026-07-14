@@ -43,6 +43,7 @@ export * from "./goals";
 export * from "./briefs";
 export * from "./credit_ledger";
 export * from "./waitlist_signups";
+export * from "./contact_submissions";
 export * from "./search_property_connections";
 export * from "./gsc_search_queries";
 export * from "./analytics_property_connections";

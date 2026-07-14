@@ -64,6 +64,13 @@ export type ContentPieceMetadata = {
   internalLinkSuggestions?: { anchorText: string; suggestedSlug: string; rationale?: string }[];
   jsonLdSchema?: object;
   humanized?: boolean;
+  humanizationAudit?: {
+    slopScoreBefore: number;
+    slopScoreAfter: number;
+    humanizationLevel: "off" | "light" | "strong";
+    rejected?: boolean;
+    tellsFixed?: number;
+  };
   /** Markdown infographic template block injected post-generation */
   hasInfographicBlock?: boolean;
   deeplRefined?: boolean;
