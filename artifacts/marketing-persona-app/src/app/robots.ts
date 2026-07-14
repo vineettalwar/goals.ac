@@ -12,7 +12,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: [
           "/dashboard",
           "/projects",
-          "/autopilot",
           "/strategy",
           "/search",
           "/audit",

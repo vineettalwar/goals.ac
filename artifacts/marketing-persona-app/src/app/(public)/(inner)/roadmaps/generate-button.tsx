@@ -11,6 +11,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { saveRoadmapIntent } from "@/lib/projects/roadmap-intent";
 import { CONTACT_HREF } from "@/lib/marketing/marketing-contact";
 
+import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+
+const glassCard = cardSurfaceClass("glass", false);
+
 export function GenerateRoadmapButton() {
   const router = useRouter();
   const [show, setShow] = useState(false);
@@ -55,21 +59,21 @@ export function GenerateRoadmapButton() {
   }
 
   return (
-    <div className="paper-card rounded-xl p-6 space-y-4 w-full max-w-lg">
-      <h3 className="font-semibold">Generate a custom roadmap</h3>
+    <div className={`${glassCard} p-6 space-y-4 w-full max-w-lg`}>
+      <h3 className="font-semibold text-white">Generate a custom roadmap</h3>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="space-y-1.5">
-          <Label>Industry</Label>
-          <Input placeholder="e.g. SaaS" value={form.industry} onChange={(e) => setForm((p) => ({ ...p, industry: e.target.value }))} />
+          <Label className="text-white/80">Industry</Label>
+          <Input placeholder="e.g. SaaS" value={form.industry} onChange={(e) => setForm((p) => ({ ...p, industry: e.target.value }))} className="marketing-input-dark" />
         </div>
         <div className="space-y-1.5">
-          <Label>Location</Label>
-          <Input placeholder="e.g. London, UK" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} />
+          <Label className="text-white/80">Location</Label>
+          <Input placeholder="e.g. London, UK" value={form.location} onChange={(e) => setForm((p) => ({ ...p, location: e.target.value }))} className="marketing-input-dark" />
         </div>
         <div className="space-y-1.5">
-          <Label>Stage</Label>
+          <Label className="text-white/80">Stage</Label>
           <select
-            className="w-full h-10 rounded-lg border border-border bg-white px-3 text-sm"
+            className="marketing-input-dark"
             value={form.stage}
             onChange={(e) => setForm((p) => ({ ...p, stage: e.target.value }))}
           >

@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     url: siteUrl,
     description:
       "AI-powered B2B content growth engine with persona-driven SEO articles, roadmaps, GEO audits, and CMS publishing.",
-    sameAs: [],
+    sameAs: ["https://www.linkedin.com/company/goals-ac"],
   };
 
   return (

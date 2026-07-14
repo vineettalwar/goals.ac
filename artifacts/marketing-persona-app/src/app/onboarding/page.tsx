@@ -15,6 +15,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { StepIndicator } from "@/components/step-indicator";
 import { readRoadmapIntent } from "@/lib/projects/roadmap-intent";
+import {
+  readAutopilotIntent,
+  postAutopilotOnboardingRedirect,
+} from "@/lib/projects/autopilot-intent";
 
 const goalSchema = z.object({
   objective: z.enum(["traffic", "leads", "sales", "authority"]),
@@ -50,10 +54,12 @@ const INDUSTRIES = [
 export default function OnboardingPage() {
   const router = useRouter();
   const { update } = useSession();
+  const autopilotIntent = readAutopilotIntent();
+  const isFastLane = Boolean(autopilotIntent);
 
   useEffect(() => {
-    router.prefetch("/onboarding/personas");
-  }, [router]);
+    if (!isFastLane) router.prefetch("/onboarding/personas");
+  }, [router, isFastLane]);
 
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
@@ -65,7 +71,18 @@ export default function OnboardingPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+    defaultValues: autopilotIntent
+      ? {
+          websiteUrl: autopilotIntent.websiteUrl,
+          name: new URL(autopilotIntent.websiteUrl).hostname.replace(/^www\./, ""),
+          industry: "Other",
+          description: "Growing organic traffic with SEO content on autopilot.",
+          targetAudience: "Customers searching for our products and services online.",
+        }
+      : undefined,
+  });
 
   function addCompetitor() {
     if (competitors.length < 5) setCompetitors([...competitors, ""]);
@@ -127,6 +144,29 @@ export default function OnboardingPage() {
       }
     }
 
+    if (isFastLane) {
+      const projectRes = await fetch("/api/website-projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: data.name,
+          url: data.websiteUrl,
+          contentStyle: { primaryLanguage: language },
+        }),
+      });
+
+      if (!projectRes.ok) {
+        const { error: projErr } = await projectRes.json().catch(() => ({ error: "Failed to create project" }));
+        toast.error(projErr ?? "Failed to create project");
+        setLoading(false);
+        return;
+      }
+
+      const { project } = (await projectRes.json()) as { project: { id: number } };
+      router.push(postAutopilotOnboardingRedirect(project.id));
+      return;
+    }
+
     router.push(`/onboarding/personas?companyId=${company.id}`);
   }
 
@@ -141,18 +181,62 @@ export default function OnboardingPage() {
             </div>
             <span className="text-lg font-semibold">goals.ac</span>
           </div>
-          <StepIndicator steps={["Goal", "Company", "Personas", "WordPress"]} current={step} />
+          <StepIndicator
+            steps={isFastLane ? ["Website", "Content plan", "Articles", "Connect CMS"] : ["Goal", "Company", "Personas", "WordPress"]}
+            current={isFastLane ? 0 : step}
+          />
           <h1 className="mt-8 text-3xl font-bold">
-            {step === 0 ? "What are you trying to achieve?" : "Tell us about your company"}
+            {isFastLane
+              ? "Confirm your website"
+              : step === 0
+                ? "What are you trying to achieve?"
+                : "Tell us about your company"}
           </h1>
           <p className="mt-2 text-muted-foreground">
-            {step === 0
-              ? "Define your primary business outcome before we connect tools or generate content."
-              : "We'll use this to generate marketing personas and write SEO articles tailored to your audience."}
+            {isFastLane
+              ? "We'll scan your site, build a 30-day SEO plan, and queue your first 3 expert articles."
+              : step === 0
+                ? "Define your primary business outcome before we connect tools or generate content."
+                : "We'll use this to generate marketing personas and write SEO articles tailored to your audience."}
           </p>
         </div>
 
-        {step === 0 ? (
+        {isFastLane || step === 0 ? (
+          isFastLane ? (
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="paper-card p-8 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="name">Company name</Label>
+                <Input id="name" placeholder="Acme Inc." {...register("name")} />
+                {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="websiteUrl">Website URL</Label>
+                <Input id="websiteUrl" placeholder="https://acme.com" {...register("websiteUrl")} />
+                {errors.websiteUrl && <p className="text-xs text-destructive">{errors.websiteUrl.message}</p>}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="industry">Industry</Label>
+              <select
+                id="industry"
+                className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"
+                {...register("industry")}
+              >
+                {INDUSTRIES.map((ind) => (
+                  <option key={ind} value={ind}>{ind}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="mt-6 flex justify-end">
+            <Button type="submit" disabled={loading} size="lg">
+              {loading ? "Starting…" : "Get 3 articles + 30-day plan →"}
+            </Button>
+          </div>
+        </form>
+          ) : (
           <div className="paper-card p-8 space-y-6">
             <div className="space-y-1.5">
               <Label htmlFor="objective">Primary objective</Label>
@@ -202,6 +286,7 @@ export default function OnboardingPage() {
               </Button>
             </div>
           </div>
+          )
         ) : (
         <form onSubmit={handleSubmit(onSubmit)}>
           <div className="paper-card p-8 space-y-6">

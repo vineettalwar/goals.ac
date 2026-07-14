@@ -26,6 +26,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           userName={session.user.name ?? "User"}
           userEmail={session.user.email ?? ""}
           userRole={sidebarRole}
+          orgRole={session.user.orgRole}
         />
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <ImpersonationBanner />
