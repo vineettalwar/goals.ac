@@ -1,0 +1,30 @@
+---
+description: The word "ensure" is forbidden in this codebase
+alwaysApply: true
+---
+
+# No "ensure" — forbidden
+
+The word **`ensure`** must never appear in this codebase — not in identifiers, comments, strings, docs, or error messages.
+
+## Do not use
+
+- Function names like `ensureX`, `ensureSomething`
+- File names like `ensure-*.ts`
+- Comments or prose: "ensure that…", "this ensures…"
+- Error messages containing "ensure"
+
+## Use instead
+
+| Instead of | Prefer |
+|---|---|
+| `ensureReferenceData` | `seedReferenceDataIfEmpty` |
+| `ensureWorkspaceForOrganization` | `getOrCreateWorkspaceForOrganization` |
+| `ensureOrganizationForUser` | `getOrCreateOrganizationForUser` |
+| `ensurePlatformVoice` | `getOrCreatePlatformVoice` |
+| `ensureCfBindings` | `initCfBindings` |
+| "ensure X is set" (prose) | "confirm X is set", "verify X is set", "X must be set" |
+
+When writing new code, pick a concrete verb: `init`, `getOrCreate`, `seed`, `provision`, `verify`, `require`.
+
+Full project conventions: `.agents/skills/goals-ac-conventions/SKILL.md`.

@@ -65,7 +65,7 @@ As a **platform operator**, I want every AI call to produce auditable ledger ent
 
 ## Edge cases
 
-- Org without workspace: `ensureWorkspaceForOrganization` auto-provisions
+- Org without workspace: `getOrCreateWorkspaceForOrganization` auto-provisions
 - Stream abort mid-generation: `finally` releases reservation
 - Duplicate settle (retry): idempotent guard on `reservationRunId`
 - Roadmap/content cache hits: no reserve, no settle

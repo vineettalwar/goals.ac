@@ -1,0 +1,12 @@
+{
+  "name": "@workspace/marketing-pages",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node ../../scripts/build-marketing-static.mjs",
+    "pages:deploy": "pnpm run build && pnpm exec wrangler pages deploy dist --project-name=goals-ac-marketing"
+  },
+  "devDependencies": {
+    "wrangler": "^4.110.0"
+  }
+}

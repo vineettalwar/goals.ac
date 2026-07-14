@@ -2,15 +2,15 @@ import { db, workspacesTable } from "@workspace/db";
 import { organizationsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 
-export interface EnsureWorkspaceInput {
+export interface GetOrCreateWorkspaceInput {
   organizationId: number;
   name?: string;
   ownerId?: number;
 }
 
 /** Idempotent 1:1 workspace provisioning for an organization. */
-export async function ensureWorkspaceForOrganization(
-  input: EnsureWorkspaceInput,
+export async function getOrCreateWorkspaceForOrganization(
+  input: GetOrCreateWorkspaceInput,
 ): Promise<number> {
   const [existing] = await db
     .select({ id: workspacesTable.id })
@@ -31,7 +31,7 @@ export async function ensureWorkspaceForOrganization(
       .limit(1);
 
     if (!org) {
-      throw new Error(`ensureWorkspaceForOrganization: organization ${input.organizationId} not found`);
+      throw new Error(`getOrCreateWorkspaceForOrganization: organization ${input.organizationId} not found`);
     }
 
     ownerId ??= org.ownerId;
@@ -57,7 +57,7 @@ export async function ensureWorkspaceForOrganization(
     .limit(1);
 
   if (!created) {
-    throw new Error(`ensureWorkspaceForOrganization: failed to provision workspace for org ${input.organizationId}`);
+    throw new Error(`getOrCreateWorkspaceForOrganization: failed to provision workspace for org ${input.organizationId}`);
   }
 
   return created.id;

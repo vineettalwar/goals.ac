@@ -6,7 +6,7 @@ import { setKvBindings } from "@workspace/content-engine/core/kv-binding";
 let initialized = false;
 
 /** Wire Cloudflare bindings (D1, KV, Queues) into shared libs. */
-export function ensureCfBindings(): void {
+export function initCfBindings(): void {
   if (initialized) return;
   if (process.env.DB_DIALECT?.trim().toLowerCase() !== "d1") return;
 

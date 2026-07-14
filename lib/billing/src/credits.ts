@@ -3,7 +3,7 @@ import { db, creditLedgerTable, jsonTextAt } from "@workspace/db";
 import { grantCredits } from "./ledger";
 import { listCreditTopUpPacks, type CreditTopUpPack } from "./credit-topup-packs";
 import { getMonthlyCreditsForPlan, type PlanId } from "./plans";
-import { ensureWorkspaceForOrganization } from "./workspaces";
+import { getOrCreateWorkspaceForOrganization } from "./workspaces";
 
 export interface GrantRenewalCreditsInput {
   organizationId: number;
@@ -28,7 +28,7 @@ export async function grantRenewalCreditsForOrganization(
     return { granted: false, reason: "zero_amount" };
   }
 
-  const workspaceId = await ensureWorkspaceForOrganization({ organizationId: input.organizationId });
+  const workspaceId = await getOrCreateWorkspaceForOrganization({ organizationId: input.organizationId });
 
   const [existing] = await db
     .select({ id: creditLedgerTable.id })
@@ -79,7 +79,7 @@ export async function grantTopUpCreditsForOrganization(
 ): Promise<GrantTopUpCreditsResult> {
   if (input.credits <= 0) return { granted: false, reason: "zero_amount" };
 
-  const workspaceId = await ensureWorkspaceForOrganization({ organizationId: input.organizationId });
+  const workspaceId = await getOrCreateWorkspaceForOrganization({ organizationId: input.organizationId });
 
   const [existing] = await db
     .select({ id: creditLedgerTable.id })

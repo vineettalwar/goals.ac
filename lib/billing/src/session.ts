@@ -18,7 +18,7 @@ import { isStripeBillingActive } from "./platform-gates";
 import { estimateAiCallCredits, type AiTier } from "./pricing";
 import { checkCountQuota, type QuotaKind } from "./quotas";
 import { recordUsageEvent, type RecordUsageEventInput } from "./usage-events";
-import { ensureWorkspaceForOrganization } from "./workspaces";
+import { getOrCreateWorkspaceForOrganization } from "./workspaces";
 
 export interface AiBillingContext {
   runId: string;
@@ -146,7 +146,7 @@ export async function prepareAiBillingSession(
 
   let workspaceId = 0;
   if (organizationId != null) {
-    workspaceId = await ensureWorkspaceForOrganization({ organizationId });
+    workspaceId = await getOrCreateWorkspaceForOrganization({ organizationId });
   }
 
   const reservedCredits = await shouldReserveCredits(plan, input.usedByok);

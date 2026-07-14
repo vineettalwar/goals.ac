@@ -11,7 +11,7 @@ import type { OrgSecuritySettings } from "@workspace/db/schema";
 import crypto from "crypto";
 import { and, asc, count, desc, eq, gt, inArray, isNull, or, sql } from "drizzle-orm";
 import {
-  ensureWorkspaceForOrganization,
+  getOrCreateWorkspaceForOrganization,
   getBalance,
   getWorkspaceIdForOrganization,
   resolvePlanProjectQuota,
@@ -361,7 +361,7 @@ export interface CreateOrganizationInput {
 }
 
 /** Create org and owner membership for a user (idempotent if membership exists). */
-export async function ensureOrganizationForUser(input: CreateOrganizationInput): Promise<number> {
+export async function getOrCreateOrganizationForUser(input: CreateOrganizationInput): Promise<number> {
   const existing = await getOrgMembership(input.userId);
   if (existing) {
     if (input.companyId != null) {
@@ -396,7 +396,7 @@ export async function ensureOrganizationForUser(input: CreateOrganizationInput):
     assignedProjectId: null,
   });
 
-  await ensureWorkspaceForOrganization({
+  await getOrCreateWorkspaceForOrganization({
     organizationId: org.id,
     ownerId: input.userId,
     name: input.name,
@@ -922,7 +922,7 @@ export async function onboardOrganizationAsAdmin(
     assignedProjectId: null,
   });
 
-  await ensureWorkspaceForOrganization({
+  await getOrCreateWorkspaceForOrganization({
     organizationId: org.id,
     ownerId: input.ownerUserId,
     name: input.organizationName,

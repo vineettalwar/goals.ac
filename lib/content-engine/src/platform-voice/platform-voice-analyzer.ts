@@ -3,7 +3,7 @@ import type { PlatformVoiceChannel, PlatformVoices, SocialPlatformId } from "@wo
 import { cleanAndParse } from "../core/utils";
 import { resolveAiClient } from "../support/ai/resolve-ai-client";
 import { PLATFORM_CHANNELS, PLATFORM_LABELS } from "./registry";
-import { ensurePlatformVoice } from "./platform-voice-import-service";
+import { getOrCreatePlatformVoice } from "./platform-voice-import-service";
 
 const ANALYZE_SYSTEM = `You are an expert social media voice analyst. Extract writing style traits from sample posts.
 Respond ONLY with valid JSON. No markdown fences.`;
@@ -58,7 +58,7 @@ export async function analyzePlatformVoiceChannel(params: {
   userApiKey?: string | null;
   aiProviderOptions?: AiProviderOptions;
 }): Promise<{ voices: PlatformVoices; channel: PlatformVoiceChannel }> {
-  const profile = ensurePlatformVoice(params.voices, params.platform);
+  const profile = getOrCreatePlatformVoice(params.voices, params.platform);
   const current = profile.channels[params.channel];
   if (!current || current.writingExamples.length === 0) {
     throw new Error("Add writing samples before analyzing");
@@ -107,7 +107,7 @@ export async function analyzeAllPlatformChannels(params: {
 }): Promise<PlatformVoices> {
   let next = params.voices ?? {};
   for (const channel of PLATFORM_CHANNELS[params.platform]) {
-    const profile = ensurePlatformVoice(next, params.platform);
+    const profile = getOrCreatePlatformVoice(next, params.platform);
     const samples = profile.channels[channel]?.writingExamples ?? [];
     if (samples.length === 0) continue;
     const result = await analyzePlatformVoiceChannel({

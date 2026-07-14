@@ -164,7 +164,9 @@ pnpm run cf:migrate:d1:local && pnpm run cf:seed:d1:local && pnpm run cf:preview
 3. API spec changes: edit `lib/api-spec/openapi.yaml`, run `pnpm --filter @workspace/api-spec run codegen`
 4. Always run `pnpm run typecheck` locally before pushing
 
-**No GitHub CI** — this repo does not use GitHub Actions. Do not add `.github/workflows/`, CI pipelines, or GitHub Actions config unless the user explicitly asks. Validate changes locally (`pnpm run typecheck`, package builds, `docker compose config`) instead.
+**No GitHub Actions (forbidden)** — zero `.github/workflows/` in this repo. Never create, restore, or suggest GitHub Actions / GitHub CI unless the user explicitly asks. Deploy via Cloudflare Workers Builds, not Actions. Validate locally (`pnpm run typecheck`, package builds, `docker compose config`) instead.
+
+**No "ensure" (forbidden)** — never use the word `ensure` in identifiers, filenames, comments, strings, or docs. Prefer `init`, `getOrCreate`, `seed`, `provision`, `verify`, or `require`. See `.cursor/rules/no-ensure.mdc` and `.agents/skills/goals-ac-conventions/SKILL.md`.
 
 ## Env Variables
 

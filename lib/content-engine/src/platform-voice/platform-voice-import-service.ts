@@ -31,7 +31,7 @@ function normalizeSample(platform: SocialPlatformId, text: string): string {
   return normalizeGenericSocialText(text);
 }
 
-export function ensurePlatformVoice(
+export function getOrCreatePlatformVoice(
   voices: PlatformVoices | null | undefined,
   platform: SocialPlatformId,
 ): PlatformVoiceProfile {
@@ -57,7 +57,7 @@ export function mergeImportedSamples(params: {
     ? channel
     : defaultChannelForPlatform(platform);
 
-  const profile = ensurePlatformVoice(params.voices, platform);
+  const profile = getOrCreatePlatformVoice(params.voices, platform);
   const current = profile.channels[resolvedChannel] ?? emptyChannel();
   const normalized = samples
     .map((s) => normalizeSample(platform, s))
@@ -113,7 +113,7 @@ export function updatePlatformVoiceChannel(params: {
   channel: string;
   updates: Partial<PlatformVoiceChannel>;
 }): PlatformVoices {
-  const profile = ensurePlatformVoice(params.voices, params.platform);
+  const profile = getOrCreatePlatformVoice(params.voices, params.platform);
   const resolvedChannel = isValidChannel(params.platform, params.channel)
     ? params.channel
     : defaultChannelForPlatform(params.platform);

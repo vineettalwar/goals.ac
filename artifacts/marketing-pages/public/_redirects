@@ -1,0 +1,13 @@
+# Cloudflare Pages redirects (product + legacy URLs → app subdomain or marketing)
+/roadmaps /content-engine/ 301
+/roadmap/* /content-engine/ 301
+/success-stories/* /success-stories/ 301
+/agent /https://app.goals.ac/projects 301
+/autopilot /https://app.goals.ac/projects 301
+/autopilot/* /https://app.goals.ac/projects 301
+/login /https://app.goals.ac/login 301
+/signup /https://app.goals.ac/signup 301
+/dashboard /https://app.goals.ac/dashboard 301
+/projects /https://app.goals.ac/projects 301
+/projects/* /https://app.goals.ac/projects/:splat 301
+/api/* https://api.goals.ac/api/:splat 200

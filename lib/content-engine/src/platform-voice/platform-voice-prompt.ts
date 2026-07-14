@@ -1,6 +1,5 @@
 import type { PlatformVoiceChannel, PlatformVoices, SocialPlatformId } from "@workspace/db/schema";
 import { defaultChannelForPlatform, PLATFORM_LABELS } from "./registry";
-import { ensurePlatformVoice } from "./platform-voice-import-service";
 
 function listSection(label: string, items: string[] | undefined, max = 10): string {
   const values = (items ?? []).map((item) => item.trim()).filter(Boolean).slice(0, max);

@@ -262,7 +262,7 @@ Disconnect and reconnect. goals.ac refreshes tokens automatically when refresh t
 
 **Bluesky OAuth errors**
 - Verify your handle includes the domain (e.g. \`you.bsky.social\`)
-- Self-hosted: ensure \`NEXTAUTH_URL\` matches your public URL and client metadata is reachable
+- Self-hosted: confirm \`NEXTAUTH_URL\` matches your public URL and client metadata is reachable
 
 **Mastodon OAuth errors**
 - Try the full instance URL (\`https://mastodon.social\`)

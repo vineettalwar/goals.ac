@@ -58,7 +58,14 @@ Thumbs.db
 # Next.js build
 .next/
 .open-next/
+.marketing-out/
+.marketing-build-backup/
 next-env.d.ts
+
+# Marketing static export (generated — scripts/build-marketing-static.mjs)
+artifacts/marketing-persona-app/.marketing-out/
+artifacts/marketing-persona-app/.marketing-build-backup/
+artifacts/marketing-pages/dist/
 
 # Cloudflare local secrets (copy from .dev.vars.example)
 .dev.vars

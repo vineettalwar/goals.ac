@@ -4,6 +4,40 @@ Living document capturing architectural decisions, historical context, and lesso
 
 ---
 
+## No "ensure" — forbidden
+
+**Policy (2026-07-14):** The word **`ensure`** must never appear anywhere in this repo — identifiers, filenames, comments, strings, docs, or error messages.
+
+- Do **not** introduce `ensure*` functions, `ensure-*.ts` files, or prose like "ensure that…".
+- Prefer concrete verbs: `init`, `getOrCreate`, `seed`, `provision`, `verify`, `require`.
+- Example renames: `ensureReferenceData` → `seedReferenceDataIfEmpty`, `ensureWorkspaceForOrganization` → `getOrCreateWorkspaceForOrganization`.
+
+**Enforced in:** `.cursor/rules/no-ensure.mdc`, `.agents/skills/goals-ac-conventions/SKILL.md`, `AGENTS.md`.
+
+---
+
+## `.marketing-out/` — build artifact, not in repo
+
+**Policy:** `artifacts/marketing-persona-app/.marketing-out/` is the static marketing export produced by `scripts/build-marketing-static.mjs` (Next.js `distDir` for the marketing-only build). It is listed in `.gitignore` and must **never** be committed.
+
+- Seeing it locally after a marketing build is normal.
+- Deploy target copies from this dir to `artifacts/marketing-pages/dist` for Cloudflare Pages.
+- Do not treat untracked `.marketing-out/` files as missing repo content — they are generated output.
+
+---
+
+## No GitHub Actions — forbidden
+
+**Policy (2026-07-14):** This repo uses **zero** GitHub Actions. No `.github/workflows/` files. No exceptions unless the user explicitly asks to add one.
+
+- Do **not** create, restore, or suggest GitHub Actions / GitHub CI for any task (bug fixes, refactors, deploy, lint, tests, React Doctor, etc.).
+- Deploy via **Cloudflare Workers Builds** (dashboard Git integration), not Actions — see `docs/deploy-cloudflare.md`.
+- Validate locally instead: `pnpm run typecheck`, relevant package builds, `docker compose config --quiet` when Docker config changes.
+
+**Enforced in:** `.cursor/rules/no-github-ci.mdc`, `AGENTS.md`, `PROJECT.md`.
+
+---
+
 ## Why JWT over Sessions (legacy Express / Vite only)
 
 **Decision**: The legacy Express API (`artifacts/api-server`) and Vite app (`artifacts/goals-ac`) use stateless JWTs. The **canonical Next.js product** (`marketing-persona-app`) uses **NextAuth sessions**.
@@ -201,4 +235,4 @@ The `buildContentStyleContext(style)` function in `contentStudioGenerator.ts` tu
 - **Double migration 0008**: There are two files named `0008_aspiring_firebrand.sql` and `0008_condemned_rocket_racer.sql`. This happened because an early migration was renamed. The journal references `0008_condemned_rocket_racer` — the other file is a stale artifact that should not be applied.
 - **Snapshot chain**: Previously, migrations 0012–0015, 0017, and 0018 were missing snapshot files in `meta/`. These were backfilled in Task #54; the chain is now complete (0000–0019). `drizzle-kit generate` reports "No schema changes" on the current schema — future generates will produce only genuine diffs.
 - **`contentStyle` TS errors**: The `@workspace/db` compiled declarations in `lib/db/dist/` can go stale. If you see "Property 'contentStyle' does not exist" errors after a schema change, run `cd lib/db && npx tsc --build` to regenerate.
-- **Port collisions**: Vite will increment the port if the default is in use. The API server always binds to the `PORT` env var; Vite uses `PORT` too. Ensure the artifact `PORT` assignments don't collide.
+- **Port collisions**: Vite will increment the port if the default is in use. The API server always binds to the `PORT` env var; Vite uses `PORT` too. Keep artifact `PORT` assignments from colliding.

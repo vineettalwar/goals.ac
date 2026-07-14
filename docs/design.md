@@ -31,7 +31,7 @@ All colors are defined as HSL CSS variables in `artifacts/goals-ac/src/index.css
 ## Dark / Light Mode Strategy
 
 - Mode is toggled via a `dark` class on `<html>`, stored in `localStorage`.
-- The `@custom-variant dark (&:is(.dark *))` directive ensures all `dark:` utilities apply correctly without relying on `prefers-color-scheme`.
+- The `@custom-variant dark (&:is(.dark *))` directive applies all `dark:` utilities correctly without relying on `prefers-color-scheme`.
 - Pages default to dark mode on first visit.
 
 ## Glass Card Patterns

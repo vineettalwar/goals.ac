@@ -13,7 +13,8 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 - **AI:** `@workspace/ai-providers` — Gemini, Bedrock, Ollama; tier routing (`strategy` / `planning` / `execution` / `rapid`)
 - **Jobs:** pg-boss worker (`artifacts/worker`) — Postgres only; `JobsUnavailableError` when `DB_DIALECT=d1`
 - **Monorepo:** pnpm workspaces, TypeScript project references
-- **Deploy:** Docker Compose locally; Cloudflare Workers + D1 (`docs/deploy-cloudflare.md`)
+- **Deploy:** Docker Compose locally; Cloudflare Workers + D1 + Queues (`docs/deploy-cloudflare.md`)
+- **Jobs:** `artifacts/cf-jobs-worker` on Cloudflare (D1 path); `artifacts/worker` pg-boss for local Postgres only
 
 ## Architecture Map
 
@@ -31,7 +32,9 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 
 - Schema changes: edit `lib/db/src/schema/`, `pnpm --filter @workspace/db run generate`, migrate, `cd lib/db && npx tsc --build`
 - D1: `pnpm --filter @workspace/db run generate:d1` after schema edits; `pnpm run cf:migrate:d1:local` + `cf:seed:d1:local` for Workers preview
-- No GitHub Actions CI — validate with `pnpm run typecheck` locally
+- **No GitHub Actions (forbidden)** — zero `.github/workflows/`; validate with `pnpm run typecheck` locally; deploy via Cloudflare Workers Builds
+- **No `ensure` (forbidden)** — never in identifiers, filenames, comments, strings, or docs; prefer `init`, `getOrCreate`, `seed`, `provision`, `verify`, `require`
+- **Build artifacts gitignored** — do not commit `.marketing-out/`, `.next/`, `.open-next/`, `dist/` (see `.gitignore`; regenerate via `node scripts/build-marketing-static.mjs`)
 - Org permissions via `hasOrgPermission()` / `requireOrgPermission()` — never ad-hoc role string checks
 - User-facing ops language: **"Platform operations"** — not internal control terminology
 - Encryption: AES-256-GCM via `GEMINI_KEY_ENCRYPTION_SECRET` (BYOK keys, CMS creds, OAuth tokens)
@@ -87,4 +90,4 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 - Super-admin platform toggles: `/admin` → Platform operations
 - Org suspend: `/admin/organizations`
 - First debug step for "maintenance loop": check `platform_settings` row `id=1`
-- Skills governing stack: `nextjs-app-router-patterns`, `postgres-drizzle`, `AGENTS.md`
+- Skills governing stack: `nextjs-app-router-patterns`, `postgres-drizzle`, `goals-ac-conventions`, `AGENTS.md`

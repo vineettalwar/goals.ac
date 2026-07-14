@@ -2,7 +2,7 @@ import "./src/load-workspace-env";
 import { defineConfig } from "drizzle-kit";
 
 if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
+  throw new Error("DATABASE_URL is required; provision the database first.");
 }
 
 export default defineConfig({
