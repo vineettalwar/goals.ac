@@ -17,23 +17,7 @@ export function setJobsQueueBinding(binding: CfQueueProducer | null): void {
 }
 
 export function resolveJobsQueue(): CfQueueProducer | null {
-  if (jobsQueue) return jobsQueue;
-
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { getCloudflareContext } = require("@opennextjs/cloudflare") as {
-      getCloudflareContext: () => { env: { JOBS_QUEUE?: CfQueueProducer } };
-    };
-    const { env } = getCloudflareContext();
-    if (env?.JOBS_QUEUE) {
-      setJobsQueueBinding(env.JOBS_QUEUE);
-      return jobsQueue;
-    }
-  } catch {
-    // Not in Workers runtime.
-  }
-
-  return null;
+  return jobsQueue;
 }
 
 export async function sendToCfQueue<Q extends QueueName>(

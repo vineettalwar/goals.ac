@@ -17,6 +17,7 @@ import { processBrandVoiceResync } from "./handlers/brandVoiceResync";
 import { processEvergreenRecycleSweep } from "./handlers/evergreenRecycle";
 import { processSocialHistorySync } from "./handlers/socialHistorySync";
 import { processSocialMetricsSync } from "./handlers/socialMetricsSync";
+import { processPublicGeoAudit } from "./handlers/publicGeoAudit";
 import type { JobEnvelope } from "./cf-queues";
 
 const processors: Record<QueueName, (payload: unknown) => Promise<void>> = {
@@ -38,6 +39,7 @@ const processors: Record<QueueName, (payload: unknown) => Promise<void>> = {
   [QUEUES.evergreenRecycleSweep]: () => processEvergreenRecycleSweep(),
   [QUEUES.socialHistorySync]: (p) => processSocialHistorySync(p as never),
   [QUEUES.socialMetricsSync]: (p) => processSocialMetricsSync(p as never),
+  [QUEUES.publicGeoAudit]: (p) => processPublicGeoAudit(p as never),
 };
 
 export async function processJobEnvelope(envelope: JobEnvelope): Promise<void> {
