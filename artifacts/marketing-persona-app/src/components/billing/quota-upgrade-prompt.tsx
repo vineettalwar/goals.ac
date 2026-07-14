@@ -23,5 +23,16 @@ export function isAiBillingDeniedPayload(value: unknown): value is QuotaExhauste
 }
 
 export function QuotaUpgradePrompt({ message, className }: { message: string; className?: string }) {
-  return <p className={`text-sm text-destructive text-center ${className ?? ""}`}>{message}</p>;
+  return (
+    <div className={`space-y-2 text-center ${className ?? ""}`}>
+      <p className="text-sm text-destructive">{message}</p>
+      <p className="text-xs text-muted-foreground">
+        Consulting clients use BYOK for unlimited AI generations. Add your key in{" "}
+        <a href="/settings?tab=ai" className="text-primary hover:underline">
+          Settings → AI Providers
+        </a>
+        .
+      </p>
+    </div>
+  );
 }

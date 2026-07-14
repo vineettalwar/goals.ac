@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -359,7 +360,7 @@ export function AdminStrategyDetail({
               <p className="mt-1 text-xs text-primary">{item.primaryKeyword}</p>
               {item.contentPiece ? (
                 <Link
-                  href={`/content-pieces/${item.contentPiece.id}`}
+                  href={contentPiecePath(strategy.websiteProjectId!, item.contentPiece.id)}
                   className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-foreground hover:text-primary"
                 >
                   View article ({item.contentPiece.status})

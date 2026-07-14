@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PLAN_LABELS } from "@/lib/billing/plans";
+import { UpgradePlanButton } from "@/components/billing/upgrade-plan-button";
 import Link from "next/link";
 
 interface BillingStatus {
@@ -24,6 +25,7 @@ interface UsageSummary {
   articlesThisMonth: number;
   quota: number | null;
   quotaRemaining: number | null;
+  usesByok: boolean;
 }
 
 interface CreditBalance {
@@ -157,6 +159,9 @@ export function SettingsBillingPanel() {
 
   const renewal = formatRenewalDate(billing.currentPeriodEnd);
   const showTopUps = billing.stripeConfigured && billing.canManageBilling && topUpPacks.length > 0;
+  const currentPlan = usage?.plan ?? billing.plan;
+  const planLabel = PLAN_LABELS[currentPlan as keyof typeof PLAN_LABELS] ?? currentPlan;
+  const canUpgradeToGrowth = currentPlan === "starter" && billing.stripeConfigured;
 
   return (
     <div className="space-y-6">
@@ -215,16 +220,20 @@ export function SettingsBillingPanel() {
             <div>
               <h2 className="font-semibold">Plan</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Starter is free. Connect your own API key for unlimited AI generations.
+                {currentPlan === "growth"
+                  ? "Growth includes autopilot and platform features. BYOK recommended for unlimited AI."
+                  : "Consulting clients use BYOK for unlimited AI generations. Platform access is scoped per engagement."}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
-              <p className="text-2xl font-bold">{PLAN_LABELS.starter}</p>
-              <Badge variant="secondary" className="gap-1">
-                <KeyRound className="h-3 w-3" />
-                BYOK
-              </Badge>
+              <p className="text-2xl font-bold">{planLabel}</p>
+              {currentPlan === "starter" && (
+                <Badge variant="secondary" className="gap-1">
+                  <KeyRound className="h-3 w-3" />
+                  BYOK optional
+                </Badge>
+              )}
               {billing.subscriptionStatus && (
                 <Badge variant="outline" className="capitalize">
                   {statusLabel(billing.subscriptionStatus)}
@@ -234,26 +243,33 @@ export function SettingsBillingPanel() {
 
             {renewal && billing.hasActiveSubscription && (
               <p className="text-sm text-muted-foreground">
-                Legacy subscription renews on <span className="text-foreground">{renewal}</span>
+                {currentPlan === "growth" ? "Subscription renews" : "Legacy subscription renews"} on{" "}
+                <span className="text-foreground">{renewal}</span>
               </p>
+            )}
+
+            {usage && (
+              <div className="rounded-lg border border-border p-4 space-y-2">
+                <p className="text-sm font-medium">Usage this month</p>
+                <p className="text-2xl font-bold tabular-nums">{usage.articlesThisMonth}</p>
+                <p className="text-sm text-muted-foreground">
+                  {usage.usesByok
+                    ? "Articles generated with your API key (unlimited)"
+                    : "Articles generated on platform key"}
+                </p>
+              </div>
             )}
 
             <p className="text-sm text-muted-foreground">
               Add your Gemini or Bedrock key in{" "}
               <Link href="/settings?tab=ai" className="text-primary hover:underline">
                 Settings → AI Providers
-              </Link>
-              . Paid upgrades are not available yet.
+              </Link>{" "}
+              for unlimited AI generations.
             </p>
 
-            {usage && usage.quota != null && (
-              <div className="rounded-lg border border-border p-4 space-y-2">
-                <p className="text-sm font-medium">Platform key usage this month</p>
-                <p className="text-sm text-muted-foreground">
-                  Articles: {usage.articlesThisMonth} / {usage.quota}
-                  {usage.quotaRemaining != null && ` (${usage.quotaRemaining} remaining)`}
-                </p>
-              </div>
+            {canUpgradeToGrowth && (
+              <UpgradePlanButton plan="growth" label="Upgrade to Growth — $49/mo" />
             )}
 
             {billing.hasStripeCustomer && billing.canManageBilling && (

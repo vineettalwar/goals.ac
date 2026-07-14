@@ -9,7 +9,24 @@ import {
   resolvePlatformResendCredentials,
   resolvePlatformStripeCredentials,
 } from "@workspace/billing";
+import {
+  clearStripeConnectTokens,
+  deauthorizeStripeConnectAccount,
+  stripeConnectOAuthAvailable,
+} from "@/lib/platform/stripe-connect-oauth";
 import { eq } from "drizzle-orm";
+
+function isUnsplashManagedByEnv(): boolean {
+  return Boolean(process.env.UNSPLASH_ACCESS_KEY?.trim());
+}
+
+function isPexelsManagedByEnv(): boolean {
+  return Boolean(process.env.PEXELS_API_KEY?.trim());
+}
+
+function invalidatePlatformStockCredentialsCache(): void {
+  // Platform stock keys are read from env in @workspace/stock-images; DB cache not used yet.
+}
 
 export type IntegrationFieldStatus = {
   configured: boolean;
@@ -21,6 +38,14 @@ export type PlatformIntegrationStatus = {
   stripe: {
     managedByEnv: boolean;
     envVars: string[];
+    connectAvailable: boolean;
+    connect: {
+      connected: boolean;
+      accountId: string | null;
+      livemode: boolean | null;
+      connectedAt: string | null;
+      lastFour: string | null;
+    };
     secretKey: IntegrationFieldStatus;
     webhookSecret: IntegrationFieldStatus;
     priceGrowthMonthly: { configured: boolean; value: string | null; source: "db" | "env" | null };
@@ -32,6 +57,16 @@ export type PlatformIntegrationStatus = {
     apiKey: IntegrationFieldStatus;
     fromEmail: { configured: boolean; value: string | null; source: "db" | "env" | null };
   };
+  unsplash: {
+    managedByEnv: boolean;
+    envVars: string[];
+    accessKey: IntegrationFieldStatus;
+  };
+  pexels: {
+    managedByEnv: boolean;
+    envVars: string[];
+    apiKey: IntegrationFieldStatus;
+  };
 };
 
 const STRIPE_ENV_VARS = [
@@ -42,6 +77,8 @@ const STRIPE_ENV_VARS = [
 ] as const;
 
 const RESEND_ENV_VARS = ["RESEND_API_KEY", "RESEND_FROM_EMAIL"] as const;
+const UNSPLASH_ENV_VARS = ["UNSPLASH_ACCESS_KEY"] as const;
+const PEXELS_ENV_VARS = ["PEXELS_API_KEY"] as const;
 
 function activeEnvVars(names: readonly string[]): string[] {
   return names.filter((name) => Boolean(process.env[name]?.trim()));
@@ -103,20 +140,36 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
   const [row] = await db
     .select({
       encryptedStripeSecretKey: platformSettingsTable.encryptedStripeSecretKey,
+      encryptedStripeConnectAccessToken: platformSettingsTable.encryptedStripeConnectAccessToken,
       encryptedStripeWebhookSecret: platformSettingsTable.encryptedStripeWebhookSecret,
       stripePriceGrowthMonthly: platformSettingsTable.stripePriceGrowthMonthly,
       stripePriceScaleMonthly: platformSettingsTable.stripePriceScaleMonthly,
+      stripeConnectAccountId: platformSettingsTable.stripeConnectAccountId,
+      stripeConnectLivemode: platformSettingsTable.stripeConnectLivemode,
+      stripeConnectConnectedAt: platformSettingsTable.stripeConnectConnectedAt,
       encryptedResendApiKey: platformSettingsTable.encryptedResendApiKey,
       resendFromEmail: platformSettingsTable.resendFromEmail,
+      encryptedUnsplashAccessKey: platformSettingsTable.encryptedUnsplashAccessKey,
+      encryptedPexelsApiKey: platformSettingsTable.encryptedPexelsApiKey,
     })
     .from(platformSettingsTable)
     .where(eq(platformSettingsTable.id, 1))
     .limit(1);
 
+  const connectToken = safeDecrypt(row?.encryptedStripeConnectAccessToken);
+
   return {
     stripe: {
       managedByEnv: isStripeManagedByEnv(),
       envVars: activeEnvVars(STRIPE_ENV_VARS),
+      connectAvailable: stripeConnectOAuthAvailable(),
+      connect: {
+        connected: Boolean(connectToken && row?.stripeConnectAccountId),
+        accountId: row?.stripeConnectAccountId ?? null,
+        livemode: row?.stripeConnectLivemode ?? null,
+        connectedAt: row?.stripeConnectConnectedAt?.toISOString() ?? null,
+        lastFour: lastFour(connectToken),
+      },
       secretKey: fieldStatus(row?.encryptedStripeSecretKey, "STRIPE_SECRET_KEY"),
       webhookSecret: fieldStatus(row?.encryptedStripeWebhookSecret, "STRIPE_WEBHOOK_SECRET"),
       priceGrowthMonthly: plainFieldStatus(
@@ -130,6 +183,16 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       envVars: activeEnvVars(RESEND_ENV_VARS),
       apiKey: fieldStatus(row?.encryptedResendApiKey, "RESEND_API_KEY"),
       fromEmail: plainFieldStatus(row?.resendFromEmail, "RESEND_FROM_EMAIL"),
+    },
+    unsplash: {
+      managedByEnv: isUnsplashManagedByEnv(),
+      envVars: activeEnvVars(UNSPLASH_ENV_VARS),
+      accessKey: fieldStatus(row?.encryptedUnsplashAccessKey, "UNSPLASH_ACCESS_KEY"),
+    },
+    pexels: {
+      managedByEnv: isPexelsManagedByEnv(),
+      envVars: activeEnvVars(PEXELS_ENV_VARS),
+      apiKey: fieldStatus(row?.encryptedPexelsApiKey, "PEXELS_API_KEY"),
     },
   };
 }
@@ -145,6 +208,16 @@ export type SaveStripeCredentialsInput = {
 export type SaveResendCredentialsInput = {
   apiKey?: string;
   fromEmail?: string | null;
+  updatedBy: number;
+};
+
+export type SaveUnsplashCredentialsInput = {
+  accessKey?: string;
+  updatedBy: number;
+};
+
+export type SavePexelsCredentialsInput = {
+  apiKey?: string;
   updatedBy: number;
 };
 
@@ -210,10 +283,72 @@ export async function saveResendCredentials(input: SaveResendCredentialsInput): 
   invalidateStripeClientCache();
 }
 
+export async function saveUnsplashCredentials(input: SaveUnsplashCredentialsInput): Promise<void> {
+  if (isUnsplashManagedByEnv()) {
+    throw new Error("Unsplash credentials are managed via server environment variables");
+  }
+  const patch: Partial<typeof platformSettingsTable.$inferInsert> = {
+    updatedBy: input.updatedBy,
+  };
+
+  if (input.accessKey !== undefined) {
+    patch.encryptedUnsplashAccessKey = input.accessKey
+      ? encryptSecret(input.accessKey.trim())
+      : null;
+  }
+
+  await db
+    .insert(platformSettingsTable)
+    .values({ id: 1, ...patch })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.id,
+      set: patch,
+    });
+
+  invalidatePlatformStockCredentialsCache();
+}
+
+export async function savePexelsCredentials(input: SavePexelsCredentialsInput): Promise<void> {
+  if (isPexelsManagedByEnv()) {
+    throw new Error("Pexels credentials are managed via server environment variables");
+  }
+  const patch: Partial<typeof platformSettingsTable.$inferInsert> = {
+    updatedBy: input.updatedBy,
+  };
+
+  if (input.apiKey !== undefined) {
+    patch.encryptedPexelsApiKey = input.apiKey ? encryptSecret(input.apiKey.trim()) : null;
+  }
+
+  await db
+    .insert(platformSettingsTable)
+    .values({ id: 1, ...patch })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.id,
+      set: patch,
+    });
+
+  invalidatePlatformStockCredentialsCache();
+}
+
 export async function clearStoredStripeCredentials(updatedBy: number): Promise<void> {
   if (isStripeManagedByEnv()) {
     throw new Error("Stripe credentials are managed via server environment variables");
   }
+
+  const [row] = await db
+    .select({
+      stripeConnectAccountId: platformSettingsTable.stripeConnectAccountId,
+    })
+    .from(platformSettingsTable)
+    .where(eq(platformSettingsTable.id, 1))
+    .limit(1);
+
+  if (row?.stripeConnectAccountId) {
+    await deauthorizeStripeConnectAccount(row.stripeConnectAccountId);
+    await clearStripeConnectTokens(updatedBy);
+  }
+
   await saveStripeCredentials({
     secretKey: "",
     webhookSecret: "",
@@ -221,6 +356,26 @@ export async function clearStoredStripeCredentials(updatedBy: number): Promise<v
     priceScaleMonthly: null,
     updatedBy,
   });
+}
+
+export async function disconnectStripeConnect(updatedBy: number): Promise<void> {
+  if (isStripeManagedByEnv()) {
+    throw new Error("Stripe credentials are managed via server environment variables");
+  }
+
+  const [row] = await db
+    .select({
+      stripeConnectAccountId: platformSettingsTable.stripeConnectAccountId,
+    })
+    .from(platformSettingsTable)
+    .where(eq(platformSettingsTable.id, 1))
+    .limit(1);
+
+  if (row?.stripeConnectAccountId) {
+    await deauthorizeStripeConnectAccount(row.stripeConnectAccountId);
+  }
+
+  await clearStripeConnectTokens(updatedBy);
 }
 
 export async function clearStoredResendCredentials(updatedBy: number): Promise<void> {
@@ -232,6 +387,20 @@ export async function clearStoredResendCredentials(updatedBy: number): Promise<v
     fromEmail: null,
     updatedBy,
   });
+}
+
+export async function clearStoredUnsplashCredentials(updatedBy: number): Promise<void> {
+  if (isUnsplashManagedByEnv()) {
+    throw new Error("Unsplash credentials are managed via server environment variables");
+  }
+  await saveUnsplashCredentials({ accessKey: "", updatedBy });
+}
+
+export async function clearStoredPexelsCredentials(updatedBy: number): Promise<void> {
+  if (isPexelsManagedByEnv()) {
+    throw new Error("Pexels credentials are managed via server environment variables");
+  }
+  await savePexelsCredentials({ apiKey: "", updatedBy });
 }
 
 export async function isStripeIntegrationReady(): Promise<boolean> {

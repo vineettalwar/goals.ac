@@ -8,28 +8,19 @@ import { ProjectPublishingTab } from "@/components/project-publishing-tab";
 import { SearchPropertyConnectionsPanel } from "@/components/search-property-connections-panel";
 import { AnalyticsPropertyConnectionsPanel } from "@/components/analytics-property-connections-panel";
 import { IntegrationTabBadge } from "@/components/integration-tile";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { IntegrationCategoryFilter } from "@/components/publishing-settings-panel";
 import {
   useIntegrationCounts,
 } from "@/hooks/use-integration-counts";
-import { SEARCH_INTEGRATIONS_COUNT } from "@/components/search-property-connections-panel";
-import { ANALYTICS_INTEGRATIONS_COUNT } from "@/components/analytics-property-connections-panel";
-import { getCmsDestinations, getEspDestinations, SOCIAL_SETTINGS_COUNT } from "@/lib/projects/publishing-destinations";
 
-type IntegrationsTab = "all" | IntegrationCategoryFilter | "search";
-
-const CMS_TOTAL = getCmsDestinations().length;
-const ESP_TOTAL = getEspDestinations().length;
+type IntegrationsTab = IntegrationCategoryFilter | "search";
 
 export default function IntegrationsPage() {
   const { activeProjectId, activeProject, isLoading } = useActiveProject();
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
-  const [activeTab, setActiveTab] = useState<IntegrationsTab>("all");
+  const [activeTab, setActiveTab] = useState<IntegrationsTab>("cms");
   const counts = useIntegrationCounts(projectId);
-
-  const publishingFilter: IntegrationCategoryFilter =
-    activeTab === "cms" || activeTab === "social" || activeTab === "esp" ? activeTab : "all";
 
   return (
     <div className="px-8 py-8 max-w-5xl space-y-6">
@@ -63,59 +54,63 @@ export default function IntegrationsPage() {
           className="space-y-5"
         >
           <TabsList className="h-auto flex-wrap gap-1 p-1">
-            <TabsTrigger value="all" className="gap-0">
-              All
-              <IntegrationTabBadge count={counts.total} />
-            </TabsTrigger>
             <TabsTrigger value="cms" className="gap-0">
               CMS
-              <IntegrationTabBadge count={counts.cms} />
+              <IntegrationTabBadge count={counts.cms} loading={counts.loading} />
             </TabsTrigger>
             <TabsTrigger value="social" className="gap-0">
               Social
-              <IntegrationTabBadge count={counts.social} />
+              <IntegrationTabBadge count={counts.social} loading={counts.loading} />
             </TabsTrigger>
             <TabsTrigger value="esp" className="gap-0">
               Email
-              <IntegrationTabBadge count={counts.esp} />
+              <IntegrationTabBadge count={counts.esp} loading={counts.loading} />
             </TabsTrigger>
             <TabsTrigger value="search" className="gap-0">
               Search & Analytics
-              <IntegrationTabBadge count={counts.search} />
+              <IntegrationTabBadge count={counts.search} loading={counts.loading} />
             </TabsTrigger>
           </TabsList>
 
-          {activeTab === "all" || activeTab === "search" ? (
-            <div className="space-y-6">
-              <SearchPropertyConnectionsPanel
-                projectId={projectId}
-                embedded
-                layout="grid"
-              />
-              <AnalyticsPropertyConnectionsPanel
-                projectId={projectId}
-                embedded
-                layout="grid"
-              />
-            </div>
-          ) : null}
-
-          {activeTab !== "search" ? (
+          <TabsContent value="cms" className="mt-0">
             <ProjectPublishingTab
               projectId={projectId}
               showAutomation={false}
               layout="grid"
-              categoryFilter={publishingFilter}
+              categoryFilter="cms"
             />
-          ) : null}
+          </TabsContent>
 
-          {!counts.loading && activeTab === "all" ? (
-            <p className="text-xs text-muted-foreground">
-              {counts.total} of{" "}
-              {CMS_TOTAL + ESP_TOTAL + SOCIAL_SETTINGS_COUNT + SEARCH_INTEGRATIONS_COUNT + ANALYTICS_INTEGRATIONS_COUNT}{" "}
-              integrations connected.
-            </p>
-          ) : null}
+          <TabsContent value="social" className="mt-0">
+            <ProjectPublishingTab
+              projectId={projectId}
+              showAutomation={false}
+              layout="grid"
+              categoryFilter="social"
+            />
+          </TabsContent>
+
+          <TabsContent value="esp" className="mt-0">
+            <ProjectPublishingTab
+              projectId={projectId}
+              showAutomation={false}
+              layout="grid"
+              categoryFilter="esp"
+            />
+          </TabsContent>
+
+          <TabsContent value="search" className="space-y-6 mt-0">
+            <SearchPropertyConnectionsPanel
+              projectId={projectId}
+              embedded
+              layout="grid"
+            />
+            <AnalyticsPropertyConnectionsPanel
+              projectId={projectId}
+              embedded
+              layout="grid"
+            />
+          </TabsContent>
         </Tabs>
       ) : null}
 

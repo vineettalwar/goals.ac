@@ -228,6 +228,41 @@ export async function getAccessibleProject(projectId: number, userId: number) {
   return project ?? null;
 }
 
+export async function requireIntegrationsManage(
+  userId: number,
+  projectId: number,
+): Promise<{ ok: true } | { ok: false; status: number; error: string }> {
+  const platformRole = await getUserPlatformRole(userId);
+  if (isSuperAdmin(platformRole)) {
+    const access = await requireProjectAccess(projectId, userId);
+    if (!access.ok) return access;
+    return { ok: true };
+  }
+
+  const membership = await getOrgMembership(userId);
+  if (membership) {
+    if (membership.suspendedAt) {
+      return { ok: false, status: 403, error: "Organization is suspended" };
+    }
+    if (!hasOrgPermission(membership.orgRole, OrgPermission.INTEGRATIONS_MANAGE)) {
+      return { ok: false, status: 403, error: "Forbidden" };
+    }
+    const access = await requireProjectAccess(projectId, userId);
+    if (!access.ok) return access;
+    return { ok: true };
+  }
+
+  const [project] = await db
+    .select({ userId: websiteProjectsTable.userId })
+    .from(websiteProjectsTable)
+    .where(eq(websiteProjectsTable.id, projectId))
+    .limit(1);
+  if (!project || project.userId !== userId) {
+    return { ok: false, status: 403, error: "Forbidden" };
+  }
+  return { ok: true };
+}
+
 export async function requireSiteAdminAccess(
   userId: number,
 ): Promise<

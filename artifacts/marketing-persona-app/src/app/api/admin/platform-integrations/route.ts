@@ -2,11 +2,16 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
 import {
+  clearStoredPexelsCredentials,
   clearStoredResendCredentials,
   clearStoredStripeCredentials,
+  clearStoredUnsplashCredentials,
+  disconnectStripeConnect,
   getPlatformIntegrationStatus,
+  savePexelsCredentials,
   saveResendCredentials,
   saveStripeCredentials,
+  saveUnsplashCredentials,
 } from "@/lib/platform/platform-integration-secrets";
 
 const stripeBodySchema = z.object({
@@ -23,10 +28,25 @@ const resendBodySchema = z.object({
   fromEmail: z.string().email().optional().nullable(),
 });
 
-const patchSchema = z.discriminatedUnion("integration", [stripeBodySchema, resendBodySchema]);
+const unsplashBodySchema = z.object({
+  integration: z.literal("unsplash"),
+  accessKey: z.string().min(8).optional(),
+});
+
+const pexelsBodySchema = z.object({
+  integration: z.literal("pexels"),
+  apiKey: z.string().min(8).optional(),
+});
+
+const patchSchema = z.discriminatedUnion("integration", [
+  stripeBodySchema,
+  resendBodySchema,
+  unsplashBodySchema,
+  pexelsBodySchema,
+]);
 
 const deleteSchema = z.object({
-  integration: z.enum(["stripe", "resend"]),
+  integration: z.enum(["stripe", "stripe_connect", "resend", "unsplash", "pexels"]),
 });
 
 export async function GET() {
@@ -67,7 +87,7 @@ export async function PATCH(req: Request) {
         priceScaleMonthly: data.priceScaleMonthly,
         updatedBy: admin.userId!,
       });
-    } else {
+    } else if (data.integration === "resend") {
       if (data.apiKey === undefined && data.fromEmail === undefined) {
         return NextResponse.json({ error: "No Resend fields to update" }, { status: 400 });
       }
@@ -75,6 +95,24 @@ export async function PATCH(req: Request) {
       await saveResendCredentials({
         apiKey: data.apiKey,
         fromEmail: data.fromEmail,
+        updatedBy: admin.userId!,
+      });
+    } else if (data.integration === "unsplash") {
+      if (data.accessKey === undefined) {
+        return NextResponse.json({ error: "No Unsplash fields to update" }, { status: 400 });
+      }
+
+      await saveUnsplashCredentials({
+        accessKey: data.accessKey,
+        updatedBy: admin.userId!,
+      });
+    } else {
+      if (data.apiKey === undefined) {
+        return NextResponse.json({ error: "No Pexels fields to update" }, { status: 400 });
+      }
+
+      await savePexelsCredentials({
+        apiKey: data.apiKey,
         updatedBy: admin.userId!,
       });
     }
@@ -99,10 +137,22 @@ export async function DELETE(req: Request) {
   }
 
   try {
-    if (parsed.data.integration === "stripe") {
-      await clearStoredStripeCredentials(admin.userId!);
-    } else {
-      await clearStoredResendCredentials(admin.userId!);
+    switch (parsed.data.integration) {
+      case "stripe":
+        await clearStoredStripeCredentials(admin.userId!);
+        break;
+      case "stripe_connect":
+        await disconnectStripeConnect(admin.userId!);
+        break;
+      case "resend":
+        await clearStoredResendCredentials(admin.userId!);
+        break;
+      case "unsplash":
+        await clearStoredUnsplashCredentials(admin.userId!);
+        break;
+      case "pexels":
+        await clearStoredPexelsCredentials(admin.userId!);
+        break;
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Clear failed";

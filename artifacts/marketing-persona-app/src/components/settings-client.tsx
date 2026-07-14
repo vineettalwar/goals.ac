@@ -25,6 +25,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OrgSecurityPanel } from "@/components/org-security-panel";
+import { StockByokPanel } from "@/components/settings/stock-byok-panel";
+import { DeeplByokPanel } from "@/components/settings/deepl-byok-panel";
+import { PublicApiKeysPanel } from "@/components/settings/public-api-keys-panel";
 import { useActiveProject } from "@/context/active-project";
 import {
   contentLanguageLabel,
@@ -95,11 +98,13 @@ interface AiProviderStatus {
   ollama: { configured: boolean; baseUrl: string; model: string; reachable: boolean };
 }
 
-type AiProviderChoice = "gemini" | "bedrock" | "ollama";
+type AiProviderChoice = "gemini" | "bedrock" | "ollama" | "openai" | "anthropic";
 
 function normalizeProviderChoice(value: string | null | undefined): AiProviderChoice {
   if (value === "bedrock") return "bedrock";
   if (value === "ollama") return "ollama";
+  if (value === "openai") return "openai";
+  if (value === "anthropic") return "anthropic";
   return "gemini";
 }
 
@@ -145,6 +150,26 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
   const [geminiTesting, setGeminiTesting] = useState(false);
   const [geminiTestResult, setGeminiTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [geminiSaving, setGeminiSaving] = useState(false);
+  const [hasOpenAIKey, setHasOpenAIKey] = useState(initialData?.openaiCredentials.hasKey ?? false);
+  const [openaiLastFour, setOpenaiLastFour] = useState<string | null>(
+    initialData?.openaiCredentials.lastFour ?? null,
+  );
+  const [openaiDialogOpen, setOpenaiDialogOpen] = useState(false);
+  const [openaiKeyInput, setOpenaiKeyInput] = useState("");
+  const [openaiTesting, setOpenaiTesting] = useState(false);
+  const [openaiTestResult, setOpenaiTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [openaiSaving, setOpenaiSaving] = useState(false);
+  const [deletingOpenAIKey, setDeletingOpenAIKey] = useState(false);
+  const [hasAnthropicKey, setHasAnthropicKey] = useState(initialData?.anthropicCredentials.hasKey ?? false);
+  const [anthropicLastFour, setAnthropicLastFour] = useState<string | null>(
+    initialData?.anthropicCredentials.lastFour ?? null,
+  );
+  const [anthropicDialogOpen, setAnthropicDialogOpen] = useState(false);
+  const [anthropicKeyInput, setAnthropicKeyInput] = useState("");
+  const [anthropicTesting, setAnthropicTesting] = useState(false);
+  const [anthropicTestResult, setAnthropicTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
+  const [anthropicSaving, setAnthropicSaving] = useState(false);
+  const [deletingAnthropicKey, setDeletingAnthropicKey] = useState(false);
   const [hasBedrockCredentials, setHasBedrockCredentials] = useState(
     initialData?.bedrockCredentials.hasCredentials ?? false,
   );
@@ -233,10 +258,12 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
       fetch("/api/usage").then((r) => (r.ok ? r.json() : null)),
       fetch("/api/auth/me").then((r) => (r.ok ? r.json() : null)),
       fetch("/api/auth/api-key").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/auth/openai-credentials").then((r) => (r.ok ? r.json() : null)),
+      fetch("/api/auth/anthropic-credentials").then((r) => (r.ok ? r.json() : null)),
       fetch("/api/auth/bedrock-credentials").then((r) => (r.ok ? r.json() : null)),
       fetch("/api/auth/semrush-credentials").then((r) => (r.ok ? r.json() : null)),
       fetch("/api/ai-providers/status").then((r) => (r.ok ? r.json() : null)),
-    ]).then(([usageData, meData, keyData, bedrockData, semrushData, aiData]) => {
+    ]).then(([usageData, meData, keyData, openaiData, anthropicData, bedrockData, semrushData, aiData]) => {
       if (usageData?.usage) setUsage(usageData.usage);
       if (meData) {
         setHasGoogleId(meData.hasGoogleId ?? false);
@@ -246,6 +273,14 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
       if (keyData?.hasKey) {
         setHasGeminiKey(true);
         setGeminiLastFour(keyData.lastFour ?? null);
+      }
+      if (openaiData?.hasKey) {
+        setHasOpenAIKey(true);
+        setOpenaiLastFour(openaiData.lastFour ?? null);
+      }
+      if (anthropicData?.hasKey) {
+        setHasAnthropicKey(true);
+        setAnthropicLastFour(anthropicData.lastFour ?? null);
       }
       if (bedrockData?.hasCredentials) {
         setHasBedrockCredentials(true);
@@ -348,6 +383,96 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
     setHasGeminiKey(false);
     setGeminiLastFour(null);
     toast.success("API key removed");
+  }
+
+  async function testOpenAIKey() {
+    if (!openaiKeyInput.trim()) return;
+    setOpenaiTesting(true);
+    setOpenaiTestResult(null);
+    const res = await fetch("/api/auth/openai-credentials/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: openaiKeyInput }),
+    });
+    setOpenaiTestResult(await res.json());
+    setOpenaiTesting(false);
+  }
+
+  async function saveOpenAIKey() {
+    if (!openaiKeyInput.trim()) return;
+    setOpenaiSaving(true);
+    const res = await fetch("/api/auth/openai-credentials", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: openaiKeyInput }),
+    });
+    setOpenaiSaving(false);
+    if (!res.ok) { toast.error("Failed to save key"); return; }
+    const data = await res.json();
+    setHasOpenAIKey(true);
+    setOpenaiLastFour(data.lastFour ?? openaiKeyInput.slice(-4));
+    setOpenaiDialogOpen(false);
+    setOpenaiKeyInput("");
+    toast.success("OpenAI API key saved");
+    const statusRes = await fetch("/api/ai-providers/status");
+    if (statusRes.ok) setAiStatus(await statusRes.json());
+  }
+
+  async function removeOpenAIKey() {
+    setDeletingOpenAIKey(true);
+    const res = await fetch("/api/auth/openai-credentials", { method: "DELETE" });
+    setDeletingOpenAIKey(false);
+    if (!res.ok) { toast.error("Failed to remove key"); return; }
+    setHasOpenAIKey(false);
+    setOpenaiLastFour(null);
+    toast.success("OpenAI API key removed");
+    const statusRes = await fetch("/api/ai-providers/status");
+    if (statusRes.ok) setAiStatus(await statusRes.json());
+  }
+
+  async function testAnthropicKey() {
+    if (!anthropicKeyInput.trim()) return;
+    setAnthropicTesting(true);
+    setAnthropicTestResult(null);
+    const res = await fetch("/api/auth/anthropic-credentials/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: anthropicKeyInput }),
+    });
+    setAnthropicTestResult(await res.json());
+    setAnthropicTesting(false);
+  }
+
+  async function saveAnthropicKey() {
+    if (!anthropicKeyInput.trim()) return;
+    setAnthropicSaving(true);
+    const res = await fetch("/api/auth/anthropic-credentials", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: anthropicKeyInput }),
+    });
+    setAnthropicSaving(false);
+    if (!res.ok) { toast.error("Failed to save key"); return; }
+    const data = await res.json();
+    setHasAnthropicKey(true);
+    setAnthropicLastFour(data.lastFour ?? anthropicKeyInput.slice(-4));
+    setAnthropicDialogOpen(false);
+    setAnthropicKeyInput("");
+    toast.success("Anthropic API key saved");
+    const statusRes = await fetch("/api/ai-providers/status");
+    if (statusRes.ok) setAiStatus(await statusRes.json());
+  }
+
+  async function removeAnthropicKey() {
+    setDeletingAnthropicKey(true);
+    const res = await fetch("/api/auth/anthropic-credentials", { method: "DELETE" });
+    setDeletingAnthropicKey(false);
+    if (!res.ok) { toast.error("Failed to remove key"); return; }
+    setHasAnthropicKey(false);
+    setAnthropicLastFour(null);
+    toast.success("Anthropic API key removed");
+    const statusRes = await fetch("/api/ai-providers/status");
+    if (statusRes.ok) setAiStatus(await statusRes.json());
   }
 
   function openBedrockDialog() {
@@ -576,12 +701,14 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase">Articles</p>
-                  <p className="text-2xl font-bold">{usage.articlesThisMonth}</p>
-                  {!usage.usesByok && usage.quota != null && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {usage.quotaRemaining ?? 0} of {usage.quota} remaining (platform key)
-                    </p>
-                  )}
+                  <p className="text-2xl font-bold tabular-nums">{usage.articlesThisMonth}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {usage.usesByok
+                      ? "BYOK — unlimited"
+                      : usage.quota != null
+                        ? `${usage.quotaRemaining ?? 0} remaining on platform key`
+                        : "Generated this month"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase">Plan</p>
@@ -626,6 +753,8 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="gemini">Google Gemini</SelectItem>
+                      <SelectItem value="openai">OpenAI (ChatGPT)</SelectItem>
+                      <SelectItem value="anthropic">Anthropic (Claude)</SelectItem>
                       <SelectItem value="bedrock">AWS Bedrock</SelectItem>
                       <SelectItem value="ollama">Ollama (local)</SelectItem>
                     </SelectContent>
@@ -718,6 +847,76 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
           </div>
 
           <div className="paper-card p-6 space-y-4">
+            <h2 className="font-semibold">OpenAI (ChatGPT) BYOK</h2>
+            <p className="text-sm text-muted-foreground">
+              Bring your own OpenAI API key to route AI generation through your ChatGPT API account.
+              {!canManageAiSettings && " Only site admins can manage the API key."}
+            </p>
+            {hasOpenAIKey ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Organization OpenAI API key connected</p>
+                    <p className="text-xs text-muted-foreground">Ending in ••••{openaiLastFour ?? "••••"}</p>
+                  </div>
+                </div>
+                {canManageAiSettings && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setOpenaiKeyInput(""); setOpenaiTestResult(null); setOpenaiDialogOpen(true); }}>
+                      Replace key
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={removeOpenAIKey} disabled={deletingOpenAIKey}>
+                      {deletingOpenAIKey ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove key"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : canManageAiSettings ? (
+              <Button variant="outline" size="sm" onClick={() => { setOpenaiKeyInput(""); setOpenaiTestResult(null); setOpenaiDialogOpen(true); }}>
+                <KeyRound className="mr-2 h-3.5 w-3.5" />Add OpenAI API key
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">No organization OpenAI API key configured.</p>
+            )}
+          </div>
+
+          <div className="paper-card p-6 space-y-4">
+            <h2 className="font-semibold">Anthropic (Claude) BYOK</h2>
+            <p className="text-sm text-muted-foreground">
+              Bring your own Anthropic API key to route AI generation through Claude directly (not via AWS Bedrock).
+              {!canManageAiSettings && " Only site admins can manage the API key."}
+            </p>
+            {hasAnthropicKey ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium">Organization Anthropic API key connected</p>
+                    <p className="text-xs text-muted-foreground">Ending in ••••{anthropicLastFour ?? "••••"}</p>
+                  </div>
+                </div>
+                {canManageAiSettings && (
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => { setAnthropicKeyInput(""); setAnthropicTestResult(null); setAnthropicDialogOpen(true); }}>
+                      Replace key
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={removeAnthropicKey} disabled={deletingAnthropicKey}>
+                      {deletingAnthropicKey ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove key"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            ) : canManageAiSettings ? (
+              <Button variant="outline" size="sm" onClick={() => { setAnthropicKeyInput(""); setAnthropicTestResult(null); setAnthropicDialogOpen(true); }}>
+                <KeyRound className="mr-2 h-3.5 w-3.5" />Add Anthropic API key
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground">No organization Anthropic API key configured.</p>
+            )}
+          </div>
+
+          <div className="paper-card p-6 space-y-4">
             <h2 className="font-semibold flex items-center gap-2">
               <Cloud className="w-4 h-4 text-amber-500" />
               AWS Bedrock (BYOK)
@@ -798,6 +997,20 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
             ) : (
               <p className="text-sm text-muted-foreground">No organization Semrush credentials configured.</p>
             )}
+          </div>
+
+          <DeeplByokPanel scope="org" canManage={canManageAiSettings} />
+
+          <PublicApiKeysPanel canManage={canManageAiSettings} />
+
+          <div className="paper-card p-6">
+            <StockByokPanel
+              scope="org"
+              canManage={canManageAiSettings}
+              billingFilter="free"
+              title="Optional Unsplash / Pexels overrides"
+              description="By default, free stock photos use platform-wide keys. Add your own Unsplash or Pexels developer keys here for higher rate limits or compliance."
+            />
           </div>
 
           {aiStatus && (
@@ -886,6 +1099,68 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
               </Button>
               <Button onClick={saveGeminiKey} disabled={geminiSaving || !geminiKeyInput}>
                 {geminiSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save key"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={openaiDialogOpen} onOpenChange={setOpenaiDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>OpenAI API key</DialogTitle>
+            <DialogDescription>Your key is encrypted and stored securely.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              type="password"
+              placeholder="sk-..."
+              value={openaiKeyInput}
+              onChange={(e) => setOpenaiKeyInput(e.target.value)}
+            />
+            {openaiTestResult && (
+              <div className={`flex items-center gap-2 text-sm ${openaiTestResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                {openaiTestResult.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                {openaiTestResult.ok ? "Key is valid" : openaiTestResult.error ?? "Key test failed"}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={testOpenAIKey} disabled={openaiTesting || !openaiKeyInput}>
+                {openaiTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test key"}
+              </Button>
+              <Button onClick={saveOpenAIKey} disabled={openaiSaving || !openaiKeyInput}>
+                {openaiSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save key"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={anthropicDialogOpen} onOpenChange={setAnthropicDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Anthropic API key</DialogTitle>
+            <DialogDescription>Your key is encrypted and stored securely.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Input
+              type="password"
+              placeholder="sk-ant-..."
+              value={anthropicKeyInput}
+              onChange={(e) => setAnthropicKeyInput(e.target.value)}
+            />
+            {anthropicTestResult && (
+              <div className={`flex items-center gap-2 text-sm ${anthropicTestResult.ok ? "text-emerald-600" : "text-destructive"}`}>
+                {anthropicTestResult.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                {anthropicTestResult.ok ? "Key is valid" : anthropicTestResult.error ?? "Key test failed"}
+              </div>
+            )}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={testAnthropicKey} disabled={anthropicTesting || !anthropicKeyInput}>
+                {anthropicTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test key"}
+              </Button>
+              <Button onClick={saveAnthropicKey} disabled={anthropicSaving || !anthropicKeyInput}>
+                {anthropicSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save key"}
               </Button>
             </div>
           </div>
