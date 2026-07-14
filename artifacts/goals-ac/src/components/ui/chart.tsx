@@ -131,7 +131,8 @@ const ChartTooltip = (
 ) => {
   const recharts = useRechartsModule()
   if (!recharts) return null
-  return <recharts.Tooltip {...props} />
+  const Tooltip = recharts.Tooltip as typeof RechartsPrimitive.Tooltip
+  return <Tooltip {...props} />
 }
 
 const ChartTooltipContent = React.forwardRef<
@@ -297,7 +298,8 @@ const ChartLegend = (
 ) => {
   const recharts = useRechartsModule()
   if (!recharts) return null
-  return <recharts.Legend {...props} />
+  const Legend = recharts.Legend as typeof RechartsPrimitive.Legend
+  return <Legend {...props} />
 }
 
 const ChartLegendContent = React.forwardRef<

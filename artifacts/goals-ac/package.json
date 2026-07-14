@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "node -e \"console.warn('\\n⚠️  artifacts/goals-ac is deprecated. Use marketing-persona-app (:3001). See DEPRECATED.md.\\n')\"",
+    "predev": "node -e \"console.warn('\\n⚠️  artifacts/goals-ac is a redirect shell only. Use marketing-persona-app (:3001). See DEPRECATED.md.\\n')\"",
     "dev": "vite --config vite.config.ts --host 0.0.0.0",
     "build": "vite build --config vite.config.ts",
     "serve": "vite preview --config vite.config.ts --host 0.0.0.0",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.redirect.json --noEmit"
   },
   "devDependencies": {
     "@hookform/resolvers": "^3.10.0",
