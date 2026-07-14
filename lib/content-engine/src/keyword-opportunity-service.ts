@@ -17,7 +17,7 @@ import {
   type GapOpportunity,
 } from "@workspace/seo-tools/keywordGapAnalyzer";
 import {
-  modelForTier,
+  modelForProviderTier,
   resolveAiClient,
   resolveProviderId,
 } from "@workspace/ai-providers";
@@ -98,7 +98,7 @@ Return ONLY valid JSON array with one item per query, same order:
   try {
     const providerId = resolveProviderId(params.aiProviderOptions);
     const response = await client.generate({
-      model: providerId === "gemini" ? modelForTier("gemini", "planning") : undefined,
+      model: modelForProviderTier(providerId, "planning"),
       prompt,
       responseMimeType: "application/json",
       temperature: 0.4,
@@ -172,7 +172,7 @@ Return ONLY valid JSON array with one item per keyword, same order:
   try {
     const providerId = resolveProviderId(params.aiProviderOptions);
     const response = await client.generate({
-      model: providerId === "gemini" ? modelForTier("gemini", "planning") : undefined,
+      model: modelForProviderTier(providerId, "planning"),
       prompt,
       responseMimeType: "application/json",
       temperature: 0.4,
@@ -433,7 +433,7 @@ Focus on keywords competitors likely rank for that this brand does not yet cover
   try {
     const providerId = resolveProviderId(params.aiProviderOptions);
     const response = await client.generate({
-      model: providerId === "gemini" ? modelForTier("gemini", "planning") : undefined,
+      model: modelForProviderTier(providerId, "planning"),
       prompt,
       responseMimeType: "application/json",
       temperature: 0.5,

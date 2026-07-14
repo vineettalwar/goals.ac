@@ -164,6 +164,7 @@ export async function rateLimitResponse(
 
 export const RATE_LIMITS = {
   AI_GENERATION_PER_USER: { limit: 10, windowMs: 60_000 },
+  PUBLIC_GEO_AUDIT_PER_IP: { limit: 5, windowMs: 60 * 60_000 },
   AUTH_PER_IP: { limit: 20, windowMs: 60_000 },
   GSC_SYNC_PER_PROJECT: { limit: 3, windowMs: 60 * 60_000 },
   GA4_SYNC_PER_PROJECT: { limit: 3, windowMs: 60 * 60_000 },

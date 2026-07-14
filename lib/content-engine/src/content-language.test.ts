@@ -18,13 +18,14 @@ describe("content-language", () => {
     expect(semrushDatabaseForLanguage("de")).toBe("de");
     expect(semrushDatabaseForLanguage("en-GB")).toBe("uk");
     expect(semrushDatabaseForLanguage("pt")).toBe("br");
-    expect(semrushDatabaseForLanguage("nl")).toBeNull();
+    expect(semrushDatabaseForLanguage("nl")).toBe("nl");
+    expect(semrushDatabaseForLanguage("xx")).toBe("us");
   });
 
   it("detects database mismatch when a direct mapping exists", () => {
     expect(isSemrushDatabaseMismatch("de", "us")).toBe(true);
     expect(isSemrushDatabaseMismatch("de", "de")).toBe(false);
-    expect(isSemrushDatabaseMismatch("nl", "us")).toBe(false);
+    expect(isSemrushDatabaseMismatch("nl", "us")).toBe(true);
   });
 
   it("builds language prompt line for non-English only", () => {

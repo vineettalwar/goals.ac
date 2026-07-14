@@ -1,32 +1,34 @@
-import { publishToNotion } from "@workspace/connectors/notion";
-import { publishToWebflow, type WebflowPublishStatus } from "@workspace/connectors/webflow";
+import { injectGoalsAcSchema } from "@workspace/connectors/goals-ac-plugin";
+import { renderAndPublish } from "../adapters/render-service";
+import { getAdapter } from "../adapters/registry";
 import {
   type CmsIntegrationCredentials,
-  type CmsPublishPlatform,
-  CMS_PUBLISH_PLATFORMS,
   type EspPublishPlatform,
   ESP_PUBLISH_PLATFORMS,
 } from "./cms-integrations";
 import {
-  publishPieceToCms,
-  publishPieceToWordPress,
   type PublishableContentPiece,
 } from "./cms-publish";
 import { publishPieceToEsp } from "./esp-publish";
+import type { PublishEntitlements } from "./publish-entitlements";
 
 export type BlogDestinationId =
   | "wordpress"
   | "notion"
   | "webflow"
-  | CmsPublishPlatform
+  | "ghost"
+  | "webhook"
+  | "shopify"
+  | "drupal"
+  | "joomla"
+  | "typo3"
   | "wix"
   | "framer"
   | "squarespace"
   | "contentful"
   | "sanity"
   | "strapi"
-  | "hubspot"
-  | "typo3";
+  | "hubspot";
 
 const BLOG_DESTINATION_PRIORITY: BlogDestinationId[] = [
   "wordpress",
@@ -46,6 +48,25 @@ const BLOG_DESTINATION_PRIORITY: BlogDestinationId[] = [
   "webflow",
   "webhook",
 ];
+
+const ADAPTER_PLATFORMS = new Set([
+  "wordpress",
+  "notion",
+  "webflow",
+  "ghost",
+  "webhook",
+  "contentful",
+  "sanity",
+  "strapi",
+  "shopify",
+  "drupal",
+  "joomla",
+  "typo3",
+  "wix",
+  "framer",
+  "squarespace",
+  "hubspot",
+]);
 
 function hasBlogDestination(
   creds: CmsIntegrationCredentials,
@@ -84,34 +105,55 @@ export function resolvePrimaryEspDestination(
 export interface PublishDestinationOptions {
   status?: "draft" | "publish" | "published";
   featuredImageUrl?: string;
+  entitlements?: PublishEntitlements;
+  idempotencyKey?: string;
 }
 
 export interface PublishDestinationResult {
   publishedUrl: string;
   publishPlatform: string;
-}
-
-function mapWpStatus(
-  status: PublishDestinationOptions["status"],
-): "draft" | "publish" {
-  if (status === "draft") return "draft";
-  return "publish";
+  warnings?: { code: string; message: string }[];
 }
 
 function mapCmsStatus(
   status: PublishDestinationOptions["status"],
-): "draft" | "published" {
+): "draft" | "published" | "publish" {
   if (status === "draft") return "draft";
+  if (status === "publish") return "publish";
   return "published";
 }
 
-function mapWebflowStatus(
+async function maybeInjectSchema(
   creds: CmsIntegrationCredentials,
-  status: PublishDestinationOptions["status"],
-): WebflowPublishStatus {
-  if (status === "draft") return "draft";
-  if (status === "publish" || status === "published") return "live";
-  return creds.webflow?.publishStatus ?? "draft";
+  platform: string,
+  piece: PublishableContentPiece,
+): Promise<void> {
+  const jsonLd = piece.pieceMetadata?.jsonLdSchema;
+  if (!jsonLd || typeof jsonLd !== "object") return;
+
+  const pluginCreds =
+    platform === "wordpress" && creds.wordpress?.siteUrl && creds.wordpress.siteKey
+      ? { siteUrl: creds.wordpress.siteUrl, siteKey: creds.wordpress.siteKey, platform: "wordpress" as const }
+      : platform === "drupal" && creds.drupal?.siteKey
+        ? { siteUrl: creds.drupal.siteUrl, siteKey: creds.drupal.siteKey, platform: "drupal" as const }
+        : platform === "joomla" && creds.joomla?.siteKey
+          ? { siteUrl: creds.joomla.siteUrl, siteKey: creds.joomla.siteKey, platform: "joomla" as const }
+          : platform === "shopify" && creds.shopify?.siteUrl && creds.shopify.siteKey
+            ? { siteUrl: creds.shopify.siteUrl, siteKey: creds.shopify.siteKey, platform: "shopify" as const }
+            : null;
+
+  if (!pluginCreds) return;
+
+  try {
+    await injectGoalsAcSchema(pluginCreds, {
+      json_ld: jsonLd,
+      llms_txt: piece.pieceMetadata?.metaDescription
+        ? `# ${piece.title}\n\n${piece.pieceMetadata.metaDescription}`
+        : undefined,
+    });
+  } catch {
+    // Schema injection is best-effort
+  }
 }
 
 export async function publishPieceToDestination(
@@ -120,95 +162,30 @@ export async function publishPieceToDestination(
   creds: CmsIntegrationCredentials,
   options?: PublishDestinationOptions,
 ): Promise<PublishDestinationResult> {
-  const wpStatus = mapWpStatus(options?.status);
   const cmsStatus = mapCmsStatus(options?.status);
 
-  if (platform === "wordpress" && creds.wordpress) {
-    const url = await publishPieceToWordPress(piece, creds, { status: wpStatus });
-    return { publishedUrl: url, publishPlatform: "wordpress" };
-  }
-
-  if (platform === "notion" && creds.notion) {
-    const url = await publishToNotion(
-      creds.notion.integrationToken,
-      creds.notion.databaseId,
-      piece.title,
-      piece.bodyMarkdown,
-      { status: cmsStatus === "published" ? "published" : "draft" },
-    );
-    return { publishedUrl: url, publishPlatform: "notion" };
-  }
-
-  if (platform === "webflow" && creds.webflow) {
-    const url = await publishToWebflow(
-      creds.webflow.apiToken,
-      creds.webflow.collectionId,
-      creds.webflow.bodyFieldSlug,
-      piece.title,
-      piece.bodyMarkdown,
-      { publishStatus: mapWebflowStatus(creds, options?.status) },
-    );
-    return { publishedUrl: url, publishPlatform: "webflow" };
-  }
-
-  if (CMS_PUBLISH_PLATFORMS.includes(platform as CmsPublishPlatform)) {
-    const url = await publishPieceToCms(platform as CmsPublishPlatform, piece, creds, {
+  if (ADAPTER_PLATFORMS.has(platform) && getAdapter(platform)) {
+    const result = await renderAndPublish({
+      piece,
+      platform,
+      creds,
+      entitlements: options?.entitlements,
       status: cmsStatus,
+      idempotencyKey: options?.idempotencyKey ?? (piece.id ? `piece-${piece.id}` : undefined),
     });
-    return { publishedUrl: url, publishPlatform: platform };
-  }
 
-  if (platform === "wix" && creds.wix) {
-    const { publishToWix } = await import("@workspace/connectors/wix");
-    const result = await publishToWix(creds.wix, piece.title, piece.bodyMarkdown, cmsStatus);
-    return { publishedUrl: result.url, publishPlatform: "wix" };
-  }
+    if (platform === "wordpress") {
+      await maybeInjectSchema(creds, "wordpress", piece);
+    }
+    if (platform === "shopify" || platform === "drupal" || platform === "joomla") {
+      await maybeInjectSchema(creds, platform, piece);
+    }
 
-  if (platform === "framer" && creds.framer) {
-    const { publishToFramer } = await import("@workspace/connectors/framer");
-    const result = await publishToFramer(creds.framer, piece.title, piece.bodyMarkdown, cmsStatus);
-    return { publishedUrl: result.url, publishPlatform: "framer" };
-  }
-
-  if (platform === "squarespace" && creds.squarespace) {
-    const { publishToSquarespace } = await import("@workspace/connectors/squarespace");
-    const result = await publishToSquarespace(
-      creds.squarespace,
-      piece.title,
-      piece.bodyMarkdown,
-      cmsStatus,
-    );
-    return { publishedUrl: result.url, publishPlatform: "squarespace" };
-  }
-
-  if (platform === "contentful" && creds.contentful) {
-    const { publishToContentful } = await import("@workspace/connectors/contentful");
-    const result = await publishToContentful(creds.contentful, piece.title, piece.bodyMarkdown, cmsStatus);
-    return { publishedUrl: result.url, publishPlatform: "contentful" };
-  }
-
-  if (platform === "sanity" && creds.sanity) {
-    const { publishToSanity } = await import("@workspace/connectors/sanity");
-    const result = await publishToSanity(creds.sanity, piece.title, piece.bodyMarkdown, cmsStatus);
-    return { publishedUrl: result.url, publishPlatform: "sanity" };
-  }
-
-  if (platform === "strapi" && creds.strapi) {
-    const { publishToStrapi } = await import("@workspace/connectors/strapi");
-    const result = await publishToStrapi(creds.strapi, piece.title, piece.bodyMarkdown, cmsStatus);
-    return { publishedUrl: result.url, publishPlatform: "strapi" };
-  }
-
-  if (platform === "hubspot" && creds.hubspot) {
-    const { publishToHubSpot } = await import("@workspace/connectors/hubspot");
-    const result = await publishToHubSpot(creds.hubspot, piece.title, piece.bodyMarkdown, cmsStatus);
-    return { publishedUrl: result.url, publishPlatform: "hubspot" };
-  }
-
-  if (platform === "typo3" && creds.typo3) {
-    const { publishToTypo3 } = await import("@workspace/connectors/typo3");
-    const result = await publishToTypo3(creds.typo3, piece.title, piece.bodyMarkdown, cmsStatus);
-    return { publishedUrl: result.url, publishPlatform: "typo3" };
+    return {
+      publishedUrl: result.url,
+      publishPlatform: platform,
+      warnings: result.warnings,
+    };
   }
 
   if (ESP_PUBLISH_PLATFORMS.includes(platform as EspPublishPlatform)) {
@@ -230,3 +207,6 @@ export async function publishBlogPieceToPrimaryDestination(
   }
   return publishPieceToDestination(platform, piece, creds, options);
 }
+
+/** @deprecated Use publishPieceToDestination — kept for Express legacy routes */
+export { publishPieceToWordPress } from "./cms-publish";

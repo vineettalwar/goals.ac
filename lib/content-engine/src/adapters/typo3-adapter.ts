@@ -1,0 +1,124 @@
+import { publishToTypo3 } from "@workspace/connectors/typo3";
+import type { CanonicalContent } from "../canonical-content";
+import type { CmsIntegrationCredentials } from "../support/cms-integrations";
+import { getOutputModes, resolveOutputMode } from "../support/platform-output-modes";
+import { mapSeoToPluginMeta } from "../support/seo-field-mapper";
+import {
+  contentTagsFromCanonical,
+  resolveSeoFromCanonical,
+  seoTitle,
+} from "./adapter-helpers";
+import { markdownToHtml } from "./markdown-html";
+import { mapPluginStatus } from "./plugin-shared";
+import { markdownToTypo3ContentElements } from "./typo3-content-elements";
+import type {
+  CmsAdapter,
+  PlatformPayload,
+  PublishOpts,
+  RenderOptions,
+  RenderResult,
+  Typo3ContentElement,
+} from "./types";
+
+type Typo3OutputMode = "body_text" | "content_elements";
+
+export const typo3Adapter: CmsAdapter = {
+  platform: "typo3",
+  capabilities: {
+    drafts: true,
+    scheduling: false,
+    updates: true,
+    categories: false,
+    featuredImage: false,
+    schemaInjection: true,
+    outputModes: getOutputModes("typo3").map((m) => m.value),
+  },
+
+  async render(content: CanonicalContent, opts?: RenderOptions): Promise<RenderResult> {
+    const outputMode = resolveOutputMode({
+      platform: "typo3",
+      explicit: opts?.outputMode,
+      creds: opts?.creds,
+      entitlements: opts?.entitlements,
+    }) as Typo3OutputMode;
+
+    const seo = resolveSeoFromCanonical(content);
+    const title = seoTitle(content, seo);
+    const warnings: RenderResult["warnings"] = [];
+    const requested = opts?.outputMode ?? opts?.creds?.typo3?.outputMode;
+    if (requested && requested !== outputMode) {
+      warnings.push({
+        code: "output_mode_downgraded",
+        message: `${requested} mode requires BYOK or Growth plan — using body_text instead.`,
+      });
+    }
+
+    if (outputMode === "content_elements") {
+      const contentElements = markdownToTypo3ContentElements(content.markdown);
+      const payload: PlatformPayload = {
+        kind: "typo3",
+        outputMode: "content_elements",
+        title,
+        contentElements,
+        meta: seo.metaDescription ? { description: seo.metaDescription } : undefined,
+      };
+      const previewHtml = await markdownToHtml(content.markdown);
+      return {
+        payload,
+        warnings,
+        previewHtml,
+        previewJson: { outputMode, elementCount: contentElements.length, contentElements },
+      };
+    }
+
+    const html = await markdownToHtml(content.markdown);
+    const payload: PlatformPayload = {
+      kind: "typo3",
+      outputMode: "body_text",
+      title,
+      content: html,
+      meta: {
+        ...(seo.metaDescription ? { description: seo.metaDescription } : {}),
+        tags: contentTagsFromCanonical(content).join(","),
+        seoTitle: seo.seoTitle ?? content.meta.title,
+      },
+    };
+
+    return {
+      payload,
+      warnings,
+      previewHtml: html,
+      previewJson: { outputMode, contentLength: html.length },
+    };
+  },
+
+  async publish(creds: CmsIntegrationCredentials, payload: PlatformPayload, opts?: PublishOpts) {
+    if (!creds.typo3) throw new Error("TYPO3 is not connected.");
+    if (payload.kind !== "typo3") throw new Error("Invalid payload for TYPO3 adapter.");
+
+    const status = mapPluginStatus(opts?.status);
+    const outputMode = payload.outputMode;
+    const seo = {
+      seoTitle: payload.meta?.seoTitle ?? payload.title,
+      metaDescription: payload.meta?.description,
+    };
+
+    const result = await publishToTypo3(
+      creds.typo3,
+      {
+        title: payload.title,
+        content: payload.content ?? "",
+        status: status === "publish" ? "published" : "draft",
+        outputMode,
+        contentElements: payload.contentElements as Typo3ContentElement[] | undefined,
+        meta: mapSeoToPluginMeta(seo),
+      },
+      {
+        markdown: false,
+        idempotencyKey: opts?.idempotencyKey,
+      },
+    );
+
+    return { url: result.url, remoteId: result.postId };
+  },
+};

@@ -1,6 +1,6 @@
 import type { ContentPieceImageRef, ContentFormatType } from "@workspace/db";
 import { DEFAULT_IMAGE_SETTINGS, type ProjectImageSettings } from "@workspace/db/schema/website_projects";
-import { pickBestStockPhoto } from "@workspace/stock-images";
+import { isStockSearchAvailable, pickBestStockPhoto, type DecryptedStockCredentialContext } from "@workspace/stock-images";
 import type { AiProviderClient } from "./support/resolve-ai-client";
 import { isSeoLongformFormat } from "./content-piece-seo";
 import { logger } from "./logger";
@@ -97,10 +97,6 @@ Respond ONLY with JSON: { "alt": "<max 125 chars, include keyword naturally>", "
   }
 }
 
-function stockKeysConfigured(): boolean {
-  return Boolean(process.env["UNSPLASH_ACCESS_KEY"] || process.env["PEXELS_API_KEY"]);
-}
-
 export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
   piece: T,
   options?: {
@@ -108,14 +104,16 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
     ai?: AiProviderClient;
     brandName?: string;
     excludeImageIds?: string[];
+    stockCredentials?: DecryptedStockCredentialContext;
   },
 ): Promise<T & { pieceMetadata: NonNullable<T["pieceMetadata"]> }> {
   const settings = { ...DEFAULT_IMAGE_SETTINGS, ...options?.imageSettings };
   const format = piece.formatType ?? "blog_post";
   const isLongform = isSeoLongformFormat(format);
   const isLinkedIn = format === "linkedin_post";
+  const stockCredentials = options?.stockCredentials;
   const shouldEnrich =
-    stockKeysConfigured() &&
+    isStockSearchAvailable(stockCredentials) &&
     settings.autoFeaturedImage !== false &&
     (isLongform || isLinkedIn);
 
@@ -136,6 +134,7 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
     orientation: "landscape",
     excludeIds,
     fallbackQueries: options?.brandName ? [`${keyword} ${options.brandName}`] : undefined,
+    credentials: stockCredentials,
   });
 
   if (featured) {
@@ -175,6 +174,7 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
         provider: settings.stockProvider ?? "auto",
         orientation: "landscape",
         excludeIds: [...excludeIds, ...usedIds],
+        credentials: stockCredentials,
       });
       if (!inline) continue;
 

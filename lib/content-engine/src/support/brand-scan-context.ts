@@ -5,6 +5,7 @@ import {
   gscSearchQueriesTable,
   websiteProjectsTable,
 } from "@workspace/db/schema";
+import { getCache } from "../cache";
 import { fetchGoalsAcSiteGraph, type GoalsAcPluginCredentials } from "@workspace/connectors/goals-ac-plugin";
 import { defaultSyncDateRange } from "@workspace/seo-tools/gscSearchAnalytics";
 import { fetchSitemapInfo, type SitemapCrawlData } from "@workspace/seo-tools/sitemap-crawl";
@@ -105,8 +106,29 @@ async function loadCmsSiteGraph(
   const pluginCreds = pluginCredentialsFromCms(creds);
   if (!pluginCreds) return [];
 
+  const cacheKey = `site-graph:${pluginCreds.platform}:${pluginCreds.siteUrl}`;
+  const cache = await getCache();
+  const cached = await cache.get(cacheKey);
+  if (cached) {
+    try {
+      const graph = JSON.parse(cached) as SiteGraphResponse;
+      return (graph.posts ?? [])
+        .filter((post): post is SiteGraphPost & { url: string } => Boolean(post.url))
+        .map((post) => ({
+          url: post.url,
+          excerpt: post.excerpt,
+          title: post.title,
+          body: post.body,
+          contentMarkdown: post.contentMarkdown ?? post.content_markdown,
+        }));
+    } catch {
+      // fall through to live fetch
+    }
+  }
+
   try {
     const graph = await fetchGoalsAcSiteGraph<SiteGraphResponse>(pluginCreds);
+    await cache.set(cacheKey, JSON.stringify(graph), 60 * 60 * 1000);
     return (graph.posts ?? [])
       .filter((post): post is SiteGraphPost & { url: string } => Boolean(post.url))
       .map((post) => ({

@@ -47,6 +47,9 @@ export type ContentPieceMetadata = {
   internalLinkSuggestions?: ContentPieceInternalLink[];
   jsonLdSchema?: object;
   humanized?: boolean;
+  deeplRefined?: boolean;
+  deeplTargetLang?: string;
+  visualSummaryMarkdown?: string;
 };
 
 export type RichContentPieceFields = ContentPieceMetadata & {
@@ -98,16 +101,59 @@ function appendFaqSection(body: string, faqs: ContentPieceFaqItem[]): string {
   return `${body.trim()}\n\n## Frequently Asked Questions\n\n${section}`;
 }
 
-function appendRelatedReading(
-  body: string,
-  links: ContentPieceInternalLink[],
-): string {
-  if (links.length === 0 || countInternalLinks(body) >= 2) return body;
-  const section = links
-    .slice(0, 4)
-    .map((link) => `- [${link.anchorText}](${link.suggestedSlug})`)
-    .join("\n");
-  return `${body.trim()}\n\n## Related reading\n\n${section}`;
+function extractH2Headings(body: string): string[] {
+  const matches = body.match(/^##\s+(.+)$/gm) ?? [];
+  return matches
+    .map((heading) => heading.replace(/^##\s+/, "").trim())
+    .filter((heading) => !/^(?:faq|frequently asked questions|visual summary)$/i.test(heading))
+    .slice(0, 4);
+}
+
+export function buildVisualSummaryMarkdown(input: {
+  title: string;
+  focusKeyword?: string;
+  body: string;
+  faqs?: ContentPieceFaqItem[];
+}): string {
+  const headings = extractH2Headings(input.body);
+  const words = bodyWordCount(input.body);
+  const externalLinks = countExternalLinks(input.body);
+  const internalLinks = countInternalLinks(input.body);
+  const faqCount = input.faqs?.length ?? countFaqItems(input.body);
+
+  const bullets =
+    headings.length > 0
+      ? headings.map((heading) => `- **${heading}** — core takeaway from this section`)
+      : [
+          input.focusKeyword
+            ? `- **Focus keyword:** ${input.focusKeyword}`
+            : `- **Topic:** ${input.title}`,
+        ];
+
+  const table = `| Metric | Value |
+| --- | --- |
+| Word count | ${words.toLocaleString()} |
+| External citations | ${externalLinks} |
+| Internal links | ${internalLinks} |
+| FAQ answers | ${faqCount} |`;
+
+  return `## Visual Summary
+
+${table}
+
+${bullets.join("\n")}
+`;
+}
+
+function appendVisualSummary(body: string, summary: string): string {
+  if (/##\s*Visual Summary/i.test(body)) return body;
+
+  const faqMatch = body.match(/\n##\s*(?:FAQ|Frequently Asked Questions)/i);
+  if (faqMatch?.index != null) {
+    return `${body.slice(0, faqMatch.index).trim()}\n\n${summary.trim()}\n\n${body.slice(faqMatch.index).trim()}`;
+  }
+
+  return `${body.trim()}\n\n${summary.trim()}`;
 }
 
 function normalizeMetadata(raw: RichContentPieceFields): ContentPieceMetadata {
@@ -143,9 +189,13 @@ export function finalizeSeoContentPiece<
     body = appendFaqSection(body, metadata.faqSection);
   }
 
-  if (metadata.internalLinkSuggestions?.length) {
-    body = appendRelatedReading(body, metadata.internalLinkSuggestions);
-  }
+  const visualSummary = buildVisualSummaryMarkdown({
+    title: sanitizeAiProse(result.title),
+    focusKeyword: metadata.focusKeyword ?? result.target_keyword,
+    body,
+    faqs: metadata.faqSection,
+  });
+  body = appendVisualSummary(body, visualSummary);
 
   return {
     ...result,
@@ -165,6 +215,7 @@ export function finalizeSeoContentPiece<
         question: sanitizeAiProse(faq.question),
         answer: sanitizeAiProse(faq.answer),
       })),
+      visualSummaryMarkdown: visualSummary,
     },
   };
 }

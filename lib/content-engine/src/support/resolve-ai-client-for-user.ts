@@ -32,6 +32,12 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
       aiProviderOptions.bedrock?.accessKeyId &&
       aiProviderOptions.bedrock?.secretAccessKey,
   );
+  const usingAnthropicKey = Boolean(
+    providerId === "anthropic" && aiProviderOptions.anthropic?.apiKey?.trim(),
+  );
+  const usingOpenAIKey = Boolean(
+    providerId === "openai" && aiProviderOptions.openai?.apiKey?.trim(),
+  );
 
   if (usingGeminiKey && userApiKey) {
     try {
@@ -46,6 +52,30 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
     try {
       const { BedrockClient } = await import("@workspace/ai-providers/bedrock");
       const client = await BedrockClient.create(aiProviderOptions.bedrock);
+      return { client, providerId, usingUserKey: true, source: "user-key" };
+    } catch {
+      // Fall through to platform provider below.
+    }
+  }
+
+  if (usingAnthropicKey) {
+    try {
+      const { AnthropicClient } = await import("@workspace/ai-providers/anthropic");
+      const client = AnthropicClient.create({
+        apiKey: aiProviderOptions.anthropic?.apiKey,
+      });
+      return { client, providerId, usingUserKey: true, source: "user-key" };
+    } catch {
+      // Fall through to platform provider below.
+    }
+  }
+
+  if (usingOpenAIKey) {
+    try {
+      const { OpenAIClient } = await import("@workspace/ai-providers/openai");
+      const client = OpenAIClient.create({
+        apiKey: aiProviderOptions.openai?.apiKey,
+      });
       return { client, providerId, usingUserKey: true, source: "user-key" };
     } catch {
       // Fall through to platform provider below.

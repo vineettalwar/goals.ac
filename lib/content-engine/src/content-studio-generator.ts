@@ -33,10 +33,19 @@ import {
 } from "./platform-voice";
 import { humanizeContentPiece } from "./humanizer";
 import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
+import { buildDestinationPromptHint } from "./support/publishing-settings";
 import {
   enrichContentPieceImages,
   parseImageSettings,
 } from "./article-image-enricher";
+import { injectInfographicMarkdownBlock, shouldInjectInfographic } from "./infographic-template";
+import { loadStockCredentialContextForProject } from "./support/stock-credentials";
+import {
+  buildDeeplGenerationLanguageLine,
+  maybeRefineWithDeepl,
+} from "./support/deepl-refinement";
+import { loadDeeplCredentialContextForProject } from "./support/deepl-credentials";
+import { resolveDeeplApiKey } from "@workspace/deepl";
 import { cleanAndParse } from "./utils";
 
 // LinkedIn Post Enhancement Constants (Phase 2)
@@ -142,6 +151,11 @@ export interface ContentPieceResult {
 
 export type ContentGenerationContext = {
   existingPieceTitles?: string[];
+  intendedPublishPlatform?: string;
+  intendedOutputMode?: string;
+  intendedEditorMode?: "classic" | "gutenberg" | "elementor" | "divi";
+  competitorPromptBlock?: string;
+  competitorFocusUrl?: string;
 };
 
 export type BrandContext = UnifiedBrandContext;
@@ -427,8 +441,13 @@ async function buildPrompt(
   keyword: string,
   angleHint?: string,
   existingPieceTitles?: string[],
+  generationContext?: ContentGenerationContext,
 ): Promise<string> {
   const config = FORMAT_CONFIGS[format];
+  const destinationHint = buildDestinationPromptHint(
+    generationContext?.intendedPublishPlatform,
+    generationContext?.intendedOutputMode ?? generationContext?.intendedEditorMode,
+  );
   const kwList =
     brand.primaryKeywords.length > 0
       ? brand.primaryKeywords.slice(0, 5).join(", ")
@@ -438,6 +457,17 @@ async function buildPrompt(
     : config.wordRange;
   const brandVoiceContext = await resolveVoicePromptContext(brand, format, keyword, angleHint);
   const defaultVoice = brand.voiceTone?.trim() || "Professional, clear, and authoritative";
+  const competitorContext = generationContext?.competitorPromptBlock?.trim() ?? "";
+
+  let languageLine = "";
+  if (brand.projectId) {
+    const deeplContext = await loadDeeplCredentialContextForProject(brand.projectId);
+    const deeplConfigured = Boolean(resolveDeeplApiKey(deeplContext));
+    languageLine = buildDeeplGenerationLanguageLine(brand.contentStyle, deeplConfigured);
+    if (languageLine) {
+      languageLine = `\n${languageLine}`;
+    }
+  }
 
   // Special handling for LinkedIn posts with archetypes and hooks
   if (format === "linkedin_post") {
@@ -494,7 +524,7 @@ Requirements:
 - Include specific insights or examples
 - End with an engagement question or thought-provoking insight
 - Do NOT include hashtags in the body text (they go in the comments)
-- Write like a founder speaking to peers - authentic and direct`;
+- Write like a founder speaking to peers - authentic and direct${competitorContext}${destinationHint}`;
   }
 
   if (isSeoLongformFormat(format)) {
@@ -507,7 +537,7 @@ Requirements:
 TARGET KEYWORD: "${keyword}"
 TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
 RELATED KEYWORDS TO WEAVE IN: ${kwList}
-${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${brandVoiceContext || `\nBRAND VOICE: ${defaultVoice}`}${existingArticlesCtx}
+${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${brandVoiceContext || `\nBRAND VOICE: ${defaultVoice}`}${languageLine}${existingArticlesCtx}
 
 Write a complete, publish-ready ${wordRange}-word article. Use this outline as internal guidance only: do NOT copy these bullet labels, word counts, or placeholder headings into the output:
 ${config.structure}
@@ -515,7 +545,7 @@ ${config.structure}
 Return ONLY this JSON object:
 ${buildSeoLongformJsonSchema(keyword)}
 
-${buildSeoLongformRequirements(brand.companyName, keyword, wordRange)}`;
+${buildSeoLongformRequirements(brand.companyName, keyword, wordRange)}${competitorContext}${destinationHint}`;
   }
 
   return `Create a ${config.label} for ${brand.companyName} (${brand.websiteUrl}), a company in the ${brand.industry} industry.
@@ -540,7 +570,7 @@ Requirements:
 - Write entirely in the brand voice described above
 - Target the keyword "${keyword}" naturally throughout
 - Reference ${brand.companyName} where appropriate without being promotional
-- Content must be original and actionable`;
+- Content must be original and actionable${competitorContext}${destinationHint}`;
 }
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -550,6 +580,8 @@ export function buildCacheKey(
   keyword: string,
   brand: BrandContext,
   angleHint?: string,
+  intendedPlatform?: string,
+  competitorFocusUrl?: string,
 ): string {
   const raw = [
     format,
@@ -561,8 +593,10 @@ export function buildCacheKey(
     brand.targetAudience,
     (brand.primaryKeywords ?? []).slice().sort().join(","),
     angleHint?.trim() ?? "",
+    intendedPlatform?.trim() ?? "",
+    competitorFocusUrl?.trim() ?? "",
     brandVoiceCacheFingerprint(brand),
-    "seo-v5",
+    "seo-v7",
   ].join("::");
   return createHash("sha256").update(raw).digest("hex").slice(0, 16);
 }
@@ -645,7 +679,14 @@ async function postProcessGeneratedResult(
       : humanizedResult;
   }
 
+  if (isSeoLongformFormat(format)) {
+    result = await maybeRefineWithDeepl(result, brand, format);
+  }
+
   try {
+    const stockCredentials = brand.projectId
+      ? await loadStockCredentialContextForProject(brand.projectId)
+      : undefined;
     const enriched = await enrichContentPieceImages(
       {
         title: result.title,
@@ -658,17 +699,35 @@ async function postProcessGeneratedResult(
         imageSettings: parseImageSettings(brand.contentStyle),
         ai,
         brandName: brand.companyName,
+        stockCredentials,
       },
     );
-    return {
+    result = {
       ...result,
       body_markdown: enriched.body_markdown,
       pieceMetadata: enriched.pieceMetadata,
     };
   } catch (err) {
     logger.warn({ err, format }, "Stock image enrichment skipped");
-    return result;
   }
+
+  if (shouldInjectInfographic(format)) {
+    const withInfographic = injectInfographicMarkdownBlock(result.body_markdown, {
+      title: result.title,
+      keyword: result.target_keyword,
+      brandName: brand.companyName,
+    });
+    result = {
+      ...result,
+      body_markdown: withInfographic,
+      pieceMetadata: {
+        ...result.pieceMetadata,
+        hasInfographicBlock: true,
+      },
+    };
+  }
+
+  return result;
 }
 
 function validateResult(result: unknown, format: ContentFormatType): asserts result is ContentPieceResult {
@@ -699,9 +758,16 @@ async function generateWithClient(
   brand: BrandContext,
   keyword: string,
   angleHint?: string,
-  existingPieceTitles?: string[],
+  generationContext: ContentGenerationContext = {},
 ): Promise<ContentPieceResult> {
-  const prompt = await buildPrompt(format, brand, keyword, angleHint, existingPieceTitles);
+  const prompt = await buildPrompt(
+    format,
+    brand,
+    keyword,
+    angleHint,
+    generationContext.existingPieceTitles,
+    generationContext,
+  );
   const aiOptions = getAiGenerationOptions(format);
   let lastError: unknown;
 
@@ -720,7 +786,7 @@ async function generateWithClient(
 
       const parsed = cleanAndParse(rawText);
       validateResult(parsed, format);
-      const processed = postProcessGeneratedResult(parsed, format, brand, ai);
+      const processed = await postProcessGeneratedResult(parsed, format, brand, ai);
       return {
         ...processed,
         generationUsage: response.usage ?? estimateUsageFromText(prompt, rawText),
@@ -746,9 +812,16 @@ async function generateWithClientStream(
   keyword: string,
   onChunk: (text: string) => void,
   angleHint?: string,
-  existingPieceTitles?: string[],
+  generationContext: ContentGenerationContext = {},
 ): Promise<ContentPieceResult> {
-  const prompt = await buildPrompt(format, brand, keyword, angleHint, existingPieceTitles);
+  const prompt = await buildPrompt(
+    format,
+    brand,
+    keyword,
+    angleHint,
+    generationContext.existingPieceTitles,
+    generationContext,
+  );
   const aiOptions = getAiGenerationOptions(format);
   let lastError: unknown;
 
@@ -785,7 +858,7 @@ async function generateWithClientStream(
 
       const parsed = cleanAndParse(accumulated);
       validateResult(parsed, format);
-      const processed = postProcessGeneratedResult(parsed, format, brand, ai);
+      const processed = await postProcessGeneratedResult(parsed, format, brand, ai);
       return {
         ...processed,
         generationUsage: estimateUsageFromText(prompt, accumulated),
@@ -815,7 +888,6 @@ export async function generateContentPieceStream(
   context: ContentGenerationContext = {},
 ): Promise<ContentPieceResult> {
   await assertAiGenerationEnabled();
-  const existingPieceTitles = context.existingPieceTitles;
   if (userApiKey && resolveProviderId(aiProviderOptions) === "gemini") {
     let chunksEmitted = 0;
     try {
@@ -832,7 +904,7 @@ export async function generateContentPieceStream(
           onChunk(chunk);
         },
         angleHint,
-        existingPieceTitles,
+        context,
       );
     } catch (err) {
       if (isUserKeyError(err) && chunksEmitted === 0) {
@@ -854,7 +926,7 @@ export async function generateContentPieceStream(
     keyword,
     onChunk,
     angleHint,
-    existingPieceTitles,
+    context,
   );
 }
 
@@ -869,7 +941,14 @@ export async function generateContentPiece(
   context: ContentGenerationContext = {},
 ): Promise<ContentPieceResult> {
   await assertAiGenerationEnabled();
-  const key = buildCacheKey(format, keyword, brand, angleHint);
+  const key = buildCacheKey(
+    format,
+    keyword,
+    brand,
+    angleHint,
+    context.intendedPublishPlatform,
+    context.competitorFocusUrl,
+  );
   if (!bypassCache) {
     const cached = await cacheGet(key);
     if (cached) {
@@ -885,7 +964,7 @@ export async function generateContentPiece(
     brand,
     keyword,
     angleHint,
-    context.existingPieceTitles,
+    context,
   );
   await cacheSet(key, result);
   return result;
@@ -902,6 +981,7 @@ async function buildRepurposePrompt(
   brand: BrandContext,
   existingContent: string,
   existingKeyword: string,
+  competitorPromptBlock?: string,
 ): Promise<string> {
   const config = FORMAT_CONFIGS[targetFormat];
   const brandVoiceContext = await resolveVoicePromptContext(
@@ -910,6 +990,7 @@ async function buildRepurposePrompt(
     existingKeyword,
   );
   const defaultVoice = brand.voiceTone?.trim() || "Professional, clear, and authoritative";
+  const competitorContext = competitorPromptBlock?.trim() ?? "";
   return `Repurpose the following existing content into a ${config.label} for ${brand.companyName} (${brand.websiteUrl}).
 
 EXISTING CONTENT:
@@ -917,7 +998,7 @@ ${existingContent.slice(0, 4000)}
 
 TARGET FORMAT: ${config.label} (${config.wordRange} words)
 TARGET KEYWORD: "${existingKeyword}"
-TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}${brandVoiceContext || `\nBRAND VOICE: ${defaultVoice}`}
+TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}${brandVoiceContext || `\nBRAND VOICE: ${defaultVoice}`}${competitorContext}
 
 Rewrite the content following this structure:
 ${config.structure}
@@ -944,12 +1025,14 @@ export async function repurposeContentPiece(
   existingKeyword: string,
   userApiKey?: string | null,
   aiProviderOptions?: AiProviderOptions,
+  context: Pick<ContentGenerationContext, "competitorPromptBlock"> = {},
 ): Promise<ContentPieceResult> {
   const prompt = await buildRepurposePrompt(
     targetFormat,
     brand,
     existingContent,
     existingKeyword,
+    context.competitorPromptBlock,
   );
 
   async function attemptGeneration(

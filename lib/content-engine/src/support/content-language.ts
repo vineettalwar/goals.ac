@@ -9,6 +9,21 @@ const LANGUAGE_LABELS: Record<string, string> = {
   nl: "Dutch",
   sv: "Swedish",
   pl: "Polish",
+  ja: "Japanese",
+  ko: "Korean",
+  "zh-CN": "Chinese (Simplified)",
+  tr: "Turkish",
+  ar: "Arabic",
+  hi: "Hindi",
+  da: "Danish",
+  fi: "Finnish",
+  no: "Norwegian",
+  cs: "Czech",
+  ro: "Romanian",
+  hu: "Hungarian",
+  el: "Greek",
+  id: "Indonesian",
+  vi: "Vietnamese",
 };
 
 const LANGUAGE_TO_SEMRUSH_DB: Record<string, string> = {
@@ -19,6 +34,24 @@ const LANGUAGE_TO_SEMRUSH_DB: Record<string, string> = {
   es: "es",
   it: "it",
   pt: "br",
+  nl: "nl",
+  pl: "pl",
+  ja: "jp",
+  ko: "kr",
+  "zh-CN": "cn",
+  tr: "tr",
+  ar: "ae",
+  hi: "in",
+  sv: "uk",
+  da: "uk",
+  fi: "uk",
+  no: "uk",
+  cs: "pl",
+  ro: "uk",
+  hu: "uk",
+  el: "uk",
+  id: "us",
+  vi: "us",
 };
 
 export function contentLanguageLabel(code: string | undefined): string {
@@ -28,7 +61,7 @@ export function contentLanguageLabel(code: string | undefined): string {
 
 export function semrushDatabaseForLanguage(code: string | undefined): string | null {
   if (!code) return LANGUAGE_TO_SEMRUSH_DB.en ?? null;
-  return LANGUAGE_TO_SEMRUSH_DB[code] ?? null;
+  return LANGUAGE_TO_SEMRUSH_DB[code] ?? "us";
 }
 
 export function isSemrushDatabaseMismatch(
@@ -60,6 +93,13 @@ export function semrushDatabaseLabel(database: string): string {
     it: "Italy",
     br: "Brazil",
     in: "India",
+    nl: "Netherlands",
+    pl: "Poland",
+    jp: "Japan",
+    kr: "South Korea",
+    cn: "China",
+    tr: "Turkey",
+    ae: "United Arab Emirates",
   };
   const db = database.trim().toLowerCase();
   const name = labels[db];

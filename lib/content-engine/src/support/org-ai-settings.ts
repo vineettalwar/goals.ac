@@ -8,6 +8,8 @@ import { logger } from "../logger";
 export interface OrgAiSettings {
   organizationId: number;
   encryptedGeminiKey: string | null;
+  encryptedOpenaiApiKey: string | null;
+  encryptedAnthropicApiKey: string | null;
   encryptedBedrockAccessKeyId: string | null;
   encryptedBedrockSecretAccessKey: string | null;
   encryptedBedrockSessionToken: string | null;
@@ -20,13 +22,27 @@ export interface OrgAiSettings {
   semrushDatabase: string | null;
 }
 
-const SELECTABLE_PROVIDERS = new Set(["gemini", "bedrock", "ollama"]);
+const SELECTABLE_PROVIDERS = new Set(["gemini", "bedrock", "ollama", "openai", "anthropic"]);
 
-function normalizeProvider(provider: string | null | undefined): "gemini" | "bedrock" | "ollama" | null {
+function normalizeProvider(
+  provider: string | null | undefined,
+): "gemini" | "bedrock" | "ollama" | "openai" | "anthropic" | null {
   if (provider && SELECTABLE_PROVIDERS.has(provider)) {
-    return provider as "gemini" | "bedrock" | "ollama";
+    return provider as "gemini" | "bedrock" | "ollama" | "openai" | "anthropic";
   }
   return null;
+}
+
+export function hasOrgOpenAICredentials(
+  settings: Pick<OrgAiSettings, "encryptedOpenaiApiKey"> | null | undefined,
+): boolean {
+  return Boolean(settings?.encryptedOpenaiApiKey);
+}
+
+export function hasOrgAnthropicCredentials(
+  settings: Pick<OrgAiSettings, "encryptedAnthropicApiKey"> | null | undefined,
+): boolean {
+  return Boolean(settings?.encryptedAnthropicApiKey);
 }
 
 export function hasOrgBedrockCredentials(
@@ -61,6 +77,8 @@ export async function getOrgAiSettings(organizationId: number): Promise<OrgAiSet
     .select({
       organizationId: organizationsTable.id,
       encryptedGeminiKey: organizationsTable.encryptedGeminiKey,
+      encryptedOpenaiApiKey: organizationsTable.encryptedOpenaiApiKey,
+      encryptedAnthropicApiKey: organizationsTable.encryptedAnthropicApiKey,
       encryptedBedrockAccessKeyId: organizationsTable.encryptedBedrockAccessKeyId,
       encryptedBedrockSecretAccessKey: organizationsTable.encryptedBedrockSecretAccessKey,
       encryptedBedrockSessionToken: organizationsTable.encryptedBedrockSessionToken,
@@ -122,6 +140,28 @@ export async function getDecryptedOrgBedrockCredentials(
   }
 }
 
+export async function getDecryptedOrgOpenAIKey(organizationId: number): Promise<string | null> {
+  try {
+    const settings = await getOrgAiSettings(organizationId);
+    if (!settings?.encryptedOpenaiApiKey) return null;
+    return decryptSecret(settings.encryptedOpenaiApiKey);
+  } catch (err) {
+    logger.warn({ err, organizationId }, "Failed to decrypt org OpenAI key");
+    return null;
+  }
+}
+
+export async function getDecryptedOrgAnthropicKey(organizationId: number): Promise<string | null> {
+  try {
+    const settings = await getOrgAiSettings(organizationId);
+    if (!settings?.encryptedAnthropicApiKey) return null;
+    return decryptSecret(settings.encryptedAnthropicApiKey);
+  } catch (err) {
+    logger.warn({ err, organizationId }, "Failed to decrypt org Anthropic key");
+    return null;
+  }
+}
+
 async function getLegacyUserGeminiKey(userId: number): Promise<string | null> {
   try {
     const [user] = await db
@@ -145,6 +185,18 @@ export async function getDecryptedGeminiKeyForUser(userId: number): Promise<stri
     if (orgKey) return orgKey;
   }
   return getLegacyUserGeminiKey(userId);
+}
+
+export async function getDecryptedOpenAIKeyForUser(userId: number): Promise<string | null> {
+  const organizationId = await resolveOrganizationIdForUser(userId);
+  if (!organizationId) return null;
+  return getDecryptedOrgOpenAIKey(organizationId);
+}
+
+export async function getDecryptedAnthropicKeyForUser(userId: number): Promise<string | null> {
+  const organizationId = await resolveOrganizationIdForUser(userId);
+  if (!organizationId) return null;
+  return getDecryptedOrgAnthropicKey(organizationId);
 }
 
 export async function getDecryptedBedrockCredentialsForUser(
@@ -204,6 +256,14 @@ export async function getAiProviderOptionsForUser(userId: number): Promise<AiPro
       const bedrockCreds = await getDecryptedOrgBedrockCredentials(orgSettings.organizationId);
       if (bedrockCreds) {
         options.bedrock = bedrockCreds;
+      }
+      const openaiKey = await getDecryptedOrgOpenAIKey(orgSettings.organizationId);
+      if (openaiKey) {
+        options.openai = { apiKey: openaiKey };
+      }
+      const anthropicKey = await getDecryptedOrgAnthropicKey(orgSettings.organizationId);
+      if (anthropicKey) {
+        options.anthropic = { apiKey: anthropicKey };
       }
       return options;
     }

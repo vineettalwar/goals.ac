@@ -2,6 +2,8 @@ import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 
 export type CmsConnectionType = "api" | "plugin";
 
+export type WordPressEditorMode = "classic" | "gutenberg" | "elementor" | "divi";
+
 export interface CmsFieldMapping {
   titleField?: string;
   bodyField?: string;
@@ -26,14 +28,19 @@ export interface CmsIntegrationCredentials {
     username?: string;
     appPassword?: string;
     siteKey?: string;
+    /** How WordPress should store post body content (default: classic HTML) */
+    editorMode?: WordPressEditorMode;
+    outputMode?: WordPressEditorMode;
   };
   ghost?: {
     apiUrl: string;
     adminApiKey: string;
+    outputMode?: "html" | "lexical";
   };
   webhook?: {
     url: string;
     signingSecret: string;
+    outputMode?: "both" | "markdown" | "html" | "full";
   };
   shopify?: {
     connectionType: CmsConnectionType;
@@ -42,6 +49,7 @@ export interface CmsIntegrationCredentials {
     blogId?: string;
     siteUrl?: string;
     siteKey?: string;
+    outputMode?: "article_html" | "article_metafields" | "page_sections" | "markdown" | "html";
   };
   drupal?: {
     connectionType: CmsConnectionType;
@@ -52,6 +60,8 @@ export interface CmsIntegrationCredentials {
     accessToken?: string;
     contentType?: string;
     siteKey?: string;
+    outputMode?: "body_html" | "layout_builder" | "markdown" | "html";
+    layoutStorageField?: string;
   };
   joomla?: {
     connectionType: CmsConnectionType;
@@ -59,6 +69,7 @@ export interface CmsIntegrationCredentials {
     apiToken?: string;
     categoryId?: number;
     siteKey?: string;
+    outputMode?: "markdown" | "html";
   };
   linkedin?: {
     accessToken: string;
@@ -158,6 +169,7 @@ export interface CmsIntegrationCredentials {
     connectionType: CmsConnectionType;
     siteUrl: string;
     siteKey: string;
+    outputMode?: "body_text" | "content_elements";
   };
 }
 
@@ -203,6 +215,42 @@ export const CMS_PUBLISH_PLATFORMS: CmsPublishPlatform[] = [
   "typo3",
 ];
 
+/** All keys stored in website_projects.cms_integrations (used for PATCH/DELETE validation). */
+export const CMS_INTEGRATION_PLATFORM_KEYS = [
+  "notion",
+  "webflow",
+  "wordpress",
+  "ghost",
+  "webhook",
+  "shopify",
+  "drupal",
+  "joomla",
+  "linkedin",
+  "twitter",
+  "meta",
+  "bluesky",
+  "mastodon",
+  "wix",
+  "framer",
+  "squarespace",
+  "contentful",
+  "sanity",
+  "strapi",
+  "beehiiv",
+  "convertkit",
+  "mailchimp",
+  "hubspot",
+  "typo3",
+] as const satisfies readonly (keyof CmsIntegrationCredentials)[];
+
+export type CmsIntegrationPlatformKey = (typeof CMS_INTEGRATION_PLATFORM_KEYS)[number];
+
+export function isCmsIntegrationPlatformKey(
+  value: string,
+): value is CmsIntegrationPlatformKey {
+  return (CMS_INTEGRATION_PLATFORM_KEYS as readonly string[]).includes(value);
+}
+
 export function resolveWordPressConnectionType(
   wordpress: NonNullable<CmsIntegrationCredentials["wordpress"]>,
 ): CmsConnectionType {
@@ -241,6 +289,8 @@ export function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsInte
     result.wordpress = {
       connectionType: creds.wordpress.connectionType ?? "api",
       siteUrl: creds.wordpress.siteUrl,
+      editorMode: creds.wordpress.editorMode ?? creds.wordpress.outputMode,
+      outputMode: creds.wordpress.outputMode ?? creds.wordpress.editorMode,
       username: creds.wordpress.username
         ? encryptSecret(creds.wordpress.username)
         : undefined,
@@ -256,12 +306,14 @@ export function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsInte
     result.ghost = {
       apiUrl: creds.ghost.apiUrl,
       adminApiKey: encryptSecret(creds.ghost.adminApiKey),
+      outputMode: creds.ghost.outputMode,
     };
   }
   if (creds.webhook) {
     result.webhook = {
       url: creds.webhook.url,
       signingSecret: encryptSecret(creds.webhook.signingSecret),
+      outputMode: creds.webhook.outputMode,
     };
   }
   if (creds.shopify) {
@@ -270,6 +322,7 @@ export function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsInte
       blogId: creds.shopify.blogId,
       shopDomain: creds.shopify.shopDomain,
       siteUrl: creds.shopify.siteUrl,
+      outputMode: creds.shopify.outputMode,
       accessToken: creds.shopify.accessToken
         ? encryptSecret(creds.shopify.accessToken)
         : undefined,
@@ -284,6 +337,8 @@ export function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsInte
       siteUrl: creds.drupal.siteUrl,
       authType: creds.drupal.authType,
       contentType: creds.drupal.contentType,
+      outputMode: creds.drupal.outputMode,
+      layoutStorageField: creds.drupal.layoutStorageField,
       username: creds.drupal.username
         ? encryptSecret(creds.drupal.username)
         : undefined,
@@ -303,6 +358,7 @@ export function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsInte
       connectionType: creds.joomla.connectionType,
       siteUrl: creds.joomla.siteUrl,
       categoryId: creds.joomla.categoryId,
+      outputMode: creds.joomla.outputMode,
       apiToken: creds.joomla.apiToken
         ? encryptSecret(creds.joomla.apiToken)
         : undefined,
@@ -439,6 +495,7 @@ export function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsInte
     result.typo3 = {
       connectionType: creds.typo3.connectionType,
       siteUrl: creds.typo3.siteUrl,
+      outputMode: creds.typo3.outputMode,
       siteKey: encryptSecret(creds.typo3.siteKey),
     };
   }
@@ -465,6 +522,8 @@ export function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsInt
     result.wordpress = {
       connectionType: stored.wordpress.connectionType ?? "api",
       siteUrl: stored.wordpress.siteUrl,
+      editorMode: stored.wordpress.editorMode ?? stored.wordpress.outputMode,
+      outputMode: stored.wordpress.outputMode ?? stored.wordpress.editorMode,
       username: stored.wordpress.username
         ? tryDecrypt(stored.wordpress.username)
         : undefined,
@@ -480,12 +539,14 @@ export function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsInt
     result.ghost = {
       apiUrl: stored.ghost.apiUrl,
       adminApiKey: tryDecrypt(stored.ghost.adminApiKey),
+      outputMode: stored.ghost.outputMode,
     };
   }
   if (stored.webhook) {
     result.webhook = {
       url: stored.webhook.url,
       signingSecret: tryDecrypt(stored.webhook.signingSecret),
+      outputMode: stored.webhook.outputMode,
     };
   }
   if (stored.shopify) {
@@ -494,6 +555,7 @@ export function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsInt
       blogId: stored.shopify.blogId,
       shopDomain: stored.shopify.shopDomain,
       siteUrl: stored.shopify.siteUrl,
+      outputMode: stored.shopify.outputMode,
       accessToken: stored.shopify.accessToken
         ? tryDecrypt(stored.shopify.accessToken)
         : undefined,
@@ -508,6 +570,8 @@ export function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsInt
       siteUrl: stored.drupal.siteUrl,
       authType: stored.drupal.authType,
       contentType: stored.drupal.contentType,
+      outputMode: stored.drupal.outputMode,
+      layoutStorageField: stored.drupal.layoutStorageField,
       username: stored.drupal.username
         ? tryDecrypt(stored.drupal.username)
         : undefined,
@@ -527,6 +591,7 @@ export function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsInt
       connectionType: stored.joomla.connectionType,
       siteUrl: stored.joomla.siteUrl,
       categoryId: stored.joomla.categoryId,
+      outputMode: stored.joomla.outputMode,
       apiToken: stored.joomla.apiToken
         ? tryDecrypt(stored.joomla.apiToken)
         : undefined,
@@ -671,6 +736,7 @@ export function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsInt
     result.typo3 = {
       connectionType: stored.typo3.connectionType,
       siteUrl: stored.typo3.siteUrl,
+      outputMode: stored.typo3.outputMode,
       siteKey: tryDecrypt(stored.typo3.siteKey),
     };
   }
@@ -701,6 +767,8 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
       connected: true,
       connectionType,
       siteUrl: decrypted.wordpress.siteUrl,
+      outputMode: decrypted.wordpress.outputMode ?? decrypted.wordpress.editorMode,
+      editorMode: decrypted.wordpress.editorMode ?? decrypted.wordpress.outputMode,
       usernameHint: decrypted.wordpress.username
         ? secretHint(decrypted.wordpress.username)
         : undefined,
@@ -713,6 +781,7 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
     result.ghost = {
       connected: true,
       apiUrl: decrypted.ghost.apiUrl,
+      outputMode: decrypted.ghost.outputMode ?? "html",
       adminApiKeyHint: secretHint(decrypted.ghost.adminApiKey),
     };
   }
@@ -720,6 +789,7 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
     result.webhook = {
       connected: true,
       url: decrypted.webhook.url,
+      outputMode: decrypted.webhook.outputMode ?? "both",
       signingSecretHint: secretHint(decrypted.webhook.signingSecret),
     };
   }
@@ -730,6 +800,7 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
       shopDomain: decrypted.shopify.shopDomain,
       siteUrl: decrypted.shopify.siteUrl,
       blogId: decrypted.shopify.blogId,
+      outputMode: decrypted.shopify.outputMode ?? "article_html",
       accessTokenHint: decrypted.shopify.accessToken
         ? secretHint(decrypted.shopify.accessToken)
         : undefined,
@@ -745,6 +816,8 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
       siteUrl: decrypted.drupal.siteUrl,
       authType: decrypted.drupal.authType,
       contentType: decrypted.drupal.contentType,
+      outputMode: decrypted.drupal.outputMode ?? "body_html",
+      layoutStorageField: decrypted.drupal.layoutStorageField,
       usernameHint: decrypted.drupal.username
         ? secretHint(decrypted.drupal.username)
         : undefined,
@@ -759,6 +832,7 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
       connectionType: decrypted.joomla.connectionType,
       siteUrl: decrypted.joomla.siteUrl,
       categoryId: decrypted.joomla.categoryId,
+      outputMode: decrypted.joomla.outputMode ?? "markdown",
       apiTokenHint: decrypted.joomla.apiToken
         ? secretHint(decrypted.joomla.apiToken)
         : undefined,
@@ -898,6 +972,7 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
       connected: true,
       connectionType: decrypted.typo3.connectionType,
       siteUrl: decrypted.typo3.siteUrl,
+      outputMode: decrypted.typo3.outputMode ?? "body_text",
       siteKeyHint: secretHint(decrypted.typo3.siteKey),
     };
   }

@@ -17,7 +17,7 @@ import {
 } from "./support/gsc-connection";
 import { logger } from "./logger";
 import {
-  modelForTier,
+  modelForProviderTier,
   resolveAiClient,
   resolveProviderId,
 } from "@workspace/ai-providers";
@@ -87,7 +87,7 @@ ${JSON.stringify(batch.map((r) => ({ keyword: r.keyword, title: r.suggestedTitle
   try {
     const providerId = resolveProviderId(aiProviderOptions);
     const response = await client.generate({
-      model: providerId === "gemini" ? modelForTier("gemini", "planning") : undefined,
+      model: modelForProviderTier(providerId, "planning"),
       prompt,
       responseMimeType: "application/json",
       temperature: 0.4,
