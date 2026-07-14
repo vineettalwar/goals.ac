@@ -41,7 +41,8 @@ async function uploadOptimizedImage(
     { maxWidth: 1920, quality: 85 },
   );
 
-  const caption = `Photo by ${image.photographer} on ${image.provider === "unsplash" ? "Unsplash" : "Pexels"}`;
+  const sourceLabel = image.provider === "unsplash" ? "Unsplash" : "Pexels";
+  const caption = `Photo by ${image.photographer} on ${sourceLabel}`;
 
   if (pluginCreds) {
     const uploaded = await uploadGoalsAcPluginMedia(pluginCreds, {
@@ -117,25 +118,44 @@ export async function prepareWordPressImages(params: {
 
   const urlMap: ImageUploadMap = new Map();
   const updatedImages: PublishableImageRef[] = [];
+  const uniqueImages: PublishableImageRef[] = [];
+  const seenUrls = new Set<string>();
 
   for (const image of images) {
-    if (urlMap.has(image.remoteUrl)) {
-      updatedImages.push({
-        ...image,
-        publishedUrl: urlMap.get(image.remoteUrl)!.sourceUrl,
-      });
+    if (seenUrls.has(image.remoteUrl)) {
       continue;
     }
+    seenUrls.add(image.remoteUrl);
+    uniqueImages.push(image);
+  }
 
-    const filenameBase = `${params.targetKeyword}-${image.role}`;
-    const uploaded = await uploadOptimizedImage(
-      image,
-      filenameBase,
-      params.wpCreds ?? null,
-      params.pluginCreds ?? null,
-    );
-    urlMap.set(image.remoteUrl, uploaded);
-    updatedImages.push({ ...image, publishedUrl: uploaded.sourceUrl });
+  const concurrency = 3;
+  let nextIndex = 0;
+  const uploadWorker = async () => {
+    while (nextIndex < uniqueImages.length) {
+      const index = nextIndex++;
+      const image = uniqueImages[index]!;
+      const filenameBase = `${params.targetKeyword}-${image.role}`;
+      const uploaded = await uploadOptimizedImage(
+        image,
+        filenameBase,
+        params.wpCreds ?? null,
+        params.pluginCreds ?? null,
+      );
+      urlMap.set(image.remoteUrl, uploaded);
+    }
+  };
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, uniqueImages.length) }, () => uploadWorker()),
+  );
+
+  for (const image of images) {
+    const hosted = urlMap.get(image.remoteUrl);
+    updatedImages.push({
+      ...image,
+      publishedUrl: hosted?.sourceUrl ?? image.publishedUrl,
+    });
   }
 
   const bodyMarkdown = rewriteMarkdownImageUrls(params.bodyMarkdown, urlMap);

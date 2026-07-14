@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { marked } from "marked";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
+import { connectorFetch } from "@workspace/connectors/connector-fetch";
 
 /** CMS platforms that expose the goals.ac plugin HTTP contract. */
 export type GoalsAcPluginPlatform = "wordpress" | "drupal" | "joomla" | "shopify" | "typo3";
@@ -9,6 +10,30 @@ export interface GoalsAcPluginCredentials {
   siteUrl: string;
   siteKey: string;
   platform: GoalsAcPluginPlatform;
+}
+
+export interface GoalsAcLayoutSection {
+  layout_id: string;
+  layout_settings?: Record<string, unknown>;
+  components: Array<{
+    type: string;
+    uuid: string;
+    region: string;
+    configuration: Record<string, unknown>;
+    additional?: Record<string, unknown>;
+  }>;
+}
+
+export interface GoalsAcContentElement {
+  ctype: string;
+  fields: Record<string, unknown>;
+  colPos?: number;
+  sorting?: number;
+}
+
+export interface GoalsAcShopifySection {
+  type: string;
+  settings: Record<string, unknown>;
 }
 
 export interface GoalsAcPublishPayload {
@@ -22,6 +47,24 @@ export interface GoalsAcPublishPayload {
   meta?: Record<string, string>;
   seo?: Record<string, string | undefined>;
   update_id?: string | number;
+  /** Canonical output mode (contract v0.2) */
+  output_mode?: string;
+  /** WordPress editor output mode (alias for output_mode) */
+  editor_mode?: "classic" | "gutenberg" | "elementor" | "divi";
+  /** Elementor layout JSON for _elementor_data meta */
+  elementor_data?: string;
+  /** Drupal Layout Builder sections */
+  layout?: { sections: GoalsAcLayoutSection[] };
+  layout_data?: string;
+  layout_storage_field?: string;
+  /** TYPO3 content elements */
+  content_elements?: GoalsAcContentElement[];
+  replace_strategy?: "managed_only" | "full_replace";
+  /** Shopify structured sections */
+  sections?: GoalsAcShopifySection[];
+  metafield_namespace?: string;
+  metafield_key?: string;
+  template_suffix?: string;
   /** Shopify only */
   blogId?: string;
 }
@@ -35,7 +78,12 @@ export interface GoalsAcPublishResult {
 export interface GoalsAcHealthResponse {
   version: string;
   cms_version: string;
-  capabilities: Record<string, boolean>;
+  capabilities: Record<string, boolean | string | string[]>;
+  detected_builders?: string[];
+  /** @deprecated Use recommended_output_mode */
+  recommended_editor_mode?: string;
+  output_modes?: string[];
+  recommended_output_mode?: string;
 }
 
 export const GOALS_HMAC_HEADERS = {
@@ -153,7 +201,7 @@ async function goalsAcRequest<T>(
     headers[GOALS_HMAC_HEADERS.idempotency] = idempotencyKey;
   }
 
-  const res = await fetch(url, {
+  const res = await connectorFetch(url, {
     method,
     headers,
     body: body === undefined ? undefined : rawBody,
@@ -180,6 +228,37 @@ async function goalsAcRequest<T>(
   return data as T;
 }
 
+export function parseAvailableOutputModes(health: GoalsAcHealthResponse): string[] {
+  const fromCapabilities = health.capabilities?.output_modes;
+  if (Array.isArray(fromCapabilities)) {
+    return fromCapabilities.filter((m): m is string => typeof m === "string");
+  }
+  if (Array.isArray(health.output_modes)) {
+    return health.output_modes;
+  }
+  const builders = health.detected_builders;
+  if (Array.isArray(builders) && builders.length > 0) {
+    const modes = ["classic"];
+    if (builders.includes("gutenberg")) modes.push("gutenberg");
+    if (builders.includes("elementor")) modes.push("elementor");
+    if (builders.includes("divi")) modes.push("divi");
+    return modes;
+  }
+  return [];
+}
+
+/** Resolve recommended output mode from plugin health (contract v0.2 + WordPress legacy). */
+export function parseRecommendedOutputMode(health: GoalsAcHealthResponse): string | undefined {
+  if (typeof health.recommended_output_mode === "string" && health.recommended_output_mode) {
+    return health.recommended_output_mode;
+  }
+  if (typeof health.recommended_editor_mode === "string" && health.recommended_editor_mode) {
+    return health.recommended_editor_mode;
+  }
+  const available = parseAvailableOutputModes(health);
+  return available.length === 1 ? available[0] : undefined;
+}
+
 export async function testGoalsAcPluginConnection(
   credentials: GoalsAcPluginCredentials,
 ): Promise<{ ok: boolean; health?: GoalsAcHealthResponse; error?: string }> {
@@ -187,7 +266,7 @@ export async function testGoalsAcPluginConnection(
     const url = goalsAcApiUrl(credentials, "health");
     await assertPublicUrl(url);
 
-    const res = await fetch(url, {
+    const res = await connectorFetch(url, {
       headers: { Accept: "application/json" },
     });
 

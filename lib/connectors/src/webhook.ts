@@ -1,5 +1,6 @@
 import crypto from "crypto";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
+import { connectorFetch } from "@workspace/connectors/connector-fetch";
 
 export interface WebhookCredentials {
   url: string;
@@ -17,6 +18,13 @@ export interface WebhookArticlePayload {
   citations?: { text: string; url: string; source: string }[];
   jsonLd?: object;
   publishedStatus: "draft" | "publish";
+  /** Full structured export (webhook v2, BYOK+) */
+  canonical?: {
+    id: string;
+    markdown: string;
+    meta: Record<string, unknown>;
+    formatType?: string;
+  };
 }
 
 export interface WebhookPublishResult {
@@ -38,8 +46,9 @@ async function postEvent(
   const rawBody = JSON.stringify(payload);
   const signature = sign(credentials.signingSecret, rawBody);
 
-  const res = await fetch(credentials.url, {
+  const res = await connectorFetch(credentials.url, {
     method: "POST",
+    redirect: "manual",
     headers: {
       "Content-Type": "application/json",
       "X-GoalsAC-Event": event,
@@ -47,6 +56,10 @@ async function postEvent(
     },
     body: rawBody,
   });
+
+  if (res.status >= 300 && res.status < 400) {
+    throw new Error("Webhook redirects are not allowed");
+  }
 
   const bodyText = await res.text().catch(() => undefined);
 

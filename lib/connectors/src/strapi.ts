@@ -27,12 +27,19 @@ export async function publishToStrapi(
   title: string,
   bodyMarkdown: string,
   status: "draft" | "published" = "draft",
+  fieldsOverride?: Record<string, unknown>,
 ): Promise<StrapiPostResult> {
   const base = credentials.baseUrl.replace(/\/$/, "");
   const url = `${base}/api/${credentials.contentType}`;
   await assertPublicUrl(url);
   const htmlContent = await marked(bodyMarkdown);
   const isLive = status === "published" || credentials.publishStatus === "live";
+
+  const data = fieldsOverride ?? {
+    title,
+    slug: slugify(title),
+    content: htmlContent,
+  };
 
   const res = await fetch(url, {
     method: "POST",
@@ -42,9 +49,7 @@ export async function publishToStrapi(
     },
     body: JSON.stringify({
       data: {
-        title,
-        slug: slugify(title),
-        content: htmlContent,
+        ...data,
         publishedAt: isLive ? new Date().toISOString() : null,
       },
     }),
@@ -55,8 +60,8 @@ export async function publishToStrapi(
     throw new Error(body.error?.message ?? `Strapi API error: ${res.status}`);
   }
 
-  const data = (await res.json()) as { data?: { id?: number; documentId?: string } };
-  const documentId = String(data.data?.documentId ?? data.data?.id ?? "");
+  const responseData = (await res.json()) as { data?: { id?: number; documentId?: string } };
+  const documentId = String(responseData.data?.documentId ?? responseData.data?.id ?? "");
   return { documentId, url: `${base}/admin/content-manager/collection-types/api::${credentials.contentType}.${credentials.contentType}/${documentId}` };
 }
 

@@ -31,6 +31,7 @@
     "./mailchimp": "./src/mailchimp.ts",
     "./hubspot": "./src/hubspot.ts",
     "./typo3": "./src/typo3.ts",
+    "./connector-fetch": "./src/connector-fetch.ts",
     "./social-metrics-types": "./src/social-metrics-types.ts"
   },
   "dependencies": {

@@ -37,6 +37,7 @@ export async function publishToContentful(
   title: string,
   bodyMarkdown: string,
   status: "draft" | "published" = "draft",
+  fieldsOverride?: Record<string, unknown>,
 ): Promise<ContentfulPostResult> {
   const mapping = credentials.fieldMapping;
   const titleField = mapping.titleField ?? "title";
@@ -47,11 +48,16 @@ export async function publishToContentful(
   const url = `${CONTENTFUL_API}/spaces/${credentials.spaceId}/environments/${credentials.environmentId}/entries`;
   await assertPublicUrl(url);
 
-  const fields: Record<string, Record<string, unknown>> = {
-    [titleField]: { "en-US": title },
-    [bodyField]: { "en-US": htmlContent },
-    [slugField]: { "en-US": slugify(title) },
+  const fieldValues: Record<string, unknown> = fieldsOverride ?? {
+    [titleField]: title,
+    [bodyField]: htmlContent,
+    [slugField]: slugify(title),
   };
+
+  const fields: Record<string, Record<string, unknown>> = {};
+  for (const [key, value] of Object.entries(fieldValues)) {
+    fields[key] = { "en-US": value };
+  }
 
   const res = await fetch(url, {
     method: "POST",

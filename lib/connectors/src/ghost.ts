@@ -59,22 +59,49 @@ export async function publishToGhost(
   bodyMarkdown: string,
   status: "draft" | "published" = "draft",
   metaDescription?: string,
-  tags?: string[]
+  tags?: string[],
+  htmlContentOverride?: string,
 ): Promise<GhostPostResult> {
   const base = apiBase(credentials.apiUrl);
   const postsUrl = `${base}/posts/?source=html`;
   await assertPublicUrl(postsUrl);
 
-  const htmlContent = await marked(bodyMarkdown);
-
   const post: Record<string, unknown> = {
     title,
-    html: htmlContent,
+    html: htmlContentOverride ?? (await marked(bodyMarkdown)),
     status,
   };
   if (metaDescription) post["custom_excerpt"] = metaDescription.slice(0, 300);
   if (tags?.length) post["tags"] = tags.map((name) => ({ name }));
 
+  return postToGhost(credentials, postsUrl, post);
+}
+
+/** Publish a post using native Ghost 5 Lexical JSON (Admin API default format). */
+export async function publishToGhostLexical(
+  credentials: GhostCredentials,
+  title: string,
+  lexical: string,
+  status: "draft" | "published" = "draft",
+  metaDescription?: string,
+  tags?: string[],
+): Promise<GhostPostResult> {
+  const base = apiBase(credentials.apiUrl);
+  const postsUrl = `${base}/posts/`;
+  await assertPublicUrl(postsUrl);
+
+  const post: Record<string, unknown> = { title, lexical, status };
+  if (metaDescription) post["custom_excerpt"] = metaDescription.slice(0, 300);
+  if (tags?.length) post["tags"] = tags.map((name) => ({ name }));
+
+  return postToGhost(credentials, postsUrl, post);
+}
+
+async function postToGhost(
+  credentials: GhostCredentials,
+  postsUrl: string,
+  post: Record<string, unknown>,
+): Promise<GhostPostResult> {
   const res = await fetch(postsUrl, {
     method: "POST",
     headers: {

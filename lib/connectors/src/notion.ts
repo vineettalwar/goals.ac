@@ -13,7 +13,7 @@ interface RichText {
   };
 }
 
-type NotionBlock =
+export type NotionBlock =
   | { object: "block"; type: "heading_1"; heading_1: { rich_text: RichText[] } }
   | { object: "block"; type: "heading_2"; heading_2: { rich_text: RichText[] } }
   | { object: "block"; type: "heading_3"; heading_3: { rich_text: RichText[] } }
@@ -134,12 +134,14 @@ export async function publishToNotion(
   databaseId: string,
   title: string,
   bodyMarkdown: string,
-  meta?: { status?: string; tags?: string[] },
+  meta?: { status?: string; tags?: string[]; blocks?: NotionBlock[] },
 ): Promise<string> {
   await assertPublicUrl(NOTION_API);
 
   const [blocks, dbProperties] = await Promise.all([
-    Promise.resolve(markdownToNotionBlocks(bodyMarkdown)),
+    meta?.blocks
+      ? Promise.resolve(meta.blocks)
+      : Promise.resolve(markdownToNotionBlocks(bodyMarkdown)),
     fetchDatabaseProperties(integrationToken, databaseId),
   ]);
 

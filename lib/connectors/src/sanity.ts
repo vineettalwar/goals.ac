@@ -35,6 +35,7 @@ export async function publishToSanity(
   title: string,
   bodyMarkdown: string,
   status: "draft" | "published" = "draft",
+  fieldsOverride?: Record<string, unknown>,
 ): Promise<SanityPostResult> {
   const mapping = credentials.fieldMapping;
   const titleField = mapping.titleField ?? "title";
@@ -45,12 +46,14 @@ export async function publishToSanity(
   const url = `https://${credentials.projectId}.api.sanity.io/v2021-06-07/data/mutate/${credentials.dataset}`;
   await assertPublicUrl(url);
 
-  const doc: Record<string, unknown> = {
-    _type: credentials.documentType,
-    [titleField]: title,
-    [bodyField]: htmlContent,
-    [slugField]: { _type: "slug", current: slugify(title) },
-  };
+  const doc: Record<string, unknown> = fieldsOverride
+    ? { _type: credentials.documentType, ...fieldsOverride }
+    : {
+        _type: credentials.documentType,
+        [titleField]: title,
+        [bodyField]: htmlContent,
+        [slugField]: { _type: "slug", current: slugify(title) },
+      };
 
   const res = await fetch(url, {
     method: "POST",

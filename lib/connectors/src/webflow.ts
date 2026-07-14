@@ -20,12 +20,12 @@ export async function publishToWebflow(
   bodyFieldSlug: string,
   title: string,
   bodyMarkdown: string,
-  options?: { publishStatus?: WebflowPublishStatus },
+  options?: { publishStatus?: WebflowPublishStatus; htmlContent?: string },
 ): Promise<string> {
   await assertPublicUrl(WEBFLOW_API);
 
   const publishStatus = options?.publishStatus ?? "draft";
-  const htmlContent = await marked(bodyMarkdown);
+  const htmlContent = options?.htmlContent ?? (await marked(bodyMarkdown));
   const slug = slugify(title) + "-" + Date.now().toString(36);
 
   const createRes = await fetch(`${WEBFLOW_API}/collections/${collectionId}/items`, {
