@@ -68,3 +68,4 @@ cloudflare-env.d.ts
 # Wrangler local D1/KV state
 .wrangler/
 **/.wrangler/
+.cursor/skills/
