@@ -11,8 +11,10 @@ import {
   isSeoLongformFormat,
   seoQualitySignals,
 } from "./content-piece-seo";
-import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
+import { AI_WRITING_FROM_SCRATCH_PROMPT, AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
 import { loadBrandVoiceGenerationContext } from "./support/brand-voice-generation";
+import type { UnifiedBrandContext } from "./brand-voice";
+import { humanizeContentPiece } from "./humanizer";
 
 export type EnhanceBrandContext = {
   companyName: string;
@@ -37,6 +39,8 @@ You MUST add what's missing:
 - ## Frequently Asked Questions with 4-6 ### questions if missing
 - Depth where sections are thin. Expand to 1,200+ total words.
 
+When adding prose, apply human voice rules:
+${AI_WRITING_FROM_SCRATCH_PROMPT}
 ${AI_WRITING_RULES_PROMPT}
 
 Never output outline labels, word-count notes, or placeholder headings.
@@ -104,6 +108,7 @@ export async function enhanceContentPiece(
   existingPieceTitles: string[] = [],
   userApiKey?: string | null,
   aiProviderOptions?: AiProviderOptions,
+  unifiedBrand?: UnifiedBrandContext,
 ): Promise<ContentPieceResult> {
   if (!isSeoLongformFormat(input.formatType)) {
     throw new Error("Enhance quality is only available for long-form SEO content");
@@ -146,6 +151,23 @@ export async function enhanceContentPiece(
 
       const signals = seoQualitySignals(finalized.body_markdown);
       if (signals.words < 800) throw new Error("Enhanced article still too short");
+
+      if (unifiedBrand) {
+        const { result: humanizedResult, humanized } = await humanizeContentPiece(finalized, unifiedBrand, {
+          userApiKey,
+          aiProviderOptions,
+        });
+        if (humanized) {
+          return finalizeSeoContentPiece(humanizedResult);
+        }
+        return finalizeSeoContentPiece({
+          ...humanizedResult,
+          pieceMetadata: {
+            ...humanizedResult.pieceMetadata,
+            humanized: finalized.pieceMetadata?.humanized,
+          },
+        });
+      }
 
       return finalized;
     } catch (err) {

@@ -133,6 +133,7 @@ export async function generateFromContentItem(
       wordCount: generated.body_markdown.split(/\s+/).filter(Boolean).length,
       plannedDate,
       publishPlatform: null,
+      pieceMetadata: generated.pieceMetadata ?? null,
     })
     .returning();
 
@@ -168,6 +169,7 @@ export async function generateFromContentItem(
           wordCount: repurposed.body_markdown.split(/\s+/).filter(Boolean).length,
           plannedDate,
           publishPlatform: platform,
+          pieceMetadata: repurposed.pieceMetadata ?? null,
         })
         .returning();
       variantPieceIds.push(variant.id);

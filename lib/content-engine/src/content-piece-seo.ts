@@ -1,5 +1,9 @@
 import type { ContentFormatType } from "@workspace/db";
-import { AI_WRITING_RULES_PROMPT, sanitizeAiProse } from "./ai-writing-rules";
+import {
+  AI_WRITING_FROM_SCRATCH_PROMPT,
+  AI_WRITING_RULES_PROMPT,
+  sanitizeAiProse,
+} from "./ai-writing-rules";
 
 export const SEO_LONGFORM_FORMATS: ContentFormatType[] = [
   "blog_post",
@@ -33,6 +37,14 @@ export type ContentPieceInternalLink = {
   rationale?: string;
 };
 
+export type HumanizationAudit = {
+  slopScoreBefore: number;
+  slopScoreAfter: number;
+  humanizationLevel: "off" | "light" | "strong";
+  rejected?: boolean;
+  tellsFixed?: number;
+};
+
 export type ContentPieceMetadata = {
   seoTitle?: string;
   metaDescription?: string;
@@ -47,6 +59,7 @@ export type ContentPieceMetadata = {
   internalLinkSuggestions?: ContentPieceInternalLink[];
   jsonLdSchema?: object;
   humanized?: boolean;
+  humanizationAudit?: HumanizationAudit;
   hasInfographicBlock?: boolean;
   deeplRefined?: boolean;
   deeplTargetLang?: string;
@@ -242,6 +255,7 @@ Writing principles:
 - Use real-world examples, stats, named frameworks, and actionable steps
 - Write naturally for humans. No AI-sounding filler.
 - Structure with H2/H3 headings, short paragraphs, and scannable bullet lists
+${AI_WRITING_FROM_SCRATCH_PROMPT}
 ${AI_WRITING_RULES_PROMPT}
 - Every statistical or factual claim MUST have an inline citation: [Publisher Name](https://real-url)
 - Include ## Frequently Asked Questions with 4-6 ### questions ending in ?
@@ -310,7 +324,8 @@ export function buildSeoLongformRequirements(
 ): string {
   return `Requirements for body_markdown:
 - Write ${wordRange} words of publish-ready prose. NEVER an outline, brief, or template.
-- Open with a hook paragraph (no label like "Engaging introduction")
+- Open with a hook paragraph (no label like "Engaging introduction"). Start on the actual point, not a generic landscape opener.
+- Commit to direct claims instead of hedging. Prefer specifics over abstract noun fog.
 - Use 4-6 concrete ## H2 headings named after the actual topic (e.g. "## Why local SEO matters for startups", NOT "## Core Insight 1")
 - Every stat or research claim needs an inline citation: [Source Name](https://real-url)
 - Minimum 4 external citations to authoritative sources (.gov, .edu, industry research, named publications)

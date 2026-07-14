@@ -1,3 +1,5 @@
+import { countAiSlopSignals } from "./ai-writing-rules";
+
 export type ArticleQualityInput = {
   bodyMarkdown: string;
   metaTitle?: string | null;
@@ -50,6 +52,15 @@ function inferMetaDescription(body: string): string | null {
   return firstParagraph ?? null;
 }
 
+function scoreHumanVoice(body: string): { score: number; detail: string } {
+  const slop = countAiSlopSignals(body);
+  if (slop === 0) return { score: 15, detail: "No AI tells detected" };
+  if (slop <= 3) return { score: 12, detail: `${slop} AI tell${slop === 1 ? "" : "s"} detected` };
+  if (slop <= 8) return { score: 8, detail: `${slop} AI tells detected` };
+  if (slop <= 15) return { score: 4, detail: `${slop} AI tells detected` };
+  return { score: 0, detail: `${slop} AI tells — re-humanize recommended` };
+}
+
 export function scoreArticleQuality(input: ArticleQualityInput): ArticleQualityResult {
   const body = input.bodyMarkdown ?? "";
   const wordCount = input.wordCount ?? body.split(/\s+/).filter(Boolean).length;
@@ -63,12 +74,19 @@ export function scoreArticleQuality(input: ArticleQualityInput): ArticleQualityR
   const titleLen = input.metaTitle?.length ?? 0;
   const inferredMeta = inferMetaDescription(body);
   const metaLen = input.metaDescription?.length ?? inferredMeta?.length ?? 0;
+  const humanVoice = scoreHumanVoice(body);
 
   const breakdown: ArticleQualityBreakdown[] = [
     {
+      label: "Human voice",
+      score: humanVoice.score,
+      max: 15,
+      detail: humanVoice.detail,
+    },
+    {
       label: "Structure",
-      score: Math.min(20, h2Count >= 4 ? 20 : h2Count >= 2 ? 14 : h2Count >= 1 ? 8 : 0),
-      max: 20,
+      score: Math.min(15, h2Count >= 4 ? 15 : h2Count >= 2 ? 10 : h2Count >= 1 ? 5 : 0),
+      max: 15,
       detail: `${h2Count} H2 sections`,
     },
     {
@@ -91,20 +109,20 @@ export function scoreArticleQuality(input: ArticleQualityInput): ArticleQualityR
     },
     {
       label: "Schema",
-      score: hasSchema ? 10 : 0,
-      max: 10,
+      score: hasSchema ? 5 : 0,
+      max: 5,
       detail: hasSchema ? "JSON-LD present" : "Missing structured data",
     },
     {
       label: "Meta title",
-      score: titleLen >= 30 && titleLen <= 60 ? 10 : titleLen > 0 ? 5 : 0,
-      max: 10,
+      score: titleLen >= 30 && titleLen <= 60 ? 5 : titleLen > 0 ? 3 : 0,
+      max: 5,
       detail: titleLen ? `${titleLen} characters` : "Missing meta title",
     },
     {
       label: "Meta description",
-      score: metaLen >= 50 && metaLen <= 160 ? 10 : metaLen > 0 ? 5 : 0,
-      max: 10,
+      score: metaLen >= 50 && metaLen <= 160 ? 5 : metaLen > 0 ? 3 : 0,
+      max: 5,
       detail: metaLen ? `${metaLen} characters` : "Missing meta description",
     },
     {

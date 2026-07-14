@@ -32,7 +32,7 @@ import {
   platformForFormat,
 } from "./platform-voice";
 import { humanizeContentPiece } from "./humanizer";
-import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
+import { AI_WRITING_FROM_SCRATCH_PROMPT, AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
 import { buildDestinationPromptHint } from "./support/publishing-settings";
 import {
   enrichContentPieceImages,
@@ -185,6 +185,7 @@ const SYSTEM_PROMPT = `You are a world-class SEO content strategist and writer. 
 
 Your content is brand-aligned, audience-specific, and actionable.
 
+${AI_WRITING_FROM_SCRATCH_PROMPT}
 ${AI_WRITING_RULES_PROMPT}
 
 You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation; only raw JSON.`;
@@ -652,10 +653,11 @@ function processGeneratedResult(
   if (signals.words < 700) {
     throw new Error("Generated SEO article too short");
   }
-  if (humanized) {
+  if (humanized || parsed.pieceMetadata?.humanizationAudit) {
     finalized.pieceMetadata = {
       ...finalized.pieceMetadata,
-      humanized: true,
+      humanized: humanized || parsed.pieceMetadata?.humanized,
+      humanizationAudit: parsed.pieceMetadata?.humanizationAudit,
     };
   }
   return finalized;
@@ -676,7 +678,13 @@ async function postProcessGeneratedResult(
     });
     result = isSeoLongformFormat(format)
       ? processGeneratedResult(humanizedResult, format, humanized)
-      : humanizedResult;
+      : {
+          ...humanizedResult,
+          pieceMetadata: {
+            ...humanizedResult.pieceMetadata,
+            humanized: humanized || humanizedResult.pieceMetadata?.humanized,
+          },
+        };
   }
 
   if (isSeoLongformFormat(format)) {

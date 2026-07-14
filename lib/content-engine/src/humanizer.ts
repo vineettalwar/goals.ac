@@ -10,9 +10,12 @@ import {
   type UnifiedBrandContext,
 } from "./brand-voice";
 import { loadBrandVoiceGenerationContext } from "./support/brand-voice-generation";
-import { bodyWordCount } from "./content-piece-seo";
+import { bodyWordCount, type ContentPieceMetadata, type HumanizationAudit } from "./content-piece-seo";
 import {
   AI_WRITING_REWRITE_RULES_PROMPT,
+  countAiSlopSignals,
+  diagnoseAiTells,
+  formatAiTellDiagnosisSummary,
   sanitizeAiProse,
 } from "./ai-writing-rules";
 
@@ -29,21 +32,12 @@ export interface HumanizableContentPiece {
     rationale?: string;
   }[];
   json_ld_schema?: object;
-  pieceMetadata?: {
-    metaDescription?: string;
-    faqSection?: { question: string; answer: string }[];
-    citations?: { text: string; url: string; source: string }[];
-    internalLinkSuggestions?: {
-      anchorText: string;
-      suggestedSlug: string;
-      rationale?: string;
-    }[];
-    jsonLdSchema?: object;
-    humanized?: boolean;
-  };
+  pieceMetadata?: ContentPieceMetadata;
 }
 
 export type { HumanizationLevel };
+
+export type { HumanizationAudit } from "./content-piece-seo";
 
 export interface HumanizeOptions {
   level: HumanizationLevel;
@@ -60,15 +54,31 @@ interface HumanizedOutput {
   wordCount: number;
 }
 
-const SYSTEM_PROMPT = `You are a senior human editor. Your job is to rewrite AI-generated article drafts so they read like they were written by an experienced human writer, while preserving the article's SEO structure exactly.
+export type HumanizeArticleResult = {
+  article: GeneratedArticle;
+  audit: HumanizationAudit;
+  changed: boolean;
+};
 
-Rewrite rules:
-- Vary sentence length: mix short punchy sentences with longer ones. Break up monotonous rhythm.
+const SYSTEM_PROMPT = `You are a senior human editor. Rewrite AI-generated drafts so they read like an experienced human wrote them, while preserving SEO structure exactly.
+
+Work in two ordered passes inside your rewrite:
+Pass 1 — SUBTRACT:
+- Delete generic intros and conclusions. Start on the actual point; end on the last real thing you have to say.
+- Cut buzzwords, abstract noun fog, corporate verbs, and filler transitions.
+- Break uniform section shapes where safe (one section can run long, another short).
+
+Pass 2 — ADD specificity and voice:
+- Replace generic phrasing with concrete, specific language already supported by the draft.
+- Commit to claims instead of hedging where the draft allows.
+- Vary sentence length deliberately: mix short punchy sentences with longer ones.
 - Use contractions naturally (it's, don't, you're, we've).
-- Prefer concrete, specific phrasing over abstract filler.
 - Use first/second person where it fits the context.
+- Litmus test: if a sentence could appear verbatim in a thousand articles, make it specific or cut it.
+
 ${AI_WRITING_REWRITE_RULES_PROMPT}
 - Never sound like marketing copy reading its own press release.
+- Never fabricate statistics, quotes, or anecdotes.
 
 You MUST preserve, character-for-character where noted:
 - Every H2 (##) and H3 (###) heading: keep the exact heading text and order.
@@ -88,10 +98,28 @@ async function resolveHumanizerClient(opts: HumanizeOptions): Promise<AiProvider
   return getAiProviderClient();
 }
 
+function buildAudit(
+  level: HumanizationLevel,
+  slopScoreBefore: number,
+  slopScoreAfter: number,
+  rejected = false,
+): HumanizationAudit {
+  return {
+    slopScoreBefore,
+    slopScoreAfter,
+    humanizationLevel: level,
+    rejected,
+    tellsFixed: Math.max(0, slopScoreBefore - slopScoreAfter),
+  };
+}
+
 export async function humanizeArticle(
   article: GeneratedArticle,
   opts: HumanizeOptions,
-): Promise<GeneratedArticle> {
+): Promise<HumanizeArticleResult> {
+  const slopScoreBefore = countAiSlopSignals(article.bodyMarkdown);
+  const diagnosisSummary = formatAiTellDiagnosisSummary(diagnoseAiTells(article.bodyMarkdown));
+
   try {
     const ai = await resolveHumanizerClient(opts);
 
@@ -124,9 +152,14 @@ ${sample.slice(0, 4000)}
       return [brandVoiceCtx.trim(), sampleCtx].filter(Boolean).join("\n\n");
     })();
 
+    const tellCtx = diagnosisSummary
+      ? `\nFix these detected AI tells in the draft:\n${diagnosisSummary}\n`
+      : "";
+
     const prompt = `Rewrite the following article draft to read human.
 
 ${intensityCtx}
+${tellCtx}
 ${voiceCtx}
 
 Primary keyword (must remain present): "${article.primaryKeyword}"
@@ -156,20 +189,31 @@ Return a JSON object with these EXACT fields:
     const parsed = cleanAndParse<HumanizedOutput>(raw);
 
     if (!parsed.bodyMarkdown || typeof parsed.bodyMarkdown !== "string") {
-      return article;
+      return {
+        article,
+        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true),
+        changed: false,
+      };
     }
 
-    // Safety checks: reject the rewrite if it dropped structure we must preserve.
     const originalHeadings = extractHeadings(article.bodyMarkdown);
     const rewrittenHeadings = extractHeadings(parsed.bodyMarkdown);
     if (rewrittenHeadings.length < originalHeadings.length) {
-      return article;
+      return {
+        article,
+        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true),
+        changed: false,
+      };
     }
 
     const originalUrls = extractLinkUrls(article.bodyMarkdown);
     const rewrittenUrls = new Set(extractLinkUrls(parsed.bodyMarkdown));
     if (!originalUrls.every((url) => rewrittenUrls.has(url))) {
-      return article;
+      return {
+        article,
+        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true),
+        changed: false,
+      };
     }
 
     const rewrittenWordCount = countWords(parsed.bodyMarkdown);
@@ -177,21 +221,36 @@ Return a JSON object with these EXACT fields:
       article.wordCount > 0 &&
       (rewrittenWordCount < article.wordCount * 0.8 || rewrittenWordCount > article.wordCount * 1.25)
     ) {
-      return article;
+      return {
+        article,
+        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true),
+        changed: false,
+      };
     }
 
-    return {
+    const sanitizedBody = sanitizeAiProse(parsed.bodyMarkdown);
+    const slopScoreAfter = countAiSlopSignals(sanitizedBody);
+    const rewritten: GeneratedArticle = {
       ...article,
-      bodyMarkdown: sanitizeAiProse(parsed.bodyMarkdown),
+      bodyMarkdown: sanitizedBody,
       metaDescription:
         typeof parsed.metaDescription === "string" && parsed.metaDescription.length > 0
           ? sanitizeAiProse(parsed.metaDescription)
           : article.metaDescription,
       wordCount: rewrittenWordCount,
     };
+
+    return {
+      article: rewritten,
+      audit: buildAudit(opts.level, slopScoreBefore, slopScoreAfter, false),
+      changed: sanitizedBody !== article.bodyMarkdown,
+    };
   } catch {
-    // Humanization must never break generation — fall back to the original article.
-    return article;
+    return {
+      article,
+      audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true),
+      changed: false,
+    };
   }
 }
 
@@ -245,6 +304,7 @@ export function contentPieceToGeneratedArticle(result: HumanizableContentPiece):
 export function applyGeneratedArticleToContentPiece<T extends HumanizableContentPiece>(
   original: T,
   humanized: GeneratedArticle,
+  audit: HumanizationAudit,
 ): T {
   return {
     ...original,
@@ -254,6 +314,7 @@ export function applyGeneratedArticleToContentPiece<T extends HumanizableContent
       ...original.pieceMetadata,
       metaDescription: humanized.metaDescription,
       humanized: true,
+      humanizationAudit: audit,
     },
   };
 }
@@ -264,25 +325,36 @@ export async function humanizeContentPiece<T extends HumanizableContentPiece>(
   opts: Omit<HumanizeOptions, "level" | "writingSample" | "brandVoice"> & {
     level?: HumanizationLevel;
   } = {},
-): Promise<{ result: T; humanized: boolean }> {
+): Promise<{ result: T; humanized: boolean; audit?: HumanizationAudit }> {
   const level = opts.level ?? resolveHumanizationLevel(brand);
   if (level === "off") return { result, humanized: false };
 
   const before = result.body_markdown;
   const article = contentPieceToGeneratedArticle(result);
-  const rewritten = await humanizeArticle(article, {
+  const { article: rewritten, audit, changed } = await humanizeArticle(article, {
     ...opts,
     level,
     writingSample: resolveWritingSample(brand),
     brandVoice: brand,
   });
 
-  if (rewritten.bodyMarkdown === before) {
-    return { result, humanized: false };
+  if (!changed || rewritten.bodyMarkdown === before) {
+    return {
+      result: {
+        ...result,
+        pieceMetadata: {
+          ...result.pieceMetadata,
+          humanizationAudit: audit,
+        },
+      },
+      humanized: false,
+      audit,
+    };
   }
 
   return {
-    result: applyGeneratedArticleToContentPiece(result, rewritten),
+    result: applyGeneratedArticleToContentPiece(result, rewritten, audit),
     humanized: true,
+    audit,
   };
 }

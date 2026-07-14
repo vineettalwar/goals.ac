@@ -3,8 +3,13 @@ import { type AiProviderOptions } from "@workspace/ai-providers";
 import type { AiProviderClient } from "@workspace/ai-providers/client";
 import { resolveAiClient } from "./support/resolve-ai-client";
 import type { ContentStyle } from "@workspace/db";
-import { AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
+import { AI_WRITING_FROM_SCRATCH_PROMPT, AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
 import { loadBrandVoiceGenerationContext } from "./support/brand-voice-generation";
+import {
+  resolveHumanizationLevel,
+  type UnifiedBrandContext,
+} from "./brand-voice";
+import { humanizeArticle } from "./humanizer";
 
 export interface SeoArticleContent {
   title: string;
@@ -18,6 +23,7 @@ const SYSTEM_PROMPT = `You are a world-class SEO content strategist and writer s
 
 Your articles are brand-aligned, industry-specific, and location-aware. They combine thought leadership with practical insight to build brand authority.
 
+${AI_WRITING_FROM_SCRATCH_PROMPT}
 ${AI_WRITING_RULES_PROMPT}
 
 You MUST respond with a single valid JSON object and nothing else. No markdown, no code blocks, no explanation; only raw JSON.`;
@@ -35,6 +41,50 @@ function buildContentStyleContext(style?: ContentStyle | null): string {
   }
   if (lines.length === 0) return "";
   return "\nCONTENT STYLE GUIDELINES:\n" + lines.map((l) => `- ${l}`).join("\n");
+}
+
+async function maybeHumanizeSeoArticle(
+  result: SeoArticleContent,
+  brand: UnifiedBrandContext | undefined,
+  userApiKey?: string | null,
+  aiProviderOptions?: AiProviderOptions,
+): Promise<SeoArticleContent> {
+  if (!brand) return result;
+  const level = resolveHumanizationLevel(brand);
+  if (level === "off") return result;
+
+  const wordCount = result.content.split(/\s+/).filter(Boolean).length;
+  const { article: rewritten, changed } = await humanizeArticle(
+    {
+      title: result.title,
+      metaDescription: result.meta_description,
+      primaryKeyword: result.primary_keyword,
+      secondaryKeywords: result.secondary_keywords,
+      bodyMarkdown: result.content,
+      wordCount,
+      readingTimeMinutes: Math.max(1, Math.ceil(wordCount / 200)),
+      searchIntent: "informational",
+      faqSection: [],
+      citations: [],
+      internalLinkSuggestions: [],
+      jsonLdSchema: {},
+      personaAlignment: "",
+    },
+    {
+      level,
+      brandVoice: brand,
+      userApiKey,
+      aiProviderOptions,
+    },
+  );
+
+  if (!changed) return result;
+
+  return {
+    ...result,
+    content: rewritten.bodyMarkdown,
+    meta_description: rewritten.metaDescription,
+  };
 }
 
 function buildPrompt(
@@ -100,6 +150,9 @@ async function generateWithClient(
   stage: string,
   contentStyle?: ContentStyle | null,
   brandVoiceContext?: string,
+  brand?: UnifiedBrandContext,
+  userApiKey?: string | null,
+  aiProviderOptions?: AiProviderOptions,
 ): Promise<SeoArticleContent> {
   const prompt = buildPrompt(
     brandName,
@@ -132,7 +185,7 @@ async function generateWithClient(
         throw new Error("Invalid article structure from AI");
       }
 
-      return result;
+      return maybeHumanizeSeoArticle(result, brand, userApiKey, aiProviderOptions);
     } catch (err) {
       lastError = err;
       logger.warn({ err, attempt }, "SEO article generation attempt failed");
@@ -153,6 +206,7 @@ export async function generateSeoArticleContent(
   contentStyle?: ContentStyle | null,
   aiProviderOptions?: AiProviderOptions,
   projectId?: number,
+  brand?: UnifiedBrandContext,
 ): Promise<SeoArticleContent> {
   let brandVoiceContext = "";
   if (projectId) {
@@ -172,6 +226,9 @@ export async function generateSeoArticleContent(
     stage,
     contentStyle,
     brandVoiceContext,
+    brand,
+    userApiKey,
+    aiProviderOptions,
   );
 }
 
