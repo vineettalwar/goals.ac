@@ -8,10 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { saveRoadmapIntent } from "@/lib/projects/roadmap-intent";
-import { CONTACT_HREF } from "@/lib/marketing/marketing-contact";
+import { buildAuthRedirectParams, saveRoadmapIntent } from "@/lib/projects/roadmap-intent";
 
-import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
+import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
 const glassCard = cardSurfaceClass("glass", false);
 
@@ -37,8 +36,8 @@ export function GenerateRoadmapButton() {
         stage: form.stage,
         referrer: "roadmaps-catalog",
       });
-      toast.info("Custom roadmaps are available to clients. Contact us to get started.");
-      router.push(CONTACT_HREF);
+      toast.info("Sign in to generate this roadmap. We'll pre-fill your selections.");
+      router.push(`/signup?${buildAuthRedirectParams("roadmaps-catalog").toString()}`);
       return;
     }
     if (!res.ok) {

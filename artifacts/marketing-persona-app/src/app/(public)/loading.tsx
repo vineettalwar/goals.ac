@@ -1,4 +1,4 @@
-import { MarketingPageSkeleton } from "@/components/marketing-page-skeleton";
+import { MarketingPageSkeleton } from "@/components/skeletons/marketing-page-skeleton";
 
 export default function PublicLoading() {
   return <MarketingPageSkeleton />;

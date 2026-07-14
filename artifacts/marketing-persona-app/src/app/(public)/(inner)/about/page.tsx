@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AboutPageDynamic } from "@/components/marketing/marketing-client-dynamic";
+import { AboutPageDynamic } from "@/components/marketing/layout/marketing-client-dynamic";
 
 export const metadata: Metadata = {
   title: "About",

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import { FeatureLanderDynamic } from "@/components/marketing/feature-lander-dynamic";
+import { FeatureLanderDynamic } from "@/components/marketing/landers/feature-lander-dynamic";
 
 export const metadata: Metadata = {
-  title: "Rank on ChatGPT — goals.ac",
+  title: "Rank on ChatGPT | goals.ac",
   description: "Structure content for citation by AI assistants.",
 };
 

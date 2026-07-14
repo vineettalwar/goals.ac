@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@workspace/db";
 import { seoArticlesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { SeoArticleClient } from "@/components/marketing/seo-article-client";
+import { SeoArticleClient } from "@/components/marketing/pages/seo-article-client";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;

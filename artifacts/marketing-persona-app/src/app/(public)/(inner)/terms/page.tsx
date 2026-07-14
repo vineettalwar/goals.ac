@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
-import { LegalPageClient } from "@/components/marketing/legal-page-client";
+import { LegalPageClient } from "@/components/marketing/pages/legal-page-client";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "Terms of service for goals.ac — AI content generation, autopilot publishing, and growth tooling.",
+  description: "Terms of service for goals.ac: AI content generation, autopilot publishing, and growth tooling.",
   robots: { index: true, follow: true },
 };
 
@@ -12,7 +12,7 @@ export default function TermsPage() {
     <LegalPageClient titleLine1="Terms of" titleLine2="service" lastUpdated="July 5, 2026">
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">1. Service description</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-white/65 leading-relaxed">
           goals.ac provides AI-assisted growth strategy and content generation tools, including
           persona-driven SEO article generation, a humanization pass for article quality, a content
           strategy and topical map planner, and integrations that publish generated content to
@@ -23,7 +23,7 @@ export default function TermsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">2. Accounts</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-white/65 leading-relaxed">
           You are responsible for securing your login credentials and any API keys you provide. You must
           provide accurate account information, keep it up to date, and comply with applicable laws. You
           must be legally able to enter into a binding contract to use the service.
@@ -32,7 +32,7 @@ export default function TermsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">3. Acceptable use</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-white/65 leading-relaxed">
           You agree not to use the platform to generate or publish unlawful, defamatory, deceptive,
           infringing, or harmful content; to attempt to circumvent quota, rate-limit, or security
           controls; to resell or sublicense access without authorization; or to use the service in a way
@@ -43,7 +43,7 @@ export default function TermsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">4. Content ownership</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-white/65 leading-relaxed">
           As between you and us, you own the articles, outlines, and other content generated through your
           account, subject to the underlying AI provider&apos;s terms and any third-party rights in
           material you supplied as input (e.g., a competitor URL or writing sample). We do not claim
@@ -55,7 +55,7 @@ export default function TermsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">5. Plans, quotas, and billing</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-white/65 leading-relaxed">
           The Starter plan includes a limited number of platform-billed article generations per calendar
           month; Growth and Scale plans include higher or unlimited monthly quotas. If you provide your
           own Gemini API key (Bring Your Own Key, or &quot;BYOK&quot;), generations made with that key are
@@ -68,7 +68,7 @@ export default function TermsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">6. API usage and rate limits</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-white/65 leading-relaxed">
           To protect service stability and prevent abuse, generation endpoints are subject to per-user
           rate limits, and authentication endpoints are subject to per-IP rate limits. Requests that
           exceed these limits will receive an HTTP 429 response with a suggested retry delay.
@@ -77,7 +77,7 @@ export default function TermsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">7. Disclaimers</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-white/65 leading-relaxed">
           The service and all AI-generated content are provided &quot;as is&quot; and &quot;as
           available,&quot; without warranties of any kind, whether express or implied, including
           warranties of merchantability, fitness for a particular purpose, accuracy, or non-infringement.
@@ -88,7 +88,7 @@ export default function TermsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">8. Limitation of liability</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-white/65 leading-relaxed">
           To the maximum extent permitted by law, goals.ac and its affiliates will not be liable for any
           indirect, incidental, special, consequential, or punitive damages, or any loss of profits,
           revenue, data, or goodwill, arising from your use of the service. Our total aggregate liability
@@ -99,7 +99,7 @@ export default function TermsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">9. Changes to these terms</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-white/65 leading-relaxed">
           We may update these terms from time to time. Material changes will be reflected by an updated
           &quot;Last updated&quot; date on this page, and, where appropriate, additional notice. Continued
           use of the service after changes take effect constitutes acceptance of the revised terms.
@@ -108,9 +108,9 @@ export default function TermsPage() {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">10. Contact</h2>
-        <p className="text-sm text-muted-foreground leading-relaxed">
+        <p className="text-sm text-white/65 leading-relaxed">
           Questions about these terms can be sent to{" "}
-          <a className="text-primary hover:underline" href="mailto:legal@goals.ac">
+          <a className="text-(--accent-warm) hover:underline" href="mailto:legal@goals.ac">
             legal@goals.ac
           </a>
           .

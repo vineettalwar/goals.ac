@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
+import { db } from "@workspace/db";
+import { seoArticlesTable } from "@workspace/db/schema";
+import { desc } from "drizzle-orm";
+import type { ShowcaseArticle } from "@/components/marketing/sections/home-marketing-sections";
 
 const HomePageClient = dynamic(
-  () => import("@/components/marketing/home-page-client").then((m) => m.HomePageClient),
+  () => import("@/components/marketing/pages/home-page-client").then((m) => m.HomePageClient),
   {
     loading: () => (
       <div className="min-h-screen animate-pulse bg-black">
@@ -17,11 +21,31 @@ const HomePageClient = dynamic(
 );
 
 export const metadata: Metadata = {
-  title: "goals.ac — Rank on Google and get cited by ChatGPT",
+  title: "goals.ac | Research-driven SEO content studio",
   description:
-    "AI-powered B2B content growth: 12-month roadmaps, GEO-ready articles, AI visibility tracking, and CMS publishing with editorial control.",
+    "Cross-platform content studio for B2B teams. Research-backed SEO briefs, drafts you approve, and publishing to CMS, social, and email — saving you time end to end.",
 };
 
-export default function HomePage() {
-  return <HomePageClient />;
+async function loadShowcaseArticle(): Promise<ShowcaseArticle | null> {
+  try {
+    const [article] = await db
+      .select({
+        id: seoArticlesTable.id,
+        title: seoArticlesTable.title,
+        primaryKeyword: seoArticlesTable.primaryKeyword,
+        wordCount: seoArticlesTable.wordCount,
+      })
+      .from(seoArticlesTable)
+      .orderBy(desc(seoArticlesTable.createdAt))
+      .limit(1);
+
+    return article ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export default async function HomePage() {
+  const showcaseArticle = await loadShowcaseArticle();
+  return <HomePageClient showcaseArticle={showcaseArticle} />;
 }

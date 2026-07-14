@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { ContentEngineMarketing } from "@/components/marketing/content-engine-marketing";
+import { ContentEngineMarketing } from "@/components/marketing/pages/content-engine-marketing";
 
 export const metadata: Metadata = {
-  title: "Content Engine — goals.ac",
+  title: "Content Studio | goals.ac",
   description:
-    "Draft blog posts, guides, social posts, and web copy in your brand voice. Review, schedule, and publish to WordPress, Notion, Webflow, and social platforms.",
+    "Research-driven SEO content studio. Briefs, drafts you approve, and cross-platform publishing to CMS, social, and email — saving you time end to end.",
 };
 
 export default function ContentEngineMarketingPage() {

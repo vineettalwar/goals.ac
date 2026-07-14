@@ -3,9 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Headphones } from "lucide-react";
-import { LeadCaptureModal } from "@/components/lead-capture-modal";
-import { cardSurfaceClass } from "@/lib/marketing/marketing-surfaces";
-import { CONTACT_CTA_PRIMARY, CONTACT_HREF } from "@/lib/marketing/marketing-contact";
+import { LeadCaptureModal } from "@/components/shared/lead-capture-modal";
+import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
 const glassCard = cardSurfaceClass("glass", false);
 
@@ -15,13 +14,13 @@ export function RoadmapLeadCTA({ slug }: { slug: string }) {
   return (
     <>
       <div className={`${glassCard} p-6 text-center space-y-4`}>
-        <p className="font-semibold text-lg text-white">Want a roadmap tailored to your business?</p>
+        <p className="font-semibold text-lg text-white">Want this roadmap tied to your site and goals?</p>
         <p className="text-sm text-white/65">
-          Custom roadmaps are part of our consulting engagements — book a call to scope yours.
+          Sign in to generate a version grounded in your brand scan, or talk to us about hands-on strategy.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link href={CONTACT_HREF} className="hero-cta-primary inline-flex items-center gap-2">
-            {CONTACT_CTA_PRIMARY} <ArrowRight className="h-4 w-4" />
+          <Link href="/signup?next=/strategy/roadmaps" className="hero-cta-primary inline-flex items-center gap-2">
+            Generate for my business <ArrowRight className="h-4 w-4" />
           </Link>
           <button
             onClick={() => setModalOpen(true)}

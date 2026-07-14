@@ -3,8 +3,8 @@ import { notFound } from "next/navigation";
 import { db } from "@workspace/db";
 import { geoAuditsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { GeoAuditResultClient } from "@/components/marketing/geo-audit-result-client";
-import type { GeoIssue } from "@/components/geo-audit-result-view";
+import { GeoAuditResultClient } from "@/components/marketing/pages/geo-audit-result-client";
+import type { GeoIssue } from "@/components/geo-audit/geo-audit-result-view";
 
 export async function generateMetadata({
   params,
@@ -25,7 +25,7 @@ export async function generateMetadata({
     if (!audit) return { title: "GEO Audit not found" };
 
     return {
-      title: `GEO Audit — ${audit.geoScore}/100`,
+      title: `GEO Audit | ${audit.geoScore}/100`,
       description: `Generative engine optimization audit results for ${audit.url}.`,
       robots: { index: false, follow: false },
     };

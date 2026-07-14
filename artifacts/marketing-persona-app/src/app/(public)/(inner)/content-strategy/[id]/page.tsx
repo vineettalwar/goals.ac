@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { ContentStrategyClient } from "@/components/marketing/content-strategy-client";
+import { ContentStrategyClient } from "@/components/marketing/pages/content-strategy-client";
 
 export async function generateMetadata({
   params,

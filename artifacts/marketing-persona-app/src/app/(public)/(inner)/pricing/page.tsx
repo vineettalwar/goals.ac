@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { PricingPageDynamic } from "@/components/marketing/marketing-client-dynamic";
+import { PricingPageDynamic } from "@/components/marketing/layout/marketing-client-dynamic";
 
 export const metadata: Metadata = {
   title: "Engagements",
