@@ -13,7 +13,7 @@ import {
   readAutopilotIntent,
   postAutopilotOnboardingRedirect,
 } from "@/lib/projects/autopilot-intent";
-import { schema, type FormData } from "./onboarding-schema";
+import { schema, type FormData, type GoalIntent } from "./onboarding-schema";
 import {
   OnboardingCompanyForm,
   OnboardingFastLaneForm,
@@ -32,7 +32,7 @@ export default function OnboardingPage() {
 
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(0);
-  const [goalIntent, setGoalIntent] = useState({ objective: "traffic" as const, targetMetric: "" });
+  const [goalIntent, setGoalIntent] = useState<GoalIntent>({ objective: "traffic", targetMetric: "" });
   const [competitors, setCompetitors] = useState<string[]>([""]);
   const [language, setLanguage] = useState("en");
 

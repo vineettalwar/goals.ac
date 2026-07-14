@@ -1,4 +1,4 @@
-import type { AiProviderId } from "@/lib/ai/providers";
+import type { AiProviderId } from "@workspace/ai-providers/config";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRow } from "./content-studio-client";
 

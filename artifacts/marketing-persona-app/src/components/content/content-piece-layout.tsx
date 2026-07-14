@@ -126,7 +126,7 @@ export function ContentPieceLayout(p: any) {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setEditingPreview((v) => !v)}
+                      onClick={() => setEditingPreview((v: boolean) => !v)}
                     >
                       <Eye className="h-3.5 w-3.5" /> {editingPreview ? "Edit" : "Preview"}
                     </Button>

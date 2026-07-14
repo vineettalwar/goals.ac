@@ -88,10 +88,10 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
           ogTitle={piece.pieceMetadata?.ogTitle as string | undefined}
           ogDescription={piece.pieceMetadata?.ogDescription as string | undefined}
           focusKeyword={(piece.pieceMetadata?.focusKeyword as string | undefined) ?? piece.targetKeyword}
-          citations={piece.pieceMetadata?.citations}
-          faqSection={piece.pieceMetadata?.faqSection}
-          jsonLdSchema={piece.pieceMetadata?.jsonLdSchema}
-          internalLinkSuggestions={piece.pieceMetadata?.internalLinkSuggestions}
+          citations={piece.pieceMetadata?.citations as { text: string; url: string }[] | undefined}
+          faqSection={piece.pieceMetadata?.faqSection as { question: string; answer: string }[] | undefined}
+          jsonLdSchema={piece.pieceMetadata?.jsonLdSchema as object | null | undefined}
+          internalLinkSuggestions={piece.pieceMetadata?.internalLinkSuggestions as { anchorText: string; suggestedSlug: string }[] | undefined}
           wordCount={displayWordCount}
           canEnhance={canEnhance}
           enhancing={enhancing}
