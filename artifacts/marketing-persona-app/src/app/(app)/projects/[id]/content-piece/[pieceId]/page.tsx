@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getSession } from "@/auth";
-import { ContentPieceClient } from "@/components/content-piece-client";
+import { ContentPieceClient } from "@/components/content/content-piece-client";
 import {
   loadCmsConnectionsForProject,
   loadContentPieceForUser,

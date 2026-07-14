@@ -1,5 +1,5 @@
 import dynamic from "next/dynamic";
-import { PageSkeleton } from "@/components/page-skeleton";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 
 const GeoAuditPanel = dynamic(
   () => import("@/components/panels/geo-audit-panel").then((m) => m.GeoAuditPanel),

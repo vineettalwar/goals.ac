@@ -1,4 +1,4 @@
-import { SyncActiveProjectFromUrl } from "@/components/sync-active-project-from-url";
+import { SyncActiveProjectFromUrl } from "@/components/app/sync-active-project-from-url";
 
 export default async function ProjectLayout({
   children,

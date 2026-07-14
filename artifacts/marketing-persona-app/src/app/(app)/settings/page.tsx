@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { getSession } from "@/auth";
-import { SettingsClient } from "@/components/settings-client";
+import { SettingsClient } from "@/components/settings/settings-client";
 import { loadSettingsInitialData } from "@/lib/server/loaders";
 
 export default async function SettingsPage() {

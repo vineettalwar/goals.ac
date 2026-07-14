@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { getSession } from "@/auth";
-import { ProjectDetailClient } from "@/components/project-detail-client";
+import { ProjectDetailClient } from "@/components/projects/project-detail-client";
 import { loadWebsiteProjectForUser } from "@/lib/server/loaders";
 
 export default async function ProjectDetailPage({

@@ -1,1 +1,1 @@
-export { default } from "@/components/route-loading";
+export { default } from "@/components/skeletons/route-loading";

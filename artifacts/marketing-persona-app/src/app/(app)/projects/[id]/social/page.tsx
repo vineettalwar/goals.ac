@@ -1,6 +1,6 @@
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
-import { PageSkeleton } from "@/components/page-skeleton";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 
 const SocialHubClient = dynamic(
   () => import("@/components/social/social-hub-client").then((m) => m.SocialHubClient),

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NewProjectDialog } from "@/components/new-project-dialog";
+import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 
 export function NewProjectButton() {
   const router = useRouter();

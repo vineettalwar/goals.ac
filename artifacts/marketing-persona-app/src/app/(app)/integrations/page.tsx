@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useActiveProject } from "@/context/active-project";
-import { PageSkeleton } from "@/components/page-skeleton";
-import { ProjectPublishingTab } from "@/components/project-publishing-tab";
-import { SearchPropertyConnectionsPanel } from "@/components/search-property-connections-panel";
-import { AnalyticsPropertyConnectionsPanel } from "@/components/analytics-property-connections-panel";
-import { IntegrationTabBadge } from "@/components/integration-tile";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
+import { ProjectPublishingTab } from "@/components/projects/project-publishing-tab";
+import { SearchPropertyConnectionsPanel } from "@/components/integrations/search-property-connections-panel";
+import { AnalyticsPropertyConnectionsPanel } from "@/components/integrations/analytics-property-connections-panel";
+import { IntegrationTabBadge } from "@/components/integrations/integration-tile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { IntegrationCategoryFilter } from "@/components/publishing-settings-panel";
+import type { IntegrationCategoryFilter } from "@/components/projects/publishing-settings-panel";
 import {
   useIntegrationCounts,
 } from "@/hooks/use-integration-counts";

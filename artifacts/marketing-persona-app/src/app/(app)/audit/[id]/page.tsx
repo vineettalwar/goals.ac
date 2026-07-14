@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@workspace/db";
 import { geoAuditsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { GeoAuditResultView, type GeoIssue } from "@/components/geo-audit-result-view";
+import { GeoAuditResultView, type GeoIssue } from "@/components/geo-audit/geo-audit-result-view";
 
 export default async function AuditResultPage({
   params,

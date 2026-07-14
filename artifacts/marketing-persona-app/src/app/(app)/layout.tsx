@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { getSession } from "@/auth";
 import { redirect } from "next/navigation";
-import { SidebarNav } from "@/components/sidebar-nav";
+import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { ActiveProjectProvider } from "@/context/active-project";
-import { ImpersonationBanner } from "@/components/admin/impersonation-banner";
+import { ImpersonationBanner } from "@/components/admin/layout/impersonation-banner";
 import { MfaComplianceGate } from "@/components/mfa/mfa-compliance-gate";
 
 export const metadata: Metadata = {
