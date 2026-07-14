@@ -8,6 +8,8 @@ use GoalsAC\Shared\NonceStore;
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use TYPO3\CMS\Core\Utility\GeneralUtility;
 
+use function random_int;
+
 final class Typo3NonceStore implements NonceStore
 {
     private const TABLE = 'tx_goalsac_nonces';

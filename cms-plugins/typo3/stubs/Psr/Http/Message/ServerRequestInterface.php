@@ -13,4 +13,9 @@ interface ServerRequestInterface
     public function getMethod(): string;
 
     public function getHeaderLine(string $name): string;
+
+    /**
+     * @return mixed
+     */
+    public function getAttribute(string $name);
 }

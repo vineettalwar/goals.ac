@@ -10,6 +10,7 @@ const PUBLIC_PREFIXES = [
   "/reset-password",
   "/accept-invite",
   "/api/auth",
+  "/api/analytics/vitals",
   "/api/platform/status",
   "/api/invites",
   "/maintenance",
@@ -35,7 +36,6 @@ function normalizeOrgRole(role: string | null | undefined): string | null {
 const WRITE_API_PREFIXES = [
   "/api/website-projects",
   "/api/content-pieces",
-  "/api/integrations",
   "/api/organizations/members",
   "/api/auth/api-key",
   "/api/auth/bedrock-credentials",
@@ -48,7 +48,6 @@ const WRITE_APP_PREFIXES = [
   "/integrations",
   "/studio",
   "/content-piece",
-  "/autopilot",
   "/onboarding",
 ];
 
@@ -113,7 +112,7 @@ export default auth(async (req) => {
 
   const isAppRoute =
     pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/autopilot") ||
+    pathname.startsWith("/partner") ||
     pathname.startsWith("/projects") ||
     pathname.startsWith("/strategy") ||
     pathname.startsWith("/search") ||
@@ -132,7 +131,7 @@ export default auth(async (req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (isLoggedIn && orgRole === "editor" && pathname.startsWith("/projects")) {
+  if (isLoggedIn && orgRole === "editor" && (pathname.startsWith("/projects") || pathname.startsWith("/partner"))) {
     if (!isSuperAdmin(userRole)) {
       return NextResponse.redirect(new URL("/dashboard", req.nextUrl.origin));
     }
