@@ -1,0 +1,89 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "goals-ac-jobs",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-14",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "goals-ac",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "../../lib/db/migrations-d1"
+    }
+  ],
+  "kv_namespaces": [
+    { "binding": "AI_CACHE", "id": "00000000000000000000000000000001" },
+    { "binding": "RATE_LIMIT", "id": "00000000000000000000000000000002" }
+  ],
+  "queues": {
+    "consumers": [
+      {
+        "queue": "goals-ac-jobs",
+        "max_batch_size": 5,
+        "max_batch_timeout": 30,
+        "max_retries": 5,
+        "dead_letter_queue": "goals-ac-jobs-dlq",
+        "max_concurrency": 5
+      }
+    ]
+  },
+  "triggers": {
+    "crons": [
+      "0 4 * * *",
+      "*/15 * * * *",
+      "30 * * * *",
+      "0 6 * * *",
+      "0 7 * * 0",
+      "0 8 * * 0",
+      "0 9 * * 0",
+      "0 7 * * *",
+      "0 8 * * *",
+      "0 8 * * 1",
+      "0 9 * * 1",
+      "0 10 * * 1",
+      "0 9 * * *"
+    ]
+  },
+  "vars": {
+    "DB_DIALECT": "d1"
+  },
+  "env": {
+    "staging": {
+      "name": "goals-ac-jobs-staging",
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "goals-ac-staging",
+          "database_id": "00000000-0000-0000-0000-000000000002",
+          "migrations_dir": "../../lib/db/migrations-d1"
+        }
+      ],
+      "kv_namespaces": [
+        { "binding": "AI_CACHE", "id": "00000000000000000000000000000003" },
+        { "binding": "RATE_LIMIT", "id": "00000000000000000000000000000004" }
+      ],
+      "queues": {
+        "consumers": [
+          {
+            "queue": "goals-ac-jobs-staging",
+            "max_batch_size": 5,
+            "max_batch_timeout": 30,
+            "max_retries": 5,
+            "dead_letter_queue": "goals-ac-jobs-staging-dlq",
+            "max_concurrency": 3
+          }
+        ]
+      },
+      "vars": {
+        "DB_DIALECT": "d1"
+      }
+    },
+    "production": {
+      "name": "goals-ac-jobs",
+      "vars": {
+        "DB_DIALECT": "d1"
+      }
+    }
+  }
+}

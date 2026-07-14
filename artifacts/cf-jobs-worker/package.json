@@ -1,0 +1,24 @@
+{
+  "name": "@workspace/cf-jobs-worker",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "deploy:production": "wrangler deploy --env production",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@workspace/content-engine": "workspace:*",
+    "@workspace/db": "workspace:*",
+    "@workspace/jobs": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260708.1",
+    "@types/node": "catalog:",
+    "typescript": "~5.9.2",
+    "wrangler": "^4.110.0"
+  }
+}
