@@ -29,7 +29,6 @@ export const QUEUES = {
   evergreenRecycleSweep: "evergreen-recycle-sweep",
   socialHistorySync: "social-history-sync",
   socialMetricsSync: "social-metrics-sync",
-  legacyCompanyAutopilot: "legacy-company-autopilot",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
@@ -39,14 +38,13 @@ export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
  *
  * `kind` disambiguates which table `connectionId` refers to:
  *  - "wordpress"  → `wordpress_connections.id`
- *  - "integration" → `integration_connections.id` (ghost, webhook, ...)
  *
  * The sweep (cron-triggered, no single connection) is represented by an
- * empty payload `{}`; the handler enumerates every connection of both
- * kinds and enqueues one `ConnectionHealthCheckPayload` job per row.
+ * empty payload `{}`; the handler enumerates every WordPress connection and
+ * enqueues one `ConnectionHealthCheckPayload` job per row.
  */
 export interface ConnectionHealthCheckPayload {
-  kind: "wordpress" | "integration";
+  kind: "wordpress";
   connectionId: number;
 }
 
@@ -165,8 +163,6 @@ export interface SocialMetricsSyncPayload {
 
 export type SocialMetricsSyncJobData = SocialMetricsSyncPayload | Record<string, never>;
 
-export type LegacyCompanyAutopilotJobData = Record<string, never>;
-
 /** Maps each queue name to the payload shape(s) it accepts. */
 export interface QueuePayloadMap {
   [QUEUES.connectionHealthCheck]: ConnectionHealthCheckJobData;
@@ -187,7 +183,6 @@ export interface QueuePayloadMap {
   [QUEUES.evergreenRecycleSweep]: EvergreenRecycleSweepPayload;
   [QUEUES.socialHistorySync]: SocialHistorySyncJobData;
   [QUEUES.socialMetricsSync]: SocialMetricsSyncJobData;
-  [QUEUES.legacyCompanyAutopilot]: LegacyCompanyAutopilotJobData;
 }
 
 export type QueuePayloadFor<Q extends QueueName> = QueuePayloadMap[Q];
