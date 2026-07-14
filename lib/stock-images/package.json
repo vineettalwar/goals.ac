@@ -9,7 +9,9 @@
     "./rank": "./src/rank.ts"
   },
   "dependencies": {
+    "@workspace/db": "workspace:*",
     "@workspace/security": "workspace:*",
+    "drizzle-orm": "catalog:",
     "redis": "^5.12.1"
   },
   "devDependencies": {

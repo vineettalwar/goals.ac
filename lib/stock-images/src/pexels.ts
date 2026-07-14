@@ -19,9 +19,9 @@ function mapOrientation(orientation?: StockPhotoOrientation): string | undefined
 
 export async function searchPexels(
   query: string,
-  options?: { orientation?: StockPhotoOrientation; perPage?: number },
+  options?: { orientation?: StockPhotoOrientation; perPage?: number; apiKey?: string },
 ): Promise<StockPhoto[]> {
-  const apiKey = process.env["PEXELS_API_KEY"];
+  const apiKey = options?.apiKey?.trim() || process.env["PEXELS_API_KEY"];
   if (!apiKey) {
     throw new Error("PEXELS_API_KEY is not configured");
   }

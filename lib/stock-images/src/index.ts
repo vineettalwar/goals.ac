@@ -3,7 +3,14 @@ import {
   getCachedSearch,
   setCachedSearch,
 } from "./cache";
+import {
+  isProviderSearchConfigured,
+  listConfiguredSearchProviders,
+  resolveStockApiKey,
+  type DecryptedStockCredentialContext,
+} from "./credentials";
 import { searchPexels } from "./pexels";
+import { STOCK_PROVIDER_REGISTRY, type FreeStockProvider } from "./providers";
 import { pickBestFromRanked, rankStockPhotos } from "./rank";
 import type {
   RankedStockPhoto,
@@ -13,10 +20,11 @@ import type {
 } from "./types";
 import { searchUnsplash, trackUnsplashDownload } from "./unsplash";
 
-async function searchProvider(
-  provider: StockProvider,
+async function runStockSearch(
+  provider: FreeStockProvider,
   query: string,
   options: StockSearchOptions,
+  credentials?: DecryptedStockCredentialContext,
 ): Promise<StockPhoto[]> {
   const orientation = options.orientation ?? "landscape";
   const cacheKey = buildSearchCacheKey(provider, query, orientation);
@@ -24,13 +32,33 @@ async function searchProvider(
   if (cached) return cached;
 
   const perPage = options.perPage ?? 15;
-  const photos =
-    provider === "unsplash"
-      ? await searchUnsplash(query, { orientation, perPage })
-      : await searchPexels(query, { orientation, perPage });
+  const accessKey = resolveStockApiKey(provider, credentials);
+  if (!accessKey) {
+    throw new Error(`${provider} API key is not configured`);
+  }
+
+  let photos: StockPhoto[];
+  switch (provider) {
+    case "unsplash":
+      photos = await searchUnsplash(query, { orientation, perPage, accessKey });
+      break;
+    case "pexels":
+      photos = await searchPexels(query, { orientation, perPage, apiKey: accessKey });
+      break;
+    default: {
+      const unknownProvider: never = provider;
+      throw new Error(`Unsupported stock provider: ${unknownProvider}`);
+    }
+  }
 
   await setCachedSearch(cacheKey, photos);
   return photos;
+}
+
+function normalizeSearchProvider(provider: StockProvider | "auto"): StockProvider | "auto" {
+  if (provider === "auto") return "auto";
+  if (!STOCK_PROVIDER_REGISTRY[provider].searchImplemented) return "auto";
+  return provider;
 }
 
 async function searchWithProvider(
@@ -38,32 +66,37 @@ async function searchWithProvider(
   query: string,
   options: StockSearchOptions,
 ): Promise<StockPhoto[]> {
-  if (provider === "auto") {
-    const results: StockPhoto[] = [];
-    const hasUnsplash = Boolean(process.env["UNSPLASH_ACCESS_KEY"]);
-    const hasPexels = Boolean(process.env["PEXELS_API_KEY"]);
+  const credentials = options.credentials;
+  const resolvedProvider = normalizeSearchProvider(provider);
 
-    if (hasUnsplash) {
+  if (resolvedProvider === "auto") {
+    const results: StockPhoto[] = [];
+    const configured = listConfiguredSearchProviders(credentials);
+    if (configured.length === 0) {
+      throw new Error(
+        "No stock image API keys configured (platform UNSPLASH_ACCESS_KEY / PEXELS_API_KEY or org/project BYOK)",
+      );
+    }
+
+    for (const providerId of configured) {
       try {
-        results.push(...(await searchProvider("unsplash", query, options)));
+        results.push(...(await runStockSearch(providerId, query, options, credentials)));
       } catch {
         // try other provider
       }
     }
-    if (hasPexels) {
-      try {
-        results.push(...(await searchProvider("pexels", query, options)));
-      } catch {
-        // ignore
-      }
-    }
-    if (!hasUnsplash && !hasPexels) {
-      throw new Error("No stock image API keys configured (UNSPLASH_ACCESS_KEY or PEXELS_API_KEY)");
+
+    if (results.length === 0) {
+      throw new Error("Stock image search failed for all configured providers");
     }
     return results;
   }
 
-  return searchProvider(provider, query, options);
+  if (!isProviderSearchConfigured(resolvedProvider, credentials)) {
+    throw new Error(`${resolvedProvider} API key is not configured`);
+  }
+
+  return runStockSearch(resolvedProvider, query, options, credentials);
 }
 
 export async function searchStockPhotos(
@@ -81,6 +114,7 @@ export async function pickBestStockPhoto(
 ): Promise<RankedStockPhoto | null> {
   const queries = [keyword.trim(), ...(options.fallbackQueries ?? [])].filter(Boolean);
   const excludeIds = options.excludeIds ?? [];
+  const credentials = options.credentials;
 
   for (const query of queries) {
     const photos = await searchStockPhotos(query, options);
@@ -91,7 +125,8 @@ export async function pickBestStockPhoto(
     const best = pickBestFromRanked(ranked);
     if (best) {
       if (best.provider === "unsplash") {
-        await trackUnsplashDownload(best.id);
+        const accessKey = resolveStockApiKey("unsplash", credentials);
+        await trackUnsplashDownload(best.id, accessKey);
       }
       return best;
     }
@@ -103,3 +138,37 @@ export async function pickBestStockPhoto(
 export { rankStockPhotos, pickBestFromRanked } from "./rank";
 export type * from "./types";
 export { assertAllowedStockCdnUrl, isAllowedStockCdnHost } from "./allowed-hosts";
+export {
+  getPlatformStockImageStatus,
+  isPlatformStockConfigured,
+  type PlatformStockImageStatus,
+} from "./platform-status";
+export {
+  isStockSearchAvailable,
+  isProviderSearchConfigured,
+  listConfiguredSearchProviders,
+  resolveStockApiKey,
+  type DecryptedStockCredentialContext,
+  type EncryptedStockCredentialsMap,
+} from "./credentials";
+export {
+  FREE_STOCK_PROVIDERS,
+  PAID_STOCK_PROVIDERS,
+  SEARCHABLE_STOCK_PROVIDERS,
+  STOCK_PROVIDER_IDS,
+  STOCK_PROVIDER_REGISTRY,
+  isPaidStockProvider,
+  isStockProviderId,
+  listByokStockProviders,
+  listPaidByokProviders,
+  type PaidStockProvider,
+  type StockProviderId,
+} from "./providers";
+export { testStockProviderConnection } from "./test-connection";
+export {
+  getDecryptedPlatformStockCredentials,
+  invalidatePlatformStockCredentialsCache,
+  isPexelsManagedByEnv,
+  isUnsplashManagedByEnv,
+  resolvePlatformStockApiKey,
+} from "./platform-credentials";

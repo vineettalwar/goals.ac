@@ -22,9 +22,9 @@ function mapOrientation(orientation?: StockPhotoOrientation): string | undefined
 
 export async function searchUnsplash(
   query: string,
-  options?: { orientation?: StockPhotoOrientation; perPage?: number },
+  options?: { orientation?: StockPhotoOrientation; perPage?: number; accessKey?: string },
 ): Promise<StockPhoto[]> {
-  const accessKey = process.env["UNSPLASH_ACCESS_KEY"];
+  const accessKey = options?.accessKey?.trim() || process.env["UNSPLASH_ACCESS_KEY"];
   if (!accessKey) {
     throw new Error("UNSPLASH_ACCESS_KEY is not configured");
   }
@@ -62,12 +62,12 @@ export async function searchUnsplash(
 }
 
 /** Unsplash API guideline: trigger download tracking when a photo is selected. */
-export async function trackUnsplashDownload(photoId: string): Promise<void> {
-  const accessKey = process.env["UNSPLASH_ACCESS_KEY"];
-  if (!accessKey) return;
+export async function trackUnsplashDownload(photoId: string, accessKey?: string): Promise<void> {
+  const key = accessKey?.trim() || process.env["UNSPLASH_ACCESS_KEY"];
+  if (!key) return;
   try {
     await fetch(`https://api.unsplash.com/photos/${photoId}/download`, {
-      headers: { Authorization: `Client-ID ${accessKey}` },
+      headers: { Authorization: `Client-ID ${key}` },
     });
   } catch {
     // best-effort

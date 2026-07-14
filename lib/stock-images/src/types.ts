@@ -1,4 +1,7 @@
-export type StockProvider = "unsplash" | "pexels";
+import type { FreeStockProvider } from "./providers";
+
+/** Providers that return photos in search results (copyright-free only). */
+export type StockProvider = FreeStockProvider;
 
 export type StockPhotoOrientation = "landscape" | "portrait" | "squarish";
 
@@ -21,6 +24,7 @@ export type StockSearchOptions = {
   orientation?: StockPhotoOrientation;
   perPage?: number;
   excludeIds?: string[];
+  credentials?: import("./credentials").DecryptedStockCredentialContext;
 };
 
 export type RankedStockPhoto = StockPhoto & { rankScore: number };
