@@ -6,6 +6,7 @@ import { analyzeKeywords } from "@workspace/seo-tools/keywordAnalyzer";
 import { modelForProviderTier, resolveProviderId } from "@workspace/ai-providers";
 import { optionalAuth } from "../lib/auth";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
 import { requireProjectAccess } from "../lib/projectAccess";
 import { recordUsageEvent } from "../lib/usageEvents";
@@ -64,7 +65,7 @@ router.post("/keyword-analysis", optionalAuth, async (req, res) => {
         tier: "planning",
         provider: providerId,
         model: modelForProviderTier(providerId, "planning"),
-        usedByok: Boolean(userApiKey),
+        usedByok: (await resolveAiClientForUser(req.user.userId)).usingUserKey,
       });
     }
 

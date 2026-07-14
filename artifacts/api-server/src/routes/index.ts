@@ -18,12 +18,14 @@ import keywordOpportunitiesRouter from "./keywordOpportunities";
 import goalsRouter from "./goals";
 import briefsRouter from "./briefs";
 import aiProvidersRouter from "./aiProviders";
+import orgAiCredentialsRouter from "./orgAiCredentials";
 import publicApiRouter from "./publicApi";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(publicApiRouter);
+router.use(orgAiCredentialsRouter);
 router.use(authRouter);
 router.use(socialAuthRouter);
 router.use(aiProvidersRouter);

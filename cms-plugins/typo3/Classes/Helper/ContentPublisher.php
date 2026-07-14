@@ -159,7 +159,8 @@ final class ContentPublisher
         if ($imageUrl !== '') {
             $safeUrl = htmlspecialchars($imageUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
             $safeAlt = htmlspecialchars($imageAlt, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $figure = '<figure class="image"><img src="' . $safeUrl . '" alt="' . $safeAlt . '" loading="lazy" /></figure>';
+            $figure = '<figure class="image"><img src="' . $safeUrl . '" alt="' . $safeAlt
+                . '" loading="lazy" /></figure>';
             $bodytext = $bodytext !== '' ? $bodytext . "\n" . $figure : $figure;
         }
 

@@ -9,6 +9,9 @@ class DataHandler
     /** @var array<string, array<int|string, array<string, mixed>>> */
     public array $datamap = [];
 
+    /** @var array<string, array<string, array<int, int>>> */
+    public array $cmdmap = [];
+
     /** @var array<string, int> */
     public array $substNEWwithIDs = [];
 
@@ -22,6 +25,11 @@ class DataHandler
     }
 
     public function process_datamap(): void
+    {
+        throw new \BadMethodCallException('IDE stub only.');
+    }
+
+    public function process_cmdmap(): void
     {
         throw new \BadMethodCallException('IDE stub only.');
     }

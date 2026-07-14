@@ -6,6 +6,7 @@ import { analyzeCompetitor } from "@workspace/seo-tools/competitorAnalyzer";
 import { modelForProviderTier, resolveProviderId } from "@workspace/ai-providers";
 import { optionalAuth } from "../lib/auth";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/resolve-ai-client-for-user";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/user-ai-provider";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";
 import { requireProjectAccess } from "../lib/projectAccess";
@@ -83,7 +84,7 @@ router.post("/competitor-analysis", optionalAuth, async (req, res) => {
         tier: "strategy",
         provider: providerId,
         model: modelForProviderTier(providerId, "strategy"),
-        usedByok: Boolean(userApiKey),
+        usedByok: (await resolveAiClientForUser(req.user.userId)).usingUserKey,
       });
     }
 
