@@ -1,7 +1,7 @@
 "use client";
 
 import { TrendingUp } from "lucide-react";
-import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
+import { scoreArticleQuality } from "@workspace/content-engine/articles/article-quality-score";
 import { ScoreRing } from "@/components/content/score-ring";
 import { Button } from "@/components/ui/button";
 

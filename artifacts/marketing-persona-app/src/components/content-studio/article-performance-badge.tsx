@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { BarChart3, MousePointerClick } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
-import type { ArticlePerformanceResponse } from "@/lib/integrations/analytics/analytics-property-types";
+import { useArticlePerformance } from "@/lib/queries";
 
 function formatYmd(d: Date): string {
   const y = d.getFullYear();
@@ -19,32 +19,6 @@ function defaultDateRange(): { startDate: string; endDate: string } {
   return { startDate: formatYmd(start), endDate: formatYmd(end) };
 }
 
-const cache = new Map<string, Promise<ArticlePerformanceResponse>>();
-
-function fetchProjectPerformance(
-  projectId: string,
-  startDate: string,
-  endDate: string,
-): Promise<ArticlePerformanceResponse> {
-  const key = `${projectId}:${startDate}:${endDate}`;
-  const existing = cache.get(key);
-  if (existing) return existing;
-
-  const qs = new URLSearchParams({ startDate, endDate });
-  const promise = fetch(`/api/website-projects/${projectId}/article-performance?${qs}`)
-    .then(async (res) => {
-      if (!res.ok) throw new Error("Failed to load performance");
-      return res.json() as Promise<ArticlePerformanceResponse>;
-    })
-    .catch((err) => {
-      cache.delete(key);
-      throw err;
-    });
-
-  cache.set(key, promise);
-  return promise;
-}
-
 export function ArticlePerformanceBadge({
   projectId,
   contentPieceId,
@@ -54,43 +28,23 @@ export function ArticlePerformanceBadge({
   contentPieceId: number;
   publishedUrl?: string | null;
 }) {
-  const [metrics, setMetrics] = useState<{ sessions: number; clicks: number } | null>(null);
-  const [loading, setLoading] = useState(false);
+  const { startDate, endDate } = defaultDateRange();
+  const { data, isLoading: loading } = useArticlePerformance(
+    projectId,
+    startDate,
+    endDate,
+    Boolean(publishedUrl && projectId),
+  );
 
-  useEffect(() => {
-    if (!publishedUrl || !projectId) {
-      setMetrics(null);
-      return;
-    }
-
-    const { startDate, endDate } = defaultDateRange();
-    let cancelled = false;
-    setLoading(true);
-
-    void fetchProjectPerformance(projectId, startDate, endDate)
-      .then((data) => {
-        if (cancelled) return;
-        const article = data.articles.find((row) => row.contentPieceId === contentPieceId);
-        if (!article) {
-          setMetrics(null);
-          return;
-        }
-        setMetrics({
-          sessions: article.ga4.sessions,
-          clicks: article.gsc.clicks,
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setMetrics(null);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
+  const metrics = useMemo(() => {
+    if (!data) return null;
+    const article = data.articles.find((row) => row.contentPieceId === contentPieceId);
+    if (!article) return null;
+    return {
+      sessions: article.ga4.sessions,
+      clicks: article.gsc.clicks,
     };
-  }, [projectId, contentPieceId, publishedUrl]);
+  }, [data, contentPieceId]);
 
   if (!publishedUrl) return null;
 

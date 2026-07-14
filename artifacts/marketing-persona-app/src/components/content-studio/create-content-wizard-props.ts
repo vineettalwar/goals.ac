@@ -1,0 +1,41 @@
+import type { ContentFormatType } from "./content-studio-format-data";
+
+export type CreateContentWizardProps = {
+  selectPath: (flow: "create" | "repurpose") => void;
+  selectFormat: (type: ContentFormatType) => void;
+  loadingCompetitors: boolean;
+  competitorUrls: string[];
+  competitorAnalyses: Array<{
+    competitorUrl: string;
+    competitorName: string;
+    contentGaps: string[];
+    quickWins: string[];
+    threatLevel: "low" | "medium" | "high";
+  }>;
+  addCompetitorUrl: () => void;
+  newCompetitorUrl: string;
+  setNewCompetitorUrl: (v: string) => void;
+  projectId: string;
+  projectIndustry: string;
+  keyword: string;
+  setKeyword: (v: string) => void;
+  selectedFormat: ContentFormatType | null;
+  intendedDestination: string;
+  setIntendedDestination: (v: string) => void;
+  cmsConnections: Record<string, unknown>;
+  linkedinArchetype: string;
+  setLinkedinArchetype: (v: string) => void;
+  linkedinHook: string;
+  setLinkedinHook: (v: string) => void;
+  angleHint: string;
+  setAngleHint: (v: string) => void;
+  plannedDate: string;
+  setPlannedDate: (v: string) => void;
+  generating: boolean;
+  detectedSections: string[];
+  handleContinue: () => void;
+  bypassCache: boolean;
+  setBypassCache: (v: boolean) => void;
+  competitorFocusUrl: string;
+  setCompetitorFocusUrl: (v: string) => void;
+};

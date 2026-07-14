@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { ScanSearch } from "lucide-react";
-import type { BrandExtract } from "@workspace/content-engine/brand-extract-types";
+import type { BrandExtract } from "@workspace/content-engine/brand/brand-extract-types";
 import { formatBrandScanDiscoverySummary } from "@/lib/projects/brand-scan-summary";
+import { useBrandProfile } from "@/lib/queries";
 
 interface BrandProfileSummary {
   scrapeStatus: string;
@@ -24,25 +24,19 @@ interface BrandProfileSummary {
 }
 
 export function BrandAiProfileCard({ projectId }: { projectId: string }) {
-  const [profile, setProfile] = useState<BrandProfileSummary | null>(null);
-
-  useEffect(() => {
-    void fetch(`/api/website-projects/${projectId}/brand-profile`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setProfile(data as BrandProfileSummary | null))
-      .catch(() => setProfile(null));
-  }, [projectId]);
+  const { data: profile } = useBrandProfile(projectId);
 
   if (!profile) return null;
 
-  const scanning = profile.scrapeStatus === "pending";
-  const memory = profile.brandMemory;
+  const typedProfile = profile as BrandProfileSummary;
+  const scanning = typedProfile.scrapeStatus === "pending";
+  const memory = typedProfile.brandMemory;
   const discoveryLabel = formatBrandScanDiscoverySummary(
-    profile.discoveryMeta,
-    profile.pageCount,
+    typedProfile.discoveryMeta,
+    typedProfile.pageCount,
   );
   const scanSources =
-    profile.scanSources.length > 0 ? profile.scanSources : (memory?.scanSources ?? []);
+    typedProfile.scanSources.length > 0 ? typedProfile.scanSources : (memory?.scanSources ?? []);
 
   return (
     <div className="paper-card mb-6 p-4 border-primary/20">
@@ -66,8 +60,8 @@ export function BrandAiProfileCard({ projectId }: { projectId: string }) {
           </div>
           {memory?.summary ? (
             <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{memory.summary}</p>
-          ) : profile.voiceTone ? (
-            <p className="mt-2 text-sm text-muted-foreground">{profile.voiceTone}</p>
+          ) : typedProfile.voiceTone ? (
+            <p className="mt-2 text-sm text-muted-foreground">{typedProfile.voiceTone}</p>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">
               We scan your website on project create to build voice and keywords automatically.
@@ -85,9 +79,9 @@ export function BrandAiProfileCard({ projectId }: { projectId: string }) {
               ))}
             </div>
           )}
-          {profile.primaryKeywords.length > 0 && (
+          {typedProfile.primaryKeywords.length > 0 && (
             <p className="mt-3 text-xs text-muted-foreground">
-              Focus topics: {profile.primaryKeywords.slice(0, 6).join(", ")}
+              Focus topics: {typedProfile.primaryKeywords.slice(0, 6).join(", ")}
             </p>
           )}
           {scanSources.length > 0 && (
