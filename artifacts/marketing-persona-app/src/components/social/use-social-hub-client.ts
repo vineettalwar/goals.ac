@@ -18,8 +18,8 @@ import {
   type SocialQueueItem,
 } from "@workspace/app-shell";
 
-export function useSocialHubClient(projectId: string) {
-  const [tab, setTab] = useState<SocialHubTab>("queue");
+export function useSocialHubClient(projectId: string, initialTab: SocialHubTab = "queue") {
+  const [tab, setTab] = useState<SocialHubTab>(initialTab);
   const [queue, setQueue] = useState<SocialQueueItem[]>([]);
   const [loadingQueue, setLoadingQueue] = useState(true);
   const [platformFilter, setPlatformFilter] = useState<string>("all");

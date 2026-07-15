@@ -38,9 +38,9 @@ async function fetchQueue(projectId: string, platformFilter: string): Promise<{
   }
 }
 
-export function useSocialData(projectId: string | null) {
+export function useSocialData(projectId: string | null, initialTab: SocialHubTab = "queue") {
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<SocialHubTab>("queue");
+  const [tab, setTab] = useState<SocialHubTab>(initialTab);
   const [platformFilter, setPlatformFilter] = useState("all");
   const [metricsPlatformFilter, setMetricsPlatformFilter] = useState("all");
   const [reschedulingId, setReschedulingId] = useState<number | null>(null);

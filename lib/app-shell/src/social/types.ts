@@ -172,6 +172,22 @@ export type SocialHubTab =
   | "voice"
   | "settings";
 
+const SOCIAL_HUB_TABS = new Set<SocialHubTab>([
+  "queue",
+  "calendar",
+  "compose",
+  "analytics",
+  "voice",
+  "settings",
+]);
+
+export function parseSocialHubTab(value: string | null | undefined): SocialHubTab {
+  if (value && SOCIAL_HUB_TABS.has(value as SocialHubTab)) {
+    return value as SocialHubTab;
+  }
+  return "queue";
+}
+
 export type SocialNotify = (level: "success" | "error", message: string) => void;
 
 export const WEEK_DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;

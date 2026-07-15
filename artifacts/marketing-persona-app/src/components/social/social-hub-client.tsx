@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { SocialHubView } from "@workspace/app-shell";
+import { useSearchParams } from "next/navigation";
+import { SocialHubView, parseSocialHubTab } from "@workspace/app-shell";
 import { useSocialHubClient } from "./use-social-hub-client";
 
 export function SocialHubClient({ projectId }: { projectId: string }) {
-  const hub = useSocialHubClient(projectId);
+  const searchParams = useSearchParams();
+  const hub = useSocialHubClient(projectId, parseSocialHubTab(searchParams.get("tab")));
 
   return (
     <div className="max-w-6xl space-y-6 px-8 py-8">

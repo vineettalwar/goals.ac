@@ -28,6 +28,7 @@ import {
   StrategyRoadmapsView,
   StrategyTopicalMapView,
   type CompetitorAnalysisResult,
+  parseSocialHubTab,
   type RedditThread,
   type VisibilitySettings,
   type VisibilitySummary,
@@ -635,7 +636,8 @@ export function AutopilotPage() {
 
 export function SocialHubPage() {
   const { projectId } = useActiveProject();
-  const hub = useSocialData(projectId);
+  const [searchParams] = useSearchParams();
+  const hub = useSocialData(projectId, parseSocialHubTab(searchParams.get("tab")));
   const studioHref = projectId ? `/projects/${projectId}/content-studio` : "/projects";
   const integrationsHref = projectId ? `/projects/${projectId}/integrations` : "/integrations";
 

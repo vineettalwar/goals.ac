@@ -77,8 +77,16 @@ export function IntegrationsEspPanel({
           const row = integrations[destination.integrationKey];
           const connected = destination.isConnected(integrations);
           const detail = getEspConnectionDetail(destination.id, row);
+          const healthOk = row?.lastHealthOk;
           const usesOAuth = destination.connectionMethods.includes("oauth");
           const fullAppOnly = destination.fullAppOnly || usesOAuth;
+          const statusLabel = connected
+            ? healthOk === true
+              ? "Healthy"
+              : healthOk === false
+                ? "Failing"
+                : "Connected"
+            : "Not connected";
 
           return (
             <div
@@ -97,7 +105,11 @@ export function IntegrationsEspPanel({
                   <span
                     className={cn(
                       "h-1.5 w-1.5 shrink-0 rounded-full",
-                      connected ? "bg-emerald-500" : "bg-muted-foreground/25",
+                      connected
+                        ? healthOk === false
+                          ? "bg-red-500"
+                          : "bg-emerald-500"
+                        : "bg-muted-foreground/25",
                     )}
                     aria-hidden
                   />
@@ -106,7 +118,7 @@ export function IntegrationsEspPanel({
                   {connected && detail ? detail : destination.description}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {connected ? "Connected" : "Not connected"} · {destination.connectionMethodLabel}
+                  {statusLabel} · {destination.connectionMethodLabel}
                 </p>
                 {connected && typeof row?.apiKeyHint === "string" ? (
                   <p className="text-xs text-muted-foreground">Key …{row.apiKeyHint}</p>
@@ -121,11 +133,13 @@ export function IntegrationsEspPanel({
                   className={cn(
                     "rounded-full px-2 py-1 text-xs font-medium",
                     connected
-                      ? "bg-emerald-50 text-emerald-800"
+                      ? healthOk === false
+                        ? "bg-red-50 text-red-800"
+                        : "bg-emerald-50 text-emerald-800"
                       : "bg-muted text-muted-foreground",
                   )}
                 >
-                  {connected ? "On" : "Off"}
+                  {connected ? (healthOk === false ? "Fail" : "On") : "Off"}
                 </span>
 
                 {connected ? (

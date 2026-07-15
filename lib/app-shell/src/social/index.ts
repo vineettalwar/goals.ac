@@ -30,4 +30,5 @@ export {
   extractMarkdownImageUrl,
   resolveSocialPieceImageUrl,
   socialPieceNeedsInstagramImage,
+  parseSocialHubTab,
 } from "./types";

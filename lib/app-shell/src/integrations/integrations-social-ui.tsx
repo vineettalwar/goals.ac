@@ -239,8 +239,21 @@ export function IntegrationsSocialPanel({
 
       <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {destinations.map((destination) => {
+          const row = integrations[destination.integrationKey];
           const connected = destination.isConnected(integrations);
-          const summary = destination.connectionSummary(integrations);
+          const accountSummary = destination.connectionSummary(integrations);
+          const healthOk = row?.lastHealthOk;
+          const summary = connected
+            ? healthOk === true
+              ? accountSummary
+                ? `${accountSummary} · Healthy`
+                : "Connected · Healthy"
+              : healthOk === false
+                ? accountSummary
+                  ? `${accountSummary} · Failing`
+                  : "Connected · Failing"
+                : (accountSummary ?? "Connected")
+            : null;
           const connectHref = connected
             ? null
             : buildConnectHref(resolvedApiBase, projectId, destination, {
@@ -266,7 +279,11 @@ export function IntegrationsSocialPanel({
                     <span
                       className={cn(
                         "h-1.5 w-1.5 shrink-0 rounded-full",
-                        connected ? "bg-emerald-500" : "bg-muted-foreground/25",
+                        connected
+                          ? healthOk === false
+                            ? "bg-red-500"
+                            : "bg-emerald-500"
+                          : "bg-muted-foreground/25",
                       )}
                       aria-hidden
                     />
@@ -282,11 +299,19 @@ export function IntegrationsSocialPanel({
                   className={cn(
                     "w-fit rounded-full px-2 py-1 text-xs font-medium",
                     connected
-                      ? "bg-emerald-50 text-emerald-800"
+                      ? healthOk === false
+                        ? "bg-red-50 text-red-800"
+                        : "bg-emerald-50 text-emerald-800"
                       : "bg-muted text-muted-foreground",
                   )}
                 >
-                  {connected ? "Connected" : "Not connected"}
+                  {connected
+                    ? healthOk === true
+                      ? "Healthy"
+                      : healthOk === false
+                        ? "Failing"
+                        : "Connected"
+                    : "Not connected"}
                 </span>
 
                 {!connected ? (
