@@ -23,7 +23,23 @@
 | ~~Consolidate CMS/ESP connect dialogs~~ | **Done.** `SchemaConnectDialog` + configs. 1729 → 734 LOC (−57%). Named exports preserved. |
 | ~~Notion adapter image blocks~~ | **Done.** HTTPS markdown images + featured → page cover; non-https skipped with warnings. |
 
-**Still open elsewhere:** Next studio leftovers (~480 LOC); unused gsap/marked deps.
+**Still open elsewhere:** unused gsap/marked deps (verify before remove).
+
+### Next studio leftovers deleted (2026-07-16)
+
+Verified dead after hub → `StudioView`. Before delete: one unfinished bit was hub `ArticlePerformanceBadge` (only on leftover list cards + piece detail). Ported via shell `renderPieceExtras` + `publishedUrl` on `StudioPiece`.
+
+Deleted: `brand-ai-profile-card.tsx`, `content-studio-calendar.tsx`, `content-studio-hub-filters.tsx`, `content-studio-list-items.tsx`, `visibility/keyword-rank-chart.tsx`.
+
+Feature diff vs shell (none unfinished left in those files):
+
+| Leftover | Shell / live | Unique unfinished? |
+|---|---|---|
+| Brand AI card | Shell card + host-loaded profile (plus last-scanned) | No — shell richer |
+| Calendar DnD | Shell `StudioCalendarView` (mobile agenda + 3/day) | No — shell ≥ leftover |
+| Hub filters | Shell filters + list/grid toggle | No — shell richer |
+| List cards | Shell cards + Generate CTA | Yes → badge ported |
+| Keyword rank chart | `@workspace/app-shell` chart in keyword tabs | No |
 
 ---
 

@@ -104,15 +104,15 @@ Sources: `HANDOFF.md`, competitive plan Waves 0–3.2, create-wizard diff, TYPO3
 | Analytics best-time slots | Needs ≥3 metric samples; else falls back | HANDOFF social analytics |
 | Migrations | PG `0064`+ social OAuth cols; D1 may need local apply | HANDOFF migrate notes |
 
-### D. Dead leftovers (implemented elsewhere — safe delete candidates)
+### D. Dead leftovers — deleted 2026-07-16
 
 | Path | Why |
 |---|---|
-| `.../content-studio/brand-ai-profile-card.tsx` | Self-fetching; hub uses shell card |
-| `.../content-studio/content-studio-calendar.tsx` | Shell `StudioCalendarView` |
-| `.../content-studio/content-studio-hub-filters.tsx` | Shell hub filters |
-| `.../content-studio/content-studio-list-items.tsx` | Shell list/grid |
-| `.../visibility/keyword-rank-chart.tsx` | Shell chart via `@workspace/app-shell` |
+| ~~`.../content-studio/brand-ai-profile-card.tsx`~~ | Shell card (richer; host-loaded profile) |
+| ~~`.../content-studio/content-studio-calendar.tsx`~~ | Shell `StudioCalendarView` (mobile agenda + DnD) |
+| ~~`.../content-studio/content-studio-hub-filters.tsx`~~ | Shell hub filters + list/grid |
+| ~~`.../content-studio/content-studio-list-items.tsx`~~ | Shell cards; hub `ArticlePerformanceBadge` restored via `renderPieceExtras` |
+| ~~`.../visibility/keyword-rank-chart.tsx`~~ | Shell chart via `@workspace/app-shell` |
 
 ---
 

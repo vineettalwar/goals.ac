@@ -1,3 +1,7 @@
+import {
+  decodeRasterFeaturedDataUri,
+  isRasterFeaturedDataUri,
+} from "@workspace/connectors/wordpress-images";
 import { publishToTypo3 } from "@workspace/connectors/typo3";
 import type { CanonicalContent } from "../content/canonical-content";
 import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
@@ -10,7 +14,10 @@ import {
 } from "./adapter-helpers";
 import { markdownToHtml } from "./markdown-html";
 import { mapPluginStatus } from "./plugin-shared";
-import { markdownToTypo3ContentElements } from "./typo3-content-elements";
+import {
+  markdownToTypo3ContentElements,
+  prependTypo3FeaturedBase64,
+} from "./typo3-content-elements";
 import type {
   CmsAdapter,
   PlatformPayload,
@@ -54,7 +61,18 @@ export const typo3Adapter: CmsAdapter = {
     }
 
     if (outputMode === "content_elements") {
-      const contentElements = markdownToTypo3ContentElements(content.markdown);
+      let contentElements = markdownToTypo3ContentElements(content.markdown);
+      const featuredRaw = content.pieceMetadata?.featuredImageUrl?.trim();
+      if (isRasterFeaturedDataUri(featuredRaw)) {
+        const decoded = decodeRasterFeaturedDataUri(featuredRaw!);
+        if (decoded) {
+          contentElements = prependTypo3FeaturedBase64(contentElements, {
+            imageBase64: decoded.buffer.toString("base64"),
+            imageMime: decoded.mimeHint,
+            alt: title,
+          });
+        }
+      }
       const payload: PlatformPayload = {
         kind: "typo3",
         outputMode: "content_elements",

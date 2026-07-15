@@ -49,6 +49,27 @@ function textmediaElement(url: string, alt: string, sorting: number): Typo3Conte
 }
 
 /**
+ * Prepend a textmedia element with raw base64 for ContentPublisher FAL import
+ * when featuredImageUrl is a PNG/JPEG data URI (HTTP fetch would fail).
+ */
+export function prependTypo3FeaturedBase64(
+  elements: Typo3ContentElement[],
+  opts: { imageBase64: string; imageMime: "image/png" | "image/jpeg"; alt: string },
+): Typo3ContentElement[] {
+  const featured: Typo3ContentElement = {
+    ctype: "textmedia",
+    fields: {
+      imageBase64: opts.imageBase64,
+      imageMime: opts.imageMime,
+      imagealt: opts.alt,
+      bodytext: "",
+    },
+    sorting: 128,
+  };
+  return [featured, ...elements];
+}
+
+/**
  * Convert markdown into TYPO3 content elements (header, text, textmedia).
  */
 export function markdownToTypo3ContentElements(markdown: string): Typo3ContentElement[] {

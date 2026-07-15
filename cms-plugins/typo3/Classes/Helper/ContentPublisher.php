@@ -248,6 +248,10 @@ final class ContentPublisher
     private function resolveOrImportFalFile(string $imageUrl): ?int
     {
         try {
+            if ($this->isRasterImageDataUri($imageUrl)) {
+                return $this->importBase64ImageToFal($imageUrl, '', '');
+            }
+
             if (!class_exists(\TYPO3\CMS\Core\Resource\StorageRepository::class)) {
                 return null;
             }
@@ -268,6 +272,158 @@ final class ContentPublisher
             return $this->importRemoteImageToFal($storage, $imageUrl);
         } catch (\Throwable) {
             return null;
+        }
+    }
+
+    /**
+     * Write PNG/JPEG from raw base64 or data URI into default FAL storage (no HTTP fetch).
+     */
+    private function importBase64ImageToFal(string $imageBase64, string $mimeHint, string $preferredFilename): ?int
+    {
+        try {
+            $decoded = $this->decodeRasterImagePayload($imageBase64, $mimeHint);
+            if ($decoded === null) {
+                return null;
+            }
+
+            if (!class_exists(\TYPO3\CMS\Core\Resource\StorageRepository::class)) {
+                return null;
+            }
+
+            $storageRepository = GeneralUtility::makeInstance(
+                \TYPO3\CMS\Core\Resource\StorageRepository::class,
+            );
+            $storage = $storageRepository->getDefaultStorage();
+            if ($storage === null) {
+                return null;
+            }
+
+            $filename = $this->sanitizeImageFilename($preferredFilename, $decoded['mime']);
+            return $this->addBinaryToFal($storage, $decoded['binary'], $filename);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @return array{binary: string, mime: string}|null
+     */
+    private function decodeRasterImagePayload(string $payload, string $mimeHint): ?array
+    {
+        $trimmed = trim($payload);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        $mime = '';
+        $b64 = $trimmed;
+
+        if (str_starts_with(strtolower($trimmed), 'data:image/')) {
+            if (!preg_match(
+                '#^data:image/(png|jpeg|jpg);base64,([A-Za-z0-9+/=\s]+)$#i',
+                $trimmed,
+                $matches,
+            )) {
+                return null;
+            }
+            $subtype = strtolower($matches[1]);
+            $mime = $subtype === 'png' ? 'image/png' : 'image/jpeg';
+            $b64 = $matches[2];
+        }
+
+        $binary = base64_decode(preg_replace('/\s+/', '', $b64) ?? '', true);
+        if (!is_string($binary) || $binary === '') {
+            return null;
+        }
+        if (strlen($binary) > self::MAX_BASE64_IMAGE_BYTES) {
+            return null;
+        }
+
+        if ($mime === '') {
+            $hint = strtolower(trim($mimeHint));
+            if ($hint === 'image/png' || $hint === 'png') {
+                $mime = 'image/png';
+            } elseif (in_array($hint, ['image/jpeg', 'image/jpg', 'jpeg', 'jpg'], true)) {
+                $mime = 'image/jpeg';
+            } else {
+                $mime = $this->sniffRasterImageMime($binary) ?? '';
+            }
+        }
+
+        if ($mime !== 'image/png' && $mime !== 'image/jpeg') {
+            return null;
+        }
+
+        return ['binary' => $binary, 'mime' => $mime];
+    }
+
+    private function isRasterImageDataUri(string $value): bool
+    {
+        return (bool)preg_match(
+            '#^data:image/(png|jpeg|jpg);base64,[A-Za-z0-9+/=\s]+$#i',
+            trim($value),
+        );
+    }
+
+    private function sniffRasterImageMime(string $binary): ?string
+    {
+        if (str_starts_with($binary, "\x89PNG\r\n\x1a\n")) {
+            return 'image/png';
+        }
+        if (str_starts_with($binary, "\xFF\xD8\xFF")) {
+            return 'image/jpeg';
+        }
+        return null;
+    }
+
+    private function sanitizeImageFilename(string $preferred, string $mime): string
+    {
+        $ext = $mime === 'image/png' ? 'png' : 'jpg';
+        $basename = preg_replace('/[^a-zA-Z0-9._-]/', '', $preferred) ?? '';
+        if ($basename !== '' && str_contains($basename, '.')) {
+            return $basename;
+        }
+        if ($basename !== '') {
+            return $basename . '.' . $ext;
+        }
+        return 'image-' . substr(sha1($mime . microtime(true)), 0, 12) . '.' . $ext;
+    }
+
+    /**
+     * @param object $storage TYPO3 ResourceStorage
+     */
+    private function addBinaryToFal(object $storage, string $binary, string $filename): ?int
+    {
+        if (!method_exists(GeneralUtility::class, 'tempnam')) {
+            return null;
+        }
+
+        $tempPath = GeneralUtility::tempnam('goals_ac_img_');
+        if (!is_string($tempPath) || $tempPath === '') {
+            return null;
+        }
+
+        try {
+            if (file_put_contents($tempPath, $binary) === false) {
+                return null;
+            }
+
+            $folder = $this->resolveGoalsAcUploadFolder($storage);
+            if ($folder === null || !method_exists($storage, 'addFile')) {
+                return null;
+            }
+
+            $file = $storage->addFile($tempPath, $folder, $filename);
+            if (!is_object($file) || !method_exists($file, 'getUid')) {
+                return null;
+            }
+
+            $uid = (int)$file->getUid();
+            return $uid > 0 ? $uid : null;
+        } finally {
+            if (is_file($tempPath)) {
+                @unlink($tempPath);
+            }
         }
     }
 
