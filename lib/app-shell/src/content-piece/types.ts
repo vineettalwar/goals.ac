@@ -25,6 +25,8 @@ export type ContentPieceMetadata = {
   metaDescription?: string | null;
   ogTitle?: string | null;
   ogDescription?: string | null;
+  ogImageUrl?: string | null;
+  featuredImageUrl?: string | null;
   citations?: { text: string; url: string }[];
   faqSection?: { question: string; answer: string }[];
   jsonLdSchema?: object | null;

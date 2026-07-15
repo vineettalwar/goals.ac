@@ -126,7 +126,7 @@ export async function listBlogs(): Promise<Array<{ id: string; title: string; ur
   return data.blogs.edges.map((e) => e.node);
 }
 
-/** ArticleImageInput — Shopify fetches a public https URL (no staged upload in plugin). */
+/** ArticleImageInput — public https URL, or staged resourceUrl from featured-image.ts. */
 export interface ArticleImageInput {
   url: string;
   altText?: string;

@@ -6,11 +6,12 @@
 |---|---|
 | Ghost featured | data-URI + HTTPS upload path |
 | Notion images | HTTPS image blocks + featured image → page cover; non-https skipped with warnings |
-| Instagram queue | HTTPS-only + pre-enrich |
+| Instagram queue | HTTPS-only + pre-enrich; composer/piece: paste HTTPS `featuredImageUrl` or **Use stock image** |
 | WP featured | data-URI featured (existing) |
 | Bluesky durable JWK | `JoseKey.fromImportable` from env/DB only; no ephemeral mint — missing key throws |
+| Shopify featured | Admin API + plugin: https + PNG/JPEG data URI via `stagedUploadsCreate` |
 
-**In flight:** Shopify featured image.
+**In flight:** none from this list.
 
 ---
 
@@ -22,7 +23,7 @@
 | ~~Consolidate CMS/ESP connect dialogs~~ | **Done.** `SchemaConnectDialog` + configs. 1729 → 734 LOC (−57%). Named exports preserved. |
 | ~~Notion adapter image blocks~~ | **Done.** HTTPS markdown images + featured → page cover; non-https skipped with warnings. |
 
-**Still open elsewhere:** Shopify featured; Next studio leftovers (~480 LOC); unused gsap/marked deps.
+**Still open elsewhere:** Next studio leftovers (~480 LOC); unused gsap/marked deps.
 
 ---
 
@@ -34,12 +35,12 @@ Batch closure for admin-backed social OAuth, destination SSOT, WP data-URI featu
 |---|---|
 | CF public-worker social OAuth | LinkedIn / X / Meta / Bluesky handlers call `resolve*OAuthCredentials` (admin DB + env fallback) — same path as Next (`auth-linkedin` / `auth-twitter` / `auth-meta` / `auth-bluesky-oauth`) |
 | Publish destination IDs | UI SSOT: `lib/app-shell/src/integrations/destination-ids.ts`. Next composes full defs from app-shell (`CMS_PLATFORMS` / ESP / `getSocialDestinations`) in `publishing-destinations.ts` + local publish/format overlays |
-| WP featured upload | PNG/JPEG `data:` featured URIs → decode → WebP → plugin `/media` or WP REST via `prepareWordPressImages` (Ghost/Shopify data-URI still skipped) |
+| WP featured upload | PNG/JPEG `data:` featured URIs → decode → WebP → plugin `/media` or WP REST via `prepareWordPressImages` |
 | Shell create SSE | Vite Studio parse of generate SSE → markdown headings → `CreateContentDialog` `generatingHeadings`; timed Analyzing/Drafting/Finishing until first heading |
 | Social feature gates | Connect availability / cms-summary / platform settings use DB-aware `has*Credentials()` (not env-only) |
 | Admin Meta / X / Bluesky | Platform admin → Integrations → Social; encrypted columns + `resolve*` helpers; migrations PG `0065`–`0067`, D1 `0002`–`0004` |
 
-**Deferred unchanged:** hosted blog, Surfer NLP, TikTok, Shopify theme app block (and Ghost/Shopify data-URI featured).
+**Deferred unchanged:** hosted blog, Surfer NLP, TikTok, Shopify theme app block.
 
 ---
 
@@ -93,7 +94,8 @@ Report: [`docs/audits/2026-07-16-ponytail-frontend.md`](docs/audits/2026-07-16-p
 | Platform | Status |
 |---|---|
 | **Ghost** | Connector uploads https / PNG/JPEG data URI via Admin `images/upload`, sets `feature_image`. Adapter `featuredImage: true`. |
-| **Shopify** | Admin API path: `stagedUploadsCreate` (resource FILE) → multipart POST → `ArticleCreateInput.image.url` (+ alt). https falls back to direct URL if staged fails. Adapter `featuredImage: true`. Plugin content route still has no image field. |
+| **Shopify (Admin API)** | `lib/connectors` `resolveShopifyArticleImage`: staged upload; https falls back to direct URL if staged fails. |
+| **Shopify (plugin)** | `cms-plugins/shopify` `resolveArticleImageFromFeaturedUrl`: https pass-through; PNG/JPEG data URI → `stagedUploadsCreate` → resource URL. SVG skipped; staged failure skips image (article still publishes). Adapter already forwards `featuredImageUrl`. |
 
 SVG data URIs ignored on both.
 
@@ -179,7 +181,7 @@ LinkedIn, X, Meta, and Bluesky app credentials can be stored in platform admin (
 
 There is no R2/S3/public asset host for content media. Existing R2 (`goals-ac-next-cache`) is Next ISR/cache only. Stock regen keeps Unsplash/Pexels HTTPS CDN URLs.
 
-Sharp PNG from visual summary is `data:image/png;base64,…` on `featuredImageUrl`. **WordPress / Ghost / Shopify (Admin API)** publish paths upload that data URI (or https). Shopify plugin path still skips image.
+Sharp PNG from visual summary is `data:image/png;base64,…` on `featuredImageUrl`. **WordPress / Ghost / Shopify (Admin API + plugin)** publish paths upload that data URI (or https).
 
 ---
 
