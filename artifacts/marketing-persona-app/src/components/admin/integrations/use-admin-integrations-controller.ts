@@ -38,6 +38,8 @@ export function useAdminIntegrationsController() {
   const [savingTwitter, setSavingTwitter] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
   const [savingBluesky, setSavingBluesky] = useState(false);
+  const [savingBedrock, setSavingBedrock] = useState(false);
+  const [testingBedrock, setTestingBedrock] = useState(false);
 
   const [stripeSecretKey, setStripeSecretKey] = useState("");
   const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
@@ -60,6 +62,16 @@ export function useAdminIntegrationsController() {
   const [metaAppSecret, setMetaAppSecret] = useState("");
   const [blueskyClientName, setBlueskyClientName] = useState("");
   const [blueskyPrivateKeyJwk, setBlueskyPrivateKeyJwk] = useState("");
+  const [bedrockAccessKeyId, setBedrockAccessKeyId] = useState("");
+  const [bedrockSecretAccessKey, setBedrockSecretAccessKey] = useState("");
+  const [bedrockSessionToken, setBedrockSessionToken] = useState("");
+  const [bedrockRegion, setBedrockRegion] = useState("");
+  const [bedrockModel, setBedrockModel] = useState("");
+  const [bedrockOrgSearch, setBedrockOrgSearch] = useState("");
+  const [bedrockOrgOptions, setBedrockOrgOptions] = useState<Array<{ id: number; name: string }>>(
+    [],
+  );
+  const [bedrockGrantedOrgIds, setBedrockGrantedOrgIds] = useState<Set<number>>(new Set());
 
   const groupedIntegrations = useMemo(() => getPlatformIntegrationsByCategory(), []);
 
@@ -86,6 +98,10 @@ export function useAdminIntegrationsController() {
       setMetaAppSecret("");
     } else if (dialog === "bluesky") {
       setBlueskyPrivateKeyJwk("");
+    } else if (dialog === "bedrock") {
+      setBedrockAccessKeyId("");
+      setBedrockSecretAccessKey("");
+      setBedrockSessionToken("");
     }
   }, []);
 
@@ -98,9 +114,10 @@ export function useAdminIntegrationsController() {
     setLoading(true);
     setLoadError(false);
     try {
-      const [settingsRes, statusRes] = await Promise.all([
+      const [settingsRes, statusRes, orgsRes] = await Promise.all([
         fetch("/api/admin/platform-settings"),
         fetch("/api/admin/platform-integrations"),
+        fetch("/api/admin/organizations?minimal=true"),
       ]);
       if (!settingsRes.ok || !statusRes.ok) throw new Error("Failed to load");
       const settingsData = (await settingsRes.json()) as PlatformSettingsResponse & {
@@ -119,6 +136,17 @@ export function useAdminIntegrationsController() {
       setTwitterClientId(statusData.twitter.clientId.value ?? "");
       setMetaAppId(statusData.meta.appId.value ?? "");
       setBlueskyClientName(statusData.bluesky.clientName.value ?? "");
+      setBedrockRegion(statusData.bedrock.region.value ?? "");
+      setBedrockModel(statusData.bedrock.model.value ?? "");
+      setBedrockGrantedOrgIds(
+        new Set(statusData.bedrock.grantedOrganizations.map((org) => org.id)),
+      );
+      if (orgsRes.ok) {
+        const orgsData = (await orgsRes.json()) as {
+          organizations: Array<{ id: number; name: string }>;
+        };
+        setBedrockOrgOptions(orgsData.organizations ?? []);
+      }
     } catch {
       setLoadError(true);
       toast.error("Could not load platform integrations");
@@ -469,6 +497,97 @@ export function useAdminIntegrationsController() {
     }
   }
 
+  function toggleBedrockGrantedOrg(organizationId: number) {
+    setBedrockGrantedOrgIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(organizationId)) next.delete(organizationId);
+      else next.add(organizationId);
+      return next;
+    });
+  }
+
+  async function saveBedrock() {
+    const payload: Record<string, unknown> = {
+      integration: "bedrock",
+      organizationIds: [...bedrockGrantedOrgIds],
+    };
+    if (bedrockAccessKeyId.trim()) payload.accessKeyId = bedrockAccessKeyId.trim();
+    if (bedrockSecretAccessKey.trim()) payload.secretAccessKey = bedrockSecretAccessKey.trim();
+    if (bedrockSessionToken.trim()) payload.sessionToken = bedrockSessionToken.trim();
+    if (bedrockRegion.trim()) payload.region = bedrockRegion.trim();
+    if (bedrockModel.trim()) payload.model = bedrockModel.trim();
+
+    const alreadyConfigured = Boolean(status?.bedrock.configured);
+    const addingCreds = Boolean(payload.accessKeyId || payload.secretAccessKey);
+    if (!alreadyConfigured && addingCreds) {
+      if (!payload.accessKeyId || !payload.secretAccessKey || !payload.region || !payload.model) {
+        toast.error("Access key, secret, region, and model are required for the first save");
+        return;
+      }
+    }
+    if (!alreadyConfigured && !addingCreds && bedrockGrantedOrgIds.size > 0) {
+      toast.error("Save Bedrock credentials before granting organizations");
+      return;
+    }
+
+    setSavingBedrock(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed");
+      }
+      const data = (await res.json()) as { status: PlatformIntegrationStatus };
+      setStatus(data.status);
+      setBedrockAccessKeyId("");
+      setBedrockSecretAccessKey("");
+      setBedrockSessionToken("");
+      setBedrockRegion(data.status.bedrock.region.value ?? "");
+      setBedrockModel(data.status.bedrock.model.value ?? "");
+      setBedrockGrantedOrgIds(
+        new Set(data.status.bedrock.grantedOrganizations.map((org) => org.id)),
+      );
+      toast.success("Bedrock settings saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save Bedrock settings");
+    } finally {
+      setSavingBedrock(false);
+    }
+  }
+
+  async function testBedrock() {
+    setTestingBedrock(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations/bedrock-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accessKeyId: bedrockAccessKeyId.trim() || undefined,
+          secretAccessKey: bedrockSecretAccessKey.trim() || undefined,
+          sessionToken: bedrockSessionToken.trim() || undefined,
+          region: bedrockRegion.trim() || undefined,
+          model: bedrockModel.trim() || undefined,
+        }),
+      });
+      const body = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        error?: string;
+      } | null;
+      if (!res.ok || !body?.ok) {
+        throw new Error(body?.error ?? "Bedrock test failed");
+      }
+      toast.success("Bedrock credentials work");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Bedrock test failed");
+    } finally {
+      setTestingBedrock(false);
+    }
+  }
+
   async function disconnectStripeOAuth() {
     setDisconnectingStripe(true);
     try {
@@ -495,7 +614,8 @@ export function useAdminIntegrationsController() {
       | "linkedin"
       | "twitter"
       | "meta"
-      | "bluesky",
+      | "bluesky"
+      | "bedrock",
   ) {
     try {
       const res = await fetch("/api/admin/platform-integrations", {
@@ -526,6 +646,12 @@ export function useAdminIntegrationsController() {
       } else if (integration === "bluesky") {
         setBlueskyClientName("");
         setBlueskyPrivateKeyJwk("");
+      } else if (integration === "bedrock") {
+        setBedrockAccessKeyId("");
+        setBedrockSecretAccessKey("");
+        setBedrockSessionToken("");
+        setBedrockRegion("");
+        setBedrockModel("");
       }
       toast.success("Stored credentials removed");
     } catch (err) {
@@ -535,7 +661,7 @@ export function useAdminIntegrationsController() {
 
   const counts = useMemo<AdminIntegrationsCounts>(() => {
     if (!settings || !env || !status) {
-      return { total: 0, billing: 0, email: 0, media: 0, social: 0 };
+      return { total: 0, billing: 0, email: 0, media: 0, social: 0, ai: 0 };
     }
 
     const countActive = (definitions: PlatformIntegrationDefinition[]) =>
@@ -555,6 +681,7 @@ export function useAdminIntegrationsController() {
       email: countsByCategory.email ?? 0,
       media: countsByCategory.media ?? 0,
       social: countsByCategory.social ?? 0,
+      ai: countsByCategory.ai ?? 0,
       total: groupedIntegrations.reduce(
         (sum, group) => sum + countActive(group.integrations),
         0,
@@ -585,6 +712,9 @@ export function useAdminIntegrationsController() {
     saveTwitter,
     saveMeta,
     saveBluesky,
+    saveBedrock,
+    testBedrock,
+    toggleBedrockGrantedOrg,
     disconnectStripeOAuth,
     clearStored,
     savingToggle,
@@ -596,6 +726,8 @@ export function useAdminIntegrationsController() {
     savingTwitter,
     savingMeta,
     savingBluesky,
+    savingBedrock,
+    testingBedrock,
     stripeSecretKey,
     setStripeSecretKey,
     stripeWebhookSecret,
@@ -631,6 +763,20 @@ export function useAdminIntegrationsController() {
     setBlueskyClientName,
     blueskyPrivateKeyJwk,
     setBlueskyPrivateKeyJwk,
+    bedrockAccessKeyId,
+    setBedrockAccessKeyId,
+    bedrockSecretAccessKey,
+    setBedrockSecretAccessKey,
+    bedrockSessionToken,
+    setBedrockSessionToken,
+    bedrockRegion,
+    setBedrockRegion,
+    bedrockModel,
+    setBedrockModel,
+    bedrockOrgSearch,
+    setBedrockOrgSearch,
+    bedrockOrgOptions,
+    bedrockGrantedOrgIds,
   };
 }
 

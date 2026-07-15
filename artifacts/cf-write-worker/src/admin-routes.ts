@@ -1,5 +1,12 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { isPlatformAdmin, getPlatformSettings } from "@workspace/platform-admin";
+import {
+  isPlatformAdmin,
+  getPlatformSettings,
+  clearStoredPlatformBedrockCredentials,
+  isBedrockManagedByEnv,
+  savePlatformBedrockCredentials,
+  setPlatformBedrockOrgGrants,
+} from "@workspace/platform-admin";
 import {
   upsertPlanQuotaLimits,
   loadPlanQuotaLimits,
@@ -459,10 +466,19 @@ const patchIntegrationSchema = z.discriminatedUnion("integration", [
     integration: z.literal("pexels"),
     apiKey: z.string().min(8).optional(),
   }),
+  z.object({
+    integration: z.literal("bedrock"),
+    accessKeyId: z.string().min(16).optional(),
+    secretAccessKey: z.string().min(16).optional(),
+    sessionToken: z.string().trim().optional().nullable(),
+    region: z.string().trim().min(1).optional().nullable(),
+    model: z.string().trim().min(1).optional().nullable(),
+    organizationIds: z.array(z.number().int().positive()).optional(),
+  }),
 ]);
 
 const deleteIntegrationSchema = z.object({
-  integration: z.enum(["stripe", "stripe_connect", "resend", "unsplash", "pexels"]),
+  integration: z.enum(["stripe", "stripe_connect", "resend", "unsplash", "pexels", "bedrock"]),
 });
 
 const impersonateBodySchema = z.union([
@@ -767,18 +783,51 @@ export async function handleAdminWrite(
           updatedBy: userId,
           encryptedUnsplashAccessKey: data.accessKey ? encryptSecret(data.accessKey.trim()) : null,
         });
-      } else {
-        // pexels
+      } else if (data.integration === "pexels") {
         if (data.apiKey === undefined) return badRequest(request, "No Pexels fields to update");
 
         await upsertPlatformSettingsPatch({
           updatedBy: userId,
           encryptedPexelsApiKey: data.apiKey ? encryptSecret(data.apiKey.trim()) : null,
         });
+      } else {
+        const hasCredFields =
+          data.accessKeyId !== undefined ||
+          data.secretAccessKey !== undefined ||
+          data.sessionToken !== undefined ||
+          data.region !== undefined ||
+          data.model !== undefined;
+        const hasGrants = data.organizationIds !== undefined;
+        if (!hasCredFields && !hasGrants) {
+          return badRequest(request, "No Bedrock fields to update");
+        }
+        if (hasCredFields) {
+          if (isBedrockManagedByEnv()) {
+            return withCors(
+              request,
+              Response.json(
+                { error: "Bedrock credentials are managed via server environment variables" },
+                { status: 403 },
+              ),
+            );
+          }
+          await savePlatformBedrockCredentials({
+            accessKeyId: data.accessKeyId,
+            secretAccessKey: data.secretAccessKey,
+            sessionToken: data.sessionToken,
+            region: data.region,
+            model: data.model,
+            updatedBy: userId,
+          });
+        }
+        if (hasGrants) {
+          await setPlatformBedrockOrgGrants(data.organizationIds!, userId);
+        }
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Save failed";
-      return withCors(request, Response.json({ error: message }, { status: 500 }));
+      const status = message.includes("environment variables") ? 403 : 500;
+      return withCors(request, Response.json({ error: message }, { status }));
     }
 
     return withCors(request, Response.json({ ok: true }));
@@ -829,10 +878,14 @@ export async function handleAdminWrite(
         case "pexels":
           await upsertPlatformSettingsPatch({ updatedBy: userId, encryptedPexelsApiKey: null });
           break;
+        case "bedrock":
+          await clearStoredPlatformBedrockCredentials(userId);
+          break;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : "Clear failed";
-      return withCors(request, Response.json({ error: message }, { status: 500 }));
+      const status = message.includes("environment variables") ? 403 : 500;
+      return withCors(request, Response.json({ error: message }, { status }));
     }
 
     return withCors(request, Response.json({ ok: true }));

@@ -13,16 +13,15 @@
 
 ---
 
-## Parallel unfinished-work agents (2026-07-16, in flight)
+## Parallel unfinished-work agents (2026-07-16) — batch closed
 
 | Workstream | Notes |
 |---|---|
-| Unify publish-destination registries | Prefer extending existing UI SSOT `lib/app-shell/src/integrations/destination-ids.ts` + Next composition — avoid a third parallel rewrite |
-| ~~Consolidate CMS/ESP connect dialogs~~ | **Done.** One `SchemaConnectDialog` + per-platform configs. 1333+396 → 592+142 LOC (57% reduction). All named exports preserved as thin wrappers. |
-| Shopify featured | data-URI / HTTPS featured (same pattern as WP/Ghost) |
-| Bluesky durable JWK | Persist JWK for OAuth continuity |
+| ~~Unify publish-destination registries~~ | **Done.** Canonical: `lib/app-shell/src/content-piece/publish-destinations.ts` (27 IDs). Next thin re-export from `@workspace/app-shell/publish-destinations`. Integrations panel types stay separate shapes. Legacy `goals-ac` copy untouched. |
+| ~~Consolidate CMS/ESP connect dialogs~~ | **Done.** `SchemaConnectDialog` + configs. 1729 → 734 LOC (−57%). Named exports preserved. |
+| ~~Notion adapter image blocks~~ | **Done.** HTTPS markdown images + featured → page cover; non-https skipped with warnings. |
 
-Avoid conflicting edits on those files until agents land.
+**Still open elsewhere:** Shopify featured; Bluesky durable JWK; Next studio leftovers (~480 LOC); unused gsap/marked deps.
 
 ---
 

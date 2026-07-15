@@ -13,6 +13,7 @@ import { AdminLinkedInDialog } from "./admin-linkedin-dialog";
 import { AdminTwitterDialog } from "./admin-twitter-dialog";
 import { AdminMetaDialog } from "./admin-meta-dialog";
 import { AdminBlueskyDialog } from "./admin-bluesky-dialog";
+import { AdminBedrockDialog } from "./admin-bedrock-dialog";
 import { AdminEnvIntegrationDialog } from "./admin-env-integration-dialog";
 
 export function AdminIntegrationsDialogs({
@@ -33,6 +34,7 @@ export function AdminIntegrationsDialogs({
         {activeDialog === "twitter" ? <AdminTwitterDialog controller={controller} /> : null}
         {activeDialog === "meta" ? <AdminMetaDialog controller={controller} /> : null}
         {activeDialog === "bluesky" ? <AdminBlueskyDialog controller={controller} /> : null}
+        {activeDialog === "bedrock" ? <AdminBedrockDialog controller={controller} /> : null}
         <AdminEnvIntegrationDialog controller={controller} />
       </DialogContent>
     </Dialog>

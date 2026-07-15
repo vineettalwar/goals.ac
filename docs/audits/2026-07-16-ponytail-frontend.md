@@ -122,9 +122,10 @@ Sources: `HANDOFF.md`, competitive plan Waves 0–3.2, create-wizard diff, TYPO3
 2. Delete §D leftovers (~480 LOC) — **import grep verified** (see Appendix A).
 3. Remove unused Next deps (`gsap` / `@gsap/react` / `marked`) — **zero `src/` imports verified**.
 4. ~~Shell create catch-up~~ — **done 2026-07-16** (destination, competitor picker, stream headings, compact repurpose).
-5. Unify publish-destination registries (there are **three** copies — see Appendix A #6).
-6. CMS/ESP dialog consolidation — largest shrink; needs schema-driven PRD and visual parity.
-7. Demo trust surfaces (if partner GTM): video demo placeholder, success-stories coming-soon, Notion image blocks, public media host for non-WP featured.
+5. ~~Unify publish-destination registries~~ — **done** (canonical app-shell 27-ID registry; Next re-export). Legacy Vite copy still optional cleanup.
+6. ~~CMS/ESP dialog consolidation~~ — **done** (−57% LOC via `SchemaConnectDialog`).
+7. Demo trust surfaces (if partner GTM): video demo placeholder, success-stories coming-soon; Notion images/cover shipped.
+8. Optional deletes: Next studio leftovers (~480 LOC) + unused `gsap`/`@gsap/react`/`marked`.
 
 ---
 
@@ -164,7 +165,7 @@ Agents that inventoried gaps still listed shell competitor / stream / repurpose 
 |---|---|
 | **Intentional deferred** | Hosted blog, Surfer NLP, TikTok/YouTube/inbox, Shopify theme **app block**, detector APIs, self-serve Growth checkout, backlink exchange, detector APIs |
 | **Demo-visible (product)** | Marketing video placeholder; success-stories coming-soon; Notion adapter drops images; no public media bucket for non-WP `data:` featured; Instagram text-post placeholder image; Semrush needs org key; TYPO3 FAL real-site caveats; Bluesky JWK stability; CF public-worker social still env-only |
-| **Architecture debt** | CMS/ESP dialog mega-file; 3× publish-destinations; Next studio leftovers; unused gsap/marked deps |
+| **Architecture debt** | Next studio leftovers; unused gsap/marked deps; legacy `goals-ac` publish-destinations copy |
 | **Safe deletes** | §D leftovers (~480 LOC) + 3 Next deps |
 
 ### Appendix C — Codebase health note
