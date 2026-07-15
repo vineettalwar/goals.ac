@@ -1,88 +1,15 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "../cn";
-
-export type WordPressConnectPayload =
-  | {
-      connectionType: "api";
-      siteUrl: string;
-      username: string;
-      appPassword: string;
-    }
-  | {
-      connectionType: "plugin";
-      siteUrl: string;
-      siteKey: string;
-    };
-
-export type GhostConnectPayload = {
-  apiUrl: string;
-  adminApiKey: string;
-};
-
-export type DrupalConnectPayload =
-  | {
-      connectionType: "plugin";
-      siteUrl: string;
-      siteKey: string;
-    }
-  | {
-      connectionType: "api";
-      siteUrl: string;
-      authType: "basic" | "bearer";
-      username?: string;
-      password?: string;
-      accessToken?: string;
-      contentType?: string;
-    };
-
-export type JoomlaConnectPayload =
-  | {
-      connectionType: "plugin";
-      siteUrl: string;
-      siteKey: string;
-    }
-  | {
-      connectionType: "api";
-      siteUrl: string;
-      apiToken: string;
-      categoryId?: number;
-    };
-
-export type NotionConnectPayload = {
-  integrationToken: string;
-  databaseId: string;
-};
-
-export type WebflowConnectPayload = {
-  apiToken: string;
-  collectionId: string;
-  bodyFieldSlug: string;
-};
-
-export type ShopifyConnectPayload =
-  | {
-      connectionType: "api";
-      shopDomain: string;
-      accessToken: string;
-      blogId?: string;
-    }
-  | {
-      connectionType: "plugin";
-      siteUrl: string;
-      siteKey: string;
-      blogId?: string;
-    };
-
-export const CMS_NATIVE_CONNECT_PLATFORMS = new Set([
-  "wordpress",
-  "ghost",
-  "drupal",
-  "joomla",
-  "notion",
-  "webflow",
-  "shopify",
-]);
+import type {
+  DrupalConnectPayload,
+  GhostConnectPayload,
+  JoomlaConnectPayload,
+  NotionConnectPayload,
+  ShopifyConnectPayload,
+  WebflowConnectPayload,
+  WordPressConnectPayload,
+} from "./cms-connect-types";
 
 function isValidUrl(value: string): boolean {
   try {
@@ -106,43 +33,50 @@ type SimpleDialogProps = {
 };
 
 function SimpleDialog({ open, title, titleId, onClose, loading, children }: SimpleDialogProps) {
-  if (!open) return null;
+  const dialogRef = useRef<HTMLDialogElement>(null);
 
-  function close() {
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    if (open) {
+      if (!dialog.open) dialog.showModal();
+    } else if (dialog.open) {
+      dialog.close();
+    }
+  }, [open]);
+
+  function handleClose() {
     if (loading) return;
     onClose();
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        className="absolute inset-0 bg-black/20 backdrop-blur-sm"
-        aria-label="Close dialog"
-        onClick={close}
-      />
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="paper-card relative z-10 w-full max-w-md p-6 shadow-lg"
-      >
-        <div className="mb-5 flex items-center justify-between">
-          <h2 id={titleId} className="text-lg font-semibold">
-            {title}
-          </h2>
-          <button
-            type="button"
-            className="text-muted-foreground hover:text-foreground"
-            aria-label="Close dialog"
-            onClick={close}
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
-        </div>
-        {children}
+    <dialog
+      ref={dialogRef}
+      id={titleId}
+      aria-labelledby={titleId}
+      className="paper-card fixed left-1/2 top-1/2 z-50 m-0 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border p-6 shadow-lg backdrop:bg-black/20 backdrop:backdrop-blur-sm"
+      onClose={handleClose}
+      onCancel={(event) => {
+        if (loading) event.preventDefault();
+      }}
+    >
+      <div className="mb-5 flex items-center justify-between">
+        <h2 id={titleId} className="text-lg font-semibold">
+          {title}
+        </h2>
+        <button
+          type="button"
+          className="text-muted-foreground hover:text-foreground"
+          aria-label="Close dialog"
+          onClick={handleClose}
+          disabled={loading}
+        >
+          <X className="h-4 w-4" aria-hidden />
+        </button>
       </div>
-    </div>
+      {children}
+    </dialog>
   );
 }
 
@@ -151,6 +85,19 @@ type ConnectDialogBaseProps = {
   onOpenChange: (open: boolean) => void;
   saving?: boolean;
 };
+
+function ConnectSetupSteps({ steps }: { steps: string[] }) {
+  return (
+    <ol className="space-y-2 rounded-lg border border-border bg-muted/30 px-3 py-3 text-xs text-muted-foreground">
+      {steps.map((step, index) => (
+        <li key={step}>
+          <span className="font-medium text-foreground">{index + 1}. </span>
+          {step}
+        </li>
+      ))}
+    </ol>
+  );
+}
 
 export function WordPressConnectDialog({
   open,
@@ -241,6 +188,13 @@ export function WordPressConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <ConnectSetupSteps
+          steps={[
+            "Choose Application Password (REST) or goals.ac plugin (HMAC).",
+            "Paste site URL plus username/app password, or plugin site key from WP Admin → goals.ac.",
+            "Save, then Run health check on Integrations to confirm publish is ready.",
+          ]}
+        />
         <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
           {(["api", "plugin"] as const).map((method) => (
             <button
@@ -406,6 +360,13 @@ export function GhostConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <ConnectSetupSteps
+          steps={[
+            "In Ghost Admin → Settings → Integrations, create a Custom Integration.",
+            "Copy the Admin API URL and Admin API Key into the fields below.",
+            "Save, then Run health check to verify posting works.",
+          ]}
+        />
         <label className="block text-sm">
           <span className="mb-1 block font-medium">Admin API URL</span>
           <input
@@ -568,6 +529,13 @@ export function DrupalConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <ConnectSetupSteps
+          steps={[
+            "Prefer the goals.ac Drupal module (HMAC) for layout-aware publish, or JSON:API with a content type.",
+            "Paste site URL plus site key (plugin) or username/password (JSON:API).",
+            "Save, then Run health check before publishing.",
+          ]}
+        />
         <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
           {(["plugin", "api"] as const).map((method) => (
             <button
@@ -794,6 +762,13 @@ export function JoomlaConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <ConnectSetupSteps
+          steps={[
+            "Install the goals.ac Joomla plugin for HMAC publishing, or enable Web Services API tokens.",
+            "Paste site URL plus site key (plugin) or API token (Web Services).",
+            "Save and Run health check; set category if using the REST API.",
+          ]}
+        />
         <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
           {(["plugin", "api"] as const).map((method) => (
             <button
@@ -942,6 +917,13 @@ export function NotionConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <ConnectSetupSteps
+          steps={[
+            "Create a Notion internal integration and copy the secret token.",
+            "Share your CMS database with that integration, then paste the database ID.",
+            "Save and Run health check — Notion must return the database.",
+          ]}
+        />
         <label className="block text-sm">
           <span className="mb-1 block font-medium">Integration token</span>
           <input
@@ -1046,6 +1028,13 @@ export function WebflowConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <ConnectSetupSteps
+          steps={[
+            "In Site Settings → Integrations → API access, generate a site token.",
+            "Copy the CMS Collection ID for your blog (and optional body field slug).",
+            "Save, then Run health check before first publish.",
+          ]}
+        />
         <label className="block text-sm">
           <span className="mb-1 block font-medium">API token</span>
           <input
@@ -1217,6 +1206,13 @@ export function ShopifyConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <ConnectSetupSteps
+          steps={[
+            "Prefer Admin API: create a custom app with write_content and paste the shop domain + token.",
+            "Or install the goals.ac plugin and paste the site URL + site key.",
+            "Save and Run health check; set primary blog destination after connect.",
+          ]}
+        />
         <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
           {(["api", "plugin"] as const).map((method) => (
             <button
@@ -1349,6 +1345,13 @@ export function CmsFullAppConnectDialog({
       onClose={close}
     >
       <div className="space-y-4 text-sm">
+        <ConnectSetupSteps
+          steps={[
+            `Open Integrations and choose ${platformLabel} (or the matching CMS tile).`,
+            "Paste API credentials from that platform’s developer or site settings.",
+            "Save and Run health check before the first publish.",
+          ]}
+        />
         <p className="text-muted-foreground">
           Full connection forms for {platformLabel} are available in Integrations.
         </p>

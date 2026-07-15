@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { wordpressConnectionsTable } from "@workspace/db/schema";
+import { websiteProjectsTable, wordpressConnectionsTable } from "@workspace/db/schema";
 import { decryptSecret } from "@workspace/security/encryption";
 import { testWordPressConnection } from "@workspace/connectors/wordpress";
 import { QUEUES, enqueue } from "@workspace/jobs";
@@ -11,11 +11,9 @@ import { logger } from "../logger";
  * Registers the handler for the `connection-health-check` queue.
  *
  * Two job shapes share this queue (see `@workspace/jobs/queues`):
- *  - Sweep job (`{}`, cron-triggered): enumerate every `wordpress_connections`
- *    row and enqueue one per-row job for each.
- *  - Per-row job (`{ kind, connectionId }`): load that one row, decrypt its
- *    secret, run the matching connector's test function, and persist the
- *    result on the row.
+ *  - Sweep job (`{}`, cron-triggered): enumerate WordPress connections and
+ *    projects with CMS credentials; enqueue one per-target job each.
+ *  - Per-target job (`{ kind, connectionId }`): live-test and persist results.
  */
 export async function processConnectionHealthCheck(
   data: ConnectionHealthCheckJobData,
@@ -44,27 +42,50 @@ async function sweepAllConnections(): Promise<void> {
     .select({ id: wordpressConnectionsTable.id })
     .from(wordpressConnectionsTable);
 
+  const projectRows = await db
+    .select({ id: websiteProjectsTable.id, cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+    .from(websiteProjectsTable);
+
+  const projectsWithCms = projectRows.filter((row) => {
+    const integrations = row.cmsIntegrations as Record<string, { connected?: boolean }> | null;
+    if (!integrations || typeof integrations !== "object") return false;
+    return Object.values(integrations).some((entry) => entry && entry.connected === true);
+  });
+
   logger.info(
-    { wordpress: wordpressRows.length },
-    "Connection health-check sweep: enumerated connections"
+    { wordpress: wordpressRows.length, projects: projectsWithCms.length },
+    "Connection health-check sweep: enumerated connections",
   );
 
   for (const row of wordpressRows) {
     await enqueue(QUEUES.connectionHealthCheck, { kind: "wordpress", connectionId: row.id });
   }
+  for (const row of projectsWithCms) {
+    await enqueue(QUEUES.connectionHealthCheck, {
+      kind: "project_cms",
+      connectionId: row.id,
+    });
+  }
 }
 
 async function checkSingleConnection(payload: ConnectionHealthCheckPayload): Promise<void> {
   try {
-    if (payload.kind !== "wordpress") {
-      logger.warn({ kind: payload.kind }, "Unsupported connection kind for health check; skipping");
+    if (payload.kind === "wordpress") {
+      await checkWordPressConnection(payload.connectionId);
       return;
     }
-    await checkWordPressConnection(payload.connectionId);
+    if (payload.kind === "project_cms") {
+      const { runProjectIntegrationHealth } = await import(
+        "@workspace/content-engine/support/publishing/integration-health-service"
+      );
+      await runProjectIntegrationHealth(payload.connectionId);
+      return;
+    }
+    logger.warn({ kind: (payload as { kind: string }).kind }, "Unsupported connection kind for health check; skipping");
   } catch (err) {
     logger.error(
       { err, kind: payload.kind, connectionId: payload.connectionId },
-      "Connection health check failed"
+      "Connection health check failed",
     );
   }
 }

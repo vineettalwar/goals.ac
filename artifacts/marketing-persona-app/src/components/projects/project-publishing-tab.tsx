@@ -101,9 +101,29 @@ export function ProjectPublishingTab({
     setPendingAction("testing_health");
     setCmsError(null);
     try {
-      const res = await fetch(`/api/website-projects/${projectId}/cms-integrations/test`, { method: "POST" });
-      if (!res.ok) throw new Error("Health check failed");
-      setHealthStatus(await res.json());
+      const [legacyRes, cmsHealthRes] = await Promise.all([
+        fetch(`/api/website-projects/${projectId}/cms-integrations/test`, { method: "POST" }),
+        fetch(`/api/website-projects/${projectId}/integrations/health`, { method: "POST" }),
+      ]);
+      if (!legacyRes.ok && !cmsHealthRes.ok) throw new Error("Health check failed");
+
+      const merged: Record<string, { ok: boolean; error?: string }> = {};
+      if (legacyRes.ok) {
+        Object.assign(
+          merged,
+          (await legacyRes.json()) as Record<string, { ok: boolean; error?: string }>,
+        );
+      }
+      if (cmsHealthRes.ok) {
+        const data = (await cmsHealthRes.json()) as {
+          platforms?: Array<{ platform: string; connected: boolean; ok: boolean | null; error?: string }>;
+        };
+        for (const row of data.platforms ?? []) {
+          if (!row.connected || row.ok === null) continue;
+          merged[row.platform] = { ok: row.ok, error: row.error };
+        }
+      }
+      setHealthStatus(merged);
     } catch {
       setCmsError("Failed to test connections");
     } finally {

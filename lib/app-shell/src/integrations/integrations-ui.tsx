@@ -1,13 +1,10 @@
 import type { ReactNode } from "react";
 import { cn } from "../cn";
-import { projectDetailPath, type ProjectLinkProps } from "../projects";
+import { projectDetailPath, type ProjectLinkProps } from "../projects/projects-ui";
 import {
-  CMS_PLATFORMS,
   type CmsIntegrationRow,
   type ProjectIntegrationsTab,
 } from "./types";
-import { CmsPlatformIcon } from "./integration-icons";
-import { IntegrationTile } from "./integration-tiles";
 import {
   IntegrationsSearchPanel,
   searchConnectedCount,
@@ -19,8 +16,10 @@ import {
   countSocialConnections,
 } from "./integrations-social-ui";
 import { IntegrationsEspPanel, countEspConnections } from "./integrations-esp-ui";
+import { IntegrationsCmsPanel } from "./integrations-cms-panel";
 import type { EspPlatformId } from "./publishing-destinations";
 import { orgIntegrationsPath, projectIntegrationsPath } from "../project-detail/types";
+import { CMS_PLATFORMS } from "./types";
 
 const TABS: Array<{ id: ProjectIntegrationsTab; label: string }> = [
   { id: "cms", label: "CMS" },
@@ -52,7 +51,11 @@ function ProjectLink({
 }
 
 function cmsConnectedCount(integrations: Record<string, CmsIntegrationRow>): number {
-  return CMS_PLATFORMS.filter(({ key }) => Boolean(integrations[key]?.connected)).length;
+  let count = 0;
+  for (const { key } of CMS_PLATFORMS) {
+    if (integrations[key]?.connected) count += 1;
+  }
+  return count;
 }
 
 export function IntegrationsView({
@@ -206,7 +209,6 @@ export function IntegrationsView({
         })}
       </div>
 
-
       {!projectId ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
           Choose a project in the sidebar to manage CMS, social, email, and search connections.
@@ -216,160 +218,24 @@ export function IntegrationsView({
       {projectId ? (
         <>
           {activeTab === "cms" ? (
-            <div className="space-y-6">
-              {loadError ? <p className="text-sm text-red-700">{loadError}</p> : null}
-              {saveMessage ? (
-                <p
-                  className={cn(
-                    "text-sm",
-                    saveMessage.toLowerCase().includes("fail") ? "text-red-700" : "text-muted-foreground",
-                  )}
-                >
-                  {saveMessage}
-                </p>
-              ) : null}
-
-              {integrationsLoading ? (
-                <p className="text-sm text-muted-foreground">Loading integrations…</p>
-              ) : (
-                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {CMS_PLATFORMS.filter((p) => p.key !== "webhook").map((platform) => {
-                    const { key, label, description } = platform;
-                    const row = integrations[key];
-                    const connected = Boolean(row?.connected);
-                    const summary =
-                      connected && key === "webhook" && typeof row?.url === "string"
-                        ? row.url
-                        : connected
-                          ? "Connected"
-                          : null;
-
-                    return (
-                      <IntegrationTile
-                        key={key}
-                        icon={<CmsPlatformIcon platform={platform} />}
-                        title={label}
-                        description={description}
-                        connected={connected}
-                        summary={summary}
-                        onClick={() => {
-                          if (!connected) {
-                            onConnectPlatform(key);
-                          }
-                        }}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-
-              {!integrationsLoading &&
-              CMS_PLATFORMS.some(({ key }) => integrations[key]?.connected) ? (
-                <div className="space-y-3">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {onRunHealthCheck ? (
-                      <button
-                        type="button"
-                        disabled={saving || healthCheckRunning}
-                        onClick={onRunHealthCheck}
-                        className="inline-flex h-8 items-center rounded-lg border border-border bg-card px-3 text-xs font-medium hover:bg-muted/40 disabled:opacity-50"
-                      >
-                        {healthCheckRunning ? "Checking…" : "Run health check"}
-                      </button>
-                    ) : null}
-                  </div>
-                  {healthStatuses && healthStatuses.length > 0 ? (
-                    <ul className="grid gap-2 sm:grid-cols-2">
-                      {healthStatuses
-                        .filter((row) => row.connected)
-                        .map((row) => (
-                          <li
-                            key={row.platform}
-                            className="rounded-lg border border-border px-3 py-2 text-xs"
-                          >
-                            <span className="font-medium capitalize">{row.platform}</span>
-                            <span
-                              className={
-                                row.ok
-                                  ? "ml-2 text-emerald-700"
-                                  : row.ok === false
-                                    ? "ml-2 text-red-700"
-                                    : "ml-2 text-muted-foreground"
-                              }
-                            >
-                              {row.ok === true ? "Healthy" : row.ok === false ? "Failing" : "Unknown"}
-                            </span>
-                            {row.error ? (
-                              <p className="mt-1 text-muted-foreground">{row.error}</p>
-                            ) : null}
-                          </li>
-                        ))}
-                    </ul>
-                  ) : null}
-                  <div className="flex flex-wrap gap-2">
-                  {CMS_PLATFORMS.filter(({ key }) => integrations[key]?.connected).map(({ key, label }) => (
-                    <div key={key} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs">
-                      <span className="font-medium">{label}</span>
-                      {onTestPlatform ? (
-                        <button
-                          type="button"
-                          disabled={saving}
-                          onClick={() => onTestPlatform(key)}
-                          className="text-primary hover:underline disabled:opacity-50"
-                        >
-                          Test
-                        </button>
-                      ) : null}
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => onDisconnect(key)}
-                        className="text-red-700 hover:underline disabled:opacity-50"
-                      >
-                        Disconnect
-                      </button>
-                    </div>
-                  ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <section className="paper-card max-w-lg space-y-3 p-4">
-                <h2 className="text-sm font-semibold">Connect webhook</h2>
-                <p className="text-xs text-muted-foreground">
-                  Receive publish events at your endpoint when content is pushed from goals.ac.
-                </p>
-                <div className="space-y-3">
-                  <label className="block text-sm">
-                    <span className="mb-1 block text-muted-foreground">Webhook URL</span>
-                    <input
-                      type="url"
-                      value={webhookUrl}
-                      onChange={(event) => onWebhookUrlChange(event.target.value)}
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                      placeholder="https://example.com/hooks/goals-ac"
-                    />
-                  </label>
-                  <label className="block text-sm">
-                    <span className="mb-1 block text-muted-foreground">Signing secret</span>
-                    <input
-                      type="password"
-                      value={webhookSecret}
-                      onChange={(event) => onWebhookSecretChange(event.target.value)}
-                      className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                    />
-                  </label>
-                  <button
-                    type="button"
-                    disabled={saving || !webhookUrl.trim() || !webhookSecret.trim()}
-                    onClick={onSaveWebhook}
-                    className="h-10 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                  >
-                    {saving ? "Saving…" : "Save webhook"}
-                  </button>
-                </div>
-              </section>
-            </div>
+            <IntegrationsCmsPanel
+              integrations={integrations}
+              integrationsLoading={integrationsLoading}
+              loadError={loadError}
+              saveMessage={saveMessage}
+              saving={saving}
+              webhookUrl={webhookUrl}
+              webhookSecret={webhookSecret}
+              onWebhookUrlChange={onWebhookUrlChange}
+              onWebhookSecretChange={onWebhookSecretChange}
+              onSaveWebhook={onSaveWebhook}
+              onDisconnect={onDisconnect}
+              onConnectPlatform={onConnectPlatform}
+              onTestPlatform={onTestPlatform}
+              onRunHealthCheck={onRunHealthCheck}
+              healthCheckRunning={healthCheckRunning}
+              healthStatuses={healthStatuses}
+            />
           ) : null}
 
           {activeTab === "search" ? (
@@ -422,14 +288,14 @@ export function IntegrationsView({
 
       {projectId ? (
         <p className="text-xs text-muted-foreground">
-        Organization AI and research tools:{" "}
-        <ProjectLink
-          renderLink={renderLink}
-          href={orgIntegrationsPath("ai")}
-          className="font-medium text-primary hover:underline"
-        >
-          Org integrations
-        </ProjectLink>
+          Organization AI and research tools:{" "}
+          <ProjectLink
+            renderLink={renderLink}
+            href={orgIntegrationsPath("ai")}
+            className="font-medium text-primary hover:underline"
+          >
+            Org integrations
+          </ProjectLink>
           {" · "}
           <ProjectLink
             renderLink={renderLink}

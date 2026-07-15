@@ -28,7 +28,6 @@ export {
 } from "./publishing-destinations";
 export {
   CmsFullAppConnectDialog,
-  CMS_NATIVE_CONNECT_PLATFORMS,
   DrupalConnectDialog,
   GhostConnectDialog,
   JoomlaConnectDialog,
@@ -36,6 +35,9 @@ export {
   ShopifyConnectDialog,
   WebflowConnectDialog,
   WordPressConnectDialog,
+} from "./cms-connect-dialogs";
+export {
+  CMS_NATIVE_CONNECT_PLATFORMS,
   type DrupalConnectPayload,
   type GhostConnectPayload,
   type JoomlaConnectPayload,
@@ -43,7 +45,7 @@ export {
   type ShopifyConnectPayload,
   type WebflowConnectPayload,
   type WordPressConnectPayload,
-} from "./cms-connect-dialogs";
+} from "./cms-connect-types";
 export {
   BeehiivConnectDialog,
   ConvertKitConnectDialog,

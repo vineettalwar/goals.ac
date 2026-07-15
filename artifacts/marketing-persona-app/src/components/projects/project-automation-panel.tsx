@@ -254,6 +254,16 @@ export function ProjectAutomationPanel({ projectId }: Props) {
       </div>
 
       <div className="paper-card p-6 space-y-4">
+        <h3 className="font-semibold">Internal link hub</h3>
+        <p className="text-sm text-muted-foreground">
+          Review coverage and suggestions from drafts before publish — white-hat internal linking, no exchange schemes.{" "}
+          <Link href="/search/site" className="text-primary hover:underline">
+            Open site &amp; link coverage
+          </Link>
+        </p>
+      </div>
+
+      <div className="paper-card p-6 space-y-4">
         <h3 className="font-semibold">AI Visibility & GEO</h3>
         <p className="text-sm text-muted-foreground">
           Weekly LLM citation tracking and GEO re-audits.{" "}
