@@ -29,7 +29,6 @@ export async function searchRedditThreads(
 
   const res = await fetch(url.toString(), {
     headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
-    next: { revalidate: 300 },
   });
 
   if (!res.ok) return [];

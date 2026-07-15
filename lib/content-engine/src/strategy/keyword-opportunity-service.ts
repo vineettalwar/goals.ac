@@ -26,7 +26,8 @@ import { getDecryptedUserGeminiKey } from "../support/ai/user-api-key";
 import { getUserAiProviderOptions } from "../support/ai/user-ai-provider";
 import { getDecryptedSemrushCredentialsForUser } from "../support/ai/org-ai-settings";
 import { getGscQueryRowsForProject } from "../analytics/gsc-search-analytics-service";
-import { defaultSyncDateRange, priorPeriodRange } from "@workspace/seo-tools/gscSearchAnalytics";
+import { defaultSyncDateRange } from "@workspace/seo-tools/analyticsDateRange";
+import { priorPeriodRange } from "@workspace/seo-tools/gscSearchAnalytics";
 import {
   rollupGscQueries,
   scoreGscQueries,
@@ -210,7 +211,7 @@ export async function discoverSemrushOpportunities(
 ): Promise<GapOpportunity[]> {
   const credentials = await getDecryptedSemrushCredentialsForUser(userId);
   if (!credentials) {
-    throw new Error("Semrush is not configured. Add your organization's API key in Settings.");
+    throw new Error("Semrush is not configured. Add your organization's API key in Integrations → Tools.");
   }
 
   const [project] = await db
@@ -524,7 +525,7 @@ export async function discoverOpportunities(
   if (sourceMode === "all" || sourceMode === "semrush") {
     const semrushCreds = await getDecryptedSemrushCredentialsForUser(userId);
     if (sourceMode === "semrush" && !semrushCreds) {
-      throw new Error("Semrush is not configured. Add your organization's API key in Settings.");
+      throw new Error("Semrush is not configured. Add your organization's API key in Integrations → Tools.");
     }
 
     if (semrushCreds) {
@@ -737,4 +738,129 @@ export async function createRankDropOpportunity(params: {
     suggestedAngle: opp.suggestedAngle,
     status: "open",
   });
+}
+
+export type OpportunityBrief = {
+  workingTitle: string;
+  targetKeyword: string;
+  searchIntent: string;
+  angle: string;
+  format: string;
+  wordCount: number;
+  outline: string[];
+  context: {
+    estimatedVolume?: string | null;
+    difficulty?: string | null;
+    gscPosition?: number | null;
+    gscImpressions?: number | null;
+    rankPosition?: number | null;
+    serpFeatures?: Record<string, unknown> | null;
+    source: string;
+    opportunityScore: number;
+  };
+};
+
+export async function buildBriefFromOpportunity(opportunityId: number): Promise<OpportunityBrief> {
+  const [opp] = await db
+    .select()
+    .from(keywordOpportunitiesTable)
+    .where(eq(keywordOpportunitiesTable.id, opportunityId))
+    .limit(1);
+  if (!opp) throw new Error("Opportunity not found");
+
+  const { startDate, endDate } = defaultSyncDateRange();
+  const gscRows = await getGscQueryRowsForProject(opp.websiteProjectId, startDate, endDate);
+  const gscMatch = gscRows.find((row) => row.query.toLowerCase() === opp.keyword.toLowerCase());
+
+  const { trackedKeywordsTable, keywordRankSnapshotsTable } = await import("@workspace/db/schema");
+  const [tracked] = await db
+    .select({ id: trackedKeywordsTable.id })
+    .from(trackedKeywordsTable)
+    .where(
+      and(
+        eq(trackedKeywordsTable.websiteProjectId, opp.websiteProjectId),
+        eq(trackedKeywordsTable.keyword, opp.keyword),
+        eq(trackedKeywordsTable.isActive, true),
+      ),
+    )
+    .limit(1);
+
+  let rankPosition: number | null = null;
+  let serpFeatures: Record<string, unknown> | null = null;
+  if (tracked) {
+    const [snapshot] = await db
+      .select({
+        position: keywordRankSnapshotsTable.position,
+        serpFeatures: keywordRankSnapshotsTable.serpFeatures,
+      })
+      .from(keywordRankSnapshotsTable)
+      .where(eq(keywordRankSnapshotsTable.trackedKeywordId, tracked.id))
+      .orderBy(desc(keywordRankSnapshotsTable.checkedAt))
+      .limit(1);
+    rankPosition = snapshot?.position ?? null;
+    serpFeatures = (snapshot?.serpFeatures as Record<string, unknown>) ?? null;
+  }
+
+  const peopleAlsoAsk = Array.isArray(serpFeatures?.peopleAlsoAsk)
+    ? (serpFeatures.peopleAlsoAsk as string[]).slice(0, 3)
+    : [];
+
+  const outline = [
+    `Introduction — why "${opp.keyword}" matters now`,
+    `Core concepts and definitions`,
+    opp.suggestedAngle,
+    ...peopleAlsoAsk.map((question) => `FAQ: ${question}`),
+    "Actionable next steps for the reader",
+  ];
+
+  return {
+    workingTitle: opp.suggestedTitle,
+    targetKeyword: opp.keyword,
+    searchIntent: opp.intent ?? "informational",
+    angle: opp.suggestedAngle,
+    format: "blog_post",
+    wordCount: 1500,
+    outline,
+    context: {
+      estimatedVolume: opp.estimatedVolume,
+      difficulty: opp.difficulty,
+      gscPosition: gscMatch?.position ?? null,
+      gscImpressions: gscMatch?.impressions ?? null,
+      rankPosition,
+      serpFeatures,
+      source: opp.source,
+      opportunityScore: opp.opportunityScore,
+    },
+  };
+}
+
+export async function queueOpportunityAndGenerate(
+  opportunityId: number,
+  userId: number,
+): Promise<{
+  contentItemId: number;
+  strategyId: number;
+  primaryPieceId: number;
+}> {
+  const queued = await queueOpportunityToStrategy(opportunityId, userId);
+  const { generateFromContentItem } = await import("./autopilot-orchestrator");
+  const [opp] = await db
+    .select({ websiteProjectId: keywordOpportunitiesTable.websiteProjectId })
+    .from(keywordOpportunitiesTable)
+    .where(eq(keywordOpportunitiesTable.id, opportunityId))
+    .limit(1);
+  if (!opp) throw new Error("Opportunity not found");
+
+  const generated = await generateFromContentItem(
+    queued.contentItemId,
+    opp.websiteProjectId,
+    userId,
+    { generateVariants: false },
+  );
+
+  return {
+    contentItemId: queued.contentItemId,
+    strategyId: queued.strategyId,
+    primaryPieceId: generated.primaryPieceId,
+  };
 }
