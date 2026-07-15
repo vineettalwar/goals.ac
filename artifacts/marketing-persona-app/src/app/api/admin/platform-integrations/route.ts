@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
 import {
+  clearStoredBlueskyCredentials,
   clearStoredLinkedInCredentials,
   clearStoredMetaCredentials,
   clearStoredPexelsCredentials,
@@ -11,6 +12,7 @@ import {
   clearStoredUnsplashCredentials,
   disconnectStripeConnect,
   getPlatformIntegrationStatus,
+  saveBlueskyCredentials,
   saveLinkedInCredentials,
   saveMetaCredentials,
   savePexelsCredentials,
@@ -62,6 +64,12 @@ const metaBodySchema = z.object({
   appSecret: z.string().min(8).optional(),
 });
 
+const blueskyBodySchema = z.object({
+  integration: z.literal("bluesky"),
+  clientName: z.string().trim().min(1).optional().nullable(),
+  privateKeyJwk: z.string().min(8).optional(),
+});
+
 const patchSchema = z.discriminatedUnion("integration", [
   stripeBodySchema,
   resendBodySchema,
@@ -70,6 +78,7 @@ const patchSchema = z.discriminatedUnion("integration", [
   linkedinBodySchema,
   twitterBodySchema,
   metaBodySchema,
+  blueskyBodySchema,
 ]);
 
 const deleteSchema = z.object({
@@ -82,6 +91,7 @@ const deleteSchema = z.object({
     "linkedin",
     "twitter",
     "meta",
+    "bluesky",
   ]),
 });
 
@@ -171,7 +181,7 @@ export async function PATCH(req: Request) {
         clientSecret: data.clientSecret,
         updatedBy: admin.userId!,
       });
-    } else {
+    } else if (data.integration === "meta") {
       if (data.appId === undefined && data.appSecret === undefined) {
         return NextResponse.json({ error: "No Meta fields to update" }, { status: 400 });
       }
@@ -179,6 +189,16 @@ export async function PATCH(req: Request) {
       await saveMetaCredentials({
         appId: data.appId,
         appSecret: data.appSecret,
+        updatedBy: admin.userId!,
+      });
+    } else {
+      if (data.clientName === undefined && data.privateKeyJwk === undefined) {
+        return NextResponse.json({ error: "No Bluesky fields to update" }, { status: 400 });
+      }
+
+      await saveBlueskyCredentials({
+        clientName: data.clientName,
+        privateKeyJwk: data.privateKeyJwk,
         updatedBy: admin.userId!,
       });
     }
@@ -227,6 +247,9 @@ export async function DELETE(req: Request) {
         break;
       case "meta":
         await clearStoredMetaCredentials(admin.userId!);
+        break;
+      case "bluesky":
+        await clearStoredBlueskyCredentials(admin.userId!);
         break;
     }
   } catch (err) {

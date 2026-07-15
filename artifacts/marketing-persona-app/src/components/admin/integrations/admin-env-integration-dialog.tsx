@@ -20,7 +20,8 @@ export function AdminEnvIntegrationDialog({ controller }: { controller: AdminInt
     activeDialog === "pexels" ||
     activeDialog === "linkedin" ||
     activeDialog === "twitter" ||
-    activeDialog === "meta"
+    activeDialog === "meta" ||
+    activeDialog === "bluesky"
   ) {
     return null;
   }

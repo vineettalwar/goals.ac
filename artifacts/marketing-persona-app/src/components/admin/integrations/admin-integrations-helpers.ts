@@ -73,6 +73,9 @@ export function isIntegrationConfigured(
   if (definition.id === "meta") {
     return status.meta.appId.configured && status.meta.appSecret.configured;
   }
+  if (definition.id === "bluesky") {
+    return status.bluesky.privateKeyJwk.configured;
+  }
   return false;
 }
 
@@ -123,6 +126,7 @@ export function getIntegrationLastFour(
   if (definition.id === "linkedin") return status.linkedin.clientSecret.lastFour;
   if (definition.id === "twitter") return status.twitter.clientSecret.lastFour;
   if (definition.id === "meta") return status.meta.appSecret.lastFour;
+  if (definition.id === "bluesky") return status.bluesky.privateKeyJwk.lastFour;
   return null;
 }
 
@@ -137,5 +141,6 @@ export function isIntegrationManagedByEnv(
   if (definition.id === "linkedin") return status.linkedin.managedByEnv;
   if (definition.id === "twitter") return status.twitter.managedByEnv;
   if (definition.id === "meta") return status.meta.managedByEnv;
+  if (definition.id === "bluesky") return status.bluesky.managedByEnv;
   return definition.kind === "env";
 }
