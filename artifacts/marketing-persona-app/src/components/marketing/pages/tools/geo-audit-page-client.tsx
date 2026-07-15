@@ -53,14 +53,29 @@ export function GeoAuditPageClient() {
         body: JSON.stringify({ url: auditUrl }),
       });
 
-      const data = (await res.json().catch(() => null)) as { id?: number; audit?: { id?: number }; error?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        id?: number;
+        audit?: { id?: number };
+        error?: string;
+        message?: string;
+      } | null;
 
       if (!res.ok) {
+        if (res.status === 429) {
+          toast.error(data?.message ?? "Too many audits from this network. Try again later.");
+          return;
+        }
         toast.error(data?.error ?? "Audit failed. Check the URL and try again.");
         return;
       }
 
-      router.push(`/geo-audit/${data?.id ?? data?.audit?.id}`);
+      const auditId = data?.id ?? data?.audit?.id;
+      if (!auditId) {
+        toast.error("Audit completed but no result id was returned.");
+        return;
+      }
+
+      router.push(`/geo-audit/${auditId}`);
     } catch {
       toast.error("Audit failed. Network error, please try again.");
     } finally {

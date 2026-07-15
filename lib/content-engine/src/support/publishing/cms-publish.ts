@@ -14,6 +14,7 @@ import { publishToWordPress } from "@workspace/connectors/wordpress";
 import type { ContentPieceMetadata } from "@workspace/db";
 import type { CmsIntegrationCredentials, CmsPublishPlatform } from "./cms-integrations";
 import { resolveWordPressConnectionType } from "./cms-integrations";
+import { hostFeaturedImageForPublish } from "./host-featured-image";
 import {
   mapSeoToJoomlaMeta,
   mapSeoToPluginMeta,
@@ -220,7 +221,29 @@ export async function publishPieceToCms(
 ): Promise<string> {
   const status = options?.status ?? "published";
   const tags = contentTags(piece);
-  const seo = resolveSeo(piece);
+
+  const hostedFeatured = await hostFeaturedImageForPublish(
+    piece.pieceMetadata?.featuredImageUrl,
+    {
+      scope: piece.id != null ? `piece-${piece.id}` : "cms",
+      filenameBase: piece.targetKeyword ?? piece.title,
+    },
+  );
+  const pieceForPublish: PublishableContentPiece =
+    hostedFeatured && hostedFeatured !== piece.pieceMetadata?.featuredImageUrl
+      ? {
+          ...piece,
+          pieceMetadata: {
+            ...piece.pieceMetadata,
+            featuredImageUrl: hostedFeatured,
+            ogImageUrl: piece.pieceMetadata?.ogImageUrl?.startsWith("data:")
+              ? hostedFeatured
+              : piece.pieceMetadata?.ogImageUrl,
+          },
+        }
+      : piece;
+
+  const seo = resolveSeo(pieceForPublish);
 
   switch (platform) {
     case "ghost": {
@@ -229,13 +252,13 @@ export async function publishPieceToCms(
       }
       const result = await publishToGhost(
         creds.ghost,
-        seo.seoTitle ?? piece.title,
-        piece.bodyMarkdown,
+        seo.seoTitle ?? pieceForPublish.title,
+        pieceForPublish.bodyMarkdown,
         status,
         seo.metaDescription,
         tags,
         undefined,
-        piece.pieceMetadata?.featuredImageUrl,
+        pieceForPublish.pieceMetadata?.featuredImageUrl,
       );
       return result.url;
     }
@@ -273,20 +296,23 @@ export async function publishPieceToCms(
             platform: "shopify",
           },
           {
-            title: piece.title,
-            content: piece.bodyMarkdown,
+            title: pieceForPublish.title,
+            content: pieceForPublish.bodyMarkdown,
             status,
             blogId: creds.shopify.blogId,
             tags,
             meta: mapSeoToPluginMeta(seo),
             seo: seo as Record<string, string | undefined>,
+            ...(pieceForPublish.pieceMetadata?.featuredImageUrl?.trim()
+              ? { featuredImageUrl: pieceForPublish.pieceMetadata.featuredImageUrl.trim() }
+              : {}),
           },
           {
             markdown: true,
-            idempotencyKey: piece.id ? `piece-${piece.id}` : undefined,
+            idempotencyKey: pieceForPublish.id ? `piece-${pieceForPublish.id}` : undefined,
           },
         );
-        await maybeInjectSchema(creds, "shopify", piece);
+        await maybeInjectSchema(creds, "shopify", pieceForPublish);
         return result.url;
       }
       if (!creds.shopify.shopDomain || !creds.shopify.accessToken) {
@@ -298,13 +324,13 @@ export async function publishPieceToCms(
           accessToken: creds.shopify.accessToken,
           blogId: creds.shopify.blogId,
         },
-        seo.seoTitle ?? piece.title,
-        piece.bodyMarkdown,
+        seo.seoTitle ?? pieceForPublish.title,
+        pieceForPublish.bodyMarkdown,
         status,
         seo.metaDescription,
         tags,
-        piece.pieceMetadata?.featuredImageUrl,
-        piece.title,
+        pieceForPublish.pieceMetadata?.featuredImageUrl,
+        pieceForPublish.title,
       );
       return result.url;
     }

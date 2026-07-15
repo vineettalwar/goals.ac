@@ -69,7 +69,7 @@
 
 | # | Deliverable | vs BLG | vs AutoSEO | Key files |
 |---|-------------|--------|------------|-----------|
-| 2.1 | **Anonymous GEO audit** — rate-limited, optional email capture | Matches free audit CTA | Ahead if AutoSEO lacks | `geo-audit/page.tsx`, `api/geo-audits/generate/route.ts` |
+| 2.1 | **Anonymous GEO audit** — rate-limited, optional email capture | Matches free audit CTA | Ahead if AutoSEO lacks | `geo-audit/page.tsx`, `api/public/geo-audits/generate/route.ts` (auth remains `api/geo-audits/generate`) |
 | 2.2 | **Internal link hub in autopilot dashboard** — suggested links count, cluster view | White-hat counter to $800 backlinks | White-hat counter to DA backlinks | `internal-links-panel.tsx` |
 | 2.3 | **Brand tailoring showcase** — colors, voice, cross-links on `/brand-voice` | Matches BLG homepage "written like you" | Ahead | `brand-voice/page.tsx`, `project-brand-tab.tsx` |
 | 2.4 | **GSC case study template** — DR, impressions, AI citation %, verify CTAs | Matches BLG success stories | Matches AVIAN Care format | Marketing success stories |

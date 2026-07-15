@@ -1,4 +1,7 @@
 # Cloudflare Pages redirects (product + legacy URLs → app subdomain)
+# Anonymous GEO result shell (static export only prebuilds /geo-audit/0/)
+/geo-audit/:id /geo-audit/0/ 200
+/geo-audit/:id/ /geo-audit/0/ 200
 /roadmaps /content-engine/ 301
 /roadmap/* /content-engine/ 301
 /success-stories/* /success-stories/ 301

@@ -12,6 +12,7 @@ import {
 } from "../publishing/cms-integrations";
 import { getSocialAccessToken, loadProjectCreds } from "./social-tokens";
 import { featuredImageFromMetadata } from "../../articles/article-image-enricher";
+import { hostFeaturedImageForPublish } from "../publishing/host-featured-image";
 
 export interface PublishablePiece {
   id: number;
@@ -70,6 +71,18 @@ export function resolveSocialImageUrl(piece: PublishablePiece): string | undefin
   return undefined;
 }
 
+async function resolveSocialImageUrlForPublish(piece: PublishablePiece): Promise<string | undefined> {
+  const raw = resolveSocialImageUrl(piece);
+  const hosted = await hostFeaturedImageForPublish(raw, {
+    scope: String(piece.websiteProjectId),
+    filenameBase: piece.title || "featured",
+  });
+  if (!hosted) return undefined;
+  // Social upload paths that fetch remote media need public HTTPS.
+  if (hosted.startsWith("data:")) return undefined;
+  return hosted;
+}
+
 export async function publishPieceToSocial(
   platform: SocialPlatform,
   piece: PublishablePiece,
@@ -84,7 +97,7 @@ export async function publishPieceToSocial(
       throw new Error(`${label} is not connected. Configure it in Project → Publishing.`);
     }
     const accessToken = await getSocialAccessToken(piece.websiteProjectId, userId, "linkedin");
-    const imageUrl = resolveSocialImageUrl(piece);
+    const imageUrl = await resolveSocialImageUrlForPublish(piece);
     const result = await publishToLinkedIn(
       { accessToken, authorUrn: resolvedCreds.linkedin.authorUrn },
       piece.title,
@@ -112,7 +125,7 @@ export async function publishPieceToSocial(
       );
     }
     const accessToken = await getSocialAccessToken(piece.websiteProjectId, userId, "meta");
-    const imageUrl = resolveSocialImageUrl(piece);
+    const imageUrl = await resolveSocialImageUrlForPublish(piece);
     if (!imageUrl) {
       throw new Error(INSTAGRAM_IMAGE_REQUIRED_MESSAGE);
     }

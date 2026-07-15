@@ -2,6 +2,7 @@ import { getDb, setD1Binding } from "@workspace/db";
 import type { GoalsD1Database } from "@workspace/db/d1";
 import {
   contactSubmissionsTable,
+  geoAuditsTable,
   industriesTable,
   leadCapturesTable,
   locationsTable,
@@ -19,9 +20,7 @@ import {
   type PlanQuotaLimits,
 } from "@workspace/billing/plans";
 import { buildPublicPlanCatalog } from "@workspace/billing/public-plans";
-import { asc, and, eq } from "drizzle-orm";
-import { sendToCfQueue } from "@workspace/jobs/cf-queues";
-import { QUEUES } from "@workspace/jobs/queues";
+import { asc, and, eq, isNull } from "drizzle-orm";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { auditUrl } from "@workspace/seo-tools/geoAuditor";
 import { scoreMetaTags } from "@workspace/seo-tools/freeTools";
@@ -62,7 +61,6 @@ import { handleStripeWebhook } from "./stripe-webhook";
 import { handlePublicInviteGet } from "./invite-routes";
 import { handleV1Api } from "./v1-api-routes";
 import { kvGetJson, kvPutJson } from "@workspace/cf-edge/kv-cache";
-import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
 import { z } from "zod";
 
@@ -558,7 +556,16 @@ async function handle(request: Request, env: Env): Promise<Response> {
     if (path === "/api/public/geo-audits/generate" && request.method === "POST") {
       const ip = clientIp(request);
       if (await rateLimitKv(env, `public-geo:${ip}`, 5, 3600)) {
-        return withCors(request, Response.json({ error: "Rate limit exceeded" }, { status: 429 }));
+        return withCors(
+          request,
+          Response.json(
+            {
+              error: "rate_limited",
+              message: "Too many requests. Please slow down and try again shortly.",
+            },
+            { status: 429, headers: { "Retry-After": "3600" } },
+          ),
+        );
       }
       const parsed = geoBody.safeParse(await request.json().catch(() => null));
       if (!parsed.success) {
@@ -572,16 +579,52 @@ async function handle(request: Request, env: Env): Promise<Response> {
           Response.json({ error: err instanceof Error ? err.message : "Invalid URL" }, { status: 422 }),
         );
       }
-      const jobId = await sendToCfQueue(QUEUES.publicGeoAudit, {
-        url: parsed.data.url,
-        clientIp: ip,
-      });
-      return withCors(
-        request,
-        acceptedJobResponse(jobId ?? `queued-${Date.now()}`, QUEUES.publicGeoAudit, {
-          message: "GEO audit queued; poll /api/jobs/:id for result",
-        }),
-      );
+      let auditResult;
+      try {
+        auditResult = await auditUrl(parsed.data.url);
+      } catch (err) {
+        return withCors(
+          request,
+          Response.json(
+            { error: `Failed to fetch URL: ${err instanceof Error ? err.message : String(err)}` },
+            { status: 422 },
+          ),
+        );
+      }
+      const [audit] = await db()
+        .insert(geoAuditsTable)
+        .values({
+          url: auditResult.url,
+          roadmapId: null,
+          websiteProjectId: null,
+          geoScore: auditResult.geoScore,
+          issues: auditResult.issues,
+          pageTitle: auditResult.pageTitle,
+          metaDescription: auditResult.metaDescription,
+          hasSchemaOrg: auditResult.hasSchemaOrg,
+          schemaTypes: auditResult.schemaTypes,
+          h1Count: auditResult.h1Count,
+          imageCount: auditResult.imageCount,
+          imagesMissingAlt: auditResult.imagesMissingAlt,
+        })
+        .returning();
+      return withCors(request, Response.json(audit, { status: 201 }));
+    }
+
+    {
+      const publicGeoGet = path.match(/^\/api\/public\/geo-audits\/(\d+)$/);
+      if (publicGeoGet && request.method === "GET") {
+        const id = Number(publicGeoGet[1]);
+        const [audit] = await db()
+          .select()
+          .from(geoAuditsTable)
+          .where(and(eq(geoAuditsTable.id, id), isNull(geoAuditsTable.websiteProjectId)))
+          .limit(1);
+        if (!audit) {
+          return withCors(request, Response.json({ error: "GEO audit not found" }, { status: 404 }));
+        }
+        return withCors(request, Response.json(audit));
+      }
     }
 
     if (path.startsWith("/api/tools/") && request.method === "POST") {

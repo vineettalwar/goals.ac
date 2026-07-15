@@ -263,6 +263,22 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
     }
   }
 
+  // Prefer public HTTPS on platform content-media R2 when configured.
+  if (featuredImageUrl?.startsWith("data:image/")) {
+    try {
+      const { hostRasterFeaturedDataUri } = await import("@workspace/media");
+      const hosted = await hostRasterFeaturedDataUri(featuredImageUrl, {
+        filenameBase: keyword || "featured",
+      });
+      if (hosted) {
+        featuredImageUrl = hosted;
+        if (ogImageUrl?.startsWith("data:image/")) ogImageUrl = hosted;
+      }
+    } catch (err) {
+      logger.debug({ err }, "content-media R2 host skipped");
+    }
+  }
+
   const nextMeta: NonNullable<T["pieceMetadata"]> = {
     ...piece.pieceMetadata,
     ...(shouldEnrich ? { images } : {}),

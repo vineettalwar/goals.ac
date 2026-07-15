@@ -201,6 +201,7 @@ Generated: 2026-07-15T15:20:06.179Z
 | GET | `/api/platform/status` | `artifacts/marketing-persona-app/src/app/api/platform/status/route.ts` | partial+ | core |
 | GET | `/api/platform/stock-images/status` | `artifacts/marketing-persona-app/src/app/api/platform/stock-images/status/route.ts` | partial+ | core |
 | POST | `/api/public/geo-audits/generate` | `artifacts/marketing-persona-app/src/app/api/public/geo-audits/generate/route.ts` | partial+ | core |
+| GET | `/api/public/geo-audits/:id` | `artifacts/marketing-persona-app/src/app/api/public/geo-audits/[id]/route.ts` | partial+ | core |
 | POST | `/api/reddit-discovery` | `artifacts/marketing-persona-app/src/app/api/reddit-discovery/route.ts` | partial+ | core |
 | GET | `/api/roadmaps` | `artifacts/marketing-persona-app/src/app/api/roadmaps/route.ts` | partial+ | 2-studio |
 | GET | `/api/roadmaps/:slug` | `artifacts/marketing-persona-app/src/app/api/roadmaps/[slug]/route.ts` | partial+ | 2-studio |
@@ -453,6 +454,7 @@ Generated: 2026-07-15T15:20:06.179Z
 - `/api/platform/status`
 - `/api/platform/stock-images/status`
 - `/api/public/geo-audits/generate`
+- `/api/public/geo-audits/:id`
 - `/api/reddit-discovery`
 - `/api/roadmaps`
 - `/api/roadmaps/:id`
