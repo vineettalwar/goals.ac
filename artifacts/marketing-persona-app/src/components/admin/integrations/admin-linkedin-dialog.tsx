@@ -63,13 +63,10 @@ export function AdminLinkedInDialog({ controller }: { controller: AdminIntegrati
             id="linkedin-client-id"
             value={linkedinClientId}
             onChange={(e) => setLinkedinClientId(e.target.value)}
-            placeholder={
-              status.linkedin.clientId.configured
-                ? status.linkedin.clientId.value ?? "Leave blank to keep current ID"
-                : "LinkedIn app Client ID"
-            }
+            placeholder="LinkedIn app Client ID"
             disabled={status.linkedin.managedByEnv}
             autoComplete="off"
+            className="font-mono text-xs"
           />
         </div>
         <SecretField
