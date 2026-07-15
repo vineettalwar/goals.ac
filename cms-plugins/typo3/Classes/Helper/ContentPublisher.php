@@ -12,10 +12,12 @@ final class ContentPublisher
 {
     private const MANAGED_CTYPES = ['header', 'text', 'textmedia'];
 
-    private const FAL_UPLOAD_FOLDER = 'user_upload/goals-ac';
+    private FalImporter $fal;
 
-    /** PNG/JPEG only — matches SaaS raster featured helpers (~5MB decoded). */
-    private const MAX_BASE64_IMAGE_BYTES = 5242880;
+    public function __construct()
+    {
+        $this->fal = new FalImporter();
+    }
 
     /**
      * @param array<string, mixed> $payload
@@ -205,10 +207,10 @@ final class ContentPublisher
 
         $fileUid = null;
         if ($imageBase64 !== '') {
-            $fileUid = $this->importBase64ImageToFal($imageBase64, $imageMime, $imageFilename);
+            $fileUid = $this->fal->importBase64Image($imageBase64, $imageMime, $imageFilename);
         }
         if ($fileUid === null && $imageUrl !== '') {
-            $fileUid = $this->resolveOrImportFalFile($imageUrl);
+            $fileUid = $this->fal->resolveOrImportRemote($imageUrl);
         }
 
         if ($fileUid !== null) {
@@ -223,7 +225,7 @@ final class ContentPublisher
                 'alternative' => $imageAlt,
                 'title' => $imageAlt,
             ];
-        } elseif ($imageUrl !== '' && !$this->isRasterImageDataUri($imageUrl)) {
+        } elseif ($imageUrl !== '' && !$this->fal->isRasterImageDataUri($imageUrl)) {
             // HTTP URL only — never inline huge data URIs into bodytext.
             $record['bodytext'] = $this->sanitizeContent(
                 $this->appendInlineImageFigure($bodytext, $imageUrl, $imageAlt),

@@ -5,7 +5,8 @@ import Link from "next/link";
 import { ArrowRight, BarChart2, CheckCircle2, Copy, ExternalLink, FileText, Globe, Link2, ScanSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  ILLUSTRATIVE_PROFILE,
+  PARTNER_SWAP_STEPS,
+  STORY_SLOT_LABELS,
   VERIFY_CTAS,
   STORY_KIT_MARKDOWN_TEMPLATE,
 } from "@/lib/marketing/content/story-kit-constants";
@@ -180,22 +181,22 @@ export function PartnerWorkspaceClient({ projects, organizationName }: Props) {
           <div>
             <h2 className="text-xl font-bold mb-2">Story kit</h2>
             <p className="text-sm text-muted-foreground max-w-2xl">
-              Build honest success stories with placeholder templates and verifiable metrics. No fake company names or
-              invented lift numbers allowed.
+              Empty placeholders for when a real client approves a story. No sample metrics — fill only from GSC, GEO,
+              or authority tool exports.
             </p>
           </div>
           <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded-md px-2.5 py-1">
             <FileText className="h-3.5 w-3.5" />
-            Illustrative only
+            Placeholders only
           </span>
         </div>
 
         <div className="rounded-lg border border-border bg-secondary/20 px-4 py-4 mb-6">
           <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-3">
-            Partner swap checklist
+            Before publishing checklist
           </p>
           <ol className="space-y-2 list-decimal list-inside">
-            {ILLUSTRATIVE_PROFILE.partnerSwapSteps.map((step) => (
+            {PARTNER_SWAP_STEPS.map((step) => (
               <li key={step} className="text-sm text-foreground/80 leading-relaxed pl-1">
                 {step}
               </li>
@@ -238,9 +239,10 @@ export function PartnerWorkspaceClient({ projects, organizationName }: Props) {
             Screenshot & audit slots
           </p>
           <div className="grid sm:grid-cols-3 gap-3">
-            {ILLUSTRATIVE_PROFILE.metrics.map((slot) => (
-              <div key={slot.label} className="rounded-md border border-border bg-card px-3 py-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">{slot.label}</p>
+            {STORY_SLOT_LABELS.map((slot) => (
+              <div key={slot.label} className="rounded-md border border-dashed border-border bg-card px-3 py-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">{slot.label}</p>
+                <p className="text-[10px] text-muted-foreground mb-2">{slot.source}</p>
                 <p className="text-xs text-foreground/70 leading-relaxed">{slot.hint}</p>
               </div>
             ))}
@@ -273,9 +275,9 @@ export function PartnerWorkspaceClient({ projects, organizationName }: Props) {
         <div className="rounded-lg border-l-4 border-l-primary bg-secondary/30 px-4 py-3 mt-6">
           <p className="text-xs font-semibold text-foreground mb-1">No named clients published yet</p>
           <p className="text-xs text-muted-foreground leading-relaxed">
-            The public <Link href="/company/success-stories" className="text-primary hover:underline">success stories page</Link> shows
-            illustrative ranges only. When you publish a real story, every metric must be backed by a GSC screenshot, GEO audit link,
-            or third-party tool export — no invented lift.
+            The public <Link href="/success-stories" className="text-primary hover:underline">success stories page</Link> is
+            coming soon only — no published stories or illustrative metrics. When you publish a real story, every metric must
+            be backed by a GSC screenshot, GEO audit link, or third-party tool export — no invented lift.
           </p>
         </div>
       </div>

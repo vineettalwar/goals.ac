@@ -33,7 +33,7 @@ The growth roadmap and content studio that already knows your brand, CMS, and co
 - **Tertiary / enterprise:** Talk to us → `/contact` or `contact@goals.ac`
 - **The line a visitor remembers after 10 seconds:** AI-powered content growth that respects your brand voice and publishes where you already work.
 - **Belief ladder:** (1) AI search and answer-engine visibility are now part of B2B growth. (2) goals.ac understands my industry, stage, and CMS — not generic templates. (3) I can start self-serve without a big agency contract. (4) What it produces is editorial-quality and reviewable before publish.
-- **Proof on hand:** Success stories (`/success-stories`), comparison content (`/compare/ai-seo-tools`), learn hub articles, live product surfaces (content studio, GEO audit, roadmaps), and scoped program tiers on `/pricing`.
+- **Proof on hand:** Comparison content (`/compare/ai-seo-tools`), learn hub articles, live product surfaces (content studio, GEO audit, roadmaps), and scoped program tiers on `/pricing`. Customer stories (`/success-stories`) are not published yet — early access, no named case studies.
 
 ## Brand Personality
 

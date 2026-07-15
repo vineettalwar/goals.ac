@@ -11,8 +11,18 @@
 | Instagram copy | Fixes |
 | Partner Story kit | Shared constants + template; honest (no fake names/metrics) |
 | Instagram queue stock CTA | "Use stock image" button when "Needs image" badge shown; reuses `/images/regenerate` API; queue reloads on success |
+| Outline actions | **Copy outline** + optional **Insert into draft** when empty; wired in shell + Next |
 
 **In flight:** none from this list.
+
+### Outline actions
+
+Writing-room actions on `ContentBriefPanel` when outline present:
+
+- **Copy outline** button → clipboard as markdown H2 list (always shown)
+- **Insert into draft** button → `dispatch({ type: "set_body" })` (only when body empty + host provides callback)
+- Wired: `content-piece-ui.tsx` (`ContentPieceAside` → `ContentBriefPanel`) + Next `content-piece-layout-aside.tsx` (`setBodyDraft`)
+- Files: `lib/app-shell/src/content-piece/content-brief-panel.tsx`, `content-piece-ui.tsx`; Next `content-piece-layout-aside.tsx`
 
 ---
 
