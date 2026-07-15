@@ -19,6 +19,7 @@ import {
 } from "@workspace/content-engine/articles/article-image-enricher";
 import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
 import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
+import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor/competitor-generation-context";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
@@ -73,6 +74,12 @@ const repurposeBody = z.object({
   existingContent: z.string().optional(),
 });
 
+const repurposeFromTextBody = z.object({
+  targetFormat: z.enum(CONTENT_FORMAT_TYPES as unknown as [string, ...string[]]),
+  existingContent: z.string().min(50, "Existing content must be at least 50 characters"),
+  targetKeyword: z.string().min(1, "Target keyword is required"),
+});
+
 export async function handleContentPiecesAiWrite(
   request: Request,
   path: string,
@@ -91,6 +98,18 @@ export async function handleContentPiecesAiWrite(
   const repurposeMatch = path.match(/^\/api\/content-pieces\/(\d+)\/repurpose$/);
   if (repurposeMatch && request.method === "POST") {
     return handleRepurpose(request, Number.parseInt(repurposeMatch[1]!, 10), userId);
+  }
+
+  const repurposeStreamMatch = path.match(/^\/api\/content-pieces\/(\d+)\/repurpose\/stream$/);
+  if (repurposeStreamMatch && request.method === "POST") {
+    return handleRepurpose(request, Number.parseInt(repurposeStreamMatch[1]!, 10), userId);
+  }
+
+  const projectRepurposeMatch = path.match(
+    /^\/api\/website-projects\/(\d+)\/content-pieces\/repurpose$/,
+  );
+  if (projectRepurposeMatch && request.method === "POST") {
+    return handleProjectRepurpose(request, Number.parseInt(projectRepurposeMatch[1]!, 10), userId);
   }
 
   const imagesMatch = path.match(/^\/api\/content-pieces\/(\d+)\/images\/regenerate$/);
@@ -364,6 +383,80 @@ async function handleRepurpose(
     await cancelAiBilling(billingPrep.ctx);
     const message = err instanceof Error ? err.message : "Repurpose failed";
     return withCors(request, Response.json({ error: message }, { status: 503 }));
+  }
+}
+
+async function handleProjectRepurpose(
+  request: Request,
+  projectId: number,
+  userId: number,
+): Promise<Response> {
+  const limited = await rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs,
+  );
+  if (limited) return withCors(request, limited);
+
+  const parsed = repurposeFromTextBody.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return withCors(
+      request,
+      Response.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 }),
+    );
+  }
+
+  const project = await getAccessibleProject(projectId, userId);
+  if (!project) {
+    return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const brand = await loadBrandContextForProject(projectId);
+  if (!brand) {
+    return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId);
+  const billingPrep = await prepareAiBilling({ userId, tier: "execution", quotaKind: "article" });
+  if (!billingPrep.ok) return withCors(request, billingPrep.response);
+
+  try {
+    const competitorContext = await loadCompetitorGenerationContext(projectId);
+    const result = await repurposeContentPiece(
+      parsed.data.targetFormat as ContentFormatType,
+      brand,
+      parsed.data.existingContent,
+      parsed.data.targetKeyword,
+      userApiKey,
+      aiProviderOptions,
+      { competitorPromptBlock: competitorContext.promptBlock || undefined },
+    );
+
+    const [inserted] = await db
+      .insert(contentPiecesTable)
+      .values({
+        websiteProjectId: projectId,
+        formatType: parsed.data.targetFormat as ContentFormatType,
+        title: result.title,
+        targetKeyword: result.target_keyword,
+        bodyMarkdown: result.body_markdown,
+        wordCount: wordCountFromMarkdown(result.body_markdown),
+        status: "draft",
+        pieceMetadata: result.pieceMetadata ?? null,
+      })
+      .returning();
+
+    await completeAiBilling(billingPrep.ctx, {
+      userId,
+      eventType: "content_repurpose",
+      usedByok: billingPrep.usedByok,
+      tier: "execution",
+    });
+
+    return withCors(request, Response.json(inserted, { status: 201 }));
+  } catch {
+    await cancelAiBilling(billingPrep.ctx);
+    return withCors(request, Response.json({ error: "Failed to repurpose content" }, { status: 503 }));
   }
 }
 

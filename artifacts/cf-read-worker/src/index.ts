@@ -17,6 +17,8 @@ import { handleKeywordRead } from "./keyword-routes";
 import { handleOnboardingFastLaneRead } from "./onboarding-fast-lane-routes";
 import { handleResearchRead } from "./research-routes";
 import { handleBrandVoiceRead } from "./brand-voice-routes";
+import { handleLegacyRead } from "./legacy-routes";
+import { handleProjectCredentialsRead } from "./project-credentials-routes";
 
 export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
@@ -109,6 +111,12 @@ export default {
 
       const brandVoiceHandled = await handleBrandVoiceRead(request, path, userId);
       if (brandVoiceHandled) return brandVoiceHandled;
+
+      const legacyHandled = await handleLegacyRead(request, path, userId);
+      if (legacyHandled) return legacyHandled;
+
+      const projectCredentialsHandled = await handleProjectCredentialsRead(request, path, userId);
+      if (projectCredentialsHandled) return projectCredentialsHandled;
 
       const fastLaneHandled = await handleOnboardingFastLaneRead(request, path, userId);
       if (fastLaneHandled) return fastLaneHandled;

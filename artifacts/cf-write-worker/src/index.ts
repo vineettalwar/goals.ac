@@ -45,6 +45,10 @@ import { handleGeoAuditWrite } from "./geo-audit-routes";
 import { handleOnboardingFastLaneWrite } from "./onboarding-fast-lane-routes";
 import { handleResearchWrite } from "./research-routes";
 import { handleBrandVoiceWrite } from "./brand-voice-routes";
+import { handleLegacyWrite } from "./legacy-routes";
+import { handleProjectCredentialsWrite } from "./project-credentials-routes";
+import { handleRoadmapPinWrite } from "./roadmap-pin-routes";
+import { handleWordpressTestWrite } from "./wordpress-test-routes";
 import { edgeNotImplementedResponse, isUnimplementedGeneratePath } from "@workspace/cf-edge/edge-not-implemented";
 import { persistSitemapCrawl } from "@workspace/content-engine/support/brand/brand-scan-context";
 import { getAccessibleProject } from "./project-access";
@@ -249,6 +253,18 @@ export default {
 
       const brandVoiceHandled = await handleBrandVoiceWrite(request, path, userId);
       if (brandVoiceHandled) return brandVoiceHandled;
+
+      const legacyHandled = await handleLegacyWrite(request, path, userId);
+      if (legacyHandled) return legacyHandled;
+
+      const projectCredentialsHandled = await handleProjectCredentialsWrite(request, path, userId);
+      if (projectCredentialsHandled) return projectCredentialsHandled;
+
+      const roadmapPinHandled = await handleRoadmapPinWrite(request, path, userId);
+      if (roadmapPinHandled) return roadmapPinHandled;
+
+      const wordpressTestHandled = await handleWordpressTestWrite(request, path, userId);
+      if (wordpressTestHandled) return wordpressTestHandled;
 
       if (path === "/api/content-pieces/generate" && request.method === "POST") {
         const parsed = contentGenerateBody.safeParse(await request.json().catch(() => null));

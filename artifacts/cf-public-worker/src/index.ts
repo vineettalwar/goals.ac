@@ -60,6 +60,7 @@ import {
 import { handleMastodonAuthCallback, handleMastodonAuthStart } from "./auth-mastodon";
 import { handleStripeWebhook } from "./stripe-webhook";
 import { handlePublicInviteGet } from "./invite-routes";
+import { handleV1Api } from "./v1-api-routes";
 import { kvGetJson, kvPutJson } from "@workspace/cf-edge/kv-cache";
 import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
@@ -199,6 +200,14 @@ const leadCaptureBody = z.object({
   name: z.string().min(1),
   email: z.string().email(),
   companyUrl: z.string().url().optional(),
+});
+
+const vitalsBody = z.object({
+  name: z.string(),
+  value: z.number(),
+  rating: z.string().optional(),
+  navigationType: z.string().optional(),
+  path: z.string().optional(),
 });
 
 const urlBody = z.object({ url: z.string().url() });
@@ -448,6 +457,17 @@ async function handle(request: Request, env: Env): Promise<Response> {
 
     const inviteHandled = await handlePublicInviteGet(request, path);
     if (inviteHandled) return inviteHandled;
+
+    const v1Handled = await handleV1Api(request, path);
+    if (v1Handled) return v1Handled;
+
+    if (path === "/api/analytics/vitals" && request.method === "POST") {
+      const parsed = vitalsBody.safeParse(await request.json().catch(() => null));
+      if (!parsed.success) {
+        return withCors(request, Response.json({ error: "Invalid payload" }, { status: 400 }));
+      }
+      return withCors(request, Response.json({ ok: true }));
+    }
 
     const leadCaptureMatch = path.match(/^\/api\/roadmaps\/([^/]+)\/lead-capture$/);
     if (leadCaptureMatch && request.method === "POST") {

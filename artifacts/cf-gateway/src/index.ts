@@ -32,6 +32,8 @@ const PUBLIC_PREFIXES = [
   "/api/auth/google-sheets",
   "/api/public/",
   "/api/tools/",
+  "/api/v1/",
+  "/api/analytics/vitals",
 ];
 
 const PUBLIC_EXACT_PATHS = [
@@ -112,6 +114,13 @@ function isReadPath(path: string, method: string): boolean {
     if (path.startsWith("/api/jobs/")) return true;
     if (path.startsWith("/api/auth/mfa/")) return true;
     if (path === "/api/onboarding/fast-lane") return true;
+    if (path === "/api/auth/gemini-key") return true;
+    if (path === "/api/conversations") return true;
+    if (path === "/api/personas") return true;
+    if (path === "/api/org/api-keys") return true;
+    if (/^\/api\/seo-articles\/\d+$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/deepl-credentials$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/stock-credentials$/.test(path)) return true;
     return !isPublicPath(path) && !path.startsWith("/api/auth/");
   }
   return false;
@@ -173,6 +182,37 @@ function isWritePath(path: string, method: string): boolean {
     return true;
   }
   if (/^\/api\/website-projects\/\d+\/brand-profile\/platform-voice\/[^/]+$/.test(path) && method === "PUT") {
+    return true;
+  }
+  if (path === "/api/auth/gemini-key" && (method === "POST" || method === "DELETE")) return true;
+  if (path === "/api/chat" && method === "POST") return true;
+  if (path === "/api/conversations" && method === "DELETE") return true;
+  if (path === "/api/companies/humanization" && method === "POST") return true;
+  if (path === "/api/org/api-keys" && method === "POST") return true;
+  if (/^\/api\/org\/api-keys\/\d+$/.test(path) && method === "DELETE") return true;
+  if (/^\/api\/personas\/\d+$/.test(path) && (method === "PATCH" || method === "DELETE")) return true;
+  if (/^\/api\/seo-articles\/\d+$/.test(path) && method === "PATCH") return true;
+  if (path === "/api/wordpress/test" && method === "POST") return true;
+  if (/^\/api\/website-projects\/\d+\/roadmaps\/\d+$/.test(path) && (method === "POST" || method === "DELETE")) {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/deepl-credentials$/.test(path) && (method === "PATCH" || method === "DELETE")) {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/stock-credentials$/.test(path) && (method === "PATCH" || method === "DELETE")) {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/content-pieces\/repurpose$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/content-pieces\/\d+\/repurpose\/stream$/.test(path) && method === "POST") return true;
+  if (/^\/api\/website-projects\/\d+\/brand-profile\/platform-voice\/[^/]+\/analyze$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/brand-profile\/platform-voice\/[^/]+\/import$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/brand-profile\/voice\/analyze$/.test(path) && method === "POST") {
     return true;
   }
   if (path === "/api/onboarding/fast-lane" && method === "POST") return true;

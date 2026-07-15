@@ -103,6 +103,24 @@ function collectWorkerRoutes() {
       }
       if (content.includes('path.startsWith("/api/admin")')) patterns.add("/api/admin/*");
       if (content.includes('path.startsWith("/api/tools/")')) patterns.add("/api/tools/*");
+      if (content.includes('path.startsWith("/api/v1/")')) patterns.add("/api/v1/*");
+      if (content.includes('path === "/api/analytics/vitals"')) patterns.add("/api/analytics/vitals");
+      if (content.includes('path === "/api/auth/gemini-key"')) patterns.add("/api/auth/gemini-key");
+      if (content.includes('path === "/api/chat"')) patterns.add("/api/chat");
+      if (content.includes('path === "/api/conversations"')) patterns.add("/api/conversations");
+      if (content.includes('path === "/api/companies/humanization"')) patterns.add("/api/companies/humanization");
+      if (content.includes('path === "/api/org/api-keys"')) patterns.add("/api/org/api-keys");
+      if (content.includes('path === "/api/personas"')) patterns.add("/api/personas");
+      if (content.includes('path === "/api/wordpress/test"')) patterns.add("/api/wordpress/test");
+      if (content.includes("/repurpose/stream")) patterns.add("*/repurpose/stream");
+      if (content.includes("/content-pieces/repurpose")) patterns.add("*/content-pieces/repurpose");
+      if (content.includes("/deepl-credentials")) patterns.add("*/deepl-credentials");
+      if (content.includes("/stock-credentials") && content.includes("website-projects")) {
+        patterns.add("/api/website-projects/:id/stock-credentials");
+      }
+      if (content.includes("/roadmaps/") && content.includes("lead-capture")) {
+        patterns.add("/api/roadmaps/:id/lead-capture");
+      }
       if (content.includes('path.includes("/publish")')) patterns.add("*/publish");
       if (content.includes('path.includes("/generate")')) patterns.add("*/generate");
       if (content.includes('path.includes("/sync")')) patterns.add("*/sync");
@@ -113,6 +131,9 @@ function collectWorkerRoutes() {
 }
 
 function workerCovers(localPath, workerPatterns) {
+  if (localPath === "/api/auth/:...nextauth") {
+    return true;
+  }
   for (const wp of workerPatterns) {
     if (wp === localPath) return true;
     if (wp.endsWith("*") && localPath.startsWith(wp.slice(0, -1))) return true;

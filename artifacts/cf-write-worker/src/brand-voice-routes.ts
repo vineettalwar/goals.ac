@@ -9,11 +9,16 @@ import {
 } from "@workspace/content-engine/brand/brand-voice-skill";
 import { ingestBrandVoiceDocuments } from "@workspace/content-engine/brand/brand-voice-indexer";
 import {
+  analyzeAllPlatformChannels,
+  analyzePlatformVoiceChannel,
+  importFromPaste,
   isValidChannel,
   isValidSocialPlatform,
   PLATFORM_CHANNELS,
   updatePlatformVoiceChannel,
 } from "@workspace/content-engine/platform-voice";
+import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "./ai-billing";
@@ -37,6 +42,20 @@ const updateChannelBody = z.object({
   doWords: z.array(z.string()).optional(),
   dontWords: z.array(z.string()).optional(),
   voiceTraits: z.array(z.string()).optional(),
+});
+
+const analyzePlatformBody = z.object({
+  channel: z.string().optional(),
+  allChannels: z.boolean().optional(),
+});
+
+const importPlatformBody = z.object({
+  channel: z.string().optional(),
+  raw: z.string().min(20),
+});
+
+const analyzeWritingBody = z.object({
+  writingExamples: z.array(z.string()).min(1),
 });
 
 const MAX_TEXT_BYTES = 2 * 1024 * 1024;
@@ -255,6 +274,216 @@ export async function handleBrandVoiceWrite(
         profile: updated?.platformVoices?.[platformRaw] ?? null,
       }),
     );
+  }
+
+  const voiceAnalyzeMatch = path.match(
+    /^\/api\/website-projects\/(\d+)\/brand-profile\/voice\/analyze$/,
+  );
+  if (voiceAnalyzeMatch && request.method === "POST") {
+    const projectId = Number.parseInt(voiceAnalyzeMatch[1]!, 10);
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+
+    const parsed = analyzeWritingBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return withCors(
+        request,
+        Response.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 }),
+      );
+    }
+
+    const { writingExamples } = parsed.data;
+    const allText = writingExamples.join(" ").toLowerCase();
+    const words: string[] = allText.match(/\b\w+\b/g) ?? [];
+    const wordFreq: Record<string, number> = {};
+    for (const word of words) {
+      if (word.length > 3) wordFreq[word] = (wordFreq[word] || 0) + 1;
+    }
+    const sortedWords = Object.entries(wordFreq)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .map(([word]) => word);
+
+    const hasQuestions = writingExamples.some((text) => text.includes("?"));
+    const hasColons = writingExamples.some((text) => text.includes(":"));
+    const avgLength =
+      writingExamples.reduce((sum, text) => sum + text.length, 0) / writingExamples.length;
+
+    let suggestedStructure = "Hook → Insight → CTA";
+    if (hasQuestions && hasColons) {
+      suggestedStructure = "Question → Explanation → Example → CTA";
+    } else if (hasQuestions) {
+      suggestedStructure = "Question → Insight → CTA";
+    } else if (avgLength > 200) {
+      suggestedStructure = "Story → Lesson → Application";
+    }
+
+    return withCors(
+      request,
+      Response.json({
+        suggestedGlossary: sortedWords,
+        suggestedStructure,
+        analysis: {
+          totalExamples: writingExamples.length,
+          averageLength: Math.round(avgLength),
+          hasQuestions,
+          hasColons,
+          commonWords: sortedWords.slice(0, 5),
+        },
+      }),
+    );
+  }
+
+  const platformImportMatch = path.match(
+    /^\/api\/website-projects\/(\d+)\/brand-profile\/platform-voice\/([^/]+)\/import$/,
+  );
+  if (platformImportMatch && request.method === "POST") {
+    const projectId = Number.parseInt(platformImportMatch[1]!, 10);
+    const platformRaw = platformImportMatch[2]!;
+    if (!isValidSocialPlatform(platformRaw)) {
+      return withCors(request, Response.json({ error: "Invalid request" }, { status: 400 }));
+    }
+
+    const parsed = importPlatformBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return withCors(
+        request,
+        Response.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 }),
+      );
+    }
+
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+
+    const channel = parsed.data.channel ?? PLATFORM_CHANNELS[platformRaw][0];
+    if (!isValidChannel(platformRaw, channel)) {
+      return withCors(request, Response.json({ error: "Invalid channel for platform" }, { status: 400 }));
+    }
+
+    const [brandProfile] = await db
+      .select({ platformVoices: brandProfilesTable.platformVoices })
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, projectId))
+      .limit(1);
+    if (!brandProfile) {
+      return withCors(request, Response.json({ error: "Brand profile not found" }, { status: 404 }));
+    }
+
+    const platformVoices = importFromPaste({
+      voices: brandProfile.platformVoices,
+      platform: platformRaw,
+      channel,
+      raw: parsed.data.raw,
+    });
+
+    const [updated] = await db
+      .update(brandProfilesTable)
+      .set({ platformVoices })
+      .where(eq(brandProfilesTable.websiteProjectId, projectId))
+      .returning();
+
+    const profile = updated?.platformVoices?.[platformRaw];
+    const sampleCount = profile?.channels[channel]?.writingExamples.length ?? 0;
+
+    return withCors(
+      request,
+      Response.json({ platform: platformRaw, channel, sampleCount, profile }),
+    );
+  }
+
+  const platformAnalyzeMatch = path.match(
+    /^\/api\/website-projects\/(\d+)\/brand-profile\/platform-voice\/([^/]+)\/analyze$/,
+  );
+  if (platformAnalyzeMatch && request.method === "POST") {
+    const projectId = Number.parseInt(platformAnalyzeMatch[1]!, 10);
+    const platformRaw = platformAnalyzeMatch[2]!;
+    if (!isValidSocialPlatform(platformRaw)) {
+      return withCors(request, Response.json({ error: "Invalid request" }, { status: 400 }));
+    }
+
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+
+    const parsed = analyzePlatformBody.safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) {
+      return withCors(
+        request,
+        Response.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 }),
+      );
+    }
+
+    const [brandProfile] = await db
+      .select({ platformVoices: brandProfilesTable.platformVoices })
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, projectId))
+      .limit(1);
+    if (!brandProfile) {
+      return withCors(request, Response.json({ error: "Brand profile not found" }, { status: 404 }));
+    }
+
+    const [userApiKey, aiProviderOptions, billingPrep] = await Promise.all([
+      getDecryptedUserGeminiKey(userId),
+      getUserAiProviderOptions(userId),
+      prepareAiBilling({ userId, tier: "planning", quotaKind: "article" }),
+    ]);
+    if (!billingPrep.ok) return withCors(request, billingPrep.response);
+
+    try {
+      let platformVoices = brandProfile.platformVoices;
+      if (parsed.data.allChannels) {
+        platformVoices = await analyzeAllPlatformChannels({
+          voices: platformVoices,
+          platform: platformRaw,
+          userApiKey,
+          aiProviderOptions,
+        });
+      } else {
+        const channel = parsed.data.channel ?? PLATFORM_CHANNELS[platformRaw][0];
+        if (!isValidChannel(platformRaw, channel)) {
+          await cancelAiBilling(billingPrep.ctx, "invalid_channel");
+          return withCors(request, Response.json({ error: "Invalid channel for platform" }, { status: 400 }));
+        }
+        const result = await analyzePlatformVoiceChannel({
+          voices: platformVoices,
+          platform: platformRaw,
+          channel,
+          userApiKey,
+          aiProviderOptions,
+        });
+        platformVoices = result.voices;
+      }
+
+      const [updated] = await db
+        .update(brandProfilesTable)
+        .set({ platformVoices })
+        .where(eq(brandProfilesTable.websiteProjectId, projectId))
+        .returning();
+
+      await completeAiBilling(billingPrep.ctx, {
+        userId,
+        eventType: "platform_voice_analysis",
+        usedByok: billingPrep.usedByok,
+        tier: "planning",
+      });
+
+      return withCors(
+        request,
+        Response.json({
+          platform: platformRaw,
+          profile: updated?.platformVoices?.[platformRaw] ?? null,
+        }),
+      );
+    } catch (err) {
+      await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "analysis_failed");
+      const message = err instanceof Error ? err.message : "Analysis failed";
+      return withCors(request, Response.json({ error: message }, { status: 400 }));
+    }
   }
 
   return null;
