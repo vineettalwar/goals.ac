@@ -268,7 +268,15 @@ export function shouldInjectInfographic(format: ContentFormatType): boolean {
   return format === "blog_post" || format === "guide" || format === "pillar_page" || format === "tutorial";
 }
 
-/** Apply infographic injection + set visual summary markdown/SVG on pieceMetadata. */
+/**
+ * Apply infographic injection + set visual summary markdown/SVG on pieceMetadata.
+ *
+ * `visualSummarySvg` / `visualSummarySvgDataUri` are for in-app/aside preview and
+ * the body markdown image. Do not set `featuredImageUrl` / `ogImageUrl` to SVG data
+ * URIs — many CMS featured-image APIs reject SVG. Stock photos remain preferred for
+ * CMS publish; on Node workers, `enrichContentPieceImages` may rasterize the SVG to
+ * a PNG data URI via sharp when no stock featured exists.
+ */
 export function applyInfographicToContentPiece<
   T extends {
     title: string;
@@ -288,9 +296,6 @@ export function applyInfographicToContentPiece<
 
   if (!visualSummaryMarkdown && !visualSummarySvg) return result;
 
-  const hasStockFeatured = Boolean(result.pieceMetadata?.featuredImageUrl);
-  const useSvgAsFeatured = Boolean(visualSummarySvgDataUri) && !hasStockFeatured;
-
   return {
     ...result,
     body_markdown: body,
@@ -300,12 +305,6 @@ export function applyInfographicToContentPiece<
       ...(visualSummaryMarkdown ? { visualSummaryMarkdown } : {}),
       ...(visualSummarySvg ? { visualSummarySvg } : {}),
       ...(visualSummarySvgDataUri ? { visualSummarySvgDataUri } : {}),
-      ...(useSvgAsFeatured
-        ? {
-            featuredImageUrl: visualSummarySvgDataUri,
-            ogImageUrl: visualSummarySvgDataUri,
-          }
-        : {}),
     },
   };
 }

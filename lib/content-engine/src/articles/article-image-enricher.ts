@@ -15,10 +15,56 @@ export type ImageEnrichablePiece = {
     images?: ContentPieceImageRef[];
     featuredImageUrl?: string;
     ogImageUrl?: string;
+    visualSummarySvg?: string;
     visualSummarySvgDataUri?: string;
     [key: string]: unknown;
   };
 };
+
+function isSvgDataUri(url?: string | null): boolean {
+  return Boolean(url?.startsWith("data:image/svg+xml"));
+}
+
+/** Drop SVG data URIs from featured/og fields (CMS-incompatible). */
+function nonSvgImageUrl(url?: string | null): string | undefined {
+  if (!url || isSvgDataUri(url)) return undefined;
+  return url;
+}
+
+function visualSummarySvgMarkup(meta: ImageEnrichablePiece["pieceMetadata"]): string | null {
+  if (meta?.visualSummarySvg?.trim()) return meta.visualSummarySvg.trim();
+  const dataUri = meta?.visualSummarySvgDataUri;
+  if (!dataUri || !isSvgDataUri(dataUri)) return null;
+  const comma = dataUri.indexOf(",");
+  if (comma < 0) return null;
+  const payload = dataUri.slice(comma + 1);
+  try {
+    if (dataUri.includes(";base64,")) {
+      return Buffer.from(payload, "base64").toString("utf8");
+    }
+    return decodeURIComponent(payload);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Rasterize visual-summary SVG → PNG data URI on Node (native sharp via @workspace/media).
+ * No-op on Cloudflare Workers where sharp is stubbed.
+ */
+async function pngFeaturedFromVisualSummary(
+  meta: ImageEnrichablePiece["pieceMetadata"],
+): Promise<string | null> {
+  const svg = visualSummarySvgMarkup(meta);
+  if (!svg) return null;
+  try {
+    const { svgMarkupToPngDataUri } = await import("@workspace/media");
+    return await svgMarkupToPngDataUri(svg);
+  } catch (err) {
+    logger.debug({ err }, "visualSummary SVG→PNG skipped (sharp unavailable)");
+    return null;
+  }
+}
 
 export function parseImageSettings(
   contentStyle?: { imageSettings?: ProjectImageSettings } | null,
@@ -119,107 +165,117 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
     settings.autoFeaturedImage !== false &&
     (isLongform || isSocial);
 
-  if (!shouldEnrich) {
-    return {
-      ...piece,
-      pieceMetadata: piece.pieceMetadata ?? {},
-    };
-  }
-
   const keyword = piece.target_keyword?.trim() || piece.title;
   const images: ContentPieceImageRef[] = [];
   let body = piece.body_markdown;
   const excludeIds = options?.excludeImageIds ?? [];
 
-  const featured = await pickBestStockPhoto(keyword, {
-    provider: settings.stockProvider ?? "auto",
-    orientation: "landscape",
-    excludeIds,
-    fallbackQueries: options?.brandName ? [`${keyword} ${options.brandName}`] : undefined,
-    credentials: stockCredentials,
-  });
+  if (shouldEnrich) {
+    const featured = await pickBestStockPhoto(keyword, {
+      provider: settings.stockProvider ?? "auto",
+      orientation: "landscape",
+      excludeIds,
+      fallbackQueries: options?.brandName ? [`${keyword} ${options.brandName}`] : undefined,
+      credentials: stockCredentials,
+    });
 
-  if (featured) {
-    const meta = await generateImageAltTitle(
-      options?.ai,
-      keyword,
-      piece.title,
-      featured.description,
-    );
-    const ref: ContentPieceImageRef = {
-      role: "featured",
-      provider: featured.provider,
-      remoteId: featured.id,
-      remoteUrl: featured.url,
-      alt: meta.alt,
-      title: meta.title,
-      searchQuery: keyword,
-      rankScore: featured.rankScore,
-      photographer: featured.photographer,
-      photographerUrl: featured.photographerUrl,
-    };
-    images.push(ref);
-
-    if (isLongform && !body.includes(featured.url)) {
-      body = injectHeroAfterIntro(body, ref.alt, featured.url);
-    }
-  }
-
-  if (isLongform && settings.autoInlineImages !== false) {
-    const maxInline = settings.maxInlineImages ?? 2;
-    const headings = extractH2Headings(body).slice(0, maxInline);
-    const usedIds = images.map((img) => `${img.provider}:${img.remoteId}`);
-
-    for (const heading of headings) {
-      const inlineQuery = `${keyword} ${heading}`.trim();
-      const inline = await pickBestStockPhoto(inlineQuery, {
-        provider: settings.stockProvider ?? "auto",
-        orientation: "landscape",
-        excludeIds: [...excludeIds, ...usedIds],
-        credentials: stockCredentials,
-      });
-      if (!inline) continue;
-
+    if (featured) {
       const meta = await generateImageAltTitle(
         options?.ai,
         keyword,
-        heading,
-        inline.description,
+        piece.title,
+        featured.description,
       );
       const ref: ContentPieceImageRef = {
-        role: "inline",
-        provider: inline.provider,
-        remoteId: inline.id,
-        remoteUrl: inline.url,
+        role: "featured",
+        provider: featured.provider,
+        remoteId: featured.id,
+        remoteUrl: featured.url,
         alt: meta.alt,
         title: meta.title,
-        searchQuery: inlineQuery,
-        rankScore: inline.rankScore,
-        photographer: inline.photographer,
-        photographerUrl: inline.photographerUrl,
-        sectionHeading: heading,
+        searchQuery: keyword,
+        rankScore: featured.rankScore,
+        photographer: featured.photographer,
+        photographerUrl: featured.photographerUrl,
       };
       images.push(ref);
-      usedIds.push(`${inline.provider}:${inline.id}`);
-      if (!body.includes(inline.url)) {
-        body = injectImageAfterHeading(body, heading, ref.alt, inline.url);
+
+      if (isLongform && !body.includes(featured.url)) {
+        body = injectHeroAfterIntro(body, ref.alt, featured.url);
+      }
+    }
+
+    if (isLongform && settings.autoInlineImages !== false) {
+      const maxInline = settings.maxInlineImages ?? 2;
+      const headings = extractH2Headings(body).slice(0, maxInline);
+      const usedIds = images.map((img) => `${img.provider}:${img.remoteId}`);
+
+      for (const heading of headings) {
+        const inlineQuery = `${keyword} ${heading}`.trim();
+        const inline = await pickBestStockPhoto(inlineQuery, {
+          provider: settings.stockProvider ?? "auto",
+          orientation: "landscape",
+          excludeIds: [...excludeIds, ...usedIds],
+          credentials: stockCredentials,
+        });
+        if (!inline) continue;
+
+        const meta = await generateImageAltTitle(
+          options?.ai,
+          keyword,
+          heading,
+          inline.description,
+        );
+        const ref: ContentPieceImageRef = {
+          role: "inline",
+          provider: inline.provider,
+          remoteId: inline.id,
+          remoteUrl: inline.url,
+          alt: meta.alt,
+          title: meta.title,
+          searchQuery: inlineQuery,
+          rankScore: inline.rankScore,
+          photographer: inline.photographer,
+          photographerUrl: inline.photographerUrl,
+          sectionHeading: heading,
+        };
+        images.push(ref);
+        usedIds.push(`${inline.provider}:${inline.id}`);
+        if (!body.includes(inline.url)) {
+          body = injectImageAfterHeading(body, heading, ref.alt, inline.url);
+        }
       }
     }
   }
 
   const featuredImage = images.find((img) => img.role === "featured");
-  const svgFallback = piece.pieceMetadata?.visualSummarySvgDataUri;
+  // Prefer stock remote URLs for CMS. Never use SVG data URIs as featured/og.
+  let featuredImageUrl =
+    featuredImage?.remoteUrl ?? nonSvgImageUrl(piece.pieceMetadata?.featuredImageUrl);
+  let ogImageUrl =
+    featuredImage?.remoteUrl ?? nonSvgImageUrl(piece.pieceMetadata?.ogImageUrl);
+
+  if (isLongform && !featuredImageUrl) {
+    const pngDataUri = await pngFeaturedFromVisualSummary(piece.pieceMetadata);
+    if (pngDataUri) {
+      featuredImageUrl = pngDataUri;
+      ogImageUrl = ogImageUrl ?? pngDataUri;
+    }
+  }
+
+  const nextMeta: NonNullable<T["pieceMetadata"]> = {
+    ...piece.pieceMetadata,
+    ...(shouldEnrich ? { images } : {}),
+  };
+  if (featuredImageUrl) nextMeta.featuredImageUrl = featuredImageUrl;
+  else delete nextMeta.featuredImageUrl;
+  if (ogImageUrl) nextMeta.ogImageUrl = ogImageUrl;
+  else delete nextMeta.ogImageUrl;
 
   return {
     ...piece,
     body_markdown: body,
-    pieceMetadata: {
-      ...piece.pieceMetadata,
-      images,
-      featuredImageUrl:
-        featuredImage?.remoteUrl ?? piece.pieceMetadata?.featuredImageUrl ?? svgFallback,
-      ogImageUrl: featuredImage?.remoteUrl ?? piece.pieceMetadata?.ogImageUrl ?? svgFallback,
-    },
+    pieceMetadata: nextMeta,
   };
 }
 
