@@ -14,7 +14,8 @@
     "./jwt": "./src/jwt.ts",
     "./session-cookie": "./src/session-cookie.ts",
     "./wire": "./src/wire.ts",
-    "./project-access": "./src/project-access.ts"
+    "./project-access": "./src/project-access.ts",
+    "./search-property-client": "./src/search-property-client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
@@ -22,6 +23,7 @@
   "dependencies": {
     "@workspace/db": "workspace:*",
     "@workspace/jobs": "workspace:*",
+    "@workspace/security": "workspace:*",
     "drizzle-orm": "catalog:",
     "next-auth": "^5.0.0-beta.30"
   },

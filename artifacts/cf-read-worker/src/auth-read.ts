@@ -3,7 +3,22 @@ import { decryptSecret } from "@workspace/security/encryption";
 import {
   getOrgAiSettingsForUser,
   hasOrgBedrockCredentials,
+  hasOrgSemrushCredentials,
 } from "@workspace/content-engine/support/ai/org-ai-settings";
+import {
+  getOrgEncryptedDeeplApiKey,
+  maskEncryptedDeeplApiKeyLastFour,
+} from "@workspace/content-engine/support/integrations/deepl-credentials";
+import {
+  getOrgEncryptedStockCredentials,
+  maskStockCredentialLastFour,
+} from "@workspace/content-engine/support/integrations/stock-credentials";
+import { SEMRUSH_DATABASES } from "@workspace/keyword-research-provider";
+import {
+  getPlatformStockImageStatus,
+  listByokStockProviders,
+  STOCK_PROVIDER_REGISTRY,
+} from "@workspace/stock-images";
 
 type OrgKeyRoute = {
   path: string;
@@ -32,6 +47,77 @@ export async function handleAuthRead(
 ): Promise<Response | null> {
   if (request.method !== "GET") {
     return null;
+  }
+
+  if (path === "/api/auth/semrush-credentials") {
+    const orgSettings = await getOrgAiSettingsForUser(userId);
+    if (!hasOrgSemrushCredentials(orgSettings)) {
+      return withCors(
+        request,
+        Response.json({
+          hasCredentials: false,
+          database: orgSettings?.semrushDatabase ?? "us",
+        }),
+      );
+    }
+
+    let apiKeyLastFour = "••••";
+    try {
+      if (orgSettings?.encryptedSemrushApiKey) {
+        apiKeyLastFour = decryptSecret(orgSettings.encryptedSemrushApiKey).slice(-4);
+      }
+    } catch {
+      // keep placeholder
+    }
+
+    return withCors(
+      request,
+      Response.json({
+        hasCredentials: true,
+        apiKeyLastFour,
+        database: orgSettings?.semrushDatabase ?? "us",
+        supportedDatabases: SEMRUSH_DATABASES,
+      }),
+    );
+  }
+
+  if (path === "/api/auth/deepl-credentials") {
+    const orgSettings = await getOrgAiSettingsForUser(userId);
+    const encrypted = orgSettings
+      ? await getOrgEncryptedDeeplApiKey(orgSettings.organizationId)
+      : null;
+
+    return withCors(
+      request,
+      Response.json({
+        configured: Boolean(encrypted),
+        apiKeyLastFour: maskEncryptedDeeplApiKeyLastFour(encrypted),
+        docsUrl: "https://www.deepl.com/pro-api",
+      }),
+    );
+  }
+
+  if (path === "/api/auth/stock-credentials") {
+    const orgSettings = await getOrgAiSettingsForUser(userId);
+    const encrypted = orgSettings
+      ? await getOrgEncryptedStockCredentials(orgSettings.organizationId)
+      : null;
+    const masked = maskStockCredentialLastFour(encrypted ?? undefined);
+
+    return withCors(
+      request,
+      Response.json({
+        platform: getPlatformStockImageStatus(),
+        org: Object.entries(masked).map(([provider, apiKeyLastFour]) => ({
+          provider,
+          apiKeyLastFour,
+          billing: STOCK_PROVIDER_REGISTRY[provider as keyof typeof STOCK_PROVIDER_REGISTRY].billing,
+          searchImplemented:
+            STOCK_PROVIDER_REGISTRY[provider as keyof typeof STOCK_PROVIDER_REGISTRY].searchImplemented,
+        })),
+        providers: listByokStockProviders(),
+      }),
+    );
   }
 
   if (path === "/api/auth/bedrock-credentials") {

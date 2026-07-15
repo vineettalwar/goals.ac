@@ -33,9 +33,10 @@ import { parseVisibilitySettings } from "@workspace/content-engine/support/setti
 import { getUsageSummaryForUser } from "./usage";
 import { handleAuthRead } from "./auth-read";
 import { getAiProviderStatusForUser } from "./ai-providers-status";
-import { handleSearchPropertiesGet } from "./search-properties";
+import { handleSearchPropertiesGet, handleSearchPropertiesAvailablePost } from "./search-properties";
 import { handleOrgMembersRead } from "./org-members";
 import { handleBillingStatusGet } from "./billing-status";
+import { handleSocialMetricsGet, handleSocialQueueGet } from "./social-queue";
 
 export type ReadWorkerEnv = {
   GOOGLE_CLIENT_ID?: string;
@@ -70,8 +71,16 @@ export async function handleAuthenticatedRead(
         .then((rows) => rows[0]),
       getOrgAiSettingsForUser(userId),
       db
-        .select({ orgRole: organizationMembersTable.role })
+        .select({
+          orgRole: organizationMembersTable.role,
+          organizationId: organizationMembersTable.organizationId,
+          organizationName: organizationsTable.name,
+        })
         .from(organizationMembersTable)
+        .innerJoin(
+          organizationsTable,
+          eq(organizationMembersTable.organizationId, organizationsTable.id),
+        )
         .where(eq(organizationMembersTable.userId, userId))
         .limit(1)
         .then((rows) => rows[0]),
@@ -93,6 +102,8 @@ export async function handleAuthenticatedRead(
         hasGoogleId: Boolean(user.googleId),
         hasPassword: Boolean(user.passwordHash),
         orgRole: membership?.orgRole ?? null,
+        organizationId: membership?.organizationId ?? null,
+        organizationName: membership?.organizationName ?? null,
       }),
     );
   }
@@ -123,6 +134,12 @@ export async function handleAuthenticatedRead(
 
   const orgMembersHandled = await handleOrgMembersRead(request, path, userId);
   if (orgMembersHandled) return orgMembersHandled;
+
+  const socialQueueHandled = await handleSocialQueueGet(request, path, userId);
+  if (socialQueueHandled) return socialQueueHandled;
+
+  const socialMetricsHandled = await handleSocialMetricsGet(request, path, userId);
+  if (socialMetricsHandled) return socialMetricsHandled;
 
   if (path === "/api/organizations" && request.method === "GET") {
     const memberships = await db
@@ -181,6 +198,14 @@ export async function handleAuthenticatedRead(
   if (projectSearchPropsMatch && request.method === "GET") {
     const projectId = Number.parseInt(projectSearchPropsMatch[1]!, 10);
     return handleSearchPropertiesGet(request, projectId, userId, env);
+  }
+
+  const projectSearchPropsAvailableMatch = path.match(
+    /^\/api\/website-projects\/(\d+)\/search-properties\/available$/,
+  );
+  if (projectSearchPropsAvailableMatch && request.method === "POST") {
+    const projectId = Number.parseInt(projectSearchPropsAvailableMatch[1]!, 10);
+    return handleSearchPropertiesAvailablePost(request, projectId, userId, env);
   }
 
   const projectCmsMatch = path.match(/^\/api\/website-projects\/(\d+)\/cms-integrations$/);
@@ -484,7 +509,10 @@ export async function handleAuthenticatedRead(
       )
       .limit(1);
     if (!piece) {
-      return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+      return withCors(
+        request,
+        Response.json({ error: "Content piece not found" }, { status: 404 }),
+      );
     }
     return withCors(request, Response.json(piece));
   }

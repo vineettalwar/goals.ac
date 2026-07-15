@@ -21,7 +21,13 @@ import { handleAiProvidersSettingsWrite } from "./ai-providers-settings";
 import { handleAuthOpenaiWrite } from "./auth-openai";
 import { handleAuthAnthropicWrite } from "./auth-anthropic";
 import { handleAuthBedrockWrite } from "./auth-bedrock";
+import { handleAuthSemrushWrite } from "./auth-semrush";
+import { handleAuthDeeplWrite } from "./auth-deepl";
+import { handleAuthStockWrite } from "./auth-stock";
 import { handleOrgMembersWrite } from "./org-members";
+import { handleBillingPortalPost } from "./billing-portal";
+import { handleBillingCheckoutPost } from "./billing-checkout";
+import { handleSearchPropertiesWrite } from "./search-properties";
 
 export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
@@ -29,6 +35,10 @@ export interface Env extends CfEdgeBindings {
   FORCE_QUEUE_WRITES: string;
   AUTH_SECRET: string;
   GEMINI_KEY_ENCRYPTION_SECRET: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  BING_WEBMASTER_CLIENT_ID?: string;
+  BING_WEBMASTER_CLIENT_SECRET?: string;
 }
 
 const contentGenerateBody = z
@@ -45,6 +55,7 @@ const contentGenerateBody = z
 
 const contentPublishBody = z.object({
   contentPieceId: z.number().int().positive(),
+  platform: z.string().min(1).optional(),
 });
 
 const scrapeBody = z.object({
@@ -109,6 +120,15 @@ export default {
       const bedrockHandled = await handleAuthBedrockWrite(request, path, userId);
       if (bedrockHandled) return bedrockHandled;
 
+      const semrushHandled = await handleAuthSemrushWrite(request, path, userId);
+      if (semrushHandled) return semrushHandled;
+
+      const deeplHandled = await handleAuthDeeplWrite(request, path, userId);
+      if (deeplHandled) return deeplHandled;
+
+      const stockHandled = await handleAuthStockWrite(request, path, userId);
+      if (stockHandled) return stockHandled;
+
       const aiProvidersHandled = await handleAiProvidersSettingsWrite(request, path, userId);
       if (aiProvidersHandled) return aiProvidersHandled;
 
@@ -120,6 +140,15 @@ export default {
 
       const orgMembersHandled = await handleOrgMembersWrite(request, path, userId);
       if (orgMembersHandled) return orgMembersHandled;
+
+      const billingPortalHandled = await handleBillingPortalPost(request, path, userId);
+      if (billingPortalHandled) return billingPortalHandled;
+
+      const billingCheckoutHandled = await handleBillingCheckoutPost(request, path, userId);
+      if (billingCheckoutHandled) return billingCheckoutHandled;
+
+      const searchPropertiesHandled = await handleSearchPropertiesWrite(request, path, userId, env);
+      if (searchPropertiesHandled) return searchPropertiesHandled;
 
       const contentPiecesHandled = await handleContentPiecesWrite(request, path, userId, (jobId, queue, meta) =>
         trackJob(env, jobId, queue, meta),
@@ -142,8 +171,13 @@ export default {
 
       const publishMatch = path.match(/^\/api\/content-pieces\/(\d+)\/publish$/);
       if (publishMatch && request.method === "POST") {
+        const body = (await request.json().catch(() => null)) as {
+          contentPieceId?: number;
+          platform?: string;
+        } | null;
         const parsed = contentPublishBody.safeParse({
           contentPieceId: Number.parseInt(publishMatch[1]!, 10),
+          platform: body?.platform,
         });
         if (!parsed.success) {
           return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
@@ -151,6 +185,7 @@ export default {
         const jobId = await sendToCfQueue(QUEUES.contentPublish, {
           contentPieceId: parsed.data.contentPieceId,
           userId,
+          platform: parsed.data.platform,
         });
         const id = jobId ?? `cf:${QUEUES.contentPublish}:${Date.now()}`;
         await trackJob(env, id, QUEUES.contentPublish, { userId });

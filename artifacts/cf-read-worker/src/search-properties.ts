@@ -5,8 +5,16 @@ import {
   searchPropertyConnectionsTable,
   type SearchPropertyProvider,
 } from "@workspace/db/schema-sqlite";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
+import {
+  encryptStoredTokens,
+  listPropertiesForProvider,
+  parseStoredTokens,
+  rankProperties,
+  resolveAccessToken,
+  type SearchPropertyTokenEnv,
+} from "@workspace/cf-edge/search-property-client";
 import { getAccessibleProject } from "./project-access";
 
 const AI_REPORT_LABELS: Record<SearchPropertyProvider, string> = {
@@ -169,4 +177,71 @@ export async function handleSearchPropertiesGet(
       oauthConfigured: await oauthConfigured(env),
     }),
   );
+}
+
+export async function handleSearchPropertiesAvailablePost(
+  request: Request,
+  projectId: number,
+  userId: number,
+  env: SearchPropertyTokenEnv,
+): Promise<Response> {
+  const provider = new URL(request.url).searchParams.get("provider") as SearchPropertyProvider | null;
+  if (!provider || !SEARCH_PROPERTY_PROVIDERS.includes(provider)) {
+    return withCors(
+      request,
+      Response.json({ error: "provider query param is required" }, { status: 400 }),
+    );
+  }
+
+  const project = await getAccessibleProject(projectId, userId);
+  if (!project) {
+    return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const [connection] = await db
+    .select({
+      id: searchPropertyConnectionsTable.id,
+      encryptedTokens: searchPropertyConnectionsTable.encryptedTokens,
+    })
+    .from(searchPropertyConnectionsTable)
+    .where(
+      and(
+        eq(searchPropertyConnectionsTable.projectId, projectId),
+        eq(searchPropertyConnectionsTable.provider, provider),
+      ),
+    )
+    .limit(1);
+
+  if (!connection) {
+    return withCors(request, Response.json({ error: "Connect this provider first" }, { status: 404 }));
+  }
+
+  try {
+    let tokens = parseStoredTokens(connection.encryptedTokens);
+    const resolved = await resolveAccessToken(provider, tokens, env);
+    tokens = resolved.tokens;
+
+    if (resolved.refreshed) {
+      await db
+        .update(searchPropertyConnectionsTable)
+        .set({ encryptedTokens: encryptStoredTokens(tokens) })
+        .where(eq(searchPropertyConnectionsTable.id, connection.id));
+    }
+
+    const rawProperties = await listPropertiesForProvider(provider, resolved.accessToken);
+    const properties = rankProperties(project.url, rawProperties);
+
+    return withCors(
+      request,
+      Response.json({
+        properties,
+        projectUrl: project.url,
+      }),
+    );
+  } catch {
+    return withCors(
+      request,
+      Response.json({ error: "Failed to load verified properties" }, { status: 502 }),
+    );
+  }
 }
