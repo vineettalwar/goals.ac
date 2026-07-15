@@ -56,7 +56,10 @@ export function ProjectPublishingTab({
     refetch: refetchIntegrations,
   } = useCmsIntegrations(projectId);
   const [cmsIntegrations, setCmsIntegrations] = useState<CmsIntegrationStatus>({});
-  const [healthStatus, setHealthStatus] = useState<Record<string, { ok: boolean; error?: string }> | null>(null);
+  const [healthStatus, setHealthStatus] = useState<Record<
+    string,
+    { ok: boolean; error?: string; themeSnippetRequiredFor?: string[] }
+  > | null>(null);
   const [pendingAction, setPendingAction] = useState<PublishingPendingAction>(null);
   const [cmsError, setCmsError] = useState<string | null>(null);
   const [cmsSaveSuccess, setCmsSaveSuccess] = useState<string | null>(null);
@@ -108,11 +111,17 @@ export function ProjectPublishingTab({
       ]);
       if (!legacyRes.ok && !cmsHealthRes.ok) throw new Error("Health check failed");
 
-      const merged: Record<string, { ok: boolean; error?: string }> = {};
+      const merged: Record<
+        string,
+        { ok: boolean; error?: string; themeSnippetRequiredFor?: string[] }
+      > = {};
       if (legacyRes.ok) {
         Object.assign(
           merged,
-          (await legacyRes.json()) as Record<string, { ok: boolean; error?: string }>,
+          (await legacyRes.json()) as Record<
+            string,
+            { ok: boolean; error?: string; themeSnippetRequiredFor?: string[] }
+          >,
         );
       }
       if (cmsHealthRes.ok) {

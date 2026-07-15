@@ -262,6 +262,25 @@ export function ContentPiecePublishDialog({
                 </div>
               ) : null}
 
+              {showShopifyThemeSnippetWarning ? (
+                <div className="space-y-2">
+                  <ShopifyThemeSnippetPreflight learnHref={shopifyThemeLearnHref} />
+                  <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-border"
+                      checked={shopifyThemeSnippetAck}
+                      onChange={(e) => setShopifyThemeSnippetAck(e.target.checked)}
+                      disabled={publishing}
+                    />
+                    <span>
+                      Theme snippet installed — publish continues either way; check if you already
+                      pasted the Liquid into the theme.
+                    </span>
+                  </label>
+                </div>
+              ) : null}
+
               {isExportOnly && (platform === "medium" || platform === "substack") ? (
                 <ContentExportPanel
                   platform={platform}

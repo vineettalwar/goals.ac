@@ -12,6 +12,12 @@ export {
   type ContentBriefSummary,
 } from "./content-brief-panel";
 export { ContentPiecePublishDialog, type RenderPreviewResult } from "./publish-dialog";
+export {
+  ShopifyThemeSnippetPreflight,
+  shopifyOutputModeNeedsThemeSnippet,
+  readShopifyThemeSnippetRequiredFor,
+  SHOPIFY_THEME_SNIPPET_REQUIRED_FALLBACK,
+} from "./shopify-theme-snippet-preflight";
 export { ContentExportPanel, type ContentExportPlatform } from "./content-export-panel";
 export { ContentPieceRepurposeDialog } from "./repurpose-dialog";
 export { ContentPieceFeaturedImage } from "./content-featured-image";

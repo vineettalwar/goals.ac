@@ -48,6 +48,11 @@ import {
   outputModeLabel,
 } from "@workspace/content-engine/support/publishing/platform-output-modes";
 import {
+  readShopifyThemeSnippetRequiredFor,
+  shopifyOutputModeNeedsThemeSnippet,
+  ShopifyThemeSnippetPreflight,
+} from "@workspace/app-shell/content-piece";
+import {
   type ConnectionMethod,
   type PublishDestinationDefinition,
   type PublishDestinationId,
@@ -66,6 +71,7 @@ export function HealthBadge({
     error?: string;
     recommendedOutputMode?: string;
     availableOutputModes?: string[];
+    themeSnippetRequiredFor?: string[];
   };
   destinationName?: string;
 }) {
@@ -202,6 +208,7 @@ function ConnectionField({
 function ConnectedOutputModeControl({
   platform,
   integration,
+  health,
   apiBase,
   projectId,
   onUpdated,
@@ -209,6 +216,7 @@ function ConnectedOutputModeControl({
 }: {
   platform: PublishDestinationId;
   integration: Record<string, unknown>;
+  health?: { themeSnippetRequiredFor?: string[] };
   apiBase: string;
   projectId: string;
   onUpdated: (updated: CmsIntegrationStatus) => void;
@@ -259,6 +267,15 @@ function ConnectedOutputModeControl({
     }
   };
 
+  const themeSnippetRequiredFor =
+    platform === "shopify"
+      ? (health?.themeSnippetRequiredFor ??
+        readShopifyThemeSnippetRequiredFor(integration))
+      : null;
+  const showShopifyThemeSnippetWarning =
+    platform === "shopify" &&
+    shopifyOutputModeNeedsThemeSnippet(currentMode, themeSnippetRequiredFor);
+
   return (
     <div className="space-y-1.5">
       <Label htmlFor={`${platform}-output-mode`}>Output format</Label>
@@ -279,6 +296,7 @@ function ConnectedOutputModeControl({
           {modeOptions.find((option) => option.value === currentMode)?.hint}
         </p>
       ) : null}
+      {showShopifyThemeSnippetWarning ? <ShopifyThemeSnippetPreflight /> : null}
     </div>
   );
 }
@@ -297,7 +315,11 @@ function CmsConnectionCard({
 }: {
   destination: PublishDestinationDefinition;
   integration?: Record<string, unknown>;
-  health?: { ok: boolean; error?: string };
+  health?: {
+    ok: boolean;
+    error?: string;
+    themeSnippetRequiredFor?: string[];
+  };
   apiBase: string;
   projectId: string;
   token: string;
@@ -477,6 +499,7 @@ function CmsConnectionCard({
             <ConnectedOutputModeControl
               platform={destination.id}
               integration={integration}
+              health={health}
               apiBase={apiBase}
               projectId={projectId}
               onUpdated={onConnected}
