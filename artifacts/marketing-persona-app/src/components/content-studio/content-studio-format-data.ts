@@ -205,40 +205,9 @@ export const FORMAT_CATEGORIES: { label: string; formats: ContentFormatType[] }[
   },
 ];
 
-export type LinkedInArchetypeId =
-  | "listicle"
-  | "case-study"
-  | "hot-take"
-  | "personal-story"
-  | "educational";
-
-export type LinkedInHookId =
-  | "bold-question"
-  | "contrarian-take"
-  | "surprising-stat"
-  | "personal-confession"
-  | "controversial";
-
-export const LINKEDIN_ARCHETYPES: ReadonlyArray<{
-  id: LinkedInArchetypeId;
-  label: string;
-  description: string;
-}> = [
-  { id: "listicle", label: "Listicle", description: "Numbered insights" },
-  { id: "case-study", label: "Mini Case Study", description: "Client or success story" },
-  { id: "hot-take", label: "Hot Take", description: "Contrarian viewpoint" },
-  { id: "personal-story", label: "Personal Story", description: "Journey or confession" },
-  { id: "educational", label: "Educational", description: "How-to insight" },
-];
-
-export const LINKEDIN_HOOK_TYPES: ReadonlyArray<{
-  id: LinkedInHookId;
-  label: string;
-  template: string;
-}> = [
-  { id: "bold-question", label: "Bold Question", template: "What if [statement]?" },
-  { id: "contrarian-take", label: "Contrarian Take", template: "Most [audience] get [topic] wrong." },
-  { id: "surprising-stat", label: "Surprising Stat", template: "83% of [audience] fail because of [reason]." },
-  { id: "personal-confession", label: "Personal Confession", template: "I used to do X. Here's why I stopped." },
-  { id: "controversial", label: "Controversial", template: "Hot take: [statement]" },
-];
+export {
+  LINKEDIN_ARCHETYPES,
+  LINKEDIN_HOOK_TYPES,
+  type LinkedInArchetypeId,
+  type LinkedInHookId,
+} from "@workspace/app-shell/studio";

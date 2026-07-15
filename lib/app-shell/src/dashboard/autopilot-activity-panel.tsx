@@ -31,6 +31,27 @@ export function formatArticleUsageLabel(usage: DashboardArticleUsage): string {
   return `${usage.articlesThisMonth} articles this month`;
 }
 
+/**
+ * Internal-links chip label for Autopilot activity.
+ * - Coverage available: `62% linked · 3 orphans`
+ * - Else suggestions: `4 link suggestions`
+ * - Else null → UI shows “No link map yet”
+ */
+export function formatInternalLinksChipLabel(input: {
+  coveragePercent: number | null | undefined;
+  orphanCount: number | null | undefined;
+  suggestionCount: number;
+}): string | null {
+  if (input.coveragePercent != null) {
+    const orphans = input.orphanCount ?? 0;
+    return `${input.coveragePercent}% linked · ${orphans} orphan${orphans === 1 ? "" : "s"}`;
+  }
+  if (input.suggestionCount > 0) {
+    return `${input.suggestionCount} link suggestion${input.suggestionCount === 1 ? "" : "s"}`;
+  }
+  return null;
+}
+
 const STATUS_BADGE: Record<string, string> = {
   ready: "bg-emerald-100 text-emerald-800",
   published: "bg-primary text-primary-foreground",
@@ -112,8 +133,11 @@ export function AutopilotActivityPanel({
   const recentPublishes = commandCenter.recentPublishes ?? [];
   const publishOk = recentPublishes.filter((row) => row.status === "published").length;
   const publishFail = recentPublishes.filter((row) => row.status === "failed").length;
-  const linkSuggestionCount = commandCenter.internalLinkSuggestions ?? 0;
-  const hasLinkMap = commandCenter.internalLinkCoverage != null;
+  const linkChipLabel = formatInternalLinksChipLabel({
+    coveragePercent: commandCenter.internalLinkCoverage,
+    orphanCount: commandCenter.internalLinkOrphanCount,
+    suggestionCount: commandCenter.internalLinkSuggestions ?? 0,
+  });
 
   return (
     <div className="paper-card mb-8 p-6">
@@ -136,17 +160,16 @@ export function AutopilotActivityPanel({
                 {formatArticleUsageLabel(articleUsage)}
               </p>
             ) : null}
-            {linkSuggestionCount > 0 ? (
+            {linkChipLabel ? (
               <DashLink
                 renderLink={renderLink}
                 href="/internal-links"
                 className="inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
               >
                 <Link2 className="mr-1.5 h-3 w-3 shrink-0" />
-                {linkSuggestionCount} link suggestion
-                {linkSuggestionCount === 1 ? "" : "s"}
+                {linkChipLabel}
               </DashLink>
-            ) : !hasLinkMap ? (
+            ) : (
               <DashLink
                 renderLink={renderLink}
                 href="/internal-links"
@@ -155,7 +178,7 @@ export function AutopilotActivityPanel({
                 <Link2 className="mr-1.5 h-3 w-3 shrink-0" />
                 No link map yet
               </DashLink>
-            ) : null}
+            )}
           </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">

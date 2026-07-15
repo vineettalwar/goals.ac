@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, FileText } from "lucide-react";
+import {
+  buildLinkedInAngleHint,
+  LINKEDIN_ARCHETYPES,
+  parseLinkedInArchetypeFromAngleHint,
+  stripLinkedInAngleMeta,
+  type LinkedInArchetypeId,
+} from "./linkedin-archetypes";
 import { STUDIO_FORMAT_OPTIONS, formatTypeLabel } from "./types";
 
 export type CreateContentDraftInput = {
@@ -78,6 +85,7 @@ export function CreateContentDialog({
   const [targetKeyword, setTargetKeyword] = useState("");
   const [formatType, setFormatType] = useState("blog_post");
   const [angleHint, setAngleHint] = useState("");
+  const [linkedinArchetype, setLinkedinArchetype] = useState<LinkedInArchetypeId | "">("");
   const [plannedDate, setPlannedDate] = useState("");
   const [intendedPublishPlatform, setIntendedPublishPlatform] = useState<string | undefined>();
   const [competitorFocusUrl, setCompetitorFocusUrl] = useState("");
@@ -91,6 +99,7 @@ export function CreateContentDialog({
       setTargetKeyword("");
       setFormatType("blog_post");
       setAngleHint("");
+      setLinkedinArchetype("");
       setPlannedDate("");
       setIntendedPublishPlatform(undefined);
       setCompetitorFocusUrl("");
@@ -101,11 +110,17 @@ export function CreateContentDialog({
       initialValues?.formatType && VALID_FORMATS.has(initialValues.formatType as never)
         ? initialValues.formatType
         : "blog_post";
+    const initialAngle = initialValues?.angleHint?.trim() ?? "";
     setStepIndex(0);
     setTitle(initialValues?.title?.trim() ?? "");
     setTargetKeyword(initialValues?.targetKeyword?.trim() ?? "");
     setFormatType(nextFormat);
-    setAngleHint(initialValues?.angleHint?.trim() ?? "");
+    setLinkedinArchetype(parseLinkedInArchetypeFromAngleHint(initialAngle));
+    setAngleHint(
+      nextFormat === "linkedin_post"
+        ? stripLinkedInAngleMeta(initialAngle)
+        : initialAngle,
+    );
     setPlannedDate(initialValues?.plannedDate?.trim() || "");
     setIntendedPublishPlatform(initialValues?.intendedPublishPlatform?.trim() || undefined);
     setCompetitorFocusUrl(initialValues?.competitorFocusUrl?.trim() ?? "");
@@ -147,11 +162,16 @@ export function CreateContentDialog({
     const keyword = targetKeyword.trim();
     if (!keyword || submitting) return;
 
+    const resolvedAngle =
+      formatType === "linkedin_post"
+        ? buildLinkedInAngleHint(linkedinArchetype, "", angleHint)
+        : angleHint.trim() || undefined;
+
     await onSubmit({
       title: title.trim(),
       targetKeyword: keyword,
       formatType,
-      angleHint: angleHint.trim() || undefined,
+      angleHint: resolvedAngle,
       plannedDate: plannedDate.trim() || null,
       intendedPublishPlatform: intendedPublishPlatform || undefined,
       competitorFocusUrl:
@@ -166,7 +186,7 @@ export function CreateContentDialog({
       ? "Choose a format"
       : currentStep === "keyword"
         ? isLinkedIn
-          ? "Keyword & hook"
+          ? "Keyword & archetype"
           : "Keyword & angle"
         : currentStep === "competitors"
           ? "Competitor focus"
@@ -177,7 +197,7 @@ export function CreateContentDialog({
       ? "Pick the content type — we tailor structure and length to match."
       : currentStep === "keyword"
         ? isLinkedIn
-          ? "Target keyword is required. Hook or archetype is optional."
+          ? "Target keyword is required. Archetype chips are optional."
           : "Target keyword is required. Angle and title are optional."
         : currentStep === "competitors"
           ? "Optional — paste a competitor URL to differentiate against for this piece."
@@ -238,7 +258,10 @@ export function CreateContentDialog({
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setFormatType(option.value)}
+                    onClick={() => {
+                      setFormatType(option.value);
+                      if (option.value !== "linkedin_post") setLinkedinArchetype("");
+                    }}
                     className={
                       selected
                         ? "flex w-full items-center justify-between rounded-xl border border-primary bg-primary/5 px-4 py-2.5 text-left text-sm"
@@ -276,9 +299,40 @@ export function CreateContentDialog({
                 />
               </label>
 
+              {isLinkedIn ? (
+                <div className="space-y-1.5">
+                  <span className="text-sm font-medium">
+                    Archetype{" "}
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  </span>
+                  <div className="flex flex-wrap gap-2 pt-0.5">
+                    {LINKEDIN_ARCHETYPES.map((archetype) => {
+                      const selected = linkedinArchetype === archetype.id;
+                      return (
+                        <button
+                          key={archetype.id}
+                          type="button"
+                          title={archetype.description}
+                          onClick={() =>
+                            setLinkedinArchetype(selected ? "" : archetype.id)
+                          }
+                          className={
+                            selected
+                              ? "rounded-lg border border-primary bg-primary/5 px-3 py-1.5 text-left text-sm font-medium text-foreground"
+                              : "rounded-lg border border-border px-3 py-1.5 text-left text-sm text-muted-foreground hover:border-primary/60 hover:bg-secondary/40 hover:text-foreground"
+                          }
+                        >
+                          {archetype.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">
-                  {isLinkedIn ? "Hook / archetype" : "Angle / hint"}{" "}
+                  {isLinkedIn ? "Extra notes" : "Angle / hint"}{" "}
                   <span className="font-normal text-muted-foreground">(optional)</span>
                 </span>
                 <textarea
@@ -287,7 +341,7 @@ export function CreateContentDialog({
                   onChange={(event) => setAngleHint(event.target.value)}
                   placeholder={
                     isLinkedIn
-                      ? "e.g. hot take · bold question opener · founder story…"
+                      ? "Optional context beyond the archetype…"
                       : "Tone, audience, or angle for the AI…"
                   }
                   className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm"
@@ -357,9 +411,18 @@ export function CreateContentDialog({
                 <ReviewRow label="Format" value={formatTypeLabel(formatType)} />
                 <ReviewRow label="Keyword" value={targetKeyword.trim() || "—"} />
                 {title.trim() ? <ReviewRow label="Title" value={title.trim()} /> : null}
+                {isLinkedIn && linkedinArchetype ? (
+                  <ReviewRow
+                    label="Archetype"
+                    value={
+                      LINKEDIN_ARCHETYPES.find((a) => a.id === linkedinArchetype)
+                        ?.label ?? linkedinArchetype
+                    }
+                  />
+                ) : null}
                 {angleHint.trim() ? (
                   <ReviewRow
-                    label={isLinkedIn ? "Hook" : "Angle"}
+                    label={isLinkedIn ? "Notes" : "Angle"}
                     value={angleHint.trim()}
                   />
                 ) : null}

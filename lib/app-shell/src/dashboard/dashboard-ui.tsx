@@ -11,7 +11,11 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "../cn";
-import { AutopilotActivityPanel, formatArticleUsageLabel } from "./autopilot-activity-panel";
+import {
+  AutopilotActivityPanel,
+  formatArticleUsageLabel,
+  formatInternalLinksChipLabel,
+} from "./autopilot-activity-panel";
 import {
   contentPiecePath,
   countByStatus,
@@ -25,7 +29,11 @@ import {
 } from "./types";
 import { AutopilotSettingsCompact } from "./autopilot-settings-compact";
 
-export { AutopilotActivityPanel, formatArticleUsageLabel } from "./autopilot-activity-panel";
+export {
+  AutopilotActivityPanel,
+  formatArticleUsageLabel,
+  formatInternalLinksChipLabel,
+} from "./autopilot-activity-panel";
 export { AutopilotSettingsCompact } from "./autopilot-settings-compact";
 
 const STATUS_BADGE: Record<string, string> = {

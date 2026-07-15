@@ -9,6 +9,7 @@ export {
   DashboardStatsSection,
   DashboardView,
   formatArticleUsageLabel,
+  formatInternalLinksChipLabel,
 } from "./dashboard-ui";
 export {
   contentPiecePath,

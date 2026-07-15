@@ -81,7 +81,10 @@ export type DashboardCommandCenter = {
     suggestedTitle: string;
     source: string;
   }>;
+  /** Coverage % from `/internal-links` rules; null when no pages in map. */
   internalLinkCoverage?: number | null;
+  /** Published pages with zero inbound links; null when coverage unavailable. */
+  internalLinkOrphanCount?: number | null;
   internalLinkSuggestions?: number;
   recentPieces?: DashboardCommandCenterRecentPiece[];
   recentPublishes?: DashboardCommandCenterRecentPublish[];
