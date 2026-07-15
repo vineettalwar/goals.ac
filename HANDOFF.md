@@ -19,6 +19,17 @@ Report: [`docs/audits/2026-07-16-ponytail-frontend.md`](docs/audits/2026-07-16-p
 - Plugin PHP unchanged (already accepts base64 payloads; no URL fetch of data: schemes)
 - Call sites: `cms-publish.ts`, `wordpress-adapter.ts`
 
+### Ghost / Shopify — skipped (same day)
+
+Checked whether publish paths can do the same for featured/OG from PNG data URIs. **No implement** — neither has an existing binary/base64 media upload in-repo; both would be net-new API surface.
+
+| Platform | Why skipped |
+|---|---|
+| **Ghost** | `publishToGhost` / Lexical never set `feature_image`. No `images/upload` helper. Ghost Admin needs multipart `POST …/images/upload/` then a hosted URL on the post — new FormData/auth path, Workers risk. Adapter `featuredImage: true` is capability-only. |
+| **Shopify** | Adapter `featuredImage: false`. `articleCreate` + plugin content route have no image/media upload. Real path is `stagedUploadsCreate` → binary PUT → article image — multi-step GraphQL + scopes, not a base64 one-liner. |
+
+Stock HTTPS featured still works where the platform already accepts remote URLs. Data-URI featured remains WP-only until Ghost/Shopify media helpers exist.
+
 ---
 
 ## Shell create destination step (2026-07-16)
@@ -98,11 +109,11 @@ LinkedIn, X, Meta, and Bluesky app credentials can be stored in platform admin (
 - **Success stories** — partner case study template (empty metrics + verify CTAs)
 - **Create from brief** — ContentBriefPanel CTA when outline present + empty body
 
-### Visual-summary PNG → featured (decision 2026-07-16)
+### Visual-summary PNG → featured (decision 2026-07-16; WP upload added later)
 
-**Skip platform upload.** There is no R2/S3/public asset host for content media. Existing R2 (`goals-ac-next-cache`) is Next ISR/cache only. Stock regen keeps Unsplash/Pexels HTTPS CDN URLs; WP/plugin media upload only happens at publish via `downloadAndOptimizeImage(https) → uploadWordPressMedia / uploadGoalsAcPluginMedia`.
+There is no R2/S3/public asset host for content media. Existing R2 (`goals-ac-next-cache`) is Next ISR/cache only. Stock regen keeps Unsplash/Pexels HTTPS CDN URLs.
 
-Sharp PNG from visual summary stays as `data:image/png;base64,…` on `featuredImageUrl` for **in-app** only. CMS featured still needs stock (`images[]` remote HTTPS) or WP media sideload of HTTPS URLs — data-URI featured is not publish-path media.
+Sharp PNG from visual summary is `data:image/png;base64,…` on `featuredImageUrl`. **WordPress publish** decodes/uploads that data URI (see section above). **Ghost / Shopify** still skip — no media upload helpers; use stock HTTPS or leave featured empty.
 
 ---
 
