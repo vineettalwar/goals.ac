@@ -17,9 +17,22 @@ const PUBLIC_PREFIXES = [
   "/api/auth/login",
   "/api/auth/signup",
   "/api/auth/logout",
+  "/api/auth/forgot-password",
+  "/api/auth/reset-password",
   "/api/auth/google",
+  "/api/auth/linkedin",
+  "/api/auth/twitter",
+  "/api/auth/meta",
+  "/api/auth/bluesky",
+  "/api/auth/mastodon",
+  "/api/auth/bing-webmaster",
   "/api/public/",
   "/api/tools/",
+];
+
+const PUBLIC_EXACT_PATHS = [
+  "/oauth/bluesky-client-metadata.json",
+  "/oauth/bluesky-jwks.json",
 ];
 
 const WRITE_PREFIXES = [
@@ -28,16 +41,26 @@ const WRITE_PREFIXES = [
 ];
 
 function isPublicPath(path: string): boolean {
+  if (PUBLIC_EXACT_PATHS.includes(path)) return true;
   return PUBLIC_PREFIXES.some((p) => path === p || path.startsWith(p));
 }
 
 function isReadPath(path: string, method: string): boolean {
+  if (
+    method === "POST" &&
+    /^\/api\/website-projects\/\d+\/search-properties\/available$/.test(path)
+  ) {
+    return true;
+  }
   if (method === "GET" || method === "HEAD") {
     if (path === "/api/auth/me") return true;
     if (path === "/api/auth/api-key") return true;
     if (path === "/api/auth/openai-credentials") return true;
     if (path === "/api/auth/anthropic-credentials") return true;
     if (path === "/api/auth/bedrock-credentials") return true;
+    if (path === "/api/auth/semrush-credentials") return true;
+    if (path === "/api/auth/deepl-credentials") return true;
+    if (path === "/api/auth/stock-credentials") return true;
     if (path === "/api/billing/status") return true;
     if (path.startsWith("/api/jobs/")) return true;
     return !isPublicPath(path) && !path.startsWith("/api/auth/");
@@ -71,10 +94,26 @@ function isWritePath(path: string, method: string): boolean {
   if (path === "/api/auth/anthropic-credentials/test" && method === "POST") return true;
   if (path === "/api/auth/bedrock-credentials" && (method === "PATCH" || method === "DELETE")) return true;
   if (path === "/api/auth/bedrock-credentials/test" && method === "POST") return true;
+  if (path === "/api/auth/semrush-credentials" && (method === "PATCH" || method === "DELETE")) return true;
+  if (path === "/api/auth/semrush-credentials/test" && method === "POST") return true;
+  if (path === "/api/auth/deepl-credentials" && (method === "PATCH" || method === "DELETE")) return true;
+  if (path === "/api/auth/deepl-credentials/test" && method === "POST") return true;
+  if (path === "/api/auth/stock-credentials" && (method === "PATCH" || method === "DELETE")) return true;
+  if (path === "/api/auth/stock-credentials/test" && method === "POST") return true;
+  if (path === "/api/billing/portal" && method === "POST") return true;
+  if (path === "/api/billing/checkout" && method === "POST") return true;
   if (path.includes("/cms-integrations")) {
     if (method === "PATCH" || method === "DELETE") return true;
     if (method === "POST" && /\/cms-integrations\/test$/.test(path)) return true;
   }
+  if (
+    /^\/api\/website-projects\/\d+\/search-properties$/.test(path) &&
+    (method === "PATCH" || method === "DELETE")
+  ) {
+    return true;
+  }
+  if (/^\/api\/content-pieces\/\d+$/.test(path) && method === "PATCH") return true;
+  if (/^\/api\/content-pieces\/\d+\/humanize$/.test(path) && method === "POST") return true;
   if (path.includes("/publish") && method === "POST") return true;
   if (path.includes("/scrape") && method === "POST") return true;
   if (path.includes("/sync") && method === "POST") return true;
@@ -104,6 +143,10 @@ export default {
     }
 
     if (!path.startsWith("/api/")) {
+      if (isPublicPath(path)) {
+        const response = await env.PUBLIC.fetch(request);
+        return withCors(request, response);
+      }
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
     }
 

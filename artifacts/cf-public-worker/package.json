@@ -10,8 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@atproto/api": "^0.15.15",
+    "@atproto/jwk-jose": "^0.1.6",
+    "@atproto/oauth-client-node": "^0.4.8",
     "@workspace/billing": "workspace:*",
     "@workspace/cf-edge": "workspace:*",
+    "@workspace/connectors": "workspace:*",
     "@workspace/content-engine": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/jobs": "workspace:*",

@@ -30,7 +30,24 @@ import {
   handleAuthLogout,
   handleAuthSignup,
 } from "./auth";
+import {
+  handleAuthForgotPassword,
+  handleAuthResetPassword,
+} from "./auth-password-reset";
 import { handleGoogleAuthCallback, handleGoogleAuthStart } from "./auth-google";
+import { handleGscAuthCallback, handleGscAuthStart } from "./auth-gsc";
+import { handleBingAuthCallback, handleBingAuthStart } from "./auth-bing";
+import { handleLinkedInAuthCallback, handleLinkedInAuthStart } from "./auth-linkedin";
+import { handleTwitterAuthCallback, handleTwitterAuthStart } from "./auth-twitter";
+import { handleMetaAuthCallback, handleMetaAuthStart } from "./auth-meta";
+import { handleMetaPagesList, handleMetaSelectPage } from "./auth-meta-pages";
+import {
+  getBlueskyClientMetadata,
+  getBlueskyJwks,
+  handleBlueskyAuthCallback,
+  handleBlueskyAuthStart,
+} from "./auth-bluesky";
+import { handleMastodonAuthCallback, handleMastodonAuthStart } from "./auth-mastodon";
 import { kvGetJson, kvPutJson } from "@workspace/cf-edge/kv-cache";
 import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
@@ -40,8 +57,22 @@ export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
   CF_EDGE_HTTP: string;
   AUTH_SECRET: string;
+  GEMINI_KEY_ENCRYPTION_SECRET?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  LINKEDIN_CLIENT_ID?: string;
+  LINKEDIN_CLIENT_SECRET?: string;
+  TWITTER_CLIENT_ID?: string;
+  TWITTER_CLIENT_SECRET?: string;
+  META_APP_ID?: string;
+  META_APP_SECRET?: string;
+  BLUESKY_OAUTH_PRIVATE_KEY_JWK?: string;
+  BLUESKY_CLIENT_NAME?: string;
+  BING_WEBMASTER_CLIENT_ID?: string;
+  BING_WEBMASTER_CLIENT_SECRET?: string;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
+  APP_URL?: string;
 }
 
 /** D1-only worker — `getDb()` is always SQLite after `setD1Binding()`. */
@@ -225,6 +256,24 @@ async function handle(request: Request, env: Env): Promise<Response> {
       return withCors(request, response);
     }
 
+    if (path === "/api/auth/forgot-password" && request.method === "POST") {
+      const ip = clientIp(request);
+      if (await rateLimitKv(env, `auth-forgot-password:${ip}`, 10, 3600)) {
+        return withCors(request, Response.json({ error: "Too many attempts" }, { status: 429 }));
+      }
+      const response = await handleAuthForgotPassword(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/reset-password" && request.method === "POST") {
+      const ip = clientIp(request);
+      if (await rateLimitKv(env, `auth-reset-password:${ip}`, 20, 900)) {
+        return withCors(request, Response.json({ error: "Too many attempts" }, { status: 429 }));
+      }
+      const response = await handleAuthResetPassword(request, db());
+      return withCors(request, response);
+    }
+
     if (path === "/api/auth/google" && request.method === "GET") {
       const response = await handleGoogleAuthStart(request, env);
       return withCors(request, response);
@@ -232,6 +281,126 @@ async function handle(request: Request, env: Env): Promise<Response> {
 
     if (path === "/api/auth/google/callback" && request.method === "GET") {
       const response = await handleGoogleAuthCallback(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/linkedin" && request.method === "GET") {
+      const response = await handleLinkedInAuthStart(request, env);
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/linkedin/callback" && request.method === "GET") {
+      const response = await handleLinkedInAuthCallback(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/twitter" && request.method === "GET") {
+      const response = await handleTwitterAuthStart(request, env);
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/twitter/callback" && request.method === "GET") {
+      const response = await handleTwitterAuthCallback(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/meta" && request.method === "GET") {
+      const response = await handleMetaAuthStart(request, env);
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/meta/callback" && request.method === "GET") {
+      const response = await handleMetaAuthCallback(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/meta/pages" && request.method === "GET") {
+      const response = await handleMetaPagesList(request, env);
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/meta/select-page" && request.method === "POST") {
+      const response = await handleMetaSelectPage(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/bluesky" && request.method === "GET") {
+      const response = await handleBlueskyAuthStart(request, env);
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/bluesky/callback" && request.method === "GET") {
+      const response = await handleBlueskyAuthCallback(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/mastodon" && request.method === "GET") {
+      const response = await handleMastodonAuthStart(request, env);
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/mastodon/callback" && request.method === "GET") {
+      const response = await handleMastodonAuthCallback(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/oauth/bluesky-client-metadata.json" && request.method === "GET") {
+      try {
+        const metadata = await getBlueskyClientMetadata(request, env);
+        return withCors(
+          request,
+          Response.json(metadata, {
+            headers: { "Cache-Control": "public, max-age=3600" },
+          }),
+        );
+      } catch (err) {
+        return withCors(
+          request,
+          Response.json(
+            { error: err instanceof Error ? err.message : "Bluesky OAuth not configured" },
+            { status: 503 },
+          ),
+        );
+      }
+    }
+
+    if (path === "/oauth/bluesky-jwks.json" && request.method === "GET") {
+      try {
+        const jwks = await getBlueskyJwks(request, env);
+        return withCors(
+          request,
+          Response.json(jwks, {
+            headers: { "Cache-Control": "public, max-age=3600" },
+          }),
+        );
+      } catch (err) {
+        return withCors(
+          request,
+          Response.json(
+            { error: err instanceof Error ? err.message : "Bluesky OAuth not configured" },
+            { status: 503 },
+          ),
+        );
+      }
+    }
+
+    if (path === "/api/auth/google-search-console" && request.method === "GET") {
+      const response = await handleGscAuthStart(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/google-search-console/callback" && request.method === "GET") {
+      const response = await handleGscAuthCallback(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/bing-webmaster" && request.method === "GET") {
+      const response = await handleBingAuthStart(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/bing-webmaster/callback" && request.method === "GET") {
+      const response = await handleBingAuthCallback(request, env, db());
       return withCors(request, response);
     }
 
