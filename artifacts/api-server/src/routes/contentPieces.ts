@@ -6,6 +6,8 @@ import {
   brandProfilesTable,
   wordpressConnectionsTable,
   companiesTable,
+  briefsTable,
+  goalsTable,
   CONTENT_FORMAT_TYPES,
   type ContentFormatType,
 } from "@workspace/db";
@@ -55,9 +57,28 @@ const GenerateBody = z.object({
   formatType: z.enum(CONTENT_FORMAT_TYPES as unknown as [string, ...string[]]),
   targetKeyword: z.string().min(1, "Target keyword is required"),
   angleHint: z.string().optional(),
+  briefId: z.number().int().positive().optional(),
   competitorFocusUrl: z.string().optional(),
   competitorUrls: z.array(z.string()).max(5).optional(),
 });
+
+/** Mirrors Next `loadBriefForProject` — confirms the brief's goal belongs to this project. */
+async function loadBriefForProject(briefId: number, projectId: number) {
+  const [brief] = await db.select().from(briefsTable).where(eq(briefsTable.id, briefId)).limit(1);
+  if (!brief) return null;
+
+  const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.id, brief.goalId)).limit(1);
+  if (!goal || goal.projectId !== projectId) return null;
+
+  return brief;
+}
+
+async function markBriefGenerated(briefId: number) {
+  await db
+    .update(briefsTable)
+    .set({ status: "done", updatedAt: new Date() })
+    .where(eq(briefsTable.id, briefId));
+}
 
 async function resolveCompetitorGenerationContext(
   projectId: number,
@@ -121,7 +142,7 @@ router.post(
       return;
     }
 
-    const { formatType, targetKeyword, angleHint, competitorFocusUrl, competitorUrls } =
+    const { formatType, targetKeyword, angleHint, briefId, competitorFocusUrl, competitorUrls } =
       parsed.data;
 
     try {
@@ -138,6 +159,11 @@ router.post(
 
       if (!project) {
         res.status(404).json({ error: "Project not found" });
+        return;
+      }
+
+      if (briefId && !(await loadBriefForProject(briefId, projectId))) {
+        res.status(404).json({ error: "Brief not found" });
         return;
       }
 
@@ -214,6 +240,7 @@ router.post(
         .insert(contentPiecesTable)
         .values({
           websiteProjectId: projectId,
+          briefId: briefId ?? null,
           formatType: formatType as ContentFormatType,
           title: result.title,
           targetKeyword: result.target_keyword,
@@ -223,6 +250,8 @@ router.post(
           cacheKey: cacheKeyStr,
         })
         .returning();
+
+      if (briefId) await markBriefGenerated(briefId);
 
       res.status(201).json(inserted);
     } catch (err) {
@@ -252,7 +281,7 @@ router.post(
       return;
     }
 
-    const { formatType, targetKeyword, angleHint, competitorFocusUrl, competitorUrls } =
+    const { formatType, targetKeyword, angleHint, briefId, competitorFocusUrl, competitorUrls } =
       parsed.data;
 
     try {
@@ -270,6 +299,21 @@ router.post(
       if (!project) {
         res.status(404).json({ error: "Project not found" });
         return;
+      }
+
+      if (briefId) {
+        const brief = await loadBriefForProject(briefId, projectId);
+        if (!brief) {
+          res.status(404).json({ error: "Brief not found" });
+          return;
+        }
+        if (brief.status !== "approved" && brief.status !== "generating" && brief.status !== "done") {
+          res.status(400).json({
+            error: "brief_not_approved",
+            message: "Approve this brief in Goals & Briefs before generating content.",
+          });
+          return;
+        }
       }
 
       const [brandProfile] = await db
@@ -351,6 +395,7 @@ router.post(
             .insert(contentPiecesTable)
             .values({
               websiteProjectId: projectId,
+              briefId: briefId ?? null,
               formatType: formatType as ContentFormatType,
               title: aiCached.title,
               targetKeyword: aiCached.target_keyword,
@@ -360,6 +405,7 @@ router.post(
               cacheKey: cacheKeyStr,
             })
             .returning();
+          if (briefId) await markBriefGenerated(briefId);
           sendEvent("done", inserted);
           res.end();
           return;
@@ -404,6 +450,7 @@ router.post(
         .insert(contentPiecesTable)
         .values({
           websiteProjectId: projectId,
+          briefId: briefId ?? null,
           formatType: formatType as ContentFormatType,
           title: result.title,
           targetKeyword: result.target_keyword,
@@ -413,6 +460,8 @@ router.post(
           cacheKey: cacheKeyStr,
         })
         .returning();
+
+      if (briefId) await markBriefGenerated(briefId);
 
       sendEvent("done", inserted);
       res.end();

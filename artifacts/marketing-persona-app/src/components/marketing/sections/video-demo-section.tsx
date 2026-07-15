@@ -37,9 +37,9 @@ const COLLAGE = [
   },
   {
     src: HERO_IMAGES.roadmaps.hero,
-    alt: "Growth roadmap planning",
-    label: "Roadmaps",
-    href: "/roadmaps",
+    alt: "Content engine planning",
+    label: "Content engine",
+    href: "/content-engine",
     className: "",
     sizes: "(max-width: 640px) 100vw, 33vw",
   },

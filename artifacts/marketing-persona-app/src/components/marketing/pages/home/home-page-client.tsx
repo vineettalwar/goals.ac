@@ -11,6 +11,14 @@ const WorkflowSection = dynamic(
   { loading: () => null },
 );
 
+const VideoDemoSection = dynamic(
+  () =>
+    import("@/components/marketing/sections/video-demo-section").then(
+      (module) => module.VideoDemoSection,
+    ),
+  { loading: () => null },
+);
+
 const HomeMarketingSections = dynamic(
   () =>
     import("@/components/marketing/sections/home-marketing-sections").then(
@@ -27,6 +35,7 @@ export function HomePageClient({ showcaseArticle }: HomePageClientProps) {
   return (
     <MarketingPageShell hero={<HeroSection />}>
       <WorkflowSection />
+      <VideoDemoSection />
       <HomeMarketingSections showcaseArticle={showcaseArticle} />
     </MarketingPageShell>
   );

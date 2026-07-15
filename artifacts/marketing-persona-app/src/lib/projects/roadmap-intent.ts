@@ -1,7 +1,5 @@
 export const ROADMAP_INTENT_KEY = "roadmap_intent";
 export const GROWTH_ROADMAPS_PATH = "/strategy/roadmaps";
-export const HOME_ROADMAP_REFERRER = "home-roadmap-generator";
-export const ROADMAPS_PAGE_REFERRER = "roadmaps-page-generator";
 
 export type RoadmapIntent = {
   industry: string;

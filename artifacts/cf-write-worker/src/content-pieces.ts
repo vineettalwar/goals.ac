@@ -2,6 +2,8 @@ import { withCors } from "@workspace/cf-edge/cors";
 import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
 import { db } from "@workspace/db";
 import {
+  briefsTable,
+  goalsTable,
   CONTENT_FORMAT_TYPES,
   contentPiecesTable,
   type ContentFormatType,
@@ -74,7 +76,19 @@ const createDraftBody = z.object({
   title: z.string().trim().min(1, "Title is required"),
   targetKeyword: z.string().trim().min(1, "Target keyword is required"),
   formatType: z.enum(CONTENT_FORMAT_TYPES).optional().default("blog_post"),
+  briefId: z.number().int().positive().optional(),
 });
+
+/** Mirrors Next `loadBriefForProject` — confirms the brief's goal belongs to this project. */
+async function loadBriefForProject(briefId: number, projectId: number) {
+  const [brief] = await db.select().from(briefsTable).where(eq(briefsTable.id, briefId)).limit(1);
+  if (!brief) return null;
+
+  const [goal] = await db.select().from(goalsTable).where(eq(goalsTable.id, brief.goalId)).limit(1);
+  if (!goal || goal.projectId !== projectId) return null;
+
+  return brief;
+}
 
 function wordCountFromMarkdown(body: string): number {
   return body.split(/\s+/).filter(Boolean).length;
@@ -157,12 +171,17 @@ export async function handleContentPiecesWrite(
     );
   }
 
-  const { title, targetKeyword, formatType } = parsed.data;
+  const { title, targetKeyword, formatType, briefId } = parsed.data;
+
+  if (briefId && !(await loadBriefForProject(briefId, projectId))) {
+    return withCors(request, Response.json({ error: "Brief not found" }, { status: 404 }));
+  }
 
   const [piece] = await db
     .insert(contentPiecesTable)
     .values({
       websiteProjectId: projectId,
+      briefId: briefId ?? null,
       title,
       targetKeyword,
       formatType,
