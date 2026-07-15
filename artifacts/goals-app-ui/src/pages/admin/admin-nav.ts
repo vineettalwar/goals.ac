@@ -44,7 +44,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     ],
   },
   { label: "Plans", href: "/admin/plans", icon: CreditCard },
-  { label: "Platform integrations", href: "/admin/integrations", icon: Plug },
+  { label: "Integrations", href: "/admin/integrations", icon: Plug },
   { label: "Content pipeline", href: "/admin/content-strategies", icon: FileText },
   { label: "Platform", href: "/admin/platform", icon: Settings2 },
 ];

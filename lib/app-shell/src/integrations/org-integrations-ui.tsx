@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "../cn";
 import type { OrgIntegrationsTab } from "./types";
 
@@ -12,12 +13,15 @@ export function OrgIntegrationsView({
   onTabChange,
   aiPanel,
   toolsPanel,
+  projectIntegrationsHref,
   footer,
 }: {
   activeTab: OrgIntegrationsTab;
   onTabChange: (tab: OrgIntegrationsTab) => void;
   aiPanel: ReactNode;
   toolsPanel: ReactNode;
+  /** Link to `/projects/:id/integrations` — CMS, social, ESP, search live there. */
+  projectIntegrationsHref?: string | null;
   footer?: ReactNode;
 }) {
   return (
@@ -29,6 +33,26 @@ export function OrgIntegrationsView({
           photos. Shared across all projects. Credentials are encrypted at rest.
         </p>
       </div>
+
+      {projectIntegrationsHref !== undefined ? (
+        <a
+          href={projectIntegrationsHref ?? "/projects"}
+          className="group flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card px-4 py-3 text-left transition-all hover:border-border hover:bg-muted/20 hover:shadow-sm"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-xs font-bold text-white">
+            CMS
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Project integrations</p>
+            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+              {projectIntegrationsHref
+                ? "CMS, social, email, and search connections for your active project"
+                : "Choose a project to connect CMS, social, email, and search"}
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 transition-colors group-hover:text-muted-foreground" />
+        </a>
+      ) : null}
 
       <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-muted/40 p-1">
         {TABS.map((tab) => {

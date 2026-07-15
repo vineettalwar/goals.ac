@@ -12,8 +12,18 @@
 | Partner Story kit | Shared constants + template; honest (no fake names/metrics) |
 | Instagram queue stock CTA | "Use stock image" button when "Needs image" badge shown; reuses `/images/regenerate` API; queue reloads on success |
 | Outline actions | **Copy outline** + optional **Insert into draft** when empty; wired in shell + Next |
+| TYPO3 media upload | `POST /goals-ac/v1/media` — mirrors WordPress `/media`; FAL import shared via new `FalImporter` helper |
 
 **In flight:** none from this list.
+
+### TYPO3 media upload
+
+`POST /goals-ac/v1/media` — HMAC auth, no idempotency (matches WP). Accepts `filename`, `mime_type`, `data` (base64 raw or data URI; PNG/JPEG/WebP), optional `alt`/`title`/`caption`. Writes into default FAL storage under `fileadmin/user_upload/goals-ac/`, returns `{ id, source_url }` (site-relative URL — never fabricates a host).
+
+- New: `cms-plugins/typo3/Classes/Helper/FalImporter.php` (extracted from `ContentPublisher` — shared by inline `textmedia` FAL import and the standalone upload), `Classes/Controller/MediaController.php`
+- Registered in `ApiMiddleware.php`; `HealthController` now lists `endpoints.media` + `capabilities.media_upload: true`
+- `typo3-adapter.ts` (`content-engine`) now prefers uploading the featured image via `/media` and referencing the hosted URL in the `textmedia` element, falling back to inline base64 (`prependTypo3FeaturedBase64`) when the upload fails or plugin/creds are unavailable — avoids inlining large base64 into the content publish payload for plugin installs that support `/media`
+- `cms-publish.ts` (legacy content-piece publish flow) still calls `publishToTypo3` with body markdown only — never touches images, so unaffected
 
 ### Outline actions
 

@@ -85,6 +85,7 @@ export function IntegrationsPage() {
     <OrgIntegrationsView
       activeTab={activeTab}
       onTabChange={(tab) => navigate(orgIntegrationsPath(tab))}
+      projectIntegrationsHref={projectId != null ? projectIntegrationsPath(projectId) : null}
       aiPanel={
         <OrgAiProvidersPanel
           aiSummary={aiSummary}

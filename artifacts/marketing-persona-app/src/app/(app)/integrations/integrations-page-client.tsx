@@ -54,6 +54,9 @@ export function IntegrationsPageClient({ tab }: { tab: string }) {
     <OrgIntegrationsView
       activeTab={activeTab}
       onTabChange={(next) => router.push(orgIntegrationsPath(next))}
+      projectIntegrationsHref={
+        activeProjectId != null ? projectIntegrationsPath(activeProjectId) : null
+      }
       aiPanel={
         <OrgAiProvidersPanel
           aiSummary={aiSummary}
@@ -110,32 +113,24 @@ export function IntegrationsPageClient({ tab }: { tab: string }) {
       }
       footer={
         <p className="text-sm text-muted-foreground">
-          Project CMS, social, email, and search connections live on each project&apos;s integrations
-          page
-          {activeProjectId != null ? (
-            <>
-              {" — "}
-              <Link
-                href={projectIntegrationsPath(activeProjectId)}
-                className="text-primary hover:underline"
-              >
-                open current project
-              </Link>
-            </>
-          ) : (
-            <>
-              {" — "}
-              <Link href="/projects" className="text-primary hover:underline">
-                choose a project
-              </Link>
-            </>
-          )}
-          . Need setup instructions?{" "}
-          <Link href="/help" className="text-primary hover:underline">
-            Help center
-          </Link>
-          .
-        </p>
+        Project CMS, social, email, and search connections live under each project — use the
+        <span className="font-medium text-foreground"> Project integrations </span>
+        card above
+        {activeProjectId == null ? (
+          <>
+            {" "}
+            or{" "}
+            <Link href="/projects" className="text-primary hover:underline">
+              choose a project
+            </Link>
+          </>
+        ) : null}
+        . Need setup instructions?{" "}
+        <Link href="/help" className="text-primary hover:underline">
+          Help center
+        </Link>
+        .
+      </p>
       }
     />
   );

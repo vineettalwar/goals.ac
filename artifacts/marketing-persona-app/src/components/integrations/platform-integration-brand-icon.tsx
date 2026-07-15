@@ -127,5 +127,5 @@ export function PlatformIntegrationBrandIcon({
   className?: string;
 }) {
   const Logo = LOGOS[id];
-  return <Logo className={cn("h-5 w-5 shrink-0", className)} />;
+  return <Logo className={cn("h-8 w-8 shrink-0", className)} />;
 }
