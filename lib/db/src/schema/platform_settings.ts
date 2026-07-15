@@ -28,6 +28,8 @@ export const platformSettingsTable = pgTable("platform_settings", {
   resendFromEmail: text("resend_from_email"),
   encryptedUnsplashAccessKey: text("encrypted_unsplash_access_key"),
   encryptedPexelsApiKey: text("encrypted_pexels_api_key"),
+  linkedinClientId: text("linkedin_client_id"),
+  encryptedLinkedinClientSecret: text("encrypted_linkedin_client_secret"),
   updatedBy: integer("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

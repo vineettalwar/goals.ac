@@ -463,6 +463,13 @@
       "when": 1784100000000,
       "tag": "0064_publish_records_output_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1784200000000,
+      "tag": "0065_platform_linkedin_credentials",
+      "breakpoints": true
     }
   ]
 }
