@@ -20,6 +20,12 @@
     { "binding": "AI_CACHE", "id": "d986e00b3e7d43f5a6e5e68ab7b48ea7" },
     { "binding": "RATE_LIMIT", "id": "f85bddf77d9a49ed8d165529eead2998" }
   ],
+  "r2_buckets": [
+    {
+      "binding": "CONTENT_MEDIA_R2",
+      "bucket_name": "goals-ac-content-media"
+    }
+  ],
   "queues": {
     "consumers": [
       {

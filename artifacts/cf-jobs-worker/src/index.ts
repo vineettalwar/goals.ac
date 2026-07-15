@@ -1,5 +1,6 @@
 import { setD1Binding } from "@workspace/db";
 import { setKvBindings, getAiCacheKv } from "@workspace/content-engine/core/kv-binding";
+import { setContentMediaR2Binding } from "@workspace/media";
 import { processJobEnvelope, type JobEnvelope } from "@workspace/jobs";
 import { QUEUES } from "@workspace/jobs/queues";
 import { CONTENT_GENERATE_SWEEP_CRON } from "@workspace/jobs/handlers";
@@ -65,11 +66,13 @@ export interface Env {
   DB: import("@workspace/db").D1DatabaseBinding;
   AI_CACHE: import("@workspace/content-engine/core/kv-binding").KvNamespaceBinding;
   RATE_LIMIT: import("@workspace/content-engine/core/kv-binding").KvNamespaceBinding;
+  CONTENT_MEDIA_R2?: import("@workspace/media").ContentMediaR2Binding;
 }
 
 function wireBindings(env: Env): void {
   setD1Binding(env.DB);
   setKvBindings({ AI_CACHE: env.AI_CACHE, RATE_LIMIT: env.RATE_LIMIT });
+  if (env.CONTENT_MEDIA_R2) setContentMediaR2Binding(env.CONTENT_MEDIA_R2);
 }
 
 async function runDailySweep(): Promise<void> {

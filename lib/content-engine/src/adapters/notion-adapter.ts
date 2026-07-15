@@ -1,6 +1,7 @@
 import { markdownToNotionBlocks, publishToNotion } from "@workspace/connectors/notion";
 import type { CanonicalContent } from "../content/canonical-content";
 import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
+import { hostFeaturedImageForPublish } from "../support/publishing/host-featured-image";
 import type { CmsAdapter, PlatformPayload, PublishOpts, RenderResult } from "./types";
 
 export const notionAdapter: CmsAdapter = {
@@ -29,13 +30,19 @@ export const notionAdapter: CmsAdapter = {
     }
 
     const featuredRaw = content.pieceMetadata?.featuredImageUrl?.trim();
-    const coverUrl = featuredRaw?.startsWith("https://") ? featuredRaw : undefined;
-
+    let coverUrl = featuredRaw?.startsWith("https://") ? featuredRaw : undefined;
     if (featuredRaw && !coverUrl) {
-      warnings.push({
-        code: "notion_featured_skipped",
-        message: `Featured image skipped — not an https:// URL.`,
+      const hosted = await hostFeaturedImageForPublish(featuredRaw, {
+        filenameBase: content.meta.title || "featured",
       });
+      if (hosted?.startsWith("https://")) {
+        coverUrl = hosted;
+      } else {
+        warnings.push({
+          code: "notion_featured_skipped",
+          message: `Featured image skipped — not an https:// URL.`,
+        });
+      }
     }
 
     if (blocks.length > 100) {
