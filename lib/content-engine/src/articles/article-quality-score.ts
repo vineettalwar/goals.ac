@@ -13,6 +13,10 @@ export type ArticleQualityInput = {
   writingSample?: string | null;
   /** Optional brand-voice excerpt; used when writingSample is absent. */
   brandVoiceExcerpt?: string | null;
+  /** Optional brand glossary terms — presence boost when a sample/passage is also present. */
+  brandGlossary?: string[];
+  /** Optional brand-voice passages; Jaccard vs concat, max'd with writingSample. */
+  brandVoicePassages?: string[];
 };
 
 export type ArticleQualityBreakdown = {
@@ -92,6 +96,14 @@ function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
   return union === 0 ? 0 : intersection / union;
 }
 
+function distinctiveTokens(tokens: Set<string>): Set<string> {
+  const out = new Set<string>();
+  for (const t of Array.from(tokens)) {
+    if (t.length >= 5) out.add(t);
+  }
+  return out;
+}
+
 /**
  * Anti-slop half (~0–8): inverse of AI-tell count from countAiSlopSignals.
  */
@@ -160,21 +172,8 @@ function scoreRhythmSpecificity(body: string): number {
   return Math.min(7, pts);
 }
 
-/**
- * Optional brand/sample overlap bonus (0–3). Omitted sample → 0, never a penalty.
- */
-function scoreVoiceSampleOverlap(
-  body: string,
-  sample: string | null | undefined,
-): number {
-  const trimmed = sample?.trim();
-  if (!trimmed || trimmed.length < 40) return 0;
-
-  const bodyTokens = tokenizeForOverlap(stripMarkdownForProse(body));
-  const sampleTokens = tokenizeForOverlap(trimmed);
-  if (sampleTokens.size < 8 || bodyTokens.size < 8) return 0;
-
-  const j = jaccardSimilarity(bodyTokens, sampleTokens);
+/** Map raw Jaccard similarity to 0–3 points. */
+function jaccardToPoints(j: number): number {
   if (j >= 0.12) return 3;
   if (j >= 0.07) return 2;
   if (j >= 0.03) return 1;
@@ -182,28 +181,144 @@ function scoreVoiceSampleOverlap(
 }
 
 /**
+ * Jaccard overlap points (0–3) for one sample string. Short/empty sample → 0.
+ */
+function scoreJaccardOverlap(body: string, sample: string | null | undefined): number {
+  const trimmed = sample?.trim();
+  if (!trimmed || trimmed.length < 40) return 0;
+
+  const bodyTokens = tokenizeForOverlap(stripMarkdownForProse(body));
+  const sampleTokens = tokenizeForOverlap(trimmed);
+  if (sampleTokens.size < 8 || bodyTokens.size < 8) return 0;
+
+  return jaccardToPoints(jaccardSimilarity(bodyTokens, sampleTokens));
+}
+
+/**
+ * Shared distinctive tokens (len ≥ 5) between body and sample → 0–2.
+ * Omitted/short sample → 0.
+ */
+function scoreDistinctiveTokenBoost(
+  body: string,
+  sample: string | null | undefined,
+): number {
+  const trimmed = sample?.trim();
+  if (!trimmed || trimmed.length < 40) return 0;
+
+  const bodyDist = distinctiveTokens(tokenizeForOverlap(stripMarkdownForProse(body)));
+  const sampleDist = distinctiveTokens(tokenizeForOverlap(trimmed));
+  if (sampleDist.size < 4 || bodyDist.size < 4) return 0;
+
+  let hit = 0;
+  for (const t of Array.from(sampleDist)) {
+    if (bodyDist.has(t)) hit += 1;
+  }
+  const share = hit / sampleDist.size;
+  if (share >= 0.15) return 2;
+  if (share >= 0.08) return 1;
+  return 0;
+}
+
+/**
+ * Brand glossary term presence in body → 0–2. Only meaningful when a sample is present.
+ */
+function scoreGlossaryPresence(body: string, glossary?: string[]): number {
+  if (!glossary?.length) return 0;
+  const prose = stripMarkdownForProse(body).toLowerCase();
+  if (prose.length < 40) return 0;
+
+  let hits = 0;
+  for (const raw of glossary) {
+    const term = raw?.trim().toLowerCase();
+    if (!term || term.length < 2) continue;
+    if (prose.includes(term)) hits += 1;
+  }
+  if (hits >= 2) return 2;
+  if (hits === 1) return 1;
+  return 0;
+}
+
+function concatPassages(passages?: string[]): string | null {
+  if (!passages?.length) return null;
+  const joined = passages
+    .map((p) => p?.trim())
+    .filter((p): p is string => Boolean(p && p.length > 0))
+    .join("\n\n")
+    .trim();
+  return joined.length >= 40 ? joined : null;
+}
+
+type BrandVoiceScoreInput = {
+  writingSample?: string | null;
+  brandVoiceExcerpt?: string | null;
+  brandGlossary?: string[];
+  brandVoicePassages?: string[];
+};
+
+/**
+ * Brand / sample signals (0–5), never a penalty when omitted:
+ * - Jaccard vs writingSample/excerpt and vs concatenated passages (max)
+ * - distinctive-token share boost when a sample exists
+ * - glossary presence boost when a sample exists and glossary is passed
+ */
+function scoreBrandVoiceSignals(
+  body: string,
+  input: BrandVoiceScoreInput,
+): { bonus: number; hasSample: boolean } {
+  const primary = (input.writingSample ?? input.brandVoiceExcerpt)?.trim() || null;
+  const passages = concatPassages(input.brandVoicePassages);
+  const hasSample = Boolean(
+    (primary && primary.length >= 40) || passages,
+  );
+
+  if (!hasSample) {
+    return { bonus: 0, hasSample: false };
+  }
+
+  const jaccardPts = Math.max(
+    scoreJaccardOverlap(body, primary),
+    scoreJaccardOverlap(body, passages),
+  );
+
+  // Distinctive boost against the richest available brand text.
+  const distinctiveSource =
+    [primary, passages]
+      .filter((s): s is string => Boolean(s))
+      .sort((a, b) => b.length - a.length)[0] ?? primary;
+  const distinctivePts = scoreDistinctiveTokenBoost(body, distinctiveSource);
+  const glossaryPts = scoreGlossaryPresence(body, input.brandGlossary);
+
+  const bonus = Math.min(5, jaccardPts + distinctivePts + glossaryPts);
+  return { bonus, hasSample: true };
+}
+
+/**
  * Human voice (max 15) = anti-slop (~0–8) + rhythm/specificity (~0–7)
- * + optional sample Jaccard bonus (0–3), capped at 15.
+ * + optional brand signals (Jaccard + distinctive tokens + glossary, 0–5), capped at 15.
  * Detail strings report AI tells + rhythm — not detector/"undetectable" claims.
  */
 function scoreHumanVoice(
   body: string,
-  voiceSample?: string | null,
+  brand: BrandVoiceScoreInput,
 ): { score: number; detail: string } {
   const slop = countAiSlopSignals(body);
   const antiSlop = scoreAntiSlop(slop);
   const rhythm = scoreRhythmSpecificity(body);
-  const sampleBonus = scoreVoiceSampleOverlap(body, voiceSample);
-  const score = Math.min(15, antiSlop + rhythm + sampleBonus);
+  const { bonus: brandBonus, hasSample } = scoreBrandVoiceSignals(body, brand);
+  const score = Math.min(15, antiSlop + rhythm + brandBonus);
 
   const tellPart =
     slop === 0
       ? "no AI tells"
       : `${slop} AI tell${slop === 1 ? "" : "s"}`;
-  const samplePart =
-    sampleBonus > 0 ? `, +${sampleBonus} voice overlap` : "";
-  const detail = `AI tells + rhythm: ${tellPart}, rhythm ${rhythm}/7${samplePart}`;
 
+  if (hasSample) {
+    const brandPart = brandBonus > 0 ? `, +${brandBonus} brand match` : "";
+    const detail = `AI tells + rhythm + brand sample: ${tellPart}, rhythm ${rhythm}/7${brandPart}`;
+    return { score, detail };
+  }
+
+  const detail = `AI tells + rhythm (add writing sample for brand match): ${tellPart}, rhythm ${rhythm}/7`;
   return { score, detail };
 }
 
@@ -220,8 +335,12 @@ export function scoreArticleQuality(input: ArticleQualityInput): ArticleQualityR
   const titleLen = input.metaTitle?.length ?? 0;
   const inferredMeta = inferMetaDescription(body);
   const metaLen = input.metaDescription?.length ?? inferredMeta?.length ?? 0;
-  const voiceSample = input.writingSample ?? input.brandVoiceExcerpt ?? null;
-  const humanVoice = scoreHumanVoice(body, voiceSample);
+  const humanVoice = scoreHumanVoice(body, {
+    writingSample: input.writingSample,
+    brandVoiceExcerpt: input.brandVoiceExcerpt,
+    brandGlossary: input.brandGlossary,
+    brandVoicePassages: input.brandVoicePassages,
+  });
 
   const breakdown: ArticleQualityBreakdown[] = [
     {

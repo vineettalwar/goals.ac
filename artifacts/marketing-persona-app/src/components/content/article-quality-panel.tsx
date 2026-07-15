@@ -25,6 +25,8 @@ type ArticleQualityPanelProps = {
   wordCount?: number;
   writingSample?: string | null;
   brandVoiceExcerpt?: string | null;
+  brandGlossary?: string[];
+  brandVoicePassages?: string[];
   contentPieceId?: number | null;
   /** Last saved body — used to compute baseline for delta when `baselineScore` is omitted. */
   savedBodyMarkdown?: string | null;
@@ -48,6 +50,10 @@ type DualScore = {
   combined: number;
   publishReady: boolean;
   competitorDiff?: Array<{ title: string; covered: boolean; overlap: number }>;
+  /** Brand voice context from project — used for local Human voice scoring. */
+  writingSample?: string | null;
+  brandGlossary?: string[] | null;
+  brandVoicePassages?: string[] | null;
 };
 
 async function fetchDualScore(contentPieceId: number): Promise<DualScore | null> {
@@ -75,6 +81,10 @@ export function ArticleQualityPanel({
   showScoreDelta = false,
   bodyMarkdown,
   wordCount,
+  writingSample: writingSampleProp,
+  brandVoiceExcerpt,
+  brandGlossary: brandGlossaryProp,
+  brandVoicePassages: brandVoicePassagesProp,
   ...props
 }: ArticleQualityPanelProps) {
   const [debouncedBody, setDebouncedBody] = useState(bodyMarkdown);
@@ -94,18 +104,32 @@ export function ArticleQualityPanel({
     return () => window.clearTimeout(timer);
   }, [bodyMarkdown, wordCount, savedBodyMarkdown]);
 
-  const result = scoreArticleQuality({
-    ...props,
-    bodyMarkdown: debouncedBody,
-    wordCount: debouncedWordCount,
-  });
-
   // SERP half is DB-bodied on the server — do not refetch on draft keystrokes.
+  // Response also carries brand voice context for local Human voice scoring.
   const { data: dual = null } = useQuery({
     queryKey: ["content-piece-serp-score", contentPieceId],
     queryFn: () => fetchDualScore(contentPieceId!),
     enabled: Boolean(contentPieceId),
     staleTime: 30_000,
+  });
+
+  const writingSample = writingSampleProp ?? dual?.writingSample ?? null;
+  const brandGlossary = brandGlossaryProp ?? dual?.brandGlossary ?? undefined;
+  const brandVoicePassages =
+    brandVoicePassagesProp ?? dual?.brandVoicePassages ?? undefined;
+
+  const voiceScoreInput = {
+    writingSample,
+    brandVoiceExcerpt,
+    brandGlossary: brandGlossary?.length ? brandGlossary : undefined,
+    brandVoicePassages: brandVoicePassages?.length ? brandVoicePassages : undefined,
+  };
+
+  const result = scoreArticleQuality({
+    ...props,
+    ...voiceScoreInput,
+    bodyMarkdown: debouncedBody,
+    wordCount: debouncedWordCount,
   });
 
   const editorialTotal = result.total;
@@ -122,6 +146,7 @@ export function ArticleQualityPanel({
     const savedWords = savedBodyMarkdown.split(/\s+/).filter(Boolean).length;
     const savedEditorial = scoreArticleQuality({
       ...props,
+      ...voiceScoreInput,
       bodyMarkdown: savedBodyMarkdown,
       wordCount: savedWords,
     }).total;

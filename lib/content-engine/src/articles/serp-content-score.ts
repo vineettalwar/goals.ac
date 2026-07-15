@@ -13,9 +13,11 @@ export type SerpScoreInput = {
   serpFeatures?: Record<string, unknown> | null;
   competitorTitles?: string[];
   peopleAlsoAsk?: string[];
-  /** Optional — passed through to editorial Human voice overlap bonus. */
+  /** Optional — passed through to editorial Human voice brand signals. */
   writingSample?: string | null;
   brandVoiceExcerpt?: string | null;
+  brandGlossary?: string[];
+  brandVoicePassages?: string[];
 };
 
 export type SerpScoreBreakdown = {
@@ -271,6 +273,8 @@ export function scoreDualContentQuality(input: SerpScoreInput): DualContentScore
     internalLinkSuggestions: input.internalLinkSuggestions,
     writingSample: input.writingSample,
     brandVoiceExcerpt: input.brandVoiceExcerpt,
+    brandGlossary: input.brandGlossary,
+    brandVoicePassages: input.brandVoicePassages,
   });
   const serp = scoreSerpCoverage(input);
   const combined = Math.round(editorial.total * 0.55 + serp.total * 0.45);

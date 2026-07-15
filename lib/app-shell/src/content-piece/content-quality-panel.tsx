@@ -28,6 +28,11 @@ type ArticleQualityPanelProps = {
   fetchDualScore?: (contentPieceId: number) => Promise<DualContentScore | null>;
   /** When parent already loaded dual score (e.g. brief panel), skip internal fetch. */
   dualScore?: DualContentScore | null;
+  /** Optional brand voice signals for Human voice editorial score. */
+  writingSample?: string | null;
+  brandVoiceExcerpt?: string | null;
+  brandGlossary?: string[];
+  brandVoicePassages?: string[];
   /** Last saved body — used to compute baseline for delta when `baselineScore` is omitted. */
   savedBodyMarkdown?: string | null;
   /** Precomputed score for the last saved body (editorial or combined). Wins over scoring `savedBodyMarkdown`. */
@@ -55,6 +60,10 @@ export function ArticleQualityPanel({
   contentPieceId,
   fetchDualScore,
   dualScore,
+  writingSample,
+  brandVoiceExcerpt,
+  brandGlossary,
+  brandVoicePassages,
   savedBodyMarkdown,
   baselineScore,
   showScoreDelta = false,
@@ -90,6 +99,10 @@ export function ArticleQualityPanel({
     faqSection: metadata?.faqSection,
     jsonLdSchema: metadata?.jsonLdSchema,
     internalLinkSuggestions: metadata?.internalLinkSuggestions,
+    writingSample,
+    brandVoiceExcerpt,
+    brandGlossary,
+    brandVoicePassages,
   };
   const result = scoreArticleQuality(scoreInput);
 

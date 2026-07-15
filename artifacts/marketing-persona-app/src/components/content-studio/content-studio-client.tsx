@@ -2,18 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Plus,
-  ExternalLink,
   FileText,
   Calendar,
   LayoutGrid,
-  Trash2,
-  CheckCircle2,
-  RefreshCw,
-  ArrowUpDown,
+  PenLine,
 } from "lucide-react";
 import { PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
@@ -41,6 +36,8 @@ import {
 
 export { FORMAT_OPTIONS };
 export type { ContentPieceRow };
+
+const KEYWORD_IDEAS_HREF = "/search/keywords?tab=ideas";
 
 interface Props {
   projectId: string;
@@ -81,7 +78,6 @@ export function ContentStudioClient({
   initialBriefDraft = null,
   initialCreateOpen = false,
 }: Props) {
-  const router = useRouter();
   const [studioData, dispatchStudioData] = useReducer(studioLoadReducer, initialStudioLoadState);
   const {
     projectName,
@@ -269,8 +265,52 @@ export function ContentStudioClient({
       ) : tab === "hub" ? (
         sorted.length === 0 ? (
           <div className="paper-card rounded-xl flex flex-col items-center justify-center p-16 text-center">
-            <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-            <p className="font-medium">{pieces.length === 0 ? "No content yet" : "No items match filters"}</p>
+            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+              {pieces.length === 0 ? (
+                <PenLine className="h-7 w-7 text-primary" aria-hidden />
+              ) : (
+                <FileText className="h-7 w-7 text-muted-foreground" aria-hidden />
+              )}
+            </div>
+            {pieces.length === 0 ? (
+              <>
+                <h2 className="text-lg font-semibold">No content yet</h2>
+                <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                  Generate your first article from a keyword or brief
+                </p>
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <Button onClick={() => setCreateOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                    Create content
+                  </Button>
+                  {projectId ? (
+                    <Link
+                      href={KEYWORD_IDEAS_HREF}
+                      className="text-sm font-medium text-primary hover:underline"
+                    >
+                      Browse keyword ideas
+                    </Link>
+                  ) : null}
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="font-medium">No items match filters</p>
+                <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                  Try clearing filters to see all content.
+                </p>
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => {
+                    setFilterFormat("all");
+                    setFilterStatus("all");
+                  }}
+                >
+                  Clear filters
+                </Button>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-3">

@@ -8,6 +8,7 @@ import {
   FileText,
   LayoutGrid,
   List,
+  PenLine,
   Plus,
   RefreshCw,
   Trash2,
@@ -509,16 +510,50 @@ export function StudioView({
             </div>
           ) : sorted.length === 0 ? (
             <div className="paper-card flex flex-col items-center justify-center rounded-xl p-16 text-center">
-              <FileText className="mb-3 h-10 w-10 text-muted-foreground" aria-hidden />
-              <p className="font-medium">
-                {pieces.length === 0 ? "No content yet" : "No items match filters"}
-              </p>
-              <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                {pieces.length === 0
-                  ? "Create your first draft with the button above, then open it to generate or edit."
-                  : "Try clearing filters to see all content."}
-              </p>
-              {pieces.length === 0 ? <div className="mt-4">{newContentAction}</div> : null}
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
+                {pieces.length === 0 ? (
+                  <PenLine className="h-7 w-7 text-primary" aria-hidden />
+                ) : (
+                  <FileText className="h-7 w-7 text-muted-foreground" aria-hidden />
+                )}
+              </div>
+              {pieces.length === 0 ? (
+                <>
+                  <h2 className="text-lg font-semibold">No content yet</h2>
+                  <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                    Generate your first article from a keyword or brief
+                  </p>
+                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                    {newContentAction}
+                    {projectId ? (
+                      <StudioLink
+                        renderLink={renderLink}
+                        href="/search/keywords?tab=ideas"
+                        className="text-sm font-medium text-primary transition-colors hover:underline"
+                      >
+                        Browse keyword ideas
+                      </StudioLink>
+                    ) : null}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="font-medium">No items match filters</p>
+                  <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                    Try clearing filters to see all content.
+                  </p>
+                  <button
+                    type="button"
+                    className="mt-4 inline-flex h-9 items-center justify-center rounded-lg border border-input bg-card px-4 text-sm font-medium transition-colors hover:bg-secondary"
+                    onClick={() => {
+                      setFilterFormat("all");
+                      setFilterStatus("all");
+                    }}
+                  >
+                    Clear filters
+                  </button>
+                </>
+              )}
             </div>
           ) : (
             <div
