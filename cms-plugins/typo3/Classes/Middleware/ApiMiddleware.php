@@ -6,6 +6,7 @@ namespace GoalsAc\Typo3\Middleware;
 
 use GoalsAc\Typo3\Controller\ContentController;
 use GoalsAc\Typo3\Controller\HealthController;
+use GoalsAc\Typo3\Controller\MediaController;
 use GoalsAc\Typo3\Controller\SchemaController;
 use GoalsAc\Typo3\Controller\SiteGraphController;
 use Psr\Http\Message\ResponseInterface;
@@ -20,6 +21,7 @@ final class ApiMiddleware implements MiddlewareInterface
         'GET /goals-ac/v1/site-graph' => [SiteGraphController::class, 'export'],
         'POST /goals-ac/v1/content' => [ContentController::class, 'publish'],
         'POST /goals-ac/v1/schema' => [SchemaController::class, 'store'],
+        'POST /goals-ac/v1/media' => [MediaController::class, 'upload'],
     ];
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -43,7 +45,7 @@ final class ApiMiddleware implements MiddlewareInterface
         }
 
         [$class, $action] = self::ROUTES[$routeKey];
-        /** @var HealthController|SiteGraphController|ContentController|SchemaController $controller */
+        /** @var HealthController|SiteGraphController|ContentController|SchemaController|MediaController $controller */
         $controller = new $class();
 
         return $controller->{$action}($request);

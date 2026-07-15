@@ -13,16 +13,21 @@ final class HealthController
 {
     public function index(ServerRequestInterface $request): ResponseInterface
     {
+        $capabilities = Contract::defaultCapabilities();
+        $capabilities['media_upload'] = true;
+
         return new JsonResponse(
             Contract::healthResponse(TYPO3_version, [
                 'cms' => 'typo3',
                 'output_modes' => ['body_text', 'content_elements'],
                 'recommended_output_mode' => 'body_text',
                 'content_element_types' => ['header', 'text', 'textmedia'],
+                'capabilities' => $capabilities,
                 'endpoints' => [
                     'site_graph' => '/goals-ac/v1/site-graph',
                     'content' => '/goals-ac/v1/content',
                     'schema' => '/goals-ac/v1/schema',
+                    'media' => '/goals-ac/v1/media',
                 ],
             ])
         );
