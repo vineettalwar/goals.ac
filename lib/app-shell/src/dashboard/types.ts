@@ -22,10 +22,20 @@ export type DashboardProject = {
   url: string;
 };
 
+export type DashboardAutopilotCadence = "daily" | "weekly";
+
 export type DashboardAutopilotSettings = {
   enabled?: boolean;
   cadence?: string;
   publishMode?: string;
+  autoQueueOpportunities?: boolean;
+};
+
+/** Compact dashboard PATCH payload (full controls remain on Publishing). */
+export type DashboardAutopilotSavePayload = {
+  enabled: boolean;
+  cadence: DashboardAutopilotCadence;
+  autoQueueOpportunities: boolean;
 };
 
 /** Monthly article quota from plan usage (platform key). `articleQuotaLimit` is null when unlimited. */

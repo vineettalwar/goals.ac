@@ -9,10 +9,12 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "../cn";
+import { AutopilotSettingsCompact } from "./autopilot-settings-compact";
 import {
   contentPiecePath,
   countByStatus,
   type DashboardArticleUsage,
+  type DashboardAutopilotSavePayload,
   type DashboardAutopilotSettings,
   type DashboardCommandCenter,
   type DashboardLinkProps,
@@ -77,6 +79,9 @@ export function AutopilotActivityPanel({
   pieces,
   articleUsage,
   renderLink,
+  onSaveAutopilot,
+  savingAutopilot = false,
+  saveAutopilotError = null,
 }: {
   projectId: number;
   settings: DashboardAutopilotSettings | null;
@@ -84,6 +89,9 @@ export function AutopilotActivityPanel({
   pieces: DashboardPiece[];
   articleUsage?: DashboardArticleUsage | null;
   renderLink: (props: DashboardLinkProps) => ReactNode;
+  onSaveAutopilot?: (payload: DashboardAutopilotSavePayload) => void | Promise<void>;
+  savingAutopilot?: boolean;
+  saveAutopilotError?: string | null;
 }) {
   const byStatus = countByStatus(pieces);
   const generating = byStatus.generating ?? 0;
@@ -114,7 +122,9 @@ export function AutopilotActivityPanel({
           <p className="mt-1 text-sm text-muted-foreground">
             {settings?.enabled
               ? `${settings.cadence === "daily" ? "Daily" : "Weekly"} · ${settings.publishMode ?? "review"} publish mode`
-              : "Autopilot is off — enable on the Autopilot page"}
+              : onSaveAutopilot
+                ? "Autopilot is off — enable below"
+                : "Autopilot is off — enable on Publishing"}
           </p>
           {articleUsage ? (
             <p className="mt-1.5 inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
@@ -140,6 +150,17 @@ export function AutopilotActivityPanel({
           </DashLink>
         </div>
       </div>
+
+      {onSaveAutopilot ? (
+        <AutopilotSettingsCompact
+          projectId={projectId}
+          settings={settings}
+          saving={savingAutopilot}
+          saveError={saveAutopilotError}
+          onSave={onSaveAutopilot}
+          renderLink={renderLink}
+        />
+      ) : null}
 
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="rounded-lg bg-secondary/40 px-3 py-3 text-center">
