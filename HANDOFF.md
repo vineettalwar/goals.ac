@@ -84,6 +84,20 @@ Public host for raster featured data URIs → HTTPS (`docs/prd/content-media-r2.
 
 **Still open elsewhere:** (none from ponytail safe-delete list).
 
+### Ponytail re-audit unfinished → finished (2026-07-16)
+
+Re-audit: [`docs/audits/2026-07-16-ponytail-frontend-reaudit.md`](docs/audits/2026-07-16-ponytail-frontend-reaudit.md). Treated ambiguous “dead” as unfinished first.
+
+| Item | Outcome |
+|---|---|
+| `useJobPoll` | Wired generate + publish polls in Pages `use-content-piece-data` |
+| `BrandTailoringPanel` | Mounted on Brand tab (live form) + content piece `asideExtra` |
+| `VideoDemoSection` | Mounted on marketing home after `WorkflowSection`; collage → `/content-engine` |
+| Public `/roadmaps` clients | Never launched — keep redirect to `/content-engine`; deleted clients + marketing `RoadmapGenerator` |
+| Deprecated Next `content-piece-layout*` cluster | Deleted (shell `ContentPieceView` SSOT) |
+| `dashboard-sections.tsx` | Deleted (shell `DashboardView`) |
+| Unused Next deps | Removed `@dnd-kit/*`, `@radix-ui/react-separator`, orphan `ui/separator.tsx` |
+
 ### Next studio leftovers deleted (2026-07-16)
 
 Verified dead after hub → `StudioView`. Before delete: one unfinished bit was hub `ArticlePerformanceBadge` (only on leftover list cards + piece detail). Ported via shell `renderPieceExtras` + `publishedUrl` on `StudioPiece`.
@@ -149,12 +163,14 @@ Vite Studio create stream now parses SSE `text` chunks, extracts markdown headin
 
 ## Ponytail audit documented (2026-07-16)
 
-Report: [`docs/audits/2026-07-16-ponytail-frontend.md`](docs/audits/2026-07-16-ponytail-frontend.md)
+Reports:
+- [`docs/audits/2026-07-16-ponytail-frontend.md`](docs/audits/2026-07-16-ponytail-frontend.md)
+- [`docs/audits/2026-07-16-ponytail-frontend-reaudit.md`](docs/audits/2026-07-16-ponytail-frontend-reaudit.md)
 
 - Cursor rule + skills installed; complexity audit of Next + `goals-app-ui` + `app-shell`
 - **Do not delete `goals-app-ui`** — it is `app.goals.ac` Pages (`docs/deploy-cloudflare.md`)
-- High-confidence deletes: Next studio leftovers (~480 LOC)
-- Unfinished / deferred / partial features catalogued in that doc
+- First-pass high-confidence deletes + re-audit unfinished-finish batch (see section above)
+- Dual create wizards / `PieceLink` / AI pause helpers kept as intentional or unfinished wiring
 
 ---
 
