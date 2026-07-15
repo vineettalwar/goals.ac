@@ -169,30 +169,60 @@ export function extractMarkdownImageUrl(markdown: string | null | undefined): st
   return match?.[1];
 }
 
+/** True for http(s) URLs Meta/Instagram can fetch (`image_url`). Rejects data: URIs. */
+export function isPublicHttpImageUrl(url?: string | null): boolean {
+  const trimmed = url?.trim();
+  return Boolean(trimmed && /^https?:\/\//i.test(trimmed));
+}
+
+function socialPieceImageCandidates(piece: {
+  bodyMarkdown?: string | null;
+  featuredImageUrl?: string | null;
+  pieceMetadata?: SocialPieceImageMeta | null;
+}): string[] {
+  const out: string[] = [];
+  const push = (url?: string | null) => {
+    const trimmed = url?.trim();
+    if (trimmed) out.push(trimmed);
+  };
+
+  push(piece.featuredImageUrl);
+
+  const featured = piece.pieceMetadata?.images?.find((img) => img.role === "featured");
+  push(featured?.publishedUrl);
+  push(featured?.remoteUrl);
+  push(piece.pieceMetadata?.featuredImageUrl);
+
+  push(extractMarkdownImageUrl(piece.bodyMarkdown));
+
+  for (const img of piece.pieceMetadata?.images ?? []) {
+    push(img.publishedUrl);
+    push(img.remoteUrl);
+  }
+
+  push(piece.pieceMetadata?.ogImageUrl);
+  return out;
+}
+
 /** Resolve a featured/stock/markdown image URL for social preflight + publish hints. */
 export function resolveSocialPieceImageUrl(piece: {
   bodyMarkdown?: string | null;
   featuredImageUrl?: string | null;
   pieceMetadata?: SocialPieceImageMeta | null;
 }): string | undefined {
-  if (piece.featuredImageUrl?.trim()) return piece.featuredImageUrl.trim();
+  return socialPieceImageCandidates(piece)[0];
+}
 
-  const featured = piece.pieceMetadata?.images?.find((img) => img.role === "featured");
-  if (featured?.publishedUrl?.trim()) return featured.publishedUrl.trim();
-  if (featured?.remoteUrl?.trim()) return featured.remoteUrl.trim();
-  if (piece.pieceMetadata?.featuredImageUrl?.trim()) {
-    return piece.pieceMetadata.featuredImageUrl.trim();
-  }
-
-  const fromMarkdown = extractMarkdownImageUrl(piece.bodyMarkdown);
-  if (fromMarkdown) return fromMarkdown;
-
-  for (const img of piece.pieceMetadata?.images ?? []) {
-    const url = (img.publishedUrl ?? img.remoteUrl)?.trim();
-    if (url) return url;
-  }
-
-  return piece.pieceMetadata?.ogImageUrl?.trim() || undefined;
+/**
+ * Instagram / Meta Graph need a publicly fetchable http(s) URL.
+ * Stock enrich injects HTTPS; visual-summary PNG featured is `data:image/png` (in-app / WP only).
+ */
+export function resolveSocialPiecePublicImageUrl(piece: {
+  bodyMarkdown?: string | null;
+  featuredImageUrl?: string | null;
+  pieceMetadata?: SocialPieceImageMeta | null;
+}): string | undefined {
+  return socialPieceImageCandidates(piece).find((url) => isPublicHttpImageUrl(url));
 }
 
 export function socialPieceNeedsInstagramImage(piece: {

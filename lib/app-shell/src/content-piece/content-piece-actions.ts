@@ -13,9 +13,16 @@ export type QueueSocialPlatform =
 export type QueueSocialComposerOptions = {
   /** True when Meta (Facebook/Instagram) CMS integration is connected. */
   metaConnected?: boolean;
-  /** True when the article has a resolvable featured/stock/markdown image. */
+  /**
+   * True when the article has a public http(s) featured/stock/markdown image.
+   * Visual-summary PNG data URIs do not count — Instagram Graph needs a fetchable URL.
+   */
   hasImage?: boolean;
 };
+
+/** Shown when Meta is connected but Instagram is omitted from Queue social. */
+export const QUEUE_SOCIAL_INSTAGRAM_SKIPPED_MESSAGE =
+  "Instagram skipped — needs a public HTTPS featured image (stock). Visual-summary PNGs are in-app only.";
 
 const QUEUE_SOCIAL_LABELS: Record<QueueSocialPlatform, string> = {
   linkedin: "LinkedIn",
@@ -26,7 +33,11 @@ const QUEUE_SOCIAL_LABELS: Record<QueueSocialPlatform, string> = {
 
 /**
  * Queue social defaults to LinkedIn + X.
- * When Meta is connected: always add Facebook; add Instagram only if an image exists.
+ * When Meta is connected: always add Facebook; add Instagram only if a public HTTPS image exists.
+ *
+ * Order: generate runs stock enrich (+ visual-summary SVG→PNG on Node) before save.
+ * Queue may trigger one stock enrich when Meta is connected and no HTTPS image yet.
+ * Enhance applies visual summary without enrich — use Add featured / regenerate, or let Queue enrich.
  */
 export function selectQueueSocialPlatforms(
   options?: QueueSocialComposerOptions,
@@ -39,6 +50,13 @@ export function selectQueueSocialPlatforms(
     }
   }
   return platforms;
+}
+
+/** Meta connected but no public image → Instagram was omitted from the platform list. */
+export function queueSocialInstagramSkipped(
+  options?: QueueSocialComposerOptions,
+): boolean {
+  return Boolean(options?.metaConnected && !options.hasImage);
 }
 
 /** Accepts both app-shell (`connected: true`) and legacy presence-only snapshots. */

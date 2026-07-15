@@ -7,6 +7,7 @@ import {
   SOCIAL_PLATFORM_OPTIONS,
   isSocialOverCharLimit,
   resolveSocialPieceImageUrl,
+  resolveSocialPiecePublicImageUrl,
   resolveSocialPlatformId,
   socialPieceNeedsInstagramImage,
   type SocialQueueItem,
@@ -102,7 +103,7 @@ export function SocialQueuePanel({
             const overLimit = isSocialOverCharLimit(item.bodyMarkdown, platformId);
             const needsImage = socialPieceNeedsInstagramImage(item);
             const imageUrl = resolveSocialPieceImageUrl(item);
-            const hasImage = Boolean(imageUrl);
+            const hasImage = Boolean(resolveSocialPiecePublicImageUrl(item));
             const imageBlocked = needsImage && !hasImage;
             const actionsBlocked = overLimit || imageBlocked;
 

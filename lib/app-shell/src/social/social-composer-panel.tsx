@@ -7,6 +7,7 @@ import {
   SOCIAL_PLATFORM_OPTIONS,
   isSocialOverCharLimit,
   resolveSocialPieceImageUrl,
+  resolveSocialPiecePublicImageUrl,
   resolveSocialPlatformId,
   type SocialComposedPiece,
   type SocialComposerParent,
@@ -53,9 +54,12 @@ export function SocialComposerPanel({
   );
 
   const parentImageUrl = selectedParent ? resolveSocialPieceImageUrl(selectedParent) : undefined;
+  const parentPublicImageUrl = selectedParent
+    ? resolveSocialPiecePublicImageUrl(selectedParent)
+    : undefined;
 
   const instagramSelected = selectedPlatforms.has("instagram");
-  const parentHasImage = Boolean(parentImageUrl);
+  const parentHasImage = Boolean(parentPublicImageUrl);
   const instagramBlocked = instagramSelected && Boolean(selectedParent) && !parentHasImage;
 
   function togglePlatform(id: SocialPlatformId) {
@@ -207,7 +211,11 @@ export function SocialComposerPanel({
                 platformId === "instagram" || piece.formatType === "instagram_post";
               const imageUrl =
                 resolveSocialPieceImageUrl(piece) ?? parentImageUrl ?? undefined;
-              const missingInstagramImage = isInstagram && !imageUrl;
+              const publicImageUrl =
+                resolveSocialPiecePublicImageUrl(piece) ??
+                parentPublicImageUrl ??
+                undefined;
+              const missingInstagramImage = isInstagram && !publicImageUrl;
               return (
                 <div key={piece.id} className="space-y-2">
                   <SocialPostPreview

@@ -29,6 +29,7 @@ export {
   type PublishDestinationId,
 } from "./publish-destinations";
 export {
+  QUEUE_SOCIAL_INSTAGRAM_SKIPPED_MESSAGE,
   QUEUE_SOCIAL_PLATFORMS,
   formatEnhanceFailureMessage,
   formatEnhanceSuccessMessage,
@@ -37,6 +38,7 @@ export {
   humanizeAuditFromResponse,
   isMetaCmsConnected,
   queueSocialComposerPayload,
+  queueSocialInstagramSkipped,
   selectQueueSocialPlatforms,
   socialComposerPath,
   socialHubQueuePath,
