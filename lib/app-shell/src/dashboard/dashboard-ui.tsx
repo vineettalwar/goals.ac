@@ -11,6 +11,7 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "../cn";
+import { AutopilotActivityPanel } from "./autopilot-activity-panel";
 import {
   contentPiecePath,
   countByStatus,
@@ -20,6 +21,8 @@ import {
   type DashboardPiece,
   type DashboardProject,
 } from "./types";
+
+export { AutopilotActivityPanel } from "./autopilot-activity-panel";
 
 const STATUS_BADGE: Record<string, string> = {
   ready: "bg-emerald-100 text-emerald-800",
@@ -281,13 +284,27 @@ export function DashboardAutopilotSection({
   projectId,
   settings,
   pieces,
+  commandCenter,
   renderLink,
 }: {
   projectId: number;
   settings: DashboardAutopilotSettings | null;
   pieces: DashboardPiece[];
+  commandCenter?: DashboardCommandCenter | null;
   renderLink: (props: DashboardLinkProps) => ReactNode;
 }) {
+  if (commandCenter) {
+    return (
+      <AutopilotActivityPanel
+        projectId={projectId}
+        settings={settings}
+        commandCenter={commandCenter}
+        pieces={pieces}
+        renderLink={renderLink}
+      />
+    );
+  }
+
   const byStatus = countByStatus(pieces);
   const generating = byStatus.generating ?? 0;
   const drafts = byStatus.draft ?? 0;
@@ -549,16 +566,25 @@ export function DashboardView({
         />
       ) : null}
 
+      {activeProjectId && commandCenter ? (
+        <AutopilotActivityPanel
+          projectId={activeProjectId}
+          settings={autopilotSettings}
+          commandCenter={commandCenter}
+          pieces={pieces}
+          renderLink={renderLink}
+        />
+      ) : activeProjectId ? (
+        <DashboardAutopilotSection
+          projectId={activeProjectId}
+          settings={autopilotSettings}
+          pieces={pieces}
+          renderLink={renderLink}
+        />
+      ) : null}
+
       {activeProjectId ? (
-        <>
-          <DashboardAutopilotSection
-            projectId={activeProjectId}
-            settings={autopilotSettings}
-            pieces={pieces}
-            renderLink={renderLink}
-          />
-          <DashboardDraftsSection drafts={drafts} renderLink={renderLink} />
-        </>
+        <DashboardDraftsSection drafts={drafts} renderLink={renderLink} />
       ) : null}
 
       {activeProjectId ? (

@@ -29,6 +29,7 @@ export {
   contentPieceCanHumanize,
   contentPieceCanMarkReady,
   contentPieceCanPublish,
+  contentPieceCanQueueSocial,
   contentPieceSupportsStockImages,
   contentStudioBackHref,
   formatContentFormatType,

@@ -1,4 +1,5 @@
 import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
+import { SOCIAL_FORMAT_TYPES } from "../social/types";
 
 export type ContentPieceImageRef = {
   role: string;
@@ -142,4 +143,16 @@ export function contentPieceCanMarkReady(status: string, bodyMarkdown?: string |
 
 export function contentPieceCanDelete(status: string): boolean {
   return status !== "generating";
+}
+
+/** Non-social piece eligible for LinkedIn+X one-click compose (matches Social Hub parent filter). */
+export function contentPieceCanQueueSocial(
+  formatType: string,
+  status: string,
+  bodyMarkdown?: string | null,
+): boolean {
+  if (SOCIAL_FORMAT_TYPES.has(formatType)) return false;
+  const body = bodyMarkdown?.trim() ?? "";
+  if (!body) return false;
+  return status === "ready" || status === "published" || body.length > 50;
 }

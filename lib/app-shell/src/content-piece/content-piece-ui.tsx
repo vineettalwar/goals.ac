@@ -11,6 +11,7 @@ import {
   PenLine,
   RefreshCw,
   Save,
+  Share2,
   Shuffle,
   Trash2,
   TrendingUp,
@@ -31,6 +32,7 @@ import {
   contentPieceCanHumanize,
   contentPieceCanMarkReady,
   contentPieceCanPublish,
+  contentPieceCanQueueSocial,
   contentPieceSupportsStockImages,
   contentStudioBackHref,
   formatContentFormatType,
@@ -364,6 +366,8 @@ function ContentPieceToolbar({
   onCancel,
   onStartEdit,
   onRepurpose,
+  onQueueSocial,
+  queueingSocial = false,
   onCopy,
   onRegenerate,
   onEnhance,
@@ -391,6 +395,8 @@ function ContentPieceToolbar({
   onCancel?: () => void;
   onStartEdit?: () => void;
   onRepurpose?: () => void;
+  onQueueSocial?: () => void;
+  queueingSocial?: boolean;
   onCopy: () => void;
   onRegenerate?: () => void | Promise<void>;
   onEnhance?: () => void | Promise<void>;
@@ -444,6 +450,22 @@ function ContentPieceToolbar({
           >
             <Shuffle className="h-3.5 w-3.5" aria-hidden />
             Repurpose
+          </button>
+        ) : null}
+        {onQueueSocial ? (
+          <button
+            type="button"
+            onClick={onQueueSocial}
+            disabled={busy || editing}
+            className={TOOLBAR_BTN}
+            title="Create LinkedIn and X variants and open Social Hub"
+          >
+            {queueingSocial ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+            ) : (
+              <Share2 className="h-3.5 w-3.5" aria-hidden />
+            )}
+            {queueingSocial ? "Queuing…" : "Queue social"}
           </button>
         ) : null}
         {body ? (
@@ -642,6 +664,8 @@ function ContentPieceAside({
   onPlannedDateChange,
   onEnhance,
   onPublish,
+  onQueueSocial,
+  queueingSocial = false,
 }: {
   editing: boolean;
   plannedDateDraft: string;
@@ -658,6 +682,8 @@ function ContentPieceAside({
   onPlannedDateChange: (value: string) => void;
   onEnhance?: () => void | Promise<void>;
   onPublish?: () => void;
+  onQueueSocial?: () => void;
+  queueingSocial?: boolean;
 }) {
   const body = displayBody.trim();
   const [dual, setDual] = useState<DualContentScore | null>(null);
@@ -744,6 +770,43 @@ function ContentPieceAside({
             <Upload className="h-4 w-4" aria-hidden />
             Publish
           </button>
+          {onQueueSocial ? (
+            <button
+              type="button"
+              disabled={busy || editing}
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground disabled:opacity-50"
+              onClick={onQueueSocial}
+              title="Create LinkedIn and X variants and open Social Hub"
+            >
+              {queueingSocial ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Share2 className="h-4 w-4" aria-hidden />
+              )}
+              {queueingSocial ? "Queuing…" : "Queue social"}
+            </button>
+          ) : null}
+        </div>
+      ) : onQueueSocial ? (
+        <div className="paper-card space-y-3 rounded-xl p-4">
+          <p className="text-sm font-medium">Social distribution</p>
+          <p className="text-xs text-muted-foreground">
+            Create LinkedIn and X variants from this article.
+          </p>
+          <button
+            type="button"
+            disabled={busy || editing}
+            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground disabled:opacity-50"
+            onClick={onQueueSocial}
+            title="Create LinkedIn and X variants and open Social Hub"
+          >
+            {queueingSocial ? (
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+            ) : (
+              <Share2 className="h-4 w-4" aria-hidden />
+            )}
+            {queueingSocial ? "Queuing…" : "Queue social"}
+          </button>
         </div>
       ) : null}
     </aside>
@@ -779,6 +842,8 @@ export function ContentPieceView({
   enhancing = false,
   enhanceMessage = null,
   onRepurpose,
+  onQueueSocial,
+  queueingSocial = false,
   stockImagesConfigured = false,
   onRegenerateImages,
   regeneratingImages = false,
@@ -819,6 +884,8 @@ export function ContentPieceView({
   enhancing?: boolean;
   enhanceMessage?: string | null;
   onRepurpose?: () => void;
+  onQueueSocial?: () => void;
+  queueingSocial?: boolean;
   stockImagesConfigured?: boolean;
   onRegenerateImages?: () => void | Promise<void>;
   regeneratingImages?: boolean;
