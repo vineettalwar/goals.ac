@@ -9,6 +9,7 @@ import {
 } from "@workspace/billing";
 import { eq } from "drizzle-orm";
 import { toIsoStringOrNull } from "./dates";
+import type { PlatformBedrockStatus } from "./platform-bedrock";
 
 // ── Env helpers ───────────────────────────────────────────────────────────────
 
@@ -101,7 +102,7 @@ export type IntegrationEnvStatus = {
 
 // ── Platform integration definitions ─────────────────────────────────────────
 
-export type PlatformIntegrationCategoryId = "billing" | "email" | "media" | "social";
+export type PlatformIntegrationCategoryId = "billing" | "email" | "media" | "social" | "ai";
 
 export type PlatformIntegrationId =
   | "stripe"
@@ -111,7 +112,8 @@ export type PlatformIntegrationId =
   | "linkedin"
   | "twitter"
   | "meta"
-  | "bluesky";
+  | "bluesky"
+  | "bedrock";
 
 export type PlatformIntegrationSettingsKey =
   | "stripeBillingEnabled"
@@ -161,6 +163,11 @@ export const PLATFORM_INTEGRATION_CATEGORIES: {
     id: "social",
     label: "Social publishing",
     description: "OAuth apps so projects can connect LinkedIn and other networks.",
+  },
+  {
+    id: "ai",
+    label: "AI providers",
+    description: "Platform AI credentials shared with selected organizations.",
   },
 ];
 
@@ -316,6 +323,36 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
         },
       ],
     },
+    {
+      id: "bedrock",
+      category: "ai",
+      kind: "credentials",
+      label: "AWS Bedrock",
+      description: "Platform Bedrock credentials granted to selected organizations.",
+      docsUrl: "https://docs.aws.amazon.com/bedrock/",
+      envVars: [
+        {
+          name: "AWS_ACCESS_KEY_ID",
+          configured: envConfigured("AWS_ACCESS_KEY_ID"),
+          required: true,
+        },
+        {
+          name: "AWS_SECRET_ACCESS_KEY",
+          configured: envConfigured("AWS_SECRET_ACCESS_KEY"),
+          required: true,
+        },
+        {
+          name: "AWS_REGION",
+          configured: envConfigured("AWS_REGION") || envConfigured("AWS_DEFAULT_REGION"),
+          required: false,
+        },
+        {
+          name: "BEDROCK_MODEL",
+          configured: envConfigured("BEDROCK_MODEL"),
+          required: false,
+        },
+      ],
+    },
   ];
 }
 
@@ -438,6 +475,7 @@ export type PlatformIntegrationStatus = {
     clientName: { configured: boolean; value: string | null; source: "db" | "env" | null };
     privateKeyJwk: IntegrationFieldStatus;
   };
+  bedrock: PlatformBedrockStatus;
 };
 
 function fieldStatus(
@@ -471,33 +509,38 @@ function plainFieldStatus(
 }
 
 export async function getPlatformIntegrationStatus(): Promise<PlatformIntegrationStatus> {
-  const [row] = await db
-    .select({
-      encryptedStripeSecretKey: platformSettingsTable.encryptedStripeSecretKey,
-      encryptedStripeConnectAccessToken: platformSettingsTable.encryptedStripeConnectAccessToken,
-      encryptedStripeWebhookSecret: platformSettingsTable.encryptedStripeWebhookSecret,
-      stripePriceGrowthMonthly: platformSettingsTable.stripePriceGrowthMonthly,
-      stripePriceScaleMonthly: platformSettingsTable.stripePriceScaleMonthly,
-      stripeConnectAccountId: platformSettingsTable.stripeConnectAccountId,
-      stripeConnectLivemode: platformSettingsTable.stripeConnectLivemode,
-      stripeConnectConnectedAt: platformSettingsTable.stripeConnectConnectedAt,
-      encryptedResendApiKey: platformSettingsTable.encryptedResendApiKey,
-      resendFromEmail: platformSettingsTable.resendFromEmail,
-      encryptedUnsplashAccessKey: platformSettingsTable.encryptedUnsplashAccessKey,
-      encryptedPexelsApiKey: platformSettingsTable.encryptedPexelsApiKey,
-      linkedinClientId: platformSettingsTable.linkedinClientId,
-      encryptedLinkedinClientSecret: platformSettingsTable.encryptedLinkedinClientSecret,
-      twitterClientId: platformSettingsTable.twitterClientId,
-      encryptedTwitterClientSecret: platformSettingsTable.encryptedTwitterClientSecret,
-      metaAppId: platformSettingsTable.metaAppId,
-      encryptedMetaAppSecret: platformSettingsTable.encryptedMetaAppSecret,
-      blueskyClientName: platformSettingsTable.blueskyClientName,
-      encryptedBlueskyOauthPrivateKeyJwk:
-        platformSettingsTable.encryptedBlueskyOauthPrivateKeyJwk,
-    })
-    .from(platformSettingsTable)
-    .where(eq(platformSettingsTable.id, 1))
-    .limit(1);
+  const { getPlatformBedrockStatus } = await import("./platform-bedrock");
+  const [row, bedrock] = await Promise.all([
+    db
+      .select({
+        encryptedStripeSecretKey: platformSettingsTable.encryptedStripeSecretKey,
+        encryptedStripeConnectAccessToken: platformSettingsTable.encryptedStripeConnectAccessToken,
+        encryptedStripeWebhookSecret: platformSettingsTable.encryptedStripeWebhookSecret,
+        stripePriceGrowthMonthly: platformSettingsTable.stripePriceGrowthMonthly,
+        stripePriceScaleMonthly: platformSettingsTable.stripePriceScaleMonthly,
+        stripeConnectAccountId: platformSettingsTable.stripeConnectAccountId,
+        stripeConnectLivemode: platformSettingsTable.stripeConnectLivemode,
+        stripeConnectConnectedAt: platformSettingsTable.stripeConnectConnectedAt,
+        encryptedResendApiKey: platformSettingsTable.encryptedResendApiKey,
+        resendFromEmail: platformSettingsTable.resendFromEmail,
+        encryptedUnsplashAccessKey: platformSettingsTable.encryptedUnsplashAccessKey,
+        encryptedPexelsApiKey: platformSettingsTable.encryptedPexelsApiKey,
+        linkedinClientId: platformSettingsTable.linkedinClientId,
+        encryptedLinkedinClientSecret: platformSettingsTable.encryptedLinkedinClientSecret,
+        twitterClientId: platformSettingsTable.twitterClientId,
+        encryptedTwitterClientSecret: platformSettingsTable.encryptedTwitterClientSecret,
+        metaAppId: platformSettingsTable.metaAppId,
+        encryptedMetaAppSecret: platformSettingsTable.encryptedMetaAppSecret,
+        blueskyClientName: platformSettingsTable.blueskyClientName,
+        encryptedBlueskyOauthPrivateKeyJwk:
+          platformSettingsTable.encryptedBlueskyOauthPrivateKeyJwk,
+      })
+      .from(platformSettingsTable)
+      .where(eq(platformSettingsTable.id, 1))
+      .limit(1)
+      .then((rows) => rows[0]),
+    getPlatformBedrockStatus(),
+  ]);
 
   const connectToken = safeDecrypt(row?.encryptedStripeConnectAccessToken);
 
@@ -567,6 +610,7 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
       ),
     },
+    bedrock,
   };
 }
 

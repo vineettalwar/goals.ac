@@ -126,6 +126,12 @@ export async function listBlogs(): Promise<Array<{ id: string; title: string; ur
   return data.blogs.edges.map((e) => e.node);
 }
 
+/** ArticleImageInput — Shopify fetches a public https URL (no staged upload in plugin). */
+export interface ArticleImageInput {
+  url: string;
+  altText?: string;
+}
+
 export interface CreateArticleInput {
   blogId: string;
   title: string;
@@ -134,6 +140,7 @@ export interface CreateArticleInput {
   tags?: string[];
   isPublished?: boolean;
   publishedAt?: string;
+  image?: ArticleImageInput;
 }
 
 export interface Article {
@@ -183,6 +190,7 @@ export async function createArticle(input: CreateArticleInput): Promise<{ articl
       tags: input.tags ?? [],
       isPublished: input.isPublished ?? true,
       publishedAt: input.publishedAt ?? new Date().toISOString(),
+      ...(input.image ? { image: input.image } : {}),
     },
   };
 

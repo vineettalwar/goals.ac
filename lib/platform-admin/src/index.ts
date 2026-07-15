@@ -78,6 +78,22 @@ export {
   type SavePexelsCredentialsInput,
 } from "./platform-integrations";
 export {
+  clearStoredPlatformBedrockCredentials,
+  getPlatformBedrockStatus,
+  grantPlatformBedrockToOrg,
+  isBedrockManagedByEnv,
+  isOrgGrantedPlatformBedrock,
+  listPlatformBedrockGrantedOrganizations,
+  loadPlatformBedrockCredentials,
+  resolvePlatformBedrockCredentialsForOrg,
+  revokePlatformBedrockFromOrg,
+  savePlatformBedrockCredentials,
+  setPlatformBedrockOrgGrants,
+  type PlatformBedrockCredentials,
+  type PlatformBedrockStatus,
+  type SavePlatformBedrockCredentialsInput,
+} from "./platform-bedrock";
+export {
   buildStripeConnectAuthorizeUrl,
   decodeStripeConnectState,
   exchangeStripeConnectCode,

@@ -16,6 +16,7 @@
     "./content-strategies": "./src/content-strategies.ts",
     "./platform-settings-write": "./src/platform-settings-write.ts",
     "./platform-integrations": "./src/platform-integrations.ts",
+    "./platform-bedrock": "./src/platform-bedrock.ts",
     "./stripe-connect-oauth": "./src/stripe-connect-oauth.ts"
   },
   "scripts": {
