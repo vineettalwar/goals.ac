@@ -60,6 +60,12 @@ LinkedIn app credentials can be stored in platform admin (not only env):
 - **Success stories** — partner case study template (empty metrics + verify CTAs)
 - **Create from brief** — ContentBriefPanel CTA when outline present + empty body
 
+### Visual-summary PNG → featured (decision 2026-07-16)
+
+**Skip platform upload.** There is no R2/S3/public asset host for content media. Existing R2 (`goals-ac-next-cache`) is Next ISR/cache only. Stock regen keeps Unsplash/Pexels HTTPS CDN URLs; WP/plugin media upload only happens at publish via `downloadAndOptimizeImage(https) → uploadWordPressMedia / uploadGoalsAcPluginMedia`.
+
+Sharp PNG from visual summary stays as `data:image/png;base64,…` on `featuredImageUrl` for **in-app** only. CMS featured still needs stock (`images[]` remote HTTPS) or WP media sideload of HTTPS URLs — data-URI featured is not publish-path media.
+
 ---
 
 ## Demo landmine + autopilot surface (2026-07-15)

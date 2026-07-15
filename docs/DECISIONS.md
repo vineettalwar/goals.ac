@@ -223,13 +223,16 @@ Tabs use **path segments**, not `?tab=` / `?project=` query params. Legacy `/int
 
 **Decision:** Keep at-a-glance graphics as SVG in `visualSummarySvg` / `visualSummarySvgDataUri` (aside + body markdown). Do **not** assign SVG data URIs to `featuredImageUrl` / `ogImageUrl`. On Node (native sharp in `@workspace/media`), `enrichContentPieceImages` may rasterize the SVG to a PNG data URI when no stock featured exists. Stock remote URLs remain preferred for CMS publish. Cloudflare Workers keep the sharp stub (no rasterize).
 
+**Do not upload that PNG to a platform bucket.** No content-media R2/S3/public asset host exists (R2 is Next cache only). Leave PNG as data URI for in-app; CMS featured continues to require stock HTTPS or publish-time WP/plugin media download of HTTPS only.
+
 **Alternatives considered:**
 - Pure-JS SVG→PNG (no native deps) — rejected; sharp already in `@workspace/media`
 - Leave SVG as featured fallback — rejected; many CMS featured-image APIs reject SVG
+- Upload PNG to R2/S3 at enrich time — rejected; no such public media bucket wired; inventing one is out of scope
 
-**Reason:** CMS compatibility without dropping the in-app visual summary.
+**Reason:** CMS compatibility without dropping the in-app visual summary; no safe existing upload target for platform-hosted featured HTTPS.
 
-**Implications:** Generation applies infographic before image enrich; Workers publish paths prefer stock or omit featured rather than SVG.
+**Implications:** Generation applies infographic before image enrich; Workers publish paths prefer stock or omit featured rather than SVG/data-URI.
 
 ## 2026-07-14 — Platform integration hardening (security, performance, accessibility)
 
