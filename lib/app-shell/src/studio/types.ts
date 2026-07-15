@@ -15,6 +15,7 @@ export type StudioPiece = {
   status: string;
   wordCount: number;
   plannedDate?: string | null;
+  publishedUrl?: string | null;
   createdAt?: string | number | null;
   updatedAt?: string | number | null;
 };

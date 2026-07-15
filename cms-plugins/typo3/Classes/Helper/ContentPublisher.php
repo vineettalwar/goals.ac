@@ -14,6 +14,9 @@ final class ContentPublisher
 
     private const FAL_UPLOAD_FOLDER = 'user_upload/goals-ac';
 
+    /** PNG/JPEG only — matches SaaS raster featured helpers (~5MB decoded). */
+    private const MAX_BASE64_IMAGE_BYTES = 5242880;
+
     /**
      * @param array<string, mixed> $payload
      * @return array{remote_id: int, url: string, action: string}
@@ -187,6 +190,9 @@ final class ContentPublisher
         int $sorting,
     ): void {
         $imageUrl = trim((string)($fields['image'] ?? $fields['image_url'] ?? ''));
+        $imageBase64 = trim((string)($fields['imageBase64'] ?? $fields['image_base64'] ?? ''));
+        $imageMime = trim((string)($fields['imageMime'] ?? $fields['image_mime'] ?? ''));
+        $imageFilename = trim((string)($fields['filename'] ?? $fields['imageFilename'] ?? ''));
         $imageAlt = trim((string)($fields['imagealt'] ?? $fields['image_alt'] ?? $fields['alt'] ?? ''));
         $bodytext = trim((string)($fields['bodytext'] ?? ''));
 
@@ -199,7 +205,14 @@ final class ContentPublisher
             'bodytext' => $this->sanitizeContent($bodytext),
         ];
 
-        $fileUid = $imageUrl !== '' ? $this->resolveOrImportFalFile($imageUrl) : null;
+        $fileUid = null;
+        if ($imageBase64 !== '') {
+            $fileUid = $this->importBase64ImageToFal($imageBase64, $imageMime, $imageFilename);
+        }
+        if ($fileUid === null && $imageUrl !== '') {
+            $fileUid = $this->resolveOrImportFalFile($imageUrl);
+        }
+
         if ($fileUid !== null) {
             $newRefId = 'NEW' . uniqid('', true);
             $record['assets'] = $newRefId;
@@ -212,7 +225,8 @@ final class ContentPublisher
                 'alternative' => $imageAlt,
                 'title' => $imageAlt,
             ];
-        } elseif ($imageUrl !== '') {
+        } elseif ($imageUrl !== '' && !$this->isRasterImageDataUri($imageUrl)) {
+            // HTTP URL only — never inline huge data URIs into bodytext.
             $record['bodytext'] = $this->sanitizeContent(
                 $this->appendInlineImageFigure($bodytext, $imageUrl, $imageAlt),
             );

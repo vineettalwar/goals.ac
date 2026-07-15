@@ -113,6 +113,7 @@ function StudioPieceCard({
   projectId,
   renderLink,
   viewMode,
+  renderPieceExtras,
   onDelete,
   onMarkReady,
   deletingId,
@@ -122,6 +123,7 @@ function StudioPieceCard({
   projectId: string;
   renderLink: (props: StudioLinkProps) => ReactNode;
   viewMode: HubViewMode;
+  renderPieceExtras?: (piece: StudioPiece) => ReactNode;
   onDelete?: (id: number) => void | Promise<void>;
   onMarkReady?: (id: number) => void | Promise<void>;
   deletingId?: number | null;
@@ -130,6 +132,7 @@ function StudioPieceCard({
   const isDeleting = deletingId === piece.id;
   const isMarkingReady = markingReadyId === piece.id;
   const pieceHref = studioContentPiecePath(projectId, piece.id);
+  const extras = renderPieceExtras?.(piece);
 
   return (
     <div
@@ -155,6 +158,7 @@ function StudioPieceCard({
           {piece.plannedDate ? (
             <span className="text-xs text-muted-foreground">· {piece.plannedDate}</span>
           ) : null}
+          {extras}
         </div>
       </div>
       <div className={cn("flex shrink-0 items-center gap-2", viewMode === "grid" && "justify-between")}>
@@ -345,6 +349,7 @@ export function StudioView({
   deletingId = null,
   markingReadyId = null,
   reschedulingId = null,
+  renderPieceExtras,
 }: {
   projectId: string;
   projectName: string | null;
@@ -359,6 +364,8 @@ export function StudioView({
   /** Where the AI-not-ready banner sends users (Next: `/integrations/ai`). */
   aiSettingsHref?: string;
   renderLink: (props: StudioLinkProps) => ReactNode;
+  /** Host-only hub card extras (e.g. Next ArticlePerformanceBadge). */
+  renderPieceExtras?: (piece: StudioPiece) => ReactNode;
   onDeletePiece?: (id: number) => void | Promise<void>;
   onMarkReady?: (id: number) => void | Promise<void>;
   onReschedulePiece?: (id: number, plannedDate: string | null) => void | Promise<void>;
@@ -574,6 +581,7 @@ export function StudioView({
                   projectId={projectId}
                   renderLink={renderLink}
                   viewMode={viewMode}
+                  renderPieceExtras={renderPieceExtras}
                   onDelete={onDeletePiece}
                   onMarkReady={onMarkReady}
                   deletingId={deletingId}

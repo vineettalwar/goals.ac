@@ -159,10 +159,10 @@ Use **Render preview** on any content piece to verify the payload before publish
 
 **Publish**
 - **Facebook Post** format → publish to Page feed
-- **Instagram Post** format → publishes caption with a placeholder image (Instagram API requires media)
+- **Instagram Post** format → publishes caption with a featured image (Instagram Graph API requires media)
 
-**Instagram text-only limitation**
-Instagram's Graph API requires an image or video. goals.ac v1 uses a placeholder image for text posts. Attach custom media support is planned.`,
+**Instagram media**
+Instagram needs a public **HTTPS** image URL. On the content piece (or social composer), paste an HTTPS image URL and click **Attach URL**, or choose **Use stock image**. Text-only Instagram posts are not supported.`,
   },
   {
     slug: "connect-bluesky",

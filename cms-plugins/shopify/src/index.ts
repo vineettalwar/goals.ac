@@ -11,8 +11,10 @@ const PORT = parseInt(process.env.PORT ?? "3001", 10);
 app.disable("x-powered-by");
 app.use(requestContext);
 
-// Parse JSON bodies (raw body needed for HMAC — store before parsing)
+// Parse JSON bodies (raw body needed for HMAC — store before parsing).
+// 8mb covers PNG/JPEG featured data URIs (~5MB decoded + markdown body).
 app.use(express.json({
+  limit: "8mb",
   verify: (req, _res, buf) => {
     (req as any).rawBody = buf.toString();
   },

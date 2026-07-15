@@ -7,10 +7,8 @@
  * BrandAiProfileCard (profile prop), AI readiness banner.
  *
  * Kept Next-specific: CreateContentModal (rich create wizard), CMS/publishing
- * context for that modal, cookie-auth loaders, sonner toasts, brief deep-link draft.
- *
- * Local leftovers (do not re-fork hub UI): content-studio-calendar,
- * content-studio-hub-filters, content-studio-list-items, brand-ai-profile-card.
+ * context for that modal, cookie-auth loaders, sonner toasts, brief deep-link draft,
+ * ArticlePerformanceBadge via `renderPieceExtras`.
  */
 
 import { useCallback, useEffect, useReducer, useState } from "react";
@@ -25,6 +23,7 @@ import {
 import type { AiProviderId } from "@workspace/ai-providers/config";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
+import { ArticlePerformanceBadge } from "./article-performance-badge";
 import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
 import { loadContentStudioData } from "./content-studio-load-data";
 import type { ContentPieceRow, StudioPiece } from "./content-studio-utils";
@@ -77,6 +76,7 @@ function toShellPieces(pieces: StudioPiece[]): ShellStudioPiece[] {
     status: piece.status,
     wordCount: piece.wordCount,
     plannedDate: piece.plannedDate,
+    publishedUrl: piece.publishedUrl,
     createdAt: piece.createdAt,
   }));
 }
@@ -217,6 +217,13 @@ export function ContentStudioClient({
           <Link href={href} className={className} title={title}>
             {children}
           </Link>
+        )}
+        renderPieceExtras={(piece) => (
+          <ArticlePerformanceBadge
+            projectId={projectId}
+            contentPieceId={piece.id}
+            publishedUrl={piece.publishedUrl}
+          />
         )}
       />
 
