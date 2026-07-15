@@ -265,14 +265,8 @@ export function CreateContentDialog({
   const progress = ((stepIndex + 1) / steps.length) * 100;
   const isLinkedIn = formatType === "linkedin_post";
   const showGenerating = submitting && currentStep === "review";
-  const parsedCompetitorUrls = isSeoLongform(formatType)
-    ? parseCompetitorUrlInput(competitorUrlsText)
-    : [];
-  const competitorFocusUrl = parsedCompetitorUrls[0];
-  const selectedDestinationLabel = intendedPublishPlatform
-    ? destinations.find((d) => d.id === intendedPublishPlatform)?.label ??
-      intendedPublishPlatform
-    : null;
+  const sessionCompetitorUrls = isSeoLongform(formatType) ? competitorUrls : [];
+  const focusCompetitorUrl = competitorFocusUrl || sessionCompetitorUrls[0];
 
   function goBack() {
     if (submitting || stepIndex <= 0) return;
@@ -286,6 +280,13 @@ export function CreateContentDialog({
     setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   }
 
+  function addQuickCompetitor() {
+    const normalized = normalizeCompetitorUrl(newCompetitorUrl);
+    if (!normalized) return;
+    setCompetitorUrls((prev) => normalizeCompetitorUrlList([...prev, normalized]));
+    setNewCompetitorUrl("");
+  }
+
   async function handleGenerate() {
     const keyword = targetKeyword.trim();
     if (!keyword || submitting) return;
@@ -295,9 +296,8 @@ export function CreateContentDialog({
         ? buildLinkedInAngleHint(linkedinArchetype, linkedinHook, angleHint)
         : angleHint.trim() || undefined;
 
-    const competitorUrls = isSeoLongform(formatType)
-      ? parseCompetitorUrlInput(competitorUrlsText)
-      : [];
+    const urls = isSeoLongform(formatType) ? competitorUrls : [];
+    const focus = competitorFocusUrl || urls[0];
 
     await onSubmit({
       title: title.trim(),
@@ -306,8 +306,8 @@ export function CreateContentDialog({
       angleHint: resolvedAngle,
       plannedDate: plannedDate.trim() || null,
       intendedPublishPlatform: intendedPublishPlatform || undefined,
-      competitorFocusUrl: competitorUrls[0],
-      competitorUrls: competitorUrls.length > 0 ? competitorUrls : undefined,
+      competitorFocusUrl: focus || undefined,
+      competitorUrls: urls.length > 0 ? urls : undefined,
     });
   }
 
