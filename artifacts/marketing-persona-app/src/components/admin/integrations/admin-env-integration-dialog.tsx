@@ -13,7 +13,15 @@ import { EnvManagedBanner, EnvVarChecklist } from "./admin-integrations-shared";
 export function AdminEnvIntegrationDialog({ controller }: { controller: AdminIntegrationsController }) {
   const { settings, activeDialog, activeDefinition, closeDialog, toggle, savingToggle } = controller;
   if (!settings || !activeDefinition || activeDefinition.kind !== "env") return null;
-  if (activeDialog === "stripe" || activeDialog === "resend" || activeDialog === "unsplash" || activeDialog === "pexels") return null;
+  if (
+    activeDialog === "stripe" ||
+    activeDialog === "resend" ||
+    activeDialog === "unsplash" ||
+    activeDialog === "pexels" ||
+    activeDialog === "linkedin"
+  ) {
+    return null;
+  }
 
   return (
     <>

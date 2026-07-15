@@ -34,6 +34,7 @@ export function useAdminIntegrationsController() {
   const [savingResend, setSavingResend] = useState(false);
   const [savingUnsplash, setSavingUnsplash] = useState(false);
   const [savingPexels, setSavingPexels] = useState(false);
+  const [savingLinkedIn, setSavingLinkedIn] = useState(false);
 
   const [stripeSecretKey, setStripeSecretKey] = useState("");
   const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
@@ -48,6 +49,8 @@ export function useAdminIntegrationsController() {
   const [resendFromEmail, setResendFromEmail] = useState("");
   const [unsplashAccessKey, setUnsplashAccessKey] = useState("");
   const [pexelsApiKey, setPexelsApiKey] = useState("");
+  const [linkedinClientId, setLinkedinClientId] = useState("");
+  const [linkedinClientSecret, setLinkedinClientSecret] = useState("");
 
   const groupedIntegrations = useMemo(() => getPlatformIntegrationsByCategory(), []);
 
@@ -66,6 +69,8 @@ export function useAdminIntegrationsController() {
       setUnsplashAccessKey("");
     } else if (dialog === "pexels") {
       setPexelsApiKey("");
+    } else if (dialog === "linkedin") {
+      setLinkedinClientSecret("");
     }
   }, []);
 
@@ -95,6 +100,7 @@ export function useAdminIntegrationsController() {
       setStripePriceGrowth(statusData.stripe.priceGrowthMonthly.value ?? "");
       setStripePriceScale(statusData.stripe.priceScaleMonthly.value ?? "");
       setResendFromEmail(statusData.resend.fromEmail.value ?? "");
+      setLinkedinClientId(statusData.linkedin.clientId.value ?? "");
     } catch {
       setLoadError(true);
       toast.error("Could not load platform integrations");
@@ -275,6 +281,49 @@ export function useAdminIntegrationsController() {
     }
   }
 
+  async function saveLinkedIn() {
+    const payload: Record<string, string> = {};
+    if (linkedinClientId.trim()) payload.clientId = linkedinClientId.trim();
+    if (linkedinClientSecret.trim()) payload.clientSecret = linkedinClientSecret.trim();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("Enter a Client ID or Client Secret to save");
+      return;
+    }
+
+    const alreadyConfigured =
+      status?.linkedin.clientId.configured && status.linkedin.clientSecret.configured;
+    if (!alreadyConfigured && (!payload.clientId || !payload.clientSecret)) {
+      toast.error("Enter both Client ID and Client Secret for the first save");
+      return;
+    }
+
+    setSavingLinkedIn(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          integration: "linkedin",
+          ...payload,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed");
+      }
+      const data = (await res.json()) as { status: PlatformIntegrationStatus };
+      setStatus(data.status);
+      setLinkedinClientId(data.status.linkedin.clientId.value ?? "");
+      setLinkedinClientSecret("");
+      toast.success("LinkedIn credentials saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save LinkedIn credentials");
+    } finally {
+      setSavingLinkedIn(false);
+    }
+  }
+
   async function disconnectStripeOAuth() {
     setDisconnectingStripe(true);
     try {
@@ -292,7 +341,9 @@ export function useAdminIntegrationsController() {
     }
   }
 
-  async function clearStored(integration: "stripe" | "resend" | "unsplash" | "pexels") {
+  async function clearStored(
+    integration: "stripe" | "resend" | "unsplash" | "pexels" | "linkedin",
+  ) {
     try {
       const res = await fetch("/api/admin/platform-integrations", {
         method: "DELETE",
@@ -308,8 +359,11 @@ export function useAdminIntegrationsController() {
       if (integration === "stripe") {
         setStripePriceGrowth(data.status.stripe.priceGrowthMonthly.value ?? "");
         setStripePriceScale(data.status.stripe.priceScaleMonthly.value ?? "");
-      } else {
+      } else if (integration === "resend") {
         setResendFromEmail(data.status.resend.fromEmail.value ?? "");
+      } else if (integration === "linkedin") {
+        setLinkedinClientId("");
+        setLinkedinClientSecret("");
       }
       toast.success("Stored credentials removed");
     } catch (err) {
@@ -319,7 +373,7 @@ export function useAdminIntegrationsController() {
 
   const counts = useMemo<AdminIntegrationsCounts>(() => {
     if (!settings || !env || !status) {
-      return { total: 0, billing: 0, email: 0, media: 0 };
+      return { total: 0, billing: 0, email: 0, media: 0, social: 0 };
     }
 
     const countActive = (definitions: PlatformIntegrationDefinition[]) =>
@@ -335,9 +389,10 @@ export function useAdminIntegrationsController() {
     ) as Record<PlatformIntegrationCategoryId, number>;
 
     return {
-      billing: countsByCategory.billing,
-      email: countsByCategory.email,
-      media: countsByCategory.media,
+      billing: countsByCategory.billing ?? 0,
+      email: countsByCategory.email ?? 0,
+      media: countsByCategory.media ?? 0,
+      social: countsByCategory.social ?? 0,
       total: groupedIntegrations.reduce(
         (sum, group) => sum + countActive(group.integrations),
         0,
@@ -364,6 +419,7 @@ export function useAdminIntegrationsController() {
     saveResend,
     saveUnsplash,
     savePexels,
+    saveLinkedIn,
     disconnectStripeOAuth,
     clearStored,
     savingToggle,
@@ -371,6 +427,7 @@ export function useAdminIntegrationsController() {
     savingResend,
     savingUnsplash,
     savingPexels,
+    savingLinkedIn,
     stripeSecretKey,
     setStripeSecretKey,
     stripeWebhookSecret,
@@ -390,6 +447,10 @@ export function useAdminIntegrationsController() {
     setUnsplashAccessKey,
     pexelsApiKey,
     setPexelsApiKey,
+    linkedinClientId,
+    setLinkedinClientId,
+    linkedinClientSecret,
+    setLinkedinClientSecret,
   };
 }
 

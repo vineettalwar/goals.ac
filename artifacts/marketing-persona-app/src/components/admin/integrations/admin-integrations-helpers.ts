@@ -10,6 +10,7 @@ import {
 export interface PlatformSettingsResponse {
   stripeBillingEnabled: boolean;
   emailEnabled: boolean;
+  socialPublishingEnabled: boolean;
 }
 
 export type ToggleKey = PlatformIntegrationSettingsKey;
@@ -20,6 +21,7 @@ export type AdminIntegrationsCounts = {
   billing: number;
   email: number;
   media: number;
+  social: number;
 };
 
 export function integrationSummary(
@@ -62,6 +64,9 @@ export function isIntegrationConfigured(
   if (definition.id === "resend") return status.resend.apiKey.configured;
   if (definition.id === "unsplash") return status.unsplash.accessKey.configured;
   if (definition.id === "pexels") return status.pexels.apiKey.configured;
+  if (definition.id === "linkedin") {
+    return status.linkedin.clientId.configured && status.linkedin.clientSecret.configured;
+  }
   return false;
 }
 
@@ -109,6 +114,7 @@ export function getIntegrationLastFour(
   if (definition.id === "resend") return status.resend.apiKey.lastFour;
   if (definition.id === "unsplash") return status.unsplash.accessKey.lastFour;
   if (definition.id === "pexels") return status.pexels.apiKey.lastFour;
+  if (definition.id === "linkedin") return status.linkedin.clientSecret.lastFour;
   return null;
 }
 
@@ -120,5 +126,6 @@ export function isIntegrationManagedByEnv(
   if (definition.id === "resend") return status.resend.managedByEnv;
   if (definition.id === "unsplash") return status.unsplash.managedByEnv;
   if (definition.id === "pexels") return status.pexels.managedByEnv;
+  if (definition.id === "linkedin") return status.linkedin.managedByEnv;
   return definition.kind === "env";
 }

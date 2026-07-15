@@ -1,6 +1,6 @@
 # PRD: Content Studio Competitive Plan
 
-**Status:** Waves 0–3.2 shipped · Only hosted blog (3.3) deferred  
+**Status:** Waves 0–3.2 shipped · Social preview chrome, calendar polish, Queue social Meta, dashboard autopilot settings, SVG visual summary live · Only hosted blog (3.3) deferred  
 **ICP (90 days):** Partner-demo path vs BabyLoveGrowth / AutoSEO — consulting-led, not self-serve checkout  
 **Related:** [babylovegrowth-parity-planner.md](../competitors/babylovegrowth-parity-planner.md), [DECISIONS.md](../DECISIONS.md), [HANDOFF.md](../../HANDOFF.md)
 
@@ -16,7 +16,7 @@ goals.ac is **engine-rich and experience-thin**. The platform already ships stro
 |---|---|---|
 | **Surfer** | Live editor + real-time NLP term coverage while you write | Brief/SERP panel + live dual score shipped; still no term-level NLP highlighting |
 | **BLG / AutoSEO** | Volume simplicity — URL → daily articles → quality score on the homepage | Humanize before/after + quality demo live; volume/billing packaging still partner-led |
-| **Buffer** | Social polish — per-platform preview, voice, scheduling UX | Queue social + social humanize shipped; Buffer-depth preview polish still lighter |
+| **Buffer** | Social polish — per-platform preview, voice, scheduling UX | Preview chrome, calendar polish, Queue social (LinkedIn/X + Meta), social humanize shipped; TikTok/YouTube/inbox still out of scope |
 
 **Root cause:** Packaging and reliability gaps, not missing core engines. Closing the competitive gap means surfacing what we already built and hardening humanize + integration trust before chasing Surfer-style live NLP.
 
@@ -65,9 +65,9 @@ flowchart LR
 
 | Ring | Competitor exemplars | goals.ac response | Wave |
 |---|---|---|---|
-| **Autopilot** | BLG, AutoSEO — set-and-forget daily content | Fast-lane → dashboard, auto-queue on, command center, optional autopilot dashboard (Wave 3) | 0 (demo assets), 3 (dashboard) |
-| **Optimization** | Surfer, Clearscope — score while writing | Side panel brief/SERP, live draft score, unify create UX — **not** full live NLP | 1 |
-| **Distribution** | Buffer — social scheduling polish; AutoSEO — hosted blog | Health cron expansion, connect UX, publish history, article+social one-click, IG image gate | 2 |
+| **Autopilot** | BLG, AutoSEO — set-and-forget daily content | Fast-lane → dashboard, auto-queue on, command center, dashboard autopilot settings + activity panel (Wave 3.1) | 0 (demo assets), 3.1 (shipped) |
+| **Optimization** | Surfer, Clearscope — score while writing | Side panel brief/SERP, live draft score, unify create UX, SVG visual summary — **not** full live NLP | 1 (+ summary polish shipped) |
+| **Distribution** | Buffer — social scheduling polish; AutoSEO — hosted blog | Wave 2 trust + preview chrome, calendar polish, Queue social Meta; hosted blog deferred (3.3) | 2 (shipped); 3.3 deferred |
 
 ---
 
@@ -124,7 +124,7 @@ flowchart LR
 
 | # | Deliverable | Notes |
 |---|---|---|
-| 3.1 | **Optional autopilot dashboard** — Unified activity panel (articles, publishes, LLM citation delta, GEO trend) | Shipped — `/dashboard` activity panel |
+| 3.1 | **Optional autopilot dashboard** — Unified activity panel (articles, publishes, LLM citation delta, GEO trend) + compact autopilot settings | Shipped — `/dashboard` activity panel + save autopilot settings |
 | 3.2 | **Coverage % H2s** — SERP score shows H2 topic coverage % vs competitor headings | Shipped — `serp.h2Coverage` in quality panels |
 | 3.3 | **Hosted blog** (`blog.customer.goals.ac`) | **Deferred** until self-serve GTM — not partner-demo priority |
 

@@ -47,11 +47,24 @@ function PexelsLogo({ className }: { className?: string }) {
   );
 }
 
+function LinkedInLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#0A66C2" />
+      <path
+        fill="#fff"
+        d="M7.1 9.4h2.2v7.5H7.1V9.4Zm1.1-3.5c.7 0 1.3.6 1.3 1.3s-.6 1.3-1.3 1.3-1.3-.6-1.3-1.3.6-1.3 1.3-1.3ZM10.8 9.4h2.1v1h0c.3-.6 1.1-1.2 2.2-1.2 2.4 0 2.8 1.6 2.8 3.6v4.1h-2.2v-3.6c0-.9 0-2-1.2-2s-1.4 1-1.4 2v3.6h-2.2V9.4Z"
+      />
+    </svg>
+  );
+}
+
 const LOGOS: Record<PlatformIntegrationId, ComponentType<{ className?: string }>> = {
   stripe: StripeLogo,
   resend: ResendLogo,
   unsplash: UnsplashLogo,
   pexels: PexelsLogo,
+  linkedin: LinkedInLogo,
 };
 
 export function PlatformIntegrationBrandIcon({
