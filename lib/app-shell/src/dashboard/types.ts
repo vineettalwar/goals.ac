@@ -28,6 +28,14 @@ export type DashboardAutopilotSettings = {
   publishMode?: string;
 };
 
+/** Monthly article quota from plan usage (platform key). `articleQuotaLimit` is null when unlimited. */
+export type DashboardArticleUsage = {
+  articlesThisMonth: number;
+  articleQuotaLimit: number | null;
+  articlesRemaining: number | null;
+  usesByok: boolean;
+};
+
 export type DashboardCommandCenterRecentPiece = {
   id: number;
   title: string;
@@ -75,6 +83,7 @@ export type DashboardData = {
   pieces: DashboardPiece[];
   autopilotSettings: DashboardAutopilotSettings | null;
   commandCenter: DashboardCommandCenter | null;
+  articleUsage?: DashboardArticleUsage | null;
 };
 
 export function contentPiecePath(projectId: number | string, pieceId: number | string): string {

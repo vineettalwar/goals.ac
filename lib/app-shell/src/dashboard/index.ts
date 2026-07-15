@@ -11,6 +11,7 @@ export {
 export {
   contentPiecePath,
   countByStatus,
+  type DashboardArticleUsage,
   type DashboardAutopilotSettings,
   type DashboardCommandCenter,
   type DashboardCommandCenterRecentPiece,

@@ -12,11 +12,21 @@ import { cn } from "../cn";
 import {
   contentPiecePath,
   countByStatus,
+  type DashboardArticleUsage,
   type DashboardAutopilotSettings,
   type DashboardCommandCenter,
   type DashboardLinkProps,
   type DashboardPiece,
 } from "./types";
+
+/** Compact quota line for partner demos, e.g. `12 / 30 articles this month`. */
+export function formatArticleUsageLabel(usage: DashboardArticleUsage): string {
+  if (usage.usesByok) return "BYOK — unlimited AI generations";
+  if (usage.articleQuotaLimit != null) {
+    return `${usage.articlesThisMonth} / ${usage.articleQuotaLimit} articles this month`;
+  }
+  return `${usage.articlesThisMonth} articles this month`;
+}
 
 const STATUS_BADGE: Record<string, string> = {
   ready: "bg-emerald-100 text-emerald-800",
@@ -65,12 +75,14 @@ export function AutopilotActivityPanel({
   settings,
   commandCenter,
   pieces,
+  articleUsage,
   renderLink,
 }: {
   projectId: number;
   settings: DashboardAutopilotSettings | null;
   commandCenter: DashboardCommandCenter;
   pieces: DashboardPiece[];
+  articleUsage?: DashboardArticleUsage | null;
   renderLink: (props: DashboardLinkProps) => ReactNode;
 }) {
   const byStatus = countByStatus(pieces);
@@ -104,6 +116,12 @@ export function AutopilotActivityPanel({
               ? `${settings.cadence === "daily" ? "Daily" : "Weekly"} · ${settings.publishMode ?? "review"} publish mode`
               : "Autopilot is off — enable on the Autopilot page"}
           </p>
+          {articleUsage ? (
+            <p className="mt-1.5 inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+              <FileText className="mr-1.5 h-3 w-3 shrink-0" />
+              {formatArticleUsageLabel(articleUsage)}
+            </p>
+          ) : null}
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <DashLink

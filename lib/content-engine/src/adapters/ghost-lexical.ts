@@ -164,6 +164,53 @@ function parseInline(input: string): LexicalInlineNode[] {
   return nodes.length > 0 ? nodes : [textNode("")];
 }
 
+type TextOrImageSegment =
+  | { kind: "text"; value: string }
+  | { kind: "image"; src: string; alt: string };
+
+/** Split markdown into text runs and images. Ghost image cards are block-level. */
+function splitTextAndImages(text: string): TextOrImageSegment[] {
+  const segments: TextOrImageSegment[] = [];
+  const pattern = /!\[([^\]]*)\]\(([^)]+)\)/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = pattern.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ kind: "text", value: text.slice(lastIndex, match.index) });
+    }
+    segments.push({ kind: "image", src: match[2].trim(), alt: match[1].trim() });
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) {
+    segments.push({ kind: "text", value: text.slice(lastIndex) });
+  }
+
+  return segments;
+}
+
+/** Emit paragraph(s) and image cards, splitting around inline `![alt](url)`. */
+function appendParagraphWithImages(children: LexicalBlockNode[], line: string): void {
+  const segments = splitTextAndImages(line);
+  const hasImage = segments.some((s) => s.kind === "image");
+
+  if (!hasImage) {
+    children.push(paragraphFromText(line));
+    return;
+  }
+
+  for (const segment of segments) {
+    if (segment.kind === "image") {
+      children.push(imageNode(segment.src, segment.alt));
+      continue;
+    }
+    const trimmed = segment.value.trim();
+    if (!trimmed) continue;
+    children.push(paragraphFromText(trimmed));
+  }
+}
+
 /**
  * Convert markdown to a Ghost 5 Lexical document tree for the Admin API `lexical` field.
  */
@@ -241,17 +288,8 @@ export function markdownToGhostLexical(markdown: string): GhostLexicalDocument {
       continue;
     }
 
-    if (/^!\[([^\]]*)\]\(([^)]+)\)/.test(line.trim())) {
-      flushList();
-      const imageMatch = /^!\[([^\]]*)\]\(([^)]+)\)/.exec(line.trim());
-      if (imageMatch) {
-        children.push(imageNode(imageMatch[2].trim(), imageMatch[1].trim()));
-      }
-      continue;
-    }
-
     flushList();
-    children.push(paragraphFromText(line));
+    appendParagraphWithImages(children, line.trim());
   }
 
   flushList();
