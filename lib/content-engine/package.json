@@ -10,6 +10,8 @@
     "./adapters/types": "./src/adapters/types.ts",
     "./analytics/article-performance": "./src/analytics/article-performance.ts",
     "./analytics/command-center-service": "./src/analytics/command-center-service.ts",
+    "./analytics/internal-links-summary": "./src/analytics/internal-links-summary.ts",
+    "./internal-links-summary": "./src/analytics/internal-links-summary.ts",
     "./articles/serp-content-score": "./src/articles/serp-content-score.ts",
     "./serp-content-score": "./src/articles/serp-content-score.ts",
     "./strategy/keyword-cluster-service": "./src/strategy/keyword-cluster-service.ts",
