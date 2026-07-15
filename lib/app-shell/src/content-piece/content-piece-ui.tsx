@@ -1006,9 +1006,11 @@ export function ContentPieceView({
 
   async function handleSave() {
     if (!onSave) return;
+    // Published pieces cannot enter edit mode; status is draft|ready only.
     await onSave({
       title: editor.titleDraft.trim(),
       bodyMarkdown: editor.bodyDraft,
+      status: editor.statusDraft,
       plannedDate: editor.plannedDateDraft.trim() || null,
     });
     dispatch({ type: "saved", piece });
@@ -1103,6 +1105,7 @@ export function ContentPieceView({
 
         <ContentPieceAside
           editing={editor.editing}
+          statusDraft={editor.statusDraft}
           plannedDateDraft={editor.plannedDateDraft}
           piece={piece}
           displayBody={displayBody}
@@ -1114,6 +1117,7 @@ export function ContentPieceView({
           fetchDualScore={fetchDualScore}
           fetchBrief={fetchBrief}
           renderLink={renderLink}
+          onStatusChange={(value) => dispatch({ type: "set_status", value })}
           onPlannedDateChange={(value) => dispatch({ type: "set_planned_date", value })}
           onEnhance={onEnhance}
           onPublish={onPublish}

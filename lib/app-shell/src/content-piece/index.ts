@@ -2,6 +2,7 @@ export {
   ContentPieceNotFound,
   ContentPieceView,
   type ContentPieceLinkProps,
+  type ContentPieceSavePayload,
 } from "./content-piece-ui";
 export {
   ContentBriefPanel,

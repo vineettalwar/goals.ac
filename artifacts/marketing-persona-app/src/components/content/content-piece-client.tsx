@@ -3,12 +3,8 @@
 /**
  * Thin Next host for shared `ContentPieceView` (parity with Vite ContentPiecePage).
  *
- * Shell owns layout + toolbar (including empty-draft Generate vs Regenerate).
- * Next passes host-only extras via `headerExtra` / `asideExtra`, and wires
- * `onGenerate` to the existing regenerate API (no separate [id]/generate route).
- *
- * Remaining Next-only leftover: status select while editing
- * (shell save is title/body/plannedDate only).
+ * Shell owns layout + toolbar (including empty-draft Generate vs Regenerate,
+ * and edit-time status draft/ready select).
  *
  * Kept Next-specific: cookie auth routes, SSR initialPiece/cmsConnections,
  * streaming ContentPieceRepurposeDialog, toast for hard failures.
@@ -230,6 +226,7 @@ export function ContentPieceClient({
               body: JSON.stringify({
                 title: payload.title,
                 bodyMarkdown: payload.bodyMarkdown,
+                ...(payload.status ? { status: payload.status } : {}),
                 plannedDate: payload.plannedDate ?? null,
               }),
             });
