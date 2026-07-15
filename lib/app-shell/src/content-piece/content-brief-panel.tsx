@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { FileText, ListTree } from "lucide-react";
+import { Check, Copy, FileText, ListTree, PenLine } from "lucide-react";
 
 export type ContentBriefSummary = {
   id: number;
@@ -32,6 +32,8 @@ export type ContentBriefPanelProps = {
   ideasHref?: string | null;
   /** When the piece already has body, skip create-from-brief CTA. */
   pieceHasBody?: boolean;
+  /** Optional callback to insert outline into draft when body is empty. */
+  onInsertOutline?: (outlineMarkdown: string) => void;
   renderLink?: (props: {
     href: string;
     className?: string;
@@ -75,6 +77,11 @@ export function normalizeBriefOutline(outline: unknown): string[] {
     }
   }
   return bullets;
+}
+
+/** Convert outline bullets to markdown H2 list. */
+function outlineToMarkdown(bullets: string[]): string {
+  return bullets.map((bullet) => `## ${bullet}`).join("\n\n");
 }
 
 async function defaultFetchBrief(briefId: number): Promise<ContentBriefSummary | null> {

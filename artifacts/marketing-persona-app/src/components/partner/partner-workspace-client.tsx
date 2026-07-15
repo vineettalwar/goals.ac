@@ -1,8 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BarChart2, Globe, Link2, ScanSearch } from "lucide-react";
+import { ArrowRight, BarChart2, CheckCircle2, Copy, ExternalLink, FileText, Globe, Link2, ScanSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  ILLUSTRATIVE_PROFILE,
+  VERIFY_CTAS,
+  STORY_KIT_MARKDOWN_TEMPLATE,
+} from "@/lib/marketing/content/story-kit-constants";
 
 export type PartnerProjectRow = {
   id: number;
@@ -30,6 +36,8 @@ function deltaLabel(delta: number | null, suffix = "pp"): string | null {
 }
 
 export function PartnerWorkspaceClient({ projects, organizationName }: Props) {
+  const [copied, setCopied] = useState(false);
+
   const totals = projects.reduce(
     (acc, p) => ({
       published: acc.published + p.publishedCount,
@@ -39,6 +47,12 @@ export function PartnerWorkspaceClient({ projects, organizationName }: Props) {
     }),
     { published: 0, drafts: 0, avgVisibility: 0 },
   );
+
+  const handleCopyTemplate = async () => {
+    await navigator.clipboard.writeText(STORY_KIT_MARKDOWN_TEMPLATE);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="px-8 py-8 max-w-6xl space-y-8">

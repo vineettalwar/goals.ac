@@ -33,6 +33,8 @@ export function SocialQueuePanel({
   onReject,
   onSchedule,
   requireApproval = false,
+  attachingImage,
+  onUseStockImage,
 }: {
   platformFilter: string;
   onPlatformFilterChange: (value: string) => void;
@@ -47,6 +49,8 @@ export function SocialQueuePanel({
   onReject: (id: number) => void;
   onSchedule: (id: number, value: string) => void;
   requireApproval?: boolean;
+  attachingImage?: boolean;
+  onUseStockImage?: (pieceId: number) => void | Promise<void>;
 }) {
   return (
     <div className="space-y-4">
@@ -199,7 +203,26 @@ export function SocialQueuePanel({
                 {imageBlocked ? (
                   <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
                     <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-                    <span>{INSTAGRAM_IMAGE_REQUIRED_MESSAGE}</span>
+                    <div className="flex flex-1 flex-wrap items-center gap-2">
+                      <span>{INSTAGRAM_IMAGE_REQUIRED_MESSAGE}</span>
+                      {onUseStockImage ? (
+                        <button
+                          type="button"
+                          disabled={attachingImage}
+                          onClick={() => {
+                            if (onUseStockImage) void onUseStockImage(item.id);
+                          }}
+                          className="inline-flex h-7 items-center gap-1 rounded-lg border border-amber-600/30 bg-amber-100 px-2.5 text-xs font-medium text-amber-900 hover:bg-amber-200 disabled:opacity-50 dark:bg-amber-900/30 dark:text-amber-100 dark:hover:bg-amber-900/50"
+                        >
+                          {attachingImage ? (
+                            <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
+                          ) : (
+                            <RefreshCw className="h-3 w-3" aria-hidden />
+                          )}
+                          Use stock image
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
 
