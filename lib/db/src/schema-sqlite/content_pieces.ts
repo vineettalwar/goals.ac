@@ -71,6 +71,8 @@ export type ContentPieceMetadata = {
     rejected?: boolean;
     tellsFixed?: number;
   };
+  /** Body markdown as it was immediately before the most recent humanize pass. */
+  preHumanizeBodyMarkdown?: string;
   /** Markdown infographic template block injected post-generation */
   hasInfographicBlock?: boolean;
   deeplRefined?: boolean;

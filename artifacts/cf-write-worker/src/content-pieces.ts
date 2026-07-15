@@ -7,6 +7,7 @@ import {
   CONTENT_FORMAT_TYPES,
   contentPiecesTable,
   type ContentFormatType,
+  type ContentPieceMetadata,
 } from "@workspace/db/schema-sqlite";
 import { humanizeContentPiece } from "@workspace/content-engine/content/humanizer";
 import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
@@ -130,6 +131,15 @@ export async function handleContentPiecesWrite(
     return handleContentPieceHumanize(
       request,
       Number.parseInt(humanizeMatch[1]!, 10),
+      userId,
+    );
+  }
+
+  const revertHumanizeMatch = path.match(/^\/api\/content-pieces\/(\d+)\/humanize\/revert$/);
+  if (revertHumanizeMatch && request.method === "POST") {
+    return handleContentPieceRevertHumanize(
+      request,
+      Number.parseInt(revertHumanizeMatch[1]!, 10),
       userId,
     );
   }
@@ -386,6 +396,49 @@ async function handleContentPieceHumanize(
     const message = err instanceof Error ? err.message : "Humanization failed";
     return withCors(request, Response.json({ error: message }, { status: 503 }));
   }
+}
+
+async function handleContentPieceRevertHumanize(
+  request: Request,
+  contentPieceId: number,
+  userId: number,
+): Promise<Response> {
+  const access = await loadPieceForUser(contentPieceId, userId);
+  if (access.error === "not_found") {
+    return withCors(
+      request,
+      Response.json({ error: "Content piece not found" }, { status: 404 }),
+    );
+  }
+  if (access.error === "forbidden") {
+    return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
+  }
+
+  const piece = access.piece!;
+  const meta = (piece.pieceMetadata as ContentPieceMetadata | null) ?? null;
+  const snapshot = meta?.preHumanizeBodyMarkdown;
+  if (!snapshot) {
+    return withCors(
+      request,
+      Response.json({ error: "No humanize snapshot to revert to" }, { status: 400 }),
+    );
+  }
+
+  const { preHumanizeBodyMarkdown: _snapshot, humanizationAudit: _audit, ...restMeta } = meta;
+  const nextMeta: ContentPieceMetadata = { ...restMeta, humanized: false };
+
+  const [updated] = await db
+    .update(contentPiecesTable)
+    .set({
+      bodyMarkdown: snapshot,
+      wordCount: wordCountFromMarkdown(snapshot),
+      pieceMetadata: Object.keys(nextMeta).length > 0 ? nextMeta : null,
+      status: "draft",
+    })
+    .where(eq(contentPiecesTable.id, contentPieceId))
+    .returning();
+
+  return withCors(request, Response.json(updated));
 }
 
 async function handleContentPieceGenerate(

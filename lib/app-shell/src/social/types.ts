@@ -6,6 +6,13 @@ export type SocialPieceImageMeta = {
     remoteUrl?: string;
     publishedUrl?: string;
   }>;
+  humanized?: boolean;
+  humanizationAudit?: {
+    slopScoreBefore?: number;
+    slopScoreAfter?: number;
+    rejected?: boolean;
+    reason?: string;
+  };
 };
 
 export type SocialQueueItem = {

@@ -10,6 +10,7 @@ import {
   Pencil,
   PenLine,
   RefreshCw,
+  RotateCcw,
   Save,
   Share2,
   Shuffle,
@@ -609,6 +610,7 @@ function ContentPieceBodyEditor({
   displayBody,
   body,
   onBodyChange,
+  previewOverrideBody,
 }: {
   editing: boolean;
   previewMode: boolean;
@@ -617,6 +619,8 @@ function ContentPieceBodyEditor({
   displayBody: string;
   body: string;
   onBodyChange: (value: string) => void;
+  /** When set (Before/After snapshot toggle), shown instead of displayBody. Read-only. */
+  previewOverrideBody?: string;
 }) {
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -651,15 +655,77 @@ function ContentPieceBodyEditor({
     );
   }
 
+  const shownBody = previewOverrideBody ?? displayBody;
+  const shownBodyTrimmed = previewOverrideBody ? previewOverrideBody.trim() : body;
+
   return (
     <div className="px-6 py-8 lg:px-10 lg:py-10">
-      {body ? (
-        <ContentMarkdown>{displayBody}</ContentMarkdown>
+      {shownBodyTrimmed ? (
+        <ContentMarkdown>{shownBody}</ContentMarkdown>
       ) : (
         <p className="text-sm text-muted-foreground">
           No content yet. Generate or edit to add copy.
         </p>
       )}
+    </div>
+  );
+}
+
+function HumanizeSnapshotBar({
+  view,
+  onViewChange,
+  onRevert,
+  reverting,
+  disabled,
+}: {
+  view: "after" | "before";
+  onViewChange: (view: "after" | "before") => void;
+  onRevert: () => void;
+  reverting: boolean;
+  disabled: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-muted/20 px-4 py-2">
+      <div className="inline-flex rounded-lg border border-input bg-card p-0.5 text-xs font-medium">
+        <button
+          type="button"
+          onClick={() => onViewChange("before")}
+          className={cn(
+            "rounded-md px-2.5 py-1 transition-colors",
+            view === "before"
+              ? "bg-secondary text-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          Before humanize
+        </button>
+        <button
+          type="button"
+          onClick={() => onViewChange("after")}
+          className={cn(
+            "rounded-md px-2.5 py-1 transition-colors",
+            view === "after"
+              ? "bg-secondary text-foreground"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          After humanize
+        </button>
+      </div>
+      <button
+        type="button"
+        onClick={onRevert}
+        disabled={disabled}
+        className={TOOLBAR_BTN}
+        title="Restore the body from just before the last humanize pass"
+      >
+        {reverting ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+        ) : (
+          <RotateCcw className="h-3.5 w-3.5" aria-hidden />
+        )}
+        {reverting ? "Reverting…" : "Revert to before"}
+      </button>
     </div>
   );
 }
@@ -779,7 +845,17 @@ function ContentPieceAside({
         serpGaps={dual?.serp.gaps}
         competitorTopics={dual?.competitorDiff}
         pieceHasBody={Boolean(body)}
-        onInsertOutline={onInsertOutline}
+        onInsertOutline={
+          onInsertOutline && editing
+            ? (markdown, mode) => {
+                if (mode === "replace") {
+                  onInsertOutline(markdown);
+                } else {
+                  onInsertOutline(`${displayBody}\n\n${markdown}`);
+                }
+              }
+            : undefined
+        }
         renderLink={renderLink}
       />
 
@@ -874,6 +950,8 @@ export function ContentPieceView({
   onHumanize,
   humanizing = false,
   humanizeMessage = null,
+  onRevertHumanize,
+  revertingHumanize = false,
   onDelete,
   deleting = false,
   onMarkReady,
@@ -920,6 +998,8 @@ export function ContentPieceView({
   onHumanize?: () => void;
   humanizing?: boolean;
   humanizeMessage?: string | null;
+  onRevertHumanize?: () => void | Promise<void>;
+  revertingHumanize?: boolean;
   onDelete?: () => void | Promise<void>;
   deleting?: boolean;
   onMarkReady?: () => void | Promise<void>;
@@ -951,6 +1031,17 @@ export function ContentPieceView({
   if (!editor.editing && editor.draftKey !== nextDraftKey) {
     dispatch({ type: "sync", piece });
   }
+
+  const [snapshotView, setSnapshotView] = useState<"after" | "before">("after");
+  const preHumanizeBody = piece.pieceMetadata?.preHumanizeBodyMarkdown ?? null;
+  const hasHumanizeSnapshot = Boolean(
+    preHumanizeBody?.trim() &&
+      preHumanizeBody !== (piece.bodyMarkdown ?? "") &&
+      contentPieceCanEdit(piece.status),
+  );
+  useEffect(() => {
+    if (!hasHumanizeSnapshot || editor.editing) setSnapshotView("after");
+  }, [hasHumanizeSnapshot, editor.editing, piece.id]);
 
   const formatLabel = formatContentFormatType(piece.formatType);
   const displayBody = editor.editing ? editor.bodyDraft : (piece.bodyMarkdown ?? "");
@@ -1004,6 +1095,7 @@ export function ContentPieceView({
     publishing ||
     saving ||
     humanizing ||
+    revertingHumanize ||
     deleting ||
     markingReady ||
     regenerating ||
@@ -1105,6 +1197,24 @@ export function ContentPieceView({
               onGenerate={showGenerate ? onGenerate : undefined}
               onDelete={showDelete ? onDelete : undefined}
             />
+            {hasHumanizeSnapshot && !editor.editing ? (
+              <HumanizeSnapshotBar
+                view={snapshotView}
+                onViewChange={setSnapshotView}
+                onRevert={() => {
+                  if (
+                    onRevertHumanize &&
+                    window.confirm(
+                      "Revert to the body from before the last humanize pass? This replaces the current content.",
+                    )
+                  ) {
+                    void onRevertHumanize();
+                  }
+                }}
+                reverting={revertingHumanize}
+                disabled={busy || !onRevertHumanize}
+              />
+            ) : null}
             <ContentPieceBodyEditor
               editing={editor.editing}
               previewMode={editor.previewMode}
@@ -1113,6 +1223,11 @@ export function ContentPieceView({
               displayBody={displayBody}
               body={body}
               onBodyChange={(value) => dispatch({ type: "set_body", value })}
+              previewOverrideBody={
+                snapshotView === "before" && hasHumanizeSnapshot
+                  ? preHumanizeBody ?? undefined
+                  : undefined
+              }
             />
           </div>
         </div>
@@ -1138,7 +1253,7 @@ export function ContentPieceView({
           onQueueSocial={showQueueSocial ? onQueueSocial : undefined}
           queueingSocial={queueingSocial}
           onInsertOutline={
-            !body && editor.editing
+            editor.editing
               ? (markdown) => dispatch({ type: "set_body", value: markdown })
               : undefined
           }

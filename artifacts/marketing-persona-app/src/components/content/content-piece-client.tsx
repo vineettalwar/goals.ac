@@ -107,6 +107,7 @@ export function ContentPieceClient({
   const [generateMessage, setGenerateMessage] = useState<string | null>(null);
   const [humanizing, setHumanizing] = useState(false);
   const [humanizeMessage, setHumanizeMessage] = useState<string | null>(null);
+  const [revertingHumanize, setRevertingHumanize] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [regenerateMessage, setRegenerateMessage] = useState<string | null>(null);
   const [enhancing, setEnhancing] = useState(false);
@@ -120,6 +121,7 @@ export function ContentPieceClient({
   const [queueingSocial, setQueueingSocial] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [repurposeDialogOpen, setRepurposeDialogOpen] = useState(false);
+  const [refreshingSerpAfterSave, setRefreshingSerpAfterSave] = useState(false);
 
   const pieceMeta = pieceRecord.pieceMetadata as ContentPieceMetadata | null | undefined;
   const visualSummaryMarkdown = pieceMeta?.visualSummaryMarkdown ?? null;
@@ -378,6 +380,25 @@ export function ContentPieceClient({
             setHumanizing(false);
           }
         }}
+        onRevertHumanize={async () => {
+          setRevertingHumanize(true);
+          try {
+            const res = await fetch(`/api/content-pieces/${pieceId}/humanize/revert`, {
+              method: "POST",
+            });
+            if (!res.ok) {
+              const data = (await res.json().catch(() => null)) as { error?: string } | null;
+              toast.error(data?.error ?? "Could not revert humanize");
+              return;
+            }
+            const updated = await res.json();
+            setPieceRecord((prev) => mergePieceJson(updated, prev));
+            toast.success("Reverted to the version before humanize.");
+          } finally {
+            setRevertingHumanize(false);
+          }
+        }}
+        revertingHumanize={revertingHumanize}
         regenerating={regenerating}
         regenerateMessage={regenerateMessage}
         onRegenerate={async () => {

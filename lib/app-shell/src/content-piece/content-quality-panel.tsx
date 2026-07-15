@@ -17,6 +17,7 @@ export type DualContentScore = {
   combined: number;
   publishReady: boolean;
   competitorDiff?: Array<{ title: string; covered: boolean; overlap: number }>;
+  scoredAt?: string;
 };
 
 type ArticleQualityPanelProps = {
@@ -80,6 +81,16 @@ export function ArticleQualityPanel({
   const draftDiffersFromSaved =
     savedBodyMarkdown != null && bodyMarkdown !== savedBodyMarkdown;
   const canRefreshSerp = Boolean(contentPieceId && fetchDualScore);
+  
+  // Format timestamp for display
+  const serpScoredAt = dual?.scoredAt;
+  const serpTimestamp = serpScoredAt
+    ? new Date(serpScoredAt).toLocaleString(undefined, {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : null;
+  const serpIsStale = draftDiffersFromSaved && serpScoredAt;
 
   useEffect(() => {
     // Snap to saved baseline immediately on load/cancel/save; debounce live typing only.
@@ -186,13 +197,18 @@ export function ArticleQualityPanel({
             <p className="mt-1 text-xs text-muted-foreground">
               Editorial {editorialTotal} (live draft) · SERP {serpTotal} (last saved) · Combined{" "}
               {displayTotal}
+              {serpTimestamp ? ` · Scored ${serpTimestamp}` : ""}
             </p>
           ) : (
             <p className="mt-1 text-xs text-muted-foreground">
               Editorial {editorialTotal} (live draft)
             </p>
           )}
-          {dual && draftDiffersFromSaved ? (
+          {dual && serpIsStale ? (
+            <p className="mt-1 text-xs font-medium text-amber-700 dark:text-amber-400">
+              SERP score is from last saved version — save or refresh to update.
+            </p>
+          ) : dual && draftDiffersFromSaved ? (
             <p className="mt-1 text-xs text-muted-foreground">
               SERP and H2 are from the last saved body — save or refresh to update.
             </p>

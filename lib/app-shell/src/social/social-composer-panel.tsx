@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AlertCircle, ImageIcon, Loader2, PenLine, RefreshCw } from "lucide-react";
 import { cn } from "../cn";
+import { contentPieceCanHumanize, formatHumanizationAuditLine } from "../content-piece/types";
 import { SocialPostPreview } from "./social-post-preview";
 import {
   INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
@@ -33,6 +34,8 @@ export function SocialComposerPanel({
   attachingImage = false,
   onAttachFeaturedImageUrl,
   onUseStockImage,
+  onHumanize,
+  humanizingPieceId = null,
 }: {
   parents: SocialComposerParent[];
   parentsLoading: boolean;
@@ -46,6 +49,8 @@ export function SocialComposerPanel({
   attachingImage?: boolean;
   onAttachFeaturedImageUrl?: (parentPieceId: number, url: string) => void | Promise<void>;
   onUseStockImage?: (parentPieceId: number) => void | Promise<void>;
+  onHumanize?: (pieceId: number) => void | Promise<void>;
+  humanizingPieceId?: number | null;
 }) {
   const [search, setSearch] = useState("");
   const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
@@ -298,6 +303,9 @@ export function SocialComposerPanel({
                 parentPublicImageUrl ??
                 undefined;
               const missingInstagramImage = isInstagram && !publicImageUrl;
+              const canHumanize = contentPieceCanHumanize(piece.formatType);
+              const isHumanizingThis = humanizingPieceId === piece.id;
+              const humanizationAudit = piece.pieceMetadata?.humanizationAudit;
               return (
                 <div key={piece.id} className="space-y-2">
                   <SocialPostPreview
@@ -320,6 +328,22 @@ export function SocialComposerPanel({
                         Needs image
                       </span>
                     ) : null}
+                    {canHumanize && onHumanize ? (
+                      <button
+                        type="button"
+                        onClick={() => void onHumanize(piece.id)}
+                        disabled={isHumanizingThis}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input px-3 text-sm hover:bg-muted/50 disabled:opacity-50"
+                        title="Rewrite for natural human rhythm without full regeneration"
+                      >
+                        {isHumanizingThis ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                        ) : (
+                          <PenLine className="h-3.5 w-3.5" aria-hidden />
+                        )}
+                        {isHumanizingThis ? "Humanizing…" : "Humanize"}
+                      </button>
+                    ) : null}
                     {renderLink({
                       href: pieceHref(piece.id),
                       className:
@@ -330,6 +354,16 @@ export function SocialComposerPanel({
                   {missingInstagramImage ? (
                     <p className="text-xs text-amber-800 dark:text-amber-200">
                       {INSTAGRAM_IMAGE_REQUIRED_MESSAGE}
+                    </p>
+                  ) : null}
+                  {humanizationAudit ? (
+                    <p className="text-xs text-muted-foreground">
+                      {formatHumanizationAuditLine(humanizationAudit)}
+                    </p>
+                  ) : null}
+                  {overLimit ? (
+                    <p className="text-xs font-medium text-destructive">
+                      Over the platform limit — trim before scheduling.
                     </p>
                   ) : null}
                 </div>

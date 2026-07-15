@@ -54,6 +54,8 @@ export function ContentPiecePage() {
     humanizing,
     humanizeMessage,
     humanize,
+    revertingHumanize,
+    revertHumanize,
     deleting,
     deletePiece,
     markingReady,
@@ -229,6 +231,8 @@ export function ContentPiecePage() {
         humanizing={humanizing}
         humanizeMessage={humanizeMessage}
         onHumanize={humanize}
+        revertingHumanize={revertingHumanize}
+        onRevertHumanize={revertHumanize}
         regenerating={regenerating}
         regenerateMessage={regenerateMessage}
         onRegenerate={regenerate}

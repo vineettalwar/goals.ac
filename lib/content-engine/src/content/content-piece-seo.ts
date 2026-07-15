@@ -60,6 +60,8 @@ export type ContentPieceMetadata = {
   jsonLdSchema?: object;
   humanized?: boolean;
   humanizationAudit?: HumanizationAudit;
+  /** Body markdown as it was immediately before the most recent humanize pass. */
+  preHumanizeBodyMarkdown?: string;
   hasInfographicBlock?: boolean;
   deeplRefined?: boolean;
   deeplTargetLang?: string;

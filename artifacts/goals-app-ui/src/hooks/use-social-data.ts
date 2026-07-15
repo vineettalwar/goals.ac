@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  formatHumanizeResultMessage,
+  humanizeAuditFromResponse,
   INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   SOCIAL_FORMAT_TYPES,
   resolveSocialPiecePublicImageUrl,
@@ -57,6 +59,7 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
   const [composing, setComposing] = useState(false);
   const [composed, setComposed] = useState<SocialComposedPiece[] | null>(null);
   const [attachingImage, setAttachingImage] = useState(false);
+  const [humanizingPieceId, setHumanizingPieceId] = useState<number | null>(null);
 
   const [metrics, setMetrics] = useState<SocialMetricsResponse | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -446,6 +449,37 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
     [projectId, reloadQueue, notify],
   );
 
+  const humanizeComposedPiece = useCallback(
+    async (pieceId: number) => {
+      setHumanizingPieceId(pieceId);
+      try {
+        const updated = await apiFetch<Partial<SocialComposedPiece>>(
+          `/api/content-pieces/${pieceId}/humanize`,
+          { method: "POST" },
+        );
+        setComposed((prev) =>
+          prev
+            ? prev.map((piece) =>
+                piece.id === pieceId
+                  ? {
+                      ...piece,
+                      bodyMarkdown: updated.bodyMarkdown ?? piece.bodyMarkdown,
+                      pieceMetadata: updated.pieceMetadata ?? piece.pieceMetadata,
+                    }
+                  : piece,
+              )
+            : prev,
+        );
+        notify("success", formatHumanizeResultMessage(humanizeAuditFromResponse(updated)));
+      } catch (err) {
+        notify("error", err instanceof Error ? err.message : "Humanization failed");
+      } finally {
+        setHumanizingPieceId(null);
+      }
+    },
+    [notify],
+  );
+
   const syncMetrics = useCallback(async () => {
     if (!projectId) return;
     setMetricsSyncing(true);
@@ -588,6 +622,8 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
     attachingImage,
     attachFeaturedImageUrl,
     useStockImage,
+    humanizingPieceId,
+    humanizeComposedPiece,
     metrics,
     metricsLoading,
     metricsPlatformFilter,

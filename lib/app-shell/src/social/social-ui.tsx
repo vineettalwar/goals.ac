@@ -66,6 +66,8 @@ export function SocialHubView({
   attachingImage,
   onAttachFeaturedImageUrl,
   onUseStockImage,
+  onHumanize,
+  humanizingPieceId,
   metrics,
   metricsLoading,
   metricsPlatformFilter,
@@ -119,6 +121,8 @@ export function SocialHubView({
   attachingImage?: boolean;
   onAttachFeaturedImageUrl?: (parentPieceId: number, url: string) => void | Promise<void>;
   onUseStockImage?: (parentPieceId: number) => void | Promise<void>;
+  onHumanize?: (pieceId: number) => void | Promise<void>;
+  humanizingPieceId?: number | null;
   metrics: SocialMetricsResponse | null;
   metricsLoading: boolean;
   metricsPlatformFilter: string;
@@ -216,6 +220,8 @@ export function SocialHubView({
           attachingImage={attachingImage}
           onAttachFeaturedImageUrl={onAttachFeaturedImageUrl}
           onUseStockImage={onUseStockImage}
+          onHumanize={onHumanize}
+          humanizingPieceId={humanizingPieceId}
         />
       ) : null}
 

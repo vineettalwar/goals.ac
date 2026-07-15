@@ -32,8 +32,8 @@ export type ContentBriefPanelProps = {
   ideasHref?: string | null;
   /** When the piece already has body, skip create-from-brief CTA. */
   pieceHasBody?: boolean;
-  /** Optional callback to insert outline into draft when body is empty. */
-  onInsertOutline?: (outlineMarkdown: string) => void;
+  /** Optional callback to insert outline into draft. If body exists, caller should show append/replace dialog. */
+  onInsertOutline?: (outlineMarkdown: string, mode: "replace" | "append") => void;
   renderLink?: (props: {
     href: string;
     className?: string;
@@ -107,6 +107,7 @@ export function ContentBriefPanel({
   const [loading, setLoading] = useState(Boolean(briefId));
   const [loadFailed, setLoadFailed] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [insertMode, setInsertMode] = useState<"replace" | "append" | null>(null);
   const fetchBriefRef = useRef(fetchBrief);
   fetchBriefRef.current = fetchBrief;
 
@@ -185,13 +186,14 @@ export function ContentBriefPanel({
     }
   };
 
-  const handleInsertOutline = () => {
+  const handleInsertOutline = (mode: "replace" | "append") => {
     if (!onInsertOutline || outlineBullets.length === 0) return;
     const markdown = outlineToMarkdown(outlineBullets);
-    onInsertOutline(markdown);
+    onInsertOutline(markdown, mode);
+    setInsertMode(null);
   };
 
-  const showInsertButton = !pieceHasBody && onInsertOutline;
+  const showInsertButton = onInsertOutline && outlineBullets.length > 0;
 
   if (!briefId) {
     return (
@@ -291,14 +293,53 @@ export function ContentBriefPanel({
                   )}
                 </button>
                 {showInsertButton ? (
-                  <button
-                    type="button"
-                    onClick={handleInsertOutline}
-                    className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium hover:bg-secondary"
-                  >
-                    <PenLine className="h-3 w-3" aria-hidden />
-                    Insert into draft
-                  </button>
+                  pieceHasBody ? (
+                    <>
+                      {insertMode ? (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleInsertOutline("replace")}
+                            className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium hover:bg-secondary"
+                          >
+                            Replace
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleInsertOutline("append")}
+                            className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium hover:bg-secondary"
+                          >
+                            Append
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setInsertMode(null)}
+                            className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium hover:bg-secondary"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setInsertMode("replace")}
+                          className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium hover:bg-secondary"
+                        >
+                          <PenLine className="h-3 w-3" aria-hidden />
+                          Insert
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleInsertOutline("replace")}
+                      className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium hover:bg-secondary"
+                    >
+                      <PenLine className="h-3 w-3" aria-hidden />
+                      Insert into draft
+                    </button>
+                  )
                 ) : null}
                 {!pieceHasBody && createFromBriefHref
                   ? link(

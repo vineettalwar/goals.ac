@@ -40,6 +40,8 @@ export type ContentPieceMetadata = {
     /** Optional skip reason when rejected (e.g. "length guard") */
     reason?: string;
   };
+  /** Body markdown as it was immediately before the most recent humanize pass. */
+  preHumanizeBodyMarkdown?: string | null;
   intendedOutputMode?: string | null;
   intendedEditorMode?: string | null;
   intendedPublishPlatform?: string | null;

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
+  formatHumanizeResultMessage,
+  humanizeAuditFromResponse,
   INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   SOCIAL_FORMAT_TYPES,
   resolveSocialPiecePublicImageUrl,
@@ -31,6 +33,7 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
   const [composing, setComposing] = useState(false);
   const [composed, setComposed] = useState<SocialComposedPiece[] | null>(null);
   const [attachingImage, setAttachingImage] = useState(false);
+  const [humanizingPieceId, setHumanizingPieceId] = useState<number | null>(null);
 
   const [metrics, setMetrics] = useState<SocialMetricsResponse | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -421,6 +424,35 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
     }
   }
 
+  async function humanizeComposedPiece(pieceId: number) {
+    setHumanizingPieceId(pieceId);
+    try {
+      const res = await fetch(`/api/content-pieces/${pieceId}/humanize`, { method: "POST" });
+      const data = (await res.json().catch(() => null)) as
+        | (Partial<SocialComposedPiece> & { error?: string })
+        | null;
+      if (!res.ok) throw new Error(data?.error ?? "Humanization failed");
+      setComposed((prev) =>
+        prev
+          ? prev.map((piece) =>
+              piece.id === pieceId
+                ? {
+                    ...piece,
+                    bodyMarkdown: data?.bodyMarkdown ?? piece.bodyMarkdown,
+                    pieceMetadata: data?.pieceMetadata ?? piece.pieceMetadata,
+                  }
+                : piece,
+            )
+          : prev,
+      );
+      toast.success(formatHumanizeResultMessage(humanizeAuditFromResponse(data ?? {})));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Humanization failed");
+    } finally {
+      setHumanizingPieceId(null);
+    }
+  }
+
   async function syncMetrics() {
     setMetricsSyncing(true);
     try {
@@ -553,6 +585,8 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
     attachingImage,
     attachFeaturedImageUrl,
     useStockImage,
+    humanizingPieceId,
+    humanizeComposedPiece,
     metrics,
     metricsLoading,
     metricsPlatformFilter,

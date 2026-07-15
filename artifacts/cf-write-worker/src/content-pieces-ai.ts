@@ -223,6 +223,7 @@ async function handleSerpScore(
       ...dual,
       serpFeatures,
       keyword: keyword ?? null,
+      scoredAt: new Date().toISOString(),
     }),
   );
 }

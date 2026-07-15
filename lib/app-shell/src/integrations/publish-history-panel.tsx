@@ -67,9 +67,9 @@ export function PublishHistoryPanel({
     <section className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-sm font-medium">Publish history</h2>
+          <h2 className="text-sm font-medium">Publishes</h2>
           <p className="mt-0.5 text-xs text-muted-foreground">
-            Recent CMS publishes for this project.
+            Recent CMS and social publishes for this project.
           </p>
         </div>
         {onRefresh ? (

@@ -511,6 +511,27 @@ export function useContentPieceData(pieceId: string | undefined) {
     }
   }, [pieceId, piece, setCachedPiece]);
 
+  const [revertingHumanize, setRevertingHumanize] = useState(false);
+
+  const revertHumanize = useCallback(async () => {
+    if (!pieceId || !piece) return;
+    setRevertingHumanize(true);
+    try {
+      const updated = await apiFetch<ContentPiece>(
+        `/api/content-pieces/${pieceId}/humanize/revert`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+        },
+      );
+      setCachedPiece(mapPiece(updated));
+    } catch (err) {
+      setHumanizeMessage(err instanceof Error ? err.message : "Could not revert humanize");
+    } finally {
+      setRevertingHumanize(false);
+    }
+  }, [pieceId, piece, setCachedPiece]);
+
   const publishToDestination = useCallback(
     async (platform: PublishDestinationId) => {
       if (!pieceId || !piece) return;
@@ -609,6 +630,8 @@ export function useContentPieceData(pieceId: string | undefined) {
     humanizing,
     humanizeMessage,
     humanize,
+    revertingHumanize,
+    revertHumanize,
     deleting,
     deletePiece,
     markingReady,

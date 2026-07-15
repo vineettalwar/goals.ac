@@ -51,6 +51,8 @@ export function SocialHubClient({ projectId }: { projectId: string }) {
         attachingImage={hub.attachingImage}
         onAttachFeaturedImageUrl={(parentId, url) => void hub.attachFeaturedImageUrl(parentId, url)}
         onUseStockImage={(parentId) => void hub.useStockImage(parentId)}
+        onHumanize={(pieceId) => void hub.humanizeComposedPiece(pieceId)}
+        humanizingPieceId={hub.humanizingPieceId}
         metrics={hub.metrics}
         metricsLoading={hub.metricsLoading}
         metricsPlatformFilter={hub.metricsPlatformFilter}

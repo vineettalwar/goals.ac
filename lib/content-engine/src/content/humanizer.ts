@@ -391,6 +391,8 @@ export function applyGeneratedArticleToContentPiece<T extends HumanizableContent
       metaDescription: humanized.metaDescription,
       humanized: true,
       humanizationAudit: audit,
+      // Overwrite any earlier snapshot with the body just before this pass.
+      preHumanizeBodyMarkdown: original.body_markdown,
     },
   };
 }
