@@ -2,10 +2,12 @@
 
 ## Content polish batch (2026-07-16)
 
-- **Visual summary** — markdown callout inject + `pieceMetadata.visualSummaryMarkdown` (`infographic-template` / SEO finalize); piece aside renders when present
-- **Queue social + Meta** — defaults LinkedIn+X; if Meta connected → Facebook; Instagram only when article has image (`selectQueueSocialPlatforms`)
-- **Internal links chip** — Autopilot activity panel: suggestion count → `/internal-links`, or “No link map yet”
-- **Shell create** — still pending vs Next: no competitor URLs / LinkedIn archetype+hook fields (`CreateContentDialog` = format → keyword → review only)
+- **Visual summary** — markdown callout + SVG data-URI “At a glance” graphic (`visualSummarySvg` / `visualSummarySvgDataUri`); piece aside shows `<img>`
+- **Queue social + Meta** — LinkedIn+X default; Meta → Facebook; Instagram when image present
+- **Internal links chip** — `62% linked · N orphans` (fallback suggestion count) → `/internal-links`
+- **Shell create** — multi-step + Competitors (SEO) + LinkedIn archetype chips + hook field
+- **Success stories** — partner case study template (empty metrics + verify CTAs)
+- **Create from brief** — ContentBriefPanel CTA when outline present + empty body
 
 ---
 

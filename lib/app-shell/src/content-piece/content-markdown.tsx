@@ -182,6 +182,30 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
       continue;
     }
 
+    const imageMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    if (imageMatch) {
+      flushList();
+      const alt = imageMatch[1] ?? "";
+      const src = imageMatch[2] ?? "";
+      const safeSrc =
+        src.startsWith("data:image/svg+xml") ||
+        src.startsWith("https://") ||
+        src.startsWith("http://")
+          ? src
+          : null;
+      if (safeSrc) {
+        blocks.push(
+          <img
+            key={key++}
+            src={safeSrc}
+            alt={alt}
+            className="my-4 w-full max-w-lg rounded-lg border border-border/60 bg-[#FAFAF8]"
+          />,
+        );
+        continue;
+      }
+    }
+
     flushList();
     blocks.push(
       <p key={key++} className="my-3 leading-relaxed text-foreground/90">
