@@ -42,6 +42,7 @@ export type ContentPiece = {
   updatedAt: number | string;
   bodyMarkdown?: string;
   pieceMetadata?: Record<string, unknown> | null;
+  briefId?: number | null;
 };
 
 export type CmsIntegrationSummary = Record<string, { connected?: boolean } & Record<string, unknown>>;

@@ -1,4 +1,4 @@
-import { useReducer, useRef, type ReactNode } from "react";
+import { useEffect, useReducer, useRef, useState, type ReactNode } from "react";
 import {
   ArrowLeft,
   Check,
@@ -18,8 +18,9 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "../cn";
+import { ContentBriefPanel, type ContentBriefSummary } from "./content-brief-panel";
 import { ContentPieceFeaturedImage } from "./content-featured-image";
-import { ArticleQualityPanel } from "./content-quality-panel";
+import { ArticleQualityPanel, type DualContentScore } from "./content-quality-panel";
 import { ContentMarkdown } from "./content-markdown";
 import { MarkdownToolbar } from "./markdown-toolbar";
 import {
@@ -630,11 +631,14 @@ function ContentPieceAside({
   plannedDateDraft,
   piece,
   displayBody,
+  wordCount,
   canEnhance,
   enhancing,
   canPublish,
   busy,
   fetchDualScore,
+  fetchBrief,
+  renderLink,
   onPlannedDateChange,
   onEnhance,
   onPublish,
@@ -643,18 +647,39 @@ function ContentPieceAside({
   plannedDateDraft: string;
   piece: ContentPieceDetail;
   displayBody: string;
+  wordCount: number;
   canEnhance: boolean;
   enhancing: boolean;
   canPublish: boolean;
   busy: boolean;
-  fetchDualScore?: (
-    contentPieceId: number,
-  ) => Promise<import("./content-quality-panel").DualContentScore | null>;
+  fetchDualScore?: (contentPieceId: number) => Promise<DualContentScore | null>;
+  fetchBrief?: (briefId: number) => Promise<ContentBriefSummary | null>;
+  renderLink: (props: ContentPieceLinkProps) => ReactNode;
   onPlannedDateChange: (value: string) => void;
   onEnhance?: () => void | Promise<void>;
   onPublish?: () => void;
 }) {
   const body = displayBody.trim();
+  const [dual, setDual] = useState<DualContentScore | null>(null);
+
+  useEffect(() => {
+    if (!piece.id || !fetchDualScore) {
+      setDual(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchDualScore(piece.id)
+      .then((data) => {
+        if (!cancelled) setDual(data);
+      })
+      .catch(() => {
+        if (!cancelled) setDual(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [piece.id, fetchDualScore]);
+
   return (
     <aside className="space-y-4 lg:sticky lg:top-6">
       {editing ? (
@@ -678,13 +703,26 @@ function ContentPieceAside({
         </div>
       ) : null}
 
+      <ContentBriefPanel
+        briefId={piece.briefId}
+        projectId={piece.websiteProjectId}
+        pieceTargetKeyword={piece.targetKeyword}
+        secondaryKeywords={piece.pieceMetadata?.secondaryKeywords}
+        fetchBrief={fetchBrief}
+        serpGaps={dual?.serp.gaps}
+        competitorTopics={dual?.competitorDiff}
+        renderLink={renderLink}
+      />
+
       {body ? (
         <ArticleQualityPanel
           bodyMarkdown={displayBody}
-          wordCount={piece.wordCount}
+          wordCount={wordCount}
           metadata={piece.pieceMetadata}
           contentPieceId={piece.id}
-          fetchDualScore={fetchDualScore}
+          dualScore={dual}
+          savedBodyMarkdown={piece.bodyMarkdown ?? ""}
+          showScoreDelta={editing}
           canEnhance={canEnhance}
           onEnhance={onEnhance ? () => void onEnhance() : undefined}
           enhancing={enhancing}
@@ -747,12 +785,14 @@ export function ContentPieceView({
   staleGenerating = false,
   onResetGeneration,
   fetchDualScore,
+  fetchBrief,
 }: {
   piece: ContentPieceDetail;
   renderLink: (props: ContentPieceLinkProps) => ReactNode;
   fetchDualScore?: (
     contentPieceId: number,
-  ) => Promise<import("./content-quality-panel").DualContentScore | null>;
+  ) => Promise<DualContentScore | null>;
+  fetchBrief?: (briefId: number) => Promise<ContentBriefSummary | null>;
   onGenerate?: () => void;
   generating?: boolean;
   generatingState?: ContentPieceGeneratingState | null;
@@ -945,11 +985,14 @@ export function ContentPieceView({
           plannedDateDraft={editor.plannedDateDraft}
           piece={piece}
           displayBody={displayBody}
+          wordCount={wordCount}
           canEnhance={showEnhance}
           enhancing={enhancing}
           canPublish={showPublish}
           busy={busy}
           fetchDualScore={fetchDualScore}
+          fetchBrief={fetchBrief}
+          renderLink={renderLink}
           onPlannedDateChange={(value) => dispatch({ type: "set_planned_date", value })}
           onEnhance={onEnhance}
           onPublish={onPublish}

@@ -69,6 +69,7 @@ function mapPiece(piece: ContentPiece): ContentPieceDetail {
     updatedAt: piece.updatedAt,
     bodyMarkdown: piece.bodyMarkdown ?? null,
     pieceMetadata: (piece.pieceMetadata as ContentPieceMetadata | null | undefined) ?? null,
+    briefId: piece.briefId ?? null,
   };
 }
 

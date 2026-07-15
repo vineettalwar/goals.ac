@@ -1,10 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { TrendingUp } from "lucide-react";
 import { scoreArticleQuality } from "@workspace/content-engine/articles/article-quality-score";
 import { ScoreRing } from "@/components/content/score-ring";
 import { Button } from "@/components/ui/button";
+
+/** Pause after typing before re-running local editorial score (no server). */
+const EDITORIAL_SCORE_DEBOUNCE_MS = 2000;
 
 type ArticleQualityPanelProps = {
   bodyMarkdown: string;
@@ -22,6 +26,12 @@ type ArticleQualityPanelProps = {
   writingSample?: string | null;
   brandVoiceExcerpt?: string | null;
   contentPieceId?: number | null;
+  /** Last saved body — used to compute baseline for delta when `baselineScore` is omitted. */
+  savedBodyMarkdown?: string | null;
+  /** Precomputed score for the last saved body. Wins over scoring `savedBodyMarkdown`. */
+  baselineScore?: number | null;
+  /** When true (edit mode), show “+N vs saved” if live score differs from baseline. */
+  showScoreDelta?: boolean;
   onEnhance?: () => void;
   enhancing?: boolean;
   canEnhance?: boolean;
@@ -45,25 +55,83 @@ async function fetchDualScore(contentPieceId: number): Promise<DualScore | null>
   return res.json() as Promise<DualScore>;
 }
 
+function formatScoreDelta(delta: number): string {
+  if (delta > 0) return `+${delta} vs saved`;
+  return `−${Math.abs(delta)} vs saved`;
+}
+
+function combineEditorialSerp(editorialTotal: number, serpTotal: number): number {
+  return Math.round(editorialTotal * 0.55 + serpTotal * 0.45);
+}
+
 export function ArticleQualityPanel({
   onEnhance,
   enhancing = false,
   canEnhance = false,
   contentPieceId,
+  savedBodyMarkdown,
+  baselineScore,
+  showScoreDelta = false,
+  bodyMarkdown,
+  wordCount,
   ...props
 }: ArticleQualityPanelProps) {
-  const result = scoreArticleQuality(props);
+  const [debouncedBody, setDebouncedBody] = useState(bodyMarkdown);
+  const [debouncedWordCount, setDebouncedWordCount] = useState(wordCount);
+
+  useEffect(() => {
+    // Snap to saved baseline immediately on load/cancel/save; debounce live typing only.
+    if (savedBodyMarkdown != null && bodyMarkdown === savedBodyMarkdown) {
+      setDebouncedBody(bodyMarkdown);
+      setDebouncedWordCount(wordCount);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setDebouncedBody(bodyMarkdown);
+      setDebouncedWordCount(wordCount);
+    }, EDITORIAL_SCORE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [bodyMarkdown, wordCount, savedBodyMarkdown]);
+
+  const result = scoreArticleQuality({
+    ...props,
+    bodyMarkdown: debouncedBody,
+    wordCount: debouncedWordCount,
+  });
+
+  // SERP half is DB-bodied on the server — do not refetch on draft keystrokes.
   const { data: dual = null } = useQuery({
-    queryKey: ["content-piece-serp-score", contentPieceId, props.bodyMarkdown, props.wordCount],
+    queryKey: ["content-piece-serp-score", contentPieceId],
     queryFn: () => fetchDualScore(contentPieceId!),
     enabled: Boolean(contentPieceId),
     staleTime: 30_000,
   });
 
-  const displayTotal = dual?.combined ?? result.total;
-  const needsEnhance = displayTotal < 80;
-  const editorialTotal = dual?.editorial.total ?? result.total;
+  const editorialTotal = result.total;
   const serpTotal = dual?.serp.total;
+  const displayTotal =
+    dual && serpTotal != null
+      ? combineEditorialSerp(editorialTotal, serpTotal)
+      : editorialTotal;
+  const needsEnhance = displayTotal < 80;
+
+  let baselineTotal: number | null =
+    typeof baselineScore === "number" && Number.isFinite(baselineScore) ? baselineScore : null;
+  if (baselineTotal == null && savedBodyMarkdown != null) {
+    const savedWords = savedBodyMarkdown.split(/\s+/).filter(Boolean).length;
+    const savedEditorial = scoreArticleQuality({
+      ...props,
+      bodyMarkdown: savedBodyMarkdown,
+      wordCount: savedWords,
+    }).total;
+    baselineTotal =
+      dual && serpTotal != null
+        ? combineEditorialSerp(savedEditorial, serpTotal)
+        : savedEditorial;
+  }
+
+  const scoreDelta =
+    showScoreDelta && baselineTotal != null ? displayTotal - baselineTotal : 0;
 
   return (
     <div className="paper-card rounded-xl p-5 space-y-4">
@@ -72,7 +140,7 @@ export function ArticleQualityPanel({
         <div>
           <h3 className="font-semibold text-sm">Quality breakdown</h3>
           <p className="text-xs text-muted-foreground mt-1">
-            {dual?.publishReady
+            {dual && serpTotal != null && editorialTotal >= 70 && serpTotal >= 65
               ? "Publish-ready (editorial + SERP)"
               : displayTotal >= 80
                 ? "Publish-ready"
@@ -82,13 +150,18 @@ export function ArticleQualityPanel({
           </p>
           {dual ? (
             <p className="text-xs text-muted-foreground mt-1">
-              Editorial {editorialTotal} · SERP {serpTotal} · Combined {dual.combined}
+              Editorial {editorialTotal} · SERP {serpTotal} · Combined {displayTotal}
+            </p>
+          ) : null}
+          {scoreDelta !== 0 ? (
+            <p className="mt-1 text-xs font-medium tabular-nums text-muted-foreground">
+              {formatScoreDelta(scoreDelta)}
             </p>
           ) : null}
         </div>
       </div>
 
-      {(dual?.editorial.breakdown ?? result.breakdown).map((item) => (
+      {result.breakdown.map((item) => (
         <div key={item.label} className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">{item.label}</span>
           <span className={item.score === 0 ? "font-medium text-destructive" : "font-medium"}>

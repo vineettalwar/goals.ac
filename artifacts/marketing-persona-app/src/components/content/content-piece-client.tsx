@@ -81,6 +81,7 @@ export function ContentPieceClient({
   const canEnhance = isSeoLongformFormat(piece.formatType as ContentFormatType);
   const canHumanize = isHumanizableFormat(piece.formatType);
   const humanizationAudit = piece.pieceMetadata?.humanizationAudit;
+  // Toolbar Enhance emphasis only — ring score lives in ArticleQualityPanel (debounced).
   const qualityScore = useMemo(
     () =>
       scoreArticleQuality({
@@ -93,7 +94,7 @@ export function ContentPieceClient({
         internalLinkSuggestions: piece.pieceMetadata?.internalLinkSuggestions,
         wordCount: displayWordCount,
       }).total,
-    [displayBody, seoTitle, displayTitle, displayWordCount, piece.pieceMetadata],
+    [displayBody, seoTitle, displayWordCount, piece.pieceMetadata],
   );
 
   const {

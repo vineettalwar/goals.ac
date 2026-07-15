@@ -176,6 +176,13 @@ export function ContentPiecePage() {
             return null;
           }
         }}
+        fetchBrief={async (briefId) => {
+          try {
+            return await apiFetch(`/api/briefs/${briefId}`);
+          } catch {
+            return null;
+          }
+        }}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}

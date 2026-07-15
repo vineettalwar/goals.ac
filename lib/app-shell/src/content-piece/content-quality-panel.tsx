@@ -3,6 +3,9 @@ import { scoreArticleQuality } from "@workspace/content-engine/article-quality-s
 import { ScoreRing } from "../section-panels/shared";
 import type { ContentPieceMetadata } from "./types";
 
+/** Pause after typing before re-running local editorial score (no server). */
+const EDITORIAL_SCORE_DEBOUNCE_MS = 2000;
+
 export type DualContentScore = {
   editorial: { total: number; breakdown: Array<{ label: string; score: number; max: number }> };
   serp: {
@@ -22,10 +25,27 @@ type ArticleQualityPanelProps = {
   contentPieceId?: number | null;
   /** Host fetches `/api/content-pieces/:id/serp-score` (JWT or cookie). */
   fetchDualScore?: (contentPieceId: number) => Promise<DualContentScore | null>;
+  /** When parent already loaded dual score (e.g. brief panel), skip internal fetch. */
+  dualScore?: DualContentScore | null;
+  /** Last saved body — used to compute baseline for delta when `baselineScore` is omitted. */
+  savedBodyMarkdown?: string | null;
+  /** Precomputed score for the last saved body (editorial or combined). Wins over scoring `savedBodyMarkdown`. */
+  baselineScore?: number | null;
+  /** When true (edit mode), show “+N vs saved” if live score differs from baseline. */
+  showScoreDelta?: boolean;
   onEnhance?: () => void;
   enhancing?: boolean;
   canEnhance?: boolean;
 };
+
+function formatScoreDelta(delta: number): string {
+  if (delta > 0) return `+${delta} vs saved`;
+  return `−${Math.abs(delta)} vs saved`;
+}
+
+function combineEditorialSerp(editorialTotal: number, serpTotal: number): number {
+  return Math.round(editorialTotal * 0.55 + serpTotal * 0.45);
+}
 
 export function ArticleQualityPanel({
   bodyMarkdown,
@@ -33,44 +53,90 @@ export function ArticleQualityPanel({
   metadata,
   contentPieceId,
   fetchDualScore,
+  dualScore,
+  savedBodyMarkdown,
+  baselineScore,
+  showScoreDelta = false,
   onEnhance,
   enhancing = false,
   canEnhance = false,
 }: ArticleQualityPanelProps) {
-  const result = scoreArticleQuality({
-    bodyMarkdown,
-    wordCount,
+  const [debouncedBody, setDebouncedBody] = useState(bodyMarkdown);
+  const [debouncedWordCount, setDebouncedWordCount] = useState(wordCount);
+  const [fetchedDual, setFetchedDual] = useState<DualContentScore | null>(null);
+  const dual = dualScore ?? fetchedDual;
+
+  useEffect(() => {
+    // Snap to saved baseline immediately on load/cancel/save; debounce live typing only.
+    if (savedBodyMarkdown != null && bodyMarkdown === savedBodyMarkdown) {
+      setDebouncedBody(bodyMarkdown);
+      setDebouncedWordCount(wordCount);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setDebouncedBody(bodyMarkdown);
+      setDebouncedWordCount(wordCount);
+    }, EDITORIAL_SCORE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [bodyMarkdown, wordCount, savedBodyMarkdown]);
+
+  const scoreInput = {
+    bodyMarkdown: debouncedBody,
+    wordCount: debouncedWordCount,
     metaTitle: metadata?.seoTitle ?? metadata?.metaTitle ?? null,
     metaDescription: metadata?.metaDescription ?? null,
     citations: metadata?.citations,
     faqSection: metadata?.faqSection,
     jsonLdSchema: metadata?.jsonLdSchema,
     internalLinkSuggestions: metadata?.internalLinkSuggestions,
-  });
-  const [dual, setDual] = useState<DualContentScore | null>(null);
+  };
+  const result = scoreArticleQuality(scoreInput);
 
   useEffect(() => {
-    if (!contentPieceId || !fetchDualScore) {
-      setDual(null);
+    if (dualScore != null || !contentPieceId || !fetchDualScore) {
+      if (dualScore == null && (!contentPieceId || !fetchDualScore)) {
+        setFetchedDual(null);
+      }
       return;
     }
     let cancelled = false;
     void fetchDualScore(contentPieceId)
       .then((data) => {
-        if (!cancelled) setDual(data);
+        if (!cancelled) setFetchedDual(data);
       })
       .catch(() => {
-        if (!cancelled) setDual(null);
+        if (!cancelled) setFetchedDual(null);
       });
     return () => {
       cancelled = true;
     };
-  }, [contentPieceId, fetchDualScore, bodyMarkdown, wordCount]);
+  }, [contentPieceId, fetchDualScore, dualScore]);
 
-  const displayTotal = dual?.combined ?? result.total;
-  const needsEnhance = displayTotal < 80;
-  const editorialTotal = dual?.editorial.total ?? result.total;
+  const editorialTotal = result.total;
   const serpTotal = dual?.serp.total;
+  const displayTotal =
+    dual && serpTotal != null
+      ? combineEditorialSerp(editorialTotal, serpTotal)
+      : editorialTotal;
+  const needsEnhance = displayTotal < 80;
+
+  let baselineTotal: number | null =
+    typeof baselineScore === "number" && Number.isFinite(baselineScore) ? baselineScore : null;
+  if (baselineTotal == null && savedBodyMarkdown != null) {
+    const savedWords = savedBodyMarkdown.split(/\s+/).filter(Boolean).length;
+    const savedEditorial = scoreArticleQuality({
+      ...scoreInput,
+      bodyMarkdown: savedBodyMarkdown,
+      wordCount: savedWords,
+    }).total;
+    baselineTotal =
+      dual && serpTotal != null
+        ? combineEditorialSerp(savedEditorial, serpTotal)
+        : savedEditorial;
+  }
+
+  const scoreDelta =
+    showScoreDelta && baselineTotal != null ? displayTotal - baselineTotal : 0;
 
   return (
     <div className="paper-card space-y-4 rounded-xl p-5">
@@ -79,7 +145,7 @@ export function ArticleQualityPanel({
         <div>
           <h3 className="text-sm font-semibold">Quality breakdown</h3>
           <p className="mt-1 text-xs text-muted-foreground">
-            {dual?.publishReady
+            {dual && serpTotal != null && editorialTotal >= 70 && serpTotal >= 65
               ? "Publish-ready (editorial + SERP)"
               : displayTotal >= 80
                 ? "Publish-ready"
@@ -89,13 +155,18 @@ export function ArticleQualityPanel({
           </p>
           {dual ? (
             <p className="mt-1 text-xs text-muted-foreground">
-              Editorial {editorialTotal} · SERP {serpTotal} · Combined {dual.combined}
+              Editorial {editorialTotal} · SERP {serpTotal} · Combined {displayTotal}
+            </p>
+          ) : null}
+          {scoreDelta !== 0 ? (
+            <p className="mt-1 text-xs font-medium tabular-nums text-muted-foreground">
+              {formatScoreDelta(scoreDelta)}
             </p>
           ) : null}
         </div>
       </div>
       <ul className="space-y-2">
-        {(dual?.editorial.breakdown ?? result.breakdown).map((item) => (
+        {result.breakdown.map((item) => (
           <li key={item.label} className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">{item.label}</span>
             <span className={item.score === 0 ? "font-medium text-red-600" : "font-medium"}>

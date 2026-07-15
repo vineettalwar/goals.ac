@@ -37,6 +37,7 @@ export type ContentPieceMetadata = {
   intendedOutputMode?: string | null;
   intendedEditorMode?: string | null;
   intendedPublishPlatform?: string | null;
+  secondaryKeywords?: string[] | null;
 };
 
 export type ContentPieceDetail = {
@@ -51,6 +52,7 @@ export type ContentPieceDetail = {
   updatedAt: number | string;
   bodyMarkdown?: string | null;
   pieceMetadata?: ContentPieceMetadata | null;
+  briefId?: number | null;
 };
 
 export type ContentPieceGeneratingState = {
