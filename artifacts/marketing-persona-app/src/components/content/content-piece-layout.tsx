@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Send, Copy, Check, RefreshCw, Save, Pencil, PenLine, Trash2, CheckCircle2, FileCode2, TrendingUp, Eye, Shuffle, ImageIcon, AlertTriangle, LayoutTemplate } from "lucide-react";
+import { ArrowLeft, Send, Copy, Check, RefreshCw, Save, Pencil, PenLine, Trash2, CheckCircle2, FileCode2, TrendingUp, Eye, Shuffle, Share2, ImageIcon, AlertTriangle, LayoutTemplate, Loader2 } from "lucide-react";
 import { sanitizeHtml } from "@/lib/security/sanitize-html";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,6 +30,7 @@ export function ContentPieceLayout(p: any) {
     handleHumanize, regenerateImages, handlePublishPreview, handlePublish, handleDelete,
     handleMarkReady, handleCopy, setEditingPreview, setTitleDraft, setBodyDraft,
     setStatusDraft, setPlannedDateDraft, router,
+    canQueueSocial, queueingSocial, handleQueueSocial,
   } = p;
   return (
     <div className="px-6 py-6 lg:px-8 lg:py-8 max-w-7xl mx-auto">
@@ -141,6 +142,22 @@ export function ContentPieceLayout(p: any) {
                 <Button variant="outline" size="sm" onClick={() => setRepurposeOpen(true)}>
                   <Shuffle className="h-3.5 w-3.5" /> Repurpose
                 </Button>
+                {canQueueSocial ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void handleQueueSocial()}
+                    disabled={queueingSocial || editing}
+                    title="Create LinkedIn and X variants and open Social Hub"
+                  >
+                    {queueingSocial ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Share2 className="h-3.5 w-3.5" />
+                    )}
+                    {queueingSocial ? "Queuing…" : "Queue social"}
+                  </Button>
+                ) : null}
                 <Button variant="outline" size="sm" onClick={handleCopy}>
                   {copied ? (
                     <>

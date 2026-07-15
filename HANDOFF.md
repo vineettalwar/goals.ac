@@ -45,7 +45,8 @@
 | Wave | Focus |
 |------|-------|
 | **2.5** | Article → social one-click queue |
-| **3** | Optional autopilot dashboard, coverage % H2s, hosted blog (self-serve only) |
+| **3.1** | Autopilot/activity panel — **Done** (`AutopilotActivityPanel` on `/dashboard`) |
+| **3** | Coverage % H2s, hosted blog (self-serve only) |
 
 ### Explicitly deferred (all waves)
 
