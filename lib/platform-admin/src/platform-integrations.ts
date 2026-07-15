@@ -69,6 +69,10 @@ function isMetaManagedByEnv(): boolean {
   return Boolean(process.env.META_APP_ID?.trim() || process.env.META_APP_SECRET?.trim());
 }
 
+function isBlueskyManagedByEnv(): boolean {
+  return Boolean(process.env.BLUESKY_OAUTH_PRIVATE_KEY_JWK?.trim());
+}
+
 export function hasTwitterCredentials(): boolean {
   return Boolean(
     process.env.TWITTER_CLIENT_ID?.trim() && process.env.TWITTER_CLIENT_SECRET?.trim(),
@@ -77,6 +81,10 @@ export function hasTwitterCredentials(): boolean {
 
 export function hasMetaCredentials(): boolean {
   return Boolean(process.env.META_APP_ID?.trim() && process.env.META_APP_SECRET?.trim());
+}
+
+export function hasBlueskyCredentials(): boolean {
+  return Boolean(process.env.BLUESKY_OAUTH_PRIVATE_KEY_JWK?.trim());
 }
 
 export function hasUnsplashCredentials(): boolean {
@@ -88,7 +96,12 @@ export function hasPexelsCredentials(): boolean {
 }
 
 export function hasSocialCredentials(): boolean {
-  return hasLinkedInCredentials() || hasTwitterCredentials() || hasMetaCredentials();
+  return (
+    hasLinkedInCredentials() ||
+    hasTwitterCredentials() ||
+    hasMetaCredentials() ||
+    hasBlueskyCredentials()
+  );
 }
 
 export function hasResendCredentials(): boolean {
@@ -108,6 +121,7 @@ export type IntegrationEnvStatus = {
   linkedin: boolean;
   twitter: boolean;
   meta: boolean;
+  bluesky: boolean;
   email: boolean;
   stripe: boolean;
   unsplash: boolean;
@@ -122,6 +136,7 @@ export function getIntegrationEnvStatus(): IntegrationEnvStatus {
     linkedin: hasLinkedInCredentials(),
     twitter: hasTwitterCredentials(),
     meta: hasMetaCredentials(),
+    bluesky: hasBlueskyCredentials(),
     email: hasResendCredentials(),
     stripe: hasStripeCredentials(),
     unsplash: hasUnsplashCredentials(),
@@ -140,7 +155,8 @@ export type PlatformIntegrationId =
   | "pexels"
   | "linkedin"
   | "twitter"
-  | "meta";
+  | "meta"
+  | "bluesky";
 
 export type PlatformIntegrationSettingsKey =
   | "stripeBillingEnabled"
@@ -324,6 +340,27 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
         },
       ],
     },
+    {
+      id: "bluesky",
+      category: "social",
+      kind: "credentials",
+      label: "Bluesky",
+      description: "AT Protocol OAuth signing key for project Bluesky connect.",
+      settingsKey: "socialPublishingEnabled",
+      docsUrl: "https://docs.bsky.app/docs/advanced-guides/oauth-client",
+      envVars: [
+        {
+          name: "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
+          configured: envConfigured("BLUESKY_OAUTH_PRIVATE_KEY_JWK"),
+          required: true,
+        },
+        {
+          name: "BLUESKY_CLIENT_NAME",
+          configured: envConfigured("BLUESKY_CLIENT_NAME"),
+          required: false,
+        },
+      ],
+    },
   ];
 }
 
@@ -361,6 +398,7 @@ const PEXELS_ENV_VARS = ["PEXELS_API_KEY"] as const;
 const LINKEDIN_ENV_VARS = ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"] as const;
 const TWITTER_ENV_VARS = ["TWITTER_CLIENT_ID", "TWITTER_CLIENT_SECRET"] as const;
 const META_ENV_VARS = ["META_APP_ID", "META_APP_SECRET"] as const;
+const BLUESKY_ENV_VARS = ["BLUESKY_OAUTH_PRIVATE_KEY_JWK", "BLUESKY_CLIENT_NAME"] as const;
 
 export function isStripeManagedByEnv(): boolean {
   return activeEnvVars(STRIPE_ENV_VARS).length > 0;
@@ -439,6 +477,12 @@ export type PlatformIntegrationStatus = {
     appId: { configured: boolean; value: string | null; source: "db" | "env" | null };
     appSecret: IntegrationFieldStatus;
   };
+  bluesky: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientName: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    privateKeyJwk: IntegrationFieldStatus;
+  };
 };
 
 function fieldStatus(
@@ -492,6 +536,9 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       encryptedTwitterClientSecret: platformSettingsTable.encryptedTwitterClientSecret,
       metaAppId: platformSettingsTable.metaAppId,
       encryptedMetaAppSecret: platformSettingsTable.encryptedMetaAppSecret,
+      blueskyClientName: platformSettingsTable.blueskyClientName,
+      encryptedBlueskyOauthPrivateKeyJwk:
+        platformSettingsTable.encryptedBlueskyOauthPrivateKeyJwk,
     })
     .from(platformSettingsTable)
     .where(eq(platformSettingsTable.id, 1))
@@ -555,6 +602,15 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       envVars: activeEnvVars(META_ENV_VARS),
       appId: plainFieldStatus(row?.metaAppId, "META_APP_ID"),
       appSecret: fieldStatus(row?.encryptedMetaAppSecret, "META_APP_SECRET"),
+    },
+    bluesky: {
+      managedByEnv: isBlueskyManagedByEnv(),
+      envVars: activeEnvVars(BLUESKY_ENV_VARS),
+      clientName: plainFieldStatus(row?.blueskyClientName, "BLUESKY_CLIENT_NAME"),
+      privateKeyJwk: fieldStatus(
+        row?.encryptedBlueskyOauthPrivateKeyJwk,
+        "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
+      ),
     },
   };
 }

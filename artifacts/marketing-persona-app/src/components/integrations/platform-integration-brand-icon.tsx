@@ -83,6 +83,18 @@ function MetaLogo({ className }: { className?: string }) {
   );
 }
 
+function BlueskyLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#1185FE" />
+      <path
+        fill="#fff"
+        d="M7.2 7.8c1.6 1.2 3.3 3.7 3.8 5 .5-1.3 2.2-3.8 3.8-5 1.1-.9 2.9-1.6 2.9.6 0 .4-.2 3.5-.4 4-.7 1.6-3.1 2-3.1.4l.1-1.2c-.1 1.3-.5 2.7-1.4 3.7-.5.5-.1.7.4 1.1 1.3.9 2.9.9 3.4.9-.1.3-.4 1.3-1.3 1.9-.9.6-2 .7-3.1.5-.3-.1-.6-.2-.9-.3-.8-.3-1.5-.3-2.3 0-.3.1-.6.2-.9.3-1.1.2-2.2.1-3.1-.5-.9-.6-1.2-1.6-1.3-1.9.5 0 2.1 0 3.4-.9.5-.4.9-.6.4-1.1-.9-1-1.3-2.4-1.4-3.7l.1 1.2c0 1.6-2.4 1.2-3.1-.4-.2-.5-.4-3.6-.4-4 0-2.2 1.8-1.5 2.9-.6Z"
+      />
+    </svg>
+  );
+}
+
 const LOGOS: Record<PlatformIntegrationId, ComponentType<{ className?: string }>> = {
   stripe: StripeLogo,
   resend: ResendLogo,
@@ -91,6 +103,7 @@ const LOGOS: Record<PlatformIntegrationId, ComponentType<{ className?: string }>
   linkedin: LinkedInLogo,
   twitter: XLogo,
   meta: MetaLogo,
+  bluesky: BlueskyLogo,
 };
 
 export function PlatformIntegrationBrandIcon({

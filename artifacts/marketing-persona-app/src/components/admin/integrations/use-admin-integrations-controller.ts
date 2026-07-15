@@ -37,6 +37,7 @@ export function useAdminIntegrationsController() {
   const [savingLinkedIn, setSavingLinkedIn] = useState(false);
   const [savingTwitter, setSavingTwitter] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
+  const [savingBluesky, setSavingBluesky] = useState(false);
 
   const [stripeSecretKey, setStripeSecretKey] = useState("");
   const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
@@ -57,6 +58,8 @@ export function useAdminIntegrationsController() {
   const [twitterClientSecret, setTwitterClientSecret] = useState("");
   const [metaAppId, setMetaAppId] = useState("");
   const [metaAppSecret, setMetaAppSecret] = useState("");
+  const [blueskyClientName, setBlueskyClientName] = useState("");
+  const [blueskyPrivateKeyJwk, setBlueskyPrivateKeyJwk] = useState("");
 
   const groupedIntegrations = useMemo(() => getPlatformIntegrationsByCategory(), []);
 
@@ -81,6 +84,8 @@ export function useAdminIntegrationsController() {
       setTwitterClientSecret("");
     } else if (dialog === "meta") {
       setMetaAppSecret("");
+    } else if (dialog === "bluesky") {
+      setBlueskyPrivateKeyJwk("");
     }
   }, []);
 
@@ -113,6 +118,7 @@ export function useAdminIntegrationsController() {
       setLinkedinClientId(statusData.linkedin.clientId.value ?? "");
       setTwitterClientId(statusData.twitter.clientId.value ?? "");
       setMetaAppId(statusData.meta.appId.value ?? "");
+      setBlueskyClientName(statusData.bluesky.clientName.value ?? "");
     } catch {
       setLoadError(true);
       toast.error("Could not load platform integrations");
@@ -422,6 +428,47 @@ export function useAdminIntegrationsController() {
     }
   }
 
+  async function saveBluesky() {
+    const payload: Record<string, string> = {};
+    if (blueskyClientName.trim()) payload.clientName = blueskyClientName.trim();
+    if (blueskyPrivateKeyJwk.trim()) payload.privateKeyJwk = blueskyPrivateKeyJwk.trim();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("Enter a client name or private key JWK to save");
+      return;
+    }
+
+    if (!status?.bluesky.privateKeyJwk.configured && !payload.privateKeyJwk) {
+      toast.error("Paste a private key JWK for the first save");
+      return;
+    }
+
+    setSavingBluesky(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          integration: "bluesky",
+          ...payload,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed");
+      }
+      const data = (await res.json()) as { status: PlatformIntegrationStatus };
+      setStatus(data.status);
+      setBlueskyClientName(data.status.bluesky.clientName.value ?? "");
+      setBlueskyPrivateKeyJwk("");
+      toast.success("Bluesky credentials saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save Bluesky credentials");
+    } finally {
+      setSavingBluesky(false);
+    }
+  }
+
   async function disconnectStripeOAuth() {
     setDisconnectingStripe(true);
     try {
@@ -440,7 +487,15 @@ export function useAdminIntegrationsController() {
   }
 
   async function clearStored(
-    integration: "stripe" | "resend" | "unsplash" | "pexels" | "linkedin" | "twitter" | "meta",
+    integration:
+      | "stripe"
+      | "resend"
+      | "unsplash"
+      | "pexels"
+      | "linkedin"
+      | "twitter"
+      | "meta"
+      | "bluesky",
   ) {
     try {
       const res = await fetch("/api/admin/platform-integrations", {
@@ -468,6 +523,9 @@ export function useAdminIntegrationsController() {
       } else if (integration === "meta") {
         setMetaAppId("");
         setMetaAppSecret("");
+      } else if (integration === "bluesky") {
+        setBlueskyClientName("");
+        setBlueskyPrivateKeyJwk("");
       }
       toast.success("Stored credentials removed");
     } catch (err) {
@@ -526,6 +584,7 @@ export function useAdminIntegrationsController() {
     saveLinkedIn,
     saveTwitter,
     saveMeta,
+    saveBluesky,
     disconnectStripeOAuth,
     clearStored,
     savingToggle,
@@ -536,6 +595,7 @@ export function useAdminIntegrationsController() {
     savingLinkedIn,
     savingTwitter,
     savingMeta,
+    savingBluesky,
     stripeSecretKey,
     setStripeSecretKey,
     stripeWebhookSecret,
@@ -567,6 +627,10 @@ export function useAdminIntegrationsController() {
     setMetaAppId,
     metaAppSecret,
     setMetaAppSecret,
+    blueskyClientName,
+    setBlueskyClientName,
+    blueskyPrivateKeyJwk,
+    setBlueskyPrivateKeyJwk,
   };
 }
 
