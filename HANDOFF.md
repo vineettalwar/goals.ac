@@ -1,5 +1,15 @@
 # Session Handoff
 
+## Demo landmine + autopilot surface (2026-07-15)
+
+- Shopify theme-snippet soft preflight on publish + publishing settings
+- Dual score honesty labels + Refresh SERP
+- Autopilot settings compact block on dashboard
+- Shell multi-step create — done (`CreateContentDialog` wizard: format → details → destination → review)
+- TYPO3 FAL + Shopify Liquid snippets shipped earlier
+
+---
+
 ## Shopify theme snippet preflight (2026-07-15)
 
 Soft (non-blocking) amber preflight when Shopify `outputMode` is `article_metafields` or `page_sections` (or modes from health `theme_snippet_required_for`):
