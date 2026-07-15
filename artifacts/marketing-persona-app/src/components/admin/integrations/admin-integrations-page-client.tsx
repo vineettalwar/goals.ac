@@ -50,7 +50,7 @@ export function AdminIntegrationsPageClient() {
   return (
     <div className="px-8 py-8 max-w-5xl space-y-6">
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Integrations</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Platform integrations</h1>
         <p className="text-sm text-muted-foreground">
           Manage platform-wide{" "}
           <span className="font-medium text-foreground">billing, email, and stock images</span>.
@@ -102,11 +102,12 @@ export function AdminIntegrationsPageClient() {
         )}
         aria-hidden={loading}
       >
-        Per-project CMS, social, and search connections live in{" "}
+        Organization AI keys and tools live in{" "}
         <Link href="/integrations" className="text-primary hover:underline">
-          project Integrations
+          Org integrations
         </Link>
-        . Need setup instructions?{" "}
+        . Project CMS, social, and search connections live on each project&apos;s integrations page.
+        Need setup instructions?{" "}
         <Link href="/help" className="text-primary hover:underline">
           Help center
         </Link>

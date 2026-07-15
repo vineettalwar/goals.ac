@@ -1,4 +1,6 @@
-export type IntegrationsTab = "cms" | "social" | "esp" | "search";
+export type IntegrationsTab = "cms" | "social" | "esp" | "search" | "ai" | "tools";
+export type ProjectIntegrationsTab = "cms" | "social" | "esp" | "search";
+export type OrgIntegrationsTab = "ai" | "tools";
 
 export type CmsIntegrationRow = {
   connected?: boolean;
@@ -67,5 +69,61 @@ export const CMS_PLATFORMS: CmsPlatform[] = [
     key: "webhook",
     label: "Webhook",
     description: "Send HMAC-signed JSON to Zapier, Make, n8n, or any custom endpoint.",
+  },
+  {
+    key: "contentful",
+    label: "Contentful",
+    description: "Publish entries to a Contentful space via the Content Management API.",
+    badgeLetter: "C",
+    badgeClassName: "bg-sky-600",
+  },
+  {
+    key: "sanity",
+    label: "Sanity",
+    description: "Create documents in a Sanity dataset via the API.",
+    badgeLetter: "S",
+    badgeClassName: "bg-red-600",
+  },
+  {
+    key: "strapi",
+    label: "Strapi",
+    description: "Publish articles to Strapi via REST API.",
+    badgeLetter: "S",
+    badgeClassName: "bg-indigo-600",
+  },
+  {
+    key: "typo3",
+    label: "TYPO3",
+    description: "Publish via TYPO3 content elements or the goals.ac TYPO3 extension.",
+    badgeLetter: "T",
+    badgeClassName: "bg-orange-700",
+  },
+  {
+    key: "wix",
+    label: "Wix",
+    description: "Publish blog posts to Wix via the Blog API.",
+    badgeLetter: "W",
+    badgeClassName: "bg-yellow-600",
+  },
+  {
+    key: "framer",
+    label: "Framer",
+    description: "Publish CMS items to a Framer project collection.",
+    badgeLetter: "F",
+    badgeClassName: "bg-zinc-700",
+  },
+  {
+    key: "squarespace",
+    label: "Squarespace",
+    description: "Publish blog posts via the Squarespace Commerce API.",
+    badgeLetter: "S",
+    badgeClassName: "bg-zinc-900",
+  },
+  {
+    key: "hubspot",
+    label: "HubSpot CMS",
+    description: "Create or update HubSpot CMS blog posts.",
+    badgeLetter: "H",
+    badgeClassName: "bg-orange-500",
   },
 ];

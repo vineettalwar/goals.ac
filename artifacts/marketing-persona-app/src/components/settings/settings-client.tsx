@@ -138,6 +138,11 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
   const searchParams = useSearchParams();
   const { activeProject } = useActiveProject();
   const [activeTab, setActiveTab] = useState(() => searchParams.get("tab") ?? "profile");
+  useEffect(() => {
+    if (searchParams.get("tab") === "ai") {
+      window.location.replace("/integrations/ai");
+    }
+  }, [searchParams]);
   const [usage, setUsage] = useState<UsageSummary | null>(initialData?.usage ?? null);
   const [usageLoading, setUsageLoading] = useState(!initialData);
   const [hasGeminiKey, setHasGeminiKey] = useState(initialData?.me?.hasGeminiKey ?? false);
@@ -660,10 +665,6 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-6 flex-wrap h-auto">
           <TabsTrigger value="profile"><User className="w-4 h-4 mr-1.5" />Profile</TabsTrigger>
-          <TabsTrigger value="ai">
-            <Cpu className="w-4 h-4 mr-1.5" />AI Providers
-            <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary capitalize">{activeProvider}</span>
-          </TabsTrigger>
           {!isGoogleOnly && (
             <TabsTrigger value="security"><Shield className="w-4 h-4 mr-1.5" />Security</TabsTrigger>
           )}

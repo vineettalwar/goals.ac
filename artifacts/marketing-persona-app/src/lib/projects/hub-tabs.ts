@@ -19,6 +19,7 @@ export const SEARCH_TABS: HubTab[] = [
 ];
 
 export const RESEARCH_TABS: HubTab[] = [
+  { label: "Overview", href: "/research" },
   { label: "Competitors", href: "/research/competitors" },
-  { label: "Reddit", href: "/research/reddit", badge: "Beta" },
+  { label: "Signals", href: "/research/reddit" },
 ];

@@ -10,7 +10,15 @@ import { verifySessionClaims } from "@workspace/cf-edge/jwt";
 import { encryptSecret } from "@workspace/security/encryption";
 
 const PROD_API_ORIGIN = "https://api.goals.ac";
-const DEFAULT_INTEGRATIONS_URL = "https://app.goals.ac/integrations";
+const DEFAULT_APP_ORIGIN = "https://app.goals.ac";
+
+export function defaultProjectIntegrationsUrl(projectId?: number | null): string {
+  if (projectId != null && Number.isFinite(projectId)) {
+    return `${DEFAULT_APP_ORIGIN}/projects/${projectId}/integrations`;
+  }
+  return `${DEFAULT_APP_ORIGIN}/projects`;
+}
+
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
 export type SearchPropertyAuthEnv = {
@@ -102,8 +110,12 @@ function isAllowedAppOrigin(origin: string, request: Request): boolean {
   return false;
 }
 
-export function normalizeReturnUrl(raw: string | null, request: Request): string {
-  if (!raw?.trim()) return DEFAULT_INTEGRATIONS_URL;
+export function normalizeReturnUrl(
+  raw: string | null,
+  request: Request,
+  projectId?: number | null,
+): string {
+  if (!raw?.trim()) return defaultProjectIntegrationsUrl(projectId);
   try {
     const parsed = new URL(raw);
     if (isAllowedAppOrigin(parsed.origin, request)) {
@@ -112,7 +124,7 @@ export function normalizeReturnUrl(raw: string | null, request: Request): string
   } catch {
     // Invalid return URL — fall back to default.
   }
-  return DEFAULT_INTEGRATIONS_URL;
+  return defaultProjectIntegrationsUrl(projectId);
 }
 
 export async function signSearchOAuthState(
@@ -458,14 +470,15 @@ export async function handleSearchPropertyCallback(
   const oauthError = url.searchParams.get("error");
 
   const secret = requireAuthSecret(env);
-  const fallbackReturn = DEFAULT_INTEGRATIONS_URL;
+  const state = stateParam ? await verifySearchOAuthState(stateParam, secret) : null;
+  const fallbackReturn = defaultProjectIntegrationsUrl(state?.projectId);
+  const returnUrl = state
+    ? normalizeReturnUrl(state.returnUrl, request, state.projectId)
+    : fallbackReturn;
 
   if (!secret) {
     return new Response("Auth is not configured", { status: 503 });
   }
-
-  const state = stateParam ? await verifySearchOAuthState(stateParam, secret) : null;
-  const returnUrl = state ? normalizeReturnUrl(state.returnUrl, request) : fallbackReturn;
 
   if (oauthError || !code || !state) {
     return new Response(

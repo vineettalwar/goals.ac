@@ -178,8 +178,9 @@ export function integrationsRedirectUrl(
   projectId: number,
   params: Record<string, string>,
 ): string {
-  const qs = new URLSearchParams({ project: String(projectId), ...params });
-  return `${appOrigin.replace(/\/+$/, "")}/integrations?${qs.toString()}`;
+  const qs = new URLSearchParams(params).toString();
+  const base = `${appOrigin.replace(/\/+$/, "")}/projects/${projectId}/integrations`;
+  return qs ? `${base}?${qs}` : base;
 }
 
 function requireAuthSecret(env: SocialOAuthEnv): string | null {

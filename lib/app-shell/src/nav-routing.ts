@@ -57,6 +57,9 @@ export function isNavItemActive(
   if (item.label === "Partner") {
     return pathname === "/partner" || pathname.startsWith("/partner/");
   }
+  if (item.label === "Integrations") {
+    return pathname === "/integrations" || pathname.startsWith("/integrations/");
+  }
   if (item.label === "Projects") {
     return pathname === resolvedHref || pathname.startsWith("/projects/");
   }

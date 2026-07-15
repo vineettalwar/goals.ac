@@ -1,4 +1,7 @@
 export { IntegrationsView } from "./integrations-ui";
+export { OrgIntegrationsView } from "./org-integrations-ui";
+export { OrgAiProvidersPanel } from "./org-ai-providers-panel";
+export { OrgToolsPanel } from "./org-tools-panel";
 export {
   IntegrationsSearchPanel,
   searchConnectedCount,
@@ -7,15 +10,6 @@ export {
   type SearchPropertyProvider,
 } from "./integrations-search-ui";
 export { IntegrationsEspPanel } from "./integrations-esp-ui";
-export {
-  BeehiivConnectDialog,
-  ConvertKitConnectDialog,
-  EspFullAppConnectDialog,
-  MailchimpConnectDialog,
-  type BeehiivConnectPayload,
-  type ConvertKitConnectPayload,
-  type MailchimpConnectPayload,
-} from "./esp-connect-dialogs";
 export {
   IntegrationsSocialPanel,
   countSocialConnections,
@@ -51,8 +45,19 @@ export {
   type WordPressConnectPayload,
 } from "./cms-connect-dialogs";
 export {
+  BeehiivConnectDialog,
+  ConvertKitConnectDialog,
+  EspFullAppConnectDialog,
+  MailchimpConnectDialog,
+  type BeehiivConnectPayload,
+  type ConvertKitConnectPayload,
+  type MailchimpConnectPayload,
+} from "./esp-connect-dialogs";
+export {
   CMS_PLATFORMS,
   type CmsIntegrationRow,
   type CmsPlatform,
   type IntegrationsTab,
+  type OrgIntegrationsTab,
+  type ProjectIntegrationsTab,
 } from "./types";

@@ -15,8 +15,10 @@ import {
   type KeywordSourceFilter,
   PartnerWorkspaceView,
   ResearchCompetitorsView,
-  ResearchHubGrid,
-  ResearchRedditView,
+  ResearchOverviewView,
+  ResearchSignalsView,
+  buildResearchActionPaths,
+  flattenCompetitorAnalysis,
   SearchHubGrid,
   SearchPerformanceView,
   SearchSiteHealthView,
@@ -88,7 +90,7 @@ const searchTabs = [
 const researchTabs = [
   { label: "Overview", to: "/research" },
   { label: "Competitors", to: "/research/competitors" },
-  { label: "Reddit", to: "/research/reddit" },
+  { label: "Signals", to: "/research/reddit" },
 ];
 
 const renderLink = ({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) => (
@@ -177,7 +179,7 @@ export function StrategyCalendarPage() {
 
   return (
     <SectionShell title="Editorial calendar" description="Content scheduled by planned date." tabs={strategyTabs}>
-      <StrategyCalendarView pieces={pieces} error={error} renderLink={renderLink} />
+      <StrategyCalendarView pieces={pieces} projectId={projectId} error={error} renderLink={renderLink} />
     </SectionShell>
   );
 }
@@ -298,6 +300,12 @@ export function SearchKeywordsPage() {
       source === "rank_drop"
     ) {
       setSourceFilter(source);
+    }
+    const keyword = searchParams.get("keyword")?.trim();
+    if (keyword) {
+      setKeywordInput(keyword);
+      setTrackInput(keyword);
+      if (!tab) setActiveTab("analyzer");
     }
     const sheets = searchParams.get("sheets");
     if (sheets === "connected") {
@@ -718,10 +726,12 @@ export function SearchKeywordsPage() {
         onDeleteSheetSource={(id) => void handleDeleteSheetSource(id)}
         onConnectSheetSource={handleConnectSheetSource}
         syncingSheetId={syncingSheetId}
-        settingsHref="/settings"
+        settingsHref="/integrations/tools"
         visibilityHref="/search/visibility"
         studioHref={(opp) =>
-          `/studio?project=${projectId}&keyword=${encodeURIComponent(opp.keyword)}&title=${encodeURIComponent(opp.suggestedTitle)}`
+          projectId
+            ? `/projects/${projectId}/content-studio?create=1&keyword=${encodeURIComponent(opp.keyword)}&title=${encodeURIComponent(opp.suggestedTitle)}`
+            : "/projects"
         }
         renderLink={renderLink}
         error={actionError}
@@ -772,7 +782,7 @@ export function SearchVisibilityPage() {
         onSettingsChange={(next) => void saveSettings(next)}
         onRunCheck={() => void runCheck()}
         runningCheck={runningCheck}
-        integrationsHref={projectId ? `/integrations?project=${projectId}` : "/integrations"}
+        integrationsHref={projectId ? `/projects/${projectId}/integrations` : "/integrations"}
         brandProfileHref={activeProject ? `/projects/${activeProject.id}` : undefined}
         renderLink={renderLink}
       />
@@ -801,7 +811,7 @@ export function SearchPerformancePage() {
         onRefresh={() => void refetch()}
         sortKey={sortKey}
         onSortKeyChange={setSortKey}
-        integrationsHref={projectId ? `/integrations?project=${projectId}` : "/integrations"}
+        integrationsHref={projectId ? `/projects/${projectId}/integrations` : "/integrations"}
         renderLink={renderLink}
         contentPieceHref={(id) => `/content-piece/${id}`}
       />
@@ -915,7 +925,7 @@ export function AuditDetailPage({ auditId }: { auditId: string }) {
   const { audit, loading, error } = useAuditDetailData(auditId);
 
   return (
-    <div className="max-w-5xl px-8 py-8">
+    <div className="max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       <GeoAuditDetailView audit={audit} loading={loading} error={error} renderLink={renderLink} />
     </div>
   );
@@ -923,46 +933,163 @@ export function AuditDetailPage({ auditId }: { auditId: string }) {
 
 export function ResearchHubPage() {
   const { projectId } = useActiveProject();
+  const { analyses, loading, error } = useCompetitorAnalyses(projectId);
+  const paths = useMemo(
+    () =>
+      buildResearchActionPaths({
+        projectId,
+        studioBase: projectId ? `/projects/${projectId}/content-studio` : "/projects",
+      }),
+    [projectId],
+  );
+
   return (
-    <SectionShell title="Research" description="Competitive and community research." tabs={researchTabs}>
-      <ResearchHubGrid projectId={projectId} renderLink={renderLink} />
+    <SectionShell
+      title="Research"
+      description="Competitive landscape and demand signals for this project"
+      tabs={researchTabs}
+    >
+      <ResearchOverviewView
+        analyses={analyses}
+        loading={loading}
+        error={error}
+        paths={paths}
+        renderLink={renderLink}
+      />
     </SectionShell>
   );
 }
 
 export function ResearchCompetitorsPage() {
   const { projectId } = useActiveProject();
-  const { analyses, error } = useCompetitorAnalyses(projectId);
-  const [form, setForm] = useState({ competitorUrl: "", industry: "", location: "", stage: "early" });
+  const [searchParams] = useSearchParams();
+  const industryParam = searchParams.get("industry")?.trim() ?? "";
+  const analysisParam = searchParams.get("analysis");
+  const initialAnalysisId = analysisParam ? Number(analysisParam) : null;
+  const { analyses, loading, error, reload } = useCompetitorAnalyses(projectId);
+  const paths = useMemo(
+    () =>
+      buildResearchActionPaths({
+        projectId,
+        studioBase: projectId ? `/projects/${projectId}/content-studio` : "/projects",
+      }),
+    [projectId],
+  );
+  const [form, setForm] = useState({
+    competitorUrl: "",
+    industry: industryParam,
+    location: "",
+    stage: "early",
+  });
+  const [formOpen, setFormOpen] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
-  const [result, setResult] = useState<CompetitorAnalysisResult | null>(null);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [result, setResult] = useState<(CompetitorAnalysisResult & { competitorUrl?: string; id?: number }) | null>(
+    null,
+  );
+  const [resultLoading, setResultLoading] = useState(false);
+
+  useEffect(() => {
+    if (industryParam) {
+      setForm((prev) => ({ ...prev, industry: prev.industry || industryParam }));
+    }
+  }, [industryParam]);
+
+  useEffect(() => {
+    if (!projectId) return;
+    let cancelled = false;
+    void apiFetch<{ industry?: string } | null>(`/api/website-projects/${projectId}/brand-profile`)
+      .then((profile) => {
+        if (cancelled || !profile?.industry) return;
+        setForm((prev) => ({ ...prev, industry: prev.industry || profile.industry || "" }));
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
+
+  useEffect(() => {
+    setResult(null);
+    setSelectedId(null);
+    setFormOpen(true);
+  }, [projectId]);
+
+  useEffect(() => {
+    if (analyses.length === 0) {
+      setFormOpen(true);
+      return;
+    }
+    setFormOpen(false);
+    if (selectedId != null) return;
+    const preferred =
+      initialAnalysisId && analyses.some((row) => row.id === initialAnalysisId)
+        ? initialAnalysisId
+        : analyses[0]!.id;
+    setSelectedId(preferred);
+  }, [analyses, initialAnalysisId, selectedId]);
+
+  useEffect(() => {
+    if (selectedId == null) return;
+    let cancelled = false;
+    setResultLoading(true);
+    void apiFetch(`/api/competitor-analyses/${selectedId}`)
+      .then((data) => {
+        if (cancelled) return;
+        setResult(flattenCompetitorAnalysis(data));
+      })
+      .catch(() => {
+        if (!cancelled) setResult(null);
+      })
+      .finally(() => {
+        if (!cancelled) setResultLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
 
   async function analyze() {
     if (!form.competitorUrl || !form.industry || !form.location) return;
     setAnalyzing(true);
-    setResult(null);
     try {
-      const data = await apiFetch<CompetitorAnalysisResult>("/api/competitor-analysis", {
+      const data = await apiFetch("/api/competitor-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, websiteProjectId: projectId ? Number(projectId) : undefined }),
       });
-      setResult(data);
+      const flat = flattenCompetitorAnalysis(data);
+      setResult(flat);
+      if (flat?.id != null) setSelectedId(flat.id);
+      setFormOpen(false);
+      await reload();
     } finally {
       setAnalyzing(false);
     }
   }
 
   return (
-    <SectionShell title="Competitor research" description="AI-powered competitive intelligence." tabs={researchTabs}>
+    <SectionShell
+      title="Competitor research"
+      description="AI-powered competitive intelligence."
+      tabs={researchTabs}
+    >
       <ResearchCompetitorsView
         analyses={analyses}
+        loading={loading}
         error={error}
         form={form}
         onFormChange={setForm}
         onAnalyze={() => void analyze()}
         analyzing={analyzing}
         result={result}
+        resultLoading={resultLoading}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        formOpen={formOpen}
+        onFormOpenChange={setFormOpen}
+        paths={paths}
+        renderLink={renderLink}
       />
     </SectionShell>
   );
@@ -973,6 +1100,14 @@ export function ResearchRedditPage() {
   const [threads, setThreads] = useState<RedditThread[]>([]);
   const [discovering, setDiscovering] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const paths = useMemo(
+    () =>
+      buildResearchActionPaths({
+        projectId,
+        studioBase: projectId ? `/projects/${projectId}/content-studio` : "/projects",
+      }),
+    [projectId],
+  );
 
   useEffect(() => {
     setThreads([]);
@@ -1002,13 +1137,18 @@ export function ResearchRedditPage() {
   }
 
   return (
-    <SectionShell title="Reddit visibility" description="Community thread research for content angles." tabs={researchTabs}>
-      <ResearchRedditView
+    <SectionShell
+      title="Signals"
+      description="Community demand signals for content angles."
+      tabs={researchTabs}
+    >
+      <ResearchSignalsView
         projectId={projectId}
         threads={threads}
         discovering={discovering}
         error={error}
         onDiscover={() => void discover()}
+        paths={paths}
         renderLink={renderLink}
       />
     </SectionShell>
@@ -1028,30 +1168,82 @@ export function AutopilotPage() {
 
 export function SocialHubPage() {
   const { projectId } = useActiveProject();
-  const {
-    queue,
-    queueLoading,
-    queueError,
-    metrics,
-    metricsLoading,
-    platformFilter,
-    setPlatformFilter,
-    reload,
-  } = useSocialData(projectId);
+  const hub = useSocialData(projectId);
+  const studioHref = projectId ? `/projects/${projectId}/content-studio` : "/projects";
+  const integrationsHref = projectId ? `/projects/${projectId}/integrations` : "/integrations";
 
   return (
     <SectionShell title="Social hub" description="Schedule and publish social variants.">
+      {hub.flash ? (
+        <div
+          className={
+            hub.flash.level === "error"
+              ? "mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+              : "mb-4 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground"
+          }
+          role="status"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <span>{hub.flash.message}</span>
+            <button
+              type="button"
+              className="text-xs text-muted-foreground hover:text-foreground"
+              onClick={() => hub.clearFlash()}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      ) : null}
       <SocialHubView
         projectId={projectId}
+        studioHref={studioHref}
+        integrationsHref={integrationsHref}
+        pieceHref={(pieceId) => `/content-piece/${pieceId}`}
         renderLink={renderLink}
-        queue={queue}
-        queueLoading={queueLoading}
-        queueError={queueError}
-        platformFilter={platformFilter}
-        onPlatformFilterChange={setPlatformFilter}
-        onRefreshQueue={reload}
-        metrics={metrics}
-        metricsLoading={metricsLoading}
+        tab={hub.tab}
+        onTabChange={hub.setTab}
+        queue={hub.queue}
+        queueLoading={hub.queueLoading}
+        queueError={hub.queueError}
+        platformFilter={hub.platformFilter}
+        onPlatformFilterChange={hub.setPlatformFilter}
+        onRefreshQueue={() => void hub.reloadQueue()}
+        onSubmitReview={(id) => void hub.submitReview(id)}
+        onApprove={(id) => void hub.approvePiece(id)}
+        onSchedule={(id, value) => void hub.schedulePiece(id, value)}
+        reschedulingId={hub.reschedulingId}
+        onReschedule={(pieceId, dateKey) => void hub.reschedulePiece(pieceId, dateKey)}
+        composerParents={hub.composerParents}
+        composerParentsLoading={hub.composerParentsLoading}
+        composerConnected={hub.composerConnected}
+        composing={hub.composing}
+        composed={hub.composed}
+        onCompose={(parentId, platforms) => void hub.compose(parentId, platforms)}
+        metrics={hub.metrics}
+        metricsLoading={hub.metricsLoading}
+        metricsPlatformFilter={hub.metricsPlatformFilter}
+        onMetricsPlatformFilterChange={hub.setMetricsPlatformFilter}
+        metricsSyncing={hub.metricsSyncing}
+        metricsLastSyncedAt={hub.metricsLastSyncedAt}
+        onSyncMetrics={() => void hub.syncMetrics()}
+        voicePlatform={hub.voicePlatform}
+        voiceChannel={hub.voiceChannel}
+        importText={hub.importText}
+        voiceLoading={hub.voiceLoading}
+        historySync={hub.historySync}
+        syncingVoice={hub.syncingVoice}
+        channelData={hub.channelData}
+        onVoicePlatformChange={hub.setVoicePlatform}
+        onVoiceChannelChange={hub.setVoiceChannel}
+        onImportTextChange={hub.setImportText}
+        onSyncVoiceFromOAuth={() => void hub.syncVoiceFromOAuth()}
+        onImportVoice={() => void hub.importVoice()}
+        onAnalyzeVoice={() => void hub.analyzeVoice()}
+        settings={hub.settings}
+        settingsLoading={hub.settingsLoading}
+        onSettingsChange={hub.setSettings}
+        onSaveSettings={() => void hub.saveSettings()}
       />
     </SectionShell>
   );
@@ -1091,8 +1283,8 @@ export function HelpPage() {
         checklist={[
           { id: "project", label: "Create a website project", done: hasProject, href: "/projects" },
           { id: "brand", label: "Complete brand profile", done: false, href: projectId ? `/projects/${projectId}` : "/projects" },
-          { id: "integrations", label: "Connect a CMS integration", done: !checklistLoading && hasCmsIntegration, href: "/integrations" },
-          { id: "content", label: "Generate your first content piece", done: !checklistLoading && hasContentPiece, href: projectId ? `/studio?project=${projectId}` : "/studio" },
+          { id: "integrations", label: "Connect a CMS integration", done: !checklistLoading && hasCmsIntegration, href: projectId ? `/projects/${projectId}/integrations` : "/projects" },
+          { id: "content", label: "Generate your first content piece", done: !checklistLoading && hasContentPiece, href: projectId ? `/projects/${projectId}/content-studio` : "/projects" },
         ]}
         renderLink={renderLink}
       />
@@ -1146,7 +1338,7 @@ export function GrowthRoadmapPage({ slug }: { slug: string }) {
   const { roadmap, loading, error } = useGrowthRoadmap(slug);
 
   return (
-    <div className="px-8 py-8 max-w-5xl">
+    <div className="max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       <GrowthRoadmapView roadmap={roadmap} slug={slug} loading={loading} error={error} renderLink={renderLink} />
     </div>
   );

@@ -1,8 +1,10 @@
-import { Navigate, Route, Routes, useParams } from "react-router-dom";
+import { Navigate, Route, Routes, useParams, useSearchParams } from "react-router-dom";
 import { AppShell } from "@/components/AppShell";
+import { useActiveProject } from "@/hooks/use-active-project";
 import { ContentPiecePage } from "@/pages/ContentPiecePage";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { IntegrationsPage } from "@/pages/IntegrationsPage";
+import { ProjectIntegrationsPage } from "@/pages/ProjectIntegrationsPage";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { LoginPage } from "@/pages/LoginPage";
 import { SignupPage } from "@/pages/SignupPage";
@@ -61,19 +63,39 @@ function GrowthRoadmapRoute() {
   return <GrowthRoadmapPage slug={slug ?? ""} />;
 }
 
-function ProjectStudioRedirect() {
-  const { id } = useParams();
-  return <Navigate to={`/studio?project=${id}`} replace />;
+function legacyProjectQueryRedirect(
+  projectId: string,
+  searchParams: URLSearchParams,
+  suffix: string,
+): string {
+  const next = new URLSearchParams(searchParams);
+  next.delete("project");
+  const qs = next.toString();
+  return `/projects/${projectId}${suffix}${qs ? `?${qs}` : ""}`;
 }
 
-function ProjectSocialRedirect() {
-  const { id } = useParams();
-  return <Navigate to={`/social?project=${id}`} replace />;
+function LegacyStudioRedirect() {
+  const [searchParams] = useSearchParams();
+  const { projectId, loading } = useActiveProject();
+  const fromQuery = searchParams.get("project");
+  const id = fromQuery && /^\d+$/.test(fromQuery) ? fromQuery : projectId;
+  if (!id) {
+    if (loading) return <p className="p-8 text-muted-foreground">Loading…</p>;
+    return <Navigate to="/projects" replace />;
+  }
+  return <Navigate to={legacyProjectQueryRedirect(id, searchParams, "/content-studio")} replace />;
 }
 
-function ProjectContentPieceRedirect() {
-  const { pieceId } = useParams();
-  return <Navigate to={`/content-piece/${pieceId}`} replace />;
+function LegacySocialRedirect() {
+  const [searchParams] = useSearchParams();
+  const { projectId, loading } = useActiveProject();
+  const fromQuery = searchParams.get("project");
+  const id = fromQuery && /^\d+$/.test(fromQuery) ? fromQuery : projectId;
+  if (!id) {
+    if (loading) return <p className="p-8 text-muted-foreground">Loading…</p>;
+    return <Navigate to="/projects" replace />;
+  }
+  return <Navigate to={legacyProjectQueryRedirect(id, searchParams, "/social")} replace />;
 }
 
 function AdminContentStrategyDetailRoute() {
@@ -128,11 +150,15 @@ export default function App() {
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
-        <Route path="/projects/:id/content-studio" element={<ProjectStudioRedirect />} />
-        <Route path="/projects/:id/social" element={<ProjectSocialRedirect />} />
-        <Route path="/projects/:id/content-piece/:pieceId" element={<ProjectContentPieceRedirect />} />
+        <Route path="/projects/:id/content-studio" element={<StudioPage />} />
+        <Route path="/projects/:id/social" element={<SocialHubPage />} />
+        <Route path="/projects/:id/integrations" element={<ProjectIntegrationsPage />} />
+        <Route path="/projects/:id/integrations/:tab" element={<ProjectIntegrationsPage />} />
+        <Route path="/projects/:id/content-piece/:pieceId" element={<ContentPiecePage />} />
         <Route path="/integrations" element={<IntegrationsPage />} />
-        <Route path="/studio" element={<StudioPage />} />
+        <Route path="/integrations/:tab" element={<IntegrationsPage />} />
+        <Route path="/studio" element={<LegacyStudioRedirect />} />
+        <Route path="/social" element={<LegacySocialRedirect />} />
         <Route path="/content-piece/:id" element={<ContentPiecePage />} />
         <Route path="/content-pieces/:id" element={<ContentPiecePage />} />
         <Route path="/settings" element={<SettingsPage />} />
@@ -154,7 +180,6 @@ export default function App() {
         <Route path="/research/reddit" element={<ResearchRedditPage />} />
         <Route path="/competitor-analysis" element={<Navigate to="/research/competitors" replace />} />
         <Route path="/autopilot" element={<AutopilotPage />} />
-        <Route path="/social" element={<SocialHubPage />} />
         <Route path="/partner" element={<PartnerPage />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/onboarding" element={<OnboardingPage />} />

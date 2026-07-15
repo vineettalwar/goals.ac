@@ -1,123 +1,142 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import {
+  OrgAiProvidersPanel,
+  OrgIntegrationsView,
+  OrgToolsPanel,
+  isSiteAdmin,
+  isSuperAdmin,
+  orgIntegrationsPath,
+  projectIntegrationsPath,
+  type OrgIntegrationsTab,
+} from "@workspace/app-shell";
 import { useActiveProject } from "@/context/use-active-project";
-import { PageSkeleton } from "@/components/skeletons/page-skeleton";
-import { ProjectPublishingTab } from "@/components/projects/project-publishing-tab";
-import { SearchPropertyConnectionsPanel } from "@/components/integrations/search-property-connections-panel";
-import { AnalyticsPropertyConnectionsPanel } from "@/components/integrations/analytics-property-connections-panel";
-import { IntegrationTabBadge } from "@/components/integrations/integration-tile";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import type { IntegrationCategoryFilter } from "@/components/projects/publishing-settings-panel";
-import { useIntegrationCounts } from "@/hooks/use-integration-counts";
+import { PublicApiKeysPanel } from "@/components/settings/public-api-keys-panel";
+import { useSettingsData } from "@/hooks/use-settings-data";
+import { useOrgByokControllers } from "@/hooks/use-org-byok-controllers";
 
-type IntegrationsTab = IntegrationCategoryFilter | "search";
+const VALID_TABS: OrgIntegrationsTab[] = ["ai", "tools"];
 
-export function IntegrationsPageClient() {
-  const { activeProjectId, activeProject, isLoading } = useActiveProject();
-  const projectId = activeProjectId != null ? String(activeProjectId) : "";
-  const [activeTab, setActiveTab] = useState<IntegrationsTab>("cms");
-  const counts = useIntegrationCounts(projectId);
+function parseTab(value: string | undefined): OrgIntegrationsTab {
+  if (value && VALID_TABS.includes(value as OrgIntegrationsTab)) {
+    return value as OrgIntegrationsTab;
+  }
+  return "ai";
+}
+
+export function IntegrationsPageClient({ tab }: { tab: string }) {
+  const { data: session } = useSession();
+  const router = useRouter();
+  const { activeProjectId } = useActiveProject();
+  const {
+    aiSummary,
+    integrationsSummary,
+    reload,
+    userRole,
+    orgRole,
+    canManageAiSettings: initialCanManage,
+  } = useSettingsData();
+  const byok = useOrgByokControllers(reload);
+
+  const canManageProviderKeys =
+    initialCanManage ??
+    (isSuperAdmin(userRole) ||
+      isSiteAdmin(orgRole) ||
+      isSuperAdmin(session?.user?.role) ||
+      isSiteAdmin(session?.user?.orgRole));
+
+  const activeTab = parseTab(tab);
 
   return (
-    <div className="px-8 py-8 max-w-5xl space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">Integrations</h1>
+    <OrgIntegrationsView
+      activeTab={activeTab}
+      onTabChange={(next) => router.push(orgIntegrationsPath(next))}
+      aiPanel={
+        <OrgAiProvidersPanel
+          aiSummary={aiSummary}
+          canManageGeminiKey={canManageProviderKeys}
+          canManageProviderKeys={canManageProviderKeys}
+          canManageProvider={canManageProviderKeys}
+          onSaveGeminiKey={byok.saveGeminiKey}
+          onDeleteGeminiKey={byok.deleteGeminiKey}
+          onTestGeminiKey={byok.testGeminiKey}
+          geminiSaving={byok.geminiSaving}
+          geminiDeleting={byok.geminiDeleting}
+          onSaveOpenaiKey={byok.saveOpenaiKey}
+          onDeleteOpenaiKey={byok.deleteOpenaiKey}
+          onTestOpenaiKey={byok.testOpenaiKey}
+          openaiSaving={byok.openaiSaving}
+          openaiDeleting={byok.openaiDeleting}
+          onSaveAnthropicKey={byok.saveAnthropicKey}
+          onDeleteAnthropicKey={byok.deleteAnthropicKey}
+          onTestAnthropicKey={byok.testAnthropicKey}
+          anthropicSaving={byok.anthropicSaving}
+          anthropicDeleting={byok.anthropicDeleting}
+          onSaveBedrockCredentials={byok.saveBedrockCredentials}
+          onDeleteBedrockCredentials={byok.deleteBedrockCredentials}
+          onTestBedrockCredentials={byok.testBedrockCredentials}
+          bedrockSaving={byok.bedrockSaving}
+          bedrockDeleting={byok.bedrockDeleting}
+          onSaveProvider={byok.saveProvider}
+          providerSaving={byok.providerSaving}
+          providerMessage={byok.providerMessage}
+          footerNote={<PublicApiKeysPanel canManage={canManageProviderKeys} />}
+        />
+      }
+      toolsPanel={
+        <OrgToolsPanel
+          integrationsSummary={integrationsSummary}
+          canManage={canManageProviderKeys}
+          onSaveSemrushCredentials={byok.saveSemrushCredentials}
+          onDeleteSemrushCredentials={byok.deleteSemrushCredentials}
+          onTestSemrushCredentials={byok.testSemrushCredentials}
+          semrushSaving={byok.semrushSaving}
+          semrushDeleting={byok.semrushDeleting}
+          onSaveDeeplKey={byok.saveDeeplKey}
+          onDeleteDeeplKey={byok.deleteDeeplKey}
+          onTestDeeplKey={byok.testDeeplKey}
+          deeplSaving={byok.deeplSaving}
+          deeplDeleting={byok.deeplDeleting}
+          onSaveStockCredentials={byok.saveStockCredentials}
+          onDeleteStockCredentials={byok.deleteStockCredentials}
+          onTestStockCredentials={byok.testStockCredentials}
+          stockSavingProvider={byok.stockSavingProvider}
+          stockRemovingProvider={byok.stockRemovingProvider}
+          message={byok.toolsMessage}
+        />
+      }
+      footer={
         <p className="text-sm text-muted-foreground">
-          {activeProject ? (
+          Project CMS, social, email, and search connections live on each project&apos;s integrations
+          page
+          {activeProjectId != null ? (
             <>
-              Manage connections for{" "}
-              <span className="font-medium text-foreground">{activeProject.name}</span>
+              {" — "}
+              <Link
+                href={projectIntegrationsPath(activeProjectId)}
+                className="text-primary hover:underline"
+              >
+                open current project
+              </Link>
             </>
           ) : (
-            "Choose a project to manage connections"
+            <>
+              {" — "}
+              <Link href="/projects" className="text-primary hover:underline">
+                choose a project
+              </Link>
+            </>
           )}
-          . Credentials are encrypted at rest.
+          . Need setup instructions?{" "}
+          <Link href="/help" className="text-primary hover:underline">
+            Help center
+          </Link>
+          .
         </p>
-      </div>
-
-      {!projectId && isLoading && <PageSkeleton />}
-
-      {!projectId && !isLoading && (
-        <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Choose a project in the sidebar to manage integrations.
-        </div>
-      )}
-
-      {projectId ? (
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as IntegrationsTab)}
-          className="space-y-5"
-        >
-          <TabsList className="h-auto flex-wrap gap-1 p-1">
-            <TabsTrigger value="cms" className="gap-0">
-              CMS
-              <IntegrationTabBadge count={counts.cms} loading={counts.loading} />
-            </TabsTrigger>
-            <TabsTrigger value="social" className="gap-0">
-              Social
-              <IntegrationTabBadge count={counts.social} loading={counts.loading} />
-            </TabsTrigger>
-            <TabsTrigger value="esp" className="gap-0">
-              Email
-              <IntegrationTabBadge count={counts.esp} loading={counts.loading} />
-            </TabsTrigger>
-            <TabsTrigger value="search" className="gap-0">
-              Search & Analytics
-              <IntegrationTabBadge count={counts.search} loading={counts.loading} />
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="cms" className="mt-0">
-            <ProjectPublishingTab
-              projectId={projectId}
-              showAutomation={false}
-              layout="grid"
-              categoryFilter="cms"
-            />
-          </TabsContent>
-
-          <TabsContent value="social" className="mt-0">
-            <ProjectPublishingTab
-              projectId={projectId}
-              showAutomation={false}
-              layout="grid"
-              categoryFilter="social"
-            />
-          </TabsContent>
-
-          <TabsContent value="esp" className="mt-0">
-            <ProjectPublishingTab
-              projectId={projectId}
-              showAutomation={false}
-              layout="grid"
-              categoryFilter="esp"
-            />
-          </TabsContent>
-
-          <TabsContent value="search" className="space-y-6 mt-0">
-            <SearchPropertyConnectionsPanel
-              projectId={projectId}
-              embedded
-              layout="grid"
-            />
-            <AnalyticsPropertyConnectionsPanel
-              projectId={projectId}
-              embedded
-              layout="grid"
-            />
-          </TabsContent>
-        </Tabs>
-      ) : null}
-
-      <p className="text-sm text-muted-foreground">
-        Need setup instructions?{" "}
-        <Link href="/help" className="text-primary hover:underline">
-          Help center
-        </Link>
-      </p>
-    </div>
+      }
+    />
   );
 }

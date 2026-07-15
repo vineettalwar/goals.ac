@@ -1,11 +1,28 @@
-import { Suspense } from "react";
-import { IntegrationsPageClient } from "./integrations-page-client";
-import { PageSkeleton } from "@/components/skeletons/page-skeleton";
+import { redirect } from "next/navigation";
+import { orgIntegrationsPath, projectIntegrationsPath } from "@workspace/app-shell";
 
-export default function IntegrationsPage() {
-  return (
-    <Suspense fallback={<PageSkeleton />}>
-      <IntegrationsPageClient />
-    </Suspense>
-  );
+const PROJECT_TABS = new Set(["cms", "social", "esp", "search"]);
+
+export default async function IntegrationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
+  const projectRaw = params.project;
+  const tabRaw = params.tab;
+  const project = Array.isArray(projectRaw) ? projectRaw[0] : projectRaw;
+  const tab = Array.isArray(tabRaw) ? tabRaw[0] : tabRaw;
+
+  if (project) {
+    const projectTab =
+      tab && PROJECT_TABS.has(tab) ? (tab as "cms" | "social" | "esp" | "search") : "cms";
+    redirect(projectIntegrationsPath(project, projectTab));
+  }
+
+  if (tab === "tools") {
+    redirect(orgIntegrationsPath("tools"));
+  }
+
+  redirect(orgIntegrationsPath("ai"));
 }

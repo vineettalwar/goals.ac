@@ -4,7 +4,7 @@ import { projectDetailPath, type ProjectLinkProps } from "../projects";
 import {
   CMS_PLATFORMS,
   type CmsIntegrationRow,
-  type IntegrationsTab,
+  type ProjectIntegrationsTab,
 } from "./types";
 import { CmsPlatformIcon } from "./integration-icons";
 import { IntegrationTile } from "./integration-tiles";
@@ -20,8 +20,9 @@ import {
 } from "./integrations-social-ui";
 import { IntegrationsEspPanel, countEspConnections } from "./integrations-esp-ui";
 import type { EspPlatformId } from "./publishing-destinations";
+import { orgIntegrationsPath, projectIntegrationsPath } from "../project-detail/types";
 
-const TABS: Array<{ id: IntegrationsTab; label: string }> = [
+const TABS: Array<{ id: ProjectIntegrationsTab; label: string }> = [
   { id: "cms", label: "CMS" },
   { id: "social", label: "Social" },
   { id: "esp", label: "Email" },
@@ -72,6 +73,9 @@ export function IntegrationsView({
   onDisconnect,
   onConnectPlatform,
   onTestPlatform,
+  onRunHealthCheck,
+  healthCheckRunning,
+  healthStatuses,
   onConnectEsp,
   onDisconnectEsp,
   onTestEsp,
@@ -95,8 +99,8 @@ export function IntegrationsView({
 }: {
   projectId: string | null;
   projectName: string | null;
-  activeTab: IntegrationsTab;
-  onTabChange: (tab: IntegrationsTab) => void;
+  activeTab: ProjectIntegrationsTab;
+  onTabChange: (tab: ProjectIntegrationsTab) => void;
   integrations: Record<string, CmsIntegrationRow>;
   integrationsLoading: boolean;
   loadError: string | null;
@@ -110,6 +114,14 @@ export function IntegrationsView({
   onDisconnect: (platform: string) => void;
   onConnectPlatform: (platform: string) => void;
   onTestPlatform?: (platform: string) => void;
+  onRunHealthCheck?: () => void;
+  healthCheckRunning?: boolean;
+  healthStatuses?: Array<{
+    platform: string;
+    connected: boolean;
+    ok: boolean | null;
+    error?: string;
+  }> | null;
   onConnectEsp?: (platform: EspPlatformId) => void;
   onDisconnectEsp?: (platform: EspPlatformId) => void;
   onTestEsp?: (platform: EspPlatformId) => void;
@@ -136,9 +148,16 @@ export function IntegrationsView({
   const espCount = countEspConnections(integrations);
   const resolvedSocialCount = socialCount ?? countSocialConnections(integrations);
   const searchCount = searchConnectedCount(searchProperties ?? null);
+  const projectIntegrationsHref = projectId
+    ? appOrigin
+      ? `${appOrigin.replace(/\/+$/, "")}${projectIntegrationsPath(projectId)}`
+      : projectIntegrationsPath(projectId)
+    : appOrigin
+      ? `${appOrigin.replace(/\/+$/, "")}/integrations`
+      : "/integrations";
 
   return (
-    <div className="max-w-5xl space-y-6 px-8 py-8">
+    <div className="max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Integrations</h1>
         <p className="text-sm text-muted-foreground">
@@ -154,55 +173,48 @@ export function IntegrationsView({
         </p>
       </div>
 
+      <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-muted/40 p-1">
+        {TABS.map((tab) => {
+          const active = activeTab === tab.id;
+          const count =
+            tab.id === "cms"
+              ? cmsCount
+              : tab.id === "social"
+                ? resolvedSocialCount
+                : tab.id === "esp"
+                  ? espCount
+                  : searchCount;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => onTabChange(tab.id)}
+              className={cn(
+                "inline-flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                active
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+              )}
+            >
+              {tab.label}
+              <IntegrationTabBadge
+                count={count}
+                loading={tab.id === "search" ? searchPropertiesLoading : integrationsLoading}
+              />
+            </button>
+          );
+        })}
+      </div>
+
+
       {!projectId ? (
         <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
-          Choose a project in the sidebar to manage integrations.
+          Choose a project in the sidebar to manage CMS, social, email, and search connections.
         </div>
-      ) : (
-        <>
-          <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-muted/40 p-1">
-            {TABS.map((tab) => {
-              const active = activeTab === tab.id;
-              const count =
-                tab.id === "cms"
-                  ? cmsCount
-                  : tab.id === "social"
-                    ? resolvedSocialCount
-                    : tab.id === "esp"
-                      ? espCount
-                      : tab.id === "search"
-                        ? searchCount
-                        : 0;
-              return (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => onTabChange(tab.id)}
-                  className={cn(
-                    "inline-flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                    active
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
-                  )}
-                >
-                  {tab.label}
-                  {tab.id === "cms" ? (
-                    <IntegrationTabBadge count={count} loading={integrationsLoading} />
-                  ) : null}
-                  {tab.id === "social" ? (
-                    <IntegrationTabBadge count={count} loading={integrationsLoading} />
-                  ) : null}
-                  {tab.id === "esp" ? (
-                    <IntegrationTabBadge count={count} loading={integrationsLoading} />
-                  ) : null}
-                  {tab.id === "search" ? (
-                    <IntegrationTabBadge count={count} loading={searchPropertiesLoading} />
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
+      ) : null}
 
+      {projectId ? (
+        <>
           {activeTab === "cms" ? (
             <div className="space-y-6">
               {loadError ? <p className="text-sm text-red-700">{loadError}</p> : null}
@@ -253,7 +265,48 @@ export function IntegrationsView({
 
               {!integrationsLoading &&
               CMS_PLATFORMS.some(({ key }) => integrations[key]?.connected) ? (
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {onRunHealthCheck ? (
+                      <button
+                        type="button"
+                        disabled={saving || healthCheckRunning}
+                        onClick={onRunHealthCheck}
+                        className="inline-flex h-8 items-center rounded-lg border border-border bg-card px-3 text-xs font-medium hover:bg-muted/40 disabled:opacity-50"
+                      >
+                        {healthCheckRunning ? "Checking…" : "Run health check"}
+                      </button>
+                    ) : null}
+                  </div>
+                  {healthStatuses && healthStatuses.length > 0 ? (
+                    <ul className="grid gap-2 sm:grid-cols-2">
+                      {healthStatuses
+                        .filter((row) => row.connected)
+                        .map((row) => (
+                          <li
+                            key={row.platform}
+                            className="rounded-lg border border-border px-3 py-2 text-xs"
+                          >
+                            <span className="font-medium capitalize">{row.platform}</span>
+                            <span
+                              className={
+                                row.ok
+                                  ? "ml-2 text-emerald-700"
+                                  : row.ok === false
+                                    ? "ml-2 text-red-700"
+                                    : "ml-2 text-muted-foreground"
+                              }
+                            >
+                              {row.ok === true ? "Healthy" : row.ok === false ? "Failing" : "Unknown"}
+                            </span>
+                            {row.error ? (
+                              <p className="mt-1 text-muted-foreground">{row.error}</p>
+                            ) : null}
+                          </li>
+                        ))}
+                    </ul>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2">
                   {CMS_PLATFORMS.filter(({ key }) => integrations[key]?.connected).map(({ key, label }) => (
                     <div key={key} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs">
                       <span className="font-medium">{label}</span>
@@ -277,6 +330,7 @@ export function IntegrationsView({
                       </button>
                     </div>
                   ))}
+                  </div>
                 </div>
               ) : null}
 
@@ -318,7 +372,7 @@ export function IntegrationsView({
             </div>
           ) : null}
 
-          {activeTab === "search" && projectId ? (
+          {activeTab === "search" ? (
             <IntegrationsSearchPanel
               projectId={projectId}
               data={searchProperties ?? null}
@@ -345,13 +399,11 @@ export function IntegrationsView({
               onDisconnect={(platform) => onDisconnectEsp?.(platform) ?? onDisconnect(platform)}
               onConnectPlatform={(platform) => onConnectEsp?.(platform) ?? onConnectPlatform(platform)}
               onTestPlatform={onTestEsp ?? onTestPlatform}
-              fullAppIntegrationsUrl={
-                appOrigin ? `${appOrigin.replace(/\/+$/, "")}/integrations` : undefined
-              }
+              fullAppIntegrationsUrl={projectIntegrationsHref}
             />
           ) : null}
 
-          {activeTab === "social" && projectId ? (
+          {activeTab === "social" ? (
             <IntegrationsSocialPanel
               projectId={projectId}
               integrations={integrations}
@@ -366,10 +418,19 @@ export function IntegrationsView({
             />
           ) : null}
         </>
-      )}
+      ) : null}
 
       {projectId ? (
         <p className="text-xs text-muted-foreground">
+        Organization AI and research tools:{" "}
+        <ProjectLink
+          renderLink={renderLink}
+          href={orgIntegrationsPath("ai")}
+          className="font-medium text-primary hover:underline"
+        >
+          Org integrations
+        </ProjectLink>
+          {" · "}
           <ProjectLink
             renderLink={renderLink}
             href={projectDetailPath(projectId)}
