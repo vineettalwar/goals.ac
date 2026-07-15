@@ -1,5 +1,17 @@
 # Session Handoff
 
+## TYPO3 FAL textmedia (2026-07-15)
+
+`ContentPublisher` now prefers FAL for `textmedia` images: resolve existing `/fileadmin/…` paths, otherwise download remote http(s) into `fileadmin/user_upload/goals-ac/` and attach via `sys_file_reference` on `assets`. Falls back to embedding `<img>` in `bodytext` if FAL/storage/download fails (private URLs blocked).
+
+**File:** `cms-plugins/typo3/Classes/Helper/ContentPublisher.php` (+ `GeneralUtility` stub helpers).
+
+**Leftover / verify on a real TYPO3 site:** DataHandler BE-user context for FAL writes; no plugin `/media` base64 upload route (URL fetch only); folder create quirks if `user_upload` missing.
+
+Still open optional: Shopify theme app block.
+
+---
+
 ## Demo polish batch (2026-07-15)
 
 Just shipped:
@@ -11,7 +23,7 @@ Just shipped:
 - Status select while editing on shell ContentPieceView
 - Learn post humanizer → /article-quality
 
-Still open: TYPO3 FAL / Shopify theme block (agents in flight), hosted blog deferred.
+Still open: Shopify theme block (agents in flight), hosted blog deferred.
 
 ---
 
@@ -209,7 +221,7 @@ cd lib/content-engine && npx tsc --noEmit && npx vitest run src/articles/serp-co
 
 ### Next (optional)
 - Ghost Lexical inline images inside paragraphs (standalone image lines supported)
-- TYPO3 FAL sys_file references for textmedia (currently embeds img in bodytext HTML)
+- ~~TYPO3 FAL sys_file references for textmedia~~ → done 2026-07-15 (plugin ContentPublisher; verify on live TYPO3)
 - Shopify theme app block (still deferred) — demos use manual Liquid in `cms-plugins/shopify/theme-snippets/` + docs/cms-plugins/shopify-theme-sections.md; ConnectSetupSteps + health `theme_snippet_required_for` call that out
 - ~~Publish history showing output mode used~~ → done 2026-07-15 (see top of HANDOFF; run migrate)
 
