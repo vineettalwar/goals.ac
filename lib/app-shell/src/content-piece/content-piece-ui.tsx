@@ -776,6 +776,7 @@ function ContentPieceAside({
         fetchBrief={fetchBrief}
         serpGaps={dual?.serp.gaps}
         competitorTopics={dual?.competitorDiff}
+        pieceHasBody={Boolean(body)}
         renderLink={renderLink}
       />
 

@@ -125,6 +125,7 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
         secondaryKeywords={secondaryKeywords}
         serpGaps={dual?.serp.gaps}
         competitorTopics={dual?.competitorDiff}
+        pieceHasBody={Boolean(displayBody?.trim())}
         ideasHref={
           piece.websiteProjectId
             ? `/projects/${piece.websiteProjectId}/content-studio`
