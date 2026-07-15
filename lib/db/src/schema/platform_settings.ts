@@ -34,6 +34,8 @@ export const platformSettingsTable = pgTable("platform_settings", {
   encryptedTwitterClientSecret: text("encrypted_twitter_client_secret"),
   metaAppId: text("meta_app_id"),
   encryptedMetaAppSecret: text("encrypted_meta_app_secret"),
+  blueskyClientName: text("bluesky_client_name"),
+  encryptedBlueskyOauthPrivateKeyJwk: text("encrypted_bluesky_oauth_private_key_jwk"),
   updatedBy: integer("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

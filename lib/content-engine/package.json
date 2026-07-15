@@ -141,6 +141,7 @@
     "./support/social/linkedin-platform-credentials": "./src/support/social/linkedin-platform-credentials.ts",
     "./support/social/twitter-platform-credentials": "./src/support/social/twitter-platform-credentials.ts",
     "./support/social/meta-platform-credentials": "./src/support/social/meta-platform-credentials.ts",
+    "./support/social/bluesky-platform-credentials": "./src/support/social/bluesky-platform-credentials.ts",
     "./support/social/social-tokens": "./src/support/social/social-tokens.ts",
     "./topical-map-generator": "./src/strategy/topical-map-generator.ts",
     "./utils": "./src/core/utils.ts"
