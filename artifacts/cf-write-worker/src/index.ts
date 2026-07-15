@@ -20,6 +20,7 @@ import { handleAuthApiKeyWrite } from "./auth-api-key";
 import { handleAiProvidersSettingsWrite } from "./ai-providers-settings";
 import { handleAuthOpenaiWrite } from "./auth-openai";
 import { handleAuthAnthropicWrite } from "./auth-anthropic";
+import { handleAuthBedrockWrite } from "./auth-bedrock";
 
 export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
@@ -103,6 +104,9 @@ export default {
 
       const anthropicHandled = await handleAuthAnthropicWrite(request, path, userId);
       if (anthropicHandled) return anthropicHandled;
+
+      const bedrockHandled = await handleAuthBedrockWrite(request, path, userId);
+      if (bedrockHandled) return bedrockHandled;
 
       const aiProvidersHandled = await handleAiProvidersSettingsWrite(request, path, userId);
       if (aiProvidersHandled) return aiProvidersHandled;

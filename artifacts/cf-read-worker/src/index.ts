@@ -11,6 +11,10 @@ export interface Env extends CfEdgeBindings {
   CF_EDGE_HTTP: string;
   AUTH_SECRET: string;
   GEMINI_KEY_ENCRYPTION_SECRET: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  BING_WEBMASTER_CLIENT_ID?: string;
+  BING_WEBMASTER_CLIENT_SECRET?: string;
 }
 
 async function requireAuth(request: Request, env: Env) {
@@ -49,7 +53,7 @@ export default {
     const userId = Number.parseInt(session.id, 10);
 
     try {
-      const handled = await handleAuthenticatedRead(request, path, userId);
+      const handled = await handleAuthenticatedRead(request, path, userId, env);
       if (handled) return handled;
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
     } catch (err) {

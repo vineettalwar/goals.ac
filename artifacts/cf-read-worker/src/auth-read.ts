@@ -1,6 +1,9 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { decryptSecret } from "@workspace/security/encryption";
-import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
+import {
+  getOrgAiSettingsForUser,
+  hasOrgBedrockCredentials,
+} from "@workspace/content-engine/support/ai/org-ai-settings";
 
 type OrgKeyRoute = {
   path: string;
@@ -29,6 +32,33 @@ export async function handleAuthRead(
 ): Promise<Response | null> {
   if (request.method !== "GET") {
     return null;
+  }
+
+  if (path === "/api/auth/bedrock-credentials") {
+    const orgSettings = await getOrgAiSettingsForUser(userId);
+    if (!hasOrgBedrockCredentials(orgSettings)) {
+      return withCors(request, Response.json({ hasCredentials: false }));
+    }
+
+    let accessKeyLastFour = "••••";
+    try {
+      if (orgSettings?.encryptedBedrockAccessKeyId) {
+        accessKeyLastFour = decryptSecret(orgSettings.encryptedBedrockAccessKeyId).slice(-4);
+      }
+    } catch {
+      // keep placeholder if decryption fails
+    }
+
+    return withCors(
+      request,
+      Response.json({
+        hasCredentials: true,
+        accessKeyLastFour,
+        region: orgSettings?.bedrockRegion ?? null,
+        model: orgSettings?.bedrockModel ?? null,
+        hasSessionToken: Boolean(orgSettings?.encryptedBedrockSessionToken),
+      }),
+    );
   }
 
   const route = ORG_KEY_ROUTES.find((entry) => entry.path === path);

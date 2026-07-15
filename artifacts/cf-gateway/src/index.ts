@@ -37,6 +37,7 @@ function isReadPath(path: string, method: string): boolean {
     if (path === "/api/auth/api-key") return true;
     if (path === "/api/auth/openai-credentials") return true;
     if (path === "/api/auth/anthropic-credentials") return true;
+    if (path === "/api/auth/bedrock-credentials") return true;
     if (path.startsWith("/api/jobs/")) return true;
     return !isPublicPath(path) && !path.startsWith("/api/auth/");
   }
@@ -63,6 +64,8 @@ function isWritePath(path: string, method: string): boolean {
   if (path === "/api/auth/openai-credentials/test" && method === "POST") return true;
   if (path === "/api/auth/anthropic-credentials" && (method === "PATCH" || method === "DELETE")) return true;
   if (path === "/api/auth/anthropic-credentials/test" && method === "POST") return true;
+  if (path === "/api/auth/bedrock-credentials" && (method === "PATCH" || method === "DELETE")) return true;
+  if (path === "/api/auth/bedrock-credentials/test" && method === "POST") return true;
   if (path.includes("/cms-integrations")) {
     if (method === "PATCH" || method === "DELETE") return true;
     if (method === "POST" && /\/cms-integrations\/test$/.test(path)) return true;
