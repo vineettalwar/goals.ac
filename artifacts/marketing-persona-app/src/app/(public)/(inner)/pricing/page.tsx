@@ -4,11 +4,11 @@ import { PricingPageDynamic } from "@/components/marketing/layout/marketing-clie
 export const metadata: Metadata = {
   title: "Plans & pricing",
   description:
-    "Start free on Starter, upgrade to Growth ($49/mo), or add a hands-on GEO/AEO content program. Self-serve studio plus optional consulting.",
+    "Hands-on GEO/AEO content programs for research, production, editorial review, and cross-platform publishing.",
   openGraph: {
     title: "Plans & pricing | goals.ac",
     description:
-      "Start free on Starter, upgrade to Growth ($49/mo), or add a hands-on GEO/AEO content program.",
+      "Hands-on GEO/AEO content programs for research, production, editorial review, and cross-platform publishing.",
   },
 };
 
