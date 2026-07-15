@@ -159,7 +159,16 @@ function isWritePath(path: string, method: string): boolean {
   if (/^\/api\/keyword-opportunities\/\d+$/.test(path) && (method === "POST" || method === "PATCH")) {
     return true;
   }
+  if (/^\/api\/keyword-opportunities\/\d+\/brief$/.test(path) && method === "GET") {
+    return true;
+  }
   if (/^\/api\/website-projects\/\d+\/keyword-opportunities$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/keyword-clusters$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/integrations\/health$/.test(path) && (method === "GET" || method === "POST")) {
     return true;
   }
   if (/^\/api\/website-projects\/\d+\/article-ideas$/.test(path) && method === "POST") {
@@ -271,6 +280,7 @@ function isWritePath(path: string, method: string): boolean {
   }
   if (/^\/api\/content-pieces\/\d+\/regenerate$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/enhance$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-pieces\/\d+\/serp-score$/.test(path) && method === "GET") return true;
   if (/^\/api\/content-pieces\/\d+\/repurpose$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/images\/regenerate$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/humanize$/.test(path) && method === "POST") return true;

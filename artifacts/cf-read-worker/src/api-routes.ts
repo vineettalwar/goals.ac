@@ -35,7 +35,13 @@ import { getAiProviderStatusForUser } from "./ai-providers-status";
 import { handleSearchPropertiesGet, handleSearchPropertiesAvailablePost } from "./search-properties";
 import { handleOrgMembersRead } from "./org-members";
 import { handleBillingStatusGet } from "./billing-status";
-import { handleSocialMetricsGet, handleSocialQueueGet } from "./social-queue";
+import {
+  handleSocialHistorySyncGet,
+  handleSocialMetricsGet,
+  handleSocialMetricsSyncGet,
+  handleSocialQueueGet,
+  handleSocialScheduleSettingsGet,
+} from "./social-queue";
 import { getPlatformStockImageStatus } from "@workspace/stock-images";
 
 export type ReadWorkerEnv = {
@@ -175,6 +181,19 @@ export async function handleAuthenticatedRead(
 
   const socialMetricsHandled = await handleSocialMetricsGet(request, path, userId);
   if (socialMetricsHandled) return socialMetricsHandled;
+
+  const socialScheduleSettingsHandled = await handleSocialScheduleSettingsGet(
+    request,
+    path,
+    userId,
+  );
+  if (socialScheduleSettingsHandled) return socialScheduleSettingsHandled;
+
+  const socialHistorySyncHandled = await handleSocialHistorySyncGet(request, path, userId);
+  if (socialHistorySyncHandled) return socialHistorySyncHandled;
+
+  const socialMetricsSyncHandled = await handleSocialMetricsSyncGet(request, path, userId);
+  if (socialMetricsSyncHandled) return socialMetricsSyncHandled;
 
   if (path === "/api/organizations" && request.method === "GET") {
     const memberships = await db
@@ -461,7 +480,21 @@ export async function handleAuthenticatedRead(
             .where(inArray(competitorAnalysesTable.websiteProjectId, projectIds))
             .orderBy(desc(competitorAnalysesTable.createdAt))
             .limit(50);
-    return withCors(request, Response.json({ analyses: rows }));
+    return withCors(
+      request,
+      Response.json({
+        analyses: rows.map((row) => ({
+          id: row.id,
+          competitorUrl: row.competitorUrl,
+          industry: row.industry,
+          location: row.location,
+          stage: row.stage,
+          websiteProjectId: row.websiteProjectId,
+          createdAt: row.createdAt,
+          ...(row.result ?? {}),
+        })),
+      }),
+    );
   }
 
   const competitorAnalysisMatch = path.match(/^\/api\/competitor-analyses\/(\d+)$/);
@@ -488,7 +521,19 @@ export async function handleAuthenticatedRead(
       }
     }
 
-    return withCors(request, Response.json({ id: row.id, ...row.result, createdAt: row.createdAt }));
+    return withCors(
+      request,
+      Response.json({
+        id: row.id,
+        competitorUrl: row.competitorUrl,
+        industry: row.industry,
+        location: row.location,
+        stage: row.stage,
+        websiteProjectId: row.websiteProjectId,
+        createdAt: row.createdAt,
+        ...(row.result ?? {}),
+      }),
+    );
   }
 
   const contentMatch = path.match(/^\/api\/content-pieces\/(\d+)$/);

@@ -1,18 +1,39 @@
-import { db } from "@workspace/db";
+import { db, countAsInt } from "@workspace/db";
 import {
   contentPiecesTable,
   socialPostMetricsTable,
+  websiteProjectsTable,
+  DEFAULT_SOCIAL_SCHEDULE_SETTINGS,
   SOCIAL_FORMAT_TYPES,
   SOCIAL_PLATFORM_IDS,
   SOCIAL_PLATFORM_TO_FORMAT,
   FORMAT_TO_SOCIAL_PLATFORM,
   type ContentPieceApprovalStatus,
   type SocialFormatType,
+  type SocialHistorySyncMeta,
   type SocialPlatformId,
+  type SocialScheduleSettings,
 } from "@workspace/db/schema-sqlite";
-import { and, asc, desc, eq, getTableColumns, inArray, isNotNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, getTableColumns, inArray, isNotNull, or, sql } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
+import {
+  decryptCmsCredentials,
+  type CmsIntegrationCredentials,
+} from "@workspace/content-engine/support/publishing/cms-integrations";
 import { getAccessibleProject, parsePositiveInt } from "./project-access";
+
+function parseSocialScheduleSettings(raw: unknown): SocialScheduleSettings {
+  if (!raw || typeof raw !== "object") return { ...DEFAULT_SOCIAL_SCHEDULE_SETTINGS };
+  const settings = raw as SocialScheduleSettings;
+  return {
+    ...DEFAULT_SOCIAL_SCHEDULE_SETTINGS,
+    ...settings,
+    platforms: {
+      ...DEFAULT_SOCIAL_SCHEDULE_SETTINGS.platforms,
+      ...(settings.platforms ?? {}),
+    },
+  };
+}
 
 const SOCIAL_FORMAT_LIST = [...SOCIAL_FORMAT_TYPES];
 
@@ -207,4 +228,120 @@ export async function handleSocialMetricsGet(
 
   const performance = await getSocialPerformance(projectId, { platform, days });
   return withCors(request, Response.json(performance));
+}
+
+export async function handleSocialScheduleSettingsGet(
+  request: Request,
+  path: string,
+  userId: number,
+): Promise<Response | null> {
+  const match = path.match(/^\/api\/website-projects\/(\d+)\/social\/schedule-settings$/);
+  if (!match || request.method !== "GET") return null;
+
+  const projectId = Number.parseInt(match[1]!, 10);
+  const project = await getAccessibleProject(projectId, userId);
+  if (!project) {
+    return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const [row] = await db
+    .select({ socialScheduleSettings: websiteProjectsTable.socialScheduleSettings })
+    .from(websiteProjectsTable)
+    .where(eq(websiteProjectsTable.id, projectId))
+    .limit(1);
+
+  return withCors(
+    request,
+    Response.json({
+      settings: parseSocialScheduleSettings(row?.socialScheduleSettings),
+    }),
+  );
+}
+
+export async function handleSocialHistorySyncGet(
+  request: Request,
+  path: string,
+  userId: number,
+): Promise<Response | null> {
+  const match = path.match(/^\/api\/website-projects\/(\d+)\/social\/history-sync$/);
+  if (!match || request.method !== "GET") return null;
+
+  const projectId = Number.parseInt(match[1]!, 10);
+  const project = await getAccessibleProject(projectId, userId);
+  if (!project) {
+    return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const [row] = await db
+    .select({
+      socialHistorySyncMeta: websiteProjectsTable.socialHistorySyncMeta,
+      cmsIntegrations: websiteProjectsTable.cmsIntegrations,
+    })
+    .from(websiteProjectsTable)
+    .where(eq(websiteProjectsTable.id, projectId))
+    .limit(1);
+
+  const meta = (row?.socialHistorySyncMeta ?? {}) as SocialHistorySyncMeta;
+  const creds = row
+    ? decryptCmsCredentials((row.cmsIntegrations ?? {}) as CmsIntegrationCredentials)
+    : null;
+
+  const platforms: Partial<
+    Record<
+      SocialPlatformId,
+      { connected?: boolean; lastSyncedAt?: string; postCount?: number; error?: string }
+    >
+  > = {};
+
+  for (const platform of SOCIAL_PLATFORM_IDS) {
+    const connected = Boolean(
+      platform === "linkedin"
+        ? creds?.linkedin?.accessToken
+        : platform === "twitter"
+          ? creds?.twitter?.accessToken
+          : platform === "facebook" || platform === "instagram"
+            ? creds?.meta?.accessToken
+            : platform === "bluesky"
+              ? creds?.bluesky?.accessToken
+              : creds?.mastodon?.accessToken,
+    );
+    platforms[platform] = {
+      connected,
+      ...meta[platform],
+    };
+  }
+
+  return withCors(request, Response.json({ platforms }));
+}
+
+export async function handleSocialMetricsSyncGet(
+  request: Request,
+  path: string,
+  userId: number,
+): Promise<Response | null> {
+  const match = path.match(/^\/api\/website-projects\/(\d+)\/social\/metrics\/sync$/);
+  if (!match || request.method !== "GET") return null;
+
+  const projectId = Number.parseInt(match[1]!, 10);
+  const project = await getAccessibleProject(projectId, userId);
+  if (!project) {
+    return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const [stats] = await db
+    .select({
+      lastSyncedAt: sql<string | null>`max(${socialPostMetricsTable.syncedAt})`,
+      postCount: countAsInt(),
+    })
+    .from(socialPostMetricsTable)
+    .innerJoin(contentPiecesTable, eq(socialPostMetricsTable.contentPieceId, contentPiecesTable.id))
+    .where(eq(contentPiecesTable.websiteProjectId, projectId));
+
+  return withCors(
+    request,
+    Response.json({
+      lastSyncedAt: stats?.lastSyncedAt ?? null,
+      postCount: stats?.postCount ?? 0,
+    }),
+  );
 }

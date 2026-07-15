@@ -7,6 +7,7 @@ import {
   trackedKeywordsTable,
 } from "@workspace/db/schema-sqlite";
 import { listArticleIdeaImports } from "@workspace/content-engine/articles/article-ideas-import-service";
+import { loadCommandCenterSummary } from "@workspace/content-engine/analytics/command-center-service";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
 import { getAccessibleProject, parsePositiveInt } from "./project-access";
@@ -38,6 +39,7 @@ export async function handleKeywordRead(
       .select({
         checkedAt: keywordRankSnapshotsTable.checkedAt,
         position: keywordRankSnapshotsTable.position,
+        serpFeatures: keywordRankSnapshotsTable.serpFeatures,
       })
       .from(keywordRankSnapshotsTable)
       .where(eq(keywordRankSnapshotsTable.trackedKeywordId, trackedId))
@@ -134,7 +136,10 @@ export async function handleKeywordRead(
       .orderBy(desc(trackedKeywordsTable.createdAt));
 
     const keywordIds = keywords.map((kw) => kw.id);
-    const latestByKeywordId = new Map<number, { position: number | null; checkedAt: string }>();
+    const latestByKeywordId = new Map<
+      number,
+      { position: number | null; checkedAt: string; serpFeatures: Record<string, unknown> }
+    >();
 
     if (keywordIds.length > 0) {
       const snapshots = await db
@@ -148,6 +153,7 @@ export async function handleKeywordRead(
           latestByKeywordId.set(snapshot.trackedKeywordId, {
             position: snapshot.position,
             checkedAt: String(snapshot.checkedAt),
+            serpFeatures: (snapshot.serpFeatures as Record<string, unknown>) ?? {},
           });
         }
       }
@@ -180,7 +186,22 @@ export async function handleKeywordRead(
       )
       .orderBy(desc(keywordOpportunitiesTable.opportunityScore))
       .limit(100);
-    return withCors(request, Response.json({ opportunities }));
+    const { attachLinkedContentPieces } = await import(
+      "@workspace/content-engine/strategy/keyword-opportunity-service"
+    );
+    const enriched = await attachLinkedContentPieces(projectId, opportunities);
+    return withCors(request, Response.json({ opportunities: enriched }));
+  }
+
+  const commandCenterMatch = path.match(/^\/api\/website-projects\/(\d+)\/command-center$/);
+  if (commandCenterMatch && method === "GET") {
+    const projectId = Number.parseInt(commandCenterMatch[1]!, 10);
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+    const summary = await loadCommandCenterSummary(projectId);
+    return withCors(request, Response.json(summary));
   }
 
   return null;
