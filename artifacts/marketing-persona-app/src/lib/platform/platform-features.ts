@@ -18,7 +18,7 @@ export type IntegrationEnvStatus = {
   pexels: boolean;
 };
 
-export type PlatformIntegrationCategoryId = "billing" | "email" | "media" | "social";
+export type PlatformIntegrationCategoryId = "billing" | "email" | "media" | "social" | "ai";
 
 export type PlatformIntegrationId =
   | "stripe"
@@ -28,7 +28,8 @@ export type PlatformIntegrationId =
   | "linkedin"
   | "twitter"
   | "meta"
-  | "bluesky";
+  | "bluesky"
+  | "bedrock";
 
 export type PlatformIntegrationSettingsKey =
   | "stripeBillingEnabled"
@@ -78,6 +79,11 @@ export const PLATFORM_INTEGRATION_CATEGORIES: {
     id: "social",
     label: "Social publishing",
     description: "OAuth apps so projects can connect LinkedIn and other networks.",
+  },
+  {
+    id: "ai",
+    label: "AI providers",
+    description: "Platform AI credentials shared with selected organizations.",
   },
 ];
 
@@ -333,6 +339,36 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
         {
           name: "BLUESKY_CLIENT_NAME",
           configured: envConfigured("BLUESKY_CLIENT_NAME"),
+          required: false,
+        },
+      ],
+    },
+    {
+      id: "bedrock",
+      category: "ai",
+      kind: "credentials",
+      label: "AWS Bedrock",
+      description: "Platform Bedrock credentials granted to selected organizations.",
+      docsUrl: "https://docs.aws.amazon.com/bedrock/",
+      envVars: [
+        {
+          name: "AWS_ACCESS_KEY_ID",
+          configured: envConfigured("AWS_ACCESS_KEY_ID"),
+          required: true,
+        },
+        {
+          name: "AWS_SECRET_ACCESS_KEY",
+          configured: envConfigured("AWS_SECRET_ACCESS_KEY"),
+          required: true,
+        },
+        {
+          name: "AWS_REGION",
+          configured: envConfigured("AWS_REGION") || envConfigured("AWS_DEFAULT_REGION"),
+          required: false,
+        },
+        {
+          name: "BEDROCK_MODEL",
+          configured: envConfigured("BEDROCK_MODEL"),
           required: false,
         },
       ],

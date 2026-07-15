@@ -95,6 +95,18 @@ function BlueskyLogo({ className }: { className?: string }) {
   );
 }
 
+function BedrockLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#232F3E" />
+      <path
+        fill="#FF9900"
+        d="M7 15.2 12 7l5 8.2H7Zm1.7-1.4h6.6L12 9.4 8.7 13.8Z"
+      />
+    </svg>
+  );
+}
+
 const LOGOS: Record<PlatformIntegrationId, ComponentType<{ className?: string }>> = {
   stripe: StripeLogo,
   resend: ResendLogo,
@@ -104,6 +116,7 @@ const LOGOS: Record<PlatformIntegrationId, ComponentType<{ className?: string }>
   twitter: XLogo,
   meta: MetaLogo,
   bluesky: BlueskyLogo,
+  bedrock: BedrockLogo,
 };
 
 export function PlatformIntegrationBrandIcon({

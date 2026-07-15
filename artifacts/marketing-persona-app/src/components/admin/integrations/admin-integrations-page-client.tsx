@@ -24,6 +24,7 @@ const TAB_SKELETONS: Record<PlatformIntegrationCategoryId, number> = {
   email: 1,
   media: 2,
   social: 1,
+  ai: 1,
 };
 
 const DEFAULT_TAB = PLATFORM_INTEGRATION_CATEGORIES[0]?.id ?? "billing";
@@ -55,7 +56,7 @@ export function AdminIntegrationsPageClient() {
         <p className="text-sm text-muted-foreground">
           Manage platform-wide{" "}
           <span className="font-medium text-foreground">
-            billing, email, stock images, and social OAuth
+            billing, email, stock images, social OAuth, and AI providers
           </span>
           . Credentials are encrypted at rest.
         </p>

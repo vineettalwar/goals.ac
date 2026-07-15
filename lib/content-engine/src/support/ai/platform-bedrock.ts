@@ -2,7 +2,7 @@ import { db } from "@workspace/db";
 import {
   platformBedrockOrgGrantsTable,
   platformSettingsTable,
-} from "@workspace/db/active-schema";
+} from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { decryptSecret } from "@workspace/security/encryption";
 import type { BedrockCredentialOptions } from "@workspace/ai-providers";

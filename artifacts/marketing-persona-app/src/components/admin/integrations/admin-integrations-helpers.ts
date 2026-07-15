@@ -22,6 +22,7 @@ export type AdminIntegrationsCounts = {
   email: number;
   media: number;
   social: number;
+  ai: number;
 };
 
 export function integrationSummary(
@@ -76,6 +77,9 @@ export function isIntegrationConfigured(
   if (definition.id === "bluesky") {
     return status.bluesky.privateKeyJwk.configured;
   }
+  if (definition.id === "bedrock") {
+    return status.bedrock.configured;
+  }
   return false;
 }
 
@@ -127,6 +131,7 @@ export function getIntegrationLastFour(
   if (definition.id === "twitter") return status.twitter.clientSecret.lastFour;
   if (definition.id === "meta") return status.meta.appSecret.lastFour;
   if (definition.id === "bluesky") return status.bluesky.privateKeyJwk.lastFour;
+  if (definition.id === "bedrock") return status.bedrock.accessKeyId.lastFour;
   return null;
 }
 
@@ -142,5 +147,6 @@ export function isIntegrationManagedByEnv(
   if (definition.id === "twitter") return status.twitter.managedByEnv;
   if (definition.id === "meta") return status.meta.managedByEnv;
   if (definition.id === "bluesky") return status.bluesky.managedByEnv;
+  if (definition.id === "bedrock") return status.bedrock.managedByEnv;
   return definition.kind === "env";
 }

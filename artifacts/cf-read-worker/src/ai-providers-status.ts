@@ -1,7 +1,4 @@
-import {
-  isBedrockEnvConfigured,
-  resolveProviderId,
-} from "@workspace/ai-providers/config";
+import { resolveProviderId } from "@workspace/ai-providers/config";
 import {
   getOrgAiSettingsForUser,
   hasOrgAnthropicCredentials,
@@ -9,6 +6,10 @@ import {
   hasOrgOpenAICredentials,
   toAiProviderOptionsFromOrg,
 } from "@workspace/content-engine/support/ai/org-ai-settings";
+import {
+  isOrgGrantedPlatformBedrock,
+  loadPlatformBedrockCredentials,
+} from "@workspace/content-engine/support/ai/platform-bedrock";
 
 function env(key: string): string | undefined {
   const v = process.env[key];
@@ -20,15 +21,18 @@ function isActiveProviderReady(
   options: {
     hasUserGeminiKey: boolean;
     hasOrgBedrockKey: boolean;
+    hasPlatformBedrock: boolean;
     hasOrgAnthropicKey: boolean;
     hasOrgOpenAIKey: boolean;
   },
 ): boolean {
   switch (activeProvider) {
     case "gemini":
-      return Boolean(env("GEMINI_API_KEY") || env("AI_INTEGRATIONS_GEMINI_API_KEY") || options.hasUserGeminiKey);
+      return Boolean(
+        env("GEMINI_API_KEY") || env("AI_INTEGRATIONS_GEMINI_API_KEY") || options.hasUserGeminiKey,
+      );
     case "bedrock":
-      return isBedrockEnvConfigured() || options.hasOrgBedrockKey;
+      return options.hasOrgBedrockKey || options.hasPlatformBedrock;
     case "anthropic":
       return Boolean(env("ANTHROPIC_API_KEY") || options.hasOrgAnthropicKey);
     case "openai":
@@ -50,37 +54,72 @@ export async function getAiProviderStatusForUser(userId: number) {
   const hasOrgAnthropicKey = hasOrgAnthropicCredentials(orgSettings);
   const hasOrgOpenAIKey = hasOrgOpenAICredentials(orgSettings);
 
+  const organizationId = orgSettings?.organizationId ?? null;
+  const [hasPlatformBedrockGrant, platformBedrock] = await Promise.all([
+    organizationId ? isOrgGrantedPlatformBedrock(organizationId) : Promise.resolve(false),
+    loadPlatformBedrockCredentials(),
+  ]);
+  const hasPlatformBedrock = hasPlatformBedrockGrant && Boolean(platformBedrock);
+
   return {
     activeProvider,
     ready: isActiveProviderReady(activeProvider, {
       hasUserGeminiKey,
       hasOrgBedrockKey,
+      hasPlatformBedrock,
       hasOrgAnthropicKey,
       hasOrgOpenAIKey,
     }),
-    source: orgSettings?.aiProvider ? ("app" as const) : env("AI_PROVIDER") ? ("env" as const) : ("auto" as const),
+    source: orgSettings?.aiProvider
+      ? ("app" as const)
+      : env("AI_PROVIDER")
+        ? ("env" as const)
+        : ("auto" as const),
     settings: {
       provider: orgSettings?.aiProvider ?? null,
       ollamaBaseUrl: orgSettings?.ollamaBaseUrl ?? null,
       ollamaModel: orgSettings?.ollamaModel ?? null,
     },
     gemini: {
-      configured: Boolean(env("GEMINI_API_KEY") || env("AI_INTEGRATIONS_GEMINI_API_KEY") || hasUserGeminiKey),
-      source: hasUserGeminiKey ? ("org-key" as const) : env("GEMINI_API_KEY") ? ("env-key" as const) : null,
+      configured: Boolean(
+        env("GEMINI_API_KEY") || env("AI_INTEGRATIONS_GEMINI_API_KEY") || hasUserGeminiKey,
+      ),
+      source: hasUserGeminiKey
+        ? ("org-key" as const)
+        : env("GEMINI_API_KEY")
+          ? ("env-key" as const)
+          : null,
     },
     bedrock: {
-      configured: isBedrockEnvConfigured() || hasOrgBedrockKey,
-      region: orgSettings?.bedrockRegion ?? env("AWS_REGION") ?? null,
-      model: orgSettings?.bedrockModel ?? env("BEDROCK_MODEL") ?? null,
-      source: hasOrgBedrockKey ? ("org-key" as const) : isBedrockEnvConfigured() ? ("env" as const) : null,
+      configured: hasOrgBedrockKey || hasPlatformBedrock,
+      region:
+        orgSettings?.bedrockRegion ??
+        platformBedrock?.region ??
+        env("AWS_REGION") ??
+        null,
+      model:
+        orgSettings?.bedrockModel ?? platformBedrock?.model ?? env("BEDROCK_MODEL") ?? null,
+      source: hasOrgBedrockKey
+        ? ("org-key" as const)
+        : hasPlatformBedrock
+          ? ("platform-grant" as const)
+          : null,
     },
     anthropic: {
       configured: Boolean(env("ANTHROPIC_API_KEY") || hasOrgAnthropicKey),
-      source: hasOrgAnthropicKey ? ("org-key" as const) : env("ANTHROPIC_API_KEY") ? ("env" as const) : null,
+      source: hasOrgAnthropicKey
+        ? ("org-key" as const)
+        : env("ANTHROPIC_API_KEY")
+          ? ("env" as const)
+          : null,
     },
     openai: {
       configured: Boolean(env("OPENAI_API_KEY") || hasOrgOpenAIKey),
-      source: hasOrgOpenAIKey ? ("org-key" as const) : env("OPENAI_API_KEY") ? ("env" as const) : null,
+      source: hasOrgOpenAIKey
+        ? ("org-key" as const)
+        : env("OPENAI_API_KEY")
+          ? ("env" as const)
+          : null,
     },
     ollama: {
       configured: Boolean(orgSettings?.ollamaBaseUrl || env("OLLAMA_BASE_URL")),
