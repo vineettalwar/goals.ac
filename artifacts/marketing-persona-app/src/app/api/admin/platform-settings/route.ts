@@ -22,7 +22,7 @@ export async function GET() {
 
   const [settings, env, integrations] = await Promise.all([
     getPlatformSettings(),
-    Promise.resolve(getIntegrationEnvStatus()),
+    getIntegrationEnvStatus(),
     Promise.resolve(getPlatformIntegrationDefinitions()),
   ]);
 
@@ -48,7 +48,9 @@ export async function PATCH(req: Request) {
   ]);
   invalidatePlatformGatesCache();
 
-  const env = getIntegrationEnvStatus();
-  const integrations = getPlatformIntegrationDefinitions();
+  const [env, integrations] = await Promise.all([
+    getIntegrationEnvStatus(),
+    Promise.resolve(getPlatformIntegrationDefinitions()),
+  ]);
   return NextResponse.json({ ...settings, env, integrations });
 }

@@ -1,5 +1,9 @@
 import { marked } from "marked";
-import { downloadAndOptimizeImage } from "@workspace/media";
+import {
+  downloadAndOptimizeImage,
+  optimizeImageBuffer,
+  type OptimizedImage,
+} from "@workspace/media";
 import type { WordPressCredentials } from "./wordpress";
 import { uploadWordPressMedia } from "./wordpress";
 import type { GoalsAcPluginCredentials } from "./goals-ac-plugin";
@@ -29,6 +33,73 @@ export type PreparedWordPressImages = {
 
 type ImageUploadMap = Map<string, { attachmentId: number; sourceUrl: string }>;
 
+/** PNG/JPEG data URIs only — SVG and other schemes are ignored for CMS featured upload. */
+const RASTER_DATA_URI_RE = /^data:image\/(png|jpeg|jpg);base64,([A-Za-z0-9+/=\s]+)$/i;
+/** ~5MB decoded — featured fallbacks from enricher stay well under this. */
+const MAX_FEATURED_DATA_URI_BYTES = 5 * 1024 * 1024;
+
+export function isRasterFeaturedDataUri(url: string | null | undefined): boolean {
+  if (!url?.startsWith("data:image/")) return false;
+  return RASTER_DATA_URI_RE.test(url.trim());
+}
+
+/**
+ * Decode a PNG/JPEG data URI for featured-image upload.
+ * Returns null for SVG, other mime types, invalid base64, or oversized payloads.
+ */
+export function decodeRasterFeaturedDataUri(
+  dataUri: string,
+): { buffer: Buffer; mimeHint: "image/png" | "image/jpeg" } | null {
+  const match = dataUri.trim().match(RASTER_DATA_URI_RE);
+  if (!match) return null;
+  const subtype = match[1]!.toLowerCase();
+  const b64 = match[2]!.replace(/\s+/g, "");
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(b64, "base64");
+  } catch {
+    return null;
+  }
+  if (buffer.length === 0 || buffer.length > MAX_FEATURED_DATA_URI_BYTES) return null;
+  return {
+    buffer,
+    mimeHint: subtype === "png" ? "image/png" : "image/jpeg",
+  };
+}
+
+async function pushOptimizedMedia(
+  optimized: OptimizedImage,
+  meta: { alt: string; title: string; caption?: string },
+  wpCreds: WordPressCredentials | null,
+  pluginCreds: GoalsAcPluginCredentials | null,
+): Promise<{ attachmentId: number; sourceUrl: string }> {
+  if (pluginCreds) {
+    const uploaded = await uploadGoalsAcPluginMedia(pluginCreds, {
+      filename: optimized.filename,
+      mimeType: optimized.mimeType,
+      dataBase64: optimized.buffer.toString("base64"),
+      alt: meta.alt,
+      title: meta.title,
+      caption: meta.caption,
+    });
+    return { attachmentId: uploaded.id, sourceUrl: uploaded.sourceUrl };
+  }
+
+  if (!wpCreds) {
+    throw new Error("WordPress credentials required for media upload");
+  }
+
+  const uploaded = await uploadWordPressMedia(wpCreds, {
+    buffer: optimized.buffer,
+    filename: optimized.filename,
+    mimeType: optimized.mimeType,
+    alt: meta.alt,
+    title: meta.title,
+    caption: meta.caption,
+  });
+  return { attachmentId: uploaded.id, sourceUrl: uploaded.sourceUrl };
+}
+
 async function uploadOptimizedImage(
   image: PublishableImageRef,
   filenameBase: string,
@@ -44,31 +115,32 @@ async function uploadOptimizedImage(
   const sourceLabel = image.provider === "unsplash" ? "Unsplash" : "Pexels";
   const caption = `Photo by ${image.photographer} on ${sourceLabel}`;
 
-  if (pluginCreds) {
-    const uploaded = await uploadGoalsAcPluginMedia(pluginCreds, {
-      filename: optimized.filename,
-      mimeType: optimized.mimeType,
-      dataBase64: optimized.buffer.toString("base64"),
-      alt: image.alt,
-      title: image.title,
-      caption,
-    });
-    return { attachmentId: uploaded.id, sourceUrl: uploaded.sourceUrl };
-  }
+  return pushOptimizedMedia(
+    optimized,
+    { alt: image.alt, title: image.title, caption },
+    wpCreds,
+    pluginCreds,
+  );
+}
 
-  if (!wpCreds) {
-    throw new Error("WordPress credentials required for media upload");
-  }
-
-  const uploaded = await uploadWordPressMedia(wpCreds, {
-    buffer: optimized.buffer,
-    filename: optimized.filename,
-    mimeType: optimized.mimeType,
-    alt: image.alt,
-    title: image.title,
-    caption,
+async function uploadFeaturedDataUri(
+  dataUri: string,
+  filenameBase: string,
+  wpCreds: WordPressCredentials | null,
+  pluginCreds: GoalsAcPluginCredentials | null,
+): Promise<{ attachmentId: number; sourceUrl: string } | null> {
+  const decoded = decodeRasterFeaturedDataUri(dataUri);
+  if (!decoded) return null;
+  const optimized = await optimizeImageBuffer(decoded.buffer, filenameBase, {
+    maxWidth: 1920,
+    quality: 85,
   });
-  return { attachmentId: uploaded.id, sourceUrl: uploaded.sourceUrl };
+  return pushOptimizedMedia(
+    optimized,
+    { alt: "Featured image", title: filenameBase },
+    wpCreds,
+    pluginCreds,
+  );
 }
 
 function rewriteMarkdownImageUrls(
@@ -108,11 +180,19 @@ export async function prepareWordPressImages(params: {
   bodyMarkdown: string;
   targetKeyword: string;
   images?: PublishableImageRef[];
+  /** When set to a PNG/JPEG data URI and no stock featured uploaded, decode and upload as media. */
+  featuredImageUrl?: string | null;
   wpCreds?: WordPressCredentials | null;
   pluginCreds?: GoalsAcPluginCredentials | null;
 }): Promise<PreparedWordPressImages> {
   const images = params.images ?? [];
-  if (images.length === 0) {
+  const featuredDataUri =
+    !images.some((img) => img.role === "featured") &&
+    isRasterFeaturedDataUri(params.featuredImageUrl)
+      ? params.featuredImageUrl!.trim()
+      : null;
+
+  if (images.length === 0 && !featuredDataUri) {
     return { bodyMarkdown: params.bodyMarkdown };
   }
 
@@ -146,9 +226,11 @@ export async function prepareWordPressImages(params: {
     }
   };
 
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, uniqueImages.length) }, () => uploadWorker()),
-  );
+  if (uniqueImages.length > 0) {
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, uniqueImages.length) }, () => uploadWorker()),
+    );
+  }
 
   for (const image of images) {
     const hosted = urlMap.get(image.remoteUrl);
@@ -162,11 +244,27 @@ export async function prepareWordPressImages(params: {
   const featured = updatedImages.find((img) => img.role === "featured");
   const featuredUpload = featured ? urlMap.get(featured.remoteUrl) : undefined;
 
+  let featuredImageId = featuredUpload?.attachmentId;
+  let featuredHostedUrl = featuredUpload?.sourceUrl ?? featured?.publishedUrl;
+
+  if (!featuredImageId && featuredDataUri) {
+    const fromDataUri = await uploadFeaturedDataUri(
+      featuredDataUri,
+      `${params.targetKeyword}-featured`,
+      params.wpCreds ?? null,
+      params.pluginCreds ?? null,
+    );
+    if (fromDataUri) {
+      featuredImageId = fromDataUri.attachmentId;
+      featuredHostedUrl = fromDataUri.sourceUrl;
+    }
+  }
+
   return {
     bodyMarkdown,
-    featuredImageId: featuredUpload?.attachmentId,
-    featuredHostedUrl: featuredUpload?.sourceUrl ?? featured?.publishedUrl,
-    updatedImages,
+    featuredImageId,
+    featuredHostedUrl,
+    updatedImages: updatedImages.length > 0 ? updatedImages : undefined,
   };
 }
 

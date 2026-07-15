@@ -47,12 +47,6 @@ export function hasBingCredentials(): boolean {
   );
 }
 
-export function hasLinkedInCredentials(): boolean {
-  return Boolean(
-    process.env.LINKEDIN_CLIENT_ID?.trim() && process.env.LINKEDIN_CLIENT_SECRET?.trim(),
-  );
-}
-
 function isLinkedInManagedByEnv(): boolean {
   return Boolean(
     process.env.LINKEDIN_CLIENT_ID?.trim() || process.env.LINKEDIN_CLIENT_SECRET?.trim(),
@@ -73,35 +67,12 @@ function isBlueskyManagedByEnv(): boolean {
   return Boolean(process.env.BLUESKY_OAUTH_PRIVATE_KEY_JWK?.trim());
 }
 
-export function hasTwitterCredentials(): boolean {
-  return Boolean(
-    process.env.TWITTER_CLIENT_ID?.trim() && process.env.TWITTER_CLIENT_SECRET?.trim(),
-  );
-}
-
-export function hasMetaCredentials(): boolean {
-  return Boolean(process.env.META_APP_ID?.trim() && process.env.META_APP_SECRET?.trim());
-}
-
-export function hasBlueskyCredentials(): boolean {
-  return Boolean(process.env.BLUESKY_OAUTH_PRIVATE_KEY_JWK?.trim());
-}
-
 export function hasUnsplashCredentials(): boolean {
   return Boolean(process.env.UNSPLASH_ACCESS_KEY?.trim());
 }
 
 export function hasPexelsCredentials(): boolean {
   return Boolean(process.env.PEXELS_API_KEY?.trim());
-}
-
-export function hasSocialCredentials(): boolean {
-  return (
-    hasLinkedInCredentials() ||
-    hasTwitterCredentials() ||
-    hasMetaCredentials() ||
-    hasBlueskyCredentials()
-  );
 }
 
 export function hasResendCredentials(): boolean {
@@ -127,22 +98,6 @@ export type IntegrationEnvStatus = {
   unsplash: boolean;
   pexels: boolean;
 };
-
-export function getIntegrationEnvStatus(): IntegrationEnvStatus {
-  return {
-    google: hasGoogleCredentials(),
-    bing: hasBingCredentials(),
-    social: hasSocialCredentials(),
-    linkedin: hasLinkedInCredentials(),
-    twitter: hasTwitterCredentials(),
-    meta: hasMetaCredentials(),
-    bluesky: hasBlueskyCredentials(),
-    email: hasResendCredentials(),
-    stripe: hasStripeCredentials(),
-    unsplash: hasUnsplashCredentials(),
-    pexels: hasPexelsCredentials(),
-  };
-}
 
 // ── Platform integration definitions ─────────────────────────────────────────
 
@@ -612,6 +567,60 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
       ),
     },
+  };
+}
+
+/** Env or admin DB — same presence rules as getPlatformIntegrationStatus. */
+export async function hasLinkedInCredentials(): Promise<boolean> {
+  const status = await getPlatformIntegrationStatus();
+  return status.linkedin.clientId.configured && status.linkedin.clientSecret.configured;
+}
+
+export async function hasTwitterCredentials(): Promise<boolean> {
+  const status = await getPlatformIntegrationStatus();
+  return status.twitter.clientId.configured && status.twitter.clientSecret.configured;
+}
+
+export async function hasMetaCredentials(): Promise<boolean> {
+  const status = await getPlatformIntegrationStatus();
+  return status.meta.appId.configured && status.meta.appSecret.configured;
+}
+
+export async function hasBlueskyCredentials(): Promise<boolean> {
+  const status = await getPlatformIntegrationStatus();
+  return status.bluesky.privateKeyJwk.configured;
+}
+
+export async function hasSocialCredentials(): Promise<boolean> {
+  const status = await getPlatformIntegrationStatus();
+  return (
+    (status.linkedin.clientId.configured && status.linkedin.clientSecret.configured) ||
+    (status.twitter.clientId.configured && status.twitter.clientSecret.configured) ||
+    (status.meta.appId.configured && status.meta.appSecret.configured) ||
+    status.bluesky.privateKeyJwk.configured
+  );
+}
+
+export async function getIntegrationEnvStatus(): Promise<IntegrationEnvStatus> {
+  const status = await getPlatformIntegrationStatus();
+  const linkedin =
+    status.linkedin.clientId.configured && status.linkedin.clientSecret.configured;
+  const twitter =
+    status.twitter.clientId.configured && status.twitter.clientSecret.configured;
+  const meta = status.meta.appId.configured && status.meta.appSecret.configured;
+  const bluesky = status.bluesky.privateKeyJwk.configured;
+  return {
+    google: hasGoogleCredentials(),
+    bing: hasBingCredentials(),
+    social: linkedin || twitter || meta || bluesky,
+    linkedin,
+    twitter,
+    meta,
+    bluesky,
+    email: hasResendCredentials(),
+    stripe: hasStripeCredentials(),
+    unsplash: hasUnsplashCredentials(),
+    pexels: hasPexelsCredentials(),
   };
 }
 

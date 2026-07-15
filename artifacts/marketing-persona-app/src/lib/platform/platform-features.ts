@@ -1,3 +1,7 @@
+import { hasPlatformLinkedInCredentials } from "@workspace/content-engine/support/social/linkedin-platform-credentials";
+import { hasPlatformTwitterCredentials } from "@workspace/content-engine/support/social/twitter-platform-credentials";
+import { hasPlatformMetaCredentials } from "@workspace/content-engine/support/social/meta-platform-credentials";
+import { hasPlatformBlueskyCredentials } from "@workspace/content-engine/support/social/bluesky-platform-credentials";
 import type { PlatformStatus } from "./platform-settings";
 
 export type IntegrationEnvStatus = {
@@ -92,24 +96,21 @@ export function hasBingCredentials(): boolean {
   );
 }
 
-export function hasLinkedInCredentials(): boolean {
-  return Boolean(
-    process.env.LINKEDIN_CLIENT_ID?.trim() && process.env.LINKEDIN_CLIENT_SECRET?.trim(),
-  );
+/** Env or admin DB OAuth app credentials (via resolve*OAuthCredentials). */
+export async function hasLinkedInCredentials(): Promise<boolean> {
+  return hasPlatformLinkedInCredentials();
 }
 
-export function hasTwitterCredentials(): boolean {
-  return Boolean(
-    process.env.TWITTER_CLIENT_ID?.trim() && process.env.TWITTER_CLIENT_SECRET?.trim(),
-  );
+export async function hasTwitterCredentials(): Promise<boolean> {
+  return hasPlatformTwitterCredentials();
 }
 
-export function hasMetaCredentials(): boolean {
-  return Boolean(process.env.META_APP_ID?.trim() && process.env.META_APP_SECRET?.trim());
+export async function hasMetaCredentials(): Promise<boolean> {
+  return hasPlatformMetaCredentials();
 }
 
-export function hasBlueskyCredentials(): boolean {
-  return Boolean(process.env.BLUESKY_OAUTH_PRIVATE_KEY_JWK?.trim());
+export async function hasBlueskyCredentials(): Promise<boolean> {
+  return hasPlatformBlueskyCredentials();
 }
 
 export function hasUnsplashCredentials(): boolean {
@@ -120,13 +121,14 @@ export function hasPexelsCredentials(): boolean {
   return Boolean(process.env.PEXELS_API_KEY?.trim());
 }
 
-export function hasSocialCredentials(): boolean {
-  return (
-    hasLinkedInCredentials() ||
-    hasTwitterCredentials() ||
-    hasMetaCredentials() ||
-    hasBlueskyCredentials()
-  );
+export async function hasSocialCredentials(): Promise<boolean> {
+  const [linkedin, twitter, meta, bluesky] = await Promise.all([
+    hasLinkedInCredentials(),
+    hasTwitterCredentials(),
+    hasMetaCredentials(),
+    hasBlueskyCredentials(),
+  ]);
+  return linkedin || twitter || meta || bluesky;
 }
 
 export function hasResendCredentials(): boolean {
@@ -137,15 +139,21 @@ export function hasStripeCredentials(): boolean {
   return Boolean(process.env.STRIPE_SECRET_KEY?.trim());
 }
 
-export function getIntegrationEnvStatus(): IntegrationEnvStatus {
+export async function getIntegrationEnvStatus(): Promise<IntegrationEnvStatus> {
+  const [linkedin, twitter, meta, bluesky] = await Promise.all([
+    hasLinkedInCredentials(),
+    hasTwitterCredentials(),
+    hasMetaCredentials(),
+    hasBlueskyCredentials(),
+  ]);
   return {
     google: hasGoogleCredentials(),
     bing: hasBingCredentials(),
-    social: hasSocialCredentials(),
-    linkedin: hasLinkedInCredentials(),
-    twitter: hasTwitterCredentials(),
-    meta: hasMetaCredentials(),
-    bluesky: hasBlueskyCredentials(),
+    social: linkedin || twitter || meta || bluesky,
+    linkedin,
+    twitter,
+    meta,
+    bluesky,
     email: hasResendCredentials(),
     stripe: hasStripeCredentials(),
     unsplash: hasUnsplashCredentials(),
@@ -161,8 +169,8 @@ export function bingWebmasterAvailable(settings: PlatformStatus): boolean {
   return settings.bingWebmasterEnabled && hasBingCredentials();
 }
 
-export function socialPublishingAvailable(settings: PlatformStatus): boolean {
-  return settings.socialPublishingEnabled && hasSocialCredentials();
+export async function socialPublishingAvailable(settings: PlatformStatus): Promise<boolean> {
+  return settings.socialPublishingEnabled && (await hasSocialCredentials());
 }
 
 export function emailDeliveryAvailable(settings: PlatformStatus): boolean {
