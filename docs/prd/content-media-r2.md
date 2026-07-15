@@ -47,9 +47,11 @@ As a publisher, when I generate longform without stock featured, I get an HTTPS 
 - Upload failure → keep data URI; log warn; publish continues with existing CMS data-URI paths
 - Oversized payload → reuse existing 5MB data-URI decode cap
 
-## Ops (manual)
+## Ops (manual / done 2026-07-16)
 
-1. `npx wrangler r2 bucket create goals-ac-content-media` (+ staging)
-2. Enable public access (custom domain or r2.dev)
-3. Set `CONTENT_MEDIA_PUBLIC_BASE_URL=https://…`
+1. ~~`npx wrangler r2 bucket create goals-ac-content-media` (+ staging)~~ **done**
+2. ~~Enable public access (r2.dev)~~ **done**
+   - prod: `https://pub-b86c42258b4e40ce979e65390f79588c.r2.dev`
+   - staging: `https://pub-2b41b9b8da9b4805a574284ef3c146ae.r2.dev`
+3. ~~Set `CONTENT_MEDIA_PUBLIC_BASE_URL` in wrangler vars~~ **done** (r2.dev; prefer custom domain for production later)
 4. Deploy Workers with new binding

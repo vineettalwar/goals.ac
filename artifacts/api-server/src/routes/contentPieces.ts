@@ -2097,11 +2097,7 @@ router.post(
         creds.webflow.bodyFieldSlug,
         piece.title,
         piece.bodyMarkdown,
-        {
-          featuredImageUrl: (
-            piece.pieceMetadata as { featuredImageUrl?: string } | null
-          )?.featuredImageUrl,
-        },
+        { featuredImageUrl: piece.pieceMetadata?.featuredImageUrl },
       );
 
       const [updated] = await db

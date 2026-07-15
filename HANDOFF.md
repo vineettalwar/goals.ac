@@ -24,9 +24,10 @@
 | WP featured | data-URI featured (existing) |
 | Bluesky durable JWK | `JoseKey.fromImportable` from env/DB only; no ephemeral mint — missing key throws |
 | Shopify featured | Admin API + plugin: https + PNG/JPEG data URI via `stagedUploadsCreate` |
-| Content-media R2 | Code + bindings + docs; **ops:** create public buckets + `CONTENT_MEDIA_PUBLIC_BASE_URL` |
+| Joomla featured | HTTPS → REST/plugin `images` (`image_intro` + `image_fulltext`); non-https skipped |
+| Content-media R2 | Buckets + r2.dev public URLs provisioned; vars wired |
 
-**In flight:** none from this list (content-media awaits CF bucket provisioning).
+**In flight:** none from this list.
 
 ### Content-media R2 (2026-07-16)
 
@@ -35,7 +36,8 @@ Public host for raster featured data URIs → HTTPS (`docs/prd/content-media-r2.
 - Lib: `@workspace/media` `hostRasterFeaturedDataUri` / R2 binding + optional S3 API
 - Enrich + CMS/social/Notion publish fallback
 - Wrangler: `CONTENT_MEDIA_R2` on marketing OpenNext + jobs worker
-- **You must:** `wrangler r2 bucket create goals-ac-content-media` (+ staging), enable public access, set `CONTENT_MEDIA_PUBLIC_BASE_URL`
+- **Buckets created:** `goals-ac-content-media` → `https://pub-b86c42258b4e40ce979e65390f79588c.r2.dev`; staging → `https://pub-2b41b9b8da9b4805a574284ef3c146ae.r2.dev`
+- Public r2.dev enabled; `CONTENT_MEDIA_PUBLIC_BASE_URL` set in wrangler vars (swap to custom domain later for prod cache/WAF)
 
 ---
 

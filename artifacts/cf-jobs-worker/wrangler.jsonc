@@ -49,6 +49,7 @@
     ]
   },
   "vars": {
-    "DB_DIALECT": "d1"
+    "DB_DIALECT": "d1",
+    "CONTENT_MEDIA_PUBLIC_BASE_URL": "https://pub-b86c42258b4e40ce979e65390f79588c.r2.dev"
   }
 }
