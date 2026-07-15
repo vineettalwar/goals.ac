@@ -4,6 +4,7 @@ import {
   CheckCircle2,
   ExternalLink,
   FileText,
+  Link2,
   ScanSearch,
   XCircle,
   Zap,
@@ -111,6 +112,8 @@ export function AutopilotActivityPanel({
   const recentPublishes = commandCenter.recentPublishes ?? [];
   const publishOk = recentPublishes.filter((row) => row.status === "published").length;
   const publishFail = recentPublishes.filter((row) => row.status === "failed").length;
+  const linkSuggestionCount = commandCenter.internalLinkSuggestions ?? 0;
+  const hasLinkMap = commandCenter.internalLinkCoverage != null;
 
   return (
     <div className="paper-card mb-8 p-6">
@@ -126,12 +129,34 @@ export function AutopilotActivityPanel({
                 ? "Autopilot is off — enable below"
                 : "Autopilot is off — enable on Publishing"}
           </p>
-          {articleUsage ? (
-            <p className="mt-1.5 inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
-              <FileText className="mr-1.5 h-3 w-3 shrink-0" />
-              {formatArticleUsageLabel(articleUsage)}
-            </p>
-          ) : null}
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            {articleUsage ? (
+              <p className="inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                <FileText className="mr-1.5 h-3 w-3 shrink-0" />
+                {formatArticleUsageLabel(articleUsage)}
+              </p>
+            ) : null}
+            {linkSuggestionCount > 0 ? (
+              <DashLink
+                renderLink={renderLink}
+                href="/internal-links"
+                className="inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+              >
+                <Link2 className="mr-1.5 h-3 w-3 shrink-0" />
+                {linkSuggestionCount} link suggestion
+                {linkSuggestionCount === 1 ? "" : "s"}
+              </DashLink>
+            ) : !hasLinkMap ? (
+              <DashLink
+                renderLink={renderLink}
+                href="/internal-links"
+                className="inline-flex items-center rounded-md border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <Link2 className="mr-1.5 h-3 w-3 shrink-0" />
+                No link map yet
+              </DashLink>
+            ) : null}
+          </div>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <DashLink
