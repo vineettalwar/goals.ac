@@ -16,6 +16,10 @@ import {
   getCmsSetupSteps,
 } from "./connect-setup-steps";
 
+// ---------------------------------------------------------------------------
+// Shared primitives (also used by esp-connect-dialogs)
+// ---------------------------------------------------------------------------
+
 function isValidUrl(value: string): boolean {
   try {
     const url = new URL(value);
@@ -25,7 +29,7 @@ function isValidUrl(value: string): boolean {
   }
 }
 
-const inputClassName =
+export const inputClassName =
   "h-10 w-full rounded-lg border border-border bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-primary/20";
 
 type SimpleDialogProps = {
@@ -37,7 +41,7 @@ type SimpleDialogProps = {
   children: ReactNode;
 };
 
-function SimpleDialog({ open, title, titleId, onClose, loading, children }: SimpleDialogProps) {
+export function SimpleDialog({ open, title, titleId, onClose, loading, children }: SimpleDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -85,732 +89,197 @@ function SimpleDialog({ open, title, titleId, onClose, loading, children }: Simp
   );
 }
 
+// ---------------------------------------------------------------------------
+// Schema-driven connect dialog
+// ---------------------------------------------------------------------------
+
+export type FieldDef = {
+  key: string;
+  label: string;
+  type: "url" | "text" | "password" | "number" | "select";
+  placeholder?: string;
+  hint?: string;
+  autoComplete?: string;
+  required?: boolean;
+  defaultValue?: string;
+  options?: { value: string; label: string }[];
+  visibleWhen?: (values: Record<string, string>) => boolean;
+};
+
+type ModeDef = {
+  key: string;
+  label: string;
+  fields: FieldDef[];
+};
+
+export type ConnectDialogConfig<T = unknown> = {
+  id: string;
+  title: string;
+  setupSteps: string[];
+  modes?: ModeDef[];
+  defaultMode?: string;
+  sharedFields?: FieldDef[];
+  fields?: FieldDef[];
+  urlFields?: string[];
+  buildPayload: (values: Record<string, string>, mode?: string) => T;
+};
+
 type ConnectDialogBaseProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   saving?: boolean;
 };
 
-
-export function WordPressConnectDialog({
-  open,
-  onOpenChange,
-  saving = false,
-  onSave,
-}: ConnectDialogBaseProps & {
-  onSave: (payload: WordPressConnectPayload) => void;
-}) {
-  const [connectionType, setConnectionType] = useState<"api" | "plugin">("api");
-  const [siteUrl, setSiteUrl] = useState("");
-  const [username, setUsername] = useState("");
-  const [appPassword, setAppPassword] = useState("");
-  const [siteKey, setSiteKey] = useState("");
-  const [siteUrlError, setSiteUrlError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-
-  function resetForm() {
-    setConnectionType("api");
-    setSiteUrl("");
-    setUsername("");
-    setAppPassword("");
-    setSiteKey("");
-    setSiteUrlError(null);
-    setFormError(null);
-  }
-
-  useEffect(() => {
-    if (!open) resetForm();
-  }, [open]);
-
-  function close() {
-    if (saving) return;
-    resetForm();
-    onOpenChange(false);
-  }
-
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    const trimmedSiteUrl = siteUrl.trim();
-    let valid = true;
-
-    if (!trimmedSiteUrl) {
-      setSiteUrlError("Site URL is required");
-      valid = false;
-    } else if (!isValidUrl(trimmedSiteUrl)) {
-      setSiteUrlError("Enter a valid URL");
-      valid = false;
-    } else {
-      setSiteUrlError(null);
-    }
-
-    if (connectionType === "api") {
-      if (!username.trim() || !appPassword.trim()) {
-        setFormError("Username and application password are required");
-        valid = false;
-      }
-    } else if (!siteKey.trim()) {
-      setFormError("Site key is required");
-      valid = false;
-    }
-
-    if (!valid) return;
-
-    setFormError(null);
-    if (connectionType === "api") {
-      onSave({
-        connectionType: "api",
-        siteUrl: trimmedSiteUrl,
-        username: username.trim(),
-        appPassword: appPassword.trim(),
-      });
-    } else {
-      onSave({
-        connectionType: "plugin",
-        siteUrl: trimmedSiteUrl,
-        siteKey: siteKey.trim(),
-      });
-    }
-  }
-
-  return (
-    <SimpleDialog
-      open={open}
-      title="Connect WordPress"
-      titleId="wordpress-connect-title"
-      onClose={close}
-      loading={saving}
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.wordpress} />
-        <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
-          {(["api", "plugin"] as const).map((method) => (
-            <button
-              key={method}
-              type="button"
-              onClick={() => setConnectionType(method)}
-              className={cn(
-                "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                connectionType === method
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
-              )}
-            >
-              {method === "api" ? "REST API" : "Plugin"}
-            </button>
-          ))}
-        </div>
-
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Site URL</span>
-          <input
-            type="url"
-            value={siteUrl}
-            onChange={(event) => setSiteUrl(event.target.value)}
-            placeholder="https://example.com"
-            className={inputClassName}
-            autoComplete="url"
-          />
-          {siteUrlError ? <p className="mt-1 text-xs text-red-700">{siteUrlError}</p> : null}
-        </label>
-
-        {connectionType === "api" ? (
-          <>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Username</span>
-              <input
-                type="text"
-                value={username}
-                onChange={(event) => setUsername(event.target.value)}
-                placeholder="wordpress-user"
-                className={inputClassName}
-                autoComplete="username"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Application password</span>
-              <input
-                type="password"
-                value={appPassword}
-                onChange={(event) => setAppPassword(event.target.value)}
-                className={inputClassName}
-                autoComplete="new-password"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Create one under Users → Profile → Application Passwords.
-              </p>
-            </label>
-          </>
-        ) : (
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Site key</span>
-            <input
-              type="password"
-              value={siteKey}
-              onChange={(event) => setSiteKey(event.target.value)}
-              className={inputClassName}
-              autoComplete="off"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Copy the site key from the goals.ac WordPress plugin settings.
-            </p>
-          </label>
-        )}
-
-        {formError ? <p className="text-sm text-red-700">{formError}</p> : null}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={close}
-            disabled={saving}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Connecting…" : "Connect"}
-          </button>
-        </div>
-      </form>
-    </SimpleDialog>
-  );
+function getVisibleFields(fields: FieldDef[], values: Record<string, string>): FieldDef[] {
+  return fields.filter((f) => !f.visibleWhen || f.visibleWhen(values));
 }
 
-export function GhostConnectDialog({
-  open,
-  onOpenChange,
-  saving = false,
-  onSave,
-}: ConnectDialogBaseProps & {
-  onSave: (payload: GhostConnectPayload) => void;
-}) {
-  const [apiUrl, setApiUrl] = useState("");
-  const [adminApiKey, setAdminApiKey] = useState("");
-  const [apiUrlError, setApiUrlError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-
-  function resetForm() {
-    setApiUrl("");
-    setAdminApiKey("");
-    setApiUrlError(null);
-    setFormError(null);
+function getDefaults(config: ConnectDialogConfig): Record<string, string> {
+  const defaults: Record<string, string> = {};
+  const allFields = [
+    ...(config.fields ?? []),
+    ...(config.modes?.flatMap((m) => m.fields) ?? []),
+    ...(config.sharedFields ?? []),
+  ];
+  for (const f of allFields) {
+    defaults[f.key] = f.defaultValue ?? "";
   }
-
-  useEffect(() => {
-    if (!open) resetForm();
-  }, [open]);
-
-  function close() {
-    if (saving) return;
-    onOpenChange(false);
-  }
-
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    const trimmedApiUrl = apiUrl.trim();
-    let valid = true;
-
-    if (!trimmedApiUrl) {
-      setApiUrlError("Ghost Admin API URL is required");
-      valid = false;
-    } else if (!isValidUrl(trimmedApiUrl)) {
-      setApiUrlError("Enter a valid URL");
-      valid = false;
-    } else {
-      setApiUrlError(null);
-    }
-
-    if (!adminApiKey.trim()) {
-      setFormError("Admin API key is required");
-      valid = false;
-    }
-
-    if (!valid) return;
-
-    setFormError(null);
-    onSave({
-      apiUrl: trimmedApiUrl,
-      adminApiKey: adminApiKey.trim(),
-    });
-  }
-
-  return (
-    <SimpleDialog
-      open={open}
-      title="Connect Ghost"
-      titleId="ghost-connect-title"
-      onClose={close}
-      loading={saving}
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.ghost} />
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Admin API URL</span>
-          <input
-            type="url"
-            value={apiUrl}
-            onChange={(event) => setApiUrl(event.target.value)}
-            placeholder="https://example.com/ghost/api/admin"
-            className={inputClassName}
-            autoComplete="url"
-          />
-          {apiUrlError ? <p className="mt-1 text-xs text-red-700">{apiUrlError}</p> : null}
-        </label>
-
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Admin API key</span>
-          <input
-            type="password"
-            value={adminApiKey}
-            onChange={(event) => setAdminApiKey(event.target.value)}
-            className={inputClassName}
-            autoComplete="off"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Create an Admin API key in Ghost → Settings → Integrations.
-          </p>
-        </label>
-
-        {formError ? <p className="text-sm text-red-700">{formError}</p> : null}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={close}
-            disabled={saving}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Connecting…" : "Connect"}
-          </button>
-        </div>
-      </form>
-    </SimpleDialog>
-  );
+  return defaults;
 }
 
-export function DrupalConnectDialog({
+export function SchemaConnectDialog<T>({
+  config,
   open,
   onOpenChange,
   saving = false,
   onSave,
 }: ConnectDialogBaseProps & {
-  onSave: (payload: DrupalConnectPayload) => void;
+  config: ConnectDialogConfig<T>;
+  onSave: (payload: T) => void;
 }) {
-  const [connectionType, setConnectionType] = useState<"api" | "plugin">("plugin");
-  const [siteUrl, setSiteUrl] = useState("");
-  const [siteKey, setSiteKey] = useState("");
-  const [authType, setAuthType] = useState<"basic" | "bearer">("basic");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [accessToken, setAccessToken] = useState("");
-  const [contentType, setContentType] = useState("article");
-  const [siteUrlError, setSiteUrlError] = useState<string | null>(null);
+  const [values, setValues] = useState<Record<string, string>>(() => getDefaults(config));
+  const [mode, setMode] = useState(config.defaultMode ?? config.modes?.[0]?.key ?? "");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
-  function resetForm() {
-    setConnectionType("plugin");
-    setSiteUrl("");
-    setSiteKey("");
-    setAuthType("basic");
-    setUsername("");
-    setPassword("");
-    setAccessToken("");
-    setContentType("article");
-    setSiteUrlError(null);
-    setFormError(null);
-  }
-
   useEffect(() => {
-    if (!open) resetForm();
+    if (!open) {
+      setValues(getDefaults(config));
+      setMode(config.defaultMode ?? config.modes?.[0]?.key ?? "");
+      setFieldErrors({});
+      setFormError(null);
+    }
   }, [open]);
 
   function close() {
     if (saving) return;
-    resetForm();
     onOpenChange(false);
   }
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    const trimmedSiteUrl = siteUrl.trim();
-    let valid = true;
+    const activeFields = getActiveFields();
+    const visible = getVisibleFields(activeFields, values);
+    const errors: Record<string, string> = {};
+    const urlSet = new Set(config.urlFields ?? []);
 
-    if (!trimmedSiteUrl) {
-      setSiteUrlError("Site URL is required");
-      valid = false;
-    } else if (!isValidUrl(trimmedSiteUrl)) {
-      setSiteUrlError("Enter a valid URL");
-      valid = false;
-    } else {
-      setSiteUrlError(null);
+    for (const f of visible) {
+      const val = values[f.key]?.trim() ?? "";
+      const required = f.required !== false;
+      if (required && !val) {
+        errors[f.key] = `${f.label} is required`;
+      } else if (val && urlSet.has(f.key) && !isValidUrl(val)) {
+        errors[f.key] = "Enter a valid URL";
+      }
     }
 
-    if (connectionType === "plugin") {
-      if (!siteKey.trim()) {
-        setFormError("Site key is required");
-        valid = false;
-      }
-    } else if (authType === "bearer") {
-      if (!accessToken.trim()) {
-        setFormError("Access token is required");
-        valid = false;
-      }
-    } else if (!username.trim() || !password.trim()) {
-      setFormError("Username and password are required");
-      valid = false;
-    }
-
-    if (!valid) return;
-
-    setFormError(null);
-    if (connectionType === "plugin") {
-      onSave({
-        connectionType: "plugin",
-        siteUrl: trimmedSiteUrl,
-        siteKey: siteKey.trim(),
-      });
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      setFormError(null);
       return;
     }
 
-    const payload: DrupalConnectPayload = {
-      connectionType: "api",
-      siteUrl: trimmedSiteUrl,
-      authType,
-    };
-    if (authType === "bearer") {
-      payload.accessToken = accessToken.trim();
-    } else {
-      payload.username = username.trim();
-      payload.password = password.trim();
-    }
-    const trimmedContentType = contentType.trim();
-    if (trimmedContentType) {
-      payload.contentType = trimmedContentType;
-    }
-    onSave(payload);
+    setFieldErrors({});
+    setFormError(null);
+    onSave(config.buildPayload(values, mode || undefined));
   }
 
+  function getActiveFields(): FieldDef[] {
+    if (config.modes) {
+      const modeFields = config.modes.find((m) => m.key === mode)?.fields ?? [];
+      return [...modeFields, ...(config.sharedFields ?? [])];
+    }
+    return config.fields ?? [];
+  }
+
+  function setValue(key: string, val: string) {
+    setValues((prev) => ({ ...prev, [key]: val }));
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  const activeFields = getActiveFields();
+  const visibleFields = getVisibleFields(activeFields, values);
+
   return (
-    <SimpleDialog
-      open={open}
-      title="Connect Drupal"
-      titleId="drupal-connect-title"
-      onClose={close}
-      loading={saving}
-    >
+    <SimpleDialog open={open} title={config.title} titleId={`${config.id}-connect-title`} onClose={close} loading={saving}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.drupal} />
-        <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
-          {(["plugin", "api"] as const).map((method) => (
-            <button
-              key={method}
-              type="button"
-              onClick={() => setConnectionType(method)}
-              className={cn(
-                "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                connectionType === method
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
-              )}
-            >
-              {method === "plugin" ? "Plugin" : "JSON:API"}
-            </button>
-          ))}
-        </div>
+        <ConnectSetupSteps steps={config.setupSteps} />
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Site URL</span>
-          <input
-            type="url"
-            value={siteUrl}
-            onChange={(event) => setSiteUrl(event.target.value)}
-            placeholder="https://example.com"
-            className={inputClassName}
-            autoComplete="url"
-          />
-          {siteUrlError ? <p className="mt-1 text-xs text-red-700">{siteUrlError}</p> : null}
-        </label>
+        {config.modes && config.modes.length > 1 ? (
+          <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
+            {config.modes.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                onClick={() => setMode(m.key)}
+                className={cn(
+                  "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  mode === m.key
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
+                )}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
-        {connectionType === "plugin" ? (
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Site key</span>
-            <input
-              type="password"
-              value={siteKey}
-              onChange={(event) => setSiteKey(event.target.value)}
-              className={inputClassName}
-              autoComplete="off"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Copy the site key from the goals.ac Drupal module settings.
-            </p>
-          </label>
-        ) : (
-          <>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Auth type</span>
+        {visibleFields.map((f) => (
+          <label key={f.key} className="block text-sm">
+            <span className="mb-1 block font-medium">{f.label}</span>
+            {f.type === "select" ? (
               <select
-                value={authType}
-                onChange={(event) => setAuthType(event.target.value as "basic" | "bearer")}
+                value={values[f.key] ?? ""}
+                onChange={(e) => setValue(f.key, e.target.value)}
                 className={inputClassName}
               >
-                <option value="basic">Basic auth</option>
-                <option value="bearer">Bearer token</option>
+                {f.options?.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
+                ))}
               </select>
-            </label>
-
-            {authType === "basic" ? (
-              <>
-                <label className="block text-sm">
-                  <span className="mb-1 block font-medium">Username</span>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(event) => setUsername(event.target.value)}
-                    className={inputClassName}
-                    autoComplete="username"
-                  />
-                </label>
-                <label className="block text-sm">
-                  <span className="mb-1 block font-medium">Password</span>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className={inputClassName}
-                    autoComplete="current-password"
-                  />
-                </label>
-              </>
             ) : (
-              <label className="block text-sm">
-                <span className="mb-1 block font-medium">Access token</span>
-                <input
-                  type="password"
-                  value={accessToken}
-                  onChange={(event) => setAccessToken(event.target.value)}
-                  className={inputClassName}
-                  autoComplete="off"
-                />
-              </label>
+              <input
+                type={f.type === "number" ? "number" : f.type === "url" ? "url" : f.type === "password" ? "password" : "text"}
+                value={values[f.key] ?? ""}
+                onChange={(e) => setValue(f.key, e.target.value)}
+                placeholder={f.placeholder}
+                className={inputClassName}
+                autoComplete={f.autoComplete ?? "off"}
+                {...(f.type === "number" ? { min: 1 } : {})}
+              />
             )}
-
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Content type machine name</span>
-              <input
-                type="text"
-                value={contentType}
-                onChange={(event) => setContentType(event.target.value)}
-                placeholder="article"
-                className={inputClassName}
-              />
-            </label>
-          </>
-        )}
-
-        {formError ? <p className="text-sm text-red-700">{formError}</p> : null}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={close}
-            disabled={saving}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Connecting…" : "Connect"}
-          </button>
-        </div>
-      </form>
-    </SimpleDialog>
-  );
-}
-
-export function JoomlaConnectDialog({
-  open,
-  onOpenChange,
-  saving = false,
-  onSave,
-}: ConnectDialogBaseProps & {
-  onSave: (payload: JoomlaConnectPayload) => void;
-}) {
-  const [connectionType, setConnectionType] = useState<"api" | "plugin">("plugin");
-  const [siteUrl, setSiteUrl] = useState("");
-  const [siteKey, setSiteKey] = useState("");
-  const [apiToken, setApiToken] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [siteUrlError, setSiteUrlError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-
-  function resetForm() {
-    setConnectionType("plugin");
-    setSiteUrl("");
-    setSiteKey("");
-    setApiToken("");
-    setCategoryId("");
-    setSiteUrlError(null);
-    setFormError(null);
-  }
-
-  useEffect(() => {
-    if (!open) resetForm();
-  }, [open]);
-
-  function close() {
-    if (saving) return;
-    resetForm();
-    onOpenChange(false);
-  }
-
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    const trimmedSiteUrl = siteUrl.trim();
-    let valid = true;
-
-    if (!trimmedSiteUrl) {
-      setSiteUrlError("Site URL is required");
-      valid = false;
-    } else if (!isValidUrl(trimmedSiteUrl)) {
-      setSiteUrlError("Enter a valid URL");
-      valid = false;
-    } else {
-      setSiteUrlError(null);
-    }
-
-    if (connectionType === "plugin") {
-      if (!siteKey.trim()) {
-        setFormError("Site key is required");
-        valid = false;
-      }
-    } else if (!apiToken.trim()) {
-      setFormError("API token is required");
-      valid = false;
-    }
-
-    if (!valid) return;
-
-    setFormError(null);
-    if (connectionType === "plugin") {
-      onSave({
-        connectionType: "plugin",
-        siteUrl: trimmedSiteUrl,
-        siteKey: siteKey.trim(),
-      });
-      return;
-    }
-
-    const payload: JoomlaConnectPayload = {
-      connectionType: "api",
-      siteUrl: trimmedSiteUrl,
-      apiToken: apiToken.trim(),
-    };
-    const trimmedCategoryId = categoryId.trim();
-    if (trimmedCategoryId) {
-      payload.categoryId = Number(trimmedCategoryId);
-    }
-    onSave(payload);
-  }
-
-  return (
-    <SimpleDialog
-      open={open}
-      title="Connect Joomla"
-      titleId="joomla-connect-title"
-      onClose={close}
-      loading={saving}
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.joomla} />
-        <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
-          {(["plugin", "api"] as const).map((method) => (
-            <button
-              key={method}
-              type="button"
-              onClick={() => setConnectionType(method)}
-              className={cn(
-                "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                connectionType === method
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
-              )}
-            >
-              {method === "plugin" ? "Plugin" : "Web Services API"}
-            </button>
-          ))}
-        </div>
-
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Site URL</span>
-          <input
-            type="url"
-            value={siteUrl}
-            onChange={(event) => setSiteUrl(event.target.value)}
-            placeholder="https://example.com"
-            className={inputClassName}
-            autoComplete="url"
-          />
-          {siteUrlError ? <p className="mt-1 text-xs text-red-700">{siteUrlError}</p> : null}
-        </label>
-
-        {connectionType === "plugin" ? (
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Site key</span>
-            <input
-              type="password"
-              value={siteKey}
-              onChange={(event) => setSiteKey(event.target.value)}
-              className={inputClassName}
-              autoComplete="off"
-            />
-            <p className="mt-1 text-xs text-muted-foreground">
-              Copy the site key from the goals.ac Joomla plugin settings.
-            </p>
+            {fieldErrors[f.key] ? <p className="mt-1 text-xs text-red-700">{fieldErrors[f.key]}</p> : null}
+            {f.hint ? <p className="mt-1 text-xs text-muted-foreground">{f.hint}</p> : null}
           </label>
-        ) : (
-          <>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">API token</span>
-              <input
-                type="password"
-                value={apiToken}
-                onChange={(event) => setApiToken(event.target.value)}
-                className={inputClassName}
-                autoComplete="off"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Create a token under System → Web Services → API Tokens.
-              </p>
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Category ID (optional)</span>
-              <input
-                type="number"
-                value={categoryId}
-                onChange={(event) => setCategoryId(event.target.value)}
-                placeholder="2"
-                className={inputClassName}
-                min={1}
-              />
-            </label>
-          </>
-        )}
+        ))}
 
         {formError ? <p className="text-sm text-red-700">{formError}</p> : null}
 
@@ -836,443 +305,239 @@ export function JoomlaConnectDialog({
   );
 }
 
-export function NotionConnectDialog({
-  open,
-  onOpenChange,
-  saving = false,
-  onSave,
-}: ConnectDialogBaseProps & {
-  onSave: (payload: NotionConnectPayload) => void;
-}) {
-  const [integrationToken, setIntegrationToken] = useState("");
-  const [databaseId, setDatabaseId] = useState("");
-  const [formError, setFormError] = useState<string | null>(null);
+// ---------------------------------------------------------------------------
+// CMS platform configs
+// ---------------------------------------------------------------------------
 
-  function resetForm() {
-    setIntegrationToken("");
-    setDatabaseId("");
-    setFormError(null);
-  }
-
-  useEffect(() => {
-    if (!open) resetForm();
-  }, [open]);
-
-  function close() {
-    if (saving) return;
-    onOpenChange(false);
-  }
-
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!integrationToken.trim() || !databaseId.trim()) {
-      setFormError("Integration token and database ID are required");
-      return;
+const wordpressConfig: ConnectDialogConfig<WordPressConnectPayload> = {
+  id: "wordpress",
+  title: "Connect WordPress",
+  setupSteps: CMS_CONNECT_STEPS.wordpress,
+  defaultMode: "api",
+  urlFields: ["siteUrl"],
+  modes: [
+    {
+      key: "api",
+      label: "REST API",
+      fields: [
+        { key: "siteUrl", label: "Site URL", type: "url", placeholder: "https://example.com", autoComplete: "url" },
+        { key: "username", label: "Username", type: "text", placeholder: "wordpress-user", autoComplete: "username" },
+        { key: "appPassword", label: "Application password", type: "password", autoComplete: "new-password", hint: "Create one under Users → Profile → Application Passwords." },
+      ],
+    },
+    {
+      key: "plugin",
+      label: "Plugin",
+      fields: [
+        { key: "siteUrl", label: "Site URL", type: "url", placeholder: "https://example.com", autoComplete: "url" },
+        { key: "siteKey", label: "Site key", type: "password", hint: "Copy the site key from the goals.ac WordPress plugin settings." },
+      ],
+    },
+  ],
+  buildPayload(v, mode) {
+    const siteUrl = v.siteUrl.trim();
+    if (mode === "plugin") {
+      return { connectionType: "plugin", siteUrl, siteKey: v.siteKey.trim() } as WordPressConnectPayload;
     }
+    return { connectionType: "api", siteUrl, username: v.username.trim(), appPassword: v.appPassword.trim() } as WordPressConnectPayload;
+  },
+};
 
-    setFormError(null);
-    onSave({
-      integrationToken: integrationToken.trim(),
-      databaseId: databaseId.trim(),
-    });
-  }
+const ghostConfig: ConnectDialogConfig<GhostConnectPayload> = {
+  id: "ghost",
+  title: "Connect Ghost",
+  setupSteps: CMS_CONNECT_STEPS.ghost,
+  urlFields: ["apiUrl"],
+  fields: [
+    { key: "apiUrl", label: "Admin API URL", type: "url", placeholder: "https://example.com/ghost/api/admin", autoComplete: "url" },
+    { key: "adminApiKey", label: "Admin API key", type: "password", hint: "Create an Admin API key in Ghost → Settings → Integrations." },
+  ],
+  buildPayload(v) {
+    return { apiUrl: v.apiUrl.trim(), adminApiKey: v.adminApiKey.trim() };
+  },
+};
 
-  return (
-    <SimpleDialog
-      open={open}
-      title="Connect Notion"
-      titleId="notion-connect-title"
-      onClose={close}
-      loading={saving}
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.notion} />
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Integration token</span>
-          <input
-            type="password"
-            value={integrationToken}
-            onChange={(event) => setIntegrationToken(event.target.value)}
-            placeholder="secret_..."
-            className={inputClassName}
-            autoComplete="off"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Create an integration at notion.so/my-integrations and share your database with it.
-          </p>
-        </label>
-
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Database ID</span>
-          <input
-            type="text"
-            value={databaseId}
-            onChange={(event) => setDatabaseId(event.target.value)}
-            placeholder="32-character hex ID from your database URL"
-            className={inputClassName}
-            autoComplete="off"
-          />
-        </label>
-
-        {formError ? <p className="text-sm text-red-700">{formError}</p> : null}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={close}
-            disabled={saving}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Connecting…" : "Connect"}
-          </button>
-        </div>
-      </form>
-    </SimpleDialog>
-  );
-}
-
-export function WebflowConnectDialog({
-  open,
-  onOpenChange,
-  saving = false,
-  onSave,
-}: ConnectDialogBaseProps & {
-  onSave: (payload: WebflowConnectPayload) => void;
-}) {
-  const [apiToken, setApiToken] = useState("");
-  const [collectionId, setCollectionId] = useState("");
-  const [bodyFieldSlug, setBodyFieldSlug] = useState("post-body");
-  const [formError, setFormError] = useState<string | null>(null);
-
-  function resetForm() {
-    setApiToken("");
-    setCollectionId("");
-    setBodyFieldSlug("post-body");
-    setFormError(null);
-  }
-
-  useEffect(() => {
-    if (!open) resetForm();
-  }, [open]);
-
-  function close() {
-    if (saving) return;
-    onOpenChange(false);
-  }
-
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    if (!apiToken.trim() || !collectionId.trim()) {
-      setFormError("API token and collection ID are required");
-      return;
+const drupalConfig: ConnectDialogConfig<DrupalConnectPayload> = {
+  id: "drupal",
+  title: "Connect Drupal",
+  setupSteps: CMS_CONNECT_STEPS.drupal,
+  defaultMode: "plugin",
+  urlFields: ["siteUrl"],
+  modes: [
+    {
+      key: "plugin",
+      label: "Plugin",
+      fields: [
+        { key: "siteUrl", label: "Site URL", type: "url", placeholder: "https://example.com", autoComplete: "url" },
+        { key: "siteKey", label: "Site key", type: "password", hint: "Copy the site key from the goals.ac Drupal module settings." },
+      ],
+    },
+    {
+      key: "api",
+      label: "JSON:API",
+      fields: [
+        { key: "siteUrl", label: "Site URL", type: "url", placeholder: "https://example.com", autoComplete: "url" },
+        { key: "authType", label: "Auth type", type: "select", defaultValue: "basic", options: [{ value: "basic", label: "Basic auth" }, { value: "bearer", label: "Bearer token" }] },
+        { key: "username", label: "Username", type: "text", autoComplete: "username", visibleWhen: (v) => v.authType !== "bearer" },
+        { key: "password", label: "Password", type: "password", autoComplete: "current-password", visibleWhen: (v) => v.authType !== "bearer" },
+        { key: "accessToken", label: "Access token", type: "password", visibleWhen: (v) => v.authType === "bearer" },
+        { key: "contentType", label: "Content type machine name", type: "text", placeholder: "article", required: false, defaultValue: "article" },
+      ],
+    },
+  ],
+  buildPayload(v, mode) {
+    const siteUrl = v.siteUrl.trim();
+    if (mode === "plugin") {
+      return { connectionType: "plugin", siteUrl, siteKey: v.siteKey.trim() } as DrupalConnectPayload;
     }
-
-    setFormError(null);
-    onSave({
-      apiToken: apiToken.trim(),
-      collectionId: collectionId.trim(),
-      bodyFieldSlug: bodyFieldSlug.trim() || "post-body",
-    });
-  }
-
-  return (
-    <SimpleDialog
-      open={open}
-      title="Connect Webflow"
-      titleId="webflow-connect-title"
-      onClose={close}
-      loading={saving}
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.webflow} />
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">API token</span>
-          <input
-            type="password"
-            value={apiToken}
-            onChange={(event) => setApiToken(event.target.value)}
-            placeholder="Webflow site API token"
-            className={inputClassName}
-            autoComplete="off"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Site Settings → Integrations → API access
-          </p>
-        </label>
-
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Collection ID</span>
-          <input
-            type="text"
-            value={collectionId}
-            onChange={(event) => setCollectionId(event.target.value)}
-            placeholder="64-character collection ID"
-            className={inputClassName}
-            autoComplete="off"
-          />
-        </label>
-
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Body field slug</span>
-          <input
-            type="text"
-            value={bodyFieldSlug}
-            onChange={(event) => setBodyFieldSlug(event.target.value)}
-            placeholder="post-body"
-            className={inputClassName}
-            autoComplete="off"
-          />
-          <p className="mt-1 text-xs text-muted-foreground">
-            Rich Text field slug in your collection (default: post-body).
-          </p>
-        </label>
-
-        {formError ? <p className="text-sm text-red-700">{formError}</p> : null}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={close}
-            disabled={saving}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Connecting…" : "Connect"}
-          </button>
-        </div>
-      </form>
-    </SimpleDialog>
-  );
-}
-
-export function ShopifyConnectDialog({
-  open,
-  onOpenChange,
-  saving = false,
-  onSave,
-}: ConnectDialogBaseProps & {
-  onSave: (payload: ShopifyConnectPayload) => void;
-}) {
-  const [connectionType, setConnectionType] = useState<"api" | "plugin">("api");
-  const [shopDomain, setShopDomain] = useState("");
-  const [accessToken, setAccessToken] = useState("");
-  const [siteUrl, setSiteUrl] = useState("");
-  const [siteKey, setSiteKey] = useState("");
-  const [blogId, setBlogId] = useState("");
-  const [siteUrlError, setSiteUrlError] = useState<string | null>(null);
-  const [shopDomainError, setShopDomainError] = useState<string | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
-
-  function resetForm() {
-    setConnectionType("api");
-    setShopDomain("");
-    setAccessToken("");
-    setSiteUrl("");
-    setSiteKey("");
-    setBlogId("");
-    setSiteUrlError(null);
-    setShopDomainError(null);
-    setFormError(null);
-  }
-
-  useEffect(() => {
-    if (!open) resetForm();
-  }, [open]);
-
-  function close() {
-    if (saving) return;
-    resetForm();
-    onOpenChange(false);
-  }
-
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
-    const trimmedBlogId = blogId.trim();
-    let valid = true;
-
-    if (connectionType === "api") {
-      const trimmedShopDomain = shopDomain.trim();
-      if (!trimmedShopDomain) {
-        setShopDomainError("Shop domain is required");
-        valid = false;
-      } else {
-        setShopDomainError(null);
-      }
-
-      if (!accessToken.trim()) {
-        setFormError("Admin API access token is required");
-        valid = false;
-      }
+    const authType = (v.authType || "basic") as "basic" | "bearer";
+    const payload: DrupalConnectPayload = { connectionType: "api", siteUrl, authType };
+    if (authType === "bearer") {
+      (payload as { accessToken?: string }).accessToken = v.accessToken.trim();
     } else {
-      const trimmedSiteUrl = siteUrl.trim();
-      if (!trimmedSiteUrl) {
-        setSiteUrlError("App URL is required");
-        valid = false;
-      } else if (!isValidUrl(trimmedSiteUrl)) {
-        setSiteUrlError("Enter a valid URL");
-        valid = false;
-      } else {
-        setSiteUrlError(null);
-      }
-
-      if (!siteKey.trim()) {
-        setFormError("Site key is required");
-        valid = false;
-      }
+      (payload as { username?: string; password?: string }).username = v.username.trim();
+      (payload as { username?: string; password?: string }).password = v.password.trim();
     }
+    const ct = v.contentType?.trim();
+    if (ct) (payload as { contentType?: string }).contentType = ct;
+    return payload;
+  },
+};
 
-    if (!valid) return;
-
-    setFormError(null);
-    if (connectionType === "api") {
-      onSave({
-        connectionType: "api",
-        shopDomain: shopDomain.trim(),
-        accessToken: accessToken.trim(),
-        ...(trimmedBlogId ? { blogId: trimmedBlogId } : {}),
-      });
-    } else {
-      onSave({
-        connectionType: "plugin",
-        siteUrl: siteUrl.trim(),
-        siteKey: siteKey.trim(),
-        ...(trimmedBlogId ? { blogId: trimmedBlogId } : {}),
-      });
+const joomlaConfig: ConnectDialogConfig<JoomlaConnectPayload> = {
+  id: "joomla",
+  title: "Connect Joomla",
+  setupSteps: CMS_CONNECT_STEPS.joomla,
+  defaultMode: "plugin",
+  urlFields: ["siteUrl"],
+  modes: [
+    {
+      key: "plugin",
+      label: "Plugin",
+      fields: [
+        { key: "siteUrl", label: "Site URL", type: "url", placeholder: "https://example.com", autoComplete: "url" },
+        { key: "siteKey", label: "Site key", type: "password", hint: "Copy the site key from the goals.ac Joomla plugin settings." },
+      ],
+    },
+    {
+      key: "api",
+      label: "Web Services API",
+      fields: [
+        { key: "siteUrl", label: "Site URL", type: "url", placeholder: "https://example.com", autoComplete: "url" },
+        { key: "apiToken", label: "API token", type: "password", hint: "Create a token under System → Web Services → API Tokens." },
+        { key: "categoryId", label: "Category ID (optional)", type: "number", placeholder: "2", required: false },
+      ],
+    },
+  ],
+  buildPayload(v, mode) {
+    const siteUrl = v.siteUrl.trim();
+    if (mode === "plugin") {
+      return { connectionType: "plugin", siteUrl, siteKey: v.siteKey.trim() } as JoomlaConnectPayload;
     }
-  }
+    const payload: JoomlaConnectPayload = { connectionType: "api", siteUrl, apiToken: v.apiToken.trim() };
+    const cat = v.categoryId?.trim();
+    if (cat) (payload as { categoryId?: number }).categoryId = Number(cat);
+    return payload;
+  },
+};
 
-  return (
-    <SimpleDialog
-      open={open}
-      title="Connect Shopify"
-      titleId="shopify-connect-title"
-      onClose={close}
-      loading={saving}
-    >
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.shopify} />
-        <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
-          {(["api", "plugin"] as const).map((method) => (
-            <button
-              key={method}
-              type="button"
-              onClick={() => setConnectionType(method)}
-              className={cn(
-                "flex-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                connectionType === method
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:bg-background/60 hover:text-foreground",
-              )}
-            >
-              {method === "api" ? "Admin API" : "Plugin"}
-            </button>
-          ))}
-        </div>
+const notionConfig: ConnectDialogConfig<NotionConnectPayload> = {
+  id: "notion",
+  title: "Connect Notion",
+  setupSteps: CMS_CONNECT_STEPS.notion,
+  fields: [
+    { key: "integrationToken", label: "Integration token", type: "password", placeholder: "secret_...", hint: "Create an integration at notion.so/my-integrations and share your database with it." },
+    { key: "databaseId", label: "Database ID", type: "text", placeholder: "32-character hex ID from your database URL" },
+  ],
+  buildPayload(v) {
+    return { integrationToken: v.integrationToken.trim(), databaseId: v.databaseId.trim() };
+  },
+};
 
-        {connectionType === "api" ? (
-          <>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Shop domain</span>
-              <input
-                type="text"
-                value={shopDomain}
-                onChange={(event) => setShopDomain(event.target.value)}
-                placeholder="mystore.myshopify.com"
-                className={inputClassName}
-                autoComplete="off"
-              />
-              {shopDomainError ? (
-                <p className="mt-1 text-xs text-red-700">{shopDomainError}</p>
-              ) : null}
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Admin API access token</span>
-              <input
-                type="password"
-                value={accessToken}
-                onChange={(event) => setAccessToken(event.target.value)}
-                className={inputClassName}
-                autoComplete="off"
-              />
-            </label>
-          </>
-        ) : (
-          <>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">App URL</span>
-              <input
-                type="url"
-                value={siteUrl}
-                onChange={(event) => setSiteUrl(event.target.value)}
-                placeholder="https://your-store.myshopify.com"
-                className={inputClassName}
-                autoComplete="url"
-              />
-              {siteUrlError ? <p className="mt-1 text-xs text-red-700">{siteUrlError}</p> : null}
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Site key</span>
-              <input
-                type="password"
-                value={siteKey}
-                onChange={(event) => setSiteKey(event.target.value)}
-                className={inputClassName}
-                autoComplete="off"
-              />
-              <p className="mt-1 text-xs text-muted-foreground">
-                Copy the site key from the goals.ac Shopify app after installation.
-              </p>
-            </label>
-          </>
-        )}
+const webflowConfig: ConnectDialogConfig<WebflowConnectPayload> = {
+  id: "webflow",
+  title: "Connect Webflow",
+  setupSteps: CMS_CONNECT_STEPS.webflow,
+  fields: [
+    { key: "apiToken", label: "API token", type: "password", placeholder: "Webflow site API token", hint: "Site Settings → Integrations → API access" },
+    { key: "collectionId", label: "Collection ID", type: "text", placeholder: "64-character collection ID" },
+    { key: "bodyFieldSlug", label: "Body field slug", type: "text", placeholder: "post-body", defaultValue: "post-body", hint: "Rich Text field slug in your collection (default: post-body)." },
+  ],
+  buildPayload(v) {
+    return {
+      apiToken: v.apiToken.trim(),
+      collectionId: v.collectionId.trim(),
+      bodyFieldSlug: v.bodyFieldSlug.trim() || "post-body",
+    };
+  },
+};
 
-        <label className="block text-sm">
-          <span className="mb-1 block font-medium">Blog ID (optional)</span>
-          <input
-            type="text"
-            value={blogId}
-            onChange={(event) => setBlogId(event.target.value)}
-            placeholder="gid://shopify/Blog/..."
-            className={inputClassName}
-            autoComplete="off"
-          />
-        </label>
+const shopifyConfig: ConnectDialogConfig<ShopifyConnectPayload> = {
+  id: "shopify",
+  title: "Connect Shopify",
+  setupSteps: CMS_CONNECT_STEPS.shopify,
+  defaultMode: "api",
+  urlFields: ["siteUrl"],
+  modes: [
+    {
+      key: "api",
+      label: "Admin API",
+      fields: [
+        { key: "shopDomain", label: "Shop domain", type: "text", placeholder: "mystore.myshopify.com" },
+        { key: "accessToken", label: "Admin API access token", type: "password" },
+      ],
+    },
+    {
+      key: "plugin",
+      label: "Plugin",
+      fields: [
+        { key: "siteUrl", label: "App URL", type: "url", placeholder: "https://your-store.myshopify.com", autoComplete: "url" },
+        { key: "siteKey", label: "Site key", type: "password", hint: "Copy the site key from the goals.ac Shopify app after installation." },
+      ],
+    },
+  ],
+  sharedFields: [
+    { key: "blogId", label: "Blog ID (optional)", type: "text", placeholder: "gid://shopify/Blog/...", required: false },
+  ],
+  buildPayload(v, mode) {
+    const blogId = v.blogId?.trim() || undefined;
+    if (mode === "plugin") {
+      return { connectionType: "plugin", siteUrl: v.siteUrl.trim(), siteKey: v.siteKey.trim(), ...(blogId ? { blogId } : {}) } as ShopifyConnectPayload;
+    }
+    return { connectionType: "api", shopDomain: v.shopDomain.trim(), accessToken: v.accessToken.trim(), ...(blogId ? { blogId } : {}) } as ShopifyConnectPayload;
+  },
+};
 
-        {formError ? <p className="text-sm text-red-700">{formError}</p> : null}
+// ---------------------------------------------------------------------------
+// Public CMS dialog exports (thin wrappers)
+// ---------------------------------------------------------------------------
 
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={close}
-            disabled={saving}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-          >
-            {saving ? "Connecting…" : "Connect"}
-          </button>
-        </div>
-      </form>
-    </SimpleDialog>
-  );
+export function WordPressConnectDialog(props: ConnectDialogBaseProps & { onSave: (p: WordPressConnectPayload) => void }) {
+  return <SchemaConnectDialog config={wordpressConfig} {...props} />;
+}
+
+export function GhostConnectDialog(props: ConnectDialogBaseProps & { onSave: (p: GhostConnectPayload) => void }) {
+  return <SchemaConnectDialog config={ghostConfig} {...props} />;
+}
+
+export function DrupalConnectDialog(props: ConnectDialogBaseProps & { onSave: (p: DrupalConnectPayload) => void }) {
+  return <SchemaConnectDialog config={drupalConfig} {...props} />;
+}
+
+export function JoomlaConnectDialog(props: ConnectDialogBaseProps & { onSave: (p: JoomlaConnectPayload) => void }) {
+  return <SchemaConnectDialog config={joomlaConfig} {...props} />;
+}
+
+export function NotionConnectDialog(props: ConnectDialogBaseProps & { onSave: (p: NotionConnectPayload) => void }) {
+  return <SchemaConnectDialog config={notionConfig} {...props} />;
+}
+
+export function WebflowConnectDialog(props: ConnectDialogBaseProps & { onSave: (p: WebflowConnectPayload) => void }) {
+  return <SchemaConnectDialog config={webflowConfig} {...props} />;
+}
+
+export function ShopifyConnectDialog(props: ConnectDialogBaseProps & { onSave: (p: ShopifyConnectPayload) => void }) {
+  return <SchemaConnectDialog config={shopifyConfig} {...props} />;
 }
 
 export function CmsFullAppConnectDialog({
@@ -1283,20 +548,15 @@ export function CmsFullAppConnectDialog({
   fullAppIntegrationsUrl,
 }: ConnectDialogBaseProps & {
   platformLabel: string;
-  /** Platform key for platform-specific setup steps (e.g. contentful, typo3). */
   platformKey?: string;
   fullAppIntegrationsUrl?: string;
 }) {
-  function close() {
-    onOpenChange(false);
-  }
-
   return (
     <SimpleDialog
       open={open}
       title={`Connect ${platformLabel}`}
       titleId="cms-full-app-connect-title"
-      onClose={close}
+      onClose={() => onOpenChange(false)}
     >
       <div className="space-y-4 text-sm">
         <ConnectSetupSteps steps={getCmsSetupSteps(platformKey, platformLabel)} />
@@ -1320,7 +580,7 @@ export function CmsFullAppConnectDialog({
         <div className="flex justify-end pt-2">
           <button
             type="button"
-            onClick={close}
+            onClick={() => onOpenChange(false)}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
           >
             Got it

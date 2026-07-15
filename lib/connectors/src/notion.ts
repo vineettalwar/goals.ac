@@ -165,7 +165,7 @@ export async function publishToNotion(
   databaseId: string,
   title: string,
   bodyMarkdown: string,
-  meta?: { status?: string; tags?: string[]; blocks?: NotionBlock[] },
+  meta?: { status?: string; tags?: string[]; blocks?: NotionBlock[]; coverUrl?: string },
 ): Promise<string> {
   await assertPublicUrl(NOTION_API);
 
@@ -228,6 +228,7 @@ export async function publishToNotion(
     parent: { database_id: databaseId },
     properties: pageProperties,
     children: allBlocks.slice(0, 100),
+    ...(meta?.coverUrl ? { cover: { type: "external", external: { url: meta.coverUrl } } } : {}),
   };
 
   const createRes = await fetch(`${NOTION_API}/pages`, {

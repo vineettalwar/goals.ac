@@ -10,13 +10,14 @@ export const notionAdapter: CmsAdapter = {
     scheduling: false,
     updates: false,
     categories: false,
-    featuredImage: false,
+    featuredImage: true,
     schemaInjection: false,
   },
 
   async render(content: CanonicalContent): Promise<RenderResult> {
     const blocks = markdownToNotionBlocks(content.markdown);
-    const warnings = [];
+    const warnings: RenderResult["warnings"] = [];
+
     const omittedImages = [...content.markdown.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].filter(
       (m) => !m[1]!.trim().startsWith("https://"),
     ).length;
@@ -26,6 +27,17 @@ export const notionAdapter: CmsAdapter = {
         message: `${omittedImages} image(s) omitted — Notion only supports https:// image URLs.`,
       });
     }
+
+    const featuredRaw = content.pieceMetadata?.featuredImageUrl?.trim();
+    const coverUrl = featuredRaw?.startsWith("https://") ? featuredRaw : undefined;
+
+    if (featuredRaw && !coverUrl) {
+      warnings.push({
+        code: "notion_featured_skipped",
+        message: `Featured image skipped — not an https:// URL.`,
+      });
+    }
+
     if (blocks.length > 100) {
       warnings.push({
         code: "notion_block_limit",
@@ -38,9 +50,10 @@ export const notionAdapter: CmsAdapter = {
         kind: "notion_blocks",
         blocks: blocks.slice(0, 100),
         title: content.meta.title,
+        coverUrl,
       },
       warnings,
-      previewJson: { title: content.meta.title, blockCount: blocks.length },
+      previewJson: { title: content.meta.title, blockCount: blocks.length, coverUrl },
     };
   },
 
@@ -57,7 +70,7 @@ export const notionAdapter: CmsAdapter = {
       creds.notion.databaseId,
       payload.title,
       "",
-      { status, blocks: payload.blocks },
+      { status, blocks: payload.blocks, coverUrl: payload.coverUrl },
     );
     return { url };
   },

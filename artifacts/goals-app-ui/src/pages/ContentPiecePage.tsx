@@ -234,7 +234,9 @@ export function ContentPiecePage() {
         enhanceMessage={enhanceMessage}
         onEnhance={enhance}
         regeneratingImages={regeneratingImages}
-        onRegenerateImages={stockImagesConfigured ? regenerateImages : undefined}
+        onRegenerateImages={
+          stockImagesConfigured ? () => void regenerateImages() : undefined
+        }
         publishing={publishing || Boolean(publishingState)}
         publishingState={publishingState}
         publishMessage={publishMessage}

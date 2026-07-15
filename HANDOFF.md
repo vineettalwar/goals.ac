@@ -1,12 +1,26 @@
 # Session Handoff
 
+## Still shipping (2026-07-16 pulse)
+
+| Done | Notes |
+|---|---|
+| Ghost featured | data-URI + HTTPS upload path |
+| Notion images | HTTPS image blocks |
+| Instagram queue | HTTPS-only + pre-enrich |
+| WP featured | data-URI featured (existing) |
+
+**In flight:** Shopify featured image; Bluesky durable JWK.
+
+---
+
 ## Parallel unfinished-work agents (2026-07-16, in flight)
 
 | Workstream | Notes |
 |---|---|
 | Unify publish-destination registries | Prefer extending existing UI SSOT `lib/app-shell/src/integrations/destination-ids.ts` + Next composition — avoid a third parallel rewrite |
 | Consolidate CMS/ESP connect dialogs | Schema-driven collapse of `cms-connect-dialogs.tsx` / `esp-connect-dialogs.tsx` |
-| Notion adapter image blocks | External HTTPS image blocks in `notion-adapter.ts` |
+| Shopify featured | data-URI / HTTPS featured (same pattern as WP/Ghost) |
+| Bluesky durable JWK | Persist JWK for OAuth continuity |
 
 Avoid conflicting edits on those files until agents land.
 
