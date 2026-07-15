@@ -23,6 +23,7 @@ import type { ContentStyle, WebsiteProject } from "@/lib/projects/project-detail
 import { formatBrandScanDiscoverySummary } from "@/lib/projects/brand-scan-summary";
 import { profileToBrandForm, type BrandForm, type StyleForm } from "./project-brand-constants";
 import { ProjectBrandProfileFields, ProjectContentStyleFields } from "./project-brand-form-fields";
+import { BrandTailoringPanel } from "@/components/brand/brand-tailoring-panel";
 import { useStockImageStatus } from "@/lib/queries";
 
 interface Props {
@@ -208,6 +209,27 @@ export function ProjectBrandTab({
     setTimeout(() => setStyleSaved(false), 3000);
   }
 
+  const liveTailoring = useMemo(
+    () => ({
+      voiceTone: brandForm.voiceTone.trim() || undefined,
+      brandColors: brandForm.brandColors
+        .split(",")
+        .map((c) => c.trim())
+        .filter(Boolean),
+      productOfferings: brandForm.productOfferings
+        .split("\n")
+        .map((o) => o.trim())
+        .filter(Boolean),
+      doWords: project.brandProfile?.doWords ?? [],
+    }),
+    [
+      brandForm.voiceTone,
+      brandForm.brandColors,
+      brandForm.productOfferings,
+      project.brandProfile?.doWords,
+    ],
+  );
+
   return (
     <div className="space-y-6">
       <div className="paper-card p-6 rounded-xl space-y-4">
@@ -225,14 +247,22 @@ export function ProjectBrandTab({
         {isScraping ? (
           <ScrapeFormSkeleton />
         ) : (
-          <ProjectBrandProfileFields
-            brandForm={brandForm}
-            onBrandFormChange={setBrandForm}
-            hasPlaceholderCompetitors={hasPlaceholderCompetitors}
-            savingBrand={savingBrand}
-            brandSaved={brandSaved}
-            onSaveBrand={saveBrand}
-          />
+          <>
+            <BrandTailoringPanel
+              voiceTone={liveTailoring.voiceTone}
+              brandColors={liveTailoring.brandColors}
+              productOfferings={liveTailoring.productOfferings}
+              doWords={liveTailoring.doWords}
+            />
+            <ProjectBrandProfileFields
+              brandForm={brandForm}
+              onBrandFormChange={setBrandForm}
+              hasPlaceholderCompetitors={hasPlaceholderCompetitors}
+              savingBrand={savingBrand}
+              brandSaved={brandSaved}
+              onSaveBrand={saveBrand}
+            />
+          </>
         )}
       </div>
 

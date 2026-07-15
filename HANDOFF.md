@@ -13,6 +13,7 @@
 | Instagram queue stock CTA | "Use stock image" button when "Needs image" badge shown; reuses `/images/regenerate` API; queue reloads on success |
 | Outline actions | **Copy outline** + optional **Insert into draft** when empty; wired in shell + Next |
 | TYPO3 media upload | `POST /goals-ac/v1/media` — mirrors WordPress `/media`; FAL import shared via new `FalImporter` helper |
+| TYPO3 media preflight | Soft amber warning in publish UI when publishing with raster `data:` featured + plugin lacks `media_upload` capability — non-blocking; inline FAL (base64 in DB) still works |
 
 **In flight:** none from this list.
 
@@ -24,6 +25,16 @@
 - Registered in `ApiMiddleware.php`; `HealthController` now lists `endpoints.media` + `capabilities.media_upload: true`
 - `typo3-adapter.ts` (`content-engine`) now prefers uploading the featured image via `/media` and referencing the hosted URL in the `textmedia` element, falling back to inline base64 (`prependTypo3FeaturedBase64`) when the upload fails or plugin/creds are unavailable — avoids inlining large base64 into the content publish payload for plugin installs that support `/media`
 - `cms-publish.ts` (legacy content-piece publish flow) still calls `publishToTypo3` with body markdown only — never touches images, so unaffected
+
+### TYPO3 media preflight
+
+Soft amber warning in publish dialog when TYPO3 selected + raster `data:` featured image + plugin health lacks `media_upload` capability (older plugin without POST /media). Non-blocking — inline FAL (base64 in DB) still works.
+
+- Health service (`integration-health-service.ts`) now persists `lastHealthMediaUploadCapable` from plugin capabilities
+- New component: `lib/app-shell/src/content-piece/typo3-media-preflight.tsx` (Shopify pattern)
+- Publish dialog checks: `platform === "typo3" && hasRasterDataImage(pieceFeaturedImageUrl) && !readTypo3MediaUploadCapable(connection)`
+- Setup steps updated: mentions POST /media in checklist
+- Files: `integration-health-service.ts`, `typo3-media-preflight.tsx`, `publish-dialog.tsx`, `connect-setup-steps.tsx`
 
 ### Outline actions
 

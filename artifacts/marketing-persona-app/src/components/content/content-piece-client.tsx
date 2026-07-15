@@ -44,14 +44,23 @@ import { resolveSocialPiecePublicImageUrl } from "@workspace/app-shell/social";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRecord } from "@/lib/server/loaders";
 import { ArticlePerformanceBadge } from "@/components/content-studio/article-performance-badge";
+import { BrandTailoringPanel } from "@/components/brand/brand-tailoring-panel";
 import { ContentMarkdown } from "@/components/content/content-markdown";
 import { ContentPieceRepurposeDialog } from "@/components/content/content-piece-repurpose-dialog";
+
+export type BrandTailoringSummary = {
+  voiceTone?: string;
+  brandColors?: string[];
+  productOfferings?: string[];
+  doWords?: string[];
+};
 
 interface ContentPieceClientProps {
   pieceId: string;
   initialPiece: ContentPieceRecord;
   initialCmsConnections: CmsConnectionSnapshot;
   stockImagesConfigured: boolean;
+  brandTailoring?: BrandTailoringSummary | null;
 }
 
 function toDetail(piece: ContentPieceRecord): ContentPieceDetail {
@@ -86,6 +95,7 @@ export function ContentPieceClient({
   initialPiece,
   initialCmsConnections,
   stockImagesConfigured,
+  brandTailoring = null,
 }: ContentPieceClientProps) {
   const router = useRouter();
   const [pieceRecord, setPieceRecord] = useState(initialPiece);
@@ -256,28 +266,38 @@ export function ContentPieceClient({
           </>
         }
         asideExtra={
-          (visualSummarySvgSrc || visualSummaryMarkdown) &&
-          contentPieceCanEnhance(piece.formatType) ? (
-            <div className="paper-card space-y-2 rounded-xl p-4">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <LayoutTemplate className="h-4 w-4 text-primary" aria-hidden />
-                Visual summary
-              </div>
-              {visualSummarySvgSrc ? (
-                // eslint-disable-next-line @next/next/no-img-element -- SVG data URI from pieceMetadata
-                <img
-                  src={visualSummarySvgSrc}
-                  alt="At a glance"
-                  className="w-full rounded-lg border border-border/60 bg-[#FAFAF8]"
-                />
-              ) : null}
-              {visualSummaryMarkdown ? (
-                <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-                  <ContentMarkdown>{visualSummaryMarkdown}</ContentMarkdown>
+          <>
+            {brandTailoring ? (
+              <BrandTailoringPanel
+                voiceTone={brandTailoring.voiceTone}
+                brandColors={brandTailoring.brandColors}
+                productOfferings={brandTailoring.productOfferings}
+                doWords={brandTailoring.doWords}
+              />
+            ) : null}
+            {(visualSummarySvgSrc || visualSummaryMarkdown) &&
+            contentPieceCanEnhance(piece.formatType) ? (
+              <div className="paper-card space-y-2 rounded-xl p-4">
+                <div className="flex items-center gap-2 text-sm font-medium">
+                  <LayoutTemplate className="h-4 w-4 text-primary" aria-hidden />
+                  Visual summary
                 </div>
-              ) : null}
-            </div>
-          ) : null
+                {visualSummarySvgSrc ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- SVG data URI from pieceMetadata
+                  <img
+                    src={visualSummarySvgSrc}
+                    alt="At a glance"
+                    className="w-full rounded-lg border border-border/60 bg-[#FAFAF8]"
+                  />
+                ) : null}
+                {visualSummaryMarkdown ? (
+                  <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
+                    <ContentMarkdown>{visualSummaryMarkdown}</ContentMarkdown>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+          </>
         }
         saving={saving}
         saveMessage={saveMessage}

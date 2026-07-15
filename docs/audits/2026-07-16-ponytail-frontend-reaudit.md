@@ -57,7 +57,7 @@ Ponytail **safe-delete runway is not exhausted.** Morning cuts were real; a seco
 | `dashboard-sections.tsx` | Server-rendered dashboard widgets | Re-wire into `DashboardPageClient` / `load-dashboard-data` **or** delete if shell `DashboardView` already covers all cards |
 | Public `roadmaps-*-client.tsx` | Marketing roadmap browser/generator | Re-mount behind `/roadmaps` (today `permanentRedirect` → `/content-engine`) **or** keep redirect and delete clients |
 | `VideoDemoSection` | Homepage “see it live” collage/tour | Import on marketing home between hero and features |
-| `BrandTailoringPanel` | Show voice/colors/offerings on brand/piece | Mount on project brand tab or piece aside with brand profile props |
+| `BrandTailoringPanel` | Show voice/colors/offerings on brand/piece | **Done 2026-07-16** — Brand tab (live form) + content piece `asideExtra` |
 | `useJobPoll` | Shared async job polling | **Done 2026-07-16** — generate + publish in Pages `use-content-piece-data` |
 | Unused `@dnd-kit` on Next | Studio calendar DnD | Not unfinished — DnD lives in app-shell; drop Next deps |
 | Dead helpers (`motion`, `quota-checkout`, date utils, AI stubs) | Leftover re-exports / unused utils | Delete after import-graph confirm, or re-wire call sites if intentional |

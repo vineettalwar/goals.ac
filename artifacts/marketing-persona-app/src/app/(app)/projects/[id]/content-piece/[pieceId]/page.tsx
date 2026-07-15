@@ -4,6 +4,7 @@ import { ContentPieceClient } from "@/components/content/content-piece-client";
 import {
   loadCmsConnectionsForProject,
   loadContentPieceForUser,
+  loadWebsiteProjectForUser,
 } from "@/lib/server/loaders";
 import { loadStockCredentialContextForProject } from "@workspace/content-engine/support/integrations/stock-credentials";
 import { isStockSearchAvailable } from "@workspace/stock-images";
@@ -25,10 +26,13 @@ export default async function ProjectContentPiecePage({
   const piece = await loadContentPieceForUser(pieceId, userId);
   if (!piece || piece.websiteProjectId !== projectId) notFound();
 
-  const [cmsConnections, stockCredentials] = await Promise.all([
+  const [cmsConnections, stockCredentials, project] = await Promise.all([
     loadCmsConnectionsForProject(projectId, userId),
     loadStockCredentialContextForProject(projectId),
+    loadWebsiteProjectForUser(projectId, userId),
   ]);
+
+  const bp = project?.brandProfile;
 
   return (
     <ContentPieceClient
@@ -36,6 +40,16 @@ export default async function ProjectContentPiecePage({
       initialPiece={piece}
       initialCmsConnections={cmsConnections}
       stockImagesConfigured={isStockSearchAvailable(stockCredentials)}
+      brandTailoring={
+        bp
+          ? {
+              voiceTone: bp.voiceTone || undefined,
+              brandColors: bp.brandColors ?? [],
+              productOfferings: bp.productOfferings ?? [],
+              doWords: bp.doWords ?? [],
+            }
+          : null
+      }
     />
   );
 }
