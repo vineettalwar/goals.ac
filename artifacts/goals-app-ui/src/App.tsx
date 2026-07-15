@@ -116,6 +116,12 @@ function AdminOrganizationDetailRoute() {
   return <AdminOrganizationDetailPage organizationId={organizationId} />;
 }
 
+/** Tab-less URL → default CMS tab (avoids mounting the full page before redirect). */
+function ProjectIntegrationsIndexRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/projects/${id}/integrations/cms`} replace />;
+}
+
 export default function App() {
   return (
     <Routes>
@@ -152,7 +158,10 @@ export default function App() {
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
         <Route path="/projects/:id/content-studio" element={<StudioPage />} />
         <Route path="/projects/:id/social" element={<SocialHubPage />} />
-        <Route path="/projects/:id/integrations" element={<ProjectIntegrationsPage />} />
+        <Route
+          path="/projects/:id/integrations"
+          element={<ProjectIntegrationsIndexRedirect />}
+        />
         <Route path="/projects/:id/integrations/:tab" element={<ProjectIntegrationsPage />} />
         <Route path="/projects/:id/content-piece/:pieceId" element={<ContentPiecePage />} />
         <Route path="/integrations" element={<IntegrationsPage />} />

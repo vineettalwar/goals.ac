@@ -440,10 +440,6 @@ export function ProjectIntegrationsPage() {
 
   if (!user) return null;
 
-  if (!tabParam) {
-    return <Navigate to={projectIntegrationsPath(projectId, "cms")} replace />;
-  }
-
   if (!activeTab) {
     return <Navigate to={projectIntegrationsPath(projectId, "cms")} replace />;
   }

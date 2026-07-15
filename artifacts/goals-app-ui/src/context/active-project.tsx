@@ -89,10 +89,12 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
   const setProjectId = useCallback(
     (id: string) => {
       const previous = localStorage.getItem(STORAGE_KEY);
-      if (previous !== id) {
-        removeProjectScopedQueries(queryClient);
-      }
+      // Path-scoped pages call this on mount to sync storage. Re-navigating to the
+      // current pathname fights in-page redirects (e.g. /integrations → /integrations/cms)
+      // and can loop into a blank Loading screen.
+      if (previous === id) return;
 
+      removeProjectScopedQueries(queryClient);
       localStorage.setItem(STORAGE_KEY, id);
 
       const numericId = Number.parseInt(id, 10);
@@ -100,7 +102,7 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
         ? navigationTargetForActiveProject(pathname, numericId)
         : null;
 
-      if (navigationTarget) {
+      if (navigationTarget && navigationTarget !== pathname) {
         const nextQuery = new URLSearchParams(searchParams.toString());
         nextQuery.delete("project");
         const queryString = nextQuery.toString();
