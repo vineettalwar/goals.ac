@@ -283,6 +283,19 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
     [reloadQueue],
   );
 
+  const rejectPiece = useCallback(
+    async (pieceId: number) => {
+      try {
+        await apiFetch(`/api/content-pieces/${pieceId}/reject`, { method: "POST" });
+        notify("success", "Rejected");
+        await reloadQueue();
+      } catch {
+        notify("error", "Failed to reject");
+      }
+    },
+    [reloadQueue],
+  );
+
   const reschedulePiece = useCallback(
     async (pieceId: number, newDateKey: string | null) => {
       if (!projectId) return;
@@ -495,6 +508,7 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
     schedulePiece,
     submitReview,
     approvePiece,
+    rejectPiece,
     reschedulingId,
     reschedulePiece,
     composerParents,

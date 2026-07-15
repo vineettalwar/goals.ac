@@ -118,7 +118,12 @@ async function handleReject(
 
   const [updated] = await db
     .update(contentPiecesTable)
-    .set({ approvalStatus: "rejected", status: "draft" })
+    .set({
+      approvalStatus: "rejected",
+      status: "draft",
+      approvedByUserId: null,
+      approvedAt: null,
+    })
     .where(eq(contentPiecesTable.id, contentPieceId))
     .returning();
 

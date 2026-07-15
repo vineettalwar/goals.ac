@@ -1,4 +1,4 @@
-import { AlertCircle, Calendar, Check, Loader2, RefreshCw, Send } from "lucide-react";
+import { AlertCircle, Calendar, Check, Loader2, RefreshCw, Send, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../cn";
 import {
@@ -26,7 +26,9 @@ export function SocialQueuePanel({
   onRefresh,
   onSubmitReview,
   onApprove,
+  onReject,
   onSchedule,
+  requireApproval = false,
 }: {
   platformFilter: string;
   onPlatformFilterChange: (value: string) => void;
@@ -38,10 +40,22 @@ export function SocialQueuePanel({
   onRefresh: () => void;
   onSubmitReview: (id: number) => void;
   onApprove: (id: number) => void;
+  onReject: (id: number) => void;
   onSchedule: (id: number, value: string) => void;
+  requireApproval?: boolean;
 }) {
   return (
     <div className="space-y-4">
+      {requireApproval ? (
+        <div
+          className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-100"
+          role="status"
+        >
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>Posts need approval before the publish sweep</span>
+        </div>
+      ) : null}
+
       <div className="flex flex-wrap items-center gap-3">
         <select
           aria-label="Filter by platform"
@@ -109,7 +123,9 @@ export function SocialQueuePanel({
                             ? "bg-primary/10 text-primary"
                             : item.approvalStatus === "pending_review"
                               ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                              : "bg-muted text-muted-foreground",
+                              : item.approvalStatus === "rejected"
+                                ? "bg-destructive/10 text-destructive"
+                                : "bg-muted text-muted-foreground",
                         )}
                       >
                         {item.approvalStatus.replace(/_/g, " ")}
@@ -133,14 +149,24 @@ export function SocialQueuePanel({
                       </button>
                     ) : null}
                     {item.approvalStatus === "pending_review" ? (
-                      <button
-                        type="button"
-                        onClick={() => void onApprove(item.id)}
-                        className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2.5 text-sm text-primary-foreground"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                        Approve
-                      </button>
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => void onApprove(item.id)}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2.5 text-sm text-primary-foreground"
+                        >
+                          <Check className="h-3.5 w-3.5" />
+                          Approve
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void onReject(item.id)}
+                          className="inline-flex h-8 items-center gap-1 rounded-lg border border-input px-2.5 text-sm hover:bg-muted/50"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                          Reject
+                        </button>
+                      </>
                     ) : null}
                   </div>
                 </div>

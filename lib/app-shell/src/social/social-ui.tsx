@@ -53,6 +53,7 @@ export function SocialHubView({
   onRefreshQueue,
   onSubmitReview,
   onApprove,
+  onReject,
   onSchedule,
   reschedulingId,
   onReschedule,
@@ -102,6 +103,7 @@ export function SocialHubView({
   onRefreshQueue: () => void;
   onSubmitReview: (id: number) => void;
   onApprove: (id: number) => void;
+  onReject: (id: number) => void;
   onSchedule: (id: number, value: string) => void;
   reschedulingId: number | null;
   onReschedule: (pieceId: number, newDateKey: string | null) => void;
@@ -166,7 +168,11 @@ export function SocialHubView({
           onRefresh={onRefreshQueue}
           onSubmitReview={onSubmitReview}
           onApprove={onApprove}
+          onReject={onReject}
           onSchedule={onSchedule}
+          requireApproval={Object.values(settings?.platforms ?? {}).some(
+            (platform) => platform?.requireApproval === true,
+          )}
         />
       ) : null}
 
@@ -210,8 +216,10 @@ export function SocialHubView({
           lastSyncedAt={metricsLastSyncedAt}
           pieceHref={pieceHref}
           integrationsHref={integrationsHref}
+          settingsHref={integrationsHref}
           renderLink={renderLink}
           onSync={onSyncMetrics}
+          onSyncMetrics={onSyncMetrics}
         />
       ) : null}
 

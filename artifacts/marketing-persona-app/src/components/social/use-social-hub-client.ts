@@ -255,6 +255,16 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
     void loadQueue();
   }
 
+  async function rejectPiece(pieceId: number) {
+    const res = await fetch(`/api/content-pieces/${pieceId}/reject`, { method: "POST" });
+    if (!res.ok) {
+      toast.error("Failed to reject");
+      return;
+    }
+    toast.success("Rejected");
+    void loadQueue();
+  }
+
   async function reschedulePiece(pieceId: number, newDateKey: string | null) {
     const piece = queue.find((item) => item.id === pieceId);
     if (
@@ -454,6 +464,7 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
     schedulePiece,
     submitReview,
     approvePiece,
+    rejectPiece,
     reschedulingId,
     reschedulePiece,
     composerParents,

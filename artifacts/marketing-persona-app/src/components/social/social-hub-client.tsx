@@ -21,7 +21,7 @@ export function SocialHubClient({ projectId }: { projectId: string }) {
       <SocialHubView
         projectId={projectId}
         studioHref={`/projects/${projectId}/content-studio`}
-        integrationsHref={`/projects/${projectId}/integrations`}
+        integrationsHref={`/projects/${projectId}/integrations/social`}
         pieceHref={(pieceId) => `/projects/${projectId}/content-piece/${pieceId}`}
         renderLink={({ href, className, children }) => (
           <Link href={href} className={className}>
@@ -38,6 +38,7 @@ export function SocialHubClient({ projectId }: { projectId: string }) {
         onRefreshQueue={() => void hub.loadQueue()}
         onSubmitReview={(id) => void hub.submitReview(id)}
         onApprove={(id) => void hub.approvePiece(id)}
+        onReject={(id) => void hub.rejectPiece(id)}
         onSchedule={(id, value) => void hub.schedulePiece(id, value)}
         reschedulingId={hub.reschedulingId}
         onReschedule={(pieceId, dateKey) => void hub.reschedulePiece(pieceId, dateKey)}

@@ -17,8 +17,10 @@ export function SocialAnalyticsPanel({
   lastSyncedAt,
   pieceHref,
   integrationsHref,
+  settingsHref,
   renderLink,
   onSync,
+  onSyncMetrics,
 }: {
   metrics: SocialMetricsResponse | null;
   metricsLoading: boolean;
@@ -28,10 +30,16 @@ export function SocialAnalyticsPanel({
   lastSyncedAt: string | null;
   pieceHref: (pieceId: number) => string;
   integrationsHref: string;
+  /** Prefer Integrations → Social when set; falls back to `integrationsHref`. */
+  settingsHref?: string;
   renderLink: (props: SocialHubLinkProps) => ReactNode;
   onSync: () => void;
+  /** Empty-state sync CTA; falls back to `onSync`. */
+  onSyncMetrics?: () => void;
 }) {
   const totals = metrics?.totals;
+  const handleSyncMetrics = onSyncMetrics ?? onSync;
+  const socialSettingsHref = settingsHref ?? integrationsHref;
 
   return (
     <div className="space-y-4">
@@ -89,17 +97,35 @@ export function SocialAnalyticsPanel({
           Loading analytics…
         </div>
       ) : !metrics?.rows.length ? (
-        <div className="paper-card space-y-2 px-4 py-10 text-center text-sm text-muted-foreground">
-          <BarChart3 className="mx-auto h-8 w-8 opacity-40" />
-          <p>No published social posts with metrics yet.</p>
-          <p>
-            Publish from the queue, then sync.{" "}
+        <div className="paper-card space-y-3 px-4 py-10 text-center">
+          <BarChart3 className="mx-auto h-8 w-8 text-muted-foreground opacity-40" />
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">No metrics yet</p>
+            <p className="text-sm text-muted-foreground">
+              Metrics appear after posts publish and sync.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+            <button
+              type="button"
+              disabled={syncing}
+              onClick={() => void handleSyncMetrics()}
+              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm hover:bg-muted/50 disabled:opacity-50"
+            >
+              {syncing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Sync metrics
+            </button>
             {renderLink({
-              href: integrationsHref,
-              className: "text-primary hover:underline",
-              children: "Connect social accounts",
+              href: socialSettingsHref,
+              className:
+                "inline-flex h-9 items-center rounded-lg border border-border px-3 text-sm hover:bg-secondary",
+              children: "Integrations → Social",
             })}
-          </p>
+          </div>
         </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border">

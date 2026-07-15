@@ -167,7 +167,12 @@ export async function approvePiece(pieceId: number, userId: number): Promise<Con
 export async function rejectPiece(pieceId: number): Promise<ContentPiece | null> {
   const [updated] = await db
     .update(contentPiecesTable)
-    .set({ approvalStatus: "rejected", status: "draft" })
+    .set({
+      approvalStatus: "rejected",
+      status: "draft",
+      approvedByUserId: null,
+      approvedAt: null,
+    })
     .where(eq(contentPiecesTable.id, pieceId))
     .returning();
   return updated ?? null;

@@ -639,7 +639,9 @@ export function SocialHubPage() {
   const [searchParams] = useSearchParams();
   const hub = useSocialData(projectId, parseSocialHubTab(searchParams.get("tab")));
   const studioHref = projectId ? `/projects/${projectId}/content-studio` : "/projects";
-  const integrationsHref = projectId ? `/projects/${projectId}/integrations` : "/integrations";
+  const integrationsHref = projectId
+    ? `/projects/${projectId}/integrations/social`
+    : "/integrations";
 
   return (
     <SectionShell title="Social hub" description="Schedule and publish social variants.">
@@ -680,6 +682,7 @@ export function SocialHubPage() {
         onRefreshQueue={() => void hub.reloadQueue()}
         onSubmitReview={(id) => void hub.submitReview(id)}
         onApprove={(id) => void hub.approvePiece(id)}
+        onReject={(id) => void hub.rejectPiece(id)}
         onSchedule={(id, value) => void hub.schedulePiece(id, value)}
         reschedulingId={hub.reschedulingId}
         onReschedule={(pieceId, dateKey) => void hub.reschedulePiece(pieceId, dateKey)}
