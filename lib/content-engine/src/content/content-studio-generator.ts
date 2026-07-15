@@ -32,6 +32,7 @@ import {
   platformForFormat,
 } from "../platform-voice";
 import { humanizeContentPiece } from "./humanizer";
+import { isHumanizableFormat } from "./humanize-eligibility";
 import { AI_WRITING_FROM_SCRATCH_PROMPT, AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
 import { buildDestinationPromptHint } from "../support/publishing/publishing-settings";
 import {
@@ -133,6 +134,7 @@ export interface ContentPieceResult {
   target_keyword: string;
   body_markdown: string;
   meta_description?: string;
+  secondary_keywords?: string[];
   faq_section?: { question: string; answer: string }[];
   citations?: { text: string; url: string; source: string }[];
   internal_link_suggestions?: {
@@ -141,7 +143,9 @@ export interface ContentPieceResult {
     rationale?: string;
   }[];
   json_ld_schema?: object;
-  pieceMetadata?: ContentPieceMetadata;
+  pieceMetadata?: ContentPieceMetadata & {
+    secondaryKeywords?: string[];
+  };
   generationUsage?: {
     promptTokens?: number;
     outputTokens?: number;
@@ -669,13 +673,15 @@ async function postProcessGeneratedResult(
   brand: BrandContext,
   ai: AiProviderClient,
 ): Promise<ContentPieceResult> {
-  let result: ContentPieceResult;
-  if (!isSeoLongformFormat(format) && format !== "linkedin_post") {
-    result = parsed;
-  } else {
+  const MAX_HUMANIZE_PASSES = 2;
+  let humanizePasses = 0;
+  let result: ContentPieceResult = parsed;
+
+  if (isHumanizableFormat(format)) {
     const { result: humanizedResult, humanized } = await humanizeContentPiece(parsed, brand, {
       aiClient: ai,
     });
+    humanizePasses += 1;
     result = isSeoLongformFormat(format)
       ? processGeneratedResult(humanizedResult, format, humanized)
       : {
@@ -688,7 +694,22 @@ async function postProcessGeneratedResult(
   }
 
   if (isSeoLongformFormat(format)) {
+    const beforeDeeplBody = result.body_markdown;
     result = await maybeRefineWithDeepl(result, brand, format);
+    const primaryLanguage = brand.contentStyle?.primaryLanguage ?? "en";
+    const deeplChangedBody = result.body_markdown !== beforeDeeplBody;
+    const needsPostDeeplHumanize =
+      humanizePasses < MAX_HUMANIZE_PASSES &&
+      (deeplChangedBody || primaryLanguage !== "en");
+
+    if (needsPostDeeplHumanize) {
+      const { result: humanizedResult, humanized } = await humanizeContentPiece(result, brand, {
+        aiClient: ai,
+        level: "light",
+      });
+      humanizePasses += 1;
+      result = processGeneratedResult(humanizedResult, format, humanized);
+    }
   }
 
   try {

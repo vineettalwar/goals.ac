@@ -1,3 +1,5 @@
+import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
+
 export type ContentPieceImageRef = {
   role: string;
   provider: string;
@@ -29,6 +31,8 @@ export type ContentPieceMetadata = {
     slopScoreBefore?: number;
     slopScoreAfter?: number;
     rejected?: boolean;
+    /** Optional skip reason when rejected (e.g. "length guard") */
+    reason?: string;
   };
   intendedOutputMode?: string | null;
   intendedEditorMode?: string | null;
@@ -66,6 +70,21 @@ export function formatContentFormatType(formatType: string): string {
   return formatType.replace(/_/g, " ");
 }
 
+/** Compact humanization audit line for piece headers. */
+export function formatHumanizationAuditLine(audit: {
+  slopScoreBefore?: number;
+  slopScoreAfter?: number;
+  rejected?: boolean;
+  reason?: string;
+}): string {
+  if (audit.rejected) {
+    return `skipped: ${audit.reason?.trim() || "length guard"}`;
+  }
+  const before = audit.slopScoreBefore ?? "?";
+  const after = audit.slopScoreAfter ?? "?";
+  return `Humanize: ${before}→${after} tells`;
+}
+
 export function formatContentPieceUpdatedAt(value: number | string | undefined): string {
   if (value == null) return "—";
   const ms = typeof value === "number" ? value : Date.parse(String(value));
@@ -90,17 +109,7 @@ export function contentPieceCanGenerate(status: string): boolean {
 }
 
 export function contentPieceCanHumanize(formatType: string): boolean {
-  const longform = new Set([
-    "blog_post",
-    "guide",
-    "tutorial",
-    "pillar_page",
-    "whitepaper",
-    "faq_article",
-    "news_article",
-    "location_page",
-  ]);
-  return longform.has(formatType) || formatType === "linkedin_post";
+  return isHumanizableFormat(formatType);
 }
 
 export function contentPieceCanEnhance(formatType: string): boolean {

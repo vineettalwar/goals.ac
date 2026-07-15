@@ -132,7 +132,50 @@ const AI_TELL_PATTERNS: Record<AiTellCategory, RegExp[]> = {
   over_formatting: [],
 };
 
-const AI_SLOP_PHRASES: RegExp[] = Object.values(AI_TELL_PATTERNS).flat();
+/**
+ * Categories whose multi-word phrase patterns are safe to strip in post-LLM sanitize.
+ * Single-token categories (corporate_verb, abstract_noun, banned_word) are intentionally
+ * excluded — blind mid-sentence deletes of words like "optimize" wreck otherwise valid prose;
+ * those tells belong to the LLM rewrite, not regex deletion.
+ */
+const SAFE_PHRASE_SANITIZE_CATEGORIES: AiTellCategory[] = [
+  "generic_opener",
+  "hedging",
+  "formulaic_structure",
+  "manufactured_balance",
+  "predictable_closer",
+  "ai_transition",
+];
+
+/** True when a pattern describes a multi-word phrase (two+ letter tokens), not a lone banned word. */
+function isMultiWordPhrasePattern(pattern: RegExp): boolean {
+  const rough = pattern.source
+    .replace(/\\\w/g, " ")
+    .replace(/\(\?:/g, " ")
+    .replace(/[()[\]{}.*?+|^=$:\\/-]/g, " ");
+  const tokens = rough.split(/\s+/).filter((token) => /[a-zA-Z]{2,}/.test(token));
+  return tokens.length >= 2;
+}
+
+const AI_SLOP_PHRASE_PATTERNS: RegExp[] = SAFE_PHRASE_SANITIZE_CATEGORIES.flatMap(
+  (category) => AI_TELL_PATTERNS[category].filter(isMultiWordPhrasePattern),
+);
+
+function tidyAfterPhraseRemoval(text: string): string {
+  let out = text;
+  out = out.replace(/[ \t]{2,}/g, " ");
+  out = out.replace(/ +\n/g, "\n");
+  out = out.replace(/\n{3,}/g, "\n\n");
+  // Leftover " ," / " ." after phrase deletes
+  out = out.replace(/\s+([,.;:!?])/g, "$1");
+  out = out.replace(/([,.;:])\1+/g, "$1");
+  out = out.replace(/,\s*,+/g, ", ");
+  out = out.replace(/\(\s+/g, "(");
+  out = out.replace(/\s+\)/g, ")");
+  // Empty clause fragments: ", ," already handled; strip orphan commas at line starts
+  out = out.replace(/(^|\n)\s*,\s*/g, "$1");
+  return out.trim();
+}
 
 function extractMatches(text: string, pattern: RegExp): string[] {
   const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
@@ -173,13 +216,16 @@ export function sanitizeEmDashes(text: string): string {
   return out;
 }
 
-/** Light cleanup of the worst AI-tell phrases (deterministic fallback after generation). */
+/**
+ * Light cleanup of multi-word AI-tell phrases only (deterministic fallback after generation).
+ * Do not extend this to single banned verbs/nouns — those are LLM rewrite territory.
+ */
 export function sanitizeAiSlopPhrases(text: string): string {
   let out = text;
-  for (const pattern of AI_SLOP_PHRASES) {
+  for (const pattern of AI_SLOP_PHRASE_PATTERNS) {
     out = out.replace(pattern, "");
   }
-  return out.replace(/  +/g, " ").replace(/\n{3,}/g, "\n\n").trim();
+  return tidyAfterPhraseRemoval(out);
 }
 
 export function sanitizeAiProse(text: string): string {

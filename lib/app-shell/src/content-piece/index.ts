@@ -26,6 +26,7 @@ export {
   contentStudioBackHref,
   formatContentFormatType,
   formatContentPieceUpdatedAt,
+  formatHumanizationAuditLine,
   type ContentPieceDetail,
   type ContentPieceGeneratingState,
   type ContentPieceImageRef,

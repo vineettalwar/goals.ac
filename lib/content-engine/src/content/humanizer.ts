@@ -24,6 +24,7 @@ export interface HumanizableContentPiece {
   target_keyword: string;
   body_markdown: string;
   meta_description?: string;
+  secondary_keywords?: string[];
   faq_section?: { question: string; answer: string }[];
   citations?: { text: string; url: string; source: string }[];
   internal_link_suggestions?: {
@@ -32,7 +33,9 @@ export interface HumanizableContentPiece {
     rationale?: string;
   }[];
   json_ld_schema?: object;
-  pieceMetadata?: ContentPieceMetadata;
+  pieceMetadata?: ContentPieceMetadata & {
+    secondaryKeywords?: string[];
+  };
 }
 
 export type { HumanizationLevel };
@@ -272,6 +275,79 @@ function countWords(text: string): number {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
+const SECONDARY_STOP_WORDS = new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "for",
+  "to",
+  "of",
+  "in",
+  "on",
+  "with",
+  "your",
+  "our",
+  "how",
+  "what",
+  "why",
+  "when",
+  "from",
+  "into",
+  "about",
+  "guide",
+  "best",
+  "top",
+]);
+
+function normalizeKeywordList(values: string[] | undefined | null): string[] {
+  if (!values?.length) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of values) {
+    const trimmed = raw?.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+  return out;
+}
+
+/** Light related terms from title/body when metadata has no secondary keywords. */
+function deriveRelatedTerms(title: string, body: string, primaryKeyword: string): string[] {
+  const primary = primaryKeyword.trim().toLowerCase();
+  const pool = `${title} ${body.slice(0, 400)}`;
+  const tokens = pool
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length >= 4 && !SECONDARY_STOP_WORDS.has(token));
+
+  const seen = new Set<string>();
+  const related: string[] = [];
+  for (const token of tokens) {
+    if (token === primary || primary.includes(token)) continue;
+    if (seen.has(token)) continue;
+    seen.add(token);
+    related.push(token);
+    if (related.length >= 4) break;
+  }
+  return related;
+}
+
+function resolveSecondaryKeywords(result: HumanizableContentPiece): string[] {
+  const fromField = normalizeKeywordList(result.secondary_keywords);
+  if (fromField.length > 0) return fromField;
+
+  const fromMeta = normalizeKeywordList(result.pieceMetadata?.secondaryKeywords);
+  if (fromMeta.length > 0) return fromMeta;
+
+  return deriveRelatedTerms(result.title, result.body_markdown ?? "", result.target_keyword);
+}
+
 export function contentPieceToGeneratedArticle(result: HumanizableContentPiece): GeneratedArticle {
   const body = result.body_markdown ?? "";
   const meta =
@@ -282,7 +358,7 @@ export function contentPieceToGeneratedArticle(result: HumanizableContentPiece):
     title: result.title,
     metaDescription: meta,
     primaryKeyword: result.target_keyword,
-    secondaryKeywords: [],
+    secondaryKeywords: resolveSecondaryKeywords(result),
     bodyMarkdown: body,
     wordCount: bodyWordCount(body),
     readingTimeMinutes: Math.max(1, Math.ceil(bodyWordCount(body) / 200)),

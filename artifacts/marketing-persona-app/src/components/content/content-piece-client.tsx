@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { scoreArticleQuality } from "@workspace/content-engine/articles/article-quality-score";
+import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
 import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import {
@@ -78,8 +79,7 @@ export function ContentPieceClient({
   }, [piece.pieceMetadata?.visualSummaryMarkdown, displayBody]);
 
   const canEnhance = isSeoLongformFormat(piece.formatType as ContentFormatType);
-  const canHumanize =
-    isSeoLongformFormat(piece.formatType as ContentFormatType) || piece.formatType === "linkedin_post";
+  const canHumanize = isHumanizableFormat(piece.formatType);
   const humanizationAudit = piece.pieceMetadata?.humanizationAudit;
   const qualityScore = useMemo(
     () =>

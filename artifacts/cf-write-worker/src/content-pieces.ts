@@ -7,7 +7,7 @@ import {
   type ContentFormatType,
 } from "@workspace/db/schema-sqlite";
 import { humanizeContentPiece } from "@workspace/content-engine/content/humanizer";
-import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
+import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
 import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
@@ -288,12 +288,12 @@ async function handleContentPieceHumanize(
 
   const piece = access.piece!;
   const formatType = piece.formatType as ContentFormatType;
-  if (!isSeoLongformFormat(formatType) && formatType !== "linkedin_post") {
+  if (!isHumanizableFormat(formatType)) {
     return withCors(
       request,
       Response.json(
         {
-          error: "Humanization is available for long-form SEO content and LinkedIn posts",
+          error: "Humanization is available for long-form SEO content and social posts",
         },
         { status: 400 },
       ),

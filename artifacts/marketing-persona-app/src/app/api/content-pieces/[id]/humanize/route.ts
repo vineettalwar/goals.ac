@@ -5,7 +5,7 @@ import type { ContentFormatType } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { humanizeContentPiece } from "@workspace/content-engine/content/humanizer";
-import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
+import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import {
   assertPieceOwner,
@@ -46,9 +46,9 @@ export async function POST(
   }
 
   const formatType = piece!.formatType as ContentFormatType;
-  if (!isSeoLongformFormat(formatType) && formatType !== "linkedin_post") {
+  if (!isHumanizableFormat(formatType)) {
     return NextResponse.json(
-      { error: "Humanization is available for long-form SEO content and LinkedIn posts" },
+      { error: "Humanization is available for long-form SEO content and social posts" },
       { status: 400 },
     );
   }

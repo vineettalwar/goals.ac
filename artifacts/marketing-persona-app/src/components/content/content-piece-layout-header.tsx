@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { formatHumanizationAuditLine } from "@workspace/app-shell/content-piece";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArticlePerformanceBadge } from "@/components/content-studio/article-performance-badge";
@@ -33,6 +34,7 @@ export function ContentPieceLayoutHeader({
     rejected?: boolean;
     slopScoreBefore?: number;
     slopScoreAfter?: number;
+    reason?: string;
   } | null;
 }) {
   return (
@@ -63,12 +65,10 @@ export function ContentPieceLayoutHeader({
               Humanized
             </Badge>
           ) : null}
-          {humanizationAudit && !humanizationAudit.rejected ? (
+          {humanizationAudit ? (
             <span className="text-xs text-muted-foreground">
-              AI tells {humanizationAudit.slopScoreBefore} → {humanizationAudit.slopScoreAfter}
+              {formatHumanizationAuditLine(humanizationAudit)}
             </span>
-          ) : humanizationAudit?.rejected ? (
-            <span className="text-xs text-muted-foreground">Humanization skipped</span>
           ) : null}
           {piece.plannedDate && !editing && (
             <span className="text-xs text-muted-foreground">Planned {piece.plannedDate}</span>
