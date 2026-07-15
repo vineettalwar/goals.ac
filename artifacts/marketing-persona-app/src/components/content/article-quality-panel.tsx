@@ -19,6 +19,8 @@ type ArticleQualityPanelProps = {
   jsonLdSchema?: object | null;
   internalLinkSuggestions?: { anchorText: string; suggestedSlug: string }[];
   wordCount?: number;
+  writingSample?: string | null;
+  brandVoiceExcerpt?: string | null;
   contentPieceId?: number | null;
   onEnhance?: () => void;
   enhancing?: boolean;

@@ -1,10 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "../cn";
 import { projectDetailPath, type ProjectLinkProps } from "../projects/projects-ui";
-import {
-  type CmsIntegrationRow,
-  type ProjectIntegrationsTab,
-} from "./types";
+import type { CmsIntegrationRow, ProjectIntegrationsTab } from "./types";
 import {
   IntegrationsSearchPanel,
   searchConnectedCount,
@@ -19,44 +16,12 @@ import { IntegrationsEspPanel, countEspConnections } from "./integrations-esp-ui
 import { IntegrationsCmsPanel } from "./integrations-cms-panel";
 import type { EspPlatformId } from "./publishing-destinations";
 import { orgIntegrationsPath, projectIntegrationsPath } from "../project-detail/types";
-import { CMS_PLATFORMS } from "./types";
-
-const TABS: Array<{ id: ProjectIntegrationsTab; label: string }> = [
-  { id: "cms", label: "CMS" },
-  { id: "social", label: "Social" },
-  { id: "esp", label: "Email" },
-  { id: "search", label: "Search & Analytics" },
-];
-
-function IntegrationTabBadge({ count, loading }: { count: number; loading?: boolean }) {
-  if (!loading && count <= 0) return null;
-  return (
-    <span
-      className={cn(
-        "ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-primary",
-        loading && "invisible",
-      )}
-      aria-hidden={loading}
-    >
-      {loading ? 0 : count}
-    </span>
-  );
-}
-
-function ProjectLink({
-  renderLink,
-  ...props
-}: ProjectLinkProps & { renderLink: (props: ProjectLinkProps) => ReactNode }) {
-  return <>{renderLink(props)}</>;
-}
-
-function cmsConnectedCount(integrations: Record<string, CmsIntegrationRow>): number {
-  let count = 0;
-  for (const { key } of CMS_PLATFORMS) {
-    if (integrations[key]?.connected) count += 1;
-  }
-  return count;
-}
+import {
+  INTEGRATION_TABS,
+  IntegrationTabBadge,
+  ProjectIntegrationsLink,
+  cmsConnectedCount,
+} from "./integrations-view-helpers";
 
 export function IntegrationsView({
   projectId,
@@ -131,7 +96,6 @@ export function IntegrationsView({
   searchProperties?: SearchPropertyConnectionsResponse | null;
   searchPropertiesLoading?: boolean;
   searchPropertiesError?: string | null;
-  /** API origin for OAuth start URLs (e.g. https://api.goals.ac or empty for dev proxy). */
   apiBase?: string;
   onDisconnectSearch?: (provider: SearchPropertyProvider) => void;
   onSyncGsc?: () => void;
@@ -177,7 +141,7 @@ export function IntegrationsView({
       </div>
 
       <div className="flex flex-wrap gap-1 rounded-lg border border-border bg-muted/40 p-1">
-        {TABS.map((tab) => {
+        {INTEGRATION_TABS.map((tab) => {
           const active = activeTab === tab.id;
           const count =
             tab.id === "cms"
@@ -289,21 +253,21 @@ export function IntegrationsView({
       {projectId ? (
         <p className="text-xs text-muted-foreground">
           Organization AI and research tools:{" "}
-          <ProjectLink
+          <ProjectIntegrationsLink
             renderLink={renderLink}
             href={orgIntegrationsPath("ai")}
             className="font-medium text-primary hover:underline"
           >
             Org integrations
-          </ProjectLink>
+          </ProjectIntegrationsLink>
           {" · "}
-          <ProjectLink
+          <ProjectIntegrationsLink
             renderLink={renderLink}
             href={projectDetailPath(projectId)}
             className="font-medium text-primary hover:underline"
           >
             Open project overview
-          </ProjectLink>
+          </ProjectIntegrationsLink>
         </p>
       ) : null}
     </div>

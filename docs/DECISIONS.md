@@ -1,3 +1,16 @@
+## 2026-07-15 — Execute Wave 0→1→2 competitive plan
+
+**Decision:** Execute the Content Studio competitive plan in order: Wave 0 (humanize reliability + demo assets) → Wave 1 (Studio side panel brief/SERP + live draft score + unified create UX) → Wave 2 (health cron expansion, connect UX, publish history, article+social one-click). Keep full Surfer live NLP deferred. Partner-demo vs BLG/AutoSEO is the primary ICP for 90 days.
+
+**Alternatives considered:**
+- Build Surfer-style real-time NLP editor first — deferred (high cost, Wave 1 side panel covers demo need)
+- Skip humanize hardening and ship Studio UI only — rejected; BLG/AutoSEO wins on perceived output quality in demos
+- Self-serve hosted blog now — deferred until self-serve GTM ships
+
+**Reason:** Product remains engine-rich and experience-thin; competitors win on workflow coherence and demo-ready surfaces, not missing backends.
+
+**Implications:** PRD at `docs/prd/content-studio-competitive-plan.md`; Wave 1 not started until Wave 0 acceptance; detector APIs and backlink exchange out of scope.
+
 ## 2026-07-15 — Competitive packaging over new engines
 
 **Decision:** Close Surfer/Clearscope/BLG-style gaps by packaging existing engines: command center, seed→cluster, dual editorial+SERP score, Fix-gaps enhance, CMS health sweep — shared in `lib/content-engine` + `lib/app-shell`, mirrored on Next and CF workers. No new Semrush clone or live NLP editor in this tranche.
@@ -6,7 +19,7 @@
 - Build a Surfer-style real-time NLP editor first — deferred (high cost, lower packaging ROI)
 - Parallel keyword/UX stack outside content-engine — rejected; keep one pipeline
 
-**Reason:** Product was engine-rich and experience-thin; competitors win on workflow coherence.
+**Reason:** Product was engine-rich and experience-thin; competitors win on workflow coherence. Full diagnosis: `docs/competitors/executive-diagnosis.md`.
 
 **Implications:** Autopilot defaults favor auto-queue after fast-lane; enhance prompts ingest SERP gaps; connection health cron covers project CMS JSON creds as `project_cms`.
 

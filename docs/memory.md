@@ -4,13 +4,27 @@ Living document capturing architectural decisions, historical context, and lesso
 
 ---
 
+## Content Studio competitive plan — Waves 0–2 (2026-07-15)
+
+**Lesson:** First packaging tranche (command center, dual score, Fix gaps, CMS health) shipped; the next gap is **humanize trust + Studio writing room + integration reliability** vs Surfer (live editor feel), BLG/AutoSEO (volume + quality demo), and Buffer (social polish).
+
+**Execution order:** Wave 0 humanize hardening → Wave 1 side panel + live score → Wave 2 health/publish/social one-click. Wave 1 not started until Wave 0 passes acceptance.
+
+**ICP (90 days):** Partner-demo path vs BLG/AutoSEO — not self-serve checkout or hosted blog.
+
+**Deferred on purpose:** Full Surfer NLP; hosted blog until self-serve; TikTok/YouTube/inbox; backlink exchange; detector APIs.
+
+**See:** `docs/prd/content-studio-competitive-plan.md`, `docs/DECISIONS.md` (Wave 0→1→2 decision), `HANDOFF.md` (in-progress workstreams).
+
+---
+
 ## Competitive packaging over engines (2026-07-15)
 
 **Lesson:** goals.ac was engine-rich and experience-thin vs Surfer/Clearscope/BLG. Closing gaps meant packaging existing pipelines (command center, seed→cluster, dual score, Fix gaps, CMS health, autopilot defaults) in `lib/content-engine` + `lib/app-shell` with Next + CF parity — not cloning Semrush or shipping a live NLP editor.
 
 **Deferred on purpose:** Surfer-style real-time NLP scoring; hosted blog fallback for CMS-less SMB.
 
-**See:** `docs/DECISIONS.md` (Competitive packaging), `HANDOFF.md` (shipped list).
+**See:** `docs/competitors/executive-diagnosis.md` (canonical diagnosis), `docs/DECISIONS.md` (Competitive packaging), `HANDOFF.md` (shipped list).
 
 ---
 
