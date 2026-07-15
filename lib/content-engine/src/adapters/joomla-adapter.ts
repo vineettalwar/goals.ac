@@ -5,7 +5,6 @@ import type { CmsIntegrationCredentials } from "../support/publishing/cms-integr
 import { getOutputModes } from "../support/publishing/platform-output-modes";
 import { resolveOutputMode } from "../support/publishing/platform-output-modes";
 import { mapSeoToJoomlaMeta, mapSeoToPluginMeta } from "../support/publishing/seo-field-mapper";
-import { contentTagsFromCanonical } from "./adapter-helpers";
 import {
   mapPluginStatus,
   renderMarkdownHtmlPayload,
@@ -14,6 +13,11 @@ import {
 } from "./plugin-shared";
 import type { CmsAdapter, PlatformPayload, PublishOpts, RenderOptions, RenderResult } from "./types";
 
+function httpsFeaturedUrl(content: CanonicalContent): string | undefined {
+  const raw = content.pieceMetadata?.featuredImageUrl?.trim();
+  return raw?.startsWith("https://") ? raw : undefined;
+}
+
 export const joomlaAdapter: CmsAdapter = {
   platform: "joomla",
   capabilities: {
@@ -21,7 +25,7 @@ export const joomlaAdapter: CmsAdapter = {
     scheduling: false,
     updates: true,
     categories: true,
-    featuredImage: false,
+    featuredImage: true,
     schemaInjection: true,
     outputModes: getOutputModes("joomla").map((m) => m.value),
   },
@@ -33,7 +37,16 @@ export const joomlaAdapter: CmsAdapter = {
       creds: opts?.creds,
       entitlements: opts?.entitlements,
     });
-    return renderMarkdownHtmlPayload(content, shouldPreRenderHtml("joomla", opts?.creds, outputMode));
+    const result = await renderMarkdownHtmlPayload(
+      content,
+      shouldPreRenderHtml("joomla", opts?.creds, outputMode),
+    );
+    const featuredImageUrl = httpsFeaturedUrl(content);
+    if (!featuredImageUrl || result.payload.kind !== "html") return result;
+    return {
+      ...result,
+      payload: { ...result.payload, featuredImageUrl },
+    };
   },
 
   async publish(creds: CmsIntegrationCredentials, payload: PlatformPayload, opts?: PublishOpts) {
@@ -48,6 +61,7 @@ export const joomlaAdapter: CmsAdapter = {
     const joomlaMeta = mapSeoToJoomlaMeta(seo);
     const outputMode = creds.joomla.outputMode ?? "markdown";
     const useMarkdown = outputMode !== "html";
+    const featuredImageUrl = payload.featuredImageUrl?.trim() || undefined;
 
     if (creds.joomla.connectionType === "plugin") {
       if (!creds.joomla.siteKey) throw new Error("Joomla plugin credentials are incomplete.");
@@ -60,6 +74,7 @@ export const joomlaAdapter: CmsAdapter = {
           output_mode: outputMode,
           meta: mapSeoToPluginMeta(seo),
           seo: { ...seo, ...joomlaMeta } as Record<string, string | undefined>,
+          ...(featuredImageUrl ? { featuredImageUrl } : {}),
         },
         { markdown: useMarkdown, idempotencyKey: opts?.idempotencyKey },
       );
@@ -75,6 +90,7 @@ export const joomlaAdapter: CmsAdapter = {
       creds.joomla.categoryId,
       payload.meta?.description,
       tags,
+      featuredImageUrl,
     );
     return { url: result.url, remoteId: result.articleId };
   },

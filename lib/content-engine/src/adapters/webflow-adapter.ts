@@ -1,4 +1,8 @@
-import { publishToWebflow, type WebflowPublishStatus } from "@workspace/connectors/webflow";
+import {
+  publishToWebflow,
+  webflowFeaturedImageUrl,
+  type WebflowPublishStatus,
+} from "@workspace/connectors/webflow";
 import type { CanonicalContent } from "../content/canonical-content";
 import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
 import { resolveSeoFromCanonical, seoTitle } from "./adapter-helpers";
@@ -12,16 +16,30 @@ export const webflowAdapter: CmsAdapter = {
     scheduling: false,
     updates: false,
     categories: false,
-    featuredImage: false,
+    featuredImage: true,
     schemaInjection: false,
   },
 
   async render(content: CanonicalContent): Promise<RenderResult> {
     const html = await markdownToHtml(content.markdown);
     const seo = resolveSeoFromCanonical(content);
+    const warnings: RenderResult["warnings"] = [];
+    const featuredRaw = content.pieceMetadata?.featuredImageUrl?.trim();
+    const featuredImageUrl = webflowFeaturedImageUrl(featuredRaw);
+    if (featuredRaw && !featuredImageUrl) {
+      warnings.push({
+        code: "webflow_featured_skipped",
+        message: "Featured image skipped — Webflow only accepts https:// image URLs.",
+      });
+    }
     return {
-      payload: { kind: "html", html, title: seoTitle(content, seo) },
-      warnings: [],
+      payload: {
+        kind: "html",
+        html,
+        title: seoTitle(content, seo),
+        featuredImageUrl,
+      },
+      warnings,
       previewHtml: html,
     };
   },
@@ -39,7 +57,11 @@ export const webflowAdapter: CmsAdapter = {
       creds.webflow.bodyFieldSlug,
       payload.title,
       "",
-      { publishStatus, htmlContent: payload.html },
+      {
+        publishStatus,
+        htmlContent: payload.html,
+        featuredImageUrl: payload.featuredImageUrl,
+      },
     );
     return { url };
   },

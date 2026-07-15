@@ -178,6 +178,24 @@ class ContentController extends BaseController
             'language'  => '*',
         ];
 
+        // HTTPS featured URL → `#__content.images` (intro + fulltext). Non-https skipped.
+        $featuredUrl = trim((string) ($data['featuredImageUrl'] ?? $data['featured_image_url'] ?? ''));
+        if ($featuredUrl !== '' && strpos($featuredUrl, 'https://') === 0) {
+            $safeUrl = $filter->clean($featuredUrl, 'URL');
+            if (is_string($safeUrl) && strpos($safeUrl, 'https://') === 0) {
+                $articleData['images'] = json_encode([
+                    'image_intro'            => $safeUrl,
+                    'float_intro'            => '',
+                    'image_intro_alt'        => '',
+                    'image_intro_caption'    => '',
+                    'image_fulltext'         => $safeUrl,
+                    'float_fulltext'         => '',
+                    'image_fulltext_alt'     => '',
+                    'image_fulltext_caption' => '',
+                ]);
+            }
+        }
+
         if ($articleId > 0) {
             // Load existing article.
             if (!$table->load($articleId)) {

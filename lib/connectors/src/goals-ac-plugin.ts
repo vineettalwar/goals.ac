@@ -67,7 +67,11 @@ export interface GoalsAcPublishPayload {
   template_suffix?: string;
   /** Shopify only */
   blogId?: string;
-  /** Shopify ArticleCreateInput.image — public https or PNG/JPEG data URI (plugin stages upload) */
+  /**
+   * Featured image URL.
+   * Shopify: https or PNG/JPEG data URI (plugin stages upload).
+   * Joomla: https only → `#__content.images` intro/fulltext.
+   */
   featuredImageUrl?: string;
 }
 

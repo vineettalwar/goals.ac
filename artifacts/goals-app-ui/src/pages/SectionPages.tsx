@@ -606,8 +606,8 @@ export function ResearchRedditPage() {
 
   return (
     <SectionShell
-      title="Signals"
-      description="Community demand signals for content angles."
+      title="Reddit signals"
+      description="Real Reddit threads plus AI draft replies — you post manually."
       tabs={researchTabs}
     >
       <ResearchSignalsView

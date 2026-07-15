@@ -82,7 +82,14 @@ export interface ShopifySectionBlock {
 }
 
 export type PlatformPayload =
-  | { kind: "html"; html: string; title: string; meta?: Record<string, string> }
+  | {
+      kind: "html";
+      html: string;
+      title: string;
+      meta?: Record<string, string>;
+      /** https featured — Webflow Image field / Joomla image_intro */
+      featuredImageUrl?: string;
+    }
   | { kind: "notion_blocks"; blocks: NotionBlock[]; title: string; coverUrl?: string }
   | { kind: "cms_fields"; fields: Record<string, unknown>; title: string; slug?: string }
   | { kind: "webhook"; event: "article.publish"; body: WebhookArticlePayload }

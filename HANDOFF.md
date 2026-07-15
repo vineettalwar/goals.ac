@@ -138,8 +138,24 @@ Report: [`docs/audits/2026-07-16-ponytail-frontend.md`](docs/audits/2026-07-16-p
 | **Ghost** | Connector uploads https / PNG/JPEG data URI via Admin `images/upload`, sets `feature_image`. Adapter `featuredImage: true`. |
 | **Shopify (Admin API)** | `lib/connectors` `resolveShopifyArticleImage`: staged upload; https falls back to direct URL if staged fails. |
 | **Shopify (plugin)** | `cms-plugins/shopify` `resolveArticleImageFromFeaturedUrl`: https pass-through; PNG/JPEG data URI → `stagedUploadsCreate` → resource URL. SVG skipped; staged failure skips image (article still publishes). Adapter already forwards `featuredImageUrl`. |
+| **Joomla** | REST `images` object + plugin `#__content.images` from HTTPS `featuredImageUrl` (`image_intro` + `image_fulltext`). Non-https skipped. Adapter `featuredImage: true`. |
 
-SVG data URIs ignored on both.
+SVG data URIs ignored on Ghost/Shopify; Joomla is HTTPS-only (no media upload).
+
+### Drupal featured image — skipped (2026-07-16)
+
+**Skip.** Not a safe one-shot map of `featuredImageUrl` → field.
+
+| Surface | Today |
+|---|---|
+| JSON:API `publishToDrupal` | Title/body/tags only — no image upload or relationships |
+| Plugin `GoalsAcController::publishContent` | No featured handling (no TYPO3-style ContentPublisher) |
+| SiteGraph | **Read-only** probe of `field_media_image` / `field_image` / `field_featured_image` |
+| Adapter | `featuredImage: false` |
+
+**Why hard:** field names/types vary per site (`image` file vs Media entity ref); write path needs File (+ often Media) entity create from https/data URI, SSRF-safe fetch, and JSON:API file-upload config that differs by Drupal version/modules. Half-wiring a URL into attributes without entities will 4xx or corrupt nodes.
+
+**When revisited:** plugin-first — detect image-like field on target bundle → fetch/create File → if Media ref, create Media → set field; then optionally mirror in JSON:API connector. Keep adapter capability false until that ships.
 
 ---
 

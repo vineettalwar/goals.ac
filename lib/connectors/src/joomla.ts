@@ -11,6 +11,18 @@ export interface JoomlaPostResult {
   url: string;
 }
 
+/** Joomla `#__content.images` JSON — templates use these as img src (local path or https URL). */
+export type JoomlaImagesField = {
+  image_intro: string;
+  float_intro: string;
+  image_intro_alt: string;
+  image_intro_caption: string;
+  image_fulltext: string;
+  float_fulltext: string;
+  image_fulltext_alt: string;
+  image_fulltext_caption: string;
+};
+
 function apiBase(siteUrl: string): string {
   return siteUrl.replace(/\/$/, "") + "/api/index.php/v1";
 }
@@ -22,6 +34,24 @@ function makeHeaders(apiToken: string): Record<string, string> {
   };
 }
 
+/** HTTPS-only — Joomla stores the string as-is; no media upload via core REST. */
+export function joomlaImagesFromFeaturedUrl(
+  featuredImageUrl?: string | null,
+): JoomlaImagesField | undefined {
+  const raw = featuredImageUrl?.trim();
+  if (!raw?.startsWith("https://")) return undefined;
+  return {
+    image_intro: raw,
+    float_intro: "",
+    image_intro_alt: "",
+    image_intro_caption: "",
+    image_fulltext: raw,
+    float_fulltext: "",
+    image_fulltext_alt: "",
+    image_fulltext_caption: "",
+  };
+}
+
 export async function publishToJoomla(
   credentials: JoomlaCredentials,
   title: string,
@@ -30,6 +60,7 @@ export async function publishToJoomla(
   categoryId?: number,
   metaDescription?: string,
   tags?: string[],
+  featuredImageUrl?: string | null,
 ): Promise<JoomlaPostResult> {
   const base = apiBase(credentials.siteUrl);
   const articlesUrl = `${base}/content/articles`;
@@ -45,6 +76,8 @@ export async function publishToJoomla(
   if (categoryId) body.catid = categoryId;
   if (metaDescription) body.metadesc = metaDescription.slice(0, 300);
   if (tags?.length) body.tags = tags;
+  const images = joomlaImagesFromFeaturedUrl(featuredImageUrl);
+  if (images) body.images = images;
 
   const res = await fetch(articlesUrl, {
     method: "POST",

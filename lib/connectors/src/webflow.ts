@@ -14,13 +14,45 @@ function slugify(title: string): string {
     .slice(0, 100);
 }
 
+/** Webflow Image fields only accept publicly reachable https:// URLs (max 4MB). */
+export function webflowFeaturedImageUrl(
+  url: string | null | undefined,
+): string | undefined {
+  const raw = url?.trim();
+  return raw?.startsWith("https://") ? raw : undefined;
+}
+
+async function resolveCollectionImageFieldSlug(
+  apiToken: string,
+  collectionId: string,
+): Promise<string | undefined> {
+  const url = `${WEBFLOW_API}/collections/${collectionId}`;
+  await assertPublicUrl(url);
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${apiToken}`,
+      accept: "application/json",
+    },
+  });
+  if (!res.ok) return undefined;
+  const data = (await res.json()) as {
+    fields?: Array<{ type?: string; slug?: string }>;
+  };
+  return data.fields?.find((f) => f.type === "Image" && f.slug)?.slug;
+}
+
 export async function publishToWebflow(
   apiToken: string,
   collectionId: string,
   bodyFieldSlug: string,
   title: string,
   bodyMarkdown: string,
-  options?: { publishStatus?: WebflowPublishStatus; htmlContent?: string },
+  options?: {
+    publishStatus?: WebflowPublishStatus;
+    htmlContent?: string;
+    /** https:// only — set on first Image field when the collection has one */
+    featuredImageUrl?: string | null;
+  },
 ): Promise<string> {
   await assertPublicUrl(WEBFLOW_API);
 
@@ -28,22 +60,35 @@ export async function publishToWebflow(
   const htmlContent = options?.htmlContent ?? (await marked(bodyMarkdown));
   const slug = slugify(title) + "-" + Date.now().toString(36);
 
-  const createRes = await fetch(`${WEBFLOW_API}/collections/${collectionId}/items`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiToken}`,
-      "Content-Type": "application/json",
-      accept: "application/json",
-    },
-    body: JSON.stringify({
-      fieldData: {
-        name: title,
-        slug,
-        [bodyFieldSlug]: htmlContent,
+  const fieldData: Record<string, unknown> = {
+    name: title,
+    slug,
+    [bodyFieldSlug]: htmlContent,
+  };
+
+  const featuredUrl = webflowFeaturedImageUrl(options?.featuredImageUrl);
+  if (featuredUrl) {
+    const imageSlug = await resolveCollectionImageFieldSlug(apiToken, collectionId);
+    if (imageSlug) {
+      fieldData[imageSlug] = { url: featuredUrl, alt: title };
+    }
+  }
+
+  const createRes = await fetch(
+    `${WEBFLOW_API}/collections/${collectionId}/items?skipInvalidFiles=true`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        "Content-Type": "application/json",
+        accept: "application/json",
       },
-      isDraft: publishStatus === "draft",
-    }),
-  });
+      body: JSON.stringify({
+        fieldData,
+        isDraft: publishStatus === "draft",
+      }),
+    },
+  );
 
   if (!createRes.ok) {
     const body = await createRes.json().catch(() => ({})) as { message?: string; code?: string };
