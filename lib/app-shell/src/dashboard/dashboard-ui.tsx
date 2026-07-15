@@ -11,11 +11,7 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "../cn";
-import {
-  AutopilotActivityPanel,
-  formatArticleUsageLabel,
-  formatInternalLinksChipLabel,
-} from "./autopilot-activity-panel";
+import { AutopilotActivityPanel, formatArticleUsageLabel } from "./autopilot-activity-panel";
 import {
   contentPiecePath,
   countByStatus,

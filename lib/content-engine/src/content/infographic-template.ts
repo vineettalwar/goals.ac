@@ -178,7 +178,10 @@ function buildVisualSummaryAssets(
   body: string,
   options: { title: string; keyword: string; brandName?: string },
 ): {
+  /** Body injection: callout + markdown image data URI */
   block: string;
+  /** Metadata: callout only (aside uses visualSummarySvgDataUri for the graphic) */
+  visualSummaryMarkdown: string;
   visualSummarySvg: string;
   visualSummarySvgDataUri: string;
 } | null {
@@ -193,8 +196,17 @@ function buildVisualSummaryAssets(
     ...options,
     svgDataUri: dataUri,
   });
-  if (!block) return null;
-  return { block, visualSummarySvg: svg, visualSummarySvgDataUri: dataUri };
+  const visualSummaryMarkdown = buildInfographicMarkdownBlock(body, {
+    ...options,
+    svgDataUri: null,
+  });
+  if (!block || !visualSummaryMarkdown) return null;
+  return {
+    block,
+    visualSummaryMarkdown,
+    visualSummarySvg: svg,
+    visualSummarySvgDataUri: dataUri,
+  };
 }
 
 /**
@@ -219,10 +231,10 @@ export function injectInfographicMarkdownBlock(
 
   const existing = extractInfographicMarkdown(body);
   if (existing) {
-    // Refresh SVG metadata even when body already has a block; do not rewrite body.
+    // Refresh SVG + callout metadata; leave an existing body block untouched.
     return {
       body,
-      visualSummaryMarkdown: existing,
+      visualSummaryMarkdown: assets.visualSummaryMarkdown,
       visualSummarySvg: assets.visualSummarySvg,
       visualSummarySvgDataUri: assets.visualSummarySvgDataUri,
       injected: false,
@@ -245,7 +257,7 @@ export function injectInfographicMarkdownBlock(
 
   return {
     body: nextBody,
-    visualSummaryMarkdown: block,
+    visualSummaryMarkdown: assets.visualSummaryMarkdown,
     visualSummarySvg: assets.visualSummarySvg,
     visualSummarySvgDataUri: assets.visualSummarySvgDataUri,
     injected: true,
