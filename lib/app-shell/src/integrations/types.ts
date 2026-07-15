@@ -1,3 +1,5 @@
+import { type CmsPlatformId } from "./destination-ids";
+
 export type IntegrationsTab = "cms" | "social" | "esp" | "search" | "ai" | "tools";
 export type ProjectIntegrationsTab = "cms" | "social" | "esp" | "search";
 export type OrgIntegrationsTab = "ai" | "tools";
@@ -8,7 +10,7 @@ export type CmsIntegrationRow = {
 } & Record<string, unknown>;
 
 export type CmsPlatform = {
-  key: string;
+  key: CmsPlatformId;
   label: string;
   description: string;
   badgeLetter?: string;

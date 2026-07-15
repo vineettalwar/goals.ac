@@ -1,5 +1,6 @@
 export {
   CreateContentDialog,
+  type CreateCompetitorOption,
   type CreateContentDraftInput,
   type CreateContentInitialValues,
 } from "./create-content-dialog";

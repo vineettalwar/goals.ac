@@ -1,19 +1,60 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import {
   CreateContentDialog,
+  flattenCompetitorAnalysisList,
   STUDIO_FORMAT_OPTIONS,
   StudioNewContentButton,
   StudioView,
   studioContentPiecePath,
+  type CreateCompetitorOption,
   type CreateContentInitialValues,
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { useIntegrationsData } from "@/hooks/use-integrations-data";
 import { useStudioData } from "@/hooks/use-studio-data";
+import {
+  fetchCompetitorContext,
+  type CompetitorContextResponse,
+} from "@/lib/queries/fetchers";
 
 const VALID_FORMATS = new Set(STUDIO_FORMAT_OPTIONS.map((option) => option.value));
+
+function hostnameKey(url: string): string {
+  try {
+    const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    return new URL(normalized).hostname.replace(/^www\./, "").toLowerCase();
+  } catch {
+    return url.trim().toLowerCase();
+  }
+}
+
+function buildCreateCompetitors(
+  ctx: CompetitorContextResponse | null | undefined,
+): CreateCompetitorOption[] {
+  if (!ctx) return [];
+  const byHost = new Map<string, CreateCompetitorOption>();
+  for (const analysis of flattenCompetitorAnalysisList(ctx)) {
+    const url = analysis.competitorUrl?.trim();
+    if (!url) continue;
+    byHost.set(hostnameKey(url), {
+      url,
+      name: analysis.competitorName,
+      summary: analysis.summary,
+      threatLevel: analysis.threatLevel,
+      contentGaps: analysis.contentGaps,
+    });
+  }
+  for (const raw of ctx.competitorUrls ?? []) {
+    const url = raw.trim();
+    if (!url) continue;
+    const key = hostnameKey(url);
+    if (!byHost.has(key)) byHost.set(key, { url });
+  }
+  return Array.from(byHost.values()).slice(0, 5);
+}
 
 function draftFromStudioSearchParams(
   searchParams: URLSearchParams,
@@ -61,6 +102,18 @@ export function StudioPage() {
   const [createError, setCreateError] = useState<string | null>(null);
   const [createInitialValues, setCreateInitialValues] =
     useState<CreateContentInitialValues | null>(null);
+
+  const competitorQuery = useQuery({
+    queryKey: ["competitor-context", projectId],
+    queryFn: () => fetchCompetitorContext(projectId!),
+    enabled: Boolean(projectId && createOpen),
+    staleTime: 30_000,
+  });
+
+  const projectCompetitors = useMemo(
+    () => buildCreateCompetitors(competitorQuery.data),
+    [competitorQuery.data],
+  );
 
   const deepLinkDraft = useMemo(
     () => draftFromStudioSearchParams(searchParams),
@@ -137,6 +190,8 @@ export function StudioPage() {
         open={createOpen}
         initialValues={createInitialValues}
         cmsConnections={integrations ?? {}}
+        projectCompetitors={projectCompetitors}
+        competitorsLoading={competitorQuery.isPending && !competitorQuery.data}
         onClose={() => {
           if (creating) return;
           setCreateOpen(false);

@@ -20,6 +20,17 @@ export {
   countSocialConnections,
 } from "./integrations-social-ui";
 export {
+  CMS_PLATFORM_IDS,
+  ESP_PLATFORM_IDS,
+  EXPORT_DESTINATION_IDS,
+  SOCIAL_INTEGRATION_IDS,
+  SOCIAL_PUBLISH_IDS,
+  type CmsPlatformId,
+  type ExportDestinationId,
+  type SocialIntegrationId,
+  type SocialPublishId,
+} from "./destination-ids";
+export {
   countEspConnections,
   ESP_DESTINATIONS,
   ESP_NATIVE_CONNECT_PLATFORMS,

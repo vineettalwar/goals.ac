@@ -1,12 +1,12 @@
 import type { CmsIntegrationRow } from "./types";
+import { type EspPlatformId, type SocialIntegrationId } from "./destination-ids";
 
 export type CmsConnectionSnapshot = Record<string, CmsIntegrationRow | undefined>;
 
-
 export type SocialDestinationDefinition = {
-  id: string;
+  id: SocialIntegrationId;
   label: string;
-  integrationKey: string;
+  integrationKey: SocialIntegrationId;
   oauthPath: string;
   description: string;
   /** Bluesky OAuth requires a handle query param. */
@@ -120,7 +120,7 @@ export function countSocialConnections(connections: CmsConnectionSnapshot): numb
     .length;
 }
 
-export type EspPlatformId = "beehiiv" | "convertkit" | "mailchimp";
+export type { EspPlatformId } from "./destination-ids";
 
 export type ConnectionMethod = "api" | "oauth";
 

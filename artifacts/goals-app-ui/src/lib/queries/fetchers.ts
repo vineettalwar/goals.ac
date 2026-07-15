@@ -23,6 +23,19 @@ export function fetchProjectBrandProfile(projectId: string) {
   return apiFetch<BrandProfileSummary>(`/api/website-projects/${projectId}/brand-profile`);
 }
 
+export type CompetitorContextResponse = {
+  competitorUrls?: string[];
+  industry?: string;
+  competitorPositioning?: string;
+  analyses?: unknown[];
+};
+
+export function fetchCompetitorContext(projectId: string) {
+  return apiFetch<CompetitorContextResponse>(
+    `/api/website-projects/${projectId}/competitors`,
+  );
+}
+
 export type StockCredentialsStatus = {
   platform?: { configured?: boolean };
   org?: unknown[];
