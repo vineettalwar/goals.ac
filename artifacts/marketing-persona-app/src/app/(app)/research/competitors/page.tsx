@@ -1,11 +1,14 @@
 import dynamic from "next/dynamic";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 
-const CompetitorAnalysisPanel = dynamic(
-  () => import("@/components/panels/competitor-analysis-panel").then((m) => m.CompetitorAnalysisPanel),
+const ResearchCompetitorsClient = dynamic(
+  () =>
+    import("@/components/research/research-competitors-client").then(
+      (m) => m.ResearchCompetitorsClient,
+    ),
   { loading: () => <PageSkeleton /> },
 );
 
 export default function ResearchCompetitorsPage() {
-  return <CompetitorAnalysisPanel embedded />;
+  return <ResearchCompetitorsClient />;
 }
