@@ -266,17 +266,30 @@ export const LANDER_CONFIG = {
     status: "beta" as const,
     titleLine1: "Find threads",
     titleLine2: "worth joining",
-    description: "Discover high-intent Reddit discussions in your niche and get draft reply suggestions. You post manually.",
+    description:
+      "Search Reddit for high-intent discussions in your niche, then get AI draft replies. Manual assist only — you post yourself.",
     heroImage: HERO_IMAGES.roadmaps.hero,
     primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     features: [
-      { icon: MessageSquare, title: "Thread discovery", description: "AI finds relevant subreddit posts for your keywords." },
+      {
+        icon: MessageSquare,
+        title: "Real thread search",
+        description: "Pulls live posts from Reddit public search for your brand keywords — not invented URLs.",
+      },
       { icon: Target, title: "Intent scoring", description: "Prioritize threads where buyers ask for recommendations." },
-      { icon: PenLine, title: "Draft replies", description: "Suggested responses aligned with your brand voice." },
+      {
+        icon: PenLine,
+        title: "Draft replies",
+        description: "AI suggested responses to copy and edit. Never posted on your behalf.",
+      },
       { icon: Shield, title: "No auto-posting", description: "You own the relationship. We never astroturf." },
     ],
     faq: [
-      { question: "Do you post to Reddit automatically?", answer: "No. We suggest threads and drafts. You copy, edit, and post yourself." },
+      {
+        question: "Do you post to Reddit automatically?",
+        answer:
+          "No. Threads come from Reddit public search; replies are AI drafts. You copy, edit, and post yourself.",
+      },
     ],
   },
   multilingual: {

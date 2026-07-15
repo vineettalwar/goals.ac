@@ -29,22 +29,24 @@ function auditIdFromLocation(): string {
 export function GeoAuditResultLoader() {
   const params = useParams();
   const paramId = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "";
-  const [id, setId] = useState(paramId);
+  const [id, setId] = useState("");
+  const [ready, setReady] = useState(false);
   const [audit, setAudit] = useState<PublicGeoAudit | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fromPath = auditIdFromLocation();
-    setId(fromPath || paramId);
+    setId(auditIdFromLocation() || paramId);
+    setReady(true);
   }, [paramId]);
 
   useEffect(() => {
+    if (!ready) return;
+
     const numericId = Number(id);
     if (!Number.isFinite(numericId) || numericId < 1) {
-      setError(id ? "Invalid audit id" : null);
-      setLoading(Boolean(id));
-      if (id) setLoading(false);
+      setError("Invalid audit id");
+      setLoading(false);
       return;
     }
 
@@ -71,9 +73,9 @@ export function GeoAuditResultLoader() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, ready]);
 
-  if (loading) {
+  if (!ready || loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center gap-3 text-white/70">
         <Spinner size="sm" />

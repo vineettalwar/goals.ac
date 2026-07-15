@@ -304,6 +304,9 @@ importers:
       '@workspace/jobs':
         specifier: workspace:*
         version: link:../../lib/jobs
+      '@workspace/media':
+        specifier: workspace:*
+        version: link:../../lib/media
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20260708.1

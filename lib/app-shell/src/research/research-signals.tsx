@@ -1,8 +1,26 @@
 import type { ReactNode } from "react";
-import { Copy, ExternalLink, FileText, Loader2, MessageSquare } from "lucide-react";
+import { AlertCircle, Copy, ExternalLink, FileText, Loader2, MessageSquare } from "lucide-react";
 import { cn } from "../cn";
 import { btnOutline, btnPrimary, PanelLoading, StatusPill } from "../section-panels/shared";
 import type { RedditThread, ResearchActionPaths, ResearchLinkProps } from "./types";
+
+function ManualAssistBanner() {
+  return (
+    <div
+      className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-100"
+      role="status"
+    >
+      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+      <div className="space-y-1">
+        <p className="font-medium">Manual assist — we never post for you</p>
+        <p className="text-amber-900/90 dark:text-amber-100/90">
+          Threads come from Reddit&apos;s public search (real posts). Reply text is an AI draft —
+          copy, edit, and post yourself.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function ResearchSignalsView({
   projectId,
@@ -30,10 +48,11 @@ export function ResearchSignalsView({
   if (!projectId) {
     return (
       <div className="paper-card max-w-3xl space-y-4 p-6">
-        <h2 className="text-lg font-semibold">Signals</h2>
+        <h2 className="text-lg font-semibold">Reddit signals</h2>
         <p className="text-sm text-muted-foreground">
-          Select a project to find community discussions that match your brand keywords.
+          Select a project to search Reddit for discussions that match your brand keywords.
         </p>
+        <ManualAssistBanner />
         {renderLink ? (
           renderLink({ href: projectsHref, className: btnPrimary, children: "Go to projects" })
         ) : (
@@ -53,9 +72,9 @@ export function ResearchSignalsView({
         <div className="flex items-start gap-3">
           <MessageSquare className="mt-0.5 h-5 w-5 text-primary" />
           <div>
-            <h2 className="text-lg font-semibold">Signals</h2>
+            <h2 className="text-lg font-semibold">Reddit signals</h2>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              Live Reddit threads ranked by intent. AI drafts replies — you post manually.
+              Real threads from Reddit public search, ranked by intent. AI only drafts replies.
             </p>
           </div>
         </div>
@@ -73,18 +92,18 @@ export function ResearchSignalsView({
         ) : null}
       </div>
 
+      <ManualAssistBanner />
+
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
       {loading && threadList.length === 0 ? <PanelLoading label="Loading threads…" /> : null}
 
       {threadList.length === 0 && !discovering && !loading ? (
         <div className="paper-card space-y-2 p-8 text-center">
-          <p className="text-sm font-medium">No signals yet</p>
+          <p className="text-sm font-medium">No threads yet</p>
           <p className="text-sm text-muted-foreground">
-            Click &quot;Find threads&quot; to search Reddit for discussions matching your brand keywords.
-          </p>
-          <p className="text-xs text-muted-foreground">
-            Results come from Reddit&apos;s public API — real posts, not invented URLs.
+            Click &quot;Find threads&quot; to search Reddit for discussions matching your brand
+            keywords.
           </p>
         </div>
       ) : null}
@@ -109,7 +128,7 @@ export function ResearchSignalsView({
               rel="noopener noreferrer"
               className="mb-1 inline-flex items-center gap-1 text-xs text-primary hover:underline"
             >
-              Open thread <ExternalLink className="h-3 w-3" />
+              Open on Reddit <ExternalLink className="h-3 w-3" />
             </a>
             {thread.score != null || thread.numComments != null ? (
               <p className="mb-3 text-xs text-muted-foreground">
@@ -118,7 +137,12 @@ export function ResearchSignalsView({
                 {thread.numComments != null ? `${thread.numComments} comments` : null}
               </p>
             ) : null}
-            <p className="rounded-lg bg-secondary/50 p-3 text-sm text-muted-foreground">{thread.suggestedReply}</p>
+            <div className="rounded-lg bg-secondary/50 p-3">
+              <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+                Suggested reply (AI draft — edit before posting)
+              </p>
+              <p className="text-sm text-muted-foreground">{thread.suggestedReply}</p>
+            </div>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"

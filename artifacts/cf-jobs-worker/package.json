@@ -13,7 +13,8 @@
   "dependencies": {
     "@workspace/content-engine": "workspace:*",
     "@workspace/db": "workspace:*",
-    "@workspace/jobs": "workspace:*"
+    "@workspace/jobs": "workspace:*",
+    "@workspace/media": "workspace:*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260708.1",
