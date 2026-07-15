@@ -66,7 +66,10 @@ export type ContentPieceMetadata = {
   visualSummaryMarkdown?: string;
   /** Raw SVG markup for the “At a glance” card */
   visualSummarySvg?: string;
-  /** data:image/svg+xml URI for aside thumbnail / markdown image */
+  /**
+   * data:image/svg+xml URI for aside thumbnail / body markdown image.
+   * Not for CMS featuredImageUrl — stock preferred; Node enricher may set PNG.
+   */
   visualSummarySvgDataUri?: string;
 };
 

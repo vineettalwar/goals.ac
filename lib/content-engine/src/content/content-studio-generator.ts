@@ -701,6 +701,10 @@ async function postProcessGeneratedResult(
     }
   }
 
+  // Infographic first so enricher can rasterize visualSummary SVG→PNG (Node/sharp)
+  // when stock featured is unavailable. Never leave SVG data URIs on featuredImageUrl.
+  result = applyInfographicToContentPiece(result, format, brand.companyName);
+
   try {
     const stockCredentials = brand.projectId
       ? await loadStockCredentialContextForProject(brand.projectId)
@@ -728,8 +732,6 @@ async function postProcessGeneratedResult(
   } catch (err) {
     logger.warn({ err, format }, "Stock image enrichment skipped");
   }
-
-  result = applyInfographicToContentPiece(result, format, brand.companyName);
 
   return result;
 }

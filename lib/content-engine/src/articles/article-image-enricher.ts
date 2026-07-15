@@ -287,7 +287,8 @@ export function featuredImageFromMetadata(piece: {
   const featured = piece.pieceMetadata?.images?.find((img) => img.role === "featured");
   if (featured?.publishedUrl) return featured.publishedUrl;
   if (featured?.remoteUrl) return featured.remoteUrl;
-  if (piece.pieceMetadata?.featuredImageUrl) return piece.pieceMetadata.featuredImageUrl;
+  const metaFeatured = nonSvgImageUrl(piece.pieceMetadata?.featuredImageUrl);
+  if (metaFeatured) return metaFeatured;
   const body = piece.bodyMarkdown ?? piece.body_markdown ?? "";
   const match = body.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/);
   return match?.[1];

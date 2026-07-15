@@ -85,7 +85,7 @@ export type ContentPieceMetadata = {
   visualSummaryMarkdown?: string;
   /** Raw SVG “At a glance” graphic */
   visualSummarySvg?: string;
-  /** data:image/svg+xml URI for aside / markdown image */
+  /** data:image/svg+xml for aside / markdown — not CMS featuredImageUrl */
   visualSummarySvgDataUri?: string;
 };
 

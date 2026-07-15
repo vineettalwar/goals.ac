@@ -219,6 +219,18 @@ Tabs use **path segments**, not `?tab=` / `?project=` query params. Legacy `/int
 
 **Implications:** `OFFERED_PLAN_IDS` is `["starter"]` only; quotas are stored in `plan_quota_config` and editable at Admin → Plans; code defaults apply when no row exists; BYOK skips all quota checks.
 
+## 2026-07-16 — Visual summary featured: PNG via sharp, never SVG data URI
+
+**Decision:** Keep at-a-glance graphics as SVG in `visualSummarySvg` / `visualSummarySvgDataUri` (aside + body markdown). Do **not** assign SVG data URIs to `featuredImageUrl` / `ogImageUrl`. On Node (native sharp in `@workspace/media`), `enrichContentPieceImages` may rasterize the SVG to a PNG data URI when no stock featured exists. Stock remote URLs remain preferred for CMS publish. Cloudflare Workers keep the sharp stub (no rasterize).
+
+**Alternatives considered:**
+- Pure-JS SVG→PNG (no native deps) — rejected; sharp already in `@workspace/media`
+- Leave SVG as featured fallback — rejected; many CMS featured-image APIs reject SVG
+
+**Reason:** CMS compatibility without dropping the in-app visual summary.
+
+**Implications:** Generation applies infographic before image enrich; Workers publish paths prefer stock or omit featured rather than SVG.
+
 ## 2026-07-14 — Platform integration hardening (security, performance, accessibility)
 
 **Decision:** Harden all publishing integrations with signed OAuth state, SSRF validation at credential save, RBAC on integration management, bounded CMS site-graph exports, async-default publish, and shared accessibility fixes on the integration UI.
