@@ -61,8 +61,8 @@ export function PublishingSettingsMetaCard({
             <CardDescription className="mt-1">
               Requires a Facebook Page with a linked Instagram Business account.
               {embedded
-                ? " Instagram posts require a featured image URL in content metadata or an image in markdown."
-                : " Instagram text posts use a placeholder image until you attach media (see Help)."}
+                ? " Instagram posts need a public HTTPS image — Attach URL or Use stock image on the content piece."
+                : " Instagram needs a public HTTPS image — Attach URL or Use stock image on the content piece (see Help)."}
             </CardDescription>
           </div>
           {metaIntegration && (

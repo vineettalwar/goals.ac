@@ -4,6 +4,20 @@
 
 | Done | Notes |
 |---|---|
+| TYPO3 BE + folder | Hardened |
+| Languages | Cap → 30 |
+| Success UI | Illustrative card |
+| Public GEO | Anonymous (if landed) |
+| Instagram copy | Fixes |
+
+**In flight:** none from this list.
+
+---
+
+## Prior pulse (2026-07-16)
+
+| Done | Notes |
+|---|---|
 | Ghost featured | data-URI + HTTPS upload path |
 | Notion images | HTTPS image blocks + featured image → page cover; non-https skipped with warnings |
 | Instagram queue | HTTPS-only + pre-enrich; composer/piece: paste HTTPS `featuredImageUrl` or **Use stock image** |
