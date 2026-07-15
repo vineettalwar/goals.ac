@@ -47,27 +47,27 @@ export function getBlueskyRedirectUri(origin: string): string {
   return `${origin.replace(/\/$/, "")}/api/auth/bluesky/callback`;
 }
 
+const BLUESKY_OAUTH_NOT_CONFIGURED =
+  "Bluesky OAuth is not configured. Set a private key JWK in Admin Integrations → Bluesky, or set BLUESKY_OAUTH_PRIVATE_KEY_JWK in the environment.";
+
 async function getBlueskyOAuthClient(origin: string): Promise<NodeOAuthClient> {
   if (!oauthClientPromise) {
     oauthClientPromise = (async () => {
       const clientId = getBlueskyClientMetadataUrl(origin);
       const redirectUri = getBlueskyRedirectUri(origin);
       const resolved = await resolveBlueskyOAuthCredentials();
-      const clientName = resolved?.clientName ?? process.env.BLUESKY_CLIENT_NAME ?? "goals.ac";
-
-      let keyset: JoseKey[];
-      const jwkRaw = resolved?.privateKeyJwk;
-      if (jwkRaw) {
-        keyset = [await JoseKey.fromImportable(JSON.parse(jwkRaw), "goals-ac-key")];
-      } else {
-        // Ephemeral — OAuth breaks after restart. Prefer env or admin-stored JWK.
-        keyset = [await JoseKey.generate(["RS256"], "goals-ac-key")];
+      if (!resolved) {
+        throw new Error(BLUESKY_OAUTH_NOT_CONFIGURED);
       }
+
+      const keyset = [
+        await JoseKey.fromImportable(JSON.parse(resolved.privateKeyJwk), "goals-ac-key"),
+      ];
 
       return new NodeOAuthClient({
         clientMetadata: {
           client_id: clientId,
-          client_name: clientName,
+          client_name: resolved.clientName,
           client_uri: origin,
           redirect_uris: [redirectUri],
           grant_types: ["authorization_code", "refresh_token"],
@@ -112,7 +112,10 @@ async function getBlueskyOAuthClient(origin: string): Promise<NodeOAuthClient> {
           },
         },
       });
-    })();
+    })().catch((err) => {
+      oauthClientPromise = null;
+      throw err;
+    });
   }
   return oauthClientPromise;
 }

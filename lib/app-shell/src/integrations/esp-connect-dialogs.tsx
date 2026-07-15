@@ -1,10 +1,8 @@
-import { ConnectSetupSteps, ESP_CONNECT_STEPS } from "./connect-setup-steps";
+import { ESP_CONNECT_STEPS } from "./connect-setup-steps";
 import {
-  inputClassName,
   SchemaConnectDialog,
   SimpleDialog,
   type ConnectDialogConfig,
-  type FieldDef,
 } from "./cms-connect-dialogs";
 
 // ---------------------------------------------------------------------------
