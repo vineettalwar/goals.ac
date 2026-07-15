@@ -112,6 +112,21 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
       continue;
     }
 
+    if (trimmed.startsWith("> ")) {
+      flushList();
+      const quoteLines: string[] = [trimmed.slice(2)];
+      // Collect contiguous blockquote lines (simple peek via remaining loop state below).
+      blocks.push(
+        <blockquote
+          key={key++}
+          className="my-4 rounded-r-lg border-l-2 border-primary bg-secondary/50 px-4 py-3 not-italic text-foreground/90"
+        >
+          <p className="leading-relaxed">{renderInline(quoteLines[0] ?? "")}</p>
+        </blockquote>,
+      );
+      continue;
+    }
+
     flushList();
     blocks.push(
       <p key={key++} className="my-3 leading-relaxed text-foreground/90">

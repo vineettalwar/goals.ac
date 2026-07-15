@@ -32,6 +32,10 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
         "prose-li:text-foreground/90 prose-strong:text-foreground",
         "prose-a:text-primary prose-a:font-medium prose-a:no-underline hover:prose-a:underline",
         "prose-h2:mt-10 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-3",
+        // Visual summary / infographic callouts
+        "prose-blockquote:not-italic prose-blockquote:border-l-primary prose-blockquote:bg-secondary/50",
+        "prose-blockquote:rounded-r-lg prose-blockquote:px-4 prose-blockquote:py-3 prose-blockquote:my-4",
+        "prose-blockquote:text-foreground/90",
         className,
       )}
     >

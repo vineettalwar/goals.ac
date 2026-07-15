@@ -5,6 +5,54 @@
 
 export const QUEUE_SOCIAL_PLATFORMS = ["linkedin", "twitter"] as const;
 
+export type QueueSocialPlatform =
+  | (typeof QUEUE_SOCIAL_PLATFORMS)[number]
+  | "facebook"
+  | "instagram";
+
+export type QueueSocialComposerOptions = {
+  /** True when Meta (Facebook/Instagram) CMS integration is connected. */
+  metaConnected?: boolean;
+  /** True when the article has a resolvable featured/stock/markdown image. */
+  hasImage?: boolean;
+};
+
+const QUEUE_SOCIAL_LABELS: Record<QueueSocialPlatform, string> = {
+  linkedin: "LinkedIn",
+  twitter: "X",
+  facebook: "Facebook",
+  instagram: "Instagram",
+};
+
+/**
+ * Queue social defaults to LinkedIn + X.
+ * When Meta is connected: always add Facebook; add Instagram only if an image exists.
+ */
+export function selectQueueSocialPlatforms(
+  options?: QueueSocialComposerOptions,
+): QueueSocialPlatform[] {
+  const platforms: QueueSocialPlatform[] = [...QUEUE_SOCIAL_PLATFORMS];
+  if (options?.metaConnected) {
+    platforms.push("facebook");
+    if (options.hasImage) {
+      platforms.push("instagram");
+    }
+  }
+  return platforms;
+}
+
+/** Accepts both app-shell (`connected: true`) and legacy presence-only snapshots. */
+export function isMetaCmsConnected(
+  connections: Record<string, unknown> | null | undefined,
+): boolean {
+  const meta = connections?.meta;
+  if (!meta || typeof meta !== "object") return false;
+  if ("connected" in meta) {
+    return Boolean((meta as { connected?: unknown }).connected);
+  }
+  return true;
+}
+
 export function socialComposerPath(projectId: number | string): string {
   return `/api/website-projects/${projectId}/social/composer`;
 }
@@ -13,18 +61,27 @@ export function socialHubQueuePath(projectId: number | string): string {
   return `/projects/${projectId}/social?tab=queue`;
 }
 
-export function queueSocialComposerPayload(parentPieceId: number): {
+export function queueSocialComposerPayload(
+  parentPieceId: number,
+  options?: QueueSocialComposerOptions,
+): {
   parentPieceId: number;
   platforms: string[];
 } {
   return {
     parentPieceId,
-    platforms: [...QUEUE_SOCIAL_PLATFORMS],
+    platforms: selectQueueSocialPlatforms(options),
   };
 }
 
-export function formatQueueSocialSuccessMessage(count: number): string {
-  return `Queued ${count} LinkedIn + X variants`;
+export function formatQueueSocialSuccessMessage(
+  count: number,
+  platforms: readonly string[] = QUEUE_SOCIAL_PLATFORMS,
+): string {
+  const labels = platforms
+    .map((p) => QUEUE_SOCIAL_LABELS[p as QueueSocialPlatform] ?? p)
+    .join(" + ");
+  return `Queued ${count} ${labels} variants`;
 }
 
 export type HumanizeAuditSnapshot = {

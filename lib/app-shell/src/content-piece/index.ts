@@ -35,11 +35,15 @@ export {
   formatHumanizeResultMessage,
   formatQueueSocialSuccessMessage,
   humanizeAuditFromResponse,
+  isMetaCmsConnected,
   queueSocialComposerPayload,
+  selectQueueSocialPlatforms,
   socialComposerPath,
   socialHubQueuePath,
   type HumanizeActionResult,
   type HumanizeAuditSnapshot,
+  type QueueSocialComposerOptions,
+  type QueueSocialPlatform,
 } from "./content-piece-actions";
 export {
   contentPieceCanDelete,

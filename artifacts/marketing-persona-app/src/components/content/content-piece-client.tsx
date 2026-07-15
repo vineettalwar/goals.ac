@@ -29,6 +29,7 @@ import {
   formatHumanizeResultMessage,
   formatQueueSocialSuccessMessage,
   humanizeAuditFromResponse,
+  isMetaCmsConnected,
   queueSocialComposerPayload,
   socialComposerPath,
   socialHubQueuePath,
@@ -37,6 +38,7 @@ import {
   type PublishDestinationId,
   type RenderPreviewResult,
 } from "@workspace/app-shell/content-piece";
+import { resolveSocialPieceImageUrl } from "@workspace/app-shell/social";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRecord } from "@/lib/server/loaders";
 import { ArticlePerformanceBadge } from "@/components/content-studio/article-performance-badge";
@@ -163,10 +165,28 @@ export function ContentPieceClient({
     if (!piece.websiteProjectId) return;
     setQueueingSocial(true);
     try {
+      let connections: Record<string, unknown> = initialCmsConnections as Record<
+        string,
+        unknown
+      >;
+      try {
+        connections = (await loadCmsConnections()) as Record<string, unknown>;
+      } catch {
+        // Fall back to SSR snapshot when refresh fails.
+      }
+      const payload = queueSocialComposerPayload(piece.id, {
+        metaConnected: isMetaCmsConnected(connections),
+        hasImage: Boolean(
+          resolveSocialPieceImageUrl({
+            bodyMarkdown: piece.bodyMarkdown,
+            pieceMetadata: piece.pieceMetadata,
+          }),
+        ),
+      });
       const res = await fetch(socialComposerPath(piece.websiteProjectId), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(queueSocialComposerPayload(piece.id)),
+        body: JSON.stringify(payload),
       });
       const data = (await res.json().catch(() => null)) as
         | { pieces?: unknown[]; error?: string }
@@ -174,7 +194,9 @@ export function ContentPieceClient({
       if (!res.ok) {
         throw new Error(data?.error ?? "Could not queue social posts");
       }
-      toast.success(formatQueueSocialSuccessMessage(data?.pieces?.length ?? 0));
+      toast.success(
+        formatQueueSocialSuccessMessage(data?.pieces?.length ?? 0, payload.platforms),
+      );
       router.push(socialHubQueuePath(piece.websiteProjectId));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not queue social posts");

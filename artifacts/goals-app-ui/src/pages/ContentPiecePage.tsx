@@ -11,7 +11,9 @@ import {
   contentPieceCanPublish,
   contentPieceCanQueueSocial,
   formatQueueSocialSuccessMessage,
+  isMetaCmsConnected,
   queueSocialComposerPayload,
+  resolveSocialPieceImageUrl,
   socialComposerPath,
   socialHubQueuePath,
 } from "@workspace/app-shell";
@@ -139,17 +141,35 @@ export function ContentPiecePage() {
     setQueueingSocial(true);
     setQueueSocialFlash(null);
     try {
+      let connections: Record<string, unknown> = {};
+      try {
+        connections = (await loadCmsConnections()) as Record<string, unknown>;
+      } catch {
+        // Queue LinkedIn+X only when connections cannot be loaded.
+      }
+      const payload = queueSocialComposerPayload(piece.id, {
+        metaConnected: isMetaCmsConnected(connections),
+        hasImage: Boolean(
+          resolveSocialPieceImageUrl({
+            bodyMarkdown: piece.bodyMarkdown,
+            pieceMetadata: piece.pieceMetadata,
+          }),
+        ),
+      });
       const data = await apiFetch<{ pieces?: unknown[]; error?: string }>(
         socialComposerPath(piece.websiteProjectId),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(queueSocialComposerPayload(piece.id)),
+          body: JSON.stringify(payload),
         },
       );
       setQueueSocialFlash({
         level: "success",
-        message: formatQueueSocialSuccessMessage(data.pieces?.length ?? 0),
+        message: formatQueueSocialSuccessMessage(
+          data.pieces?.length ?? 0,
+          payload.platforms,
+        ),
       });
       navigate(socialHubQueuePath(piece.websiteProjectId));
     } catch (err) {
