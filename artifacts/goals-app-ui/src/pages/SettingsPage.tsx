@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { SettingsView, type AiProviderChoice, type SettingsTab, isSiteAdmin, isSuperAdmin } from "@workspace/app-shell";
+import { SettingsView, type AiProviderChoice, type BedrockCredentialsForm, type SettingsTab, isSiteAdmin, isSuperAdmin } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { apiFetch, getAppOrigin } from "@/lib/api";
 import { useSettingsData } from "@/hooks/use-settings-data";
@@ -51,6 +51,9 @@ export function SettingsPage() {
   const [anthropicSaving, setAnthropicSaving] = useState(false);
   const [anthropicDeleting, setAnthropicDeleting] = useState(false);
   const [anthropicMessage, setAnthropicMessage] = useState<string | null>(null);
+  const [bedrockSaving, setBedrockSaving] = useState(false);
+  const [bedrockDeleting, setBedrockDeleting] = useState(false);
+  const [bedrockMessage, setBedrockMessage] = useState<string | null>(null);
   const [providerSaving, setProviderSaving] = useState(false);
   const [providerMessage, setProviderMessage] = useState<string | null>(null);
 
@@ -297,6 +300,60 @@ export function SettingsPage() {
     }
   }
 
+  function bedrockPayloadFromForm(form: BedrockCredentialsForm) {
+    return {
+      accessKeyId: form.accessKeyId.trim(),
+      secretAccessKey: form.secretAccessKey.trim(),
+      sessionToken: form.sessionToken.trim() || null,
+      region: form.region.trim(),
+      model: form.model.trim(),
+    };
+  }
+
+  async function testBedrockCredentials(form: BedrockCredentialsForm) {
+    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/bedrock-credentials/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(bedrockPayloadFromForm(form)),
+    });
+    return { ok: Boolean(data.ok), error: data.error };
+  }
+
+  async function saveBedrockCredentials(form: BedrockCredentialsForm) {
+    setBedrockSaving(true);
+    setBedrockMessage(null);
+    try {
+      await apiFetch("/api/auth/bedrock-credentials", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(bedrockPayloadFromForm(form)),
+      });
+      await reload();
+      setBedrockMessage("AWS Bedrock credentials saved.");
+    } catch (err) {
+      setBedrockMessage(err instanceof Error ? err.message : "Failed to save credentials");
+      throw err;
+    } finally {
+      setBedrockSaving(false);
+    }
+  }
+
+  async function deleteBedrockCredentials() {
+    if (!window.confirm("Remove the organization AWS Bedrock credentials?")) return;
+    setBedrockDeleting(true);
+    setBedrockMessage(null);
+    try {
+      await apiFetch("/api/auth/bedrock-credentials", { method: "DELETE" });
+      await reload();
+      setBedrockMessage("AWS Bedrock credentials removed.");
+    } catch (err) {
+      setBedrockMessage(err instanceof Error ? err.message : "Failed to remove credentials");
+      throw err;
+    } finally {
+      setBedrockDeleting(false);
+    }
+  }
+
   if (authLoading || loading) {
     return <p className="p-8 text-muted-foreground">Loading settings…</p>;
   }
@@ -355,6 +412,11 @@ export function SettingsPage() {
       onTestAnthropicKey={testAnthropicKey}
       anthropicSaving={anthropicSaving}
       anthropicDeleting={anthropicDeleting}
+      onSaveBedrockCredentials={saveBedrockCredentials}
+      onDeleteBedrockCredentials={deleteBedrockCredentials}
+      onTestBedrockCredentials={testBedrockCredentials}
+      bedrockSaving={bedrockSaving}
+      bedrockDeleting={bedrockDeleting}
       canManageProvider={canManageProviderKeys}
       onSaveProvider={saveProvider}
       providerSaving={providerSaving}
@@ -370,10 +432,13 @@ export function SettingsPage() {
           {anthropicMessage ? (
             <div className="paper-card p-4 text-sm text-muted-foreground">{anthropicMessage}</div>
           ) : null}
+          {bedrockMessage ? (
+            <div className="paper-card p-4 text-sm text-muted-foreground">{bedrockMessage}</div>
+          ) : null}
           <div className="paper-card p-6 text-sm text-muted-foreground">
             <p>
-              Bedrock, Semrush, DeepL, and stock image BYOK panels are available in the full product
-              app. Run{" "}
+              Semrush, DeepL, and stock image BYOK panels are available in the full product app.
+              Run{" "}
               <code className="rounded bg-muted px-1 py-0.5 text-xs">
                 pnpm --filter @workspace/marketing-persona-app run dev
               </code>{" "}

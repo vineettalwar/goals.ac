@@ -19,6 +19,11 @@ export type SettingsAiSummary = {
   openaiLastFour: string | null;
   hasAnthropicKey: boolean;
   anthropicLastFour: string | null;
+  hasBedrockCredentials: boolean;
+  bedrockAccessKeyLastFour: string | null;
+  bedrockRegion: string | null;
+  bedrockModel: string | null;
+  bedrockHasSessionToken: boolean;
   source?: "app" | "env" | "auto";
   settings: {
     provider: string | null;

@@ -5,6 +5,12 @@ export {
   type ProviderKeyDialogConfig,
 } from "./settings-provider-key-dialog";
 export {
+  SettingsBedrockDialog,
+  DEFAULT_BEDROCK_MODEL,
+  emptyBedrockForm,
+  type BedrockCredentialsForm,
+} from "./settings-bedrock-dialog";
+export {
   PLAN_LABELS,
   type AiProviderChoice,
   type SettingsAiSummary,

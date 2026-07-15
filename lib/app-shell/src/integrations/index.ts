@@ -1,5 +1,12 @@
 export { IntegrationsView } from "./integrations-ui";
 export {
+  IntegrationsSearchPanel,
+  searchConnectedCount,
+  type SearchPropertyConnectionStatus,
+  type SearchPropertyConnectionsResponse,
+  type SearchPropertyProvider,
+} from "./integrations-search-ui";
+export {
   CmsFullAppConnectDialog,
   CMS_NATIVE_CONNECT_PLATFORMS,
   DrupalConnectDialog,

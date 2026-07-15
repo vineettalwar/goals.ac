@@ -6,6 +6,11 @@ import {
   type CmsIntegrationRow,
   type IntegrationsTab,
 } from "./types";
+import {
+  IntegrationsSearchPanel,
+  searchConnectedCount,
+  type SearchPropertyConnectionsResponse,
+} from "./integrations-search-ui";
 
 const TABS: Array<{ id: IntegrationsTab; label: string }> = [
   { id: "cms", label: "CMS" },
@@ -69,6 +74,10 @@ export function IntegrationsView({
   onDisconnect,
   onConnectPlatform,
   onTestPlatform,
+  searchProperties,
+  searchPropertiesLoading,
+  searchPropertiesError,
+  appOrigin,
   renderLink,
 }: {
   projectId: string | null;
@@ -88,9 +97,14 @@ export function IntegrationsView({
   onDisconnect: (platform: string) => void;
   onConnectPlatform: (platform: string) => void;
   onTestPlatform?: (platform: string) => void;
+  searchProperties?: SearchPropertyConnectionsResponse | null;
+  searchPropertiesLoading?: boolean;
+  searchPropertiesError?: string | null;
+  appOrigin?: string;
   renderLink: (props: ProjectLinkProps) => ReactNode;
 }) {
   const cmsCount = cmsConnectedCount(integrations);
+  const searchCount = searchConnectedCount(searchProperties ?? null);
 
   return (
     <div className="max-w-5xl space-y-6 px-8 py-8">
@@ -121,7 +135,9 @@ export function IntegrationsView({
               const count =
                 tab.id === "cms"
                   ? cmsCount
-                  : 0;
+                  : tab.id === "search"
+                    ? searchCount
+                    : 0;
               return (
                 <button
                   key={tab.id}
@@ -137,6 +153,9 @@ export function IntegrationsView({
                   {tab.label}
                   {tab.id === "cms" ? (
                     <IntegrationTabBadge count={count} loading={integrationsLoading} />
+                  ) : null}
+                  {tab.id === "search" ? (
+                    <IntegrationTabBadge count={count} loading={searchPropertiesLoading} />
                   ) : null}
                 </button>
               );
@@ -266,9 +285,21 @@ export function IntegrationsView({
             </div>
           ) : null}
 
-          {activeTab === "social" || activeTab === "esp" || activeTab === "search" ? (
-            <PlaceholderTabPanel />
+          {activeTab === "search" && projectId ? (
+            searchProperties != null || searchPropertiesLoading || searchPropertiesError ? (
+              <IntegrationsSearchPanel
+                projectId={projectId}
+                data={searchProperties ?? null}
+                loading={Boolean(searchPropertiesLoading)}
+                error={searchPropertiesError ?? null}
+                appOrigin={appOrigin ?? "http://localhost:3001"}
+              />
+            ) : (
+              <PlaceholderTabPanel />
+            )
           ) : null}
+
+          {activeTab === "social" || activeTab === "esp" ? <PlaceholderTabPanel /> : null}
         </>
       )}
 

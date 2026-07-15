@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "../cn";
 import { SettingsGeminiDialog } from "./settings-gemini-dialog";
+import { SettingsBedrockDialog, type BedrockCredentialsForm } from "./settings-bedrock-dialog";
 import {
   SettingsProviderKeyDialog,
   type ProviderKeyDialogConfig,
@@ -119,6 +120,11 @@ export function SettingsView({
   onTestAnthropicKey,
   anthropicSaving = false,
   anthropicDeleting = false,
+  onSaveBedrockCredentials,
+  onDeleteBedrockCredentials,
+  onTestBedrockCredentials,
+  bedrockSaving = false,
+  bedrockDeleting = false,
   canManageProvider = false,
   onSaveProvider,
   providerSaving = false,
@@ -168,6 +174,13 @@ export function SettingsView({
   onTestAnthropicKey?: (key: string) => Promise<{ ok: boolean; error?: string }>;
   anthropicSaving?: boolean;
   anthropicDeleting?: boolean;
+  onSaveBedrockCredentials?: (form: BedrockCredentialsForm) => Promise<void>;
+  onDeleteBedrockCredentials?: () => Promise<void>;
+  onTestBedrockCredentials?: (
+    form: BedrockCredentialsForm,
+  ) => Promise<{ ok: boolean; error?: string }>;
+  bedrockSaving?: boolean;
+  bedrockDeleting?: boolean;
   canManageProvider?: boolean;
   onSaveProvider?: (input: {
     provider: AiProviderChoice;
@@ -181,6 +194,7 @@ export function SettingsView({
   const [geminiDialogOpen, setGeminiDialogOpen] = useState(false);
   const [openaiDialogOpen, setOpenaiDialogOpen] = useState(false);
   const [anthropicDialogOpen, setAnthropicDialogOpen] = useState(false);
+  const [bedrockDialogOpen, setBedrockDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<AiProviderChoice>("gemini");
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://localhost:11434");
   const [ollamaModel, setOllamaModel] = useState("");
@@ -608,6 +622,70 @@ export function SettingsView({
               saving={anthropicSaving}
               deleting={anthropicDeleting}
               config={ANTHROPIC_KEY_DIALOG}
+            />
+          ) : null}
+
+          <div className="paper-card space-y-4 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <h2 className="font-semibold">AWS Bedrock (BYOK)</h2>
+              {onSaveBedrockCredentials ? (
+                <button
+                  type="button"
+                  onClick={() => setBedrockDialogOpen(true)}
+                  disabled={!canManageProviderKeys}
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+                >
+                  {aiSummary?.hasBedrockCredentials ? "Replace credentials" : "Add credentials"}
+                </button>
+              ) : null}
+            </div>
+            {aiSummary?.hasBedrockCredentials ? (
+              <div className="flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Organization AWS Bedrock credentials connected</p>
+                  <p className="text-xs text-muted-foreground">
+                    Access key ending in ••••{aiSummary.bedrockAccessKeyLastFour ?? "••••"}
+                    {aiSummary.bedrockRegion ? ` · ${aiSummary.bedrockRegion}` : ""}
+                    {aiSummary.bedrockModel ? ` · ${aiSummary.bedrockModel}` : ""}
+                    {aiSummary.bedrockHasSessionToken ? " · session token" : ""}
+                  </p>
+                </div>
+                {onDeleteBedrockCredentials && canManageProviderKeys ? (
+                  <button
+                    type="button"
+                    onClick={() => void onDeleteBedrockCredentials()}
+                    disabled={bedrockDeleting}
+                    className="text-sm text-red-700 hover:underline disabled:opacity-50"
+                  >
+                    {bedrockDeleting ? "Removing…" : "Remove"}
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No organization AWS Bedrock credentials configured.</p>
+            )}
+            {!canManageProviderKeys ? (
+              <p className="text-xs text-muted-foreground">
+                Only organization owners and site admins can manage AWS Bedrock credentials.
+              </p>
+            ) : null}
+          </div>
+
+          {onSaveBedrockCredentials && onTestBedrockCredentials && onDeleteBedrockCredentials ? (
+            <SettingsBedrockDialog
+              open={bedrockDialogOpen}
+              onOpenChange={setBedrockDialogOpen}
+              hasCredentials={Boolean(aiSummary?.hasBedrockCredentials)}
+              accessKeyLastFour={aiSummary?.bedrockAccessKeyLastFour ?? null}
+              region={aiSummary?.bedrockRegion ?? null}
+              model={aiSummary?.bedrockModel ?? null}
+              onSave={onSaveBedrockCredentials}
+              onDelete={onDeleteBedrockCredentials}
+              onTest={onTestBedrockCredentials}
+              canManage={canManageProviderKeys}
+              saving={bedrockSaving}
+              deleting={bedrockDeleting}
             />
           ) : null}
 

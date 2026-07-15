@@ -24,7 +24,7 @@ import {
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { useIntegrationsData } from "@/hooks/use-integrations-data";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, getAppOrigin } from "@/lib/api";
 
 type CmsIntegrationsResponse = Record<string, { connected?: boolean } & Record<string, unknown>>;
 
@@ -32,7 +32,16 @@ export function IntegrationsPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { projectId, activeProject, loading: projectsLoading } = useActiveProject();
-  const { loading, error, integrations, reload, setIntegrations } = useIntegrationsData(projectId);
+  const {
+    loading,
+    error,
+    integrations,
+    searchProperties,
+    searchLoading,
+    searchError,
+    reload,
+    setIntegrations,
+  } = useIntegrationsData(projectId);
 
   const [activeTab, setActiveTab] = useState<IntegrationsTab>("cms");
   const [saving, setSaving] = useState(false);
@@ -225,6 +234,10 @@ export function IntegrationsPage() {
         onDisconnect={(platform) => void disconnect(platform)}
         onConnectPlatform={setConnectPlatform}
         onTestPlatform={(platform) => void testPlatform(platform)}
+        searchProperties={searchProperties}
+        searchPropertiesLoading={searchLoading}
+        searchPropertiesError={searchError}
+        appOrigin={getAppOrigin()}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}

@@ -21,6 +21,14 @@ type ApiKeyResponse = {
   lastFour?: string | null;
 };
 
+type BedrockCredentialsResponse = {
+  hasCredentials?: boolean;
+  accessKeyLastFour?: string | null;
+  region?: string | null;
+  model?: string | null;
+  hasSessionToken?: boolean;
+};
+
 type AiStatusResponse = {
   activeProvider?: string;
   source?: "app" | "env" | "auto";
@@ -50,12 +58,13 @@ export function useSettingsData() {
     setLoading(true);
     setUsageLoading(true);
     try {
-      const [me, usageData, keyData, openaiData, anthropicData, aiData] = await Promise.all([
+      const [me, usageData, keyData, openaiData, anthropicData, bedrockData, aiData] = await Promise.all([
         apiFetch<MeResponse>("/api/auth/me"),
         apiFetch<{ usage?: UsageSummary }>("/api/usage").catch(() => null),
         apiFetch<ApiKeyResponse>("/api/auth/api-key").catch(() => null),
         apiFetch<ApiKeyResponse>("/api/auth/openai-credentials").catch(() => null),
         apiFetch<ApiKeyResponse>("/api/auth/anthropic-credentials").catch(() => null),
+        apiFetch<BedrockCredentialsResponse>("/api/auth/bedrock-credentials").catch(() => null),
         apiFetch<AiStatusResponse>("/api/ai-providers/status").catch(() => null),
       ]);
 
@@ -79,6 +88,11 @@ export function useSettingsData() {
         openaiLastFour: openaiData?.lastFour ?? null,
         hasAnthropicKey: Boolean(anthropicData?.hasKey),
         anthropicLastFour: anthropicData?.lastFour ?? null,
+        hasBedrockCredentials: Boolean(bedrockData?.hasCredentials),
+        bedrockAccessKeyLastFour: bedrockData?.accessKeyLastFour ?? null,
+        bedrockRegion: bedrockData?.region ?? null,
+        bedrockModel: bedrockData?.model ?? null,
+        bedrockHasSessionToken: Boolean(bedrockData?.hasSessionToken),
         source: aiData?.source,
         settings: {
           provider: aiData?.settings?.provider ?? null,
