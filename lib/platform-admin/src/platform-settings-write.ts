@@ -1,5 +1,5 @@
-import { db } from "@workspace/db";
-import { platformSettingsTable } from "@workspace/db/schema";
+import { db } from "./db";
+import { platformSettingsTable } from "@workspace/db/schema-sqlite";
 import { getPlatformSettings, type PlatformStatus } from "./platform-settings";
 
 export async function updatePlatformSettings(

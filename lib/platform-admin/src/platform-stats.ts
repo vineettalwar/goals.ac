@@ -1,10 +1,10 @@
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   orgInvitesTable,
   organizationsTable,
   usersTable,
   websiteProjectsTable,
-} from "@workspace/db/schema";
+} from "@workspace/db/schema-sqlite";
 import { and, count, gt, isNotNull, isNull } from "drizzle-orm";
 
 export interface PlatformStats {

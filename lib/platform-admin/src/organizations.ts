@@ -1,11 +1,12 @@
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   organizationMembersTable,
   organizationsTable,
   usersTable,
   websiteProjectsTable,
-} from "@workspace/db/schema";
+} from "@workspace/db/schema-sqlite";
 import { count, desc, eq, inArray } from "drizzle-orm";
+import { toIsoString, toIsoStringOrNull } from "./dates";
 
 export interface AdminOrganizationRow {
   id: number;
@@ -83,8 +84,8 @@ export async function listAllOrganizations(limit?: number): Promise<AdminOrganiz
     ownerEmail: org.ownerEmail,
     ownerName: org.ownerName,
     companyId: org.companyId,
-    createdAt: org.createdAt.toISOString(),
-    suspendedAt: org.suspendedAt?.toISOString() ?? null,
+    createdAt: toIsoString(org.createdAt),
+    suspendedAt: toIsoStringOrNull(org.suspendedAt),
     suspendedReason: org.suspendedReason,
     subscriptionStatus: org.subscriptionStatus,
     stripeCustomerId: org.stripeCustomerId,

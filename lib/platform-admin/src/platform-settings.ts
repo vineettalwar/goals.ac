@@ -1,5 +1,5 @@
-import { db } from "@workspace/db";
-import { platformSettingsTable } from "@workspace/db/schema";
+import { db } from "./db";
+import { platformSettingsTable } from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";
 
 export interface PlatformStatus {

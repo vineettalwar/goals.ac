@@ -1,12 +1,14 @@
-import { db, countAsInt } from "@workspace/db";
+import { countAsInt } from "@workspace/db";
+import { db } from "./db";
 import {
   organizationMembersTable,
   organizationsTable,
   usersTable,
   websiteProjectsTable,
-} from "@workspace/db/schema";
+} from "@workspace/db/schema-sqlite";
 import { count, desc, eq } from "drizzle-orm";
 import { getBalance, getWorkspaceIdForOrganization } from "@workspace/billing";
+import { toIsoString, toIsoStringOrNull } from "./dates";
 import type { AdminOrganizationRow } from "./organizations";
 import { listOrgAuditLog } from "./org-audit";
 import type { OrgMemberRole } from "./users";
@@ -121,8 +123,8 @@ export async function getOrganizationAdminDetail(
       ownerEmail: orgRow.ownerEmail,
       ownerName: orgRow.ownerName,
       companyId: orgRow.companyId,
-      createdAt: orgRow.createdAt.toISOString(),
-      suspendedAt: orgRow.suspendedAt?.toISOString() ?? null,
+      createdAt: toIsoString(orgRow.createdAt),
+      suspendedAt: toIsoStringOrNull(orgRow.suspendedAt),
       suspendedReason: orgRow.suspendedReason,
       subscriptionStatus: orgRow.subscriptionStatus,
       stripeCustomerId: orgRow.stripeCustomerId,
@@ -130,10 +132,10 @@ export async function getOrganizationAdminDetail(
       memberCount,
       stripeSubscriptionId: orgRow.stripeSubscriptionId,
       stripePriceId: orgRow.stripePriceId,
-      currentPeriodEnd: orgRow.currentPeriodEnd?.toISOString() ?? null,
+      currentPeriodEnd: toIsoStringOrNull(orgRow.currentPeriodEnd),
     },
     members,
-    projects: projects.map((p) => ({ ...p, createdAt: p.createdAt.toISOString() })),
+    projects: projects.map((p) => ({ ...p, createdAt: toIsoString(p.createdAt) })),
     auditLog,
     creditBalance,
     workspaceId,

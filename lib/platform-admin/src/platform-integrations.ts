@@ -1,5 +1,5 @@
-import { db } from "@workspace/db";
-import { platformSettingsTable } from "@workspace/db/schema";
+import { db } from "./db";
+import { platformSettingsTable } from "@workspace/db/schema-sqlite";
 import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import {
   invalidateStripeClientCache,
@@ -8,6 +8,7 @@ import {
   resolvePlatformStripeCredentials,
 } from "@workspace/billing";
 import { eq } from "drizzle-orm";
+import { toIsoStringOrNull } from "./dates";
 
 // ── Env helpers ───────────────────────────────────────────────────────────────
 
@@ -386,7 +387,7 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         connected: Boolean(connectToken && row?.stripeConnectAccountId),
         accountId: row?.stripeConnectAccountId ?? null,
         livemode: row?.stripeConnectLivemode ?? null,
-        connectedAt: row?.stripeConnectConnectedAt?.toISOString() ?? null,
+        connectedAt: toIsoStringOrNull(row?.stripeConnectConnectedAt),
         lastFour: lastFour(connectToken),
       },
       secretKey: fieldStatus(row?.encryptedStripeSecretKey, "STRIPE_SECRET_KEY"),

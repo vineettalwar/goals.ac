@@ -1,13 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
   FolderKanban,
   LogOut,
+  Menu,
   Shield,
+  X,
   type LucideIcon,
 } from "lucide-react";
-import { cn } from "@workspace/app-shell";
+import { APP_SHELL_MAIN_OFFSET, cn } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { apiFetch } from "@/lib/api";
 import { ADMIN_NAV_ITEMS, isAdminNavActive } from "./admin-nav";
@@ -23,17 +25,20 @@ function NavItem({
   icon: Icon,
   active,
   children,
+  onNavigate,
 }: {
   label: string;
   href: string;
   icon: LucideIcon;
   active: boolean;
   children?: React.ReactNode;
+  onNavigate?: () => void;
 }) {
   return (
     <li>
       <Link
         to={href}
+        onClick={onNavigate}
         className={cn(
           "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
           active
@@ -49,11 +54,22 @@ function NavItem({
   );
 }
 
-function NavSubItem({ label, href, active }: { label: string; href: string; active: boolean }) {
+function NavSubItem({
+  label,
+  href,
+  active,
+  onNavigate,
+}: {
+  label: string;
+  href: string;
+  active: boolean;
+  onNavigate?: () => void;
+}) {
   return (
     <li>
       <Link
         to={href}
+        onClick={onNavigate}
         className={cn(
           "block rounded-md py-1.5 pl-9 pr-3 text-[13px] transition-colors",
           active ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
@@ -85,7 +101,7 @@ function ImpersonationBanner() {
 
   return (
     <div className="sticky top-0 z-50 border-b border-amber-500/40 bg-amber-500/10 px-4 py-2">
-      <div className="flex items-center justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <p className="text-sm">
           {supportOrganization ? (
             <>
@@ -114,13 +130,62 @@ function ImpersonationBanner() {
 export function AdminLayout() {
   const { user, logout } = useAuth();
   const { pathname } = useLocation();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   const userName = user?.name || user?.email || "Admin";
   const userEmail = user?.email || "";
 
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen]);
+
+  const closeMobile = () => setMobileOpen(false);
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <aside className="flex h-full w-[220px] shrink-0 flex-col border-r border-border bg-card">
+      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-card px-3 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-foreground transition-colors hover:bg-secondary"
+          aria-label="Open navigation"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary">
+            <Shield className="h-3.5 w-3.5 text-primary-foreground" />
+          </div>
+          <span className="truncate text-sm font-semibold tracking-tight">goals.ac Admin</span>
+        </div>
+      </header>
+
+      {mobileOpen ? (
+        <button
+          type="button"
+          aria-label="Dismiss navigation"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={closeMobile}
+        />
+      ) : null}
+
+      <aside
+        className={cn(
+          "flex h-full w-[220px] shrink-0 flex-col border-r border-border bg-card",
+          "fixed inset-y-0 left-0 z-50 transition-[translate] duration-200 ease-out",
+          mobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none",
+          "lg:relative lg:z-auto lg:translate-x-0 lg:pointer-events-auto",
+        )}
+      >
         <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
           <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
             <Shield className="h-3.5 w-3.5 text-primary-foreground" />
@@ -131,6 +196,14 @@ export function AdminLayout() {
               Platform Admin
             </span>
           </div>
+          <button
+            type="button"
+            onClick={closeMobile}
+            className="ml-auto flex h-11 w-11 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground lg:hidden"
+            aria-label="Close navigation"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2 py-3">
@@ -149,6 +222,7 @@ export function AdminLayout() {
                   href={item.href}
                   icon={item.icon}
                   active={parentActive}
+                  onNavigate={closeMobile}
                 >
                   {showChildren ? (
                     <ul className="mt-0.5 space-y-0.5 pb-1">
@@ -158,6 +232,7 @@ export function AdminLayout() {
                           label={child.label}
                           href={child.href}
                           active={isAdminNavActive(pathname, child)}
+                          onNavigate={closeMobile}
                         />
                       ))}
                     </ul>
@@ -177,6 +252,7 @@ export function AdminLayout() {
                 href={item.href}
                 icon={item.icon}
                 active={false}
+                onNavigate={closeMobile}
               />
             ))}
           </ul>
@@ -194,7 +270,7 @@ export function AdminLayout() {
             <button
               type="button"
               onClick={() => void logout()}
-              className="ml-auto shrink-0 text-muted-foreground transition-colors hover:text-foreground"
+              className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground lg:h-auto lg:w-auto"
               title="Sign out"
             >
               <LogOut className="h-3.5 w-3.5" />
@@ -203,9 +279,9 @@ export function AdminLayout() {
         </div>
       </aside>
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className={`flex min-w-0 flex-1 flex-col overflow-hidden ${APP_SHELL_MAIN_OFFSET}`}>
         <ImpersonationBanner />
-        <main className="flex-1 overflow-y-auto">
+        <main className="min-w-0 flex-1 overflow-y-auto">
           <Outlet />
         </main>
       </div>

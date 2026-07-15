@@ -1,4 +1,5 @@
-import { db, countAsInt, ilikeCompat } from "@workspace/db";
+import { countAsInt, ilikeCompat } from "@workspace/db";
+import { db } from "./db";
 import {
   contentItemsTable,
   contentPiecesTable,
@@ -7,12 +8,13 @@ import {
   roadmapsTable,
   usersTable,
   websiteProjectsTable,
-} from "@workspace/db/schema";
+} from "@workspace/db/schema-sqlite";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import {
   DEFAULT_AUTOPILOT_SETTINGS,
   type AutopilotSettings,
 } from "@workspace/db/schema";
+import { toIsoString } from "./dates";
 
 function parseAutopilotSettings(raw: unknown): AutopilotSettings {
   if (!raw || typeof raw !== "object") {
@@ -221,7 +223,7 @@ export async function listAdminContentStrategies(
     stage: row.stage,
     month: row.month,
     year: row.year,
-    createdAt: row.createdAt.toISOString(),
+    createdAt: toIsoString(row.createdAt),
     roadmapSlug: row.roadmapSlug,
     projectName: row.projectName,
     projectUrl: row.projectUrl,

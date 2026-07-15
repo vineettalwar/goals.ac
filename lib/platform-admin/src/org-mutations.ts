@@ -1,16 +1,18 @@
-import { db, countAsInt } from "@workspace/db";
+import { countAsInt } from "@workspace/db";
+import { db } from "./db";
 import {
   companiesTable,
   organizationMembersTable,
   organizationsTable,
   usersTable,
   websiteProjectsTable,
-} from "@workspace/db/schema";
+} from "@workspace/db/schema-sqlite";
 import { and, eq, inArray } from "drizzle-orm";
 import {
   getOrCreateWorkspaceForOrganization,
   normalizePlanId,
   resolvePlanProjectQuota,
+  type PlanId,
 } from "@workspace/billing";
 import type { OrgMemberRole } from "./users";
 
@@ -64,8 +66,8 @@ export async function unsuspendOrganization(organizationId: number): Promise<voi
 
 export async function updateOrganizationPlan(input: {
   organizationId: number;
-  plan: string;
-}): Promise<{ ok: true; previousPlan: string } | { ok: false; error: string }> {
+  plan: PlanId | string;
+}): Promise<{ ok: true; previousPlan: PlanId } | { ok: false; error: string }> {
   const [org] = await db
     .select({ plan: organizationsTable.plan })
     .from(organizationsTable)
@@ -76,25 +78,26 @@ export async function updateOrganizationPlan(input: {
     return { ok: false, error: "Organization not found" };
   }
 
-  const previousPlan = org.plan ?? "starter";
-  if (previousPlan === input.plan) {
+  const previousPlan = normalizePlanId(org.plan);
+  const nextPlan = normalizePlanId(input.plan);
+  if (previousPlan === nextPlan) {
     return { ok: true, previousPlan };
   }
 
-  const newQuota = await resolvePlanProjectQuota(input.plan);
+  const newQuota = await resolvePlanProjectQuota(nextPlan);
   if (newQuota !== null) {
     const projectCount = await getOrganizationProjectCount(input.organizationId);
     if (projectCount > newQuota) {
       return {
         ok: false,
-        error: `Cannot change plan: organization has ${projectCount} sites but ${input.plan} allows ${newQuota}`,
+        error: `Cannot change plan: organization has ${projectCount} sites but ${nextPlan} allows ${newQuota}`,
       };
     }
   }
 
   await db
     .update(organizationsTable)
-    .set({ plan: normalizePlanId(input.plan) })
+    .set({ plan: nextPlan })
     .where(eq(organizationsTable.id, input.organizationId));
 
   const members = await db
@@ -106,7 +109,7 @@ export async function updateOrganizationPlan(input: {
   if (userIds.length > 0) {
     await db
       .update(usersTable)
-      .set({ plan: normalizePlanId(input.plan) })
+      .set({ plan: nextPlan })
       .where(inArray(usersTable.id, userIds));
   }
 

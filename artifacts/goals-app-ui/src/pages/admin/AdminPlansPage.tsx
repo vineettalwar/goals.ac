@@ -55,7 +55,7 @@ export function AdminPlansPage() {
   if (!limits) return null;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6 p-8">
+    <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Plans & quotas</h1>
         <p className="mt-1 text-sm text-muted-foreground">Platform article and roadmap limits per plan tier.</p>

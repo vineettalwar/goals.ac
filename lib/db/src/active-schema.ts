@@ -1,6 +1,9 @@
 /**
  * Dialect-aware table exports — use `import { usersTable } from "@workspace/db/active-schema"`
  * when building queries that must run on both Postgres and D1.
+ *
+ * Prefer resolving after `setD1Binding()` / `DB_DIALECT=d1` is set (Workers `fetch` wiring).
+ * Module-load time uses `process.env.DB_DIALECT` when the binding is not yet set.
  */
 import { isD1Dialect } from "./dialect";
 import * as pgSchema from "./schema";

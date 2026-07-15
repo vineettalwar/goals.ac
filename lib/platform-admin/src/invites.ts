@@ -1,12 +1,13 @@
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   orgInvitesTable,
   organizationMembersTable,
   organizationsTable,
   usersTable,
-} from "@workspace/db/schema";
+} from "@workspace/db/schema-sqlite";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import crypto from "crypto";
+import { toIsoString } from "./dates";
 import { addOrganizationMember } from "./org-mutations";
 import type { OrgMemberRole } from "./users";
 
@@ -62,8 +63,8 @@ export async function listPendingInvites(organizationId?: number): Promise<Pendi
     organizationName: row.organizationName,
     role: normalizeOrgRole(row.role) ?? "editor",
     assignedProjectId: row.assignedProjectId,
-    expiresAt: row.expiresAt.toISOString(),
-    createdAt: row.createdAt.toISOString(),
+    expiresAt: toIsoString(row.expiresAt),
+    createdAt: toIsoString(row.createdAt),
   }));
 }
 

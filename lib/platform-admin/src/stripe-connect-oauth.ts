@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
-import { db } from "@workspace/db";
-import { platformSettingsTable } from "@workspace/db/schema";
+import { db } from "./db";
+import { platformSettingsTable } from "@workspace/db/schema-sqlite";
 import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
 import { eq } from "drizzle-orm";
 import { invalidateStripeClientCache } from "@workspace/billing";

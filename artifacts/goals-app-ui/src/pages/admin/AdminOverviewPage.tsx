@@ -128,7 +128,7 @@ export function AdminOverviewPage() {
         : null;
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="space-y-8 px-4 py-6 sm:px-6 lg:px-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Overview</h1>
         <p className="mt-1 text-sm text-muted-foreground">

@@ -81,7 +81,7 @@ export function AdminOrganizationOnboardPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Onboard organization</h1>
         <p className="mt-1 text-sm text-muted-foreground">

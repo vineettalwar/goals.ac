@@ -85,7 +85,7 @@ export function AdminContentStrategyDetailPage({ strategyId }: { strategyId: num
 
   if (error || !strategy) {
     return (
-      <div className="mx-auto max-w-5xl space-y-4 p-8">
+      <div className="mx-auto max-w-5xl space-y-4 px-4 py-8 sm:px-6 lg:px-8">
         <Link to="/admin/content-strategies" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Back to strategies
         </Link>
@@ -97,7 +97,7 @@ export function AdminContentStrategyDetailPage({ strategyId }: { strategyId: num
   const sortedItems = [...strategy.items].sort((a, b) => a.day - b.day);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-8">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <Link to="/admin/content-strategies" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Back to strategies
       </Link>

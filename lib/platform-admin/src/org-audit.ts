@@ -1,5 +1,5 @@
-import { db } from "@workspace/db";
-import { orgAuditLogTable } from "@workspace/db/schema";
+import { db } from "./db";
+import { orgAuditLogTable } from "@workspace/db/schema-sqlite";
 import type { OrgAuditLogMetadata } from "@workspace/db/schema";
 import { desc, eq } from "drizzle-orm";
 

@@ -1,12 +1,14 @@
-import { db, ilikeCompat } from "@workspace/db";
+import { ilikeCompat } from "@workspace/db";
+import { db } from "./db";
 import {
   orgInvitesTable,
   organizationMembersTable,
   organizationsTable,
   usersTable,
   websiteProjectsTable,
-} from "@workspace/db/schema";
+} from "@workspace/db/schema-sqlite";
 import { and, count, desc, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import { toIsoString } from "./dates";
 
 export type OrgMemberRole = "owner" | "site_admin" | "editor" | "viewer";
 
@@ -143,7 +145,7 @@ export async function listAllUsers(input: ListAllUsersInput = {}): Promise<{
       organizationName: row.organizationName,
       orgRole: normalizeOrgRole(row.orgRole),
       projectCount: projectCountByUser.get(row.id) ?? 0,
-      createdAt: row.createdAt.toISOString(),
+      createdAt: toIsoString(row.createdAt),
       status,
     };
   });
