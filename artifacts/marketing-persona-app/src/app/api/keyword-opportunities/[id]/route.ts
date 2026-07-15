@@ -2,13 +2,20 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { keywordOpportunitiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
-import { queueOpportunityToStrategy } from "@workspace/content-engine/strategy/keyword-opportunity-service";
-import { z } from "zod";
+import {
+  queueOpportunityToStrategy,
+  queueOpportunityAndGenerate,
+} from "@workspace/content-engine/strategy/keyword-opportunity-service";
+
+const PostBodySchema = z.object({
+  generate: z.boolean().optional(),
+});
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { userId, error } = await requireAuth();
@@ -17,6 +24,11 @@ export async function POST(
   const { id: idStr } = await params;
   const oppId = Number(idStr);
   if (isNaN(oppId)) return NextResponse.json({ error: "Invalid opportunity id" }, { status: 400 });
+
+  const body = PostBodySchema.safeParse(await req.json().catch(() => ({})));
+  if (!body.success) {
+    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  }
 
   const [opp] = await db
     .select()
@@ -30,6 +42,10 @@ export async function POST(
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   try {
+    if (body.data.generate) {
+      const result = await queueOpportunityAndGenerate(oppId, userId!);
+      return NextResponse.json(result);
+    }
     const result = await queueOpportunityToStrategy(oppId, userId!);
     return NextResponse.json(result);
   } catch (err) {

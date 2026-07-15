@@ -17,9 +17,9 @@ import {
   decodeSignedOAuthState,
 } from "@/lib/integrations/oauth/oauth-state";
 
-function publishingRedirect(_projectId: number, params: Record<string, string>): never {
+function publishingRedirect(projectId: number, params: Record<string, string>): never {
   const qs = new URLSearchParams(params).toString();
-  redirect(`${getNextFrontendOrigin()}/integrations?${qs}`);
+  redirect(`${getNextFrontendOrigin()}/projects/${projectId}/integrations/social?${qs}`);
 }
 
 export async function GET(req: Request) {
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
   const oauthError = url.searchParams.get("error");
 
   if (oauthError || !code || !stateRaw) {
-    redirect(`${getNextFrontendOrigin()}/integrations?bluesky=error`);
+    redirect(`${getNextFrontendOrigin()}/integrations/ai?bluesky=error`);
   }
 
   let projectId = 0;
@@ -66,6 +66,6 @@ export async function GET(req: Request) {
     if (projectId) {
       publishingRedirect(projectId, { bluesky: "error" });
     }
-    redirect(`${getNextFrontendOrigin()}/integrations?bluesky=error`);
+    redirect(`${getNextFrontendOrigin()}/integrations/ai?bluesky=error`);
   }
 }

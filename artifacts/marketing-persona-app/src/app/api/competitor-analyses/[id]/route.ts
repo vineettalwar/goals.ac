@@ -27,5 +27,14 @@ export async function GET(
     if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
   }
 
-  return NextResponse.json({ id: row.id, ...row.result, createdAt: row.createdAt });
+  return NextResponse.json({
+    id: row.id,
+    competitorUrl: row.competitorUrl,
+    industry: row.industry,
+    location: row.location,
+    stage: row.stage,
+    websiteProjectId: row.websiteProjectId,
+    createdAt: row.createdAt,
+    ...row.result,
+  });
 }

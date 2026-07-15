@@ -77,7 +77,7 @@ export async function POST(
       const credentials = await getDecryptedSemrushCredentialsForUser(userId!);
       if (!credentials) {
         return NextResponse.json(
-          { error: "Semrush is not configured. Add your organization's API key in Settings." },
+          { error: "Semrush is not configured. Add your organization's API key in Integrations → Tools." },
           { status: 400 },
         );
       }

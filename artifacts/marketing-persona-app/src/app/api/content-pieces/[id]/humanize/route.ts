@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { humanizeContentPiece } from "@workspace/content-engine/content/humanizer";
 import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import {
   assertPieceOwner,
   loadProjectBrand,
@@ -14,6 +15,9 @@ import {
 } from "@/lib/content/content-pieces-helpers";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+
+const AI_NOT_CONFIGURED_MESSAGE =
+  "AI is not configured. Add your API key in Integrations → AI, or ask your admin to set a platform key.";
 
 export async function POST(
   _req: Request,
@@ -52,13 +56,24 @@ export async function POST(
   const ctx = await loadProjectBrand(piece!.websiteProjectId, userId!);
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
+  try {
+    await resolveAiClientForUser(userId!);
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "AI provider is not configured";
+    const message = /not configured|no gemini api key/i.test(detail)
+      ? AI_NOT_CONFIGURED_MESSAGE
+      : detail;
+    return NextResponse.json({ error: message }, { status: 503 });
+  }
+
   const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
     loadUserAiSettings(userId!),
     prepareAiBilling({
-    userId: userId!,
-    tier: "execution",
-    quotaKind: "article",
-  }),  ]);
+      userId: userId!,
+      tier: "execution",
+      quotaKind: "article",
+    }),
+  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {

@@ -6,6 +6,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
 import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
 
 const AnalyzeBody = z.object({
@@ -15,6 +16,49 @@ const AnalyzeBody = z.object({
   stage: z.string().min(1),
   websiteProjectId: z.number().int().positive().optional(),
 });
+
+function flatAnalysisResponse(row: typeof competitorAnalysesTable.$inferSelect) {
+  const result = row.result ?? {};
+  return {
+    id: row.id,
+    competitorUrl: row.competitorUrl,
+    industry: row.industry,
+    location: row.location,
+    stage: row.stage,
+    websiteProjectId: row.websiteProjectId,
+    createdAt: row.createdAt,
+    ...result,
+  };
+}
+
+export async function GET(req: Request) {
+  const { userId, error } = await requireAuth();
+  if (error) return error;
+
+  const url = new URL(req.url);
+  const projectIdParam = url.searchParams.get("projectId");
+  const projectId = projectIdParam ? Number(projectIdParam) : null;
+
+  if (projectIdParam && (!Number.isFinite(projectId) || (projectId ?? 0) <= 0)) {
+    return NextResponse.json({ error: "Invalid projectId" }, { status: 400 });
+  }
+
+  if (projectId) {
+    const access = await requireProjectAccess(projectId, userId!);
+    if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+
+    const rows = await db
+      .select()
+      .from(competitorAnalysesTable)
+      .where(eq(competitorAnalysesTable.websiteProjectId, projectId))
+      .orderBy(desc(competitorAnalysesTable.createdAt))
+      .limit(50);
+
+    return NextResponse.json({ analyses: rows.map(flatAnalysisResponse) });
+  }
+
+  return NextResponse.json({ analyses: [] });
+}
 
 export async function POST(req: Request) {
   const { userId, error } = await requireAuth();
@@ -40,10 +84,11 @@ export async function POST(req: Request) {
   const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
     loadUserAiSettings(userId!),
     prepareAiBilling({
-    userId: userId!,
-    tier: "planning",
-    quotaKind: "article",
-  }),  ]);
+      userId: userId!,
+      tier: "planning",
+      quotaKind: "article",
+    }),
+  ]);
   if (!billingPrep.ok) return billingPrep.response;
 
   try {
@@ -75,7 +120,7 @@ export async function POST(req: Request) {
       tier: "planning",
     });
 
-    return NextResponse.json(saved);
+    return NextResponse.json(flatAnalysisResponse(saved));
   } catch (err) {
     await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "analysis_failed");
     return NextResponse.json(
