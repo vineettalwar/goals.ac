@@ -1,5 +1,17 @@
 # Session Handoff
 
+## Shell create repurpose flow (2026-07-16)
+
+Compact Create vs Repurpose path in `CreateContentDialog` when `onRepurpose` is provided:
+
+`path → format → keyword → source (pick piece / paste) → review → POST …/content-pieces/repurpose`
+
+`StudioPage` passes studio pieces + `onLoadSourcePiece` + `repurposePiece` from `use-studio-data`.
+
+Shell create parity with Next wizard: destination, competitor picker, stream headings, **repurpose** — done.
+
+---
+
 ## Shell create streaming headings (2026-07-16)
 
 Vite Studio create stream now parses SSE `text` chunks, extracts markdown headings from partial `body_markdown` (same algorithm as Next `extractSections`), and passes them into `CreateContentDialog` via `generatingHeadings`. Falls back to timed Analyzing/Drafting/Finishing labels until the first heading arrives; sync POST fallback shows “Finishing…”.
@@ -109,8 +121,7 @@ LinkedIn, X, Meta, and Bluesky app credentials can be stored in platform admin (
 - Env wins over encrypted DB values; admin UI: `/admin/integrations` → **Social**
 - Bluesky has no pasted client id — client id is the hosted metadata URL; demos need a stable private JWK (ephemeral key at startup breaks after restart)
 - Done when: paste credentials in admin → project Connect works without matching `.env` vars
-
-**Still env/bindings-only:** CF public-worker social auth paths if used.
+- CF public-worker now uses the same `resolve*` helpers (see closure section above)
 
 ---
 
@@ -197,7 +208,7 @@ Next Studio surfaces thin-wrap shell views:
 
 **Migrate:** Postgres `0064_publish_records_output_mode` applied locally. D1 skipped (`.dev.vars` missing).
 
-**Remaining (stale section below — updated):** Shell create destination + competitor picker + streaming headings shipped 2026-07-16. Still open vs Next richness: repurpose flow. Unused local Next studio leftovers remain deletable.
+**Remaining (stale section below — updated):** Shell create wizard parity with Next (destination, competitors, stream headings, repurpose) shipped 2026-07-16. Unused local Next studio leftovers remain deletable.
 
 ---
 

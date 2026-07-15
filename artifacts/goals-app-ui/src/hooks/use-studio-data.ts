@@ -7,7 +7,7 @@ import {
   fetchProjectContentPieces,
 } from "@/lib/queries/fetchers";
 import { queryKeys } from "@/lib/queries/keys";
-import type { BrandProfileSummary, CreateContentDraftInput, StudioPiece } from "@workspace/app-shell";
+import type { BrandProfileSummary, CreateContentDraftInput, RepurposeContentInput, StudioPiece } from "@workspace/app-shell";
 import type { ContentPiece } from "@/types/api";
 
 const STUDIO_POLL_MS = 3000;
@@ -43,6 +43,15 @@ function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGener
   return payload;
 }
 
+/** Stream lifecycle mapped onto CreateContentDialog Analyzing → Drafting → Finishing. */
+export type CreateStreamPhase = "analyzing" | "drafting" | "finishing";
+
+export type CreateStreamProgress = {
+  phase: CreateStreamPhase;
+  /** Headings parsed from streamed body_markdown chunks (optional detail under Drafting). */
+  sections?: string[];
+};
+
 /** Mirror Next extractSections: headings from streamed body_markdown JSON. */
 export function extractStreamingSections(jsonAccumulated: string): string[] {
   const bodyIdx = jsonAccumulated.indexOf('"body_markdown"');
@@ -64,7 +73,7 @@ export function extractStreamingSections(jsonAccumulated: string): string[] {
 async function createPieceViaStream(
   projectId: string,
   payload: CreateGeneratePayload,
-  onProgress?: (sections: string[]) => void,
+  onProgress?: (progress: CreateStreamProgress) => void,
 ): Promise<ContentPiece | null> {
   const path = `/api/website-projects/${projectId}/content-pieces/generate/stream`;
   const base = getApiBase();
@@ -87,12 +96,15 @@ async function createPieceViaStream(
 
   if (!response.ok || !response.body) return null;
 
+  onProgress?.({ phase: "analyzing" });
+
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
   let jsonAccumulated = "";
   let pendingEvent: string | null = null;
   let finalPiece: ContentPiece | null = null;
+  let lastSections: string[] = [];
 
   while (true) {
     const { done, value } = await reader.read();
@@ -119,6 +131,10 @@ async function createPieceViaStream(
         throw new Error(message);
       }
       if (pendingEvent === "done" || pendingEvent === "cached") {
+        onProgress?.({
+          phase: "finishing",
+          sections: lastSections.length > 0 ? lastSections : undefined,
+        });
         try {
           const parsed = JSON.parse(eventPayload) as ContentPiece;
           if (parsed && typeof parsed === "object" && "id" in parsed) {
@@ -137,11 +153,11 @@ async function createPieceViaStream(
         if ("text" in parsed && parsed.text) {
           jsonAccumulated += parsed.text;
           const sections = extractStreamingSections(jsonAccumulated);
-          if (sections.length > 0) {
-            onProgress?.(sections);
-          } else if (jsonAccumulated.length > 30) {
-            onProgress?.(["Crafting title…"]);
-          }
+          if (sections.length > 0) lastSections = sections;
+          onProgress?.({
+            phase: "drafting",
+            sections: lastSections.length > 0 ? lastSections : undefined,
+          });
         } else if (parsed && typeof parsed === "object" && "id" in parsed) {
           finalPiece = parsed as ContentPiece;
         }
@@ -224,7 +240,7 @@ export function useStudioData(projectId: string | null) {
   const createPiece = useCallback(
     async (
       input: CreateContentDraftInput,
-      options?: { onProgress?: (sections: string[]) => void },
+      options?: { onProgress?: (progress: CreateStreamProgress) => void },
     ) => {
       if (!projectId) {
         throw new Error("No project selected");
@@ -235,9 +251,10 @@ export function useStudioData(projectId: string | null) {
         throw new Error("Target keyword is required");
       }
 
+      options?.onProgress?.({ phase: "analyzing" });
       let piece = await createPieceViaStream(projectId, payload, options?.onProgress);
       if (!piece) {
-        options?.onProgress?.(["Finishing…"]);
+        options?.onProgress?.({ phase: "finishing" });
         piece = await apiFetch<ContentPiece>(
           `/api/website-projects/${projectId}/content-pieces`,
           {
@@ -262,6 +279,38 @@ export function useStudioData(projectId: string | null) {
         }
       }
 
+      await reload();
+      return piece;
+    },
+    [projectId, reload],
+  );
+
+  const repurposePiece = useCallback(
+    async (input: RepurposeContentInput) => {
+      if (!projectId) {
+        throw new Error("No project selected");
+      }
+      const targetKeyword = input.targetKeyword.trim();
+      const existingContent = input.existingContent.trim();
+      if (!targetKeyword) {
+        throw new Error("Target keyword is required");
+      }
+      if (existingContent.length < 50) {
+        throw new Error("Source content must be at least 50 characters");
+      }
+      const piece = await apiFetch<ContentPiece>(
+        `/api/website-projects/${projectId}/content-pieces/repurpose`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            targetFormat: input.targetFormat,
+            targetKeyword,
+            existingContent,
+          }),
+          timeoutMs: API_FETCH_AI_TIMEOUT_MS,
+        },
+      );
       await reload();
       return piece;
     },
@@ -345,6 +394,7 @@ export function useStudioData(projectId: string | null) {
     activeProvider: aiStatusQuery.data?.activeProvider ?? "gemini",
     reload,
     createPiece,
+    repurposePiece,
     deletePiece,
     markReady,
     reschedulePiece,

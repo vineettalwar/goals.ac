@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, CheckCircle2, FileText, Loader2, Plus, Users } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileText, Loader2, Plus, RefreshCw, Users } from "lucide-react";
 import {
   hostFromUrl,
   normalizeCompetitorUrl,
@@ -48,11 +48,33 @@ export type CreateCompetitorOption = {
   contentGaps?: string[];
 };
 
-/** Compact create flow: format → keyword → [competitors?] → [destination?] → review. */
-type CreateStepId = "format" | "keyword" | "competitors" | "destination" | "review";
+export type RepurposeContentInput = {
+  targetFormat: string;
+  targetKeyword: string;
+  existingContent: string;
+};
+
+export type CreateSourcePieceOption = {
+  id: number;
+  title: string;
+  targetKeyword?: string | null;
+  formatType?: string;
+};
+
+/** Compact create flow: [path?] → format → keyword → … → review. */
+type CreateFlow = "create" | "repurpose";
+type CreateStepId =
+  | "path"
+  | "format"
+  | "keyword"
+  | "competitors"
+  | "destination"
+  | "source"
+  | "review";
 
 const VALID_FORMATS = new Set(STUDIO_FORMAT_OPTIONS.map((option) => option.value));
 const MAX_COMPETITOR_URLS = 5;
+const MIN_REPURPOSE_CHARS = 50;
 
 /** Mirrors `SEO_LONGFORM_FORMATS` in content-engine — no db type dependency here. */
 const SEO_LONGFORM_FORMATS = new Set([
@@ -66,8 +88,16 @@ const SEO_LONGFORM_FORMATS = new Set([
   "location_page",
 ]);
 
-/** Fake progress labels while the one-shot generate API runs. */
+/** Progress labels — index driven by SSE stream phase when the host feeds generatingPhase. */
 const GENERATING_LABELS = ["Analyzing", "Drafting", "Finishing"] as const;
+
+export type CreateGeneratingPhase = "analyzing" | "drafting" | "finishing";
+
+function phaseToLabelIndex(phase: CreateGeneratingPhase | null | undefined): number {
+  if (phase === "finishing") return 2;
+  if (phase === "drafting") return 1;
+  return 0;
+}
 
 function isSeoLongform(formatType: string): boolean {
   return SEO_LONGFORM_FORMATS.has(formatType);
@@ -97,10 +127,17 @@ function optionByHost(options: CreateCompetitorOption[]): Map<string, CreateComp
 }
 
 function buildSteps(
+  flow: CreateFlow,
   formatType: string,
   destinations: { id: PublishDestinationId }[],
+  enableRepurpose: boolean,
 ): CreateStepId[] {
-  const steps: CreateStepId[] = ["format", "keyword"];
+  if (flow === "repurpose") {
+    const steps: CreateStepId[] = enableRepurpose ? ["path"] : [];
+    steps.push("format", "keyword", "source", "review");
+    return steps;
+  }
+  const steps: CreateStepId[] = enableRepurpose ? ["path", "format", "keyword"] : ["format", "keyword"];
   if (isSeoLongform(formatType)) steps.push("competitors");
   if (destinations.length > 0) steps.push("destination");
   steps.push("review");
@@ -120,28 +157,40 @@ export function CreateContentDialog({
   open,
   onClose,
   onSubmit,
+  onRepurpose,
   submitting = false,
   error = null,
   initialValues = null,
   cmsConnections = null,
   projectCompetitors = null,
   competitorsLoading = false,
+  generatingPhase = null,
   generatingHeadings = null,
+  existingPieces = null,
+  onLoadSourcePiece,
 }: {
   open: boolean;
   onClose: () => void;
   onSubmit: (input: CreateContentDraftInput) => void | Promise<void>;
+  /** When set with existingPieces, enables Create vs Repurpose path. */
+  onRepurpose?: (input: RepurposeContentInput) => void | Promise<void>;
   submitting?: boolean;
   error?: string | null;
   initialValues?: CreateContentInitialValues | null;
-  /** When present, optional destination step lists connected/export targets for the format. */
   cmsConnections?: CmsConnectionSnapshot | null;
-  /** Project brand + analysis competitors for the optional picker step. */
   projectCompetitors?: CreateCompetitorOption[] | null;
   competitorsLoading?: boolean;
-  /** Live headings extracted from stream tokens while submitting. */
+  /** SSE generate stream lifecycle (analyzing → drafting → finishing). */
+  generatingPhase?: CreateGeneratingPhase | null;
+  /** Headings parsed from stream chunks while drafting. */
   generatingHeadings?: string[] | null;
+  existingPieces?: CreateSourcePieceOption[] | null;
+  onLoadSourcePiece?: (
+    pieceId: number,
+  ) => Promise<{ bodyMarkdown: string; targetKeyword?: string | null } | null>;
 }) {
+  const enableRepurpose = Boolean(onRepurpose);
+  const [flow, setFlow] = useState<CreateFlow>("create");
   const [stepIndex, setStepIndex] = useState(0);
   const [title, setTitle] = useState("");
   const [targetKeyword, setTargetKeyword] = useState("");
@@ -154,13 +203,15 @@ export function CreateContentDialog({
   const [competitorUrls, setCompetitorUrls] = useState<string[]>([]);
   const [competitorFocusUrl, setCompetitorFocusUrl] = useState("");
   const [newCompetitorUrl, setNewCompetitorUrl] = useState("");
-  const [generatingLabelIndex, setGeneratingLabelIndex] = useState(0);
+  const [sourcePieceId, setSourcePieceId] = useState("");
+  const [sourceContent, setSourceContent] = useState("");
+  const [loadingSourcePiece, setLoadingSourcePiece] = useState(false);
 
   const contentFormat = asContentFormat(formatType);
   const destinations = useMemo(() => {
-    if (!contentFormat) return [];
+    if (flow === "repurpose" || !contentFormat) return [];
     return getConnectedDestinationsForFormat(contentFormat, cmsConnections ?? {});
-  }, [contentFormat, cmsConnections]);
+  }, [contentFormat, cmsConnections, flow]);
 
   const competitorMeta = useMemo(
     () => optionByHost(projectCompetitors ?? []),
@@ -168,12 +219,13 @@ export function CreateContentDialog({
   );
 
   const steps = useMemo(
-    () => buildSteps(formatType, destinations),
-    [formatType, destinations],
+    () => buildSteps(flow, formatType, destinations, enableRepurpose),
+    [flow, formatType, destinations, enableRepurpose],
   );
 
   useEffect(() => {
     if (!open) {
+      setFlow("create");
       setStepIndex(0);
       setTitle("");
       setTargetKeyword("");
@@ -186,7 +238,9 @@ export function CreateContentDialog({
       setCompetitorUrls([]);
       setCompetitorFocusUrl("");
       setNewCompetitorUrl("");
-      setGeneratingLabelIndex(0);
+      setSourcePieceId("");
+      setSourceContent("");
+      setLoadingSourcePiece(false);
       return;
     }
 
@@ -195,6 +249,7 @@ export function CreateContentDialog({
         ? initialValues.formatType
         : "blog_post";
     const initialAngle = initialValues?.angleHint?.trim() ?? "";
+    setFlow("create");
     setStepIndex(0);
     setTitle(initialValues?.title?.trim() ?? "");
     setTargetKeyword(initialValues?.targetKeyword?.trim() ?? "");
@@ -213,12 +268,14 @@ export function CreateContentDialog({
       normalizeCompetitorUrl(initialValues?.competitorFocusUrl ?? "") ?? "",
     );
     setNewCompetitorUrl("");
-    setGeneratingLabelIndex(0);
+    setSourcePieceId("");
+    setSourceContent("");
+    setLoadingSourcePiece(false);
   }, [open, initialValues]);
 
   // Merge project competitors once they arrive (async host fetch).
   useEffect(() => {
-    if (!open || competitorsLoading) return;
+    if (!open || competitorsLoading || flow === "repurpose") return;
     const fromProject = normalizeCompetitorUrlList(
       (projectCompetitors ?? []).map((option) => option.url),
     );
@@ -233,7 +290,7 @@ export function CreateContentDialog({
         ? normalized
         : "";
     });
-  }, [open, competitorsLoading, projectCompetitors, initialValues]);
+  }, [open, competitorsLoading, projectCompetitors, initialValues, flow]);
 
   // Clamp step when format/connections change the sequence length.
   useEffect(() => {
@@ -247,27 +304,15 @@ export function CreateContentDialog({
     setIntendedPublishPlatform(undefined);
   }, [destinations, intendedPublishPlatform]);
 
-  // Timed progress labels during one-shot generate (cleared when submit ends).
-  useEffect(() => {
-    if (!submitting) {
-      setGeneratingLabelIndex(0);
-      return;
-    }
-    setGeneratingLabelIndex(0);
-    const t1 = window.setTimeout(() => setGeneratingLabelIndex(1), 900);
-    const t2 = window.setTimeout(() => setGeneratingLabelIndex(2), 2200);
-    return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
-    };
-  }, [submitting]);
-
   if (!open) return null;
 
   const currentStep = steps[Math.min(stepIndex, steps.length - 1)] ?? "format";
   const progress = ((stepIndex + 1) / steps.length) * 100;
-  const isLinkedIn = formatType === "linkedin_post";
+  const isLinkedIn = formatType === "linkedin_post" && flow === "create";
   const showGenerating = submitting && currentStep === "review";
+  const generatingLabelIndex = phaseToLabelIndex(
+    submitting ? (generatingPhase ?? "analyzing") : null,
+  );
   const sessionCompetitorUrls = isSeoLongform(formatType) ? competitorUrls : [];
   const focusCompetitorUrl = competitorFocusUrl || sessionCompetitorUrls[0];
   const selectedDestinationLabel = intendedPublishPlatform
@@ -283,6 +328,7 @@ export function CreateContentDialog({
   function goNext() {
     if (submitting) return;
     if (currentStep === "keyword" && !targetKeyword.trim()) return;
+    if (currentStep === "source" && sourceContent.trim().length < MIN_REPURPOSE_CHARS) return;
     if (currentStep === "review") return;
     setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   }
@@ -294,9 +340,38 @@ export function CreateContentDialog({
     setNewCompetitorUrl("");
   }
 
+  async function selectSourcePiece(pieceId: string) {
+    setSourcePieceId(pieceId);
+    if (!pieceId || !onLoadSourcePiece) return;
+    const id = Number(pieceId);
+    if (!Number.isFinite(id)) return;
+    setLoadingSourcePiece(true);
+    try {
+      const loaded = await onLoadSourcePiece(id);
+      if (loaded?.bodyMarkdown) {
+        setSourceContent(loaded.bodyMarkdown);
+        if (loaded.targetKeyword?.trim() && !targetKeyword.trim()) {
+          setTargetKeyword(loaded.targetKeyword.trim());
+        }
+      }
+    } finally {
+      setLoadingSourcePiece(false);
+    }
+  }
+
   async function handleGenerate() {
     const keyword = targetKeyword.trim();
     if (!keyword || submitting) return;
+
+    if (flow === "repurpose") {
+      if (!onRepurpose || sourceContent.trim().length < MIN_REPURPOSE_CHARS) return;
+      await onRepurpose({
+        targetFormat: formatType,
+        targetKeyword: keyword,
+        existingContent: sourceContent.trim(),
+      });
+      return;
+    }
 
     const resolvedAngle =
       formatType === "linkedin_post"
@@ -319,32 +394,52 @@ export function CreateContentDialog({
   }
 
   const stepTitle = showGenerating
-    ? `Writing your ${formatTypeLabel(formatType)}…`
-    : currentStep === "format"
-      ? "Choose a format"
-      : currentStep === "keyword"
-        ? isLinkedIn
-          ? "Keyword & archetype"
-          : "Keyword & angle"
-        : currentStep === "competitors"
-          ? "Competitor landscape"
-          : currentStep === "destination"
-            ? "Where will this be published?"
-            : "Schedule & review";
+    ? flow === "repurpose"
+      ? `Repurposing into ${formatTypeLabel(formatType)}…`
+      : `Writing your ${formatTypeLabel(formatType)}…`
+    : currentStep === "path"
+      ? "How do you want to start?"
+      : currentStep === "format"
+        ? "Choose a format"
+        : currentStep === "keyword"
+          ? flow === "repurpose"
+            ? "Target keyword"
+            : isLinkedIn
+              ? "Keyword & archetype"
+              : "Keyword & angle"
+          : currentStep === "source"
+            ? "Source content"
+            : currentStep === "competitors"
+              ? "Competitor landscape"
+              : currentStep === "destination"
+                ? "Where will this be published?"
+                : flow === "repurpose"
+                  ? "Confirm & repurpose"
+                  : "Schedule & review";
 
   const stepSubtitle = showGenerating
     ? `Target: ${targetKeyword.trim() || "—"}`
-    : currentStep === "format"
-      ? "Pick the content type — we tailor structure and length to match."
-      : currentStep === "keyword"
-        ? isLinkedIn
-          ? "Target keyword is required. Archetype and hook chips are optional."
-          : "Target keyword is required. Angle and title are optional."
-        : currentStep === "competitors"
-          ? "Optional — tap a project competitor as primary focus, or quick-add a URL."
-          : currentStep === "destination"
-            ? "Optional — shapes generation and pre-selects your publish destination."
-            : "Optional date for the calendar, then confirm and generate.";
+    : currentStep === "path"
+      ? "Create from a keyword, or adapt an existing piece."
+      : currentStep === "format"
+        ? flow === "repurpose"
+          ? "We'll adapt your source content to this format."
+          : "Pick the content type — we tailor structure and length to match."
+        : currentStep === "keyword"
+          ? flow === "repurpose"
+            ? "Required — used for the new piece title focus."
+            : isLinkedIn
+              ? "Target keyword is required. Archetype and hook chips are optional."
+              : "Target keyword is required. Angle and title are optional."
+          : currentStep === "source"
+            ? `Paste content or pick a studio piece (min ${MIN_REPURPOSE_CHARS} characters).`
+            : currentStep === "competitors"
+              ? "Optional — tap a project competitor as primary focus, or quick-add a URL."
+              : currentStep === "destination"
+                ? "Optional — shapes generation and pre-selects your publish destination."
+                : flow === "repurpose"
+                  ? "Confirm the adaptation, then generate."
+                  : "Optional date for the calendar, then confirm and generate.";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -399,11 +494,37 @@ export function CreateContentDialog({
 
           {showGenerating ? (
             <div className="mt-8 space-y-3" aria-live="polite" aria-busy="true">
-              {generatingHeadings && generatingHeadings.length > 0
-                ? generatingHeadings.map((section, index) => {
+              {GENERATING_LABELS.map((label, index) => {
+                const done = index < generatingLabelIndex;
+                const active = index === generatingLabelIndex;
+                return (
+                  <div
+                    key={label}
+                    className={
+                      active
+                        ? "flex items-center gap-3 text-sm font-medium text-foreground"
+                        : done
+                          ? "flex items-center gap-3 text-sm text-muted-foreground"
+                          : "flex items-center gap-3 text-sm text-muted-foreground/50"
+                    }
+                  >
+                    {active ? (
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+                    ) : done ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    ) : (
+                      <span className="h-4 w-4 shrink-0 rounded-full border border-border" />
+                    )}
+                    {label}
+                  </div>
+                );
+              })}
+              {generatingHeadings && generatingHeadings.length > 0 ? (
+                <ul className="mt-4 space-y-2 border-t border-border/60 pt-4">
+                  {generatingHeadings.map((section, index) => {
                     const isLast = index === generatingHeadings.length - 1;
                     return (
-                      <div
+                      <li
                         key={`${index}-${section}`}
                         className={
                           isLast
@@ -411,40 +532,63 @@ export function CreateContentDialog({
                             : "flex items-center gap-3 text-sm text-muted-foreground"
                         }
                       >
-                        {isLast ? (
-                          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+                        {isLast && generatingLabelIndex === 1 ? (
+                          <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
                         ) : (
-                          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
                         )}
                         {section}
-                      </div>
-                    );
-                  })
-                : GENERATING_LABELS.map((label, index) => {
-                    const done = index < generatingLabelIndex;
-                    const active = index === generatingLabelIndex;
-                    return (
-                      <div
-                        key={label}
-                        className={
-                          active
-                            ? "flex items-center gap-3 text-sm font-medium text-foreground"
-                            : done
-                              ? "flex items-center gap-3 text-sm text-muted-foreground"
-                              : "flex items-center gap-3 text-sm text-muted-foreground/50"
-                        }
-                      >
-                        {active ? (
-                          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
-                        ) : done ? (
-                          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                        ) : (
-                          <span className="h-4 w-4 shrink-0 rounded-full border border-border" />
-                        )}
-                        {label}
-                      </div>
+                      </li>
                     );
                   })}
+                </ul>
+              ) : null}
+            </div>
+          ) : null}
+
+          {!showGenerating && currentStep === "path" ? (
+            <div className="mt-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setFlow("create");
+                  setStepIndex(1);
+                }}
+                className={
+                  flow === "create"
+                    ? "flex w-full items-start gap-3 rounded-xl border border-primary bg-primary/5 px-4 py-3 text-left"
+                    : "flex w-full items-start gap-3 rounded-xl border border-border px-4 py-3 text-left hover:border-primary/60 hover:bg-secondary/40"
+                }
+              >
+                <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span>
+                  <span className="block text-sm font-medium">Create new</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Generate from a keyword and optional competitor focus.
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFlow("repurpose");
+                  setFormatType("linkedin_post");
+                  setStepIndex(1);
+                }}
+                className={
+                  flow === "repurpose"
+                    ? "flex w-full items-start gap-3 rounded-xl border border-primary bg-primary/5 px-4 py-3 text-left"
+                    : "flex w-full items-start gap-3 rounded-xl border border-border px-4 py-3 text-left hover:border-primary/60 hover:bg-secondary/40"
+                }
+              >
+                <RefreshCw className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                <span>
+                  <span className="block text-sm font-medium">Repurpose existing</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">
+                    Adapt a studio piece or pasted draft into another format.
+                  </span>
+                </span>
+              </button>
             </div>
           ) : null}
 
@@ -560,36 +704,82 @@ export function CreateContentDialog({
                 </div>
               ) : null}
 
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">
-                  {isLinkedIn ? "Extra notes" : "Angle / hint"}{" "}
-                  <span className="font-normal text-muted-foreground">(optional)</span>
-                </span>
-                <textarea
-                  rows={2}
-                  value={angleHint}
-                  onChange={(event) => setAngleHint(event.target.value)}
-                  placeholder={
-                    isLinkedIn
-                      ? "Optional context beyond archetype and hook…"
-                      : "Tone, audience, or angle for the AI…"
-                  }
-                  className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm"
-                />
-              </label>
+              {flow === "create" ? (
+                <>
+                  <label className="block space-y-1.5">
+                    <span className="text-sm font-medium">
+                      {isLinkedIn ? "Extra notes" : "Angle / hint"}{" "}
+                      <span className="font-normal text-muted-foreground">(optional)</span>
+                    </span>
+                    <textarea
+                      rows={2}
+                      value={angleHint}
+                      onChange={(event) => setAngleHint(event.target.value)}
+                      placeholder={
+                        isLinkedIn
+                          ? "Optional context beyond archetype and hook…"
+                          : "Tone, audience, or angle for the AI…"
+                      }
+                      className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm"
+                    />
+                  </label>
 
+                  <label className="block space-y-1.5">
+                    <span className="text-sm font-medium">
+                      Title <span className="font-normal text-muted-foreground">(optional)</span>
+                    </span>
+                    <input
+                      type="text"
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      placeholder="e.g. How to improve SEO for SaaS"
+                      className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm"
+                    />
+                  </label>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
+          {!showGenerating && currentStep === "source" ? (
+            <div className="mt-4 space-y-3.5">
+              {(existingPieces?.length ?? 0) > 0 ? (
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium">Studio piece</span>
+                  <select
+                    value={sourcePieceId}
+                    onChange={(event) => void selectSourcePiece(event.target.value)}
+                    className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm"
+                  >
+                    <option value="">Paste below instead…</option>
+                    {existingPieces!.map((piece) => (
+                      <option key={piece.id} value={String(piece.id)}>
+                        {piece.title || `Piece #${piece.id}`}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              {loadingSourcePiece ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading piece…
+                </div>
+              ) : null}
               <label className="block space-y-1.5">
-                <span className="text-sm font-medium">
-                  Title <span className="font-normal text-muted-foreground">(optional)</span>
-                </span>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
-                  placeholder="e.g. How to improve SEO for SaaS"
-                  className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm"
+                <span className="text-sm font-medium">Source text</span>
+                <textarea
+                  autoFocus
+                  rows={8}
+                  value={sourceContent}
+                  onChange={(event) => setSourceContent(event.target.value)}
+                  placeholder="Paste the draft to adapt…"
+                  className="w-full resize-y rounded-lg border border-input bg-card px-3 py-2 text-sm"
                 />
               </label>
+              <p className="text-xs text-muted-foreground">
+                {sourceContent.trim().length} / {MIN_REPURPOSE_CHARS} characters minimum
+              </p>
             </div>
           ) : null}
 
@@ -748,24 +938,38 @@ export function CreateContentDialog({
 
           {!showGenerating && currentStep === "review" ? (
             <div className="mt-4 space-y-4">
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">
-                  Planned date{" "}
-                  <span className="font-normal text-muted-foreground">(optional)</span>
-                </span>
-                <input
-                  type="date"
-                  autoFocus
-                  value={plannedDate}
-                  onChange={(event) => setPlannedDate(event.target.value)}
-                  className="h-9 w-full max-w-xs rounded-lg border border-input bg-card px-3 text-sm"
-                />
-              </label>
+              {flow === "create" ? (
+                <label className="block space-y-1.5">
+                  <span className="text-sm font-medium">
+                    Planned date{" "}
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  </span>
+                  <input
+                    type="date"
+                    autoFocus
+                    value={plannedDate}
+                    onChange={(event) => setPlannedDate(event.target.value)}
+                    className="h-9 w-full max-w-xs rounded-lg border border-input bg-card px-3 text-sm"
+                  />
+                </label>
+              ) : null}
 
               <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-muted/30">
+                <ReviewRow
+                  label="Mode"
+                  value={flow === "repurpose" ? "Repurpose" : "Create"}
+                />
                 <ReviewRow label="Format" value={formatTypeLabel(formatType)} />
                 <ReviewRow label="Keyword" value={targetKeyword.trim() || "—"} />
-                {title.trim() ? <ReviewRow label="Title" value={title.trim()} /> : null}
+                {flow === "repurpose" ? (
+                  <ReviewRow
+                    label="Source"
+                    value={`${sourceContent.trim().length} characters`}
+                  />
+                ) : null}
+                {flow === "create" && title.trim() ? (
+                  <ReviewRow label="Title" value={title.trim()} />
+                ) : null}
                 {isLinkedIn && linkedinArchetype ? (
                   <ReviewRow
                     label="Archetype"
@@ -784,13 +988,13 @@ export function CreateContentDialog({
                     }
                   />
                 ) : null}
-                {angleHint.trim() ? (
+                {flow === "create" && angleHint.trim() ? (
                   <ReviewRow
                     label={isLinkedIn ? "Notes" : "Angle"}
                     value={angleHint.trim()}
                   />
                 ) : null}
-                {focusCompetitorUrl ? (
+                {flow === "create" && focusCompetitorUrl ? (
                   <ReviewRow
                     label="Competitors"
                     value={
@@ -800,15 +1004,19 @@ export function CreateContentDialog({
                     }
                   />
                 ) : null}
-                <ReviewRow
-                  label="Destination"
-                  value={selectedDestinationLabel ?? "Decide later"}
-                />
-                {plannedDate.trim() ? (
-                  <ReviewRow label="Planned date" value={plannedDate.trim()} />
-                ) : (
-                  <ReviewRow label="Planned date" value="Not scheduled" />
-                )}
+                {flow === "create" ? (
+                  <ReviewRow
+                    label="Destination"
+                    value={selectedDestinationLabel ?? "Decide later"}
+                  />
+                ) : null}
+                {flow === "create" ? (
+                  plannedDate.trim() ? (
+                    <ReviewRow label="Planned date" value={plannedDate.trim()} />
+                  ) : (
+                    <ReviewRow label="Planned date" value="Not scheduled" />
+                  )
+                ) : null}
               </div>
             </div>
           ) : null}
@@ -840,22 +1048,44 @@ export function CreateContentDialog({
             <button
               type="button"
               onClick={() => void handleGenerate()}
-              disabled={submitting || !targetKeyword.trim()}
+              disabled={
+                submitting ||
+                !targetKeyword.trim() ||
+                (flow === "repurpose" && sourceContent.trim().length < MIN_REPURPOSE_CHARS)
+              }
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               <FileText className="h-4 w-4" />
-              {`Generate ${formatTypeLabel(formatType)}`}
+              {flow === "repurpose"
+                ? `Repurpose → ${formatTypeLabel(formatType)}`
+                : `Generate ${formatTypeLabel(formatType)}`}
+            </button>
+          ) : currentStep === "path" ? (
+            <button
+              type="button"
+              onClick={() => {
+                setStepIndex(1);
+              }}
+              disabled={submitting}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            >
+              Next
             </button>
           ) : (
             <button
               type="button"
               onClick={goNext}
               disabled={
-                submitting || (currentStep === "keyword" && !targetKeyword.trim())
+                submitting ||
+                (currentStep === "keyword" && !targetKeyword.trim()) ||
+                (currentStep === "source" &&
+                  sourceContent.trim().length < MIN_REPURPOSE_CHARS)
               }
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {currentStep === "competitors" || currentStep === "destination"
+              {currentStep === "competitors" ||
+              currentStep === "destination" ||
+              currentStep === "source"
                 ? "Continue"
                 : "Next"}
             </button>

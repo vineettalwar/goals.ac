@@ -14,7 +14,11 @@ import {
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { useIntegrationsData } from "@/hooks/use-integrations-data";
-import { useStudioData } from "@/hooks/use-studio-data";
+import {
+  useStudioData,
+  type CreateStreamProgress,
+} from "@/hooks/use-studio-data";
+import { apiFetch } from "@/lib/api";
 import {
   fetchCompetitorContext,
   type CompetitorContextResponse,
@@ -89,6 +93,7 @@ export function StudioPage() {
     aiReady,
     activeProvider,
     createPiece,
+    repurposePiece,
     deletePiece,
     markReady,
     reschedulePiece,
@@ -100,7 +105,7 @@ export function StudioPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
-  const [generatingHeadings, setGeneratingHeadings] = useState<string[]>([]);
+  const [streamProgress, setStreamProgress] = useState<CreateStreamProgress | null>(null);
   const [createInitialValues, setCreateInitialValues] =
     useState<CreateContentInitialValues | null>(null);
 
@@ -193,32 +198,67 @@ export function StudioPage() {
         cmsConnections={integrations ?? {}}
         projectCompetitors={projectCompetitors}
         competitorsLoading={competitorQuery.isPending && !competitorQuery.data}
-        generatingHeadings={creating ? generatingHeadings : null}
+        generatingPhase={creating ? (streamProgress?.phase ?? "analyzing") : null}
+        generatingHeadings={creating ? (streamProgress?.sections ?? null) : null}
+        existingPieces={pieces.map((piece) => ({
+          id: piece.id,
+          title: piece.title,
+          targetKeyword: piece.targetKeyword,
+          formatType: piece.formatType,
+        }))}
+        onLoadSourcePiece={async (pieceId) => {
+          const row = await apiFetch<{ bodyMarkdown?: string; targetKeyword?: string | null }>(
+            `/api/content-pieces/${pieceId}`,
+          );
+          return {
+            bodyMarkdown: row.bodyMarkdown ?? "",
+            targetKeyword: row.targetKeyword ?? null,
+          };
+        }}
         onClose={() => {
           if (creating) return;
           setCreateOpen(false);
           setCreateInitialValues(null);
-          setGeneratingHeadings([]);
+          setStreamProgress(null);
         }}
         submitting={creating}
         error={createError}
+        onRepurpose={async (input) => {
+          setCreating(true);
+          setCreateError(null);
+          setStreamProgress({ phase: "analyzing" });
+          try {
+            const piece = await repurposePiece(input);
+            setCreateOpen(false);
+            setCreateInitialValues(null);
+            setStreamProgress(null);
+            if (projectId && piece?.id) {
+              navigate(studioContentPiecePath(projectId, piece.id));
+            }
+          } catch (err) {
+            setCreateError(err instanceof Error ? err.message : "Failed to repurpose content");
+            setStreamProgress(null);
+          } finally {
+            setCreating(false);
+          }
+        }}
         onSubmit={async (input) => {
           setCreating(true);
           setCreateError(null);
-          setGeneratingHeadings([]);
+          setStreamProgress({ phase: "analyzing" });
           try {
             const piece = await createPiece(input, {
-              onProgress: (sections) => setGeneratingHeadings(sections),
+              onProgress: (progress) => setStreamProgress(progress),
             });
             setCreateOpen(false);
             setCreateInitialValues(null);
-            setGeneratingHeadings([]);
+            setStreamProgress(null);
             if (projectId && piece?.id) {
               navigate(studioContentPiecePath(projectId, piece.id));
             }
           } catch (err) {
             setCreateError(err instanceof Error ? err.message : "Failed to create content");
-            setGeneratingHeadings([]);
+            setStreamProgress(null);
           } finally {
             setCreating(false);
           }

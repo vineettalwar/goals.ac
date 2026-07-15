@@ -88,8 +88,8 @@ Sources: `HANDOFF.md`, competitive plan Waves 0–3.2, create-wizard diff, TYPO3
 | Competitor URLs | Paste textarea | Project analyses cards + quick-add | Shell weaker |
 | Destination / `intendedPublishPlatform` | **Done 2026-07-16** | Done | Closed |
 | Project competitor picker | **Done 2026-07-16** (cards + analyses + quick-add) | Done | Closed |
-| Generating progress | **Done 2026-07-16** (stream headings + label fallback) | Done | Closed |
-| Repurpose flow | Missing | Done | Shell missing |
+| Generating progress | **Done 2026-07-16** (stream phase + headings) | Done | Closed |
+| Repurpose flow | **Done 2026-07-16** (compact path/source) | Done | Closed |
 | Brand AI profile card | Shell owns | Thin host passes profile | Leftover Next card file |
 
 ### C. Soft / demo landmines (works with caveats)
