@@ -21,29 +21,48 @@ import { resolveDefaultIntendedPlatform } from "@workspace/content-engine/suppor
 import { parsePublishingSettings } from "@workspace/content-engine/support/publishing/publishing-settings";
 import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
 import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor/competitor-generation-context";
-import { normalizeCompetitorUrl } from "@workspace/content-engine/support/competitor/competitor-url";
+import {
+  normalizeCompetitorUrl,
+  normalizeCompetitorUrlList,
+} from "@workspace/content-engine/support/competitor/competitor-url";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
 import type { AiProviderOptions } from "@workspace/ai-providers";
 import { z } from "zod";
 
-export const GenerateBody = z.object({
-  formatType: z.enum(CONTENT_FORMAT_TYPES as unknown as [ContentFormatType, ...ContentFormatType[]]),
-  targetKeyword: z.string().min(1, "Target keyword is required"),
-  angleHint: z.string().optional(),
-  plannedDate: z.string().optional(),
-  briefId: z.number().int().positive().optional(),
-  /** Optional hint — does not lock publish destination */
-  intendedPublishPlatform: z.string().min(1).optional(),
-  intendedOutputMode: z.string().min(1).optional(),
-  intendedEditorMode: z.enum(["classic", "gutenberg", "elementor", "divi"]).optional(),
-  /** Primary competitor URL to differentiate against for this piece */
-  competitorFocusUrl: z
-    .string()
-    .optional()
-    .transform((raw) => (raw?.trim() ? normalizeCompetitorUrl(raw) : undefined))
-    .pipe(z.string().url().optional()),
-});
+export const GenerateBody = z
+  .object({
+    formatType: z.enum(CONTENT_FORMAT_TYPES as unknown as [ContentFormatType, ...ContentFormatType[]]),
+    targetKeyword: z.string().min(1, "Target keyword is required"),
+    angleHint: z.string().optional(),
+    plannedDate: z.string().optional(),
+    briefId: z.number().int().positive().optional(),
+    /** Optional hint — does not lock publish destination */
+    intendedPublishPlatform: z.string().min(1).optional(),
+    intendedOutputMode: z.string().min(1).optional(),
+    intendedEditorMode: z.enum(["classic", "gutenberg", "elementor", "divi"]).optional(),
+    /** Primary competitor URL to differentiate against for this piece */
+    competitorFocusUrl: z
+      .string()
+      .optional()
+      .transform((raw) => (raw?.trim() ? normalizeCompetitorUrl(raw) : undefined))
+      .pipe(z.string().url().optional()),
+    /** Up to 5 competitor URLs for this piece (first = primary when focus omitted) */
+    competitorUrls: z
+      .array(z.string())
+      .max(5)
+      .optional()
+      .transform((raw) => {
+        if (!raw?.length) return undefined;
+        const normalized = normalizeCompetitorUrlList(raw);
+        return normalized.length > 0 ? normalized : undefined;
+      }),
+  })
+  .transform((data) => {
+    const competitorUrls = data.competitorUrls;
+    const competitorFocusUrl = data.competitorFocusUrl ?? competitorUrls?.[0];
+    return { ...data, competitorFocusUrl, competitorUrls };
+  });
 
 export type GenerateBodyInput = z.infer<typeof GenerateBody>;
 
@@ -170,6 +189,7 @@ export async function loadGenerationContext(
     | "intendedOutputMode"
     | "intendedEditorMode"
     | "competitorFocusUrl"
+    | "competitorUrls"
   >,
 ): Promise<ContentGenerationContext & { resolvedIntendedPlatform?: string }> {
   const [project] = await db
@@ -183,9 +203,13 @@ export async function loadGenerationContext(
 
   const creds = decryptCmsCredentials((project?.cmsIntegrations ?? {}) as Record<string, unknown>);
   const publishing = parsePublishingSettings(project?.publishingSettings);
+  const pieceCompetitorUrls = input.competitorUrls?.length
+    ? normalizeCompetitorUrlList(input.competitorUrls)
+    : undefined;
+  const competitorFocusUrl = input.competitorFocusUrl ?? pieceCompetitorUrls?.[0];
   const [existingPieceTitles, competitorContext] = await Promise.all([
     loadExistingPieceTitles(projectId),
-    loadCompetitorGenerationContext(projectId, input.competitorFocusUrl),
+    loadCompetitorGenerationContext(projectId, competitorFocusUrl, pieceCompetitorUrls),
   ]);
 
   const resolvedIntendedPlatform =
@@ -217,6 +241,9 @@ export async function loadGenerationContext(
       : undefined,
     competitorPromptBlock: competitorContext.promptBlock || undefined,
     competitorFocusUrl: competitorContext.focusUrl,
+    competitorUrls:
+      pieceCompetitorUrls ??
+      (competitorContext.competitorUrls.length > 0 ? competitorContext.competitorUrls : undefined),
   };
 }
 

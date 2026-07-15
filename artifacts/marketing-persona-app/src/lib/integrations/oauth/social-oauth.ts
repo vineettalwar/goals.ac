@@ -20,12 +20,9 @@ import {
   saveProjectCreds,
 } from "@workspace/content-engine/support/social/social-tokens";
 import { resolveLinkedInOAuthCredentials } from "@workspace/content-engine/support/social/linkedin-platform-credentials";
+import { resolveTwitterOAuthCredentials } from "@workspace/content-engine/support/social/twitter-platform-credentials";
+import { resolveMetaOAuthCredentials } from "@workspace/content-engine/support/social/meta-platform-credentials";
 import { assertSocialPublishingEnabled } from "../../platform/platform-settings";
-
-const TWITTER_CLIENT_ID = process.env.TWITTER_CLIENT_ID;
-const TWITTER_CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET;
-const META_APP_ID = process.env.META_APP_ID;
-const META_APP_SECRET = process.env.META_APP_SECRET;
 
 export type OAuthState = SignedOAuthPayload & {
   platform: "linkedin" | "twitter" | "meta" | "bluesky" | "mastodon";
@@ -145,14 +142,15 @@ export async function handleLinkedInCallback(code: string, stateRaw: string): Pr
 
 export async function startTwitterOAuth(projectId: number, userId: number): Promise<never> {
   await assertSocialPublishingEnabled();
-  if (!TWITTER_CLIENT_ID || !TWITTER_CLIENT_SECRET) {
+  const twitterApp = await resolveTwitterOAuthCredentials();
+  if (!twitterApp) {
     throw new Error("X OAuth is not configured");
   }
   const { verifier, challenge } = generatePkce();
   const state = encodeState({ projectId, userId, platform: "twitter", codeVerifier: verifier });
   const params = new URLSearchParams({
     response_type: "code",
-    client_id: TWITTER_CLIENT_ID,
+    client_id: twitterApp.clientId,
     redirect_uri: `${getNextApiOrigin()}/api/auth/twitter/callback`,
     scope: "tweet.read tweet.write users.read offline.access",
     state,
@@ -174,11 +172,15 @@ export async function handleTwitterCallback(code: string, stateRaw: string): Pro
   }
 
   try {
+    const twitterApp = await resolveTwitterOAuthCredentials();
+    if (!twitterApp) {
+      publishingRedirect(state.projectId, { twitter: "error" });
+    }
     const tokenRes = await fetch("https://api.x.com/2/oauth2/token", {
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${Buffer.from(`${TWITTER_CLIENT_ID}:${TWITTER_CLIENT_SECRET}`).toString("base64")}`,
+        Authorization: `Basic ${Buffer.from(`${twitterApp.clientId}:${twitterApp.clientSecret}`).toString("base64")}`,
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",
@@ -221,12 +223,13 @@ export async function handleTwitterCallback(code: string, stateRaw: string): Pro
 
 export async function startMetaOAuth(projectId: number, userId: number): Promise<never> {
   await assertSocialPublishingEnabled();
-  if (!META_APP_ID || !META_APP_SECRET) {
+  const metaApp = await resolveMetaOAuthCredentials();
+  if (!metaApp) {
     throw new Error("Meta OAuth is not configured");
   }
   const state = encodeState({ projectId, userId, platform: "meta" });
   const params = new URLSearchParams({
-    client_id: META_APP_ID,
+    client_id: metaApp.appId,
     redirect_uri: `${getNextApiOrigin()}/api/auth/meta/callback`,
     state,
     scope: "pages_show_list,pages_manage_posts,pages_read_engagement,instagram_basic,instagram_content_publish,business_management",
@@ -247,7 +250,11 @@ export async function handleMetaCallback(code: string, stateRaw: string): Promis
   }
 
   try {
-    const tokenUrl = `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${META_APP_ID}&redirect_uri=${encodeURIComponent(`${getNextApiOrigin()}/api/auth/meta/callback`)}&client_secret=${META_APP_SECRET}&code=${code}`;
+    const metaApp = await resolveMetaOAuthCredentials();
+    if (!metaApp) {
+      publishingRedirect(state.projectId, { meta: "error" });
+    }
+    const tokenUrl = `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${metaApp.appId}&redirect_uri=${encodeURIComponent(`${getNextApiOrigin()}/api/auth/meta/callback`)}&client_secret=${metaApp.appSecret}&code=${code}`;
     const tokenRes = await fetch(tokenUrl);
     const tokenData = (await tokenRes.json()) as { access_token?: string };
     if (!tokenData.access_token) {
@@ -256,20 +263,18 @@ export async function handleMetaCallback(code: string, stateRaw: string): Promis
 
     let userAccessToken = tokenData.access_token;
     let tokenExpiresAt: number | undefined;
-    if (META_APP_ID && META_APP_SECRET) {
-      try {
-        const longLived = await exchangeMetaLongLivedToken(
-          tokenData.access_token,
-          META_APP_ID,
-          META_APP_SECRET,
-        );
-        userAccessToken = longLived.accessToken;
-        if (longLived.expiresIn) {
-          tokenExpiresAt = Date.now() + longLived.expiresIn * 1000;
-        }
-      } catch {
-        // Fall back to short-lived token; page tokens may still work briefly
+    try {
+      const longLived = await exchangeMetaLongLivedToken(
+        tokenData.access_token,
+        metaApp.appId,
+        metaApp.appSecret,
+      );
+      userAccessToken = longLived.accessToken;
+      if (longLived.expiresIn) {
+        tokenExpiresAt = Date.now() + longLived.expiresIn * 1000;
       }
+    } catch {
+      // Fall back to short-lived token; page tokens may still work briefly
     }
 
     const pages = await fetchMetaPages(userAccessToken);
