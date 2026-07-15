@@ -249,6 +249,19 @@ export function ProjectIntegrationsPage() {
         method: "POST",
       });
       setHealthStatuses(result.platforms);
+      setIntegrations((prev) => {
+        const next = { ...prev };
+        for (const row of result.platforms) {
+          if (!row.connected) continue;
+          next[row.platform] = {
+            ...(next[row.platform] ?? { connected: true }),
+            lastHealthOk: row.ok,
+            lastHealthError: row.error ?? null,
+            lastHealthCheckedAt: new Date().toISOString(),
+          };
+        }
+        return next;
+      });
       const failing = result.platforms.filter((row) => row.connected && row.ok === false).length;
       setSaveMessage(
         failing > 0
