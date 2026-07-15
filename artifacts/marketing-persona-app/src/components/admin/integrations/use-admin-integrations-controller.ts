@@ -35,6 +35,8 @@ export function useAdminIntegrationsController() {
   const [savingUnsplash, setSavingUnsplash] = useState(false);
   const [savingPexels, setSavingPexels] = useState(false);
   const [savingLinkedIn, setSavingLinkedIn] = useState(false);
+  const [savingTwitter, setSavingTwitter] = useState(false);
+  const [savingMeta, setSavingMeta] = useState(false);
 
   const [stripeSecretKey, setStripeSecretKey] = useState("");
   const [stripeWebhookSecret, setStripeWebhookSecret] = useState("");
@@ -51,6 +53,10 @@ export function useAdminIntegrationsController() {
   const [pexelsApiKey, setPexelsApiKey] = useState("");
   const [linkedinClientId, setLinkedinClientId] = useState("");
   const [linkedinClientSecret, setLinkedinClientSecret] = useState("");
+  const [twitterClientId, setTwitterClientId] = useState("");
+  const [twitterClientSecret, setTwitterClientSecret] = useState("");
+  const [metaAppId, setMetaAppId] = useState("");
+  const [metaAppSecret, setMetaAppSecret] = useState("");
 
   const groupedIntegrations = useMemo(() => getPlatformIntegrationsByCategory(), []);
 
@@ -71,6 +77,10 @@ export function useAdminIntegrationsController() {
       setPexelsApiKey("");
     } else if (dialog === "linkedin") {
       setLinkedinClientSecret("");
+    } else if (dialog === "twitter") {
+      setTwitterClientSecret("");
+    } else if (dialog === "meta") {
+      setMetaAppSecret("");
     }
   }, []);
 
@@ -101,6 +111,8 @@ export function useAdminIntegrationsController() {
       setStripePriceScale(statusData.stripe.priceScaleMonthly.value ?? "");
       setResendFromEmail(statusData.resend.fromEmail.value ?? "");
       setLinkedinClientId(statusData.linkedin.clientId.value ?? "");
+      setTwitterClientId(statusData.twitter.clientId.value ?? "");
+      setMetaAppId(statusData.meta.appId.value ?? "");
     } catch {
       setLoadError(true);
       toast.error("Could not load platform integrations");
@@ -324,6 +336,92 @@ export function useAdminIntegrationsController() {
     }
   }
 
+  async function saveTwitter() {
+    const payload: Record<string, string> = {};
+    if (twitterClientId.trim()) payload.clientId = twitterClientId.trim();
+    if (twitterClientSecret.trim()) payload.clientSecret = twitterClientSecret.trim();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("Enter a Client ID or Client Secret to save");
+      return;
+    }
+
+    const alreadyConfigured =
+      status?.twitter.clientId.configured && status.twitter.clientSecret.configured;
+    if (!alreadyConfigured && (!payload.clientId || !payload.clientSecret)) {
+      toast.error("Enter both Client ID and Client Secret for the first save");
+      return;
+    }
+
+    setSavingTwitter(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          integration: "twitter",
+          ...payload,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed");
+      }
+      const data = (await res.json()) as { status: PlatformIntegrationStatus };
+      setStatus(data.status);
+      setTwitterClientId(data.status.twitter.clientId.value ?? "");
+      setTwitterClientSecret("");
+      toast.success("X credentials saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save X credentials");
+    } finally {
+      setSavingTwitter(false);
+    }
+  }
+
+  async function saveMeta() {
+    const payload: Record<string, string> = {};
+    if (metaAppId.trim()) payload.appId = metaAppId.trim();
+    if (metaAppSecret.trim()) payload.appSecret = metaAppSecret.trim();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("Enter an App ID or App Secret to save");
+      return;
+    }
+
+    const alreadyConfigured =
+      status?.meta.appId.configured && status.meta.appSecret.configured;
+    if (!alreadyConfigured && (!payload.appId || !payload.appSecret)) {
+      toast.error("Enter both App ID and App Secret for the first save");
+      return;
+    }
+
+    setSavingMeta(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          integration: "meta",
+          ...payload,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed");
+      }
+      const data = (await res.json()) as { status: PlatformIntegrationStatus };
+      setStatus(data.status);
+      setMetaAppId(data.status.meta.appId.value ?? "");
+      setMetaAppSecret("");
+      toast.success("Meta credentials saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save Meta credentials");
+    } finally {
+      setSavingMeta(false);
+    }
+  }
+
   async function disconnectStripeOAuth() {
     setDisconnectingStripe(true);
     try {
@@ -342,7 +440,7 @@ export function useAdminIntegrationsController() {
   }
 
   async function clearStored(
-    integration: "stripe" | "resend" | "unsplash" | "pexels" | "linkedin",
+    integration: "stripe" | "resend" | "unsplash" | "pexels" | "linkedin" | "twitter" | "meta",
   ) {
     try {
       const res = await fetch("/api/admin/platform-integrations", {
@@ -364,6 +462,12 @@ export function useAdminIntegrationsController() {
       } else if (integration === "linkedin") {
         setLinkedinClientId("");
         setLinkedinClientSecret("");
+      } else if (integration === "twitter") {
+        setTwitterClientId("");
+        setTwitterClientSecret("");
+      } else if (integration === "meta") {
+        setMetaAppId("");
+        setMetaAppSecret("");
       }
       toast.success("Stored credentials removed");
     } catch (err) {
