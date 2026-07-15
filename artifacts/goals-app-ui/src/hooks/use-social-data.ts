@@ -1,74 +1,509 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  SOCIAL_FORMAT_TYPES,
+  type HistorySyncPlatformStatus,
+  type PlatformVoiceProfile,
+  type ScheduleSettings,
+  type SocialComposedPiece,
+  type SocialComposerParent,
+  type SocialHubTab,
+  type SocialMetricsResponse,
+  type SocialPlatformId,
+  type SocialQueueItem,
+  type SocialQueueResponse,
+} from "@workspace/app-shell";
 import { apiFetch } from "@/lib/api";
 import { queryKeys } from "@/lib/queries/keys";
-import type { SocialMetricsResponse, SocialQueueItem, SocialQueueResponse } from "@workspace/app-shell";
 
-type SocialData = {
-  queue: SocialQueueItem[];
-  metrics: SocialMetricsResponse | null;
-  queueError: string | null;
-  metricsError: string | null;
-};
-
-async function fetchSocialData(
-  projectId: string,
-  platformFilter: string,
-): Promise<SocialData> {
+async function fetchQueue(projectId: string, platformFilter: string): Promise<{
+  items: SocialQueueItem[];
+  error: string | null;
+}> {
   const platformQuery =
     platformFilter !== "all" ? `?platform=${encodeURIComponent(platformFilter)}` : "";
-
-  const [queueResult, metricsResult] = await Promise.allSettled([
-    apiFetch<SocialQueueResponse>(`/api/website-projects/${projectId}/social/queue${platformQuery}`),
-    apiFetch<SocialMetricsResponse>(`/api/website-projects/${projectId}/social/metrics`),
-  ]);
-
-  return {
-    queue: queueResult.status === "fulfilled" ? queueResult.value.items : [],
-    metrics: metricsResult.status === "fulfilled" ? metricsResult.value : null,
-    queueError:
-      queueResult.status === "rejected"
-        ? queueResult.reason instanceof Error
-          ? queueResult.reason.message
-          : "Failed to load social queue"
-        : null,
-    metricsError:
-      metricsResult.status === "rejected"
-        ? metricsResult.reason instanceof Error
-          ? metricsResult.reason.message
-          : "Failed to load social metrics"
-        : null,
-  };
+  try {
+    const data = await apiFetch<SocialQueueResponse>(
+      `/api/website-projects/${projectId}/social/queue${platformQuery}`,
+    );
+    return { items: data.items, error: null };
+  } catch (err) {
+    return {
+      items: [],
+      error: err instanceof Error ? err.message : "Failed to load social queue",
+    };
+  }
 }
 
 export function useSocialData(projectId: string | null) {
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState<SocialHubTab>("queue");
   const [platformFilter, setPlatformFilter] = useState("all");
+  const [metricsPlatformFilter, setMetricsPlatformFilter] = useState("all");
+  const [reschedulingId, setReschedulingId] = useState<number | null>(null);
+  const [flash, setFlash] = useState<{ level: "success" | "error"; message: string } | null>(null);
 
-  const query = useQuery({
+  const notify = useCallback((level: "success" | "error", message: string) => {
+    setFlash({ level, message });
+    if (level === "error") console.error(`[social] ${message}`);
+  }, []);
+
+  const [composerParents, setComposerParents] = useState<SocialComposerParent[]>([]);
+  const [composerParentsLoading, setComposerParentsLoading] = useState(false);
+  const [composerConnected, setComposerConnected] = useState<Record<string, boolean>>({});
+  const [composing, setComposing] = useState(false);
+  const [composed, setComposed] = useState<SocialComposedPiece[] | null>(null);
+
+  const [metrics, setMetrics] = useState<SocialMetricsResponse | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState(false);
+  const [metricsSyncing, setMetricsSyncing] = useState(false);
+  const [metricsLastSyncedAt, setMetricsLastSyncedAt] = useState<string | null>(null);
+
+  const [voicePlatform, setVoicePlatform] = useState<SocialPlatformId>("linkedin");
+  const [voiceChannel, setVoiceChannel] = useState("posts");
+  const [importText, setImportText] = useState("");
+  const [voiceProfile, setVoiceProfile] = useState<PlatformVoiceProfile | null>(null);
+  const [voiceLoading, setVoiceLoading] = useState(false);
+  const [historySync, setHistorySync] = useState<
+    Partial<Record<SocialPlatformId, HistorySyncPlatformStatus>>
+  >({});
+  const [syncingVoice, setSyncingVoice] = useState(false);
+
+  const [settings, setSettings] = useState<ScheduleSettings | null>(null);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+
+  const queueQuery = useQuery({
     queryKey: queryKeys.social(projectId, platformFilter),
-    queryFn: () => fetchSocialData(projectId!, platformFilter),
+    queryFn: () => fetchQueue(projectId!, platformFilter),
     enabled: Boolean(projectId),
     staleTime: 15_000,
-    placeholderData: (previousData) => previousData,
+    placeholderData: (previous) => previous,
   });
 
-  const reload = useCallback(async () => {
+  const reloadQueue = useCallback(async () => {
     if (!projectId) return;
     await queryClient.invalidateQueries({ queryKey: queryKeys.social(projectId, platformFilter) });
   }, [projectId, platformFilter, queryClient]);
 
-  const data = query.data;
+  const loadComposerParents = useCallback(async () => {
+    if (!projectId) return;
+    setComposerParentsLoading(true);
+    try {
+      const data = await apiFetch<SocialComposerParent[]>(
+        `/api/website-projects/${projectId}/content-pieces`,
+      );
+      setComposerParents(
+        data.filter(
+          (piece) =>
+            !SOCIAL_FORMAT_TYPES.has(piece.formatType) &&
+            (piece.bodyMarkdown?.trim().length ?? 0) > 50,
+        ),
+      );
+    } catch {
+      notify("error", "Could not load source content");
+    } finally {
+      setComposerParentsLoading(false);
+    }
+  }, [projectId]);
+
+  const loadComposerConnections = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const data = await apiFetch<Record<string, unknown>>(
+        `/api/website-projects/${projectId}/cms-integrations`,
+      );
+      setComposerConnected({
+        linkedin: Boolean(data.linkedin),
+        twitter: Boolean(data.twitter),
+        instagram: Boolean(data.meta),
+        facebook: Boolean(data.meta),
+        bluesky: Boolean(data.bluesky),
+        mastodon: Boolean(data.mastodon),
+      });
+    } catch {
+      /* optional */
+    }
+  }, [projectId]);
+
+  const loadMetrics = useCallback(async () => {
+    if (!projectId) return;
+    setMetricsLoading(true);
+    try {
+      const qs =
+        metricsPlatformFilter !== "all"
+          ? `?platform=${encodeURIComponent(metricsPlatformFilter)}`
+          : "";
+      const data = await apiFetch<SocialMetricsResponse>(
+        `/api/website-projects/${projectId}/social/metrics${qs}`,
+      );
+      setMetrics(data);
+    } catch {
+      notify("error", "Could not load social analytics");
+    } finally {
+      setMetricsLoading(false);
+    }
+  }, [projectId, metricsPlatformFilter]);
+
+  const loadMetricsStatus = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const status = await apiFetch<{ lastSyncedAt?: string | null }>(
+        `/api/website-projects/${projectId}/social/metrics/sync`,
+      );
+      setMetricsLastSyncedAt(status.lastSyncedAt ?? null);
+    } catch {
+      /* optional until edge GET lands */
+    }
+  }, [projectId]);
+
+  const loadVoice = useCallback(async () => {
+    if (!projectId) return;
+    setVoiceLoading(true);
+    try {
+      const data = await apiFetch<{ profile: PlatformVoiceProfile; channels: string[] }>(
+        `/api/website-projects/${projectId}/brand-profile/platform-voice/${voicePlatform}`,
+      );
+      setVoiceProfile(data.profile);
+      if (data.channels?.[0]) setVoiceChannel(data.channels[0]);
+    } catch {
+      notify("error", "Could not load platform voice");
+    } finally {
+      setVoiceLoading(false);
+    }
+  }, [projectId, voicePlatform]);
+
+  const loadHistorySync = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const data = await apiFetch<{
+        platforms: Partial<Record<SocialPlatformId, HistorySyncPlatformStatus>>;
+      }>(`/api/website-projects/${projectId}/social/history-sync`);
+      setHistorySync(data.platforms ?? {});
+    } catch {
+      /* optional until edge GET lands */
+    }
+  }, [projectId]);
+
+  const loadSettings = useCallback(async () => {
+    if (!projectId) return;
+    setSettingsLoading(true);
+    try {
+      const data = await apiFetch<{ settings: ScheduleSettings }>(
+        `/api/website-projects/${projectId}/social/schedule-settings`,
+      );
+      setSettings(data.settings);
+    } catch {
+      notify("error", "Could not load schedule settings");
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    if (tab === "compose" && projectId) {
+      void loadComposerParents();
+      void loadComposerConnections();
+    }
+  }, [tab, projectId, loadComposerParents, loadComposerConnections]);
+
+  useEffect(() => {
+    if (tab === "analytics" && projectId) {
+      void loadMetrics();
+      void loadMetricsStatus();
+    }
+  }, [tab, projectId, loadMetrics, loadMetricsStatus]);
+
+  useEffect(() => {
+    if (tab === "voice" && projectId) {
+      void loadVoice();
+      void loadHistorySync();
+    }
+  }, [tab, projectId, loadVoice, loadHistorySync]);
+
+  useEffect(() => {
+    if (tab === "settings" && projectId) void loadSettings();
+  }, [tab, projectId, loadSettings]);
+
+  const schedulePiece = useCallback(
+    async (pieceId: number, value: string) => {
+      try {
+        await apiFetch(`/api/content-pieces/${pieceId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            scheduledAt: value ? new Date(value).toISOString() : null,
+            status: "ready",
+          }),
+        });
+        notify("success", "Scheduled");
+        await reloadQueue();
+      } catch {
+        notify("error", "Failed to schedule");
+      }
+    },
+    [reloadQueue],
+  );
+
+  const submitReview = useCallback(
+    async (pieceId: number) => {
+      try {
+        await apiFetch(`/api/content-pieces/${pieceId}/submit-review`, { method: "POST" });
+        notify("success", "Submitted for review");
+        await reloadQueue();
+      } catch {
+        notify("error", "Failed to submit for review");
+      }
+    },
+    [reloadQueue],
+  );
+
+  const approvePiece = useCallback(
+    async (pieceId: number) => {
+      try {
+        await apiFetch(`/api/content-pieces/${pieceId}/approve`, { method: "POST" });
+        notify("success", "Approved");
+        await reloadQueue();
+      } catch {
+        notify("error", "Failed to approve");
+      }
+    },
+    [reloadQueue],
+  );
+
+  const reschedulePiece = useCallback(
+    async (pieceId: number, newDateKey: string | null) => {
+      if (!projectId) return;
+      const piece = queueQuery.data?.items.find((item) => item.id === pieceId);
+      setReschedulingId(pieceId);
+      try {
+        if (newDateKey == null) {
+          await apiFetch(`/api/website-projects/${projectId}/social/queue/${pieceId}`, {
+            method: "DELETE",
+          });
+          notify("success", "Removed from calendar");
+        } else {
+          let scheduledAt: string;
+          if (piece?.scheduledAt) {
+            const prev = new Date(piece.scheduledAt);
+            const [y, m, d] = newDateKey.split("-").map(Number);
+            const next = new Date(prev);
+            next.setFullYear(y!, m! - 1, d!);
+            scheduledAt = next.toISOString();
+          } else {
+            const [y, m, d] = newDateKey.split("-").map(Number);
+            const next = new Date();
+            next.setFullYear(y!, m! - 1, d!);
+            next.setHours(9, 0, 0, 0);
+            scheduledAt = next.toISOString();
+          }
+          await apiFetch(`/api/website-projects/${projectId}/social/queue/${pieceId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ scheduledAt }),
+          });
+          notify("success", "Rescheduled");
+        }
+        await reloadQueue();
+      } catch {
+        notify("error", "Could not reschedule post");
+      } finally {
+        setReschedulingId(null);
+      }
+    },
+    [projectId, queueQuery.data?.items, reloadQueue],
+  );
+
+  const compose = useCallback(
+    async (parentPieceId: number, platforms: SocialPlatformId[]) => {
+      if (!projectId) return;
+      if (platforms.length === 0) {
+        notify("error", "Select a source article and at least one platform");
+        return;
+      }
+      setComposing(true);
+      setComposed(null);
+      try {
+        const data = await apiFetch<{ pieces?: SocialComposedPiece[]; error?: string }>(
+          `/api/website-projects/${projectId}/social/composer`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ parentPieceId, platforms }),
+          },
+        );
+        setComposed(data.pieces ?? []);
+        notify("success", `Created ${data.pieces?.length ?? 0} platform variants`);
+        await reloadQueue();
+      } catch (err) {
+        notify("error", err instanceof Error ? err.message : "Composer failed");
+      } finally {
+        setComposing(false);
+      }
+    },
+    [projectId, reloadQueue],
+  );
+
+  const syncMetrics = useCallback(async () => {
+    if (!projectId) return;
+    setMetricsSyncing(true);
+    try {
+      const body = await apiFetch<{
+        error?: string;
+        rowsUpserted?: number;
+        queued?: boolean;
+        jobId?: string;
+      }>(`/api/website-projects/${projectId}/social/metrics/sync`, { method: "POST" });
+      if (body.queued || body.jobId) {
+        notify("success", "Metrics sync queued");
+      } else {
+        notify("success", `Synced ${body.rowsUpserted ?? 0} posts`);
+      }
+      await loadMetricsStatus();
+      await loadMetrics();
+    } catch (err) {
+      notify("error", err instanceof Error ? err.message : "Sync failed");
+    } finally {
+      setMetricsSyncing(false);
+    }
+  }, [projectId, loadMetrics, loadMetricsStatus]);
+
+  const syncVoiceFromOAuth = useCallback(async () => {
+    if (!projectId) return;
+    setSyncingVoice(true);
+    try {
+      const data = await apiFetch<{
+        results?: Array<{ postCount: number; error?: string }>;
+        queued?: boolean;
+        jobId?: string;
+        error?: string;
+      }>(
+        `/api/website-projects/${projectId}/social/history-sync?platform=${voicePlatform}`,
+        { method: "POST" },
+      );
+      if (data.queued || data.jobId) {
+        notify("success", `Voice sync queued for ${voicePlatform}`);
+      } else {
+        const result = data.results?.[0];
+        if (result?.error) throw new Error(result.error);
+        notify("success", `Synced ${result?.postCount ?? 0} posts from ${voicePlatform}`);
+      }
+      void loadVoice();
+      void loadHistorySync();
+    } catch (err) {
+      notify("error", err instanceof Error ? err.message : "OAuth sync failed");
+    } finally {
+      setSyncingVoice(false);
+    }
+  }, [projectId, voicePlatform, loadVoice, loadHistorySync]);
+
+  const importVoice = useCallback(async () => {
+    if (!projectId || !importText.trim()) return;
+    setVoiceLoading(true);
+    try {
+      await apiFetch(
+        `/api/website-projects/${projectId}/brand-profile/platform-voice/${voicePlatform}/import`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ channel: voiceChannel, raw: importText }),
+        },
+      );
+      setImportText("");
+      notify("success", "Samples imported");
+      void loadVoice();
+    } catch {
+      notify("error", "Import failed");
+    } finally {
+      setVoiceLoading(false);
+    }
+  }, [projectId, importText, voicePlatform, voiceChannel, loadVoice]);
+
+  const analyzeVoice = useCallback(async () => {
+    if (!projectId) return;
+    setVoiceLoading(true);
+    try {
+      await apiFetch(
+        `/api/website-projects/${projectId}/brand-profile/platform-voice/${voicePlatform}/analyze`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ channel: voiceChannel, allChannels: true }),
+        },
+      );
+      notify("success", "Voice analyzed");
+      void loadVoice();
+    } catch (err) {
+      notify("error", err instanceof Error ? err.message : "Analyze failed");
+    } finally {
+      setVoiceLoading(false);
+    }
+  }, [projectId, voicePlatform, voiceChannel, loadVoice]);
+
+  const saveSettings = useCallback(async () => {
+    if (!projectId || !settings) return;
+    setSettingsLoading(true);
+    try {
+      await apiFetch(`/api/website-projects/${projectId}/social/schedule-settings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(settings),
+      });
+      notify("success", "Settings saved");
+    } catch {
+      notify("error", "Could not save settings");
+    } finally {
+      setSettingsLoading(false);
+    }
+  }, [projectId, settings]);
+
+  const data = queueQuery.data;
+  const channelData = voiceProfile?.channels?.[voiceChannel];
 
   return {
-    queue: data?.queue ?? [],
-    queueLoading: query.isPending && !data,
-    queueError: data?.queueError ?? data?.metricsError ?? null,
-    metrics: data?.metrics ?? null,
-    metricsLoading: query.isPending && !data,
-    metricsError: data?.metricsError ?? null,
+    tab,
+    setTab,
+    flash,
+    clearFlash: () => setFlash(null),
+    queue: data?.items ?? [],
+    queueLoading: queueQuery.isPending && !data,
+    queueError: data?.error ?? null,
     platformFilter,
     setPlatformFilter,
-    reload,
+    reloadQueue,
+    schedulePiece,
+    submitReview,
+    approvePiece,
+    reschedulingId,
+    reschedulePiece,
+    composerParents,
+    composerParentsLoading,
+    composerConnected,
+    composing,
+    composed,
+    compose,
+    metrics,
+    metricsLoading,
+    metricsPlatformFilter,
+    setMetricsPlatformFilter,
+    metricsSyncing,
+    metricsLastSyncedAt,
+    syncMetrics,
+    voicePlatform,
+    setVoicePlatform,
+    voiceChannel,
+    setVoiceChannel,
+    importText,
+    setImportText,
+    voiceLoading,
+    historySync,
+    syncingVoice,
+    channelData,
+    syncVoiceFromOAuth,
+    importVoice,
+    analyzeVoice,
+    settings,
+    setSettings,
+    settingsLoading,
+    saveSettings,
   };
 }
