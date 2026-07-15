@@ -1,7 +1,13 @@
-import { Calendar, Check, Loader2, RefreshCw, Send } from "lucide-react";
+import { AlertCircle, Calendar, Check, Loader2, RefreshCw, Send } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../cn";
-import { SOCIAL_PLATFORM_OPTIONS, type SocialQueueItem } from "./types";
+import {
+  INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
+  SOCIAL_PLATFORM_OPTIONS,
+  resolveSocialPieceImageUrl,
+  socialPieceNeedsInstagramImage,
+  type SocialQueueItem,
+} from "./types";
 
 export type SocialHubLinkProps = {
   href: string;
@@ -74,77 +80,100 @@ export function SocialQueuePanel({
         </div>
       ) : (
         <div className="space-y-3">
-          {queue.map((item) => (
-            <div key={item.id} className="paper-card p-4 space-y-3">
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <div>
-                  {renderLink({
-                    href: pieceHref(item.id),
-                    className: "text-base font-semibold hover:underline",
-                    children: item.title,
-                  })}
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-xs capitalize">
-                      {item.formatType.replace(/_/g, " ")}
-                    </span>
-                    {item.platform ? (
-                      <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs">
-                        {item.platform}
+          {queue.map((item) => {
+            const needsImage = socialPieceNeedsInstagramImage(item);
+            const hasImage = Boolean(resolveSocialPieceImageUrl(item));
+            const imageBlocked = needsImage && !hasImage;
+            return (
+              <div key={item.id} className="paper-card p-4 space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    {renderLink({
+                      href: pieceHref(item.id),
+                      className: "text-base font-semibold hover:underline",
+                      children: item.title,
+                    })}
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-xs capitalize">
+                        {item.formatType.replace(/_/g, " ")}
                       </span>
+                      {item.platform ? (
+                        <span className="inline-flex rounded-full border border-border px-2 py-0.5 text-xs">
+                          {item.platform}
+                        </span>
+                      ) : null}
+                      <span
+                        className={cn(
+                          "inline-flex rounded-full px-2 py-0.5 text-xs capitalize",
+                          item.approvalStatus === "approved"
+                            ? "bg-primary/10 text-primary"
+                            : item.approvalStatus === "pending_review"
+                              ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                              : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {item.approvalStatus.replace(/_/g, " ")}
+                      </span>
+                      {imageBlocked ? (
+                        <span className="inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-200">
+                          Needs image
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                  <div className="flex gap-1">
+                    {item.approvalStatus === "draft" ? (
+                      <button
+                        type="button"
+                        onClick={() => void onSubmitReview(item.id)}
+                        className="inline-flex h-8 items-center gap-1 rounded-lg border border-input px-2.5 text-sm hover:bg-muted/50"
+                      >
+                        <Send className="h-3.5 w-3.5" />
+                        Submit
+                      </button>
                     ) : null}
-                    <span
-                      className={cn(
-                        "inline-flex rounded-full px-2 py-0.5 text-xs capitalize",
-                        item.approvalStatus === "approved"
-                          ? "bg-primary/10 text-primary"
-                          : item.approvalStatus === "pending_review"
-                            ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                            : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {item.approvalStatus.replace(/_/g, " ")}
-                    </span>
+                    {item.approvalStatus === "pending_review" ? (
+                      <button
+                        type="button"
+                        onClick={() => void onApprove(item.id)}
+                        className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2.5 text-sm text-primary-foreground"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        Approve
+                      </button>
+                    ) : null}
                   </div>
                 </div>
-                <div className="flex gap-1">
-                  {item.approvalStatus === "draft" ? (
-                    <button
-                      type="button"
-                      onClick={() => void onSubmitReview(item.id)}
-                      className="inline-flex h-8 items-center gap-1 rounded-lg border border-input px-2.5 text-sm hover:bg-muted/50"
-                    >
-                      <Send className="h-3.5 w-3.5" />
-                      Submit
-                    </button>
-                  ) : null}
-                  {item.approvalStatus === "pending_review" ? (
-                    <button
-                      type="button"
-                      onClick={() => void onApprove(item.id)}
-                      className="inline-flex h-8 items-center gap-1 rounded-lg bg-primary px-2.5 text-sm text-primary-foreground"
-                    >
-                      <Check className="h-3.5 w-3.5" />
-                      Approve
-                    </button>
-                  ) : null}
+                {item.bodyMarkdown ? (
+                  <p className="line-clamp-2 text-sm text-muted-foreground">{item.bodyMarkdown}</p>
+                ) : null}
+                {imageBlocked ? (
+                  <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-900 dark:text-amber-100">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    <span>{INSTAGRAM_IMAGE_REQUIRED_MESSAGE}</span>
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <input
+                    type="datetime-local"
+                    aria-label={
+                      imageBlocked
+                        ? "Schedule disabled — Instagram posts need an image"
+                        : "Schedule post"
+                    }
+                    disabled={imageBlocked}
+                    className="h-9 max-w-[220px] rounded-lg border border-input bg-card px-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                    defaultValue={item.scheduledAt ? item.scheduledAt.slice(0, 16) : ""}
+                    onBlur={(event) => {
+                      if (imageBlocked) return;
+                      if (event.target.value) void onSchedule(item.id, event.target.value);
+                    }}
+                  />
                 </div>
               </div>
-              {item.bodyMarkdown ? (
-                <p className="line-clamp-2 text-sm text-muted-foreground">{item.bodyMarkdown}</p>
-              ) : null}
-              <div className="flex flex-wrap items-center gap-2">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
-                <input
-                  type="datetime-local"
-                  className="h-9 max-w-[220px] rounded-lg border border-input bg-card px-2.5 text-sm"
-                  defaultValue={item.scheduledAt ? item.scheduledAt.slice(0, 16) : ""}
-                  onBlur={(event) => {
-                    if (event.target.value) void onSchedule(item.id, event.target.value);
-                  }}
-                />
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

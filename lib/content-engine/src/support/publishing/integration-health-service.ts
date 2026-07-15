@@ -147,11 +147,66 @@ async function testPlatform(
         ? { ok: true, siteName: result.siteName }
         : { ok: false, error: result.error };
     }
+    case "wix": {
+      if (!creds.wix) return null;
+      const { testWixConnection } = await import("@workspace/connectors/wix");
+      const result = await testWixConnection(creds.wix);
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    case "framer": {
+      if (!creds.framer) return null;
+      const { testFramerConnection } = await import("@workspace/connectors/framer");
+      const result = await testFramerConnection(creds.framer);
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    case "squarespace": {
+      if (!creds.squarespace) return null;
+      const { testSquarespaceConnection } = await import("@workspace/connectors/squarespace");
+      const result = await testSquarespaceConnection(creds.squarespace);
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    case "contentful": {
+      if (!creds.contentful) return null;
+      const { testContentfulConnection } = await import("@workspace/connectors/contentful");
+      const result = await testContentfulConnection(creds.contentful);
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    case "sanity": {
+      if (!creds.sanity) return null;
+      const { testSanityConnection } = await import("@workspace/connectors/sanity");
+      const result = await testSanityConnection(creds.sanity);
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    case "strapi": {
+      if (!creds.strapi) return null;
+      const { testStrapiConnection } = await import("@workspace/connectors/strapi");
+      const result = await testStrapiConnection(creds.strapi);
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    case "hubspot": {
+      if (!creds.hubspot) return null;
+      const { testHubSpotConnection } = await import("@workspace/connectors/hubspot");
+      const result = await testHubSpotConnection(creds.hubspot);
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    case "typo3": {
+      if (!creds.typo3) return null;
+      const { testGoalsAcPluginConnection } = await import("@workspace/connectors/goals-ac-plugin");
+      const result = await testGoalsAcPluginConnection({
+        siteUrl: creds.typo3.siteUrl,
+        siteKey: creds.typo3.siteKey,
+        platform: "typo3",
+      });
+      return result.ok
+        ? { ok: true, siteName: result.health?.version }
+        : { ok: false, error: result.error };
+    }
     default:
       return null;
   }
 }
 
+/** CMS platforms with a live connector test or goals-ac-plugin health path. */
 const TESTABLE_PLATFORMS = [
   "wordpress",
   "ghost",
@@ -161,6 +216,14 @@ const TESTABLE_PLATFORMS = [
   "drupal",
   "joomla",
   "webhook",
+  "wix",
+  "framer",
+  "squarespace",
+  "contentful",
+  "sanity",
+  "strapi",
+  "hubspot",
+  "typo3",
 ] as const;
 
 /**

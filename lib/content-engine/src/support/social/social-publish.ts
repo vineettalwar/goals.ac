@@ -22,6 +22,7 @@ export interface PublishablePiece {
   pieceMetadata?: {
     images?: ContentPieceImageRef[];
     featuredImageUrl?: string;
+    ogImageUrl?: string;
   } | null;
 }
 
@@ -30,6 +31,10 @@ export interface SocialPublishResult {
   publishPlatform: SocialPlatform;
   remotePostId?: string;
 }
+
+/** User-facing copy when Instagram publish has no image after all resolution paths. */
+export const INSTAGRAM_IMAGE_REQUIRED_MESSAGE =
+  "Instagram posts need an image. Add a featured image or include one in the draft.";
 
 const PLATFORM_LABELS: Record<SocialPlatform, string> = {
   linkedin: "LinkedIn",
@@ -42,6 +47,27 @@ const PLATFORM_LABELS: Record<SocialPlatform, string> = {
 
 export function isSocialPlatform(platform: string): platform is SocialPlatform {
   return SOCIAL_PLATFORMS.includes(platform as SocialPlatform);
+}
+
+/** Resolve a public image URL for social publish: featured column → metadata → markdown → stock refs. */
+export function resolveSocialImageUrl(piece: PublishablePiece): string | undefined {
+  if (piece.featuredImageUrl?.trim()) return piece.featuredImageUrl.trim();
+
+  const fromMeta = featuredImageFromMetadata({
+    bodyMarkdown: piece.bodyMarkdown,
+    pieceMetadata: piece.pieceMetadata,
+  });
+  if (fromMeta?.trim()) return fromMeta.trim();
+
+  for (const img of piece.pieceMetadata?.images ?? []) {
+    const url = (img.publishedUrl ?? img.remoteUrl)?.trim();
+    if (url) return url;
+  }
+
+  const og = piece.pieceMetadata?.ogImageUrl?.trim();
+  if (og) return og;
+
+  return undefined;
 }
 
 export async function publishPieceToSocial(
@@ -58,12 +84,7 @@ export async function publishPieceToSocial(
       throw new Error(`${label} is not connected. Configure it in Project → Publishing.`);
     }
     const accessToken = await getSocialAccessToken(piece.websiteProjectId, userId, "linkedin");
-    const imageUrl =
-      piece.featuredImageUrl ??
-      featuredImageFromMetadata({
-        bodyMarkdown: piece.bodyMarkdown,
-        pieceMetadata: piece.pieceMetadata,
-      });
+    const imageUrl = resolveSocialImageUrl(piece);
     const result = await publishToLinkedIn(
       { accessToken, authorUrn: resolvedCreds.linkedin.authorUrn },
       piece.title,
@@ -91,12 +112,10 @@ export async function publishPieceToSocial(
       );
     }
     const accessToken = await getSocialAccessToken(piece.websiteProjectId, userId, "meta");
-    const imageUrl =
-      piece.featuredImageUrl ??
-      featuredImageFromMetadata({
-        bodyMarkdown: piece.bodyMarkdown,
-        pieceMetadata: piece.pieceMetadata,
-      });
+    const imageUrl = resolveSocialImageUrl(piece);
+    if (!imageUrl) {
+      throw new Error(INSTAGRAM_IMAGE_REQUIRED_MESSAGE);
+    }
     const result = await publishToInstagram(
       {
         accessToken,

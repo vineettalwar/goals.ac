@@ -18,6 +18,8 @@ import { repurposeContentPiece } from "../../content/content-studio-generator";
 import type { UnifiedBrandContext } from "../../brand/brand-voice";
 import type { AiProviderOptions } from "@workspace/ai-providers";
 import { getTopEngagementHour } from "../../social/social-metrics-service";
+import { featuredImageFromMetadata } from "../../articles/article-image-enricher";
+import type { ContentPieceMetadata } from "@workspace/db";
 
 function localPartsInTimezone(date: Date, timeZone: string): { year: number; month: number; day: number; hour: number; minute: number; dow: number } {
   const fmt = new Intl.DateTimeFormat("en-US", {
@@ -280,6 +282,46 @@ export async function createMultiPlatformBundle(params: {
     );
 
     const slot = await suggestNextSlot(params.projectId, platform);
+    // Instagram needs a public image URL; inherit parent featured/stock when repurpose
+    // did not attach one (image enricher sets metadata on longform / LinkedIn generates).
+    let pieceMetadata: ContentPieceMetadata | null = generated.pieceMetadata ?? null;
+    if (platform === "instagram") {
+      const parentMeta = (parent.pieceMetadata ?? {}) as ContentPieceMetadata;
+      const parentFeatured =
+        parentMeta.featuredImageUrl ??
+        featuredImageFromMetadata({
+          bodyMarkdown: parent.bodyMarkdown,
+          pieceMetadata: parentMeta,
+        });
+      const hasOwnImage =
+        Boolean(pieceMetadata?.featuredImageUrl) ||
+        Boolean(pieceMetadata?.images?.length) ||
+        Boolean(
+          featuredImageFromMetadata({
+            bodyMarkdown: generated.body_markdown,
+            pieceMetadata: pieceMetadata,
+          }),
+        );
+      if (!hasOwnImage && (parentFeatured || parentMeta.images?.length || parentMeta.ogImageUrl)) {
+        pieceMetadata = {
+          ...pieceMetadata,
+          featuredImageUrl: pieceMetadata?.featuredImageUrl ?? parentFeatured ?? parentMeta.featuredImageUrl,
+          ogImageUrl: pieceMetadata?.ogImageUrl ?? parentMeta.ogImageUrl,
+          images: pieceMetadata?.images?.length ? pieceMetadata.images : parentMeta.images,
+        };
+      }
+    }
+    const canAutoSchedule =
+      platform !== "instagram" ||
+      Boolean(
+        featuredImageFromMetadata({
+          bodyMarkdown: generated.body_markdown,
+          pieceMetadata,
+        }) ||
+          pieceMetadata?.featuredImageUrl ||
+          pieceMetadata?.images?.some((img) => img.publishedUrl || img.remoteUrl) ||
+          pieceMetadata?.ogImageUrl,
+      );
     const [piece] = await db
       .insert(contentPiecesTable)
       .values({
@@ -293,8 +335,8 @@ export async function createMultiPlatformBundle(params: {
         status: "draft",
         approvalStatus: "draft",
         publishPlatform: platform,
-        scheduledAt: slot,
-        pieceMetadata: generated.pieceMetadata ?? null,
+        scheduledAt: canAutoSchedule ? slot : null,
+        pieceMetadata,
       })
       .returning();
     if (piece) created.push(piece);

@@ -1,8 +1,10 @@
 import { useMemo, useState, type ReactNode } from "react";
-import { Loader2, PenLine } from "lucide-react";
+import { AlertCircle, Loader2, PenLine } from "lucide-react";
 import { cn } from "../cn";
 import {
+  INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   SOCIAL_PLATFORM_OPTIONS,
+  resolveSocialPieceImageUrl,
   type SocialComposedPiece,
   type SocialComposerParent,
   type SocialPlatformId,
@@ -41,6 +43,17 @@ export function SocialComposerPanel({
     if (!q) return parents.slice(0, 30);
     return parents.filter((parent) => parent.title.toLowerCase().includes(q)).slice(0, 30);
   }, [parents, search]);
+
+  const selectedParent = useMemo(
+    () => parents.find((parent) => parent.id === selectedParentId) ?? null,
+    [parents, selectedParentId],
+  );
+
+  const instagramSelected = selectedPlatforms.has("instagram");
+  const parentHasImage = Boolean(
+    selectedParent && resolveSocialPieceImageUrl(selectedParent),
+  );
+  const instagramBlocked = instagramSelected && Boolean(selectedParent) && !parentHasImage;
 
   function togglePlatform(id: SocialPlatformId) {
     setSelectedPlatforms((prev) => {
@@ -137,13 +150,21 @@ export function SocialComposerPanel({
             );
           })}
         </div>
+        {instagramBlocked ? (
+          <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-100">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>{INSTAGRAM_IMAGE_REQUIRED_MESSAGE}</span>
+          </div>
+        ) : null}
       </div>
 
       <button
         type="button"
-        disabled={composing || !selectedParentId || selectedPlatforms.size === 0}
+        disabled={
+          composing || !selectedParentId || selectedPlatforms.size === 0 || instagramBlocked
+        }
         onClick={() => {
-          if (!selectedParentId) return;
+          if (!selectedParentId || instagramBlocked) return;
           onCompose(selectedParentId, [...selectedPlatforms]);
         }}
         className="inline-flex h-10 items-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground disabled:opacity-50"
@@ -174,6 +195,10 @@ export function SocialComposerPanel({
             const platform = SOCIAL_PLATFORM_OPTIONS.find((p) => p.id === piece.publishPlatform);
             const limit = platform?.limit ?? 3000;
             const len = piece.bodyMarkdown.length;
+            const isInstagram =
+              piece.publishPlatform === "instagram" || piece.formatType === "instagram_post";
+            const missingInstagramImage =
+              isInstagram && !resolveSocialPieceImageUrl(piece);
             return (
               <div key={piece.id} className="space-y-2 rounded-lg border border-border p-3">
                 <div className="flex flex-wrap items-center gap-2">
@@ -188,6 +213,11 @@ export function SocialComposerPanel({
                       Over limit
                     </span>
                   ) : null}
+                  {missingInstagramImage ? (
+                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-200">
+                      Needs image
+                    </span>
+                  ) : null}
                   {piece.scheduledAt ? (
                     <span className="text-xs text-muted-foreground">
                       Scheduled {new Date(piece.scheduledAt).toLocaleString()}
@@ -198,6 +228,11 @@ export function SocialComposerPanel({
                 <p className="line-clamp-6 whitespace-pre-wrap text-sm text-muted-foreground">
                   {piece.bodyMarkdown}
                 </p>
+                {missingInstagramImage ? (
+                  <p className="text-xs text-amber-800 dark:text-amber-200">
+                    {INSTAGRAM_IMAGE_REQUIRED_MESSAGE}
+                  </p>
+                ) : null}
                 {renderLink({
                   href: pieceHref(piece.id),
                   className:

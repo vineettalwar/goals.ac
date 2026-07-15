@@ -1,3 +1,13 @@
+export type SocialPieceImageMeta = {
+  featuredImageUrl?: string | null;
+  ogImageUrl?: string | null;
+  images?: Array<{
+    role?: string;
+    remoteUrl?: string;
+    publishedUrl?: string;
+  }>;
+};
+
 export type SocialQueueItem = {
   id: number;
   title: string;
@@ -7,6 +17,7 @@ export type SocialQueueItem = {
   status: string;
   scheduledAt: string | null;
   bodyMarkdown?: string;
+  pieceMetadata?: SocialPieceImageMeta | null;
 };
 
 export type SocialQueueResponse = {
@@ -94,6 +105,7 @@ export type SocialComposerParent = {
   title: string;
   formatType: string;
   bodyMarkdown: string;
+  pieceMetadata?: SocialPieceImageMeta | null;
 };
 
 export type SocialComposedPiece = {
@@ -103,7 +115,54 @@ export type SocialComposedPiece = {
   formatType: string;
   publishPlatform: string | null;
   scheduledAt: string | null;
+  pieceMetadata?: SocialPieceImageMeta | null;
 };
+
+/** Matches publishPieceToSocial / connector copy when Instagram has no image. */
+export const INSTAGRAM_IMAGE_REQUIRED_MESSAGE =
+  "Instagram posts need an image. Add a featured image or include one in the draft.";
+
+/** First markdown image URL in a draft body (`![alt](https://...)`). */
+export function extractMarkdownImageUrl(markdown: string | null | undefined): string | undefined {
+  const match = (markdown ?? "").match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/);
+  return match?.[1];
+}
+
+/** Resolve a featured/stock/markdown image URL for social preflight + publish hints. */
+export function resolveSocialPieceImageUrl(piece: {
+  bodyMarkdown?: string | null;
+  featuredImageUrl?: string | null;
+  pieceMetadata?: SocialPieceImageMeta | null;
+}): string | undefined {
+  if (piece.featuredImageUrl?.trim()) return piece.featuredImageUrl.trim();
+
+  const featured = piece.pieceMetadata?.images?.find((img) => img.role === "featured");
+  if (featured?.publishedUrl?.trim()) return featured.publishedUrl.trim();
+  if (featured?.remoteUrl?.trim()) return featured.remoteUrl.trim();
+  if (piece.pieceMetadata?.featuredImageUrl?.trim()) {
+    return piece.pieceMetadata.featuredImageUrl.trim();
+  }
+
+  const fromMarkdown = extractMarkdownImageUrl(piece.bodyMarkdown);
+  if (fromMarkdown) return fromMarkdown;
+
+  for (const img of piece.pieceMetadata?.images ?? []) {
+    const url = (img.publishedUrl ?? img.remoteUrl)?.trim();
+    if (url) return url;
+  }
+
+  return piece.pieceMetadata?.ogImageUrl?.trim() || undefined;
+}
+
+export function socialPieceNeedsInstagramImage(piece: {
+  platform?: string | null;
+  publishPlatform?: string | null;
+  formatType?: string | null;
+}): boolean {
+  const platform = piece.platform ?? piece.publishPlatform;
+  if (platform === "instagram") return true;
+  return piece.formatType === "instagram_post";
+}
 
 export type SocialHubTab =
   | "queue"

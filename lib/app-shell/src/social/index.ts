@@ -17,6 +17,7 @@ export type {
   HistorySyncPlatformStatus,
   SocialComposerParent,
   SocialComposedPiece,
+  SocialPieceImageMeta,
   SocialHubTab,
   SocialNotify,
 } from "./types";
@@ -24,5 +25,9 @@ export {
   SOCIAL_PLATFORM_OPTIONS,
   WEEK_DAY_LABELS,
   SOCIAL_FORMAT_TYPES,
+  INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   socialContentPiecePath,
+  extractMarkdownImageUrl,
+  resolveSocialPieceImageUrl,
+  socialPieceNeedsInstagramImage,
 } from "./types";

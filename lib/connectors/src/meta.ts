@@ -68,7 +68,7 @@ export async function publishToInstagram(
   const imageUrl = options?.imageUrl ?? extractFirstImageUrl(bodyMarkdown);
   if (!imageUrl) {
     throw new Error(
-      "Instagram requires an image. Add a featured image URL in content metadata or include an image in markdown.",
+      "Instagram posts need an image. Add a featured image or include one in the draft.",
     );
   }
 
