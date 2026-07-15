@@ -20,8 +20,10 @@ export type CreateContentDraftInput = {
   plannedDate?: string | null;
   /** Optional pre-selected publish destination (shapes generation when supported). */
   intendedPublishPlatform?: string;
-  /** Optional competitor URL to differentiate against (SEO longform). */
+  /** Primary competitor URL sent to generate as competitorFocusUrl. */
   competitorFocusUrl?: string;
+  /** All parsed competitor URLs from the multi-input (first = focus). API takes focus only. */
+  competitorUrls?: string[];
 };
 
 export type CreateContentInitialValues = Partial<CreateContentDraftInput>;
@@ -30,6 +32,7 @@ export type CreateContentInitialValues = Partial<CreateContentDraftInput>;
 type CreateStepId = "format" | "keyword" | "competitors" | "review";
 
 const VALID_FORMATS = new Set(STUDIO_FORMAT_OPTIONS.map((option) => option.value));
+const MAX_COMPETITOR_URLS = 5;
 
 /** Mirrors `SEO_LONGFORM_FORMATS` in content-engine — no db type dependency here. */
 const SEO_LONGFORM_FORMATS = new Set([
@@ -48,6 +51,31 @@ const GENERATING_LABELS = ["Analyzing", "Drafting", "Finishing"] as const;
 
 function isSeoLongform(formatType: string): boolean {
   return SEO_LONGFORM_FORMATS.has(formatType);
+}
+
+/** Comma / newline separated URLs; first unique entry is the generate focus. */
+function parseCompetitorUrlInput(raw: string): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(/[\n,]+/)) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase().replace(/\/+$/, "");
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+    if (out.length >= MAX_COMPETITOR_URLS) break;
+  }
+  return out;
+}
+
+function competitorInputFromInitial(
+  initial: CreateContentInitialValues | null | undefined,
+): string {
+  const fromList = initial?.competitorUrls?.filter((u) => u.trim()) ?? [];
+  if (fromList.length > 0) return fromList.join("\n");
+  const focus = initial?.competitorFocusUrl?.trim();
+  return focus ?? "";
 }
 
 function buildSteps(formatType: string): CreateStepId[] {
@@ -95,7 +123,7 @@ export function CreateContentDialog({
   const [linkedinHook, setLinkedinHook] = useState<LinkedInHookId | "">("");
   const [plannedDate, setPlannedDate] = useState("");
   const [intendedPublishPlatform, setIntendedPublishPlatform] = useState<string | undefined>();
-  const [competitorFocusUrl, setCompetitorFocusUrl] = useState("");
+  const [competitorUrlsText, setCompetitorUrlsText] = useState("");
   const [generatingLabelIndex, setGeneratingLabelIndex] = useState(0);
 
   const steps = useMemo(() => buildSteps(formatType), [formatType]);
@@ -111,7 +139,7 @@ export function CreateContentDialog({
       setLinkedinHook("");
       setPlannedDate("");
       setIntendedPublishPlatform(undefined);
-      setCompetitorFocusUrl("");
+      setCompetitorUrlsText("");
       setGeneratingLabelIndex(0);
       return;
     }
@@ -134,7 +162,7 @@ export function CreateContentDialog({
     );
     setPlannedDate(initialValues?.plannedDate?.trim() || "");
     setIntendedPublishPlatform(initialValues?.intendedPublishPlatform?.trim() || undefined);
-    setCompetitorFocusUrl(initialValues?.competitorFocusUrl?.trim() ?? "");
+    setCompetitorUrlsText(competitorInputFromInitial(initialValues));
     setGeneratingLabelIndex(0);
   }, [open, initialValues]);
 
@@ -195,6 +223,10 @@ export function CreateContentDialog({
         ? buildLinkedInAngleHint(linkedinArchetype, linkedinHook, angleHint)
         : angleHint.trim() || undefined;
 
+    const competitorUrls = isSeoLongform(formatType)
+      ? parseCompetitorUrlInput(competitorUrlsText)
+      : [];
+
     await onSubmit({
       title: title.trim(),
       targetKeyword: keyword,
@@ -202,10 +234,8 @@ export function CreateContentDialog({
       angleHint: resolvedAngle,
       plannedDate: plannedDate.trim() || null,
       intendedPublishPlatform: intendedPublishPlatform || undefined,
-      competitorFocusUrl:
-        isSeoLongform(formatType) && competitorFocusUrl.trim()
-          ? competitorFocusUrl.trim()
-          : undefined,
+      competitorFocusUrl: competitorUrls[0],
+      competitorUrls: competitorUrls.length > 0 ? competitorUrls : undefined,
     });
   }
 
@@ -230,7 +260,7 @@ export function CreateContentDialog({
           ? "Target keyword is required. Archetype and hook chips are optional."
           : "Target keyword is required. Angle and title are optional."
         : currentStep === "competitors"
-          ? "Optional — paste a competitor URL to differentiate against for this piece."
+          ? "Optional — paste competitor URLs (comma or newline). First URL is the generate focus."
           : "Optional date for the calendar, then confirm and generate.";
 
   return (
@@ -463,26 +493,21 @@ export function CreateContentDialog({
             <div className="mt-4 space-y-3.5">
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">
-                  Competitor focus URL{" "}
+                  Competitor URLs{" "}
                   <span className="font-normal text-muted-foreground">(optional)</span>
                 </span>
-                <input
-                  type="url"
+                <textarea
                   autoFocus
-                  value={competitorFocusUrl}
-                  onChange={(event) => setCompetitorFocusUrl(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter") {
-                      event.preventDefault();
-                      goNext();
-                    }
-                  }}
-                  placeholder="https://competitor.example.com"
-                  className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm"
+                  rows={4}
+                  value={competitorUrlsText}
+                  onChange={(event) => setCompetitorUrlsText(event.target.value)}
+                  placeholder={"https://competitor.example.com\nhttps://rival.example.com"}
+                  className="w-full resize-y rounded-lg border border-input bg-card px-3 py-2 text-sm"
                 />
               </label>
               <p className="text-xs text-muted-foreground">
-                Skip if you want generic differentiation from project competitors.
+                Up to {MAX_COMPETITOR_URLS} URLs. First is sent as competitorFocusUrl; extras stay
+                on the draft for later. Skip for project-level competitors only.
               </p>
             </div>
           ) : null}
