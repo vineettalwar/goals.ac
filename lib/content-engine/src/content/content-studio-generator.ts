@@ -957,7 +957,13 @@ export async function generateContentPiece(
     const cached = await cacheGet(key);
     if (cached) {
       logger.info({ format, keyword }, "Content piece served from cache");
-      return isSeoLongformFormat(format) ? processGeneratedResult(cached, format) : cached;
+      if (!isSeoLongformFormat(format)) return cached;
+      // Re-finalize then re-attach infographic so visualSummaryMarkdown is not dropped.
+      return applyInfographicToContentPiece(
+        processGeneratedResult(cached, format),
+        format,
+        brand.companyName,
+      );
     }
   }
 

@@ -131,7 +131,7 @@ export function applyInfographicToContentPiece<
 >(result: T, format: ContentFormatType, brandName?: string): T {
   if (!shouldInjectInfographic(format)) return result;
 
-  const { body, visualSummaryMarkdown, injected } = injectInfographicMarkdownBlock(
+  const { body, visualSummaryMarkdown } = injectInfographicMarkdownBlock(
     result.body_markdown,
     {
       title: result.title,

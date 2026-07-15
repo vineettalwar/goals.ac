@@ -4,6 +4,7 @@ export * from "./brand/brand-extract-sanitize";
 export * from "./brand/brand-scraper";
 export * from "./content/content-piece-enhance";
 export * from "./content/content-piece-seo";
+export * from "./content/infographic-template";
 export * from "./content/content-studio-generator";
 export * from "./content/seo-content-generator";
 export * from "./content/content-strategy-generator";
