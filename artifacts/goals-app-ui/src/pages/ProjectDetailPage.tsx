@@ -49,7 +49,14 @@ export function ProjectDetailPage() {
   }, [id, setProjectId]);
 
   function changeTab(tab: ProjectDetailTab) {
-    setSearchParams({ tab }, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("tab", tab);
+        return next;
+      },
+      { replace: true },
+    );
   }
 
   if (authLoading || loading) {

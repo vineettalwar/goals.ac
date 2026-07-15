@@ -16,8 +16,27 @@ import { sendToCfQueue } from "@workspace/jobs/cf-queues";
 import { QUEUES } from "@workspace/jobs/queues";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "./ai-billing";
 import { getAccessibleProject } from "./project-access";
+
+const AI_NOT_CONFIGURED_MESSAGE =
+  "AI is not configured. Add your API key in Settings → AI Providers, or ask your admin to set a platform key.";
+
+async function assertAiGenerationReady(
+  userId: number,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    await resolveAiClientForUser(userId);
+    return { ok: true };
+  } catch (err) {
+    const detail = err instanceof Error ? err.message : "AI provider is not configured";
+    if (/not configured|no gemini api key/i.test(detail)) {
+      return { ok: false, message: AI_NOT_CONFIGURED_MESSAGE };
+    }
+    return { ok: false, message: detail };
+  }
+}
 
 const GENERATABLE_STATUSES = new Set(["draft", "pending", "failed"]);
 
@@ -182,7 +201,13 @@ async function handleContentPiecePatch(
     updates.bodyMarkdown = parsed.data.bodyMarkdown;
     updates.wordCount = wordCountFromMarkdown(parsed.data.bodyMarkdown);
   }
-  if (parsed.data.status !== undefined) updates.status = parsed.data.status;
+  if (parsed.data.status !== undefined) {
+    if (access.piece!.status === "generating" && parsed.data.status === "draft") {
+      updates.status = "draft";
+    } else if (access.piece!.status !== "generating") {
+      updates.status = parsed.data.status;
+    }
+  }
   if (parsed.data.plannedDate !== undefined) updates.plannedDate = parsed.data.plannedDate;
   if (parsed.data.scheduledAt !== undefined) {
     updates.scheduledAt = parsed.data.scheduledAt ? new Date(parsed.data.scheduledAt) : null;
@@ -310,6 +335,18 @@ async function handleContentPieceGenerate(
   userId: number,
   trackJob?: (jobId: string, queue: string, meta: Record<string, unknown>) => Promise<void>,
 ): Promise<Response> {
+  const limited = await rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs,
+  );
+  if (limited) return withCors(request, limited);
+
+  const aiReady = await assertAiGenerationReady(userId);
+  if (!aiReady.ok) {
+    return withCors(request, Response.json({ error: aiReady.message }, { status: 503 }));
+  }
+
   const [piece] = await db
     .select({
       id: contentPiecesTable.id,

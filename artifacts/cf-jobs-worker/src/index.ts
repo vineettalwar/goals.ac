@@ -1,8 +1,58 @@
 import { setD1Binding } from "@workspace/db";
-import { setKvBindings } from "@workspace/content-engine/core/kv-binding";
+import { setKvBindings, getAiCacheKv } from "@workspace/content-engine/core/kv-binding";
 import { processJobEnvelope, type JobEnvelope } from "@workspace/jobs";
 import { QUEUES } from "@workspace/jobs/queues";
 import { CONTENT_GENERATE_SWEEP_CRON } from "@workspace/jobs/handlers";
+
+const JOB_STATUS_TTL_SECONDS = 86_400;
+
+async function patchJobStatusKv(
+  jobId: string,
+  patch: { status: string; error?: string; message?: string },
+): Promise<void> {
+  const kv = getAiCacheKv();
+  if (!kv) return;
+  const key = `job:status:${jobId}`;
+  const raw = await kv.get(key, "text");
+  let existing: Record<string, unknown> = { jobId };
+  if (raw) {
+    try {
+      existing = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      existing = { jobId };
+    }
+  }
+  await kv.put(
+    key,
+    JSON.stringify({
+      ...existing,
+      ...patch,
+      updatedAt: new Date().toISOString(),
+    }),
+    { expirationTtl: JOB_STATUS_TTL_SECONDS },
+  );
+}
+
+async function processQueueMessage(message: Message<JobEnvelope>): Promise<void> {
+  const jobId = message.body.jobId;
+  if (jobId) {
+    await patchJobStatusKv(jobId, { status: "running" });
+  }
+  try {
+    await processJobEnvelope(message.body);
+    if (jobId) {
+      await patchJobStatusKv(jobId, { status: "completed" });
+    }
+    message.ack();
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Job failed";
+    if (jobId) {
+      await patchJobStatusKv(jobId, { status: "failed", error: errorMessage, message: errorMessage });
+    }
+    console.error("[goals-ac-jobs] job failed", message.body?.queue, err);
+    message.retry();
+  }
+}
 
 const CONNECTION_HEALTH_CHECK_CRON = "0 4 * * *";
 const SCHEDULED_PUBLISH_SWEEP_CRON = "*/15 * * * *";
@@ -89,13 +139,7 @@ export default {
   async queue(batch: MessageBatch<JobEnvelope>, env: Env): Promise<void> {
     wireBindings(env);
     for (const message of batch.messages) {
-      try {
-        await processJobEnvelope(message.body);
-        message.ack();
-      } catch (err) {
-        console.error("[goals-ac-jobs] job failed", message.body?.queue, err);
-        message.retry();
-      }
+      await processQueueMessage(message);
     }
   },
 };

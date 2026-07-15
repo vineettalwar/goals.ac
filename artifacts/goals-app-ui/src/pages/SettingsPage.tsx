@@ -87,7 +87,14 @@ export function SettingsPage() {
 
   function changeTab(tab: SettingsTab) {
     setActiveTab(tab);
-    setSearchParams({ tab }, { replace: true });
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set("tab", tab);
+        return next;
+      },
+      { replace: true },
+    );
   }
 
   useEffect(() => {

@@ -8,6 +8,8 @@ export type CfQueueProducer = {
 export interface JobEnvelope<Q extends QueueName = QueueName> {
   queue: Q;
   payload: QueuePayloadFor<Q>;
+  /** Correlates with KV `job:status:*` written by the write worker. */
+  jobId?: string;
 }
 
 let jobsQueue: CfQueueProducer | null = null;
@@ -32,7 +34,8 @@ export async function sendToCfQueue<Q extends QueueName>(
     );
   }
 
-  const envelope: JobEnvelope<Q> = { queue, payload };
+  const jobId = `cf:${queue}:${Date.now()}`;
+  const envelope: JobEnvelope<Q> = { queue, payload, jobId };
   await producer.send(envelope, options?.delaySeconds ? { delaySeconds: options.delaySeconds } : undefined);
-  return `cf:${queue}:${Date.now()}`;
+  return jobId;
 }

@@ -164,20 +164,16 @@ export function useContentPieceData(pieceId: string | undefined) {
 
         if (isTerminalJobStatus(jobStatus)) {
           stopGenerateJobPoll();
+          setGenerating(false);
           const refreshed = await loadPiece({ silent: true });
           if (jobStatus === "completed") {
+            setGeneratingState(null);
             setGenerateMessage("Content generation complete.");
           } else {
+            setGeneratingState(null);
             setGenerateMessage(
               status.error ?? status.message ?? "Content generation failed.",
             );
-          }
-          if (refreshed?.status === "generating") {
-            setGeneratingState({
-              message: "Generating content…",
-              jobId,
-              jobStatus,
-            });
           }
         }
       } catch {
@@ -253,14 +249,31 @@ export function useContentPieceData(pieceId: string | undefined) {
   useEffect(() => {
     if (!pieceId || piece?.status !== "generating") return;
 
-    setGeneratingState((prev) => prev ?? { message: "Generating content…" });
-
     const interval = setInterval(() => {
       void loadPiece({ silent: true });
     }, PIECE_POLL_MS);
 
     return () => clearInterval(interval);
   }, [pieceId, piece?.status, loadPiece]);
+
+  const staleGenerating =
+    piece?.status === "generating" && !generating && !generatingState?.jobId;
+
+  const resetToDraft = useCallback(async () => {
+    if (!pieceId) return;
+    setGenerateMessage(null);
+    setGeneratingState(null);
+    try {
+      const updated = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "draft" }),
+      });
+      setPiece(mapPiece(updated));
+    } catch (err) {
+      setGenerateMessage(err instanceof Error ? err.message : "Failed to reset content piece");
+    }
+  }, [pieceId]);
 
   useEffect(() => {
     if (!pieceId || !publishingState) return;
@@ -298,6 +311,7 @@ export function useContentPieceData(pieceId: string | undefined) {
         setGenerateMessage("Generate job queued. Content will update when complete.");
       }
     } catch (err) {
+      setGeneratingState(null);
       setGenerateMessage(
         err instanceof Error ? err.message : "Failed to queue generate job",
       );
@@ -422,6 +436,8 @@ export function useContentPieceData(pieceId: string | undefined) {
     generatingState,
     generateMessage,
     generate,
+    staleGenerating,
+    resetToDraft,
     saving,
     saveMessage,
     save,

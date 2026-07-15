@@ -28,7 +28,14 @@ export function useActiveProject() {
         if (valid) {
           localStorage.setItem(STORAGE_KEY, valid);
           if (paramId !== valid) {
-            setSearchParams({ project: valid }, { replace: true });
+            setSearchParams(
+              (prev) => {
+                const next = new URLSearchParams(prev);
+                next.set("project", valid);
+                return next;
+              },
+              { replace: true },
+            );
           }
         }
       })
@@ -47,7 +54,14 @@ export function useActiveProject() {
   const setProjectId = useCallback(
     (id: string) => {
       localStorage.setItem(STORAGE_KEY, id);
-      setSearchParams({ project: id }, { replace: true });
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.set("project", id);
+          return next;
+        },
+        { replace: true },
+      );
     },
     [setSearchParams],
   );

@@ -74,6 +74,8 @@ export function ContentPieceView({
   onHumanize,
   humanizing = false,
   humanizeMessage = null,
+  staleGenerating = false,
+  onResetGeneration,
 }: {
   piece: ContentPieceDetail;
   renderLink: (props: ContentPieceLinkProps) => ReactNode;
@@ -91,6 +93,8 @@ export function ContentPieceView({
   onHumanize?: () => void;
   humanizing?: boolean;
   humanizeMessage?: string | null;
+  staleGenerating?: boolean;
+  onResetGeneration?: () => void | Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState(piece.title);
@@ -115,6 +119,11 @@ export function ContentPieceView({
     onHumanize;
   const actionMessage =
     generateMessage ?? publishMessage ?? saveMessage ?? humanizeMessage;
+  const generateError =
+    generateMessage != null &&
+    !generating &&
+    !generatingState &&
+    (piece.status === "failed" || staleGenerating);
   const busy = generating || publishing || saving || humanizing;
 
   async function handleSave() {
@@ -257,13 +266,22 @@ export function ContentPieceView({
         ) : null}
       </div>
 
-      {actionMessage ? (
+      {actionMessage && !generateError ? (
         <p className="text-sm text-muted-foreground" role="status">
           {actionMessage}
         </p>
       ) : null}
 
-      {piece.status === "generating" ? (
+      {generateError ? (
+        <div
+          className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-800 dark:text-red-200"
+          role="alert"
+        >
+          {generateMessage}
+        </div>
+      ) : null}
+
+      {piece.status === "generating" && (generating || generatingState) && !staleGenerating ? (
         <div
           className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm"
           role="status"
@@ -277,6 +295,27 @@ export function ContentPieceView({
             <p className="mt-1 text-xs text-muted-foreground">
               Job status: {generatingState.jobStatus}
             </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {staleGenerating ? (
+        <div
+          className="rounded-lg border border-red-500/30 bg-red-500/5 px-4 py-3 text-sm text-red-800 dark:text-red-200"
+          role="alert"
+        >
+          <p className="font-medium">Generation did not complete.</p>
+          <p className="mt-1 text-sm">
+            AI may not be configured. Add your API key in Settings → AI Providers, then try again.
+          </p>
+          {onResetGeneration ? (
+            <button
+              type="button"
+              onClick={() => void onResetGeneration()}
+              className="mt-3 inline-flex h-9 items-center rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary"
+            >
+              Reset to draft
+            </button>
           ) : null}
         </div>
       ) : null}

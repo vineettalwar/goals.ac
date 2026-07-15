@@ -145,6 +145,14 @@ async function generateExistingContentPiece(
   }
 }
 
+async function failStuckContentPiece(contentPieceId: number | undefined): Promise<void> {
+  if (!contentPieceId) return;
+  await db
+    .update(contentPiecesTable)
+    .set({ status: "failed" })
+    .where(eq(contentPiecesTable.id, contentPieceId));
+}
+
 export async function processContentGenerate(payload: ContentGeneratePayload): Promise<void> {
   const {
     contentItemId,
@@ -175,6 +183,7 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
 
     if (!billingPrep.ok) {
       const reason = billingPrep.error.reason;
+      await failStuckContentPiece(contentPieceId);
       logger.warn(
         { contentItemId, contentPieceId, userId, reason },
         "Content generate job skipped: billing denied",
@@ -225,6 +234,9 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
         billingCtx,
         err instanceof Error ? err.message : "content_generate_failed",
       );
+    }
+    if (contentPieceId) {
+      await failStuckContentPiece(contentPieceId);
     }
     logger.error({ err, contentItemId, contentPieceId }, "Content generate job failed");
     throw err;

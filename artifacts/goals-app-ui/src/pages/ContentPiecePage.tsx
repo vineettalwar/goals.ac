@@ -26,6 +26,8 @@ export function ContentPiecePage() {
     generatingState,
     generateMessage,
     generate,
+    staleGenerating,
+    resetToDraft,
     saving,
     saveMessage,
     save,
@@ -93,6 +95,8 @@ export function ContentPiecePage() {
         generating={generating}
         generatingState={generatingState}
         generateMessage={generateMessage}
+        staleGenerating={staleGenerating}
+        onResetGeneration={resetToDraft}
         onGenerate={contentPieceCanGenerate(piece.status) ? generate : undefined}
         saving={saving}
         saveMessage={saveMessage}
