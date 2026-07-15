@@ -7,9 +7,8 @@ import {
   decryptCmsCredentials,
   encryptCmsCredentials,
 } from "../publishing/cms-integrations";
+import { resolveLinkedInOAuthCredentials } from "./linkedin-platform-credentials";
 
-const LINKEDIN_CLIENT_ID = process.env["LINKEDIN_CLIENT_ID"];
-const LINKEDIN_CLIENT_SECRET = process.env["LINKEDIN_CLIENT_SECRET"];
 const TWITTER_CLIENT_ID = process.env["TWITTER_CLIENT_ID"];
 const TWITTER_CLIENT_SECRET = process.env["TWITTER_CLIENT_SECRET"];
 
@@ -66,7 +65,8 @@ export async function refreshLinkedInToken(
   if (creds.linkedin.expiresAt && creds.linkedin.expiresAt > Date.now() + 60_000) {
     return creds.linkedin.accessToken;
   }
-  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
+  const linkedInApp = await resolveLinkedInOAuthCredentials();
+  if (!linkedInApp) {
     return creds.linkedin.accessToken;
   }
 
@@ -76,8 +76,8 @@ export async function refreshLinkedInToken(
     body: new URLSearchParams({
       grant_type: "refresh_token",
       refresh_token: creds.linkedin.refreshToken,
-      client_id: LINKEDIN_CLIENT_ID,
-      client_secret: LINKEDIN_CLIENT_SECRET,
+      client_id: linkedInApp.clientId,
+      client_secret: linkedInApp.clientSecret,
     }),
   });
   if (!res.ok) throw new Error("LinkedIn token refresh failed");
