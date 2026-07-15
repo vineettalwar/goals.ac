@@ -30,6 +30,10 @@ export const platformSettingsTable = sqliteTable("platform_settings", {
   encryptedPexelsApiKey: text("encrypted_pexels_api_key"),
   linkedinClientId: text("linkedin_client_id"),
   encryptedLinkedinClientSecret: text("encrypted_linkedin_client_secret"),
+  twitterClientId: text("twitter_client_id"),
+  encryptedTwitterClientSecret: text("encrypted_twitter_client_secret"),
+  metaAppId: text("meta_app_id"),
+  encryptedMetaAppSecret: text("encrypted_meta_app_secret"),
   updatedBy: integer("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
   updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
 });

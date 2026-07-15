@@ -8,9 +8,7 @@ import {
   encryptCmsCredentials,
 } from "../publishing/cms-integrations";
 import { resolveLinkedInOAuthCredentials } from "./linkedin-platform-credentials";
-
-const TWITTER_CLIENT_ID = process.env["TWITTER_CLIENT_ID"];
-const TWITTER_CLIENT_SECRET = process.env["TWITTER_CLIENT_SECRET"];
+import { resolveTwitterOAuthCredentials } from "./twitter-platform-credentials";
 
 function getApiOrigin(): string {
   const devDomain = process.env["REPLIT_DEV_DOMAIN"];
@@ -98,7 +96,8 @@ export async function refreshTwitterToken(
   if (creds.twitter.expiresAt && creds.twitter.expiresAt > Date.now() + 60_000) {
     return creds.twitter.accessToken;
   }
-  if (!TWITTER_CLIENT_ID || !TWITTER_CLIENT_SECRET) {
+  const twitterApp = await resolveTwitterOAuthCredentials();
+  if (!twitterApp) {
     return creds.twitter.accessToken;
   }
 
@@ -106,7 +105,7 @@ export async function refreshTwitterToken(
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Basic ${Buffer.from(`${TWITTER_CLIENT_ID}:${TWITTER_CLIENT_SECRET}`).toString("base64")}`,
+      Authorization: `Basic ${Buffer.from(`${twitterApp.clientId}:${twitterApp.clientSecret}`).toString("base64")}`,
     },
     body: new URLSearchParams({
       grant_type: "refresh_token",
