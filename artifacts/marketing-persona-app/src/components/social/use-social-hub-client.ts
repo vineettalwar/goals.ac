@@ -30,6 +30,7 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
   const [composerConnected, setComposerConnected] = useState<Record<string, boolean>>({});
   const [composing, setComposing] = useState(false);
   const [composed, setComposed] = useState<SocialComposedPiece[] | null>(null);
+  const [attachingImage, setAttachingImage] = useState(false);
 
   const [metrics, setMetrics] = useState<SocialMetricsResponse | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -321,6 +322,79 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
     }
   }
 
+  function patchComposerParentImage(
+    parentPieceId: number,
+    pieceMetadata: SocialComposerParent["pieceMetadata"],
+  ) {
+    setComposerParents((prev) =>
+      prev.map((parent) =>
+        parent.id === parentPieceId ? { ...parent, pieceMetadata } : parent,
+      ),
+    );
+  }
+
+  async function attachFeaturedImageUrl(parentPieceId: number, url: string) {
+    const trimmed = url.trim();
+    if (!/^https:\/\//i.test(trimmed)) {
+      toast.error("Use a public HTTPS image URL");
+      return;
+    }
+    setAttachingImage(true);
+    try {
+      const res = await fetch(`/api/content-pieces/${parentPieceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ featuredImageUrl: trimmed }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | SocialComposerParent
+        | { error?: string }
+        | null;
+      if (!res.ok) {
+        throw new Error(
+          data && "error" in data && data.error ? data.error : "Could not attach image URL",
+        );
+      }
+      const meta =
+        data && "pieceMetadata" in data
+          ? (data.pieceMetadata as SocialComposerParent["pieceMetadata"])
+          : { featuredImageUrl: trimmed };
+      patchComposerParentImage(parentPieceId, meta);
+      toast.success("Featured image URL attached");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not attach image URL");
+    } finally {
+      setAttachingImage(false);
+    }
+  }
+
+  async function useStockImage(parentPieceId: number) {
+    setAttachingImage(true);
+    try {
+      const res = await fetch(`/api/content-pieces/${parentPieceId}/images/regenerate`, {
+        method: "POST",
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { piece?: SocialComposerParent; error?: string }
+        | null;
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Stock image search failed");
+      }
+      const piece = data?.piece;
+      if (!piece) throw new Error("Stock image search failed");
+      patchComposerParentImage(parentPieceId, piece.pieceMetadata ?? null);
+      if (!resolveSocialPiecePublicImageUrl(piece)) {
+        toast.message("No public HTTPS image found — paste a URL or try again");
+        return;
+      }
+      toast.success("Stock image attached for Instagram");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Stock image search failed");
+    } finally {
+      setAttachingImage(false);
+    }
+  }
+
   async function compose(parentPieceId: number, platforms: SocialPlatformId[]) {
     if (platforms.length === 0) {
       toast.error("Select a source article and at least one platform");
@@ -475,6 +549,9 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
     composing,
     composed,
     compose,
+    attachingImage,
+    attachFeaturedImageUrl,
+    useStockImage,
     metrics,
     metricsLoading,
     metricsPlatformFilter,

@@ -6,6 +6,16 @@ export type AutopilotIntent = {
   referrer?: string;
 };
 
+/** Hostname stand-in until brand scrape fills the real company name. */
+export function companyNameFromUrl(websiteUrl: string): string | null {
+  try {
+    const host = new URL(websiteUrl).hostname.replace(/^www\./, "").trim();
+    return host || null;
+  } catch {
+    return null;
+  }
+}
+
 export function saveAutopilotIntent(intent: AutopilotIntent): void {
   if (typeof window === "undefined") return;
   sessionStorage.setItem(AUTOPILOT_INTENT_KEY, JSON.stringify(intent));

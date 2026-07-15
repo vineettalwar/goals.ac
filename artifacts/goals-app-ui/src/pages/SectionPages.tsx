@@ -694,6 +694,9 @@ export function SocialHubPage() {
         composing={hub.composing}
         composed={hub.composed}
         onCompose={(parentId, platforms) => void hub.compose(parentId, platforms)}
+        attachingImage={hub.attachingImage}
+        onAttachFeaturedImageUrl={(parentId, url) => void hub.attachFeaturedImageUrl(parentId, url)}
+        onUseStockImage={(parentId) => void hub.useStockImage(parentId)}
         metrics={hub.metrics}
         metricsLoading={hub.metricsLoading}
         metricsPlatformFilter={hub.metricsPlatformFilter}

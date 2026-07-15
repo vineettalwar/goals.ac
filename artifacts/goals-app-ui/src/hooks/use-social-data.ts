@@ -56,6 +56,7 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
   const [composerConnected, setComposerConnected] = useState<Record<string, boolean>>({});
   const [composing, setComposing] = useState(false);
   const [composed, setComposed] = useState<SocialComposedPiece[] | null>(null);
+  const [attachingImage, setAttachingImage] = useState(false);
 
   const [metrics, setMetrics] = useState<SocialMetricsResponse | null>(null);
   const [metricsLoading, setMetricsLoading] = useState(false);
@@ -349,6 +350,71 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
     [projectId, queueQuery.data?.items, reloadQueue, notify],
   );
 
+  const attachFeaturedImageUrl = useCallback(
+    async (parentPieceId: number, url: string) => {
+      const trimmed = url.trim();
+      if (!/^https:\/\//i.test(trimmed)) {
+        notify("error", "Use a public HTTPS image URL");
+        return;
+      }
+      setAttachingImage(true);
+      try {
+        const updated = await apiFetch<SocialComposerParent>(`/api/content-pieces/${parentPieceId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ featuredImageUrl: trimmed }),
+        });
+        setComposerParents((prev) =>
+          prev.map((parent) =>
+            parent.id === parentPieceId
+              ? {
+                  ...parent,
+                  pieceMetadata: updated.pieceMetadata ?? { featuredImageUrl: trimmed },
+                }
+              : parent,
+          ),
+        );
+        notify("success", "Featured image URL attached");
+      } catch (err) {
+        notify("error", err instanceof Error ? err.message : "Could not attach image URL");
+      } finally {
+        setAttachingImage(false);
+      }
+    },
+    [notify],
+  );
+
+  const useStockImage = useCallback(
+    async (parentPieceId: number) => {
+      setAttachingImage(true);
+      try {
+        const data = await apiFetch<{ piece?: SocialComposerParent }>(
+          `/api/content-pieces/${parentPieceId}/images/regenerate`,
+          { method: "POST" },
+        );
+        const piece = data.piece;
+        if (!piece) throw new Error("Stock image search failed");
+        setComposerParents((prev) =>
+          prev.map((parent) =>
+            parent.id === parentPieceId
+              ? { ...parent, pieceMetadata: piece.pieceMetadata ?? null }
+              : parent,
+          ),
+        );
+        if (!resolveSocialPiecePublicImageUrl(piece)) {
+          notify("error", "No public HTTPS image found — paste a URL or try again");
+          return;
+        }
+        notify("success", "Stock image attached for Instagram");
+      } catch (err) {
+        notify("error", err instanceof Error ? err.message : "Stock image search failed");
+      } finally {
+        setAttachingImage(false);
+      }
+    },
+    [notify],
+  );
+
   const compose = useCallback(
     async (parentPieceId: number, platforms: SocialPlatformId[]) => {
       if (!projectId) return;
@@ -376,7 +442,7 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
         setComposing(false);
       }
     },
-    [projectId, reloadQueue],
+    [projectId, reloadQueue, notify],
   );
 
   const syncMetrics = useCallback(async () => {
@@ -518,6 +584,9 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
     composing,
     composed,
     compose,
+    attachingImage,
+    attachFeaturedImageUrl,
+    useStockImage,
     metrics,
     metricsLoading,
     metricsPlatformFilter,
