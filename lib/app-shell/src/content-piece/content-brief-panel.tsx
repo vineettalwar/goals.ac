@@ -30,6 +30,8 @@ export type ContentBriefPanelProps = {
   competitorTopics?: ContentBriefSerpTopic[] | null;
   /** Empty-state link to ideas / studio. */
   ideasHref?: string | null;
+  /** When the piece already has body, skip create-from-brief CTA. */
+  pieceHasBody?: boolean;
   renderLink?: (props: {
     href: string;
     className?: string;
@@ -90,6 +92,7 @@ export function ContentBriefPanel({
   serpGaps,
   competitorTopics,
   ideasHref,
+  pieceHasBody = false,
   renderLink,
 }: ContentBriefPanelProps) {
   const [brief, setBrief] = useState<ContentBriefSummary | null>(null);
@@ -133,6 +136,11 @@ export function ContentBriefPanel({
     (projectId != null && projectId !== ""
       ? `/projects/${projectId}/content-studio`
       : "/projects");
+
+  const createFromBriefHref =
+    briefId && projectId != null && projectId !== ""
+      ? `/projects/${projectId}/content-studio?briefId=${briefId}`
+      : null;
 
   const clusterParts = splitKeywordCluster(brief?.targetKeywordCluster);
   const primaryKeyword =
@@ -234,6 +242,13 @@ export function ContentBriefPanel({
                   </li>
                 ))}
               </ul>
+              {!pieceHasBody && createFromBriefHref
+                ? link(
+                    createFromBriefHref,
+                    "mt-2 inline-block text-xs text-primary hover:underline",
+                    "Create from brief",
+                  )
+                : null}
             </div>
           ) : null}
         </div>
