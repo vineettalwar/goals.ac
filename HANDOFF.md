@@ -88,16 +88,14 @@ Report: [`docs/audits/2026-07-16-ponytail-frontend.md`](docs/audits/2026-07-16-p
 - Plugin PHP unchanged (already accepts base64 payloads; no URL fetch of data: schemes)
 - Call sites: `cms-publish.ts`, `wordpress-adapter.ts`
 
-### Ghost / Shopify — skipped (same day)
+### Ghost / Shopify featured images (2026-07-16)
 
-Checked whether publish paths can do the same for featured/OG from PNG data URIs. **No implement** — neither has an existing binary/base64 media upload in-repo; both would be net-new API surface.
-
-| Platform | Why skipped |
+| Platform | Status |
 |---|---|
-| **Ghost** | `publishToGhost` / Lexical never set `feature_image`. No `images/upload` helper. Ghost Admin needs multipart `POST …/images/upload/` then a hosted URL on the post — new FormData/auth path, Workers risk. Adapter `featuredImage: true` is capability-only. |
-| **Shopify** | Adapter `featuredImage: false`. `articleCreate` + plugin content route have no image/media upload. Real path is `stagedUploadsCreate` → binary PUT → article image — multi-step GraphQL + scopes, not a base64 one-liner. |
+| **Ghost** | Connector uploads https / PNG/JPEG data URI via Admin `images/upload`, sets `feature_image`. Adapter `featuredImage: true`. |
+| **Shopify** | Admin API path: `stagedUploadsCreate` (resource FILE) → multipart POST → `ArticleCreateInput.image.url` (+ alt). https falls back to direct URL if staged fails. Adapter `featuredImage: true`. Plugin content route still has no image field. |
 
-Stock HTTPS featured still works where the platform already accepts remote URLs. Data-URI featured remains WP-only until Ghost/Shopify media helpers exist.
+SVG data URIs ignored on both.
 
 ---
 
@@ -181,7 +179,7 @@ LinkedIn, X, Meta, and Bluesky app credentials can be stored in platform admin (
 
 There is no R2/S3/public asset host for content media. Existing R2 (`goals-ac-next-cache`) is Next ISR/cache only. Stock regen keeps Unsplash/Pexels HTTPS CDN URLs.
 
-Sharp PNG from visual summary is `data:image/png;base64,…` on `featuredImageUrl`. **WordPress publish** decodes/uploads that data URI (see section above). **Ghost / Shopify** still skip — no media upload helpers; use stock HTTPS or leave featured empty.
+Sharp PNG from visual summary is `data:image/png;base64,…` on `featuredImageUrl`. **WordPress / Ghost / Shopify (Admin API)** publish paths upload that data URI (or https). Shopify plugin path still skips image.
 
 ---
 

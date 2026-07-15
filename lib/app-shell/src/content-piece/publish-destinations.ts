@@ -468,7 +468,7 @@ export function getCmsDestinations(): PublishDestinationDefinition[] {
   return PUBLISHING_DESTINATIONS.filter((d) => d.category === "cms");
 }
 
-export function getEspPublishDestinations(): PublishDestinationDefinition[] {
+export function getEspDestinations(): PublishDestinationDefinition[] {
   return PUBLISHING_DESTINATIONS.filter((d) => d.category === "esp");
 }
 
@@ -476,7 +476,7 @@ export function getExportDestinations(): PublishDestinationDefinition[] {
   return PUBLISHING_DESTINATIONS.filter((d) => d.category === "export");
 }
 
-export function getPublishSocialDestinations(): PublishDestinationDefinition[] {
+export function getSocialDestinations(): PublishDestinationDefinition[] {
   return PUBLISHING_DESTINATIONS.filter(
     (d) => d.category === "social" && !d.hideSettingsCard,
   );
@@ -542,13 +542,13 @@ export function countCmsConnections(connections: CmsConnectionSnapshot): number 
   return getCmsDestinations().filter((d) => d.isConnected(connections)).length;
 }
 
-export function countEspPublishConnections(connections: CmsConnectionSnapshot): number {
-  return getEspPublishDestinations().filter((d) => d.isConnected(connections)).length;
+export function countEspConnections(connections: CmsConnectionSnapshot): number {
+  return getEspDestinations().filter((d) => d.isConnected(connections)).length;
 }
 
 export const SOCIAL_SETTINGS_COUNT = 5;
 
-export function countSocialPublishConnections(connections: CmsConnectionSnapshot): number {
+export function countSocialConnections(connections: CmsConnectionSnapshot): number {
   let count = 0;
   if (connections.linkedin) count += 1;
   if (connections.twitter) count += 1;

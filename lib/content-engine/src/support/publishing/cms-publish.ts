@@ -303,6 +303,8 @@ export async function publishPieceToCms(
         status,
         seo.metaDescription,
         tags,
+        piece.pieceMetadata?.featuredImageUrl,
+        piece.title,
       );
       return result.url;
     }
