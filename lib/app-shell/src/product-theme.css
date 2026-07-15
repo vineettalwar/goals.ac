@@ -1,0 +1,16 @@
+/* Paper product palette — import after tailwindcss in the app entry CSS. */
+:root {
+  --radius: 0.75rem;
+  --background: #fafaf8;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
+  --border: #e8e5e0;
+  --primary: #2d3b2d;
+  --primary-foreground: #ffffff;
+  --secondary: #f5f3ef;
+  --secondary-foreground: #1a1a1a;
+  --muted: #f5f3ef;
+  --muted-foreground: #6b6560;
+  --accent-warm: #e8702a;
+}

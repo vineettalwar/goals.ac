@@ -1,0 +1,34 @@
+{
+  "name": "@workspace/app-shell",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./product-theme.css": "./src/product-theme.css",
+    "./dashboard": "./src/dashboard/index.ts",
+    "./projects": "./src/projects/index.ts",
+    "./settings": "./src/settings/index.ts",
+    "./project-detail": "./src/project-detail/index.ts",
+    "./studio": "./src/studio/index.ts",
+    "./content-piece": "./src/content-piece/index.ts",
+    "./integrations": "./src/integrations/index.ts",
+    "./auth": "./src/auth/index.ts",
+    "./section": "./src/section/index.ts",
+    "./audit": "./src/audit/index.ts",
+    "./autopilot": "./src/autopilot/index.ts",
+    "./help": "./src/help/index.ts",
+    "./growth-roadmap": "./src/growth-roadmap/index.ts",
+    "./social": "./src/social/index.ts"
+  },
+  "dependencies": {
+    "clsx": "catalog:",
+    "lucide-react": "catalog:",
+    "react": "catalog:",
+    "tailwind-merge": "catalog:"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:",
+    "typescript": "~5.9.2"
+  }
+}
