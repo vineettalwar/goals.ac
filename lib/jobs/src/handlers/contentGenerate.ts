@@ -1,6 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { contentPiecesTable, websiteProjectsTable, type ContentFormatType } from "@workspace/db";
+import { briefsTable, contentPiecesTable, websiteProjectsTable, type ContentFormatType } from "@workspace/db";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { ContentGeneratePayload, PgBoss } from "@workspace/jobs";
 import {

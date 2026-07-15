@@ -53,8 +53,8 @@ Ponytail **safe-delete runway is not exhausted.** Morning cuts were real; a seco
 
 | Surface | Intended job | Finish by |
 |---|---|---|
-| Deprecated `content-piece-layout*` cluster | Pre-shell Next piece editor UI | Already superseded by `ContentPieceView` — delete only if no leftover edit paths; or port any unique status-select leftover into shell |
-| `dashboard-sections.tsx` | Server-rendered dashboard widgets | Re-wire into `DashboardPageClient` / `load-dashboard-data` **or** delete if shell `DashboardView` already covers all cards |
+| Deprecated `content-piece-layout*` cluster | Pre-shell Next piece editor UI | **Done 2026-07-16** — deleted layout/aside/header, local markdown-toolbar, handlers, utils (shell `ContentPieceView` is SSOT) |
+| `dashboard-sections.tsx` | Server-rendered dashboard widgets | **Done 2026-07-16** — deleted; hub uses shell `DashboardView` via `DashboardPageClient` |
 | Public `roadmaps-*-client.tsx` | Marketing roadmap browser/generator | **Done 2026-07-16** — never launched; keep `/roadmaps` → `/content-engine` redirect; deleted clients + marketing `RoadmapGenerator` |
 | `VideoDemoSection` | Homepage “see it live” collage/tour | **Done 2026-07-16** — mounted after `WorkflowSection`; collage tile → `/content-engine` |
 | `BrandTailoringPanel` | Show voice/colors/offerings on brand/piece | **Done 2026-07-16** — Brand tab (live form) + content piece `asideExtra` |
