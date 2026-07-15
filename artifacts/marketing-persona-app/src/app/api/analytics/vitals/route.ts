@@ -16,6 +16,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
 
+  // Lightweight RUM sink — extend with analytics provider as needed
   if (process.env.NODE_ENV === "development") {
     console.info("[web-vitals]", parsed.data);
   }
