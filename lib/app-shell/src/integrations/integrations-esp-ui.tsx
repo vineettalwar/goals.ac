@@ -6,6 +6,7 @@ import {
   type EspPlatformId,
 } from "./publishing-destinations";
 import { EspDestinationIcon, IntegrationIconBox } from "./integration-icons";
+import { ConnectSetupSteps, getEspSetupSteps } from "./connect-setup-steps";
 
 export { countEspConnections } from "./publishing-destinations";
 
@@ -125,6 +126,9 @@ export function IntegrationsEspPanel({
                 ) : null}
                 {connected && typeof row?.apiSecretHint === "string" ? (
                   <p className="text-xs text-muted-foreground">Secret …{row.apiSecretHint}</p>
+                ) : null}
+                {!connected ? (
+                  <ConnectSetupSteps steps={getEspSetupSteps(destination.id)} />
                 ) : null}
               </div>
 

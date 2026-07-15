@@ -30,6 +30,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  ConnectSetupSteps,
+  getCmsSetupSteps,
+  getEspSetupSteps,
+  getSocialSetupSteps,
+} from "@workspace/app-shell/integrations";
+import {
   fieldIsVisible,
   getCmsConnectionSchema,
   getInitialFormValues,
@@ -483,6 +489,13 @@ function CmsConnectionCard({
           </div>
         ) : (
           <div className="space-y-4">
+            <ConnectSetupSteps
+              steps={
+                destination.category === "esp"
+                  ? getEspSetupSteps(destination.id)
+                  : getCmsSetupSteps(destination.id, destination.label)
+              }
+            />
             {supportsMultipleConnectionMethods(destination.id) && (
               <div className="space-y-2">
                 <Label>Connection method</Label>
@@ -612,10 +625,13 @@ function SocialConnectionCard({
             <HealthBadge health={health} destinationName={destination.label} />
           </div>
         ) : (
-          <Button size="sm" onClick={onConnect}>
-            <Link2 className="w-3.5 h-3.5 mr-1.5" />
-            Connect {destination.label}
-          </Button>
+          <div className="space-y-3">
+            <ConnectSetupSteps steps={getSocialSetupSteps(destination.id)} />
+            <Button size="sm" onClick={onConnect}>
+              <Link2 className="w-3.5 h-3.5 mr-1.5" />
+              Connect {destination.label}
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

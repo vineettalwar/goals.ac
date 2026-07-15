@@ -1,6 +1,10 @@
 "use client";
 
 import { CheckCircle2, Facebook, Globe, Instagram, Link2, Loader2, RefreshCw, Unlink } from "lucide-react";
+import {
+  ConnectSetupSteps,
+  getSocialSetupSteps,
+} from "@workspace/app-shell/integrations";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -125,10 +129,13 @@ export function PublishingSettingsMetaCard({
             ) : null}
           </div>
         ) : (
-          <Button size="sm" onClick={() => onConnectOAuth("meta")}>
-            <Link2 className="w-3.5 h-3.5 mr-1.5" />
-            Connect Meta
-          </Button>
+          <div className="space-y-3">
+            <ConnectSetupSteps steps={getSocialSetupSteps("meta")} />
+            <Button size="sm" onClick={() => onConnectOAuth("meta")}>
+              <Link2 className="w-3.5 h-3.5 mr-1.5" />
+              Connect Meta
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>
@@ -205,6 +212,7 @@ export function PublishingSettingsBlueskyCard({
           </div>
         ) : (
           <div className="space-y-3">
+            <ConnectSetupSteps steps={getSocialSetupSteps("bluesky")} />
             <div className="space-y-1.5">
               <Label htmlFor={embedded ? "bluesky-handle-dialog" : "bluesky-handle"}>Bluesky handle</Label>
               <Input
@@ -289,6 +297,7 @@ export function PublishingSettingsMastodonCard({
           </div>
         ) : (
           <div className="space-y-3">
+            <ConnectSetupSteps steps={getSocialSetupSteps("mastodon")} />
             <div className="space-y-1.5">
               <Label htmlFor={embedded ? "mastodon-instance-dialog" : "mastodon-instance"}>
                 Instance URL

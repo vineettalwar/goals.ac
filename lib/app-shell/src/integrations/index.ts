@@ -33,8 +33,12 @@ export {
 } from "./publishing-destinations";
 export {
   ConnectSetupSteps,
+  CMS_CONNECT_STEPS,
+  ESP_CONNECT_STEPS,
   FULL_APP_CMS_SETUP_STEPS,
   WEBHOOK_SETUP_STEPS,
+  getCmsSetupSteps,
+  getEspSetupSteps,
   getFullAppCmsSetupSteps,
   getSocialSetupSteps,
 } from "./connect-setup-steps";

@@ -10,7 +10,11 @@ import type {
   WebflowConnectPayload,
   WordPressConnectPayload,
 } from "./cms-connect-types";
-import { ConnectSetupSteps, getFullAppCmsSetupSteps } from "./connect-setup-steps";
+import {
+  CMS_CONNECT_STEPS,
+  ConnectSetupSteps,
+  getCmsSetupSteps,
+} from "./connect-setup-steps";
 
 function isValidUrl(value: string): boolean {
   try {
@@ -177,13 +181,7 @@ export function WordPressConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps
-          steps={[
-            "Choose Application Password (REST) or goals.ac plugin (HMAC).",
-            "Paste site URL plus username/app password, or plugin site key from WP Admin → goals.ac.",
-            "Save, then Run health check on Integrations to confirm publish is ready.",
-          ]}
-        />
+        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.wordpress} />
         <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
           {(["api", "plugin"] as const).map((method) => (
             <button
@@ -349,13 +347,7 @@ export function GhostConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps
-          steps={[
-            "In Ghost Admin → Settings → Integrations, create a Custom Integration.",
-            "Copy the Admin API URL and Admin API Key into the fields below.",
-            "Save, then Run health check to verify posting works.",
-          ]}
-        />
+        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.ghost} />
         <label className="block text-sm">
           <span className="mb-1 block font-medium">Admin API URL</span>
           <input
@@ -518,13 +510,7 @@ export function DrupalConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps
-          steps={[
-            "Prefer the goals.ac Drupal module (HMAC) for layout-aware publish, or JSON:API with a content type.",
-            "Paste site URL plus site key (plugin) or username/password (JSON:API).",
-            "Save, then Run health check before publishing.",
-          ]}
-        />
+        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.drupal} />
         <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
           {(["plugin", "api"] as const).map((method) => (
             <button
@@ -751,13 +737,7 @@ export function JoomlaConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps
-          steps={[
-            "Install the goals.ac Joomla plugin for HMAC publishing, or enable Web Services API tokens.",
-            "Paste site URL plus site key (plugin) or API token (Web Services).",
-            "Save and Run health check; set category if using the REST API.",
-          ]}
-        />
+        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.joomla} />
         <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
           {(["plugin", "api"] as const).map((method) => (
             <button
@@ -906,13 +886,7 @@ export function NotionConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps
-          steps={[
-            "Create a Notion internal integration and copy the secret token.",
-            "Share your CMS database with that integration, then paste the database ID.",
-            "Save and Run health check — Notion must return the database.",
-          ]}
-        />
+        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.notion} />
         <label className="block text-sm">
           <span className="mb-1 block font-medium">Integration token</span>
           <input
@@ -1017,13 +991,7 @@ export function WebflowConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps
-          steps={[
-            "In Site Settings → Integrations → API access, generate a site token.",
-            "Copy the CMS Collection ID for your blog (and optional body field slug).",
-            "Save, then Run health check before first publish.",
-          ]}
-        />
+        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.webflow} />
         <label className="block text-sm">
           <span className="mb-1 block font-medium">API token</span>
           <input
@@ -1195,13 +1163,7 @@ export function ShopifyConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <ConnectSetupSteps
-          steps={[
-            "Prefer Admin API: create a custom app with write_content and paste the shop domain + token.",
-            "Or install the goals.ac plugin and paste the site URL + site key.",
-            "Save and Run health check; set primary blog destination after connect.",
-          ]}
-        />
+        <ConnectSetupSteps steps={CMS_CONNECT_STEPS.shopify} />
         <div className="flex gap-1 rounded-lg border border-border bg-muted/40 p-1">
           {(["api", "plugin"] as const).map((method) => (
             <button
@@ -1337,7 +1299,7 @@ export function CmsFullAppConnectDialog({
       onClose={close}
     >
       <div className="space-y-4 text-sm">
-        <ConnectSetupSteps steps={getFullAppCmsSetupSteps(platformKey, platformLabel)} />
+        <ConnectSetupSteps steps={getCmsSetupSteps(platformKey, platformLabel)} />
         <p className="text-muted-foreground">
           Full connection forms for {platformLabel} are available in Integrations.
         </p>

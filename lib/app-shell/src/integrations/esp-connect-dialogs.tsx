@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { X } from "lucide-react";
+import { ConnectSetupSteps, ESP_CONNECT_STEPS } from "./connect-setup-steps";
 
 export type BeehiivConnectPayload = {
   apiKey: string;
@@ -149,6 +150,7 @@ export function BeehiivConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <ConnectSetupSteps steps={ESP_CONNECT_STEPS.beehiiv} />
         <label className="block text-sm">
           <span className="mb-1 block font-medium">API key</span>
           <input
@@ -222,6 +224,7 @@ export function ConvertKitConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <ConnectSetupSteps steps={ESP_CONNECT_STEPS.convertkit} />
         <label className="block text-sm">
           <span className="mb-1 block font-medium">API secret</span>
           <input
@@ -298,6 +301,7 @@ export function MailchimpConnectDialog({
       loading={saving}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        <ConnectSetupSteps steps={ESP_CONNECT_STEPS.mailchimp} />
         <label className="block text-sm">
           <span className="mb-1 block font-medium">API key</span>
           <input
