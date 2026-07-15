@@ -24,8 +24,18 @@
 | WP featured | data-URI featured (existing) |
 | Bluesky durable JWK | `JoseKey.fromImportable` from env/DB only; no ephemeral mint — missing key throws |
 | Shopify featured | Admin API + plugin: https + PNG/JPEG data URI via `stagedUploadsCreate` |
+| Content-media R2 | Code + bindings + docs; **ops:** create public buckets + `CONTENT_MEDIA_PUBLIC_BASE_URL` |
 
-**In flight:** none from this list.
+**In flight:** none from this list (content-media awaits CF bucket provisioning).
+
+### Content-media R2 (2026-07-16)
+
+Public host for raster featured data URIs → HTTPS (`docs/prd/content-media-r2.md`).
+
+- Lib: `@workspace/media` `hostRasterFeaturedDataUri` / R2 binding + optional S3 API
+- Enrich + CMS/social/Notion publish fallback
+- Wrangler: `CONTENT_MEDIA_R2` on marketing OpenNext + jobs worker
+- **You must:** `wrangler r2 bucket create goals-ac-content-media` (+ staging), enable public access, set `CONTENT_MEDIA_PUBLIC_BASE_URL`
 
 ---
 
@@ -213,7 +223,7 @@ LinkedIn, X, Meta, and Bluesky app credentials can be stored in platform admin (
 
 There is no R2/S3/public asset host for content media. Existing R2 (`goals-ac-next-cache`) is Next ISR/cache only. Stock regen keeps Unsplash/Pexels HTTPS CDN URLs.
 
-Sharp PNG from visual summary is `data:image/png;base64,…` on `featuredImageUrl`. **WordPress / Ghost / Shopify (Admin API + plugin)** publish paths upload that data URI (or https).
+There is a dedicated public content-media R2 path (`CONTENT_MEDIA_R2` + `CONTENT_MEDIA_PUBLIC_BASE_URL`) — see `docs/prd/content-media-r2.md`. Until the bucket is provisioned, Sharp PNG from visual summary may remain `data:image/png;base64,…` on `featuredImageUrl`. **WordPress / Ghost / Shopify** still upload that data URI (or https) natively.
 
 ---
 

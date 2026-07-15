@@ -173,6 +173,8 @@ Set **`DB_DIALECT=d1`** in Worker vars (already in `wrangler.jsonc`).
 - KV: `goals-ac-cache`, `goals-ac-ratelimit` (+ staging)
 - Queues: `goals-ac-jobs`, `goals-ac-jobs-dlq` (+ staging)
 
+**Content media (manual):** create public R2 buckets `goals-ac-content-media` (+ `-staging`), enable public access (custom domain or r2.dev), set Worker/var `CONTENT_MEDIA_PUBLIC_BASE_URL`. Bindings `CONTENT_MEDIA_R2` are in marketing + jobs `wrangler.jsonc`. Details: [`docs/prd/content-media-r2.md`](prd/content-media-r2.md).
+
 Bindings are pre-wired in `wrangler.jsonc`. Enable **Cloudflare Images** on your account in the dashboard.
 
 ### 3. Deploy Edge Mesh Workers

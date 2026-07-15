@@ -231,20 +231,32 @@ Tabs use **path segments**, not `?tab=` / `?project=` query params. Legacy `/int
 
 **Implications:** `OFFERED_PLAN_IDS` is `["starter"]` only; quotas are stored in `plan_quota_config` and editable at Admin → Plans; code defaults apply when no row exists; BYOK skips all quota checks.
 
+## 2026-07-16 — Content-media R2 public host (supersedes prior “no platform bucket”)
+
+**Decision:** Host raster featured images (visual-summary PNG data URIs and publish-time fallbacks) on a dedicated public R2 bucket `goals-ac-content-media`, separate from Next ISR cache (`goals-ac-next-cache`).
+
+**Binding / env:** `CONTENT_MEDIA_R2` Worker binding; `CONTENT_MEDIA_PUBLIC_BASE_URL` (custom domain preferred); optional Node S3 path via `R2_ACCOUNT_ID` + access keys + `CONTENT_MEDIA_R2_BUCKET`.
+
+**Flow:** Enrich uploads data: → HTTPS when configured; publish (CMS/social/Notion) retries host if piece still has data:. WP/Ghost/Shopify CMS-native data-URI upload paths remain.
+
+**Supersedes:** 2026-07-16 “Do not upload that PNG to a platform bucket” (no bucket existed then).
+
+**Ops:** Create bucket, enable public access, set public base URL — `docs/prd/content-media-r2.md`.
+
 ## 2026-07-16 — Visual summary featured: PNG via sharp, never SVG data URI
 
 **Decision:** Keep at-a-glance graphics as SVG in `visualSummarySvg` / `visualSummarySvgDataUri` (aside + body markdown). Do **not** assign SVG data URIs to `featuredImageUrl` / `ogImageUrl`. On Node (native sharp in `@workspace/media`), `enrichContentPieceImages` may rasterize the SVG to a PNG data URI when no stock featured exists. Stock remote URLs remain preferred for CMS publish. Cloudflare Workers keep the sharp stub (no rasterize).
 
-**Do not upload that PNG to a platform bucket.** No content-media R2/S3/public asset host exists (R2 is Next cache only). Leave PNG as data URI for in-app; CMS featured continues to require stock HTTPS or publish-time WP/plugin media download of HTTPS only.
+**~~Do not upload that PNG to a platform bucket.~~** Superseded by **Content-media R2 public host** above. When that host is not configured, PNG remains a data URI and CMS data-URI upload paths (WP/Ghost/Shopify) still apply.
 
 **Alternatives considered:**
 - Pure-JS SVG→PNG (no native deps) — rejected; sharp already in `@workspace/media`
 - Leave SVG as featured fallback — rejected; many CMS featured-image APIs reject SVG
-- Upload PNG to R2/S3 at enrich time — rejected; no such public media bucket wired; inventing one is out of scope
+- Upload PNG to R2/S3 at enrich time — **accepted later** once `goals-ac-content-media` was scoped
 
-**Reason:** CMS compatibility without dropping the in-app visual summary; no safe existing upload target for platform-hosted featured HTTPS.
+**Reason:** CMS compatibility without dropping the in-app visual summary.
 
-**Implications:** Generation applies infographic before image enrich; Workers publish paths prefer stock or omit featured rather than SVG/data-URI.
+**Implications:** Generation applies infographic before image enrich; with content-media R2 configured, featured becomes HTTPS for Instagram/Notion/social gates.
 
 ## 2026-07-14 — Platform integration hardening (security, performance, accessibility)
 

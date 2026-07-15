@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { publicApiUrl } from "@/lib/marketing/site/public-api";
@@ -18,24 +19,42 @@ type PublicGeoAudit = {
   websiteProjectId: number | null;
 };
 
-export function GeoAuditResultLoader({ id }: { id: string }) {
+/** Prefer browser path so Cloudflare Pages rewrites to /geo-audit/0/ still load the real id. */
+function auditIdFromLocation(): string {
+  if (typeof window === "undefined") return "";
+  const match = window.location.pathname.match(/\/geo-audit\/(\d+)/);
+  return match?.[1] ?? "";
+}
+
+export function GeoAuditResultLoader() {
+  const params = useParams();
+  const paramId = typeof params?.id === "string" ? params.id : Array.isArray(params?.id) ? params.id[0] : "";
+  const [id, setId] = useState(paramId);
   const [audit, setAudit] = useState<PublicGeoAudit | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fromPath = auditIdFromLocation();
+    setId(fromPath || paramId);
+  }, [paramId]);
+
+  useEffect(() => {
     const numericId = Number(id);
     if (!Number.isFinite(numericId) || numericId < 1) {
-      setError("Invalid audit id");
-      setLoading(false);
+      setError(id ? "Invalid audit id" : null);
+      setLoading(Boolean(id));
+      if (id) setLoading(false);
       return;
     }
 
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     (async () => {
       try {
         const res = await fetch(publicApiUrl(`/api/public/geo-audits/${numericId}`));
-        const data = (await res.json().catch(() => null)) as PublicGeoAudit & { error?: string } | null;
+        const data = (await res.json().catch(() => null)) as (PublicGeoAudit & { error?: string }) | null;
         if (cancelled) return;
         if (!res.ok) {
           setError(data?.error ?? "GEO audit not found");

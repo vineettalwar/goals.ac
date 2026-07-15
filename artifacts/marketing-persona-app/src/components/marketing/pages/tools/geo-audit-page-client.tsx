@@ -75,6 +75,11 @@ export function GeoAuditPageClient() {
         return;
       }
 
+      // Static marketing (Pages) only prebuilds /geo-audit/0/; hard-nav hits the Pages rewrite.
+      if (process.env.MARKETING_STATIC === "1") {
+        window.location.assign(`/geo-audit/${auditId}/`);
+        return;
+      }
       router.push(`/geo-audit/${auditId}`);
     } catch {
       toast.error("Audit failed. Network error, please try again.");

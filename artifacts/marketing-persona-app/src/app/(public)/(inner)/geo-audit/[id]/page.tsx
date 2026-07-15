@@ -14,7 +14,6 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function GeoAuditResultPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  return <GeoAuditResultLoader id={id} />;
+export default function GeoAuditResultPage() {
+  return <GeoAuditResultLoader />;
 }
