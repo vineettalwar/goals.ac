@@ -287,7 +287,7 @@ export function ContentPieceLayout(p: any) {
           </div>
         </div>
 
-        <ContentPieceLayoutAside p={p} />
+        <ContentPieceLayoutAside {...p} />
       </div>
 
       <ContentPieceRepurposeDialog

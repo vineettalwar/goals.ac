@@ -101,6 +101,8 @@ function isReadPath(path: string, method: string): boolean {
     if (/^\/api\/website-projects\/\d+\/semrush\/status$/.test(path)) return true;
     if (/^\/api\/website-projects\/\d+\/keyword-alerts$/.test(path)) return true;
     if (/^\/api\/website-projects\/\d+\/keyword-opportunities$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/command-center$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/publish-records$/.test(path)) return true;
     if (/^\/api\/website-projects\/\d+\/article-ideas$/.test(path)) return true;
     if (/^\/api\/website-projects\/\d+\/article-idea-sources$/.test(path)) return true;
     if (path === "/api/tracked-keywords") return true;
@@ -127,6 +129,13 @@ function isReadPath(path: string, method: string): boolean {
 }
 
 function isWritePath(path: string, method: string): boolean {
+  // Integration health probes run in the write worker (shared handler for GET+POST).
+  if (
+    /^\/api\/website-projects\/\d+\/integrations\/health$/.test(path) &&
+    (method === "GET" || method === "HEAD" || method === "POST")
+  ) {
+    return true;
+  }
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return false;
   if (path.startsWith("/api/admin") && method !== "GET" && method !== "HEAD") {
     return true;
@@ -166,9 +175,6 @@ function isWritePath(path: string, method: string): boolean {
     return true;
   }
   if (/^\/api\/website-projects\/\d+\/keyword-clusters$/.test(path) && method === "POST") {
-    return true;
-  }
-  if (/^\/api\/website-projects\/\d+\/integrations\/health$/.test(path) && (method === "GET" || method === "POST")) {
     return true;
   }
   if (/^\/api\/website-projects\/\d+\/article-ideas$/.test(path) && method === "POST") {

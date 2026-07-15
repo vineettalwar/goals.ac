@@ -8,6 +8,7 @@ import {
 } from "@workspace/db/schema-sqlite";
 import { listArticleIdeaImports } from "@workspace/content-engine/articles/article-ideas-import-service";
 import { loadCommandCenterSummary } from "@workspace/content-engine/analytics/command-center-service";
+import { listPublishRecordsForProject } from "@workspace/content-engine/support/publishing/publish-records";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
 import { getAccessibleProject, parsePositiveInt } from "./project-access";
@@ -202,6 +203,17 @@ export async function handleKeywordRead(
     }
     const summary = await loadCommandCenterSummary(projectId);
     return withCors(request, Response.json(summary));
+  }
+
+  const publishRecordsMatch = path.match(/^\/api\/website-projects\/(\d+)\/publish-records$/);
+  if (publishRecordsMatch && method === "GET") {
+    const projectId = Number.parseInt(publishRecordsMatch[1]!, 10);
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+    const records = await listPublishRecordsForProject(projectId, 50);
+    return withCors(request, Response.json({ records }));
   }
 
   return null;

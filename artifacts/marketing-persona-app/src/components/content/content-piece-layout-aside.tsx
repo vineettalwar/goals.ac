@@ -151,7 +151,7 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
           jsonLdSchema={piece.pieceMetadata?.jsonLdSchema as object | null | undefined}
           internalLinkSuggestions={piece.pieceMetadata?.internalLinkSuggestions as { anchorText: string; suggestedSlug: string }[] | undefined}
           wordCount={displayWordCount}
-          contentPieceId={piece.id}
+          contentPieceId={contentPieceId}
           savedBodyMarkdown={savedBodyMarkdown}
           showScoreDelta={Boolean(editing)}
           canEnhance={canEnhance}

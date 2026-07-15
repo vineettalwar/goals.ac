@@ -6,7 +6,10 @@ import { toast } from "sonner";
 import { scoreArticleQuality } from "@workspace/content-engine/articles/article-quality-score";
 import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
 import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
-import { contentPieceCanQueueSocial } from "@workspace/app-shell/content-piece";
+import {
+  contentPieceCanQueueSocial,
+  contentPieceSupportsStockImages,
+} from "@workspace/app-shell/content-piece";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import {
   type ContentFormatType,
@@ -63,8 +66,7 @@ export function ContentPieceClient({
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const featuredImage = piece.pieceMetadata?.images?.find((img) => img.role === "featured");
-  const supportsStockImages =
-    isSeoLongformFormat(piece.formatType as ContentFormatType) || piece.formatType === "linkedin_post";
+  const supportsStockImages = contentPieceSupportsStockImages(piece.formatType);
 
   const displayBody = editing ? bodyDraft : piece.bodyMarkdown;
   const displayTitle = editing ? titleDraft : piece.title;

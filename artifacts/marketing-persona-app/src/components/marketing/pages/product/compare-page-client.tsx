@@ -84,6 +84,21 @@ export function ComparePageClient() {
         </p>
       </MarketingSection>
 
+      <MarketingSection bordered className="py-16" titleLine1="What you can" titleLine2="demo today">
+        <ul className={`${glassCard} max-w-2xl mx-auto space-y-3 p-6 text-sm text-white/80 list-none`}>
+          <li>
+            <Link href="/article-quality" className="text-white hover:underline">
+              Humanize before/after
+            </Link>
+            {" "}
+            — raw draft vs rewritten pass with human-voice and quality scores.
+          </li>
+          <li>Live draft score in Studio — editorial + SERP delta updates as you edit.</li>
+          <li>16 CMS destinations plus social/ESP health checks on every connection tile.</li>
+          <li>Queue social — one click from an approved article into the social composer queue.</li>
+        </ul>
+      </MarketingSection>
+
       <FAQAccordion
         titleLine1="Common"
         titleLine2="questions"

@@ -1,4 +1,7 @@
-import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
+import {
+  isHumanizableFormat,
+  isHumanizableSocialFormat,
+} from "@workspace/content-engine/content/humanize-eligibility";
 import { SOCIAL_FORMAT_TYPES } from "../social/types";
 
 export type ContentPieceImageRef = {
@@ -130,7 +133,7 @@ export function contentPieceCanEnhance(formatType: string): boolean {
 }
 
 export function contentPieceSupportsStockImages(formatType: string): boolean {
-  return contentPieceCanEnhance(formatType) || formatType === "linkedin_post";
+  return contentPieceCanEnhance(formatType) || isHumanizableSocialFormat(formatType);
 }
 
 export function contentPieceCanEdit(status: string): boolean {

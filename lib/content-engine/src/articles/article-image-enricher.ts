@@ -3,6 +3,7 @@ import { DEFAULT_IMAGE_SETTINGS, type ProjectImageSettings } from "@workspace/db
 import { isStockSearchAvailable, pickBestStockPhoto, type DecryptedStockCredentialContext } from "@workspace/stock-images";
 import type { AiProviderClient } from "../support/ai/resolve-ai-client";
 import { isSeoLongformFormat } from "../content/content-piece-seo";
+import { isHumanizableSocialFormat } from "../content/humanize-eligibility";
 import { logger } from "../core/logger";
 
 export type ImageEnrichablePiece = {
@@ -110,13 +111,12 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
   const settings = { ...DEFAULT_IMAGE_SETTINGS, ...options?.imageSettings };
   const format = piece.formatType ?? "blog_post";
   const isLongform = isSeoLongformFormat(format);
-  const isLinkedIn = format === "linkedin_post";
-  const isInstagram = format === "instagram_post";
+  const isSocial = isHumanizableSocialFormat(format);
   const stockCredentials = options?.stockCredentials;
   const shouldEnrich =
     isStockSearchAvailable(stockCredentials) &&
     settings.autoFeaturedImage !== false &&
-    (isLongform || isLinkedIn || isInstagram);
+    (isLongform || isSocial);
 
   if (!shouldEnrich) {
     return {
