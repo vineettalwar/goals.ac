@@ -34,7 +34,7 @@ Estimates are order-of-magnitude. Tags: `delete` · `shrink` · `yagni` · `nati
 | ~−480 | `delete` | Next studio leftovers | Unused after hub → `StudioView`: `brand-ai-profile-card.tsx` (115), `content-studio-calendar.tsx` (148), `content-studio-hub-filters.tsx` (91), `content-studio-list-items.tsx` (91); plus unused `visibility/keyword-rank-chart.tsx` (37) |
 | ~−800 | `shrink` | `lib/app-shell/.../cms-connect-dialogs.tsx` | 8 near-identical CMS connect dialogs + hand-rolled `<dialog>`; field schemas already exist in Next `cms-connection-schemas.ts` |
 | ~−250 | `shrink` | `lib/app-shell/.../esp-connect-dialogs.tsx` | 4 ESP dialogs + second hand-rolled dialog (`div role="dialog"`) |
-| ~−0 / −3 deps | `delete` | Next `package.json` | Suspected unused: `gsap`, `@gsap/react`, `marked` (verify before remove) |
+| ~−0 / −3 deps | `delete` | Next `package.json` | **Removed 2026-07-16:** `gsap`, `@gsap/react`, `marked` (zero imports) |
 | ~−0 | `yagni` | Dual publish registries | `lib/app-shell/src/content-piece/publish-destinations.ts` vs `marketing-persona-app/.../publishing-destinations.ts` — ID sets diverge (shell subset) |
 | ~−0 | `shrink` | `cn()` | Duplicated in `lib/app-shell/src/cn.ts` and Next `lib/utils.ts` |
 | ~−0 | `yagni` | Shell `ContentPieceView` / `SocialHubView` | Large prop surfaces; intentional shared-UI contract, not free deletes |

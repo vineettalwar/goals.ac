@@ -23,7 +23,7 @@
 | ~~Consolidate CMS/ESP connect dialogs~~ | **Done.** `SchemaConnectDialog` + configs. 1729 → 734 LOC (−57%). Named exports preserved. |
 | ~~Notion adapter image blocks~~ | **Done.** HTTPS markdown images + featured → page cover; non-https skipped with warnings. |
 
-**Still open elsewhere:** unused gsap/marked deps (verify before remove).
+**Still open elsewhere:** (none from ponytail safe-delete list).
 
 ### Next studio leftovers deleted (2026-07-16)
 
@@ -40,6 +40,8 @@ Feature diff vs shell (none unfinished left in those files):
 | Hub filters | Shell filters + list/grid toggle | No — shell richer |
 | List cards | Shell cards + Generate CTA | Yes → badge ported |
 | Keyword rank chart | `@workspace/app-shell` chart in keyword tabs | No |
+
+**Unused deps removed from Next:** `gsap`, `@gsap/react`, `marked` (zero imports in `marketing-persona-app`).
 
 ---
 
