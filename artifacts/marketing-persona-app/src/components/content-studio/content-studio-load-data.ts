@@ -1,4 +1,5 @@
 import type { AiProviderId } from "@workspace/ai-providers/config";
+import type { BrandProfileSummary } from "@workspace/app-shell/studio";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRow } from "./content-studio-utils";
 
@@ -9,15 +10,17 @@ export type StudioLoadResult = {
   pieces: Array<ContentPieceRow & { source: "studio" }>;
   cmsConnections: CmsConnectionSnapshot;
   primaryBlogDestination: string | null;
+  brandProfile: BrandProfileSummary | null;
 };
 
 export async function loadContentStudioData(projectId: string): Promise<StudioLoadResult> {
-  const [projRes, piecesRes, aiStatusRes, cmsRes, publishingRes] = await Promise.all([
+  const [projRes, piecesRes, aiStatusRes, cmsRes, publishingRes, brandRes] = await Promise.all([
     fetch(`/api/website-projects/${projectId}`),
     fetch(`/api/website-projects/${projectId}/content-pieces`),
     fetch("/api/ai-providers/status"),
     fetch(`/api/website-projects/${projectId}/cms-integrations`),
     fetch(`/api/website-projects/${projectId}/publishing-settings`),
+    fetch(`/api/website-projects/${projectId}/brand-profile`),
   ]);
 
   let projectName = "";
@@ -51,6 +54,11 @@ export async function loadContentStudioData(projectId: string): Promise<StudioLo
     primaryBlogDestination = settings.primaryBlogDestination ?? null;
   }
 
+  let brandProfile: BrandProfileSummary | null = null;
+  if (brandRes.ok) {
+    brandProfile = (await brandRes.json()) as BrandProfileSummary;
+  }
+
   return {
     projectName,
     aiReady,
@@ -58,5 +66,6 @@ export async function loadContentStudioData(projectId: string): Promise<StudioLo
     pieces,
     cmsConnections,
     primaryBlogDestination,
+    brandProfile,
   };
 }

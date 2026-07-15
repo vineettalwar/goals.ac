@@ -25,7 +25,6 @@ import {
 import type { AiProviderId } from "@workspace/ai-providers/config";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
-import { useBrandProfile } from "@/lib/queries";
 import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
 import { loadContentStudioData } from "./content-studio-load-data";
 import type { ContentPieceRow, StudioPiece } from "./content-studio-utils";
@@ -46,6 +45,7 @@ type StudioLoadState = {
   pieces: StudioPiece[];
   cmsConnections: CmsConnectionSnapshot;
   primaryBlogDestination: string | null;
+  brandProfile: BrandProfileSummary | null;
 };
 
 const initialStudioLoadState: StudioLoadState = {
@@ -55,6 +55,7 @@ const initialStudioLoadState: StudioLoadState = {
   pieces: [],
   cmsConnections: {},
   primaryBlogDestination: null,
+  brandProfile: null,
 };
 
 function studioLoadReducer(
@@ -93,6 +94,7 @@ export function ContentStudioClient({
     pieces,
     cmsConnections,
     primaryBlogDestination,
+    brandProfile,
   } = studioData;
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(initialCreateOpen);
@@ -100,9 +102,6 @@ export function ContentStudioClient({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [markingReadyId, setMarkingReadyId] = useState<number | null>(null);
   const [reschedulingId, setReschedulingId] = useState<number | null>(null);
-
-  const { data: brandProfileRaw, isLoading: brandProfileLoading } = useBrandProfile(projectId);
-  const brandProfile = (brandProfileRaw as BrandProfileSummary | null | undefined) ?? null;
 
   const loadData = useCallback(async () => {
     const data = await loadContentStudioData(projectId);
@@ -115,6 +114,7 @@ export function ContentStudioClient({
         pieces: data.pieces,
         cmsConnections: data.cmsConnections,
         primaryBlogDestination: data.primaryBlogDestination,
+        brandProfile: data.brandProfile,
       },
     });
   }, [projectId]);
@@ -202,7 +202,7 @@ export function ContentStudioClient({
         pieces={toShellPieces(pieces)}
         loading={loading}
         brandProfile={brandProfile}
-        brandProfileLoading={brandProfileLoading}
+        brandProfileLoading={loading && !brandProfile}
         aiReady={aiReady}
         activeProvider={activeProvider}
         aiSettingsHref="/integrations/ai"
