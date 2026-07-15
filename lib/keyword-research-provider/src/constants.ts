@@ -14,8 +14,23 @@ export const SEMRUSH_DATABASES = [
   "jp",
   "kr",
   "cn",
+  "tw",
   "tr",
   "ae",
+  "se",
+  "dk",
+  "fi",
+  "no",
+  "cz",
+  "ro",
+  "hu",
+  "gr",
+  "id",
+  "vn",
+  "th",
+  "sk",
+  "bg",
+  "il",
 ] as const;
 
 export type SemrushDatabase = (typeof SEMRUSH_DATABASES)[number];

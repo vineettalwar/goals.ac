@@ -13,27 +13,42 @@ import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
 const glassCard = cardSurfaceClass("glass");
 
-/** Placeholder metric slots only — never invent client numbers here. */
-const PARTNER_METRIC_SLOTS = [
-  {
-    label: "Impressions",
-    source: "Google Search Console",
-    placeholder: "—",
-    hint: "Fill from GSC date range (e.g. last 28 / 90 days)",
-  },
-  {
-    label: "AI citations %",
-    source: "GEO / AI visibility audit",
-    placeholder: "—",
-    hint: "Share of sampled queries citing the client domain",
-  },
-  {
-    label: "DR",
-    source: "Third-party authority (e.g. Ahrefs)",
-    placeholder: "—",
-    hint: "Domain Rating or equivalent — cite the tool + date",
-  },
-] as const;
+/**
+ * One anonymized illustrative profile — ranges only, no named customer.
+ * Partners swap these for GSC / GEO / authority screenshots before publishing.
+ */
+const ILLUSTRATIVE_PROFILE = {
+  framing: "Illustrative engagement profile (anonymized)",
+  headline: "B2B SaaS · 12-week content + GEO engagement",
+  summary:
+    "Composite ranges typical of a mid-funnel program: programmatic SEO pages, internal linking, and an AI-visibility pass. Not a named case study — replace every figure with primary-source screenshots.",
+  metrics: [
+    {
+      label: "Impressions",
+      value: "↑ 2–4×",
+      source: "Google Search Console",
+      hint: "Illustrative 90-day vs prior window. Partner: paste GSC Performance screenshot here.",
+    },
+    {
+      label: "AI citations",
+      value: "~8–15%",
+      source: "GEO / AI visibility audit",
+      hint: "Illustrative share of sampled queries citing the domain. Partner: link live GEO audit.",
+    },
+    {
+      label: "Authority",
+      value: "+2–5 pts",
+      source: "Third-party DR (cite tool + date)",
+      hint: "Illustrative Domain Rating delta. Partner: screenshot the tool export — no invented lift.",
+    },
+  ],
+  partnerSwapSteps: [
+    "Replace the ranges above with exact GSC Performance numbers (date range visible in the shot).",
+    "Attach or link a GEO audit URL for AI citation % instead of the illustrative band.",
+    "Name the authority tool, metric, and date next to the DR delta.",
+    "Keep the Verify CTAs pointed at live tooling so reviewers can check sources.",
+  ],
+} as const;
 
 const VERIFY_CTAS = [
   {
@@ -69,10 +84,10 @@ export function SuccessStoriesPageClient({ articles }: Props) {
     <MarketingPageShell
       hero={
         <PageHero
-          badge="Coming soon"
+          badge="Illustrative profile"
           titleLine1="Customer stories"
-          titleLine2="in progress"
-          description="No published client case studies yet. Partners can use the GSC-backed template below; everyone else can try the demos or book a walkthrough."
+          titleLine2="honest preview"
+          description="No named client case studies published yet. Below is one anonymized illustrative engagement profile with range bands — partners swap in GSC screenshots before going live."
           backgroundImage={HERO_IMAGES.roadmaps.hero}
           ctas={[
             { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "primary" },
@@ -81,45 +96,56 @@ export function SuccessStoriesPageClient({ articles }: Props) {
         />
       }
     >
-      <MarketingSection bordered className="py-16" titleLine1="Partner case" titleLine2="study template">
+      <MarketingSection bordered className="py-16" titleLine1="Illustrative" titleLine2="engagement profile">
         <p className="text-white/65 mb-8 max-w-2xl text-sm leading-relaxed">
-          Empty slots on purpose. When you publish a client story, drop in real figures from Search Console and
-          your authority tool, then keep the verify links so readers can check the source — not marketing math.
+          Redacted partner template filled with illustrative ranges only — not a claimed win for a named company.
+          When you publish a real story, replace every band with Search Console / GEO / authority screenshots and
+          keep the verify links so readers can check the source.
         </p>
 
         <div className={`${glassCard} p-6 sm:p-8 mb-8`}>
           <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
             <div>
-              <p className="marketing-section-label text-white/45 mb-2">Template structure</p>
-              <h3 className="font-bold text-xl text-white tracking-tight">[Client / vertical] — outcome headline</h3>
-              <p className="text-sm text-white/55 mt-2 max-w-lg">
-                One sentence on the engagement scope. No before/after percentages until you have screenshots or
-                exportable reports behind them.
-              </p>
+              <p className="marketing-section-label text-white/45 mb-2">{ILLUSTRATIVE_PROFILE.framing}</p>
+              <h3 className="font-bold text-xl text-white tracking-tight">{ILLUSTRATIVE_PROFILE.headline}</h3>
+              <p className="text-sm text-white/55 mt-2 max-w-lg">{ILLUSTRATIVE_PROFILE.summary}</p>
             </div>
             <span className="inline-flex items-center gap-1.5 text-xs text-white/50 border border-white/15 rounded-md px-2.5 py-1">
               <BarChart3 className="h-3.5 w-3.5" />
-              Metrics pending source
+              Ranges · not a named case study
             </span>
           </div>
 
           <div className="grid sm:grid-cols-3 gap-4 mb-8">
-            {PARTNER_METRIC_SLOTS.map((slot) => (
+            {ILLUSTRATIVE_PROFILE.metrics.map((slot) => (
               <div
                 key={slot.label}
                 className="rounded-lg border border-dashed border-white/20 bg-white/3 px-4 py-5"
               >
                 <p className="text-xs uppercase tracking-[0.08em] text-white/45 font-semibold mb-3">{slot.label}</p>
-                <p className="text-3xl font-bold text-white/35 tabular-nums mb-1">{slot.placeholder}</p>
+                <p className="text-3xl font-bold text-white tabular-nums mb-1">{slot.value}</p>
                 <p className="text-xs text-white/50 mb-2">{slot.source}</p>
                 <p className="text-xs text-white/40 leading-relaxed">{slot.hint}</p>
               </div>
             ))}
           </div>
 
+          <div className="rounded-lg border border-white/10 bg-white/3 px-4 py-4 mb-8">
+            <p className="text-xs uppercase tracking-[0.08em] text-white/45 font-semibold mb-3">
+              Partner: swap in GSC screenshots
+            </p>
+            <ol className="space-y-2 list-decimal list-inside">
+              {ILLUSTRATIVE_PROFILE.partnerSwapSteps.map((step) => (
+                <li key={step} className="text-xs text-white/50 leading-relaxed">
+                  {step}
+                </li>
+              ))}
+            </ol>
+          </div>
+
           <div className="border-t border-white/10 pt-6">
             <p className="text-xs uppercase tracking-[0.08em] text-white/45 font-semibold mb-3">
-              Verification CTAs (partner copy)
+              Verification CTAs
             </p>
             <div className="flex flex-wrap gap-3 mb-4">
               {VERIFY_CTAS.map((cta) => (
@@ -148,7 +174,7 @@ export function SuccessStoriesPageClient({ articles }: Props) {
           <Link href="/search-analytics" className="text-primary hover:underline">
             Search analytics
           </Link>{" "}
-          so the first real story has verifiable impressions — not placeholders.
+          so the first published story has verifiable impressions — not illustrative ranges.
         </p>
       </MarketingSection>
 
@@ -156,10 +182,10 @@ export function SuccessStoriesPageClient({ articles }: Props) {
         <div className={`${glassCard} p-6 mb-10 max-w-2xl flex gap-4 items-start`}>
           <Clock className="h-5 w-5 text-(--accent-warm) shrink-0 mt-0.5" />
           <div>
-            <p className="font-medium text-white mb-1">Stories coming later</p>
+            <p className="font-medium text-white mb-1">Named stories still ahead</p>
             <p className="text-sm text-white/65 leading-relaxed">
-              We&apos;re onboarding the first consulting clients now. Until stories are ready, use the free tools
-              and demos below. Same platform scoped programs run on.
+              The card above is an anonymized illustrative profile only. Named, permissioned case studies land as
+              clients approve. Until then, try the free tools and demos below.
             </p>
           </div>
         </div>

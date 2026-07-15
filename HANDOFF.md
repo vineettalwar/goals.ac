@@ -225,11 +225,13 @@ Soft (non-blocking) amber preflight when Shopify `outputMode` is `article_metafi
 
 ## TYPO3 FAL textmedia (2026-07-15)
 
-`ContentPublisher` now prefers FAL for `textmedia` images: resolve existing `/fileadmin/…` paths, otherwise download remote http(s) into `fileadmin/user_upload/goals-ac/` and attach via `sys_file_reference` on `assets`. Falls back to embedding `<img>` in `bodytext` if FAL/storage/download fails (private URLs blocked).
+`ContentPublisher` prefers FAL for `textmedia` images: resolve existing `/fileadmin/…` paths, download remote http(s) or accept PNG/JPEG base64/data-URI into `fileadmin/user_upload/goals-ac/`, attach via `sys_file_reference` on `assets`. Falls back to embedding `<img>` in `bodytext` if FAL/storage/download fails (private URLs blocked).
 
 **File:** `cms-plugins/typo3/Classes/Helper/ContentPublisher.php` (+ `GeneralUtility` stub helpers).
 
-**Leftover / verify on a real TYPO3 site:** DataHandler BE-user context for FAL writes; no plugin `/media` base64 upload route (URL fetch only); folder create quirks if `user_upload` missing.
+**Hardened (2026-07-16):** DataHandler paths init a synthetic admin `BackendUserAuthentication` (+ LanguageService when available) when `$GLOBALS['BE_USER']` is missing — middleware/API/CLI context. FAL folder resolve creates `user_upload` then `goals-ac` when missing (race-safe catch), then falls back to default/root folder.
+
+**Leftover / verify on a real TYPO3 site:** no dedicated plugin `/media` upload route (base64/data-URI goes through content payload → FAL import); smoke-test page + textmedia publish on a live TYPO3 install.
 
 Still open optional: Shopify theme app block.
 

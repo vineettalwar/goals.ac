@@ -13,6 +13,8 @@ const LANGUAGE_TO_DEEPL: Record<string, string> = {
   ja: "JA",
   ko: "KO",
   "zh-CN": "ZH-HANS",
+  zh: "ZH-HANS",
+  "zh-TW": "ZH-HANT",
   tr: "TR",
   ar: "AR",
   hi: "HI",
@@ -25,6 +27,10 @@ const LANGUAGE_TO_DEEPL: Record<string, string> = {
   el: "EL",
   id: "ID",
   vi: "VI",
+  th: "TH",
+  sk: "SK",
+  bg: "BG",
+  he: "HE",
 };
 
 export function deeplTargetLangForLanguage(code: string | undefined): string | null {

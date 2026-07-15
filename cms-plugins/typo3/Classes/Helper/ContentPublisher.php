@@ -40,8 +40,7 @@ final class ContentPublisher
         $pageUid = $updateId > 0 ? $updateId : 0;
         $action = 'created';
 
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-        $dataHandler->start([], []);
+        $dataHandler = $this->newDataHandler();
 
         if ($pageUid > 0) {
             if (!$this->pageExists($pageUid) || !$this->pageManagedByGoalsAc($pageUid, $parentPageUid)) {
@@ -100,8 +99,7 @@ final class ContentPublisher
     ): void {
         $this->removeManagedContentElements($pageUid, $replaceStrategy);
 
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-        $dataHandler->start([], []);
+        $dataHandler = $this->newDataHandler();
 
         $defaultSorting = 256;
         foreach ($elements as $index => $element) {
@@ -394,6 +392,8 @@ final class ContentPublisher
      */
     private function addBinaryToFal(object $storage, string $binary, string $filename): ?int
     {
+        $this->initBackendUserForDataHandler();
+
         if (!method_exists(GeneralUtility::class, 'tempnam')) {
             return null;
         }
@@ -493,6 +493,7 @@ final class ContentPublisher
         [$tempPath, $filename] = $downloaded;
 
         try {
+            $this->initBackendUserForDataHandler();
             $folder = $this->resolveGoalsAcUploadFolder($storage);
             if ($folder === null || !method_exists($storage, 'addFile')) {
                 return null;
@@ -524,22 +525,69 @@ final class ContentPublisher
             return $storage->getFolder(self::FAL_UPLOAD_FOLDER);
         }
 
-        if (method_exists($storage, 'getFolder') && method_exists($storage, 'createFolder')) {
-            try {
-                $parent = $storage->getFolder('user_upload');
-                if (method_exists($parent, 'hasFolder') && $parent->hasFolder('goals-ac')
-                    && method_exists($parent, 'getSubfolder')
-                ) {
+        try {
+            $parent = $this->getOrCreateUserUploadFolder($storage);
+            if ($parent === null) {
+                return $this->fallbackUploadFolder($storage);
+            }
+
+            if (method_exists($parent, 'hasFolder') && $parent->hasFolder('goals-ac')) {
+                if (method_exists($parent, 'getSubfolder')) {
                     return $parent->getSubfolder('goals-ac');
                 }
-                if (method_exists($parent, 'createFolder')) {
-                    return $parent->createFolder('goals-ac');
+                if (method_exists($storage, 'getFolder')) {
+                    return $storage->getFolder(self::FAL_UPLOAD_FOLDER);
                 }
-            } catch (\Throwable) {
-                // Fall through to default folder.
             }
+
+            if (method_exists($parent, 'createFolder')) {
+                return $parent->createFolder('goals-ac');
+            }
+            if (method_exists($storage, 'createFolder')) {
+                return $storage->createFolder('goals-ac', $parent);
+            }
+        } catch (\Throwable) {
+            // Concurrent create or missing FAL APIs — fall back.
         }
 
+        return $this->fallbackUploadFolder($storage);
+    }
+
+    /**
+     * Create fileadmin/user_upload when missing (API/CLI has no prior FAL tree).
+     *
+     * @param object $storage TYPO3 ResourceStorage
+     * @return object|null Folder
+     */
+    private function getOrCreateUserUploadFolder(object $storage): ?object
+    {
+        if (!method_exists($storage, 'getFolder')) {
+            return null;
+        }
+
+        if (method_exists($storage, 'hasFolder') && $storage->hasFolder('user_upload')) {
+            return $storage->getFolder('user_upload');
+        }
+
+        if (!method_exists($storage, 'createFolder')) {
+            return null;
+        }
+
+        try {
+            $storage->createFolder('user_upload');
+        } catch (\Throwable) {
+            // Race: another request may have created user_upload.
+        }
+
+        return $storage->getFolder('user_upload');
+    }
+
+    /**
+     * @param object $storage TYPO3 ResourceStorage
+     * @return object|null Folder
+     */
+    private function fallbackUploadFolder(object $storage): ?object
+    {
         if (method_exists($storage, 'getDefaultFolder')) {
             return $storage->getDefaultFolder();
         }
@@ -641,8 +689,7 @@ final class ContentPublisher
             return;
         }
 
-        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
-        $dataHandler->start([], []);
+        $dataHandler = $this->newDataHandler();
         foreach ($rows as $row) {
             $uid = (int)($row['uid'] ?? 0);
             if ($uid > 0) {
@@ -650,6 +697,74 @@ final class ContentPublisher
             }
         }
         $dataHandler->process_cmdmap();
+    }
+
+    /**
+     * DataHandler requires a BackendUserAuthentication (cruser_id, isAdmin, FAL ACLs).
+     * Middleware / API requests usually have none — init a synthetic admin BE user.
+     */
+    private function newDataHandler(): DataHandler
+    {
+        $this->initBackendUserForDataHandler();
+        $dataHandler = GeneralUtility::makeInstance(DataHandler::class);
+        $dataHandler->start([], []);
+        return $dataHandler;
+    }
+
+    private function initBackendUserForDataHandler(): void
+    {
+        $existing = $GLOBALS['BE_USER'] ?? null;
+        if (is_object($existing)
+            && is_array($existing->user ?? null)
+            && (int)($existing->user['uid'] ?? 0) > 0
+        ) {
+            $this->initLanguageServiceIfMissing($existing);
+            return;
+        }
+
+        if (!class_exists(\TYPO3\CMS\Core\Authentication\BackendUserAuthentication::class)) {
+            return;
+        }
+
+        $beUser = GeneralUtility::makeInstance(
+            \TYPO3\CMS\Core\Authentication\BackendUserAuthentication::class,
+        );
+        $beUser->user = [
+            'uid' => 1,
+            'username' => '_goals_ac',
+            'admin' => 1,
+            'workspace_id' => 0,
+            'lang' => 'default',
+        ];
+        if (property_exists($beUser, 'workspace')) {
+            $beUser->workspace = 0;
+        }
+        $GLOBALS['BE_USER'] = $beUser;
+        $this->initLanguageServiceIfMissing($beUser);
+    }
+
+    private function initLanguageServiceIfMissing(object $beUser): void
+    {
+        if (isset($GLOBALS['LANG']) && is_object($GLOBALS['LANG'])) {
+            return;
+        }
+
+        if (!class_exists(\TYPO3\CMS\Core\Localization\LanguageServiceFactory::class)) {
+            return;
+        }
+
+        try {
+            $factory = GeneralUtility::makeInstance(
+                \TYPO3\CMS\Core\Localization\LanguageServiceFactory::class,
+            );
+            if (method_exists($factory, 'createFromUserPreferences')) {
+                $GLOBALS['LANG'] = $factory->createFromUserPreferences($beUser);
+            } elseif (method_exists($factory, 'create')) {
+                $GLOBALS['LANG'] = $factory->create('default');
+            }
+        } catch (\Throwable) {
+            // DataHandler can proceed; some error paths need LANG only.
+        }
     }
 
     private function sanitizeContent(string $content): string
@@ -707,6 +822,7 @@ final class ContentPublisher
             'deleted' => 0,
         ])->fetchAssociative();
 
+        $this->initBackendUserForDataHandler();
         $dataHandler->start([], []);
         if ($existing !== false) {
             $contentUid = (int)$existing['uid'];
