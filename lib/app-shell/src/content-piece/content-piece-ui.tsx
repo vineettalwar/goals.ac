@@ -71,7 +71,12 @@ const TOOLBAR_BTN_GHOST =
   "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary disabled:opacity-50";
 
 function pieceDraftKey(piece: ContentPieceDetail): string {
-  return `${piece.id}:${piece.title}:${piece.bodyMarkdown ?? ""}:${piece.plannedDate ?? ""}`;
+  return `${piece.id}:${piece.title}:${piece.bodyMarkdown ?? ""}:${piece.status}:${piece.plannedDate ?? ""}`;
+}
+
+/** Edit-time status options only — never published (published pieces are not editable). */
+function editableStatusDraft(status: string): "draft" | "ready" {
+  return status === "ready" ? "ready" : "draft";
 }
 
 type EditorState = {
@@ -80,6 +85,7 @@ type EditorState = {
   copied: boolean;
   titleDraft: string;
   bodyDraft: string;
+  statusDraft: "draft" | "ready";
   plannedDateDraft: string;
   draftKey: string;
 };
@@ -90,6 +96,7 @@ type EditorAction =
   | { type: "toggle_preview" }
   | { type: "set_title"; value: string }
   | { type: "set_body"; value: string }
+  | { type: "set_status"; value: "draft" | "ready" }
   | { type: "set_planned_date"; value: string }
   | { type: "cancel"; piece: ContentPieceDetail }
   | { type: "saved"; piece: ContentPieceDetail }
@@ -103,6 +110,7 @@ function createEditorState(piece: ContentPieceDetail): EditorState {
     copied: false,
     titleDraft: piece.title,
     bodyDraft: piece.bodyMarkdown ?? "",
+    statusDraft: editableStatusDraft(piece.status),
     plannedDateDraft: piece.plannedDate ?? "",
     draftKey: pieceDraftKey(piece),
   };
@@ -117,6 +125,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         ...state,
         titleDraft: action.piece.title,
         bodyDraft: action.piece.bodyMarkdown ?? "",
+        statusDraft: editableStatusDraft(action.piece.status),
         plannedDateDraft: action.piece.plannedDate ?? "",
         draftKey: nextKey,
       };
@@ -129,6 +138,8 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
       return { ...state, titleDraft: action.value };
     case "set_body":
       return { ...state, bodyDraft: action.value };
+    case "set_status":
+      return { ...state, statusDraft: action.value };
     case "set_planned_date":
       return { ...state, plannedDateDraft: action.value };
     case "cancel":
@@ -142,6 +153,7 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
           ...action.piece,
           title: state.titleDraft.trim() || action.piece.title,
           bodyMarkdown: state.bodyDraft,
+          status: state.statusDraft,
           plannedDate: state.plannedDateDraft.trim() || null,
         }),
       };
@@ -654,6 +666,7 @@ function ContentPieceBodyEditor({
 
 function ContentPieceAside({
   editing,
+  statusDraft,
   plannedDateDraft,
   piece,
   displayBody,
@@ -665,6 +678,7 @@ function ContentPieceAside({
   fetchDualScore,
   fetchBrief,
   renderLink,
+  onStatusChange,
   onPlannedDateChange,
   onEnhance,
   onPublish,
@@ -673,6 +687,7 @@ function ContentPieceAside({
   asideExtra,
 }: {
   editing: boolean;
+  statusDraft: "draft" | "ready";
   plannedDateDraft: string;
   piece: ContentPieceDetail;
   displayBody: string;
@@ -684,6 +699,7 @@ function ContentPieceAside({
   fetchDualScore?: (contentPieceId: number) => Promise<DualContentScore | null>;
   fetchBrief?: (briefId: number) => Promise<ContentBriefSummary | null>;
   renderLink: (props: ContentPieceLinkProps) => ReactNode;
+  onStatusChange: (value: "draft" | "ready") => void;
   onPlannedDateChange: (value: string) => void;
   onEnhance?: () => void | Promise<void>;
   onPublish?: () => void;
@@ -717,15 +733,31 @@ function ContentPieceAside({
       {asideExtra}
       {editing ? (
         <div className="paper-card space-y-3 rounded-xl p-4">
-          <label className="block space-y-1 text-xs">
-            <span className="font-medium text-muted-foreground">Planned date</span>
-            <input
-              type="date"
-              value={plannedDateDraft}
-              onChange={(event) => onPlannedDateChange(event.target.value)}
-              className="h-9 w-full rounded-lg border border-input bg-card px-2 text-sm"
-            />
-          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block space-y-1 text-xs">
+              <span className="font-medium text-muted-foreground">Status</span>
+              <select
+                value={statusDraft}
+                onChange={(event) =>
+                  onStatusChange(event.target.value === "ready" ? "ready" : "draft")
+                }
+                className="h-9 w-full rounded-lg border border-input bg-card px-2 text-sm capitalize"
+                aria-label="Status"
+              >
+                <option value="draft">Draft</option>
+                <option value="ready">Ready</option>
+              </select>
+            </label>
+            <label className="block space-y-1 text-xs">
+              <span className="font-medium text-muted-foreground">Planned date</span>
+              <input
+                type="date"
+                value={plannedDateDraft}
+                onChange={(event) => onPlannedDateChange(event.target.value)}
+                className="h-9 w-full rounded-lg border border-input bg-card px-2 text-sm"
+              />
+            </label>
+          </div>
         </div>
       ) : piece.plannedDate ? (
         <div className="paper-card rounded-xl p-4 text-sm">
