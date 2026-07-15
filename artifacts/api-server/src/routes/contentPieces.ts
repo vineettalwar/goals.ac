@@ -1641,7 +1641,7 @@ router.get(
 
       const stored = project.cmsIntegrations as CmsIntegrationCredentials;
       const decrypted = decryptCmsCredentials(stored);
-      res.json(maskCmsCredentials(decrypted));
+      res.json(maskCmsCredentials(decrypted, stored as Record<string, unknown>));
     } catch (err) {
       req.log.error({ err }, "Failed to get CMS integrations");
       res.status(500).json({ error: "Internal server error" });

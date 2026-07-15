@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Send, Eye, AlertTriangle, LayoutTemplate } from "lucide-react";
+import { Send, Eye, AlertTriangle, LayoutTemplate, Share2, Loader2 } from "lucide-react";
 import { sanitizeHtml } from "@/lib/security/sanitize-html";
 import { sanitizeJsonForDisplay } from "@/lib/security/json-ld";
 import { Button } from "@/components/ui/button";
@@ -47,6 +47,9 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
     displayWordCount,
     editing,
     cmsConnections,
+    canQueueSocial,
+    queueingSocial,
+    handleQueueSocial,
   } = p as {
     piece: {
       id?: number;
@@ -82,6 +85,9 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
     displayWordCount: number;
     editing: boolean;
     cmsConnections: unknown;
+    canQueueSocial?: boolean;
+    queueingSocial?: boolean;
+    handleQueueSocial?: () => void | Promise<void>;
   };
 
   const contentPieceId = typeof piece.id === "number" ? piece.id : null;
@@ -235,6 +241,24 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
             Connect a destination
           </Link>
         )}
+        {canQueueSocial && handleQueueSocial ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            size="sm"
+            onClick={() => void handleQueueSocial()}
+            disabled={queueingSocial || editing}
+            title="Create LinkedIn and X variants and open Social Hub"
+          >
+            {queueingSocial ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Share2 className="h-4 w-4" />
+            )}
+            {queueingSocial ? "Queuing…" : "Queue social"}
+          </Button>
+        ) : null}
       </div>
     </aside>
   );
