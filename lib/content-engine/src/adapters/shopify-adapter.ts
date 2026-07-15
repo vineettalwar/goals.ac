@@ -30,7 +30,7 @@ export const shopifyAdapter: CmsAdapter = {
     scheduling: false,
     updates: true,
     categories: false,
-    featuredImage: false,
+    featuredImage: true,
     schemaInjection: true,
     outputModes: getOutputModes("shopify").map((m) => m.value),
   },
@@ -47,6 +47,7 @@ export const shopifyAdapter: CmsAdapter = {
     const tags = contentTagsFromCanonical(content);
     const title = seoTitle(content, seo);
     const html = await markdownToHtml(content.markdown);
+    const featuredImageUrl = content.pieceMetadata?.featuredImageUrl?.trim() || undefined;
     const warnings: RenderResult["warnings"] = [];
 
     if (outputMode === "article_html") {
@@ -62,6 +63,7 @@ export const shopifyAdapter: CmsAdapter = {
             seoTitle: seo.seoTitle ?? content.meta.title,
           },
           tags,
+          featuredImageUrl,
         },
         warnings,
         previewHtml: html,
@@ -84,6 +86,7 @@ export const shopifyAdapter: CmsAdapter = {
             seoTitle: seo.seoTitle ?? content.meta.title,
           },
           tags,
+          featuredImageUrl,
         },
         warnings,
         previewHtml: html,
@@ -106,6 +109,7 @@ export const shopifyAdapter: CmsAdapter = {
           seoTitle: seo.seoTitle ?? content.meta.title,
         },
         tags,
+        featuredImageUrl,
       },
       warnings,
       previewHtml: html,
@@ -175,6 +179,8 @@ export const shopifyAdapter: CmsAdapter = {
       status === "publish" ? "published" : "draft",
       payload.meta?.description,
       tags,
+      payload.featuredImageUrl,
+      payload.title,
     );
     return { url: result.url, remoteId: result.articleId };
   },

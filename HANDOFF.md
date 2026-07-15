@@ -18,7 +18,7 @@
 | Workstream | Notes |
 |---|---|
 | Unify publish-destination registries | Prefer extending existing UI SSOT `lib/app-shell/src/integrations/destination-ids.ts` + Next composition — avoid a third parallel rewrite |
-| ~~Consolidate CMS/ESP connect dialogs~~ | **Done.** One `SchemaConnectDialog` + per-platform configs. 1333+396 → 340+113 LOC (74% reduction). All named exports preserved as thin wrappers. |
+| ~~Consolidate CMS/ESP connect dialogs~~ | **Done.** One `SchemaConnectDialog` + per-platform configs. 1333+396 → 592+142 LOC (57% reduction). All named exports preserved as thin wrappers. |
 | Shopify featured | data-URI / HTTPS featured (same pattern as WP/Ghost) |
 | Bluesky durable JWK | Persist JWK for OAuth continuity |
 

@@ -131,6 +131,8 @@ export type PlatformPayload =
       handle?: string;
       meta?: Record<string, string>;
       tags?: string[];
+      /** https or data:image/png|jpeg — staged upload then ArticleCreateInput.image */
+      featuredImageUrl?: string;
     };
 
 export interface PublishOpts {
