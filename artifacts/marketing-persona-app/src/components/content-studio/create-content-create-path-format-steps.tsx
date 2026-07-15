@@ -32,6 +32,7 @@ import {
   WizardStep,
 } from "./create-content-modal-parts";
 import { FORMAT_META, FORMAT_CATEGORIES } from "./content-studio-format-data";
+import { cn } from "@/lib/utils";
 import type { WizardStepId } from "./create-content-modal-types";
 import type { CreateContentWizardProps } from "./create-content-wizard-props";
 export function CreateContentCreatePathFormatSteps({ currentStep, wizard }: { currentStep: WizardStepId; wizard: CreateContentWizardProps }) {
