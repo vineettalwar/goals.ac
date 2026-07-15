@@ -36,7 +36,7 @@ Ponytail **safe-delete runway is not exhausted.** Morning cuts were real; a seco
 | ~−117 | `delete` | `VideoDemoSection` never mounted | `…/marketing/sections/video-demo-section.tsx` |
 | ~−68 | `delete` | `BrandTailoringPanel` zero imports | `…/brand/brand-tailoring-panel.tsx` |
 | ~−78 | `delete` → **finished** | `useJobPoll` now drives generate + publish polls in `use-content-piece-data` | `goals-app-ui/src/hooks/use-job-poll.ts` |
-| −3 deps / ~−25 | `delete` | Unused Next deps: `@dnd-kit/core`, `@dnd-kit/utilities` (DnD in app-shell), `@radix-ui/react-separator` (+ orphan `ui/separator.tsx`) | `marketing-persona-app/package.json` |
+| −3 deps / ~−25 | `delete` | **Done 2026-07-16** — removed `@dnd-kit/*`, `@radix-ui/react-separator`, orphan `ui/separator.tsx` | `marketing-persona-app/package.json` |
 | ~−144 | `delete` | Dead helpers: `settings-types.ts`, `lib/utils/motion.ts`, `lib/billing/quota-checkout.ts`, `lib/format/date.ts`, AI re-export stubs, `marketing-section-surface.ts` | verify import-graph before each file |
 | ~−80–120 | `shrink` | Next `ContentExportPanel` / `StockByokPanel` near shell copies | prefer shell import |
 | ~−20 | `shrink` | Theme context split (product + marketing) | merge later |

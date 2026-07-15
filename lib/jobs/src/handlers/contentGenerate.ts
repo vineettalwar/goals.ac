@@ -131,6 +131,8 @@ async function generateExistingContentPiece(
       })
       .where(eq(contentPiecesTable.id, contentPieceId));
 
+    if (piece.briefId) await markBriefGenerated(piece.briefId);
+
     return {
       primaryPieceId: contentPieceId,
       variantPieceIds: [],
@@ -143,6 +145,14 @@ async function generateExistingContentPiece(
       .where(eq(contentPiecesTable.id, contentPieceId));
     throw err;
   }
+}
+
+/** Mirrors Next `markBriefGenerated` (content-pieces-helpers.ts) once real content lands. */
+async function markBriefGenerated(briefId: number): Promise<void> {
+  await db
+    .update(briefsTable)
+    .set({ status: "done", updatedAt: new Date() })
+    .where(eq(briefsTable.id, briefId));
 }
 
 async function failStuckContentPiece(contentPieceId: number | undefined): Promise<void> {
