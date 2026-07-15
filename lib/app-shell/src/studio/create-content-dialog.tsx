@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, FileText } from "lucide-react";
 import { STUDIO_FORMAT_OPTIONS, formatTypeLabel } from "./types";
 
@@ -10,16 +10,39 @@ export type CreateContentDraftInput = {
   plannedDate?: string | null;
   /** Optional pre-selected publish destination (shapes generation when supported). */
   intendedPublishPlatform?: string;
+  /** Optional competitor URL to differentiate against (SEO longform). */
+  competitorFocusUrl?: string;
 };
 
 export type CreateContentInitialValues = Partial<CreateContentDraftInput>;
 
-/** Compact create flow: format → keyword → review (+ planned date) → submit. */
-type CreateStepId = "format" | "keyword" | "review";
-
-const STEPS: CreateStepId[] = ["format", "keyword", "review"];
+/** Compact create flow: format → keyword → [competitors?] → review. */
+type CreateStepId = "format" | "keyword" | "competitors" | "review";
 
 const VALID_FORMATS = new Set(STUDIO_FORMAT_OPTIONS.map((option) => option.value));
+
+/** Mirrors `SEO_LONGFORM_FORMATS` in content-engine — no db type dependency here. */
+const SEO_LONGFORM_FORMATS = new Set([
+  "blog_post",
+  "guide",
+  "tutorial",
+  "pillar_page",
+  "whitepaper",
+  "faq_article",
+  "news_article",
+  "location_page",
+]);
+
+function isSeoLongform(formatType: string): boolean {
+  return SEO_LONGFORM_FORMATS.has(formatType);
+}
+
+function buildSteps(formatType: string): CreateStepId[] {
+  const steps: CreateStepId[] = ["format", "keyword"];
+  if (isSeoLongform(formatType)) steps.push("competitors");
+  steps.push("review");
+  return steps;
+}
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
@@ -57,6 +80,9 @@ export function CreateContentDialog({
   const [angleHint, setAngleHint] = useState("");
   const [plannedDate, setPlannedDate] = useState("");
   const [intendedPublishPlatform, setIntendedPublishPlatform] = useState<string | undefined>();
+  const [competitorFocusUrl, setCompetitorFocusUrl] = useState("");
+
+  const steps = useMemo(() => buildSteps(formatType), [formatType]);
 
   useEffect(() => {
     if (!open) {
@@ -67,6 +93,7 @@ export function CreateContentDialog({
       setAngleHint("");
       setPlannedDate("");
       setIntendedPublishPlatform(undefined);
+      setCompetitorFocusUrl("");
       return;
     }
 
@@ -81,12 +108,19 @@ export function CreateContentDialog({
     setAngleHint(initialValues?.angleHint?.trim() ?? "");
     setPlannedDate(initialValues?.plannedDate?.trim() || "");
     setIntendedPublishPlatform(initialValues?.intendedPublishPlatform?.trim() || undefined);
+    setCompetitorFocusUrl(initialValues?.competitorFocusUrl?.trim() ?? "");
   }, [open, initialValues]);
+
+  // Clamp step when format change shrinks the sequence (e.g. leave SEO longform).
+  useEffect(() => {
+    setStepIndex((i) => Math.min(i, steps.length - 1));
+  }, [steps.length]);
 
   if (!open) return null;
 
-  const currentStep = STEPS[Math.min(stepIndex, STEPS.length - 1)] ?? "format";
-  const progress = ((stepIndex + 1) / STEPS.length) * 100;
+  const currentStep = steps[Math.min(stepIndex, steps.length - 1)] ?? "format";
+  const progress = ((stepIndex + 1) / steps.length) * 100;
+  const isLinkedIn = formatType === "linkedin_post";
 
   function goBack() {
     if (submitting || stepIndex <= 0) return;
@@ -102,6 +136,10 @@ export function CreateContentDialog({
     if (currentStep === "keyword") {
       if (!targetKeyword.trim()) return;
       setStepIndex(2);
+      return;
+    }
+    if (currentStep === "competitors") {
+      setStepIndex((i) => Math.min(i + 1, steps.length - 1));
     }
   }
 
@@ -116,6 +154,10 @@ export function CreateContentDialog({
       angleHint: angleHint.trim() || undefined,
       plannedDate: plannedDate.trim() || null,
       intendedPublishPlatform: intendedPublishPlatform || undefined,
+      competitorFocusUrl:
+        isSeoLongform(formatType) && competitorFocusUrl.trim()
+          ? competitorFocusUrl.trim()
+          : undefined,
     });
   }
 
@@ -123,15 +165,23 @@ export function CreateContentDialog({
     currentStep === "format"
       ? "Choose a format"
       : currentStep === "keyword"
-        ? "Keyword & angle"
-        : "Schedule & review";
+        ? isLinkedIn
+          ? "Keyword & hook"
+          : "Keyword & angle"
+        : currentStep === "competitors"
+          ? "Competitor focus"
+          : "Schedule & review";
 
   const stepSubtitle =
     currentStep === "format"
       ? "Pick the content type — we tailor structure and length to match."
       : currentStep === "keyword"
-        ? "Target keyword is required. Angle and title are optional."
-        : "Optional date for the calendar, then confirm and generate.";
+        ? isLinkedIn
+          ? "Target keyword is required. Hook or archetype is optional."
+          : "Target keyword is required. Angle and title are optional."
+        : currentStep === "competitors"
+          ? "Optional — paste a competitor URL to differentiate against for this piece."
+          : "Optional date for the calendar, then confirm and generate.";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -169,7 +219,7 @@ export function CreateContentDialog({
             ) : null}
           </div>
           <p className="text-xs tabular-nums text-muted-foreground">
-            Step {stepIndex + 1} of {STEPS.length}
+            Step {stepIndex + 1} of {steps.length}
           </p>
           <div className="min-w-[72px]" />
         </header>
@@ -228,14 +278,18 @@ export function CreateContentDialog({
 
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">
-                  Angle / hint{" "}
+                  {isLinkedIn ? "Hook / archetype" : "Angle / hint"}{" "}
                   <span className="font-normal text-muted-foreground">(optional)</span>
                 </span>
                 <textarea
                   rows={2}
                   value={angleHint}
                   onChange={(event) => setAngleHint(event.target.value)}
-                  placeholder="Tone, audience, or angle for the AI…"
+                  placeholder={
+                    isLinkedIn
+                      ? "e.g. hot take · bold question opener · founder story…"
+                      : "Tone, audience, or angle for the AI…"
+                  }
                   className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm"
                 />
               </label>
@@ -252,6 +306,34 @@ export function CreateContentDialog({
                   className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm"
                 />
               </label>
+            </div>
+          ) : null}
+
+          {currentStep === "competitors" ? (
+            <div className="mt-4 space-y-3.5">
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium">
+                  Competitor focus URL{" "}
+                  <span className="font-normal text-muted-foreground">(optional)</span>
+                </span>
+                <input
+                  type="url"
+                  autoFocus
+                  value={competitorFocusUrl}
+                  onChange={(event) => setCompetitorFocusUrl(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      goNext();
+                    }
+                  }}
+                  placeholder="https://competitor.example.com"
+                  className="h-10 w-full rounded-lg border border-input bg-card px-3 text-sm"
+                />
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Skip if you want generic differentiation from project competitors.
+              </p>
             </div>
           ) : null}
 
@@ -276,7 +358,13 @@ export function CreateContentDialog({
                 <ReviewRow label="Keyword" value={targetKeyword.trim() || "—"} />
                 {title.trim() ? <ReviewRow label="Title" value={title.trim()} /> : null}
                 {angleHint.trim() ? (
-                  <ReviewRow label="Angle" value={angleHint.trim()} />
+                  <ReviewRow
+                    label={isLinkedIn ? "Hook" : "Angle"}
+                    value={angleHint.trim()}
+                  />
+                ) : null}
+                {competitorFocusUrl.trim() ? (
+                  <ReviewRow label="Competitor" value={competitorFocusUrl.trim()} />
                 ) : null}
                 {plannedDate.trim() ? (
                   <ReviewRow label="Planned date" value={plannedDate.trim()} />
@@ -318,7 +406,7 @@ export function CreateContentDialog({
               }
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              Next
+              {currentStep === "competitors" ? "Continue" : "Next"}
             </button>
           )}
         </footer>

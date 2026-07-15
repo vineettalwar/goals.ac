@@ -18,6 +18,7 @@ type CreateGeneratePayload = {
   angleHint?: string;
   plannedDate?: string;
   intendedPublishPlatform?: string;
+  competitorFocusUrl?: string;
 };
 
 function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGeneratePayload {
@@ -31,6 +32,8 @@ function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGener
   if (planned) payload.plannedDate = planned;
   const platform = input.intendedPublishPlatform?.trim();
   if (platform) payload.intendedPublishPlatform = platform;
+  const competitor = input.competitorFocusUrl?.trim();
+  if (competitor) payload.competitorFocusUrl = competitor;
   return payload;
 }
 

@@ -1,5 +1,14 @@
 # Session Handoff
 
+## Content polish batch (2026-07-16)
+
+- **Visual summary** — markdown callout inject + `pieceMetadata.visualSummaryMarkdown` (`infographic-template` / SEO finalize); piece aside renders when present
+- **Queue social + Meta** — defaults LinkedIn+X; if Meta connected → Facebook; Instagram only when article has image (`selectQueueSocialPlatforms`)
+- **Internal links chip** — Autopilot activity panel: suggestion count → `/internal-links`, or “No link map yet”
+- **Shell create** — still pending vs Next: no competitor URLs / LinkedIn archetype+hook fields (`CreateContentDialog` = format → keyword → review only)
+
+---
+
 ## Demo landmine + autopilot surface (2026-07-15)
 
 - Shopify theme-snippet soft preflight on publish + publishing settings
