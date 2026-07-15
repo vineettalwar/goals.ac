@@ -24,11 +24,15 @@ export type ContentPieceMetadata = {
   jsonLdSchema?: object | null;
   internalLinkSuggestions?: { anchorText: string; suggestedSlug: string }[];
   images?: ContentPieceImageRef[];
+  humanized?: boolean;
   humanizationAudit?: {
     slopScoreBefore?: number;
     slopScoreAfter?: number;
     rejected?: boolean;
   };
+  intendedOutputMode?: string | null;
+  intendedEditorMode?: string | null;
+  intendedPublishPlatform?: string | null;
 };
 
 export type ContentPieceDetail = {
@@ -73,9 +77,8 @@ export function formatContentPieceUpdatedAt(value: number | string | undefined):
   });
 }
 
-/** SPA studio list back link (not the Next.js project-scoped content studio route). */
 export function contentStudioBackHref(projectId: number | string): string {
-  return `/studio?project=${projectId}`;
+  return `/projects/${projectId}/content-studio`;
 }
 
 export function contentPieceCanPublish(status: string): boolean {

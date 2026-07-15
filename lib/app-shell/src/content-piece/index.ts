@@ -3,7 +3,8 @@ export {
   ContentPieceView,
   type ContentPieceLinkProps,
 } from "./content-piece-ui";
-export { ContentPiecePublishDialog } from "./publish-dialog";
+export { ContentPiecePublishDialog, type RenderPreviewResult } from "./publish-dialog";
+export { ContentExportPanel, type ContentExportPlatform } from "./content-export-panel";
 export { ContentPieceRepurposeDialog } from "./repurpose-dialog";
 export { ContentPieceFeaturedImage } from "./content-featured-image";
 export {
@@ -31,3 +32,4 @@ export {
   type ContentPieceMetadata,
   type ContentPiecePublishingState,
 } from "./types";
+export { sanitizePreviewHtml } from "./sanitize-preview-html";

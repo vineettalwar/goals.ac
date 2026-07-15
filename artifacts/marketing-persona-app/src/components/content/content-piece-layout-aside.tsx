@@ -35,6 +35,7 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
     cmsConnections,
   } = p as {
     piece: {
+      websiteProjectId?: string | number;
       pieceMetadata?: Record<string, unknown>;
       targetKeyword?: string;
     };
@@ -93,6 +94,7 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
           jsonLdSchema={piece.pieceMetadata?.jsonLdSchema as object | null | undefined}
           internalLinkSuggestions={piece.pieceMetadata?.internalLinkSuggestions as { anchorText: string; suggestedSlug: string }[] | undefined}
           wordCount={displayWordCount}
+          contentPieceId={piece.id}
           canEnhance={canEnhance}
           enhancing={enhancing}
           onEnhance={handleEnhance}
@@ -169,7 +171,14 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
           </div>
         )}
         {connectedDestinations.length === 0 && (
-          <Link href="/integrations" className="block text-xs text-primary hover:underline">
+          <Link
+            href={
+              piece.websiteProjectId
+                ? `/projects/${piece.websiteProjectId}/integrations`
+                : "/integrations"
+            }
+            className="block text-xs text-primary hover:underline"
+          >
             Connect a destination
           </Link>
         )}

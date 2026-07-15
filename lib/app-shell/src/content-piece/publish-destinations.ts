@@ -30,7 +30,9 @@ export type PublishDestinationId =
   | "linkedin"
   | "twitter"
   | "instagram"
-  | "facebook";
+  | "facebook"
+  | "medium"
+  | "substack";
 
 export type ConnectionMethod = "api" | "plugin" | "oauth";
 
@@ -39,7 +41,7 @@ export type CmsConnectionSnapshot = Record<string, unknown>;
 export interface PublishDestinationDefinition {
   id: PublishDestinationId;
   label: string;
-  category: "cms" | "social";
+  category: "cms" | "social" | "export";
   integrationKey: string;
   description: string;
   connectionMethods: ConnectionMethod[];
@@ -47,6 +49,8 @@ export interface PublishDestinationDefinition {
   isConnected: (connections: CmsConnectionSnapshot) => boolean;
   matchesFormat: (format: ContentFormatType) => boolean;
   hideSettingsCard?: boolean;
+  /** Copy/download only — no server publish API. */
+  exportOnly?: boolean;
 }
 
 const SOCIAL_FORMAT_DESTINATION: Partial<
@@ -230,6 +234,32 @@ const PUBLISHING_DESTINATIONS: PublishDestinationDefinition[] = [
     isConnected: hasMeta,
     matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === "facebook",
   },
+  {
+    id: "medium",
+    label: "Medium",
+    category: "export",
+    integrationKey: "medium",
+    description: "Export markdown for Medium (no publish API).",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "Manual export" },
+    isConnected: () => true,
+    matchesFormat: matchesLongForm,
+    exportOnly: true,
+    hideSettingsCard: true,
+  },
+  {
+    id: "substack",
+    label: "Substack",
+    category: "export",
+    integrationKey: "substack",
+    description: "Export markdown for Substack (no public write API).",
+    connectionMethods: ["api"],
+    connectionMethodLabels: { api: "Manual export" },
+    isConnected: () => true,
+    matchesFormat: matchesLongForm,
+    exportOnly: true,
+    hideSettingsCard: true,
+  },
 ];
 
 function getDestinationsForFormat(format: ContentFormatType): PublishDestinationDefinition[] {
@@ -240,7 +270,9 @@ export function getConnectedDestinationsForFormat(
   format: ContentFormatType,
   connections: CmsConnectionSnapshot,
 ): PublishDestinationDefinition[] {
-  return getDestinationsForFormat(format).filter((d) => d.isConnected(connections));
+  return getDestinationsForFormat(format).filter(
+    (d) => d.exportOnly || d.isConnected(connections),
+  );
 }
 
 function getDefaultConnectionMethod(cmsId: PublishDestinationId): ConnectionMethod {

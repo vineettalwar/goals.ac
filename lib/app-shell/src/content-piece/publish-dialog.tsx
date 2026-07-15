@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { AlertCircle, Loader2, Send, X } from "lucide-react";
+import { AlertCircle, Eye, Loader2, Send, X } from "lucide-react";
+import { ContentExportPanel } from "./content-export-panel";
 import {
   getConnectedDestinationsForFormat,
   getConnectionSummary,
@@ -7,6 +8,14 @@ import {
   type ContentFormatType,
   type PublishDestinationId,
 } from "./publish-destinations";
+import { sanitizePreviewHtml } from "./sanitize-preview-html";
+
+export type RenderPreviewResult = {
+  payloadKind?: string;
+  previewHtml?: string | null;
+  previewJson?: unknown;
+  warnings?: Array<{ code?: string; message: string }>;
+};
 
 export function ContentPiecePublishDialog({
   open,
@@ -14,6 +23,9 @@ export function ContentPiecePublishDialog({
   formatType,
   loadConnections,
   onPublish,
+  onRenderPreview,
+  pieceTitle,
+  pieceBodyMarkdown,
   publishing = false,
   integrationsHref,
 }: {
@@ -22,6 +34,9 @@ export function ContentPiecePublishDialog({
   formatType: string;
   loadConnections: () => Promise<CmsConnectionSnapshot>;
   onPublish: (platform: PublishDestinationId) => void | Promise<void>;
+  onRenderPreview?: (platform: PublishDestinationId) => Promise<RenderPreviewResult>;
+  pieceTitle?: string | null;
+  pieceBodyMarkdown?: string | null;
   publishing?: boolean;
   /** Link target when no CMS destinations are connected (e.g. /integrations). */
   integrationsHref?: string;
@@ -32,6 +47,9 @@ export function ContentPiecePublishDialog({
   const [loadError, setLoadError] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
   const [platformInitialized, setPlatformInitialized] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<RenderPreviewResult | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -39,6 +57,8 @@ export function ContentPiecePublishDialog({
       setLoadError(null);
       setPublishError(null);
       setPlatformInitialized(false);
+      setPreview(null);
+      setPreviewError(null);
       return;
     }
 
@@ -76,20 +96,38 @@ export function ContentPiecePublishDialog({
   if (!open) return null;
 
   const selectedDestination = availableDestinations.find((d) => d.id === platform);
-  const hasConnections = availableDestinations.length > 0;
+  const isExportOnly = Boolean(selectedDestination?.exportOnly);
+  const hasPublishable =
+    availableDestinations.some((d) => !d.exportOnly) || availableDestinations.length > 0;
   const gridCols =
     availableDestinations.length <= 1
       ? "grid-cols-1"
       : availableDestinations.length === 2
-        ? "grid-cols-2"
-        : "grid-cols-3";
+        ? "grid-cols-1 sm:grid-cols-2"
+        : "grid-cols-1 sm:grid-cols-2";
 
   async function handlePublish() {
+    if (isExportOnly) return;
     setPublishError(null);
     try {
       await onPublish(platform);
     } catch (err) {
       setPublishError(err instanceof Error ? err.message : "Failed to publish");
+    }
+  }
+
+  async function handlePreview() {
+    if (!onRenderPreview || isExportOnly) return;
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const result = await onRenderPreview(platform);
+      setPreview(result);
+    } catch (err) {
+      setPreview(null);
+      setPreviewError(err instanceof Error ? err.message : "Failed to render preview");
+    } finally {
+      setPreviewLoading(false);
     }
   }
 
@@ -105,7 +143,7 @@ export function ContentPiecePublishDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="publish-content-title"
-        className="paper-card relative z-10 w-full max-w-lg p-6 shadow-lg"
+        className="paper-card relative z-10 max-h-[90vh] w-full max-w-lg overflow-y-auto p-6 shadow-lg"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -136,7 +174,7 @@ export function ContentPiecePublishDialog({
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <span>{loadError}</span>
             </div>
-          ) : !hasConnections ? (
+          ) : !hasPublishable ? (
             <div className="space-y-2 rounded-lg border border-border bg-muted/40 px-4 py-6 text-center text-sm">
               <p className="font-medium text-foreground">No destinations connected</p>
               <p className="text-muted-foreground">
@@ -163,6 +201,8 @@ export function ContentPiecePublishDialog({
                       onClick={() => {
                         setPlatform(dest.id);
                         setPublishError(null);
+                        setPreview(null);
+                        setPreviewError(null);
                       }}
                       disabled={publishing}
                       className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-hidden disabled:opacity-50 ${
@@ -172,19 +212,22 @@ export function ContentPiecePublishDialog({
                       }`}
                     >
                       {dest.label}
+                      {dest.exportOnly ? (
+                        <span className="ml-1 text-[10px] font-normal opacity-70">export</span>
+                      ) : null}
                     </button>
                   ))}
                 </div>
               </div>
 
-              {selectedDestination && connections ? (
+              {selectedDestination && connections && !isExportOnly ? (
                 <div className="space-y-1 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm">
                   <p className="font-medium text-foreground">
                     Connected {selectedDestination.label}
                   </p>
                   {getConnectionSummary(platform, connections) ? (
                     <p className="text-muted-foreground">
-                      <code className="rounded bg-muted px-1 text-xs break-all">
+                      <code className="break-all rounded bg-muted px-1 text-xs">
                         {getConnectionSummary(platform, connections)}
                       </code>
                     </p>
@@ -195,6 +238,70 @@ export function ContentPiecePublishDialog({
                 </div>
               ) : null}
 
+              {isExportOnly && (platform === "medium" || platform === "substack") ? (
+                <ContentExportPanel
+                  platform={platform}
+                  title={pieceTitle}
+                  bodyMarkdown={pieceBodyMarkdown}
+                />
+              ) : null}
+
+              {!isExportOnly && onRenderPreview ? (
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={() => void handlePreview()}
+                    disabled={publishing || previewLoading}
+                    className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+                  >
+                    {previewLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <Eye className="h-4 w-4" aria-hidden />
+                    )}
+                    {previewLoading ? "Rendering preview…" : "Preview CMS output"}
+                  </button>
+                  {previewError ? (
+                    <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                      <span>{previewError}</span>
+                    </div>
+                  ) : null}
+                  {preview ? (
+                    <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
+                      {preview.payloadKind ? (
+                        <p className="text-xs text-muted-foreground">
+                          Destination format:{" "}
+                          <span className="font-medium text-foreground">{preview.payloadKind}</span>
+                        </p>
+                      ) : null}
+                      {preview.warnings && preview.warnings.length > 0 ? (
+                        <ul className="space-y-1 text-xs text-amber-700">
+                          {preview.warnings.map((warning) => (
+                            <li key={`${warning.code ?? ""}:${warning.message}`}>
+                              {warning.message}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                      {preview.previewHtml ? (
+                        <div
+                          className="prose prose-sm max-h-56 max-w-none overflow-auto rounded-md border border-border bg-background p-3"
+                          dangerouslySetInnerHTML={{
+                            __html: sanitizePreviewHtml(preview.previewHtml),
+                          }}
+                        />
+                      ) : null}
+                      {!preview.previewHtml && preview.previewJson != null ? (
+                        <pre className="max-h-56 overflow-auto rounded-md border border-border bg-background p-3 text-xs whitespace-pre-wrap">
+                          {JSON.stringify(preview.previewJson, null, 2)}
+                        </pre>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
               {publishError ? (
                 <div className="flex items-start gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
@@ -202,34 +309,46 @@ export function ContentPiecePublishDialog({
                 </div>
               ) : null}
 
-              <div className="flex items-center gap-3 pt-1">
-                <button
-                  type="button"
-                  onClick={() => void handlePublish()}
-                  disabled={!hasConnections || publishing}
-                  className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                >
-                  {publishing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                      Publishing…
-                    </>
-                  ) : (
-                    <>
-                      <Send className="h-4 w-4" aria-hidden />
-                      Publish to {selectedDestination?.label ?? "destination"}
-                    </>
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={onClose}
-                  disabled={publishing}
-                  className="inline-flex h-10 items-center rounded-lg border border-input bg-card px-4 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </div>
+              {!isExportOnly ? (
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => void handlePublish()}
+                    disabled={!selectedDestination || publishing}
+                    className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+                  >
+                    {publishing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                        Publishing…
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4" aria-hidden />
+                        Publish to {selectedDestination?.label ?? "destination"}
+                      </>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    disabled={publishing}
+                    className="inline-flex h-10 items-center rounded-lg border border-input bg-card px-4 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="inline-flex h-10 items-center rounded-lg border border-input bg-card px-4 text-sm font-medium hover:bg-secondary"
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

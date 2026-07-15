@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Send, Copy, Check, RefreshCw, Save, Pencil, Trash2, CheckCircle2, FileCode2, TrendingUp, Eye, Shuffle, ImageIcon, AlertTriangle, LayoutTemplate, Sparkles } from "lucide-react";
+import { ArrowLeft, Send, Copy, Check, RefreshCw, Save, Pencil, PenLine, Trash2, CheckCircle2, FileCode2, TrendingUp, Eye, Shuffle, ImageIcon, AlertTriangle, LayoutTemplate } from "lucide-react";
 import { sanitizeHtml } from "@/lib/security/sanitize-html";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -175,8 +175,8 @@ export function ContentPieceLayout(p: any) {
                     disabled={humanizing || regenerating || enhancing}
                     title="Rewrite for natural human rhythm without full regeneration"
                   >
-                    <Sparkles className={cn("h-3.5 w-3.5", humanizing && "animate-pulse")} />
-                    {humanizing ? "Humanizing…" : "Re-humanize"}
+                    <PenLine className={cn("h-3.5 w-3.5", humanizing && "animate-pulse")} />
+                    {humanizing ? "Humanizing…" : "Humanize"}
                   </Button>
                 )}
                 {piece.status === "draft" && (

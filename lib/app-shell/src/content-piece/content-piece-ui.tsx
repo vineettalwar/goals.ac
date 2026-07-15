@@ -8,11 +8,12 @@ import {
   FileCode2,
   Loader2,
   Pencil,
+  PenLine,
   RefreshCw,
   Save,
   Shuffle,
-  Sparkles,
   Trash2,
+  TrendingUp,
   Upload,
   X,
 } from "lucide-react";
@@ -32,7 +33,6 @@ import {
   contentPieceSupportsStockImages,
   contentStudioBackHref,
   formatContentFormatType,
-  formatContentPieceUpdatedAt,
   type ContentPieceDetail,
   type ContentPieceGeneratingState,
   type ContentPiecePublishingState,
@@ -122,9 +122,13 @@ export function ContentPieceView({
   regeneratingImages = false,
   staleGenerating = false,
   onResetGeneration,
+  fetchDualScore,
 }: {
   piece: ContentPieceDetail;
   renderLink: (props: ContentPieceLinkProps) => ReactNode;
+  fetchDualScore?: (
+    contentPieceId: number,
+  ) => Promise<import("./content-quality-panel").DualContentScore | null>;
   onGenerate?: () => void;
   generating?: boolean;
   generatingState?: ContentPieceGeneratingState | null;
@@ -176,7 +180,8 @@ export function ContentPieceView({
   const formatLabel = formatContentFormatType(piece.formatType);
   const displayBody = editing ? bodyDraft : (piece.bodyMarkdown ?? "");
   const body = displayBody.trim();
-  const showGenerate = contentPieceCanGenerate(piece.status) && onGenerate;
+  const showGenerate =
+    !body && contentPieceCanGenerate(piece.status) && Boolean(onGenerate);
   const showPublish = contentPieceCanPublish(piece.status) && onPublish;
   const showEdit = contentPieceCanEdit(piece.status) && onSave;
   const showHumanize =
@@ -200,6 +205,12 @@ export function ContentPieceView({
   const showMarkReady =
     contentPieceCanMarkReady(piece.status, piece.bodyMarkdown) && onMarkReady;
   const showDelete = contentPieceCanDelete(piece.status) && onDelete;
+  const toolbarBtn =
+    "inline-flex h-8 items-center gap-1.5 rounded-lg border border-input bg-card px-2.5 text-sm font-medium hover:bg-secondary disabled:opacity-50";
+  const toolbarBtnPrimary =
+    "inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50";
+  const toolbarBtnGhost =
+    "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary disabled:opacity-50";
   const actionMessage =
     generateMessage ??
     publishMessage ??
@@ -253,25 +264,28 @@ export function ContentPieceView({
     window.setTimeout(() => setCopied(false), 2000);
   }
 
-  return (
-    <div className="mx-auto max-w-7xl space-y-6 px-6 py-6 lg:px-8 lg:py-8">
-      <PieceLink
-        renderLink={renderLink}
-        href={contentStudioBackHref(piece.websiteProjectId)}
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden />
-        Content studio
-      </PieceLink>
+  const wordCount = (editing ? bodyDraft : (piece.bodyMarkdown ?? ""))
+    .split(/\s+/)
+    .filter(Boolean).length;
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
+  return (
+    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+      <div className="mb-2 flex items-start gap-3">
+        <PieceLink
+          renderLink={renderLink}
+          href={contentStudioBackHref(piece.websiteProjectId)}
+          className="mt-1 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden />
+          <span className="sr-only">Content studio</span>
+        </PieceLink>
         <div className="min-w-0 flex-1">
           {editing ? (
             <input
               type="text"
               value={titleDraft}
               onChange={(event) => setTitleDraft(event.target.value)}
-              className="w-full rounded-lg border border-input bg-card px-3 py-2 text-2xl font-bold leading-tight tracking-tight lg:text-3xl"
+              className="w-full border-b border-border bg-transparent pb-2 text-2xl font-bold leading-tight tracking-tight focus:outline-hidden lg:text-3xl"
               aria-label="Content title"
             />
           ) : (
@@ -279,200 +293,28 @@ export function ContentPieceView({
               {piece.title}
             </h1>
           )}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
+          <div className="mt-2 flex flex-wrap items-center gap-2">
             <MetaBadge>{formatLabel}</MetaBadge>
             {piece.targetKeyword ? <MetaBadge>{piece.targetKeyword}</MetaBadge> : null}
             <span className="text-xs text-muted-foreground">
-              {(editing ? bodyDraft : piece.bodyMarkdown ?? "")
-                .split(/\s+/)
-                .filter(Boolean).length.toLocaleString()}{" "}
-              words
+              {wordCount.toLocaleString()} words
             </span>
             <StatusBadge status={piece.status} />
-            {piece.plannedDate ? (
-              <span className="text-xs text-muted-foreground">Scheduled {piece.plannedDate}</span>
+            {piece.pieceMetadata?.humanized ? (
+              <MetaBadge>Humanized</MetaBadge>
             ) : null}
-            <span className="text-xs text-muted-foreground">
-              Updated {formatContentPieceUpdatedAt(piece.updatedAt)}
-            </span>
-            {humanizationAudit?.slopScoreAfter != null ? (
+            {piece.plannedDate && !editing ? (
+              <span className="text-xs text-muted-foreground">Planned {piece.plannedDate}</span>
+            ) : null}
+            {humanizationAudit && !humanizationAudit.rejected ? (
               <span className="text-xs text-muted-foreground">
                 AI tells {humanizationAudit.slopScoreBefore ?? "?"} →{" "}
-                {humanizationAudit.slopScoreAfter}
+                {humanizationAudit.slopScoreAfter ?? "?"}
               </span>
+            ) : humanizationAudit?.rejected ? (
+              <span className="text-xs text-muted-foreground">Humanization skipped</span>
             ) : null}
           </div>
-        </div>
-
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {body ? (
-            <button
-              type="button"
-              disabled={busy || editing}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-              onClick={() => void handleCopy()}
-            >
-              {copied ? (
-                <Check className="h-4 w-4 text-emerald-600" aria-hidden />
-              ) : (
-                <Copy className="h-4 w-4" aria-hidden />
-              )}
-              {copied ? "Copied" : "Copy"}
-            </button>
-          ) : null}
-          {body && onRepurpose ? (
-            <button
-              type="button"
-              disabled={busy || editing}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-              onClick={onRepurpose}
-            >
-              <Shuffle className="h-4 w-4" aria-hidden />
-              Repurpose
-            </button>
-          ) : null}
-          {showMarkReady ? (
-            <button
-              type="button"
-              onClick={() => void onMarkReady?.()}
-              disabled={busy || editing}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-            >
-              {markingReady ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <CheckCircle2 className="h-4 w-4" aria-hidden />
-              )}
-              Mark ready
-            </button>
-          ) : null}
-          {showRepurpose ? (
-            <button
-              type="button"
-              onClick={onRepurpose}
-              disabled={busy || editing}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-            >
-              <Shuffle className="h-4 w-4" aria-hidden />
-              Repurpose
-            </button>
-          ) : null}
-          {showRegenerate ? (
-            <button
-              type="button"
-              onClick={() => void onRegenerate?.()}
-              disabled={busy || editing}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-            >
-              {regenerating ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <RefreshCw className="h-4 w-4" aria-hidden />
-              )}
-              {regenerating ? "Regenerating…" : "Regenerate"}
-            </button>
-          ) : null}
-          {showEdit ? (
-            editing ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => void handleSave()}
-                  disabled={busy || !titleDraft.trim()}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-                >
-                  {saving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Save className="h-4 w-4" aria-hidden />
-                  )}
-                  {saving ? "Saving…" : "Save"}
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelEdit}
-                  disabled={busy}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-                >
-                  <X className="h-4 w-4" aria-hidden />
-                  Cancel
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                disabled={busy}
-                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-              >
-                <Pencil className="h-4 w-4" aria-hidden />
-                Edit
-              </button>
-            )
-          ) : null}
-          {showHumanize ? (
-            <button
-              type="button"
-              onClick={onHumanize}
-              disabled={busy || editing}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-            >
-              {humanizing ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Sparkles className="h-4 w-4" aria-hidden />
-              )}
-              {humanizing ? "Humanizing…" : "Humanize"}
-            </button>
-          ) : null}
-          {showGenerate ? (
-            <button
-              type="button"
-              onClick={onGenerate}
-              disabled={busy || editing}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
-            >
-              {generating ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Sparkles className="h-4 w-4" aria-hidden />
-              )}
-              {generating ? "Generating…" : "Generate"}
-            </button>
-          ) : null}
-          {showPublish ? (
-            <button
-              type="button"
-              onClick={onPublish}
-              disabled={busy || editing}
-              className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
-            >
-              {publishing ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Upload className="h-4 w-4" aria-hidden />
-              )}
-              {publishing ? "Publishing…" : "Publish"}
-            </button>
-          ) : null}
-          {showDelete ? (
-            <button
-              type="button"
-              disabled={busy || editing}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-input bg-card text-muted-foreground hover:bg-red-500/10 hover:text-red-600 disabled:opacity-50"
-              onClick={() => {
-                if (window.confirm(`Delete "${piece.title}"? This cannot be undone.`)) {
-                  void onDelete?.();
-                }
-              }}
-            >
-              {deleting ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Trash2 className="h-4 w-4" aria-hidden />
-              )}
-            </button>
-          ) : null}
         </div>
       </div>
 
@@ -516,7 +358,7 @@ export function ContentPieceView({
         >
           <p className="font-medium">Generation did not complete.</p>
           <p className="mt-1 text-sm">
-            AI may not be configured. Add your API key in Settings → AI Providers, then try again.
+            AI may not be configured. Add your API key in Integrations → AI, then try again.
           </p>
           {onResetGeneration ? (
             <button
@@ -557,61 +399,225 @@ export function ContentPieceView({
             regenerating={regeneratingImages}
             onRegenerateImages={onRegenerateImages}
           />
-          {showEdit && editing ? (
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Body
-                </p>
-                <button
-                  type="button"
-                  className={cn(
-                    "inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-medium",
-                    previewMode
-                      ? "bg-secondary text-foreground"
-                      : "text-muted-foreground hover:bg-secondary",
-                  )}
-                  onClick={() => setPreviewMode((value) => !value)}
-                >
-                  {previewMode ? (
-                    <FileCode2 className="h-3.5 w-3.5" aria-hidden />
+          <div className="paper-card overflow-hidden rounded-xl">
+            <div className="flex items-center justify-between gap-3 border-b border-border bg-muted/30 px-4 py-2.5">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {showEdit ? (
+                  editing ? (
+                    <>
+                      <button
+                        type="button"
+                        className={toolbarBtn}
+                        onClick={() => setPreviewMode((value) => !value)}
+                      >
+                        <Eye className="h-3.5 w-3.5" aria-hidden />
+                        {previewMode ? "Edit" : "Preview"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void handleSave()}
+                        disabled={busy || !titleDraft.trim()}
+                        className={toolbarBtnPrimary}
+                      >
+                        {saving ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                        ) : (
+                          <Save className="h-3.5 w-3.5" aria-hidden />
+                        )}
+                        {saving ? "Saving…" : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelEdit}
+                        disabled={busy}
+                        className={toolbarBtn}
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden />
+                        Cancel
+                      </button>
+                    </>
                   ) : (
-                    <Eye className="h-3.5 w-3.5" aria-hidden />
-                  )}
-                  {previewMode ? "Markdown" : "Preview"}
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditing(true)}
+                      disabled={busy}
+                      className={toolbarBtn}
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden />
+                      Edit
+                    </button>
+                  )
+                ) : null}
+                {showRepurpose ? (
+                  <button
+                    type="button"
+                    onClick={onRepurpose}
+                    disabled={busy || editing}
+                    className={toolbarBtn}
+                  >
+                    <Shuffle className="h-3.5 w-3.5" aria-hidden />
+                    Repurpose
+                  </button>
+                ) : null}
+                {body ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    className={toolbarBtn}
+                    onClick={() => void handleCopy()}
+                  >
+                    {copied ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    {copied ? "Copied" : "Copy"}
+                  </button>
+                ) : null}
+                {showRegenerate ? (
+                  <button
+                    type="button"
+                    onClick={() => void onRegenerate?.()}
+                    disabled={busy || editing || enhancing}
+                    className={toolbarBtn}
+                  >
+                    {regenerating ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    {regenerating ? "Regenerating…" : "Regenerate"}
+                  </button>
+                ) : null}
+                {showEnhance ? (
+                  <button
+                    type="button"
+                    onClick={() => void onEnhance?.()}
+                    disabled={busy || editing || regenerating || humanizing}
+                    className={toolbarBtn}
+                    title="Add FAQ, citations, and internal links without rewriting from scratch"
+                  >
+                    {enhancing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <TrendingUp className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    {enhancing ? "Enhancing…" : "Enhance quality"}
+                  </button>
+                ) : null}
+                {showHumanize ? (
+                  <button
+                    type="button"
+                    onClick={onHumanize}
+                    disabled={busy || editing || regenerating || enhancing}
+                    className={toolbarBtn}
+                    title="Rewrite for natural human rhythm without full regeneration"
+                  >
+                    {humanizing ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <PenLine className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    {humanizing ? "Humanizing…" : "Humanize"}
+                  </button>
+                ) : null}
+                {showMarkReady ? (
+                  <button
+                    type="button"
+                    onClick={() => void onMarkReady?.()}
+                    disabled={busy || editing}
+                    className={toolbarBtn}
+                  >
+                    {markingReady ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    Mark ready
+                  </button>
+                ) : null}
+                {showGenerate ? (
+                  <button
+                    type="button"
+                    onClick={onGenerate}
+                    disabled={busy || editing}
+                    className={toolbarBtn}
+                  >
+                    {generating ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    {generating ? "Generating…" : "Generate"}
+                  </button>
+                ) : null}
+                {showDelete ? (
+                  <button
+                    type="button"
+                    disabled={busy || editing}
+                    className={toolbarBtnGhost}
+                    onClick={() => {
+                      if (window.confirm(`Delete "${piece.title}"? This cannot be undone.`)) {
+                        void onDelete?.();
+                      }
+                    }}
+                  >
+                    {deleting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    Delete
+                  </button>
+                ) : null}
               </div>
-              {!previewMode ? (
-                <>
-                  <MarkdownToolbar
-                    textareaRef={bodyTextareaRef}
-                    value={bodyDraft}
-                    onChange={setBodyDraft}
-                  />
-                  <textarea
-                    ref={bodyTextareaRef}
-                    value={bodyDraft}
-                    onChange={(event) => setBodyDraft(event.target.value)}
-                    rows={24}
-                    className="min-h-[420px] w-full resize-y rounded-lg border border-input bg-background px-3 py-2 font-sans text-sm leading-relaxed text-foreground"
-                    aria-label="Body markdown"
-                  />
-                </>
-              ) : (
-                <article className="paper-card min-h-[420px] overflow-hidden p-6">
-                  <ContentMarkdown>{bodyDraft}</ContentMarkdown>
-                </article>
-              )}
+              {editing ? (
+                <span className="hidden items-center gap-1.5 text-xs text-muted-foreground sm:inline-flex">
+                  <FileCode2 className="h-3.5 w-3.5" aria-hidden />
+                  Markdown + live preview
+                </span>
+              ) : null}
             </div>
-          ) : (
-            <article className="paper-card overflow-hidden p-6">
-              {body ? (
-                <ContentMarkdown>{displayBody}</ContentMarkdown>
-              ) : (
-                <p className="text-sm text-muted-foreground">No body content stored for this piece.</p>
-              )}
-            </article>
-          )}
+
+            {showEdit && editing ? (
+              <div className="min-h-[420px]">
+                {!previewMode ? (
+                  <div className="p-4">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="text-xs text-muted-foreground">Markdown source</p>
+                      <MarkdownToolbar
+                        textareaRef={bodyTextareaRef}
+                        value={bodyDraft}
+                        onChange={setBodyDraft}
+                      />
+                    </div>
+                    <textarea
+                      ref={bodyTextareaRef}
+                      value={bodyDraft}
+                      onChange={(event) => setBodyDraft(event.target.value)}
+                      rows={24}
+                      className="min-h-[420px] w-full resize-y border-0 bg-transparent p-0 font-mono text-sm leading-relaxed text-foreground shadow-none outline-none"
+                      aria-label="Body markdown"
+                    />
+                  </div>
+                ) : (
+                  <div className="px-6 py-8 lg:px-10 lg:py-10">
+                    <ContentMarkdown>{bodyDraft || "_Nothing to preview yet._"}</ContentMarkdown>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="px-6 py-8 lg:px-10 lg:py-10">
+                {body ? (
+                  <ContentMarkdown>{displayBody}</ContentMarkdown>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No content yet. Generate or edit to add copy.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-6">
@@ -641,6 +647,8 @@ export function ContentPieceView({
               bodyMarkdown={displayBody}
               wordCount={piece.wordCount}
               metadata={piece.pieceMetadata}
+              contentPieceId={piece.id}
+              fetchDualScore={fetchDualScore}
               canEnhance={Boolean(showEnhance)}
               onEnhance={onEnhance ? () => void onEnhance() : undefined}
               enhancing={enhancing}
@@ -683,7 +691,7 @@ export function ContentPieceNotFound({
       </p>
       <PieceLink
         renderLink={renderLink}
-        href="/studio"
+        href="/projects"
         className="inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
       >
         Back to Content studio

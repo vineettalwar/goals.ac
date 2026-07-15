@@ -12,9 +12,11 @@ import {
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { useContentPieceData } from "@/hooks/use-content-piece-data";
+import { apiFetch } from "@/lib/api";
 
 export function ContentPiecePage() {
-  const { id } = useParams();
+  const { id, pieceId } = useParams();
+  const pieceParam = pieceId ?? id;
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -57,11 +59,23 @@ export function ContentPiecePage() {
     publishMessage,
     publishToDestination,
     loadCmsConnections,
-  } = useContentPieceData(id);
+    renderPreview,
+  } = useContentPieceData(pieceParam);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login", { replace: true });
   }, [authLoading, user, navigate]);
+
+  // Canonicalize legacy /content-piece/:id → /projects/:projectId/content-piece/:id
+  useEffect(() => {
+    if (!piece || pieceId) return;
+    if (!piece.websiteProjectId) return;
+    const qs = searchParams.toString();
+    navigate(
+      `/projects/${piece.websiteProjectId}/content-piece/${piece.id}${qs ? `?${qs}` : ""}`,
+      { replace: true },
+    );
+  }, [piece, pieceId, navigate, searchParams]);
 
   useEffect(() => {
     if (autoGenerateRequested.current) return;
@@ -75,8 +89,12 @@ export function ContentPiecePage() {
     void generate();
   }, [searchParams, piece, generate, setSearchParams]);
 
-  if ((authLoading && !user) || (loading && !piece)) {
-    return <p className="p-8 text-muted-foreground">Loading content…</p>;
+  if ((authLoading && !user) || (!user && !authLoading) || (loading && !piece)) {
+    return (
+      <p className="p-8 text-muted-foreground">
+        {!authLoading && !user ? "Redirecting to sign in…" : "Loading content…"}
+      </p>
+    );
   }
 
   if (notFound) {
@@ -93,9 +111,9 @@ export function ContentPiecePage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl px-8 py-8">
+      <div className="max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <p className="mb-4 text-sm text-red-700">{error}</p>
-        <Link to="/studio" className="text-sm font-medium text-primary hover:underline">
+        <Link to="/projects" className="text-sm font-medium text-primary hover:underline">
           ← Content studio
         </Link>
       </div>
@@ -140,7 +158,7 @@ export function ContentPiecePage() {
           contentPieceCanDelete(piece.status)
             ? async () => {
                 await deletePiece();
-                navigate(`/studio?project=${piece.websiteProjectId}`, { replace: true });
+                navigate(`/projects/${piece.websiteProjectId}/content-studio`, { replace: true });
               }
             : undefined
         }
@@ -151,6 +169,13 @@ export function ContentPiecePage() {
         markingReady={markingReady}
         onRepurpose={() => setRepurposeDialogOpen(true)}
         stockImagesConfigured={stockImagesConfigured}
+        fetchDualScore={async (contentPieceId) => {
+          try {
+            return await apiFetch(`/api/content-pieces/${contentPieceId}/serp-score`);
+          } catch {
+            return null;
+          }
+        }}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}
@@ -164,7 +189,14 @@ export function ContentPiecePage() {
         formatType={piece.formatType}
         loadConnections={loadCmsConnections}
         publishing={publishing}
-        integrationsHref="/integrations"
+        integrationsHref={
+          piece.websiteProjectId
+            ? `/projects/${piece.websiteProjectId}/integrations`
+            : "/integrations"
+        }
+        pieceTitle={piece.title}
+        pieceBodyMarkdown={piece.bodyMarkdown}
+        onRenderPreview={renderPreview}
         onPublish={async (platform) => {
           await publishToDestination(platform);
           setPublishDialogOpen(false);
