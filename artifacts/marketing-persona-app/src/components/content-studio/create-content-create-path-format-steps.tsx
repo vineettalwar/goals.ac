@@ -31,16 +31,7 @@ import {
   StepActions,
   WizardStep,
 } from "./create-content-modal-parts";
-import {
-  FORMAT_META,
-  FORMAT_CATEGORIES,
-  LINKEDIN_ARCHETYPES,
-  LINKEDIN_HOOK_TYPES,
-  type ContentFormatType,
-} from "./content-studio-format-data";
-import { getConnectedDestinationsForFormat } from "@/lib/projects/publishing-destinations";
-import { cn } from "@/lib/utils";
-import { hostFromUrl } from "@workspace/content-engine/support/competitor/competitor-url";
+import { FORMAT_META, FORMAT_CATEGORIES } from "./content-studio-format-data";
 import type { WizardStepId } from "./create-content-modal-types";
 import type { CreateContentWizardProps } from "./create-content-wizard-props";
 export function CreateContentCreatePathFormatSteps({ currentStep, wizard }: { currentStep: WizardStepId; wizard: CreateContentWizardProps }) {
