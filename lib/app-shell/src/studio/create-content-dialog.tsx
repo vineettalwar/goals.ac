@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, FileText, Loader2 } from "lucide-react";
 import {
+  getConnectedDestinationsForFormat,
+  type CmsConnectionSnapshot,
+  type ContentFormatType,
+  type PublishDestinationId,
+} from "../content-piece/publish-destinations";
+import {
   buildLinkedInAngleHint,
   LINKEDIN_ARCHETYPES,
   LINKEDIN_HOOK_TYPES,
@@ -28,8 +34,8 @@ export type CreateContentDraftInput = {
 
 export type CreateContentInitialValues = Partial<CreateContentDraftInput>;
 
-/** Compact create flow: format → keyword → [competitors?] → review. */
-type CreateStepId = "format" | "keyword" | "competitors" | "review";
+/** Compact create flow: format → keyword → [competitors?] → [destination?] → review. */
+type CreateStepId = "format" | "keyword" | "competitors" | "destination" | "review";
 
 const VALID_FORMATS = new Set(STUDIO_FORMAT_OPTIONS.map((option) => option.value));
 const MAX_COMPETITOR_URLS = 5;
@@ -51,6 +57,10 @@ const GENERATING_LABELS = ["Analyzing", "Drafting", "Finishing"] as const;
 
 function isSeoLongform(formatType: string): boolean {
   return SEO_LONGFORM_FORMATS.has(formatType);
+}
+
+function asContentFormat(formatType: string): ContentFormatType | null {
+  return VALID_FORMATS.has(formatType as never) ? (formatType as ContentFormatType) : null;
 }
 
 /** Comma / newline separated URLs; first unique entry is the generate focus. */
@@ -78,9 +88,13 @@ function competitorInputFromInitial(
   return focus ?? "";
 }
 
-function buildSteps(formatType: string): CreateStepId[] {
+function buildSteps(
+  formatType: string,
+  destinations: { id: PublishDestinationId }[],
+): CreateStepId[] {
   const steps: CreateStepId[] = ["format", "keyword"];
   if (isSeoLongform(formatType)) steps.push("competitors");
+  if (destinations.length > 0) steps.push("destination");
   steps.push("review");
   return steps;
 }
@@ -101,6 +115,7 @@ export function CreateContentDialog({
   submitting = false,
   error = null,
   initialValues = null,
+  cmsConnections = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -108,11 +123,8 @@ export function CreateContentDialog({
   submitting?: boolean;
   error?: string | null;
   initialValues?: CreateContentInitialValues | null;
-  /**
-   * Accepted for StudioPage callers that pass CMS state; compact wizard has no
-   * destination step — platform still flows through via initialValues / onSubmit.
-   */
-  cmsConnections?: unknown;
+  /** When present, optional destination step lists connected/export targets for the format. */
+  cmsConnections?: CmsConnectionSnapshot | null;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [title, setTitle] = useState("");
@@ -126,7 +138,16 @@ export function CreateContentDialog({
   const [competitorUrlsText, setCompetitorUrlsText] = useState("");
   const [generatingLabelIndex, setGeneratingLabelIndex] = useState(0);
 
-  const steps = useMemo(() => buildSteps(formatType), [formatType]);
+  const contentFormat = asContentFormat(formatType);
+  const destinations = useMemo(() => {
+    if (!contentFormat) return [];
+    return getConnectedDestinationsForFormat(contentFormat, cmsConnections ?? {});
+  }, [contentFormat, cmsConnections]);
+
+  const steps = useMemo(
+    () => buildSteps(formatType, destinations),
+    [formatType, destinations],
+  );
 
   useEffect(() => {
     if (!open) {
@@ -166,10 +187,17 @@ export function CreateContentDialog({
     setGeneratingLabelIndex(0);
   }, [open, initialValues]);
 
-  // Clamp step when format change shrinks the sequence (e.g. leave SEO longform).
+  // Clamp step when format/connections change the sequence length.
   useEffect(() => {
     setStepIndex((i) => Math.min(i, steps.length - 1));
   }, [steps.length]);
+
+  // Drop a stale destination when format no longer offers it.
+  useEffect(() => {
+    if (!intendedPublishPlatform) return;
+    if (destinations.some((d) => d.id === intendedPublishPlatform)) return;
+    setIntendedPublishPlatform(undefined);
+  }, [destinations, intendedPublishPlatform]);
 
   // Timed progress labels during one-shot generate (cleared when submit ends).
   useEffect(() => {
@@ -196,6 +224,10 @@ export function CreateContentDialog({
     ? parseCompetitorUrlInput(competitorUrlsText)
     : [];
   const competitorFocusUrl = parsedCompetitorUrls[0];
+  const selectedDestinationLabel = intendedPublishPlatform
+    ? destinations.find((d) => d.id === intendedPublishPlatform)?.label ??
+      intendedPublishPlatform
+    : null;
 
   function goBack() {
     if (submitting || stepIndex <= 0) return;
@@ -204,18 +236,9 @@ export function CreateContentDialog({
 
   function goNext() {
     if (submitting) return;
-    if (currentStep === "format") {
-      setStepIndex(1);
-      return;
-    }
-    if (currentStep === "keyword") {
-      if (!targetKeyword.trim()) return;
-      setStepIndex(2);
-      return;
-    }
-    if (currentStep === "competitors") {
-      setStepIndex((i) => Math.min(i + 1, steps.length - 1));
-    }
+    if (currentStep === "keyword" && !targetKeyword.trim()) return;
+    if (currentStep === "review") return;
+    setStepIndex((i) => Math.min(i + 1, steps.length - 1));
   }
 
   async function handleGenerate() {
@@ -253,7 +276,9 @@ export function CreateContentDialog({
           : "Keyword & angle"
         : currentStep === "competitors"
           ? "Competitor focus"
-          : "Schedule & review";
+          : currentStep === "destination"
+            ? "Where will this be published?"
+            : "Schedule & review";
 
   const stepSubtitle = showGenerating
     ? `Target: ${targetKeyword.trim() || "—"}`
@@ -265,7 +290,9 @@ export function CreateContentDialog({
           : "Target keyword is required. Angle and title are optional."
         : currentStep === "competitors"
           ? "Optional — paste competitor URLs (comma or newline). First URL is the generate focus."
-          : "Optional date for the calendar, then confirm and generate.";
+          : currentStep === "destination"
+            ? "Optional — shapes generation and pre-selects your publish destination."
+            : "Optional date for the calendar, then confirm and generate.";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -516,6 +543,52 @@ export function CreateContentDialog({
             </div>
           ) : null}
 
+          {!showGenerating && currentStep === "destination" ? (
+            <div className="mt-4 space-y-2">
+              <button
+                type="button"
+                onClick={() => setIntendedPublishPlatform(undefined)}
+                className={
+                  !intendedPublishPlatform
+                    ? "flex w-full items-center justify-between rounded-xl border border-primary bg-primary/5 px-4 py-2.5 text-left text-sm"
+                    : "flex w-full items-center justify-between rounded-xl border border-border px-4 py-2.5 text-left text-sm hover:border-primary/60 hover:bg-secondary/40"
+                }
+              >
+                <span className="font-medium">Decide later</span>
+                {!intendedPublishPlatform ? (
+                  <span className="text-xs text-primary">Selected</span>
+                ) : null}
+              </button>
+              {destinations.map((destination) => {
+                const selected = intendedPublishPlatform === destination.id;
+                return (
+                  <button
+                    key={destination.id}
+                    type="button"
+                    onClick={() => setIntendedPublishPlatform(destination.id)}
+                    className={
+                      selected
+                        ? "flex w-full flex-col items-start rounded-xl border border-primary bg-primary/5 px-4 py-2.5 text-left text-sm"
+                        : "flex w-full flex-col items-start rounded-xl border border-border px-4 py-2.5 text-left text-sm hover:border-primary/60 hover:bg-secondary/40"
+                    }
+                  >
+                    <span className="flex w-full items-center justify-between gap-2 font-medium">
+                      {destination.label}
+                      {selected ? (
+                        <span className="text-xs text-primary">Selected</span>
+                      ) : null}
+                    </span>
+                    {destination.description ? (
+                      <span className="mt-0.5 text-xs text-muted-foreground">
+                        {destination.description}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          ) : null}
+
           {!showGenerating && currentStep === "review" ? (
             <div className="mt-4 space-y-4">
               <label className="block space-y-1.5">
@@ -570,6 +643,10 @@ export function CreateContentDialog({
                     }
                   />
                 ) : null}
+                <ReviewRow
+                  label="Destination"
+                  value={selectedDestinationLabel ?? "Decide later"}
+                />
                 {plannedDate.trim() ? (
                   <ReviewRow label="Planned date" value={plannedDate.trim()} />
                 ) : (
@@ -621,7 +698,9 @@ export function CreateContentDialog({
               }
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {currentStep === "competitors" ? "Continue" : "Next"}
+              {currentStep === "competitors" || currentStep === "destination"
+                ? "Continue"
+                : "Next"}
             </button>
           )}
         </footer>

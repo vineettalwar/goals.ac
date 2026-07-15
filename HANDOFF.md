@@ -39,17 +39,19 @@ Detail sections below retain file pointers and edge notes from the work that got
 
 ## Platform Admin social OAuth credentials (2026-07-16)
 
-LinkedIn, X, and Meta app credentials can be stored in platform admin (not only env):
+LinkedIn, X, Meta, and Bluesky app credentials can be stored in platform admin (not only env):
 
 | Network | Columns | Resolve |
 |---|---|---|
 | LinkedIn | `linkedin_client_id` + `encrypted_linkedin_client_secret` | `linkedin-platform-credentials.ts` |
 | X | `twitter_client_id` + `encrypted_twitter_client_secret` | `twitter-platform-credentials.ts` |
 | Meta | `meta_app_id` + `encrypted_meta_app_secret` | `meta-platform-credentials.ts` |
+| Bluesky | `bluesky_client_name` + `encrypted_bluesky_oauth_private_key_jwk` | `bluesky-platform-credentials.ts` |
 
-- Migrations: PG `0065` (LinkedIn) + `0066_platform_twitter_meta_credentials`; D1 `0002_silly_energizer` + `0003_platform_twitter_meta_credentials`
+- Migrations: PG `0065`–`0067_platform_bluesky_credentials`; D1 `0002`–`0004_platform_bluesky_credentials`
 - **Migrate required:** `pnpm --filter @workspace/db run migrate` (and `pnpm run cf:migrate:d1:local` for D1)
 - Env wins over encrypted DB values; admin UI: `/admin/integrations` → **Social**
+- Bluesky has no pasted client id — client id is the hosted metadata URL; demos need a stable private JWK (ephemeral key at startup breaks after restart)
 - Done when: paste credentials in admin → project Connect works without matching `.env` vars
 
 **Still env/bindings-only:** CF public-worker social auth paths if used.

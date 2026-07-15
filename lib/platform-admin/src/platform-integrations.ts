@@ -919,6 +919,64 @@ export async function clearStoredMetaCredentials(updatedBy: number): Promise<voi
   await saveMetaCredentials({ appId: null, appSecret: "", updatedBy });
 }
 
+export type SaveBlueskyCredentialsInput = {
+  clientName?: string | null;
+  privateKeyJwk?: string;
+  updatedBy: number;
+};
+
+function parseBlueskyPrivateKeyJwk(raw: string): string {
+  const trimmed = raw.trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error("Bluesky private key must be valid JSON JWK");
+  }
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    !("kty" in parsed) ||
+    typeof (parsed as { kty: unknown }).kty !== "string"
+  ) {
+    throw new Error("Bluesky private key JWK must include a kty field");
+  }
+  return trimmed;
+}
+
+export async function saveBlueskyCredentials(input: SaveBlueskyCredentialsInput): Promise<void> {
+  if (isBlueskyManagedByEnv()) {
+    throw new Error("Bluesky credentials are managed via server environment variables");
+  }
+  const patch: Partial<typeof platformSettingsTable.$inferInsert> = {
+    updatedBy: input.updatedBy,
+  };
+
+  if (input.clientName !== undefined) {
+    patch.blueskyClientName = input.clientName?.trim() || null;
+  }
+  if (input.privateKeyJwk !== undefined) {
+    patch.encryptedBlueskyOauthPrivateKeyJwk = input.privateKeyJwk
+      ? encryptSecret(parseBlueskyPrivateKeyJwk(input.privateKeyJwk))
+      : null;
+  }
+
+  await db
+    .insert(platformSettingsTable)
+    .values({ id: 1, ...patch })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.id,
+      set: patch,
+    });
+}
+
+export async function clearStoredBlueskyCredentials(updatedBy: number): Promise<void> {
+  if (isBlueskyManagedByEnv()) {
+    throw new Error("Bluesky credentials are managed via server environment variables");
+  }
+  await saveBlueskyCredentials({ clientName: null, privateKeyJwk: "", updatedBy });
+}
+
 export async function isStripeIntegrationReady(): Promise<boolean> {
   const creds = await resolvePlatformStripeCredentials();
   return Boolean(
