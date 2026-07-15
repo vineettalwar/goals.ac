@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Facebook, Globe, Instagram, Linkedin, Search, Twitter, Webhook } from "lucide-react";
 import { cn } from "../cn";
+import type { AiProviderChoice } from "../settings/types";
 import type { CmsPlatform } from "./types";
 import type { EspDestinationDefinition, SocialDestinationDefinition } from "./publishing-destinations";
 
@@ -23,6 +24,29 @@ export function IntegrationIconBox({
   );
 }
 
+/** Colored letter mark — same visual language as CMS DestinationBadge tiles. */
+export function BrandBadge({
+  letter,
+  className,
+  size = "md",
+}: {
+  letter: string;
+  className?: string;
+  size?: "sm" | "md";
+}) {
+  return (
+    <span
+      className={cn(
+        "flex shrink-0 items-center justify-center rounded-md font-bold text-white",
+        size === "sm" ? "h-5 w-5 text-[10px]" : "h-8 w-8 text-xs",
+        className ?? "bg-muted",
+      )}
+    >
+      {letter}
+    </span>
+  );
+}
+
 export function DestinationBadge({
   badgeLetter,
   badgeClassName,
@@ -31,18 +55,35 @@ export function DestinationBadge({
   badgeClassName?: string;
 }) {
   if (badgeLetter) {
-    return (
-      <span
-        className={cn(
-          "flex h-5 w-5 items-center justify-center rounded text-[10px] font-bold text-white",
-          badgeClassName ?? "bg-muted",
-        )}
-      >
-        {badgeLetter}
-      </span>
-    );
+    return <BrandBadge letter={badgeLetter} className={badgeClassName} size="sm" />;
   }
   return <Globe className="h-4 w-4 text-muted-foreground" />;
+}
+
+const AI_PROVIDER_BADGES: Record<AiProviderChoice, { letter: string; className: string }> = {
+  gemini: { letter: "G", className: "bg-[#4285F4]" },
+  openai: { letter: "AI", className: "bg-neutral-900" },
+  anthropic: { letter: "A", className: "bg-[#D97757]" },
+  bedrock: { letter: "B", className: "bg-[#232F3E] text-[#FF9900]" },
+  ollama: { letter: "O", className: "bg-emerald-700" },
+};
+
+export function AiProviderIcon({ provider }: { provider: AiProviderChoice }) {
+  const badge = AI_PROVIDER_BADGES[provider];
+  return <BrandBadge letter={badge.letter} className={badge.className} />;
+}
+
+export function OrgToolIcon({ tool }: { tool: "semrush" | "deepl" | "unsplash" | "pexels" }) {
+  switch (tool) {
+    case "semrush":
+      return <BrandBadge letter="S" className="bg-[#FF622D]" />;
+    case "deepl":
+      return <BrandBadge letter="D" className="bg-[#0F2B46]" />;
+    case "unsplash":
+      return <BrandBadge letter="U" className="bg-neutral-900" />;
+    case "pexels":
+      return <BrandBadge letter="P" className="bg-[#05A081]" />;
+  }
 }
 
 export function CmsPlatformIcon({ platform }: { platform: CmsPlatform }) {

@@ -3,6 +3,7 @@ import {
   isRasterFeaturedDataUri,
 } from "@workspace/connectors/wordpress-images";
 import { publishToTypo3 } from "@workspace/connectors/typo3";
+import { uploadGoalsAcPluginMedia } from "@workspace/connectors/goals-ac-plugin";
 import type { CanonicalContent } from "../content/canonical-content";
 import type { CmsIntegrationCredentials } from "../support/publishing/cms-integrations";
 import { getOutputModes, resolveOutputMode } from "../support/publishing/platform-output-modes";
@@ -17,6 +18,7 @@ import { mapPluginStatus } from "./plugin-shared";
 import {
   markdownToTypo3ContentElements,
   prependTypo3FeaturedBase64,
+  prependTypo3FeaturedUrl,
 } from "./typo3-content-elements";
 import type {
   CmsAdapter,
@@ -28,6 +30,36 @@ import type {
 } from "./types";
 
 type Typo3OutputMode = "body_text" | "content_elements";
+
+/**
+ * Prefer hosting the featured image via `/media` so the content publish
+ * payload carries a URL instead of inline base64. Returns null on any
+ * failure (e.g. older plugin installs without `/media`) — caller falls
+ * back to embedding base64 directly.
+ */
+async function uploadTypo3FeaturedMedia(
+  creds: { siteUrl: string; siteKey: string },
+  decoded: { buffer: Buffer; mimeHint: "image/png" | "image/jpeg" },
+  title: string,
+): Promise<string | null> {
+  try {
+    const ext = decoded.mimeHint === "image/png" ? "png" : "jpg";
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "featured";
+    const uploaded = await uploadGoalsAcPluginMedia(
+      { siteUrl: creds.siteUrl, siteKey: creds.siteKey, platform: "typo3" },
+      {
+        filename: `${slug}.${ext}`,
+        mimeType: decoded.mimeHint,
+        dataBase64: decoded.buffer.toString("base64"),
+        alt: title,
+        title,
+      },
+    );
+    return uploaded.sourceUrl || null;
+  } catch {
+    return null;
+  }
+}
 
 export const typo3Adapter: CmsAdapter = {
   platform: "typo3",
@@ -66,11 +98,18 @@ export const typo3Adapter: CmsAdapter = {
       if (isRasterFeaturedDataUri(featuredRaw)) {
         const decoded = decodeRasterFeaturedDataUri(featuredRaw!);
         if (decoded) {
-          contentElements = prependTypo3FeaturedBase64(contentElements, {
-            imageBase64: decoded.buffer.toString("base64"),
-            imageMime: decoded.mimeHint,
-            alt: title,
-          });
+          const typo3Creds = opts?.creds?.typo3;
+          const hostedUrl =
+            typo3Creds?.siteUrl && typo3Creds?.siteKey
+              ? await uploadTypo3FeaturedMedia(typo3Creds, decoded, title)
+              : null;
+          contentElements = hostedUrl
+            ? prependTypo3FeaturedUrl(contentElements, { url: hostedUrl, alt: title })
+            : prependTypo3FeaturedBase64(contentElements, {
+                imageBase64: decoded.buffer.toString("base64"),
+                imageMime: decoded.mimeHint,
+                alt: title,
+              });
         }
       }
       const payload: PlatformPayload = {

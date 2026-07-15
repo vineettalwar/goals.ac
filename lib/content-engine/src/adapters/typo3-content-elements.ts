@@ -49,8 +49,21 @@ function textmediaElement(url: string, alt: string, sorting: number): Typo3Conte
 }
 
 /**
+ * Prepend a textmedia element that references an already-hosted image URL
+ * (uploaded via `POST /goals-ac/v1/media`) — avoids inlining base64 into the
+ * content publish payload.
+ */
+export function prependTypo3FeaturedUrl(
+  elements: Typo3ContentElement[],
+  opts: { url: string; alt: string },
+): Typo3ContentElement[] {
+  return [textmediaElement(opts.url, opts.alt, 128), ...elements];
+}
+
+/**
  * Prepend a textmedia element with raw base64 for ContentPublisher FAL import
  * when featuredImageUrl is a PNG/JPEG data URI (HTTP fetch would fail).
+ * Fallback for plugin installs that don't yet expose `/media`.
  */
 export function prependTypo3FeaturedBase64(
   elements: Typo3ContentElement[],

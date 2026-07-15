@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   markdownToTypo3ContentElements,
   prependTypo3FeaturedBase64,
+  prependTypo3FeaturedUrl,
 } from "./typo3-content-elements";
 
 describe("prependTypo3FeaturedBase64", () => {
@@ -18,6 +19,27 @@ describe("prependTypo3FeaturedBase64", () => {
       fields: {
         imageBase64: "iVBORw0KGgo=",
         imageMime: "image/png",
+        imagealt: "Hero",
+        bodytext: "",
+      },
+    });
+    expect(next.length).toBe(elements.length + 1);
+    expect(next.slice(1)).toEqual(elements);
+  });
+});
+
+describe("prependTypo3FeaturedUrl", () => {
+  it("prepends textmedia referencing the hosted /media URL", () => {
+    const elements = markdownToTypo3ContentElements("## Hello\n\nBody");
+    const next = prependTypo3FeaturedUrl(elements, {
+      url: "/fileadmin/user_upload/goals-ac/hero.png",
+      alt: "Hero",
+    });
+
+    expect(next[0]).toMatchObject({
+      ctype: "textmedia",
+      fields: {
+        image: "/fileadmin/user_upload/goals-ac/hero.png",
         imagealt: "Hero",
         bodytext: "",
       },

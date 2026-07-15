@@ -11,6 +11,7 @@ export function IntegrationTile({
   summary,
   onClick,
   pending,
+  compact = false,
 }: {
   icon: ReactNode;
   title: string;
@@ -19,6 +20,7 @@ export function IntegrationTile({
   summary?: string | null;
   onClick: () => void;
   pending?: boolean;
+  compact?: boolean;
 }) {
   const status = connected ? (pending ? "pending" : "connected") : "idle";
 
@@ -27,7 +29,8 @@ export function IntegrationTile({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card p-4 text-left transition-all",
+        "group flex w-full items-center gap-3 rounded-xl border border-border/60 bg-card text-left transition-all",
+        compact ? "px-3 py-2.5" : "p-4",
         "hover:border-border hover:bg-muted/20 hover:shadow-sm",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
         status === "connected" && "border-emerald-500/25 bg-emerald-500/3",
