@@ -8,6 +8,7 @@ import {
   keywordOpportunitiesTable,
   llmVisibilitySnapshotsTable,
 } from "@workspace/db/schema";
+import { listPublishRecordsForProject } from "../support/publishing/publish-records";
 
 export type CommandCenterOpportunityPreview = {
   id: number;
@@ -15,6 +16,25 @@ export type CommandCenterOpportunityPreview = {
   opportunityScore: number;
   suggestedTitle: string;
   source: string;
+};
+
+export type CommandCenterRecentPiece = {
+  id: number;
+  title: string;
+  status: string;
+  updatedAt: string;
+};
+
+export type CommandCenterRecentPublish = {
+  id: number;
+  contentPieceId: number;
+  provider: string;
+  status: string;
+  pieceTitle: string | null;
+  remoteUrl: string | null;
+  errorMessage: string | null;
+  publishedAt: string | null;
+  createdAt: string;
 };
 
 export type CommandCenterSummary = {
@@ -29,6 +49,8 @@ export type CommandCenterSummary = {
   topOpportunities: CommandCenterOpportunityPreview[];
   internalLinkCoverage: number | null;
   internalLinkSuggestions: number;
+  recentPieces: CommandCenterRecentPiece[];
+  recentPublishes: CommandCenterRecentPublish[];
 };
 
 export async function loadCommandCenterSummary(projectId: number): Promise<CommandCenterSummary> {
@@ -36,10 +58,12 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
     openRows,
     queuedRows,
     pieceRows,
+    recentPieceRows,
     geoRows,
     llmRows,
     topOpps,
     strategyRows,
+    publishRows,
   ] = await Promise.all([
     db
       .select({ count: countAsInt() })
@@ -66,6 +90,17 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
       })
       .from(contentPiecesTable)
       .where(eq(contentPiecesTable.websiteProjectId, projectId)),
+    db
+      .select({
+        id: contentPiecesTable.id,
+        title: contentPiecesTable.title,
+        status: contentPiecesTable.status,
+        updatedAt: contentPiecesTable.updatedAt,
+      })
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.websiteProjectId, projectId))
+      .orderBy(desc(contentPiecesTable.updatedAt))
+      .limit(5),
     db
       .select({
         geoScore: geoAuditsTable.geoScore,
@@ -104,6 +139,7 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
       .where(eq(contentStrategiesTable.websiteProjectId, projectId))
       .orderBy(desc(contentStrategiesTable.year), desc(contentStrategiesTable.month))
       .limit(1),
+    listPublishRecordsForProject(projectId, 5),
   ]);
 
   let calendarDraftItems = 0;
@@ -156,5 +192,22 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
     topOpportunities: topOpps,
     internalLinkCoverage,
     internalLinkSuggestions,
+    recentPieces: recentPieceRows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      status: row.status,
+      updatedAt: String(row.updatedAt),
+    })),
+    recentPublishes: publishRows.map((row) => ({
+      id: row.id,
+      contentPieceId: row.contentPieceId,
+      provider: row.provider,
+      status: row.status,
+      pieceTitle: row.pieceTitle,
+      remoteUrl: row.remoteUrl,
+      errorMessage: row.errorMessage,
+      publishedAt: row.publishedAt ? String(row.publishedAt) : null,
+      createdAt: String(row.createdAt),
+    })),
   };
 }

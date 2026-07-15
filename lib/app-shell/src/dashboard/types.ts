@@ -28,6 +28,25 @@ export type DashboardAutopilotSettings = {
   publishMode?: string;
 };
 
+export type DashboardCommandCenterRecentPiece = {
+  id: number;
+  title: string;
+  status: string;
+  updatedAt: string;
+};
+
+export type DashboardCommandCenterRecentPublish = {
+  id: number;
+  contentPieceId: number;
+  provider: string;
+  status: string;
+  pieceTitle: string | null;
+  remoteUrl: string | null;
+  errorMessage: string | null;
+  publishedAt: string | null;
+  createdAt: string;
+};
+
 export type DashboardCommandCenter = {
   openOpportunities: number;
   queuedOpportunities: number;
@@ -46,6 +65,8 @@ export type DashboardCommandCenter = {
   }>;
   internalLinkCoverage?: number | null;
   internalLinkSuggestions?: number;
+  recentPieces?: DashboardCommandCenterRecentPiece[];
+  recentPublishes?: DashboardCommandCenterRecentPublish[];
 };
 
 export type DashboardData = {

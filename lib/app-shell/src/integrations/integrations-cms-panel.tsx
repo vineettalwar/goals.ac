@@ -5,6 +5,7 @@ import {
 } from "./types";
 import { CmsPlatformIcon } from "./integration-icons";
 import { IntegrationTile } from "./integration-tiles";
+import { ConnectSetupSteps, WEBHOOK_SETUP_STEPS } from "./connect-setup-steps";
 
 function CmsPlatformTiles({
   integrations,
@@ -218,6 +219,7 @@ export function IntegrationsCmsPanel({
         <p className="text-xs text-muted-foreground">
           Receive publish events at your endpoint when content is pushed from goals.ac.
         </p>
+        <ConnectSetupSteps steps={WEBHOOK_SETUP_STEPS} />
         <div className="space-y-3">
           <label className="block text-sm">
             <span className="mb-1 block text-muted-foreground">Webhook URL</span>

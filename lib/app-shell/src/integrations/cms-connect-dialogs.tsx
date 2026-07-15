@@ -10,6 +10,7 @@ import type {
   WebflowConnectPayload,
   WordPressConnectPayload,
 } from "./cms-connect-types";
+import { ConnectSetupSteps, getFullAppCmsSetupSteps } from "./connect-setup-steps";
 
 function isValidUrl(value: string): boolean {
   try {
@@ -86,18 +87,6 @@ type ConnectDialogBaseProps = {
   saving?: boolean;
 };
 
-function ConnectSetupSteps({ steps }: { steps: string[] }) {
-  return (
-    <ol className="space-y-2 rounded-lg border border-border bg-muted/30 px-3 py-3 text-xs text-muted-foreground">
-      {steps.map((step, index) => (
-        <li key={step}>
-          <span className="font-medium text-foreground">{index + 1}. </span>
-          {step}
-        </li>
-      ))}
-    </ol>
-  );
-}
 
 export function WordPressConnectDialog({
   open,
@@ -1327,10 +1316,13 @@ export function ShopifyConnectDialog({
 export function CmsFullAppConnectDialog({
   open,
   platformLabel,
+  platformKey,
   onOpenChange,
   fullAppIntegrationsUrl,
 }: ConnectDialogBaseProps & {
   platformLabel: string;
+  /** Platform key for platform-specific setup steps (e.g. contentful, typo3). */
+  platformKey?: string;
   fullAppIntegrationsUrl?: string;
 }) {
   function close() {
@@ -1345,13 +1337,7 @@ export function CmsFullAppConnectDialog({
       onClose={close}
     >
       <div className="space-y-4 text-sm">
-        <ConnectSetupSteps
-          steps={[
-            `Open Integrations and choose ${platformLabel} (or the matching CMS tile).`,
-            "Paste API credentials from that platform’s developer or site settings.",
-            "Save and Run health check before the first publish.",
-          ]}
-        />
+        <ConnectSetupSteps steps={getFullAppCmsSetupSteps(platformKey, platformLabel)} />
         <p className="text-muted-foreground">
           Full connection forms for {platformLabel} are available in Integrations.
         </p>

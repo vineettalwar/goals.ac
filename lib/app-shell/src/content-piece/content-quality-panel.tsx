@@ -12,6 +12,7 @@ export type DualContentScore = {
     total: number;
     breakdown: Array<{ label: string; score: number; max: number; detail: string }>;
     gaps: string[];
+    h2Coverage?: { covered: number; total: number; percent: number };
   };
   combined: number;
   publishReady: boolean;
@@ -191,6 +192,11 @@ export function ArticleQualityPanel({
               </span>
             </div>
           ))}
+          {dual.serp.h2Coverage && dual.serp.h2Coverage.total > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              {`H2 coverage: ${dual.serp.h2Coverage.percent}% (${dual.serp.h2Coverage.covered}/${dual.serp.h2Coverage.total} rival topics)`}
+            </p>
+          ) : null}
           {dual.serp.gaps.length > 0 ? (
             <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
               {dual.serp.gaps.slice(0, 4).map((gap) => (

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCompetitorTopicDiff,
+  computeH2Coverage,
   scoreDualContentQuality,
   scoreSerpCoverage,
 } from "./serp-content-score";
@@ -48,6 +49,7 @@ describe("scoreSerpCoverage", () => {
     expect(result.gaps.some((gap) => gap.includes("b2b seo"))).toBe(true);
     expect(result.gaps.some((gap) => gap.includes("Complete B2B SEO"))).toBe(true);
     expect(result.total).toBeLessThan(70);
+    expect(result.h2Coverage).toEqual({ covered: 0, total: 1, percent: 0 });
   });
 
   it("scores higher when keyword, FAQ, lists, and rival topics are covered", () => {
@@ -65,6 +67,47 @@ describe("scoreSerpCoverage", () => {
 
     expect(result.total).toBeGreaterThanOrEqual(55);
     expect(result.breakdown).toHaveLength(4);
+    expect(result.h2Coverage.covered).toBe(1);
+    expect(result.h2Coverage.total).toBe(1);
+    expect(result.h2Coverage.percent).toBe(100);
+  });
+
+  it("counts serpFeatures topResults titles toward H2 coverage", () => {
+    const result = scoreSerpCoverage({
+      bodyMarkdown: richBody,
+      targetKeyword: "B2B lead generation",
+      serpFeatures: {
+        topResults: [
+          { title: "B2B lead generation qualification framework" },
+          { title: "Enterprise ABM cold calling scripts 2026" },
+        ],
+      },
+    });
+
+    expect(result.h2Coverage).toEqual({ covered: 1, total: 2, percent: 50 });
+  });
+});
+
+describe("computeH2Coverage", () => {
+  it("uses only ## H2 lines (not H3) against rival topics at 0.25 overlap", () => {
+    const body = `# Title
+
+## Qualification framework
+
+Details here.
+
+### Unrelated FAQ question about cold outreach?
+`;
+    expect(
+      computeH2Coverage(body, [
+        "B2B lead generation qualification framework",
+        "Cold outreach scripts",
+      ]),
+    ).toEqual({ covered: 1, total: 2, percent: 50 });
+  });
+
+  it("returns zeros when there are no rival topics", () => {
+    expect(computeH2Coverage(richBody, [])).toEqual({ covered: 0, total: 0, percent: 0 });
   });
 });
 
@@ -107,6 +150,7 @@ describe("scoreDualContentQuality", () => {
       Math.round(dual.editorial.total * 0.55 + dual.serp.total * 0.45),
     );
     expect(dual.competitorDiff.length).toBeGreaterThan(0);
+    expect(dual.serp.h2Coverage.total).toBeGreaterThan(0);
     expect(typeof dual.publishReady).toBe("boolean");
   });
 });

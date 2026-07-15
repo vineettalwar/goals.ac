@@ -7,6 +7,7 @@ import {
   type SocialDestinationDefinition,
 } from "./publishing-destinations";
 import { IntegrationIconBox, SocialDestinationIcon } from "./integration-icons";
+import { ConnectSetupSteps, getSocialSetupSteps } from "./connect-setup-steps";
 
 export { countSocialConnections };
 
@@ -287,6 +288,10 @@ export function IntegrationsSocialPanel({
                 >
                   {connected ? "Connected" : "Not connected"}
                 </span>
+
+                {!connected ? (
+                  <ConnectSetupSteps steps={getSocialSetupSteps(destination.id)} />
+                ) : null}
 
                 {!connected && destination.oauthHandleParam ? (
                   <label className="block text-xs">

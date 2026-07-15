@@ -558,6 +558,7 @@ export function ProjectIntegrationsPage() {
       <CmsFullAppConnectDialog
         open={showFullAppDialog}
         platformLabel={connectPlatformLabel}
+        platformKey={connectPlatform ?? undefined}
         onOpenChange={(open) => {
           if (!open) closeConnectDialog();
         }}

@@ -32,6 +32,13 @@ export {
   type SocialDestinationDefinition,
 } from "./publishing-destinations";
 export {
+  ConnectSetupSteps,
+  FULL_APP_CMS_SETUP_STEPS,
+  WEBHOOK_SETUP_STEPS,
+  getFullAppCmsSetupSteps,
+  getSocialSetupSteps,
+} from "./connect-setup-steps";
+export {
   CmsFullAppConnectDialog,
   DrupalConnectDialog,
   GhostConnectDialog,

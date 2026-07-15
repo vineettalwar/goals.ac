@@ -25,10 +25,18 @@ export type SerpScoreBreakdown = {
   detail: string;
 };
 
+export type H2Coverage = {
+  covered: number;
+  total: number;
+  percent: number;
+};
+
 export type SerpCoverageResult = {
   total: number;
   breakdown: SerpScoreBreakdown[];
   gaps: string[];
+  /** Share of rival SERP topics matched by draft H2s (token-overlap ≥ 0.25). */
+  h2Coverage: H2Coverage;
 };
 
 export type CompetitorTopicDiff = {
@@ -52,14 +60,7 @@ export function buildCompetitorTopicDiff(input: {
 }): CompetitorTopicDiff[] {
   const body = input.bodyMarkdown ?? "";
   const headings = extractHeadings(body);
-  const fromSerp = Array.isArray(input.serpFeatures?.topResults)
-    ? (input.serpFeatures!.topResults as Array<{ title?: string }>)
-        .map((row) => row.title)
-        .filter((title): title is string => Boolean(title))
-    : [];
-  const rivals = [...(input.competitorTitles ?? []), ...fromSerp]
-    .filter((title, index, all) => all.indexOf(title) === index)
-    .slice(0, 5);
+  const rivals = collectRivalTopics(input.competitorTitles, input.serpFeatures);
 
   return rivals.map((title) => {
     const overlap = Math.max(
@@ -68,7 +69,7 @@ export function buildCompetitorTopicDiff(input: {
     );
     return {
       title,
-      covered: overlap >= 0.25,
+      covered: overlap >= TOPIC_OVERLAP_THRESHOLD,
       overlap: Math.round(overlap * 100),
     };
   });
@@ -84,6 +85,53 @@ function normalize(text: string): string {
 
 function extractHeadings(body: string): string[] {
   return [...body.matchAll(/^#{2,3}\s+(.+)$/gm)].map((match) => match[1]!.trim());
+}
+
+/** Draft H2 lines only (`## `), used for rival-topic coverage. */
+function extractH2Headings(body: string): string[] {
+  return [...body.matchAll(/^##\s+(.+)$/gm)].map((match) => match[1]!.trim());
+}
+
+function collectRivalTopics(
+  competitorTitles?: string[],
+  serpFeatures?: Record<string, unknown> | null,
+): string[] {
+  const fromSerp = Array.isArray(serpFeatures?.topResults)
+    ? (serpFeatures!.topResults as Array<{ title?: string }>)
+        .map((row) => row.title)
+        .filter((title): title is string => Boolean(title))
+    : [];
+  return [...(competitorTitles ?? []), ...fromSerp]
+    .filter((title, index, all) => all.indexOf(title) === index)
+    .slice(0, 5);
+}
+
+const TOPIC_OVERLAP_THRESHOLD = 0.25;
+
+/**
+ * Coverage % = covered rival topics / total rivals,
+ * where a rival is covered if any draft H2 has token-overlap ≥ 0.25.
+ */
+export function computeH2Coverage(
+  bodyMarkdown: string,
+  rivalTopics: string[],
+): H2Coverage {
+  const total = rivalTopics.length;
+  if (total === 0) {
+    return { covered: 0, total: 0, percent: 0 };
+  }
+  const h2s = extractH2Headings(bodyMarkdown);
+  const covered =
+    h2s.length === 0
+      ? 0
+      : rivalTopics.filter((title) =>
+          h2s.some((heading) => tokenOverlap(heading, title) >= TOPIC_OVERLAP_THRESHOLD),
+        ).length;
+  return {
+    covered,
+    total,
+    percent: Math.round((covered / total) * 100),
+  };
 }
 
 function tokenOverlap(a: string, b: string): number {
@@ -126,13 +174,8 @@ export function scoreSerpCoverage(input: SerpScoreInput): SerpCoverageResult {
   });
 
   // Competitor heading / topic coverage
-  const competitorTitles = input.competitorTitles ?? [];
-  const fromSerp = Array.isArray(input.serpFeatures?.topResults)
-    ? (input.serpFeatures!.topResults as Array<{ title?: string; url?: string }>)
-        .map((row) => row.title)
-        .filter((title): title is string => Boolean(title))
-    : [];
-  const rivals = [...competitorTitles, ...fromSerp].slice(0, 5);
+  const rivals = collectRivalTopics(input.competitorTitles, input.serpFeatures);
+  const h2Coverage = computeH2Coverage(body, rivals);
   let topicScore = 15;
   if (rivals.length > 0) {
     const overlaps = rivals.map((title) =>
@@ -141,7 +184,7 @@ export function scoreSerpCoverage(input: SerpScoreInput): SerpCoverageResult {
     const avg = overlaps.reduce((sum, value) => sum + value, 0) / overlaps.length;
     topicScore = Math.round(avg * 25);
     for (let i = 0; i < rivals.length; i++) {
-      if ((overlaps[i] ?? 0) < 0.25) {
+      if ((overlaps[i] ?? 0) < TOPIC_OVERLAP_THRESHOLD) {
         gaps.push(`Cover competitor angle: ${rivals[i]}`);
       }
     }
@@ -212,6 +255,7 @@ export function scoreSerpCoverage(input: SerpScoreInput): SerpCoverageResult {
     total,
     breakdown,
     gaps: [...new Set(gaps)].slice(0, 8),
+    h2Coverage,
   };
 }
 
