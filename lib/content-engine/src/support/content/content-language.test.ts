@@ -19,6 +19,14 @@ describe("content-language", () => {
     expect(semrushDatabaseForLanguage("en-GB")).toBe("uk");
     expect(semrushDatabaseForLanguage("pt")).toBe("br");
     expect(semrushDatabaseForLanguage("nl")).toBe("nl");
+    expect(semrushDatabaseForLanguage("sv")).toBe("se");
+    expect(semrushDatabaseForLanguage("da")).toBe("dk");
+    expect(semrushDatabaseForLanguage("no")).toBe("no");
+    expect(semrushDatabaseForLanguage("fi")).toBe("fi");
+    expect(semrushDatabaseForLanguage("cs")).toBe("cz");
+    expect(semrushDatabaseForLanguage("zh-TW")).toBe("tw");
+    expect(semrushDatabaseForLanguage("he")).toBe("il");
+    expect(semrushDatabaseForLanguage("zh")).toBe("cn");
     expect(semrushDatabaseForLanguage("xx")).toBe("us");
   });
 

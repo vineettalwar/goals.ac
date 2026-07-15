@@ -1,4 +1,5 @@
 import { Save } from "lucide-react";
+import { SUPPORTED_LANGUAGES } from "@workspace/content-engine/support/content/content-language";
 import type { VoiceStyleFormValues } from "./types";
 
 const inputClassName =
@@ -29,18 +30,7 @@ const WORD_COUNT_PRESETS = [
   { label: "Long", value: 1500 },
 ] as const;
 
-const LANGUAGES = [
-  { code: "en", label: "English" },
-  { code: "es", label: "Spanish" },
-  { code: "fr", label: "French" },
-  { code: "de", label: "German" },
-  { code: "pt", label: "Portuguese" },
-  { code: "it", label: "Italian" },
-  { code: "nl", label: "Dutch" },
-  { code: "ja", label: "Japanese" },
-  { code: "ko", label: "Korean" },
-  { code: "zh", label: "Chinese (Simplified)" },
-] as const;
+const LANGUAGES = SUPPORTED_LANGUAGES;
 
 export function VoiceStyleEditView({
   values,

@@ -13,15 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SEMRUSH_DATABASES as SEMRUSH_DATABASE_CODES } from "@workspace/keyword-research-provider";
+import { semrushDatabaseLabel } from "@workspace/content-engine/support/content/content-language";
 
 const DEFAULT_BEDROCK_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0";
 
-const SEMRUSH_DATABASES = [
-  { value: "us", label: "United States" },
-  { value: "uk", label: "United Kingdom" },
-  { value: "ca", label: "Canada" },
-  { value: "au", label: "Australia" },
-] as const;
+const SEMRUSH_DATABASES = SEMRUSH_DATABASE_CODES.map((value) => ({
+  value,
+  label: semrushDatabaseLabel(value).replace(/ \([a-z]+\)$/i, ""),
+}));
 
 export function SettingsApiKeyDialogs({
   geminiDialogOpen, setGeminiDialogOpen, geminiKeyInput, setGeminiKeyInput, geminiTestResult,

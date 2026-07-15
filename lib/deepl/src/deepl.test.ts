@@ -7,7 +7,11 @@ describe("deepl language-map", () => {
     expect(deeplTargetLangForLanguage("de")).toBe("DE");
     expect(deeplTargetLangForLanguage("en-GB")).toBe("EN-GB");
     expect(deeplTargetLangForLanguage("zh-CN")).toBe("ZH-HANS");
+    expect(deeplTargetLangForLanguage("zh")).toBe("ZH-HANS");
+    expect(deeplTargetLangForLanguage("zh-TW")).toBe("ZH-HANT");
     expect(deeplTargetLangForLanguage("pt")).toBe("PT-BR");
+    expect(deeplTargetLangForLanguage("th")).toBe("TH");
+    expect(deeplTargetLangForLanguage("he")).toBe("HE");
   });
 
   it("returns null for English and unknown codes", () => {
