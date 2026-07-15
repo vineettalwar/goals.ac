@@ -1,3 +1,15 @@
+## 2026-07-15 — Persist `outputMode` on publish_records
+
+**Decision:** Store the resolved CMS `outputMode` (nullable text) on each `publish_records` row when a publish starts, so publish history can badge the format that was actually sent.
+
+**Alternatives considered:**
+- Derive mode only from live connection settings at read time — rejected; connection settings change; history would lie
+- Keep mode only in job/response payloads — rejected; UI list endpoints need a durable column
+
+**Reason:** Platform output modes already exist on connections; history and partner demos need the mode frozen per publish attempt.
+
+**Implications:** PG migration `0064_publish_records_output_mode.sql` + D1 `0001_publish_records_output_mode.sql` must be applied before badges show persisted values; write paths (`startPublishRecord` / `withPublishRecord` and callers) pass `outputMode` through.
+
 ## 2026-07-15 — Execute Wave 0→1→2 competitive plan
 
 **Decision:** Execute the Content Studio competitive plan in order: Wave 0 (humanize reliability + demo assets) → Wave 1 (Studio side panel brief/SERP + live draft score + unified create UX) → Wave 2 (health cron expansion, connect UX, publish history, article+social one-click). Keep full Surfer live NLP deferred. Partner-demo vs BLG/AutoSEO is the primary ICP for 90 days.

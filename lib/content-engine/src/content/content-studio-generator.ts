@@ -191,6 +191,7 @@ Your content is brand-aligned, audience-specific, and actionable.
 
 ${AI_WRITING_FROM_SCRATCH_PROMPT}
 ${AI_WRITING_RULES_PROMPT}
+- Outline templates are flexible guidance, not a fixed heading script: vary section names, order, and shape while keeping required SEO elements (FAQ, citations, schema) when specified.
 
 You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation; only raw JSON.`;
 
@@ -201,85 +202,73 @@ const FORMAT_CONFIGS: Record<
   blog_post: {
     label: "Blog Post",
     wordRange: "1400-1800",
-    structure: `- Engaging introduction (hook + premise, 2-3 sentences)
-- ## Why [Topic] Matters: 150-200 words
-- ## [Core Insight 1]: 200-250 words
-- ## [Core Insight 2]: 200-250 words
-- ## [Practical Takeaways]: numbered list of 5-7 actionable tips
-- ### Conclusion: 100-150 words with forward-looking close`,
+    structure: `- Open on the claim (hook + premise, 2-3 sentences); no labeled intro
+- One H2 on stakes or the cost of getting it wrong (~150-200 words); use a topic-specific heading, not stock phrases like "Why X Matters"
+- 2-3 H2s on distinct angles (~200-250 words each); vary length and shape
+- Practical application: numbered tips when helpful, or tips woven into prose
+- Close on the last concrete takeaway (no "Conclusion" / "In conclusion" wrapper)`,
   },
   news_article: {
     label: "News Article",
     wordRange: "600-900",
     structure: `- Inverted pyramid: most important facts first
-- ## Background: 150 words of context
-- ## Key Developments: 200 words on what's happening
-- ## Industry Impact: 150 words on what this means for the sector
-- ## What's Next: 100 words forward-looking
-- Keep tone journalistic, factual, and timely`,
+- Context on what led here (~150 words)
+- What changed / key developments (~200 words)
+- Sector impact with a specific actor or constraint (~150 words)
+- What to watch next (~100 words)
+- Journalistic, factual, timely tone; H2 names should fit the story, not a template`,
   },
   tutorial: {
     label: "Tutorial",
     wordRange: "1200-1600",
-    structure: `- Introduction: what you'll learn and prerequisites
-- ## What You Need: bullet list of tools/requirements
-- ## Step 1: [Action]: 150-200 words with detail
-- ## Step 2: [Action]: 150-200 words with detail
-- ## Step 3: [Action]: 150-200 words with detail
-- ## Step 4: [Action]: 150-200 words with detail
-- ## Common Mistakes to Avoid: 100-150 words
-- ## Summary: 100 words recap and next steps`,
+    structure: `- Intro: outcome readers will achieve plus prerequisites
+- Setup/requirements as bullets when needed
+- 3-5 sequential action H2s with concrete verb headings (~150-200 words each); avoid generic "Step 1" labels when a named action is clearer
+- Pitfalls section when useful (~100-150 words)
+- Short recap with next steps (no throat-clearing closer)`,
   },
   guide: {
     label: "Comprehensive Guide",
     wordRange: "1400-1800",
-    structure: `- Executive summary (what this guide covers)
-- ## Understanding [Topic]: foundational concepts, 200-250 words
-- ## Key Challenges: 200 words on what makes this hard
-- ## The Right Framework: 250 words on the recommended approach
-- ## Implementation Playbook: 300 words with numbered steps
-- ## Tools & Resources: 150 words curated list
-- ## Case Study / Example: 200 words illustrative scenario
-- ### Final Thoughts: 100 words closing`,
+    structure: `- Brief overview of what the guide delivers
+- Foundations H2 (~200-250 words) with a topic-specific name
+- Friction / failure modes H2 (~200 words); be specific about what breaks
+- Recommended approach H2 (~250 words); concrete steps, not filler "framework" language
+- Implementation section with numbered steps when useful (~300 words)
+- Tools/resources only if they add real value (~150 words)
+- Worked example or scenario (~200 words)
+- Tight close on the last useful point`,
   },
   whitepaper: {
     label: "Whitepaper",
     wordRange: "1800-2500",
-    structure: `- Executive Summary: 150 words
-- ## 1. Introduction: 200 words problem statement
-- ## 2. Industry Context & Data: 300 words with statistics/research
-- ## 3. Current Approaches & Their Limitations: 250 words
-- ## 4. Proposed Framework / Solution: 350 words detailed methodology
-- ## 5. Implementation Considerations: 200 words practical guidance
-- ## 6. ROI & Business Case: 200 words value argument
-- ## 7. Conclusion & Recommendations: 150 words
-- Formal, authoritative tone. Use data, cite frameworks by name.`,
+    structure: `- Executive summary (~150 words)
+- Cover these moves with topic-named H2s (numbering optional): problem, evidence/context, limits of current approaches, proposed approach, implementation, business case, recommendations
+- Rough word budget: problem ~200, evidence ~300, limits ~250, approach ~350, implementation ~200, business case ~200, recommendations ~150
+- Formal, authoritative tone; cite data and name sources. Avoid stock titles like "Industry Context & Data" unless they fit.`,
   },
   pillar_page: {
     label: "Pillar Page",
     wordRange: "2000-3000",
-    structure: `- Hero introduction defining the topic space (200 words)
-- ## What Is [Topic]?: 200 words clear definition
-- ## Why [Topic] Matters in [Year]: 200 words relevance
-- ## [Subtopic 1]: 300 words deep dive
-- ## [Subtopic 2]: 300 words deep dive
-- ## [Subtopic 3]: 300 words deep dive
-- ## [Subtopic 4]: 300 words deep dive
-- ## Common Questions: 5 FAQ-style Q&A pairs
-- ## Tools & Platforms: curated recommendations
-- ### Getting Started: 150 words action plan
-- This is an evergreen hub page; comprehensive, link-worthy content`,
+    structure: `- Hero intro that defines the topic space (~200 words)
+- Definition/scope H2 with a specific heading (~200 words)
+- Relevance/stakes H2 (~200 words) named for the audience, not "Why X Matters in [Year]"
+- 3-4 deep-dive H2s on real subtopics (~300 words each); vary length and shape
+- ## Frequently Asked Questions: 5 Q&A pairs (required)
+- Tools/platforms when useful
+- Getting-started close (~150 words)
+- Evergreen hub: comprehensive, link-worthy content`,
   },
   location_page: {
     label: "Location/Language Page",
     wordRange: "800-1200",
-    structure: `- Opening that names the location and the service/product in first sentence
-- ## [Service/Product] in [Location]: 200 words local market context
-- ## Why [Location] Businesses Choose [Brand]: 150 words local proof points
-- ## Local Market Insights: 200 words location-specific data and trends
-- ## How We Serve [Location] Clients: 150 words operational detail
-- ## Get Started in [Location]: 100 words CTA-oriented close
-- Weave location-specific signals throughout; mention local landmarks, regulations, or market nuances`,
+    structure: `- Opening that names the location and the service/product in the first sentence
+- Local market context H2 (~200 words)
+- Local proof / fit H2 (~150 words) with concrete signals (not "Why [Location] Businesses Choose [Brand]")
+- Location-specific insights (~200 words): data, trends, or constraints
+- How the offer works in that market (~150 words)
+- Local CTA close (~100 words)
+- Weave landmarks, regulations, or market nuance throughout`,
   },
   infographic_outline: {
     label: "Infographic Outline",
@@ -601,7 +590,7 @@ export function buildCacheKey(
     intendedPlatform?.trim() ?? "",
     competitorFocusUrl?.trim() ?? "",
     brandVoiceCacheFingerprint(brand),
-    "seo-v7",
+    "seo-v8",
   ].join("::");
   return createHash("sha256").update(raw).digest("hex").slice(0, 16);
 }

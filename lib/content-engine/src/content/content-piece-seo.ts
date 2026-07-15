@@ -257,6 +257,7 @@ Writing principles:
 - Structure with H2/H3 headings, short paragraphs, and scannable bullet lists
 ${AI_WRITING_FROM_SCRATCH_PROMPT}
 ${AI_WRITING_RULES_PROMPT}
+- Outline templates are flexible guidance, not a fixed heading script: vary section names, order, and shape while keeping required FAQ, citations, and schema.
 - Every statistical or factual claim MUST have an inline citation: [Publisher Name](https://real-url)
 - Include ## Frequently Asked Questions with 4-6 ### questions ending in ?
 - Embed 3+ internal links inline as [descriptive anchor](/blog/slug) inside body paragraphs
@@ -264,7 +265,7 @@ ${AI_WRITING_RULES_PROMPT}
 
 Quality bar: the draft MUST pass ALL of these before you respond:
 1. 1,200+ words in body_markdown
-2. 4+ ## H2 sections with real topic names (not "Core Insight 1")
+2. 4+ ## H2 sections with real topic names (not "Core Insight 1" or "Why [Topic] Matters")
 3. 4+ external citation links to authoritative sources (.gov, .edu, named research)
 4. 3+ internal links woven into prose
 5. 4+ FAQ items under ## Frequently Asked Questions
@@ -274,7 +275,7 @@ BAD output (never do this):
 "Engaging introduction (hook + premise, 2-3 sentences)\\n## Why [Topic] Matters (150-200 words)"
 
 GOOD output (do this):
-"Local SEO decides whether nearby buyers find you first. According to [Google](https://developers.google.com/search/docs/appearance/local-seo), proximity and relevance drive map pack rankings.\\n\\n## Why local search matters for startups\\n..."
+"Local SEO decides whether nearby buyers find you first. According to [Google](https://developers.google.com/search/docs/appearance/local-seo), proximity and relevance drive map pack rankings.\\n\\n## How proximity beats a prettier website\\n..."
 
 Respond ONLY with a valid JSON object. No markdown code fences, no explanation.`;
 
@@ -326,7 +327,7 @@ export function buildSeoLongformRequirements(
 - Write ${wordRange} words of publish-ready prose. NEVER an outline, brief, or template.
 - Open with a hook paragraph (no label like "Engaging introduction"). Start on the actual point, not a generic landscape opener.
 - Commit to direct claims instead of hedging. Prefer specifics over abstract noun fog.
-- Use 4-6 concrete ## H2 headings named after the actual topic (e.g. "## Why local SEO matters for startups", NOT "## Core Insight 1")
+- Use 4-6 concrete ## H2 headings named for the topic (e.g. "## How proximity beats a prettier website", NOT "## Core Insight 1" or "## Why X Matters")
 - Every stat or research claim needs an inline citation: [Source Name](https://real-url)
 - Minimum 4 external citations to authoritative sources (.gov, .edu, industry research, named publications)
 - Minimum 3 internal links inline in paragraphs: [anchor text](/blog/suggested-slug)

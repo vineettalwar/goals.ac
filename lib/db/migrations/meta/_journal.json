@@ -456,6 +456,13 @@
       "when": 1783922000000,
       "tag": "0063_contact_submissions",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1784100000000,
+      "tag": "0064_publish_records_output_mode",
+      "breakpoints": true
     }
   ]
 }

@@ -8,6 +8,13 @@
       "when": 1784050348717,
       "tag": "0000_premium_blue_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1784151705939,
+      "tag": "0001_publish_records_output_mode",
+      "breakpoints": true
     }
   ]
 }

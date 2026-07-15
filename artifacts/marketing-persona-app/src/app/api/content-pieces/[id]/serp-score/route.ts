@@ -2,10 +2,13 @@ import { NextResponse } from "next/server";
 import { eq, and, desc } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
+  brandProfilesTable,
   contentPiecesTable,
   keywordRankSnapshotsTable,
   trackedKeywordsTable,
+  websiteProjectsTable,
 } from "@workspace/db/schema";
+import type { ContentStyle } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
 import { scoreDualContentQuality } from "@workspace/content-engine/articles/serp-content-score";
@@ -43,6 +46,28 @@ export async function GET(
     jsonLdSchema?: object;
     internalLinkSuggestions?: { anchorText: string; suggestedSlug: string }[];
   };
+
+  const [[project], [brand]] = await Promise.all([
+    db
+      .select({ contentStyle: websiteProjectsTable.contentStyle })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, piece.websiteProjectId))
+      .limit(1),
+    db
+      .select({
+        brandGlossary: brandProfilesTable.brandGlossary,
+        writingExamples: brandProfilesTable.writingExamples,
+      })
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, piece.websiteProjectId))
+      .limit(1),
+  ]);
+
+  const contentStyle = (project?.contentStyle as ContentStyle | null) ?? null;
+  const writingSample = contentStyle?.writingSample?.trim() || null;
+  const brandGlossary = brand?.brandGlossary?.filter((t) => t?.trim()) ?? [];
+  const brandVoicePassages =
+    brand?.writingExamples?.map((e) => e?.trim()).filter((e): e is string => Boolean(e)) ?? [];
 
   let serpFeatures: Record<string, unknown> | null = null;
   const keyword = piece.targetKeyword?.trim();
@@ -102,11 +127,17 @@ export async function GET(
     serpFeatures,
     peopleAlsoAsk,
     competitorTitles,
+    writingSample,
+    brandGlossary: brandGlossary.length > 0 ? brandGlossary : undefined,
+    brandVoicePassages: brandVoicePassages.length > 0 ? brandVoicePassages : undefined,
   });
 
   return NextResponse.json({
     ...dual,
     serpFeatures,
     keyword: keyword ?? null,
+    writingSample,
+    brandGlossary: brandGlossary.length > 0 ? brandGlossary : null,
+    brandVoicePassages: brandVoicePassages.length > 0 ? brandVoicePassages : null,
   });
 }

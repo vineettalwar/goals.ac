@@ -4,6 +4,19 @@ Living document capturing architectural decisions, historical context, and lesso
 
 ---
 
+## Continuous packaging beats new engines (2026-07-15)
+
+**Lesson:** After Waves 0–3.2, the highest-ROI work was continuous packaging — empty CTAs, social Reject/requireApproval, ESP checklists, analytics Sync, stock images for all formats, voice sample scoring — not new scoring or CMS engines.
+
+- Ship polish in parallel once the packaging spine exists; demo and partner paths care about workflow coherence.
+- Persisting CMS `outputMode` on `publish_records` makes history badges honest; schema alone is not enough.
+- **Migration is required** before UI shows stored values: `pnpm --filter @workspace/db run migrate` and `pnpm run cf:migrate:d1:local` (or remote D1 migrate).
+- Forbidden `ensure*` identifiers still surface in typecheck; rename when packaging touches those packages.
+
+**See:** `HANDOFF.md` (Post-wave polish), `docs/DECISIONS.md` (`outputMode` on publish_records).
+
+---
+
 ## Content Studio competitive plan — Waves 0–2 (2026-07-15)
 
 **Lesson:** First packaging tranche (command center, dual score, Fix gaps, CMS health) shipped; the next gap is **humanize trust + Studio writing room + integration reliability** vs Surfer (live editor feel), BLG/AutoSEO (volume + quality demo), and Buffer (social polish).

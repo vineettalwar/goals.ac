@@ -1,0 +1,1 @@
+ALTER TABLE `publish_records` ADD `output_mode` text;

@@ -1,5 +1,48 @@
 # Session Handoff
 
+## Post-wave polish (2026-07-15)
+
+Continuous parallel ship after Waves 0–3.2. Packaging and UX polish — no new engines.
+
+- **Studio empty CTAs** — clearer empty-state actions in Content Studio
+- **`publish_records.outputMode`** — nullable column + badges; apply migrations:
+  ```sh
+  pnpm --filter @workspace/db run migrate
+  pnpm run cf:migrate:d1:local   # or migrate:d1 for remote
+  ```
+- **Social Reject + requireApproval banner** — queue reject flow + approval gate messaging
+- **Human voice brand sample scoring** — voice score against brand samples
+- **Social analytics Sync CTA** — explicit sync action on analytics panel
+- **ESP connect checklists** — setup checklists on ESP connect surfaces
+- **Marketing typecheck `ensure*` renames** — forbidden-identifier cleanup for typecheck
+- **Stock images all social formats** — stock image support across social format sizes
+
+---
+
+## Persist `outputMode` on publish_records (2026-07-15)
+
+**Status:** Schema + call sites wired. **Migration must be applied** before badges show persisted values.
+
+### Column
+- PG + sqlite schema: nullable `output_mode` text on `publish_records`
+- PG migration: `lib/db/migrations/0064_publish_records_output_mode.sql` (hand-written; `drizzle-kit generate` failed ESM/`require` in this env)
+- D1 migration: `lib/db/migrations-d1/0001_publish_records_output_mode.sql` (via `generate:d1` after convert)
+
+### Apply
+```sh
+pnpm --filter @workspace/db run migrate
+pnpm run cf:migrate:d1:local   # or migrate:d1 for remote
+```
+
+### Call sites
+- `startPublishRecord` / `withPublishRecord` accept + persist `outputMode`
+- `renderAndPublish` + `publishPieceToDestination` return resolved `outputMode`
+- Next/Express v1 publish, content-pieces publish, `contentPublish` job return it into `withPublishRecord`
+- `listPublishRecordsForProject` selects `outputMode` (was hard-coded `null`)
+- `PublishHistoryPanel` already badges when `record.outputMode` is set
+
+---
+
 ## Competitive plan messaging — Waves 0–3.2 (2026-07-15)
 
 **Status:** Partner-facing docs + compare copy aligned to shipped Waves 0–3.2. Hosted blog (3.3) still deferred.
@@ -122,7 +165,7 @@ cd lib/content-engine && npx tsc --noEmit && npx vitest run src/articles/serp-co
 - Ghost Lexical inline images inside paragraphs (standalone image lines supported)
 - TYPO3 FAL sys_file references for textmedia (currently embeds img in bodytext HTML)
 - Shopify theme app block (vs manual Liquid snippet)
-- Publish history showing output mode used
+- ~~Publish history showing output mode used~~ → done 2026-07-15 (see top of HANDOFF; run migrate)
 
 ### Done (2026-07-14 follow-up)
 - Plugin health test returns `recommendedOutputMode` + `availableOutputModes`
