@@ -28,6 +28,8 @@ router.get("/health", (_req, res) => {
       bulk_operations: true,
       output_modes: OUTPUT_MODES,
       theme_section_types: THEME_SECTION_TYPES,
+      // Manual Liquid in merchant theme — no theme app block in this plugin yet
+      theme_snippet_required_for: ["article_metafields", "page_sections"],
     },
     api_version: "2026-07",
   });

@@ -1,0 +1,9 @@
+{
+  "sections": {
+    "main": {
+      "type": "goals-ac-page-sections",
+      "settings": {}
+    }
+  },
+  "order": ["main"]
+}

@@ -20,6 +20,11 @@ const DEFAULT_METAFIELD_NAMESPACE = "goals_ac";
 const DEFAULT_METAFIELD_KEY = "content_sections";
 const DEFAULT_TEMPLATE_SUFFIX = "goals-ac";
 
+// article_metafields / page_sections write JSON metafields only. Storefront
+// rendering needs a theme Liquid snippet (not shipped as a theme app block yet).
+// Partners: copy cms-plugins/shopify/theme-snippets/ into the merchant theme —
+// see docs/cms-plugins/shopify-theme-sections.md.
+
 interface ShopifySection {
   type: string;
   settings: Record<string, unknown>;

@@ -2,6 +2,25 @@
 
 When a Shopify connection uses **Article + section metafields** or **OS 2.0 page sections**, the goals.ac plugin stores structured JSON on the article or page. Your theme must read and render it.
 
+**No theme app block yet.** Partners paste Liquid into the merchant theme (Online Store → Themes → Edit code). Copy-ready files live in [`cms-plugins/shopify/theme-snippets/`](../../cms-plugins/shopify/theme-snippets/).
+
+## Install steps (demos / partners)
+
+### Article + section metafields (`article_metafields`)
+
+1. Connect the goals.ac Shopify app plugin (Admin API alone cannot use metafield modes).
+2. In Publishing / Integrations, set output format to **Article + section metafields**.
+3. Open the active theme → **Edit code**.
+4. Copy [`theme-snippets/goals-ac-article-sections.liquid`](../../cms-plugins/shopify/theme-snippets/goals-ac-article-sections.liquid) into the article template (or `{% render %}` / include it from that template).
+5. Publish a test article and open the blog post URL — sections should render; without the snippet only the HTML `body` fallback appears.
+
+### OS 2.0 page sections (`page_sections`)
+
+1. Set output format to **OS 2.0 page sections**.
+2. Copy [`theme-snippets/sections/goals-ac-page-sections.liquid`](../../cms-plugins/shopify/theme-snippets/sections/goals-ac-page-sections.liquid) → theme `sections/goals-ac-page-sections.liquid`.
+3. Copy [`theme-snippets/templates/page.goals-ac.json`](../../cms-plugins/shopify/theme-snippets/templates/page.goals-ac.json) → theme `templates/page.goals-ac.json`.
+4. Publish a test page — the plugin sets template suffix `goals-ac`, which maps to that JSON template.
+
 ## Article metafields mode
 
 The plugin writes a JSON metafield:
@@ -34,7 +53,7 @@ Example payload:
 
 ### Minimal Liquid snippet
 
-Add to your article template or a section that loops metafields:
+Same markup as `theme-snippets/goals-ac-article-sections.liquid`:
 
 ```liquid
 {% assign sections = article.metafields.goals_ac.content_sections.value %}
@@ -69,7 +88,7 @@ The article `body` field still receives HTML as a fallback for themes without th
 
 ## Page sections mode
 
-Creates an **Online Store page** with template suffix `goals-ac` and stores section JSON in page metafields. Requires a theme template `templates/page.goals-ac.json` that reads the same metafield structure.
+Creates an **Online Store page** with template suffix `goals-ac` and stores section JSON in page metafields (`goals_ac.content_sections`). Requires theme files above (`page.goals-ac.json` + section Liquid). Page `body` HTML is also written as a fallback.
 
 ## Health check
 
@@ -78,7 +97,8 @@ Creates an **Online Store page** with template suffix `goals-ac` and stores sect
 ```json
 {
   "capabilities": {
-    "output_modes": ["article_html", "article_metafields", "page_sections"]
+    "output_modes": ["article_html", "article_metafields", "page_sections"],
+    "theme_snippet_required_for": ["article_metafields", "page_sections"]
   }
 }
 ```

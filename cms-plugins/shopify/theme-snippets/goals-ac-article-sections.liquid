@@ -1,0 +1,33 @@
+{% comment %}
+  goals.ac — article section metafields renderer
+  Install: Online Store → Themes → Edit code → paste into
+  templates/article*.liquid (or a section included from the article template).
+  Reads metafield: article.metafields.goals_ac.content_sections (json).
+  Docs: docs/cms-plugins/shopify-theme-sections.md
+{% endcomment %}
+{% assign sections = article.metafields.goals_ac.content_sections.value %}
+{% if sections %}
+  {% for block in sections %}
+    {% case block.type %}
+      {% when 'rich-text' %}
+        <div class="goals-ac-rich-text">
+          {% if block.settings.heading != blank %}
+            <h2>{{ block.settings.heading }}</h2>
+          {% endif %}
+          {{ block.settings.text }}
+        </div>
+      {% when 'image-with-text' %}
+        <div class="goals-ac-image-text">
+          {% if block.settings.image != blank %}
+            <img src="{{ block.settings.image }}" alt="{{ block.settings.heading | escape }}" loading="lazy">
+          {% endif %}
+          {% if block.settings.heading != blank %}
+            <h2>{{ block.settings.heading }}</h2>
+          {% endif %}
+          {{ block.settings.text }}
+        </div>
+    {% endcase %}
+  {% endfor %}
+{% else %}
+  {{ article.content }}
+{% endif %}
