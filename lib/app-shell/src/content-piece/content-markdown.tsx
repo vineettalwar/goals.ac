@@ -50,6 +50,10 @@ function renderInline(text: string): ReactNode[] {
   return nodes;
 }
 
+function stripBlockquotePrefix(line: string): string {
+  return line.replace(/^>\s?/, "");
+}
+
 export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
   const lines = children.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
@@ -66,10 +70,15 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
     listItems = [];
   }
 
-  for (const line of lines) {
-    const trimmed = line.trim();
+  for (let i = 0; i < lines.length; i++) {
+    const trimmed = lines[i]!.trim();
     if (!trimmed) {
       flushList();
+      continue;
+    }
+
+    // Skip HTML comment markers used by infographic injection
+    if (trimmed.startsWith("<!--") && trimmed.endsWith("-->")) {
       continue;
     }
 
@@ -103,26 +112,72 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
       continue;
     }
 
-    if (/^[-*]\s+/.test(trimmed)) {
-      listItems.push(
-        <li key={key++} className="leading-relaxed text-foreground/90">
-          {renderInline(trimmed.replace(/^[-*]\s+/, ""))}
-        </li>,
-      );
-      continue;
-    }
-
-    if (trimmed.startsWith("> ")) {
+    if (trimmed.startsWith(">")) {
       flushList();
-      const quoteLines: string[] = [trimmed.slice(2)];
-      // Collect contiguous blockquote lines (simple peek via remaining loop state below).
+      const quoteInner: string[] = [];
+      while (i < lines.length) {
+        const q = lines[i]!.trim();
+        if (!q.startsWith(">") && q !== "") break;
+        if (q.startsWith(">")) {
+          quoteInner.push(stripBlockquotePrefix(q));
+        } else {
+          // blank quote continuation — preserve as separator
+          quoteInner.push("");
+        }
+        i += 1;
+      }
+      i -= 1;
+
+      const quoteChildren: ReactNode[] = [];
+      let quoteList: ReactNode[] = [];
+      const flushQuoteList = () => {
+        if (quoteList.length === 0) return;
+        quoteChildren.push(
+          <ul key={key++} className="my-2 list-disc space-y-1 pl-5">
+            {quoteList}
+          </ul>,
+        );
+        quoteList = [];
+      };
+
+      for (const qLine of quoteInner) {
+        if (!qLine) {
+          flushQuoteList();
+          continue;
+        }
+        if (/^[-*]\s+/.test(qLine)) {
+          quoteList.push(
+            <li key={key++} className="leading-relaxed">
+              {renderInline(qLine.replace(/^[-*]\s+/, ""))}
+            </li>,
+          );
+          continue;
+        }
+        flushQuoteList();
+        quoteChildren.push(
+          <p key={key++} className="my-1 leading-relaxed">
+            {renderInline(qLine)}
+          </p>,
+        );
+      }
+      flushQuoteList();
+
       blocks.push(
         <blockquote
           key={key++}
           className="my-4 rounded-r-lg border-l-2 border-primary bg-secondary/50 px-4 py-3 not-italic text-foreground/90"
         >
-          <p className="leading-relaxed">{renderInline(quoteLines[0] ?? "")}</p>
+          {quoteChildren}
         </blockquote>,
+      );
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(trimmed)) {
+      listItems.push(
+        <li key={key++} className="leading-relaxed text-foreground/90">
+          {renderInline(trimmed.replace(/^[-*]\s+/, ""))}
+        </li>,
       );
       continue;
     }
