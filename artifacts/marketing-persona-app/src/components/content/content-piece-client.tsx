@@ -108,9 +108,13 @@ export function ContentPieceClient({
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [repurposeDialogOpen, setRepurposeDialogOpen] = useState(false);
 
-  const visualSummaryMarkdown =
-    (pieceRecord.pieceMetadata as ContentPieceMetadata | null | undefined)
-      ?.visualSummaryMarkdown ?? null;
+  const pieceMeta = pieceRecord.pieceMetadata as ContentPieceMetadata | null | undefined;
+  const visualSummaryMarkdown = pieceMeta?.visualSummaryMarkdown ?? null;
+  const visualSummarySvgSrc =
+    pieceMeta?.visualSummarySvgDataUri ??
+    (pieceMeta?.visualSummarySvg
+      ? `data:image/svg+xml;charset=utf-8,${encodeURIComponent(pieceMeta.visualSummarySvg)}`
+      : null);
 
   const fetchDualScore = useCallback(async (contentPieceId: number) => {
     try {
@@ -224,15 +228,26 @@ export function ContentPieceClient({
           </>
         }
         asideExtra={
-          visualSummaryMarkdown && contentPieceCanEnhance(piece.formatType) ? (
+          (visualSummarySvgSrc || visualSummaryMarkdown) &&
+          contentPieceCanEnhance(piece.formatType) ? (
             <div className="paper-card space-y-2 rounded-xl p-4">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <LayoutTemplate className="h-4 w-4 text-primary" aria-hidden />
                 Visual summary
               </div>
-              <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-                <ContentMarkdown>{visualSummaryMarkdown}</ContentMarkdown>
-              </div>
+              {visualSummarySvgSrc ? (
+                // eslint-disable-next-line @next/next/no-img-element -- SVG data URI from pieceMetadata
+                <img
+                  src={visualSummarySvgSrc}
+                  alt="At a glance"
+                  className="w-full rounded-lg border border-border/60 bg-[#FAFAF8]"
+                />
+              ) : null}
+              {visualSummaryMarkdown ? (
+                <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
+                  <ContentMarkdown>{visualSummaryMarkdown}</ContentMarkdown>
+                </div>
+              ) : null}
             </div>
           ) : null
         }

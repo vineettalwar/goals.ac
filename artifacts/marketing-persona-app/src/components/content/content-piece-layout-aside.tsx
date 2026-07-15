@@ -37,6 +37,7 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
     previewWarnings,
     previewKind,
     visualSummaryMarkdown,
+    visualSummarySvgSrc,
     canEnhance,
     enhancing,
     handleEnhance,
@@ -75,6 +76,7 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
     previewWarnings: Array<{ code: string; message: string }>;
     previewKind: string | null;
     visualSummaryMarkdown: string | null;
+    visualSummarySvgSrc?: string | null;
     canEnhance: boolean;
     enhancing: boolean;
     handleEnhance: () => void;
@@ -106,15 +108,25 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-6">
-      {visualSummaryMarkdown && canEnhance && (
+      {(visualSummarySvgSrc || visualSummaryMarkdown) && canEnhance && (
         <div className="paper-card p-4 rounded-xl space-y-2">
           <div className="flex items-center gap-2 text-sm font-medium">
             <LayoutTemplate className="h-4 w-4 text-primary" />
             Visual summary
           </div>
-          <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
-            <ContentMarkdown>{visualSummaryMarkdown}</ContentMarkdown>
-          </div>
+          {visualSummarySvgSrc ? (
+            // eslint-disable-next-line @next/next/no-img-element -- SVG data URI from pieceMetadata
+            <img
+              src={visualSummarySvgSrc}
+              alt="At a glance"
+              className="w-full rounded-lg border border-border/60 bg-[#FAFAF8]"
+            />
+          ) : null}
+          {visualSummaryMarkdown ? (
+            <div className="text-sm prose prose-sm dark:prose-invert max-w-none">
+              <ContentMarkdown>{visualSummaryMarkdown}</ContentMarkdown>
+            </div>
+          ) : null}
         </div>
       )}
 

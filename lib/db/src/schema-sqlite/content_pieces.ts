@@ -83,6 +83,10 @@ export type ContentPieceMetadata = {
   intendedOutputMode?: string;
   /** Markdown visual summary block injected post-generation */
   visualSummaryMarkdown?: string;
+  /** Raw SVG “At a glance” graphic */
+  visualSummarySvg?: string;
+  /** data:image/svg+xml URI for aside / markdown image */
+  visualSummarySvgDataUri?: string;
 };
 
 export const contentPiecesTable = sqliteTable("content_pieces", {

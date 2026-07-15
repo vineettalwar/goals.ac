@@ -64,6 +64,10 @@ export type ContentPieceMetadata = {
   deeplRefined?: boolean;
   deeplTargetLang?: string;
   visualSummaryMarkdown?: string;
+  /** Raw SVG markup for the “At a glance” card */
+  visualSummarySvg?: string;
+  /** data:image/svg+xml URI for aside thumbnail / markdown image */
+  visualSummarySvgDataUri?: string;
 };
 
 export type RichContentPieceFields = ContentPieceMetadata & {

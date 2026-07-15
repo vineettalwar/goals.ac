@@ -43,6 +43,8 @@ export type ContentPieceMetadata = {
   intendedPublishPlatform?: string | null;
   secondaryKeywords?: string[] | null;
   visualSummaryMarkdown?: string | null;
+  visualSummarySvg?: string | null;
+  visualSummarySvgDataUri?: string | null;
 };
 
 export type ContentPieceDetail = {
