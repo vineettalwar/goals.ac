@@ -10,6 +10,7 @@ import {
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
+import { useIntegrationsData } from "@/hooks/use-integrations-data";
 import { useStudioData } from "@/hooks/use-studio-data";
 
 const VALID_FORMATS = new Set(STUDIO_FORMAT_OPTIONS.map((option) => option.value));
@@ -54,6 +55,7 @@ export function StudioPage() {
     markingReadyId,
     reschedulingId,
   } = useStudioData(projectId || null);
+  const { integrations } = useIntegrationsData(projectId || null);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -134,6 +136,7 @@ export function StudioPage() {
       <CreateContentDialog
         open={createOpen}
         initialValues={createInitialValues}
+        cmsConnections={integrations ?? {}}
         onClose={() => {
           if (creating) return;
           setCreateOpen(false);

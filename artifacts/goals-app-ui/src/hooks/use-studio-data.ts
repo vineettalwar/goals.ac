@@ -17,6 +17,7 @@ type CreateGeneratePayload = {
   targetKeyword: string;
   angleHint?: string;
   plannedDate?: string;
+  intendedPublishPlatform?: string;
 };
 
 function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGeneratePayload {
@@ -28,6 +29,8 @@ function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGener
   if (angle) payload.angleHint = angle;
   const planned = input.plannedDate?.trim();
   if (planned) payload.plannedDate = planned;
+  const platform = input.intendedPublishPlatform?.trim();
+  if (platform) payload.intendedPublishPlatform = platform;
   return payload;
 }
 

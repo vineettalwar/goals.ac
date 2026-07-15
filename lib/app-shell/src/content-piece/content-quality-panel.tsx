@@ -75,7 +75,8 @@ export function ArticleQualityPanel({
   const [debouncedWordCount, setDebouncedWordCount] = useState(wordCount);
   const [fetchedDual, setFetchedDual] = useState<DualContentScore | null>(null);
   const [refreshingSerp, setRefreshingSerp] = useState(false);
-  const dual = dualScore ?? fetchedDual;
+  // Refreshed SERP wins over a parent-provided snapshot.
+  const dual = fetchedDual ?? dualScore;
   const draftDiffersFromSaved =
     savedBodyMarkdown != null && bodyMarkdown !== savedBodyMarkdown;
   const canRefreshSerp = Boolean(contentPieceId && fetchDualScore);
@@ -111,10 +112,11 @@ export function ArticleQualityPanel({
   const result = scoreArticleQuality(scoreInput);
 
   useEffect(() => {
+    setFetchedDual(null);
+  }, [contentPieceId]);
+
+  useEffect(() => {
     if (dualScore != null || !contentPieceId || !fetchDualScore) {
-      if (dualScore == null && (!contentPieceId || !fetchDualScore)) {
-        setFetchedDual(null);
-      }
       return;
     }
     let cancelled = false;
@@ -212,21 +214,21 @@ export function ArticleQualityPanel({
           ) : null}
         </div>
       </div>
-      <ul className="space-y-2">
-        <li>
-          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Editorial (live draft)
-          </p>
-        </li>
-        {result.breakdown.map((item) => (
-          <li key={item.label} className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">{item.label}</span>
-            <span className={item.score === 0 ? "font-medium text-red-600" : "font-medium"}>
-              {item.score}/{item.max}
-            </span>
-          </li>
-        ))}
-      </ul>
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Editorial (live draft)
+        </p>
+        <ul className="space-y-2">
+          {result.breakdown.map((item) => (
+            <li key={item.label} className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{item.label}</span>
+              <span className={item.score === 0 ? "font-medium text-red-600" : "font-medium"}>
+                {item.score}/{item.max}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {dual?.serp.breakdown?.length ? (
         <div className="space-y-2 border-t border-border pt-3">

@@ -106,12 +106,19 @@ export function ArticleQualityPanel({
 
   // SERP half is DB-bodied on the server — do not refetch on draft keystrokes.
   // Response also carries brand voice context for local Human voice scoring.
-  const { data: dual = null } = useQuery({
+  const {
+    data: dual = null,
+    refetch: refetchSerpScore,
+    isFetching: isRefreshingSerp,
+  } = useQuery({
     queryKey: ["content-piece-serp-score", contentPieceId],
     queryFn: () => fetchDualScore(contentPieceId!),
     enabled: Boolean(contentPieceId),
     staleTime: 30_000,
   });
+
+  const draftDiffersFromSaved =
+    savedBodyMarkdown != null && bodyMarkdown !== savedBodyMarkdown;
 
   const writingSample = writingSampleProp ?? dual?.writingSample ?? null;
   const brandGlossary = brandGlossaryProp ?? dual?.brandGlossary ?? undefined;
@@ -176,7 +183,17 @@ export function ArticleQualityPanel({
           </p>
           {dual ? (
             <p className="text-xs text-muted-foreground mt-1">
-              Editorial {editorialTotal} · SERP {serpTotal} · Combined {displayTotal}
+              Editorial {editorialTotal} (live draft) · SERP {serpTotal} (last saved) · Combined{" "}
+              {displayTotal}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground mt-1">
+              Editorial {editorialTotal} (live draft)
+            </p>
+          )}
+          {dual && draftDiffersFromSaved ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              SERP and H2 are from the last saved body — save or refresh to update.
             </p>
           ) : null}
           {scoreDelta !== 0 ? (
@@ -184,9 +201,24 @@ export function ArticleQualityPanel({
               {formatScoreDelta(scoreDelta)}
             </p>
           ) : null}
+          {contentPieceId ? (
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              className="mt-1 h-auto px-0 text-xs"
+              onClick={() => void refetchSerpScore()}
+              disabled={isRefreshingSerp}
+            >
+              {isRefreshingSerp ? "Refreshing SERP…" : "Refresh SERP score"}
+            </Button>
+          ) : null}
         </div>
       </div>
 
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        Editorial (live draft)
+      </p>
       {result.breakdown.map((item) => (
         <div key={item.label} className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">{item.label}</span>
@@ -199,7 +231,7 @@ export function ArticleQualityPanel({
       {dual?.serp.breakdown?.length ? (
         <div className="border-t border-border pt-3 space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            SERP coverage
+            SERP / H2 (last saved)
           </p>
           {dual.serp.breakdown.map((item) => (
             <div key={item.label} className="flex items-center justify-between text-xs">

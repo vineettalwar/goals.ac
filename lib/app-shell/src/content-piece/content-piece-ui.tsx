@@ -785,6 +785,7 @@ function ContentPieceAside({
           wordCount={wordCount}
           metadata={piece.pieceMetadata}
           contentPieceId={piece.id}
+          fetchDualScore={fetchDualScore}
           dualScore={dual}
           savedBodyMarkdown={piece.bodyMarkdown ?? ""}
           showScoreDelta={editing}
