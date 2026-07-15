@@ -35,7 +35,7 @@ Ponytail **safe-delete runway is not exhausted.** Morning cuts were real; a seco
 | ~−221 | `delete` | Roadmap page clients after redirect → `/content-engine` | `…/marketing/pages/roadmaps/roadmap{s,-detail}-*-client.tsx` |
 | ~−117 | `delete` | `VideoDemoSection` never mounted | `…/marketing/sections/video-demo-section.tsx` |
 | ~−68 | `delete` | `BrandTailoringPanel` zero imports | `…/brand/brand-tailoring-panel.tsx` |
-| ~−78 | `delete` | Unused `useJobPoll` (Pages) | `goals-app-ui/src/hooks/use-job-poll.ts` |
+| ~−78 | `delete` → **finished** | `useJobPoll` now drives generate + publish polls in `use-content-piece-data` | `goals-app-ui/src/hooks/use-job-poll.ts` |
 | −3 deps / ~−25 | `delete` | Unused Next deps: `@dnd-kit/core`, `@dnd-kit/utilities` (DnD in app-shell), `@radix-ui/react-separator` (+ orphan `ui/separator.tsx`) | `marketing-persona-app/package.json` |
 | ~−144 | `delete` | Dead helpers: `settings-types.ts`, `lib/utils/motion.ts`, `lib/billing/quota-checkout.ts`, `lib/format/date.ts`, AI re-export stubs, `marketing-section-surface.ts` | verify import-graph before each file |
 | ~−80–120 | `shrink` | Next `ContentExportPanel` / `StockByokPanel` near shell copies | prefer shell import |
@@ -46,6 +46,21 @@ Ponytail **safe-delete runway is not exhausted.** Morning cuts were real; a seco
 
 **net (high-confidence):** ~−2350 LOC, −3 deps  
 **net (aspirational shrink):** dual-wizard / admin dialogs — PRD + parity tests first  
+
+---
+
+## Assumed unfinished (not deletes) — how to finish
+
+| Surface | Intended job | Finish by |
+|---|---|---|
+| Deprecated `content-piece-layout*` cluster | Pre-shell Next piece editor UI | Already superseded by `ContentPieceView` — delete only if no leftover edit paths; or port any unique status-select leftover into shell |
+| `dashboard-sections.tsx` | Server-rendered dashboard widgets | Re-wire into `DashboardPageClient` / `load-dashboard-data` **or** delete if shell `DashboardView` already covers all cards |
+| Public `roadmaps-*-client.tsx` | Marketing roadmap browser/generator | Re-mount behind `/roadmaps` (today `permanentRedirect` → `/content-engine`) **or** keep redirect and delete clients |
+| `VideoDemoSection` | Homepage “see it live” collage/tour | Import on marketing home between hero and features |
+| `BrandTailoringPanel` | Show voice/colors/offerings on brand/piece | Mount on project brand tab or piece aside with brand profile props |
+| `useJobPoll` | Shared async job polling | **Done 2026-07-16** — generate + publish in Pages `use-content-piece-data` |
+| Unused `@dnd-kit` on Next | Studio calendar DnD | Not unfinished — DnD lives in app-shell; drop Next deps |
+| Dead helpers (`motion`, `quota-checkout`, date utils, AI stubs) | Leftover re-exports / unused utils | Delete after import-graph confirm, or re-wire call sites if intentional |
 
 ---
 

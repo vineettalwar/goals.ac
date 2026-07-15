@@ -181,7 +181,7 @@ export function AdminIntegrationsPage() {
   if (!status) return <p className="p-8 text-destructive">{error ?? "Unavailable"}</p>;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+    <div className="max-w-5xl space-y-8 px-8 py-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Platform integrations</h1>
         <p className="mt-1 text-sm text-muted-foreground">

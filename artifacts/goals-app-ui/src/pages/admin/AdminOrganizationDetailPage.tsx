@@ -167,7 +167,7 @@ export function AdminOrganizationDetailPage({ organizationId }: { organizationId
 
   if (!detail) {
     return (
-      <div className="space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="max-w-6xl space-y-4 px-8 py-8">
         <Link to="/admin/organizations" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Back to organizations
         </Link>
@@ -179,7 +179,7 @@ export function AdminOrganizationDetailPage({ organizationId }: { organizationId
   const { organization: org } = detail;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+    <div className="max-w-6xl space-y-6 px-8 py-8">
       <Link to="/admin/organizations" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
         <ArrowLeft className="h-4 w-4" /> Back to organizations
       </Link>

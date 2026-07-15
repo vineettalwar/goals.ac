@@ -18,6 +18,11 @@ export {
   readShopifyThemeSnippetRequiredFor,
   SHOPIFY_THEME_SNIPPET_REQUIRED_FALLBACK,
 } from "./shopify-theme-snippet-preflight";
+export {
+  Typo3MediaPreflight,
+  hasRasterDataImage,
+  readTypo3MediaUploadCapable,
+} from "./typo3-media-preflight";
 export { ContentExportPanel, type ContentExportPlatform } from "./content-export-panel";
 export { ContentPieceRepurposeDialog } from "./repurpose-dialog";
 export { ContentPieceFeaturedImage } from "./content-featured-image";

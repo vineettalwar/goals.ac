@@ -281,7 +281,7 @@ export function AdminLayout() {
 
       <div className={`flex min-w-0 flex-1 flex-col overflow-hidden ${APP_SHELL_MAIN_OFFSET}`}>
         <ImpersonationBanner />
-        <main className="min-w-0 flex-1 overflow-y-auto">
+        <main className="min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
           <Outlet />
         </main>
       </div>

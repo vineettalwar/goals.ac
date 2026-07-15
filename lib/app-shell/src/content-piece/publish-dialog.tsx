@@ -77,6 +77,7 @@ export function ContentPiecePublishDialog({
       setPreview(null);
       setPreviewError(null);
       setShopifyThemeSnippetAck(false);
+      setTypo3MediaUploadAck(false);
       return;
     }
 
@@ -128,6 +129,14 @@ export function ContentPiecePublishDialog({
       shopifyOutputMode,
       readShopifyThemeSnippetRequiredFor(shopifyConnection),
     );
+  const typo3Connection =
+    platform === "typo3" && connections?.typo3 && typeof connections.typo3 === "object"
+      ? (connections.typo3 as Record<string, unknown>)
+      : null;
+  const showTypo3MediaUploadWarning =
+    platform === "typo3" &&
+    hasRasterDataImage(pieceFeaturedImageUrl) &&
+    !readTypo3MediaUploadCapable(typo3Connection);
   const hasPublishable =
     availableDestinations.some((d) => !d.exportOnly) || availableDestinations.length > 0;
   const gridCols =
@@ -235,6 +244,7 @@ export function ContentPiecePublishDialog({
                         setPreview(null);
                         setPreviewError(null);
                         setShopifyThemeSnippetAck(false);
+                        setTypo3MediaUploadAck(false);
                       }}
                       disabled={publishing}
                       className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-hidden disabled:opacity-50 ${
@@ -284,6 +294,24 @@ export function ContentPiecePublishDialog({
                     <span>
                       Theme snippet installed — publish continues either way; check if you already
                       pasted the Liquid into the theme.
+                    </span>
+                  </label>
+                </div>
+              ) : null}
+
+              {showTypo3MediaUploadWarning ? (
+                <div className="space-y-2">
+                  <Typo3MediaPreflight />
+                  <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-border"
+                      checked={typo3MediaUploadAck}
+                      onChange={(e) => setTypo3MediaUploadAck(e.target.checked)}
+                      disabled={publishing}
+                    />
+                    <span>
+                      Understood — inline FAL works; publish continues. Upgrade extension for proper FAL references.
                     </span>
                   </label>
                 </div>

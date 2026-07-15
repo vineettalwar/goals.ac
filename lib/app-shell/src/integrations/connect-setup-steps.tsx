@@ -73,6 +73,7 @@ export const FULL_APP_CMS_SETUP_STEPS: Record<string, string[]> = {
   typo3: [
     "Install the goals.ac TYPO3 extension and open Extension Manager settings.",
     "Paste your TYPO3 site URL and the plugin site key.",
+    "Latest version includes POST /goals-ac/v1/media for proper FAL file references (older versions fall back to inline base64).",
     "Save in Integrations, then Run health check before the first publish.",
   ],
   wix: [
