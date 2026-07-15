@@ -62,6 +62,47 @@ export const SOCIAL_PLATFORM_OPTIONS = [
 
 export type SocialPlatformId = (typeof SOCIAL_PLATFORM_OPTIONS)[number]["id"];
 
+const FORMAT_TO_PLATFORM: Record<string, SocialPlatformId> = {
+  linkedin_post: "linkedin",
+  twitter_thread: "twitter",
+  instagram_post: "instagram",
+  facebook_post: "facebook",
+  bluesky_post: "bluesky",
+  mastodon_post: "mastodon",
+};
+
+/** Resolve platform id from publishPlatform / platform / formatType. */
+export function resolveSocialPlatformId(piece: {
+  platform?: string | null;
+  publishPlatform?: string | null;
+  formatType?: string | null;
+}): SocialPlatformId | null {
+  const raw = piece.platform ?? piece.publishPlatform;
+  if (raw && SOCIAL_PLATFORM_OPTIONS.some((p) => p.id === raw)) {
+    return raw as SocialPlatformId;
+  }
+  if (piece.formatType && FORMAT_TO_PLATFORM[piece.formatType]) {
+    return FORMAT_TO_PLATFORM[piece.formatType];
+  }
+  return null;
+}
+
+export function getSocialPlatformLimit(platformId: string | null | undefined): number {
+  const opt = SOCIAL_PLATFORM_OPTIONS.find((p) => p.id === platformId);
+  return opt?.limit ?? 3000;
+}
+
+export function socialPostCharCount(body: string | null | undefined): number {
+  return (body ?? "").length;
+}
+
+export function isSocialOverCharLimit(
+  body: string | null | undefined,
+  platformId: string | null | undefined,
+): boolean {
+  return socialPostCharCount(body) > getSocialPlatformLimit(platformId);
+}
+
 export type PlatformVoiceProfile = {
   channels: Record<
     string,
