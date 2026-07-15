@@ -183,6 +183,8 @@ export function SocialHubView({
             title: item.title,
             platform: item.platform,
             scheduledAt: item.scheduledAt,
+            bodyMarkdown: item.bodyMarkdown,
+            formatType: item.formatType,
           }))}
           loading={queueLoading}
           reschedulingId={reschedulingId}

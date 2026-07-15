@@ -19,10 +19,9 @@ import {
   generatePkce,
   saveProjectCreds,
 } from "@workspace/content-engine/support/social/social-tokens";
+import { resolveLinkedInOAuthCredentials } from "@workspace/content-engine/support/social/linkedin-platform-credentials";
 import { assertSocialPublishingEnabled } from "../../platform/platform-settings";
 
-const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID;
-const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET;
 const TWITTER_CLIENT_ID = process.env.TWITTER_CLIENT_ID;
 const TWITTER_CLIENT_SECRET = process.env.TWITTER_CLIENT_SECRET;
 const META_APP_ID = process.env.META_APP_ID;
@@ -69,13 +68,14 @@ function publishingRedirect(projectId: number, params: Record<string, string>): 
 
 export async function startLinkedInOAuth(projectId: number, userId: number): Promise<never> {
   await assertSocialPublishingEnabled();
-  if (!LINKEDIN_CLIENT_ID || !LINKEDIN_CLIENT_SECRET) {
+  const linkedInApp = await resolveLinkedInOAuthCredentials();
+  if (!linkedInApp) {
     throw new Error("LinkedIn OAuth is not configured");
   }
   const state = encodeState({ projectId, userId, platform: "linkedin" });
   const params = new URLSearchParams({
     response_type: "code",
-    client_id: LINKEDIN_CLIENT_ID,
+    client_id: linkedInApp.clientId,
     redirect_uri: `${getNextApiOrigin()}/api/auth/linkedin/callback`,
     state,
     scope: "openid profile w_member_social email",
@@ -95,6 +95,10 @@ export async function handleLinkedInCallback(code: string, stateRaw: string): Pr
   }
 
   try {
+    const linkedInApp = await resolveLinkedInOAuthCredentials();
+    if (!linkedInApp) {
+      publishingRedirect(state.projectId, { linkedin: "error" });
+    }
     const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -102,8 +106,8 @@ export async function handleLinkedInCallback(code: string, stateRaw: string): Pr
         grant_type: "authorization_code",
         code,
         redirect_uri: `${getNextApiOrigin()}/api/auth/linkedin/callback`,
-        client_id: LINKEDIN_CLIENT_ID!,
-        client_secret: LINKEDIN_CLIENT_SECRET!,
+        client_id: linkedInApp.clientId,
+        client_secret: linkedInApp.clientSecret,
       }),
     });
     const tokenData = (await tokenRes.json()) as {

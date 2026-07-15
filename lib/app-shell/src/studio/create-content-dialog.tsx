@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, FileText } from "lucide-react";
+import { ArrowLeft, CheckCircle2, FileText, Loader2 } from "lucide-react";
 import {
   buildLinkedInAngleHint,
   LINKEDIN_ARCHETYPES,
+  LINKEDIN_HOOK_TYPES,
   parseLinkedInArchetypeFromAngleHint,
+  parseLinkedInHookFromAngleHint,
   stripLinkedInAngleMeta,
   type LinkedInArchetypeId,
+  type LinkedInHookId,
 } from "./linkedin-archetypes";
 import { STUDIO_FORMAT_OPTIONS, formatTypeLabel } from "./types";
 
@@ -39,6 +42,9 @@ const SEO_LONGFORM_FORMATS = new Set([
   "news_article",
   "location_page",
 ]);
+
+/** Fake progress labels while the one-shot generate API runs. */
+const GENERATING_LABELS = ["Analyzing", "Drafting", "Finishing"] as const;
 
 function isSeoLongform(formatType: string): boolean {
   return SEO_LONGFORM_FORMATS.has(formatType);
@@ -86,9 +92,11 @@ export function CreateContentDialog({
   const [formatType, setFormatType] = useState("blog_post");
   const [angleHint, setAngleHint] = useState("");
   const [linkedinArchetype, setLinkedinArchetype] = useState<LinkedInArchetypeId | "">("");
+  const [linkedinHook, setLinkedinHook] = useState<LinkedInHookId | "">("");
   const [plannedDate, setPlannedDate] = useState("");
   const [intendedPublishPlatform, setIntendedPublishPlatform] = useState<string | undefined>();
   const [competitorFocusUrl, setCompetitorFocusUrl] = useState("");
+  const [generatingLabelIndex, setGeneratingLabelIndex] = useState(0);
 
   const steps = useMemo(() => buildSteps(formatType), [formatType]);
 
@@ -100,9 +108,11 @@ export function CreateContentDialog({
       setFormatType("blog_post");
       setAngleHint("");
       setLinkedinArchetype("");
+      setLinkedinHook("");
       setPlannedDate("");
       setIntendedPublishPlatform(undefined);
       setCompetitorFocusUrl("");
+      setGeneratingLabelIndex(0);
       return;
     }
 
@@ -116,6 +126,7 @@ export function CreateContentDialog({
     setTargetKeyword(initialValues?.targetKeyword?.trim() ?? "");
     setFormatType(nextFormat);
     setLinkedinArchetype(parseLinkedInArchetypeFromAngleHint(initialAngle));
+    setLinkedinHook(parseLinkedInHookFromAngleHint(initialAngle));
     setAngleHint(
       nextFormat === "linkedin_post"
         ? stripLinkedInAngleMeta(initialAngle)
@@ -124,6 +135,7 @@ export function CreateContentDialog({
     setPlannedDate(initialValues?.plannedDate?.trim() || "");
     setIntendedPublishPlatform(initialValues?.intendedPublishPlatform?.trim() || undefined);
     setCompetitorFocusUrl(initialValues?.competitorFocusUrl?.trim() ?? "");
+    setGeneratingLabelIndex(0);
   }, [open, initialValues]);
 
   // Clamp step when format change shrinks the sequence (e.g. leave SEO longform).
@@ -131,11 +143,27 @@ export function CreateContentDialog({
     setStepIndex((i) => Math.min(i, steps.length - 1));
   }, [steps.length]);
 
+  // Timed progress labels during one-shot generate (cleared when submit ends).
+  useEffect(() => {
+    if (!submitting) {
+      setGeneratingLabelIndex(0);
+      return;
+    }
+    setGeneratingLabelIndex(0);
+    const t1 = window.setTimeout(() => setGeneratingLabelIndex(1), 900);
+    const t2 = window.setTimeout(() => setGeneratingLabelIndex(2), 2200);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [submitting]);
+
   if (!open) return null;
 
   const currentStep = steps[Math.min(stepIndex, steps.length - 1)] ?? "format";
   const progress = ((stepIndex + 1) / steps.length) * 100;
   const isLinkedIn = formatType === "linkedin_post";
+  const showGenerating = submitting && currentStep === "review";
 
   function goBack() {
     if (submitting || stepIndex <= 0) return;
@@ -164,7 +192,7 @@ export function CreateContentDialog({
 
     const resolvedAngle =
       formatType === "linkedin_post"
-        ? buildLinkedInAngleHint(linkedinArchetype, "", angleHint)
+        ? buildLinkedInAngleHint(linkedinArchetype, linkedinHook, angleHint)
         : angleHint.trim() || undefined;
 
     await onSubmit({
@@ -181,8 +209,9 @@ export function CreateContentDialog({
     });
   }
 
-  const stepTitle =
-    currentStep === "format"
+  const stepTitle = showGenerating
+    ? `Writing your ${formatTypeLabel(formatType)}…`
+    : currentStep === "format"
       ? "Choose a format"
       : currentStep === "keyword"
         ? isLinkedIn
@@ -192,12 +221,13 @@ export function CreateContentDialog({
           ? "Competitor focus"
           : "Schedule & review";
 
-  const stepSubtitle =
-    currentStep === "format"
+  const stepSubtitle = showGenerating
+    ? `Target: ${targetKeyword.trim() || "—"}`
+    : currentStep === "format"
       ? "Pick the content type — we tailor structure and length to match."
       : currentStep === "keyword"
         ? isLinkedIn
-          ? "Target keyword is required. Archetype chips are optional."
+          ? "Target keyword is required. Archetype and hook chips are optional."
           : "Target keyword is required. Angle and title are optional."
         : currentStep === "competitors"
           ? "Optional — paste a competitor URL to differentiate against for this piece."
@@ -220,13 +250,15 @@ export function CreateContentDialog({
         <div className="h-1 w-full shrink-0 bg-muted">
           <div
             className="h-full origin-left bg-primary transition-transform duration-300 ease-out"
-            style={{ transform: `scaleX(${progress / 100})` }}
+            style={{
+              transform: `scaleX(${showGenerating ? 1 : progress / 100})`,
+            }}
           />
         </div>
 
         <header className="flex items-center justify-between gap-2 border-b border-border px-5 py-3">
-          <div className="flex min-w-[72px] items-center">
-            {stepIndex > 0 ? (
+          <div className="min-w-[72px] items-center flex">
+            {stepIndex > 0 && !showGenerating ? (
               <button
                 type="button"
                 onClick={goBack}
@@ -239,7 +271,9 @@ export function CreateContentDialog({
             ) : null}
           </div>
           <p className="text-xs tabular-nums text-muted-foreground">
-            Step {stepIndex + 1} of {steps.length}
+            {showGenerating
+              ? "Generating"
+              : `Step ${stepIndex + 1} of ${steps.length}`}
           </p>
           <div className="min-w-[72px]" />
         </header>
@@ -250,7 +284,37 @@ export function CreateContentDialog({
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{stepSubtitle}</p>
 
-          {currentStep === "format" ? (
+          {showGenerating ? (
+            <div className="mt-8 space-y-3" aria-live="polite" aria-busy="true">
+              {GENERATING_LABELS.map((label, index) => {
+                const done = index < generatingLabelIndex;
+                const active = index === generatingLabelIndex;
+                return (
+                  <div
+                    key={label}
+                    className={
+                      active
+                        ? "flex items-center gap-3 text-sm font-medium text-foreground"
+                        : done
+                          ? "flex items-center gap-3 text-sm text-muted-foreground"
+                          : "flex items-center gap-3 text-sm text-muted-foreground/50"
+                    }
+                  >
+                    {active ? (
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+                    ) : done ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    ) : (
+                      <span className="h-4 w-4 shrink-0 rounded-full border border-border" />
+                    )}
+                    {label}
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+
+          {!showGenerating && currentStep === "format" ? (
             <div className="mt-4 max-h-[min(42vh,300px)] space-y-2 overflow-y-auto pr-1">
               {STUDIO_FORMAT_OPTIONS.map((option) => {
                 const selected = formatType === option.value;
@@ -260,7 +324,10 @@ export function CreateContentDialog({
                     type="button"
                     onClick={() => {
                       setFormatType(option.value);
-                      if (option.value !== "linkedin_post") setLinkedinArchetype("");
+                      if (option.value !== "linkedin_post") {
+                        setLinkedinArchetype("");
+                        setLinkedinHook("");
+                      }
                     }}
                     className={
                       selected
@@ -278,7 +345,7 @@ export function CreateContentDialog({
             </div>
           ) : null}
 
-          {currentStep === "keyword" ? (
+          {!showGenerating && currentStep === "keyword" ? (
             <div className="mt-4 space-y-3.5">
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">Target keyword</span>
@@ -330,6 +397,35 @@ export function CreateContentDialog({
                 </div>
               ) : null}
 
+              {isLinkedIn ? (
+                <div className="space-y-1.5">
+                  <span className="text-sm font-medium">
+                    Hook type{" "}
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  </span>
+                  <div className="flex flex-wrap gap-2 pt-0.5">
+                    {LINKEDIN_HOOK_TYPES.map((hook) => {
+                      const selected = linkedinHook === hook.id;
+                      return (
+                        <button
+                          key={hook.id}
+                          type="button"
+                          title={hook.template}
+                          onClick={() => setLinkedinHook(selected ? "" : hook.id)}
+                          className={
+                            selected
+                              ? "rounded-lg border border-primary bg-primary/5 px-3 py-1.5 text-left text-sm font-medium text-foreground"
+                              : "rounded-lg border border-border px-3 py-1.5 text-left text-sm text-muted-foreground hover:border-primary/60 hover:bg-secondary/40 hover:text-foreground"
+                          }
+                        >
+                          {hook.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">
                   {isLinkedIn ? "Extra notes" : "Angle / hint"}{" "}
@@ -341,7 +437,7 @@ export function CreateContentDialog({
                   onChange={(event) => setAngleHint(event.target.value)}
                   placeholder={
                     isLinkedIn
-                      ? "Optional context beyond the archetype…"
+                      ? "Optional context beyond archetype and hook…"
                       : "Tone, audience, or angle for the AI…"
                   }
                   className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm"
@@ -363,7 +459,7 @@ export function CreateContentDialog({
             </div>
           ) : null}
 
-          {currentStep === "competitors" ? (
+          {!showGenerating && currentStep === "competitors" ? (
             <div className="mt-4 space-y-3.5">
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">
@@ -391,7 +487,7 @@ export function CreateContentDialog({
             </div>
           ) : null}
 
-          {currentStep === "review" ? (
+          {!showGenerating && currentStep === "review" ? (
             <div className="mt-4 space-y-4">
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">
@@ -420,6 +516,15 @@ export function CreateContentDialog({
                     }
                   />
                 ) : null}
+                {isLinkedIn && linkedinHook ? (
+                  <ReviewRow
+                    label="Hook"
+                    value={
+                      LINKEDIN_HOOK_TYPES.find((h) => h.id === linkedinHook)?.label ??
+                      linkedinHook
+                    }
+                  />
+                ) : null}
                 {angleHint.trim() ? (
                   <ReviewRow
                     label={isLinkedIn ? "Notes" : "Angle"}
@@ -438,7 +543,9 @@ export function CreateContentDialog({
             </div>
           ) : null}
 
-          {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
+          {error && !submitting ? (
+            <p className="mt-3 text-sm text-red-700">{error}</p>
+          ) : null}
         </div>
 
         <footer className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-3.5">
@@ -450,7 +557,16 @@ export function CreateContentDialog({
           >
             Cancel
           </button>
-          {currentStep === "review" ? (
+          {showGenerating ? (
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground opacity-50"
+            >
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Generating…
+            </button>
+          ) : currentStep === "review" ? (
             <button
               type="button"
               onClick={() => void handleGenerate()}
@@ -458,7 +574,7 @@ export function CreateContentDialog({
               className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               <FileText className="h-4 w-4" />
-              {submitting ? "Generating…" : `Generate ${formatTypeLabel(formatType)}`}
+              {`Generate ${formatTypeLabel(formatType)}`}
             </button>
           ) : (
             <button

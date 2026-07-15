@@ -20,6 +20,7 @@ export {
   LINKEDIN_ARCHETYPES,
   LINKEDIN_HOOK_TYPES,
   parseLinkedInArchetypeFromAngleHint,
+  parseLinkedInHookFromAngleHint,
   stripLinkedInAngleMeta,
   type LinkedInArchetypeId,
   type LinkedInHookId,

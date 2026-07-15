@@ -49,6 +49,7 @@ export const LINKEDIN_HOOK_TYPES: ReadonlyArray<{
 ];
 
 const ARCHETYPE_IDS = new Set<string>(LINKEDIN_ARCHETYPES.map((a) => a.id));
+const HOOK_IDS = new Set<string>(LINKEDIN_HOOK_TYPES.map((h) => h.id));
 
 /** Parse `archetype:id|…` from a LinkedIn angle hint string. */
 export function parseLinkedInArchetypeFromAngleHint(
@@ -59,6 +60,19 @@ export function parseLinkedInArchetypeFromAngleHint(
     if (!part.startsWith("archetype:")) continue;
     const id = part.slice("archetype:".length).trim();
     if (ARCHETYPE_IDS.has(id)) return id as LinkedInArchetypeId;
+  }
+  return "";
+}
+
+/** Parse `hook:id|…` from a LinkedIn angle hint string. */
+export function parseLinkedInHookFromAngleHint(
+  angleHint: string | undefined | null,
+): LinkedInHookId | "" {
+  if (!angleHint) return "";
+  for (const part of angleHint.split("|")) {
+    if (!part.startsWith("hook:")) continue;
+    const id = part.slice("hook:".length).trim();
+    if (HOOK_IDS.has(id)) return id as LinkedInHookId;
   }
   return "";
 }

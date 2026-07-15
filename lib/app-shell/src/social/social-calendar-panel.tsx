@@ -226,7 +226,11 @@ export function SocialCalendarPanel({
               const dayItems = byDate[key] ?? [];
               const isToday = key === todayKey;
               return (
-                <CalendarDay key={key} dateKey={key}>
+                <CalendarDay
+                  key={key}
+                  dateKey={key}
+                  emptyHint={dayItems.length === 0 ? "Drop to schedule" : undefined}
+                >
                   <span
                     className={cn(
                       "mb-1 flex h-6 w-6 items-center justify-center rounded-full text-xs font-medium",
@@ -249,11 +253,6 @@ export function SocialCalendarPanel({
                       <div className="px-1 text-[10px] text-muted-foreground">
                         +{dayItems.length - 3} more
                       </div>
-                    ) : null}
-                    {dayItems.length === 0 ? (
-                      <p className="px-0.5 pt-1 text-[9px] leading-tight text-muted-foreground/45">
-                        Drop to schedule
-                      </p>
                     ) : null}
                   </div>
                 </CalendarDay>
@@ -279,11 +278,21 @@ export function SocialCalendarPanel({
         </CalendarDay>
 
         <DragOverlay>
-          {activeDragId ? (
-            <div className="paper-card max-w-[140px] truncate rounded px-2 py-1 text-xs opacity-95 shadow-lg">
-              {items.find((item) => item.id === activeDragId)?.title}
-            </div>
-          ) : null}
+          {activeDragId ? (() => {
+            const active = items.find((item) => item.id === activeDragId);
+            if (!active) return null;
+            const platformId = resolveSocialPlatformId(active);
+            return (
+              <div
+                className={cn(
+                  "paper-card max-w-[140px] truncate rounded bg-card px-2 py-1 text-xs opacity-95 shadow-lg",
+                  platformCardClass(platformId),
+                )}
+              >
+                {active.title}
+              </div>
+            );
+          })() : null}
         </DragOverlay>
       </DndContext>
     </div>
@@ -294,22 +303,35 @@ function CalendarDay({
   dateKey,
   children,
   className,
+  emptyHint,
 }: {
   dateKey: string;
   children: ReactNode;
   className?: string;
+  /** Shown on empty days; strengthens while a drag is over the cell. */
+  emptyHint?: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day-${dateKey}` });
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        "min-h-[88px] bg-background p-1",
+        "relative min-h-[88px] bg-background p-1",
         isOver && "bg-primary/5 ring-1 ring-primary/30",
         className,
       )}
     >
       {children}
+      {emptyHint ? (
+        <p
+          className={cn(
+            "pointer-events-none px-0.5 pt-0.5 text-[9px] leading-tight",
+            isOver ? "text-primary/70" : "text-muted-foreground/40",
+          )}
+        >
+          {emptyHint}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -327,6 +349,11 @@ function DraggablePost({
 }) {
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: `piece-${item.id}` });
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
+  const platformId = resolveSocialPlatformId(item);
+  const hasBody = typeof item.bodyMarkdown === "string" && item.bodyMarkdown.length > 0;
+  const charCount = hasBody ? socialPostCharCount(item.bodyMarkdown) : null;
+  const limit = getSocialPlatformLimit(platformId);
+  const overLimit = hasBody && isSocialOverCharLimit(item.bodyMarkdown, platformId);
 
   return (
     <div
@@ -335,8 +362,10 @@ function DraggablePost({
       {...listeners}
       {...attributes}
       className={cn(
-        "cursor-grab rounded border border-border bg-card px-1.5 py-1 text-[10px] active:cursor-grabbing",
+        "cursor-grab rounded bg-card px-1.5 py-1 text-[10px] active:cursor-grabbing",
+        platformCardClass(platformId),
         rescheduling && "opacity-50",
+        overLimit && "ring-1 ring-destructive/35",
       )}
     >
       {renderLink({
@@ -351,6 +380,20 @@ function DraggablePost({
           </span>
         ) : null}
         {item.scheduledAt ? <span>{formatTime(item.scheduledAt)}</span> : null}
+        {overLimit ? (
+          <span className="inline-flex h-4 items-center rounded bg-destructive/15 px-1 text-[9px] font-medium text-destructive">
+            Over limit
+          </span>
+        ) : charCount != null ? (
+          <span
+            className={cn(
+              "tabular-nums text-[9px]",
+              charCount > limit * 0.9 ? "text-amber-700 dark:text-amber-400" : "text-muted-foreground/80",
+            )}
+          >
+            {charCount}/{limit}
+          </span>
+        ) : null}
       </div>
     </div>
   );
