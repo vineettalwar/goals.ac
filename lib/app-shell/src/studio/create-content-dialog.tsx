@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CheckCircle2, FileText, Loader2 } from "lucide-react";
+import { AlertTriangle, ArrowLeft, CheckCircle2, FileText, Loader2, Plus, Users } from "lucide-react";
+import {
+  hostFromUrl,
+  normalizeCompetitorUrl,
+  normalizeCompetitorUrlList,
+} from "@workspace/content-engine/support/competitor/competitor-url";
 import {
   getConnectedDestinationsForFormat,
   type CmsConnectionSnapshot,
@@ -28,11 +33,20 @@ export type CreateContentDraftInput = {
   intendedPublishPlatform?: string;
   /** Primary competitor URL sent to generate as competitorFocusUrl. */
   competitorFocusUrl?: string;
-  /** All parsed competitor URLs (max 5; first = focus). Sent as competitorUrls. */
+  /** All selected competitor URLs (max 5; focus first when set). Sent as competitorUrls. */
   competitorUrls?: string[];
 };
 
 export type CreateContentInitialValues = Partial<CreateContentDraftInput>;
+
+/** Project-level competitor row for the create-wizard picker. */
+export type CreateCompetitorOption = {
+  url: string;
+  name?: string;
+  summary?: string;
+  threatLevel?: "low" | "medium" | "high";
+  contentGaps?: string[];
+};
 
 /** Compact create flow: format → keyword → [competitors?] → [destination?] → review. */
 type CreateStepId = "format" | "keyword" | "competitors" | "destination" | "review";
@@ -63,29 +77,23 @@ function asContentFormat(formatType: string): ContentFormatType | null {
   return VALID_FORMATS.has(formatType as never) ? (formatType as ContentFormatType) : null;
 }
 
-/** Comma / newline separated URLs; first unique entry is the generate focus. */
-function parseCompetitorUrlInput(raw: string): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const part of raw.split(/[\n,]+/)) {
-    const trimmed = part.trim();
-    if (!trimmed) continue;
-    const key = trimmed.toLowerCase().replace(/\/+$/, "");
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(trimmed);
-    if (out.length >= MAX_COMPETITOR_URLS) break;
-  }
-  return out;
+function competitorUrlsFromInitial(
+  initial: CreateContentInitialValues | null | undefined,
+): string[] {
+  const fromList = initial?.competitorUrls?.filter((u) => u.trim()) ?? [];
+  if (fromList.length > 0) return normalizeCompetitorUrlList(fromList);
+  const focus = initial?.competitorFocusUrl?.trim();
+  return focus ? normalizeCompetitorUrlList([focus]) : [];
 }
 
-function competitorInputFromInitial(
-  initial: CreateContentInitialValues | null | undefined,
-): string {
-  const fromList = initial?.competitorUrls?.filter((u) => u.trim()) ?? [];
-  if (fromList.length > 0) return fromList.join("\n");
-  const focus = initial?.competitorFocusUrl?.trim();
-  return focus ?? "";
+function optionByHost(options: CreateCompetitorOption[]): Map<string, CreateCompetitorOption> {
+  const map = new Map<string, CreateCompetitorOption>();
+  for (const option of options) {
+    const url = normalizeCompetitorUrl(option.url);
+    if (!url) continue;
+    map.set(hostFromUrl(url), { ...option, url });
+  }
+  return map;
 }
 
 function buildSteps(
@@ -116,6 +124,8 @@ export function CreateContentDialog({
   error = null,
   initialValues = null,
   cmsConnections = null,
+  projectCompetitors = null,
+  competitorsLoading = false,
 }: {
   open: boolean;
   onClose: () => void;
@@ -125,6 +135,9 @@ export function CreateContentDialog({
   initialValues?: CreateContentInitialValues | null;
   /** When present, optional destination step lists connected/export targets for the format. */
   cmsConnections?: CmsConnectionSnapshot | null;
+  /** Project brand + analysis competitors for the optional picker step. */
+  projectCompetitors?: CreateCompetitorOption[] | null;
+  competitorsLoading?: boolean;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [title, setTitle] = useState("");
@@ -135,7 +148,9 @@ export function CreateContentDialog({
   const [linkedinHook, setLinkedinHook] = useState<LinkedInHookId | "">("");
   const [plannedDate, setPlannedDate] = useState("");
   const [intendedPublishPlatform, setIntendedPublishPlatform] = useState<string | undefined>();
-  const [competitorUrlsText, setCompetitorUrlsText] = useState("");
+  const [competitorUrls, setCompetitorUrls] = useState<string[]>([]);
+  const [competitorFocusUrl, setCompetitorFocusUrl] = useState("");
+  const [newCompetitorUrl, setNewCompetitorUrl] = useState("");
   const [generatingLabelIndex, setGeneratingLabelIndex] = useState(0);
 
   const contentFormat = asContentFormat(formatType);
@@ -143,6 +158,11 @@ export function CreateContentDialog({
     if (!contentFormat) return [];
     return getConnectedDestinationsForFormat(contentFormat, cmsConnections ?? {});
   }, [contentFormat, cmsConnections]);
+
+  const competitorMeta = useMemo(
+    () => optionByHost(projectCompetitors ?? []),
+    [projectCompetitors],
+  );
 
   const steps = useMemo(
     () => buildSteps(formatType, destinations),
@@ -160,7 +180,9 @@ export function CreateContentDialog({
       setLinkedinHook("");
       setPlannedDate("");
       setIntendedPublishPlatform(undefined);
-      setCompetitorUrlsText("");
+      setCompetitorUrls([]);
+      setCompetitorFocusUrl("");
+      setNewCompetitorUrl("");
       setGeneratingLabelIndex(0);
       return;
     }
@@ -183,9 +205,32 @@ export function CreateContentDialog({
     );
     setPlannedDate(initialValues?.plannedDate?.trim() || "");
     setIntendedPublishPlatform(initialValues?.intendedPublishPlatform?.trim() || undefined);
-    setCompetitorUrlsText(competitorInputFromInitial(initialValues));
+    setCompetitorUrls(competitorUrlsFromInitial(initialValues));
+    setCompetitorFocusUrl(
+      normalizeCompetitorUrl(initialValues?.competitorFocusUrl ?? "") ?? "",
+    );
+    setNewCompetitorUrl("");
     setGeneratingLabelIndex(0);
   }, [open, initialValues]);
+
+  // Merge project competitors once they arrive (async host fetch).
+  useEffect(() => {
+    if (!open || competitorsLoading) return;
+    const fromProject = normalizeCompetitorUrlList(
+      (projectCompetitors ?? []).map((option) => option.url),
+    );
+    if (fromProject.length === 0) return;
+    setCompetitorUrls((prev) => normalizeCompetitorUrlList([...prev, ...fromProject]));
+    setCompetitorFocusUrl((prev) => {
+      if (!prev) return "";
+      const normalized = normalizeCompetitorUrl(prev);
+      if (!normalized) return "";
+      const merged = normalizeCompetitorUrlList([...competitorUrlsFromInitial(initialValues), ...fromProject]);
+      return merged.some((url) => hostFromUrl(url) === hostFromUrl(normalized))
+        ? normalized
+        : "";
+    });
+  }, [open, competitorsLoading, projectCompetitors, initialValues]);
 
   // Clamp step when format/connections change the sequence length.
   useEffect(() => {
