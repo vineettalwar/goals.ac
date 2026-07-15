@@ -351,7 +351,7 @@ export function ContentPieceClient({
                     return;
                   }
                   const updated = await res.json();
-                  setPieceRecord(mergePieceJson(updated, pieceRecord));
+                  setPieceRecord((prev) => mergePieceJson(updated, prev));
                 } finally {
                   setMarkingReady(false);
                 }
@@ -403,7 +403,7 @@ export function ContentPieceClient({
             if (updated.queued) {
               setPublishMessage(`Publishing to ${platform} — running in the background`);
             } else {
-              setPieceRecord(mergePieceJson(updated, pieceRecord));
+              setPieceRecord((prev) => mergePieceJson(updated, prev));
               setPublishMessage(`Published to ${platform}.`);
             }
             setPublishDialogOpen(false);

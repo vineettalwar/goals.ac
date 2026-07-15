@@ -1,5 +1,9 @@
 "use client";
 
+/**
+ * @deprecated Content-piece actions now wire through ContentPieceView in
+ * content-piece-client.tsx (shared copy helpers live in app-shell content-piece-actions).
+ */
 import type { AppRouterInstance } from "next/dist/shared/lib/app-router-context.shared-runtime";
 import { toast } from "sonner";
 import type { PublishDestinationId } from "@/lib/projects/publishing-destinations";

@@ -1,4 +1,8 @@
 "use client";
+/**
+ * @deprecated Prefer ContentPieceView via content-piece-client.tsx.
+ * Kept for Next-only polish still listed in that file (performance badge, visual summary, status select).
+ */
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Send, Copy, Check, RefreshCw, Save, Pencil, PenLine, Trash2, CheckCircle2, FileCode2, TrendingUp, Eye, Shuffle, Share2, ImageIcon, AlertTriangle, LayoutTemplate, Loader2 } from "lucide-react";
