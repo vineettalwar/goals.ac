@@ -17,7 +17,16 @@ export function ProjectsPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { loading, error, projects, quotaLabel, reload } = useProjectsData();
-  const { canManageTeam, members, loading: teamLoading, error: teamError } = useTeamData();
+  const {
+    canManageTeam,
+    members,
+    loading: teamLoading,
+    error: teamError,
+    submitting: teamSubmitting,
+    addMember,
+    updateMember,
+    removeMember,
+  } = useTeamData();
   const { projectId, setProjectId } = useActiveProject();
   const [deleteTarget, setDeleteTarget] = useState<ProjectListItem | null>(null);
 
@@ -38,7 +47,23 @@ export function ProjectsPage() {
       {error ? <p className="px-8 pt-8 text-sm text-red-700">{error}</p> : null}
       {canManageTeam ? (
         <div className="px-8 pt-8 max-w-5xl">
-          <TeamManagementView members={members} loading={teamLoading} error={teamError} />
+          <TeamManagementView
+            members={members}
+            projects={projects}
+            loading={teamLoading}
+            error={teamError}
+            submitting={teamSubmitting}
+            onAddMember={addMember}
+            onUpdateMember={(member, role, assignedProjectId) =>
+              updateMember(member.userId, role, assignedProjectId)
+            }
+            onRemoveMember={(member) => {
+              if (!window.confirm(`Remove ${member.email} from the organization?`)) {
+                return Promise.resolve();
+              }
+              return removeMember(member.userId);
+            }}
+          />
         </div>
       ) : null}
       <ProjectsView

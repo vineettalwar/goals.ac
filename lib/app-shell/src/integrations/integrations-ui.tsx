@@ -11,6 +11,12 @@ import {
   searchConnectedCount,
   type SearchPropertyConnectionsResponse,
 } from "./integrations-search-ui";
+import {
+  IntegrationsSocialPanel,
+  countSocialConnections,
+} from "./integrations-social-ui";
+import { IntegrationsEspPanel, countEspConnections } from "./integrations-esp-ui";
+import type { EspPlatformId } from "./publishing-destinations";
 
 const TABS: Array<{ id: IntegrationsTab; label: string }> = [
   { id: "cms", label: "CMS" },
@@ -74,10 +80,15 @@ export function IntegrationsView({
   onDisconnect,
   onConnectPlatform,
   onTestPlatform,
+  onConnectEsp,
+  onDisconnectEsp,
+  onTestEsp,
   searchProperties,
   searchPropertiesLoading,
   searchPropertiesError,
   appOrigin,
+  socialCount,
+  onDisconnectSocial,
   renderLink,
 }: {
   projectId: string | null;
@@ -97,13 +108,20 @@ export function IntegrationsView({
   onDisconnect: (platform: string) => void;
   onConnectPlatform: (platform: string) => void;
   onTestPlatform?: (platform: string) => void;
+  onConnectEsp?: (platform: EspPlatformId) => void;
+  onDisconnectEsp?: (platform: EspPlatformId) => void;
+  onTestEsp?: (platform: EspPlatformId) => void;
   searchProperties?: SearchPropertyConnectionsResponse | null;
   searchPropertiesLoading?: boolean;
   searchPropertiesError?: string | null;
   appOrigin?: string;
+  socialCount?: number;
+  onDisconnectSocial?: (platform: string) => void;
   renderLink: (props: ProjectLinkProps) => ReactNode;
 }) {
   const cmsCount = cmsConnectedCount(integrations);
+  const espCount = countEspConnections(integrations);
+  const resolvedSocialCount = socialCount ?? countSocialConnections(integrations);
   const searchCount = searchConnectedCount(searchProperties ?? null);
 
   return (
@@ -135,9 +153,13 @@ export function IntegrationsView({
               const count =
                 tab.id === "cms"
                   ? cmsCount
-                  : tab.id === "search"
-                    ? searchCount
-                    : 0;
+                  : tab.id === "social"
+                    ? resolvedSocialCount
+                    : tab.id === "esp"
+                      ? espCount
+                      : tab.id === "search"
+                        ? searchCount
+                        : 0;
               return (
                 <button
                   key={tab.id}
@@ -152,6 +174,12 @@ export function IntegrationsView({
                 >
                   {tab.label}
                   {tab.id === "cms" ? (
+                    <IntegrationTabBadge count={count} loading={integrationsLoading} />
+                  ) : null}
+                  {tab.id === "social" ? (
+                    <IntegrationTabBadge count={count} loading={integrationsLoading} />
+                  ) : null}
+                  {tab.id === "esp" ? (
                     <IntegrationTabBadge count={count} loading={integrationsLoading} />
                   ) : null}
                   {tab.id === "search" ? (
@@ -299,7 +327,36 @@ export function IntegrationsView({
             )
           ) : null}
 
-          {activeTab === "social" || activeTab === "esp" ? <PlaceholderTabPanel /> : null}
+          {activeTab === "esp" ? (
+            <IntegrationsEspPanel
+              integrations={integrations}
+              loading={integrationsLoading}
+              error={loadError}
+              saveMessage={saveMessage}
+              saving={saving}
+              onDisconnect={(platform) => onDisconnectEsp?.(platform) ?? onDisconnect(platform)}
+              onConnectPlatform={(platform) => onConnectEsp?.(platform) ?? onConnectPlatform(platform)}
+              onTestPlatform={onTestEsp ?? onTestPlatform}
+              fullAppIntegrationsUrl={
+                appOrigin ? `${appOrigin.replace(/\/+$/, "")}/integrations` : undefined
+              }
+            />
+          ) : null}
+
+          {activeTab === "social" && projectId ? (
+            <IntegrationsSocialPanel
+              projectId={projectId}
+              integrations={integrations}
+              loading={integrationsLoading}
+              error={loadError}
+              appOrigin={appOrigin ?? "http://localhost:3001"}
+              saving={saving}
+              onDisconnect={onDisconnectSocial}
+              fullAppIntegrationsUrl={
+                appOrigin ? `${appOrigin.replace(/\/+$/, "")}/integrations` : undefined
+              }
+            />
+          ) : null}
         </>
       )}
 

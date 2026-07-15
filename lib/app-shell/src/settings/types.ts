@@ -36,6 +36,16 @@ export type SettingsAiSummary = {
   };
 };
 
+export type SettingsBillingSummary = {
+  plan: UsageSummary["plan"];
+  subscriptionStatus: string | null;
+  currentPeriodEnd: string | null;
+  hasStripeCustomer: boolean;
+  hasActiveSubscription: boolean;
+  stripeConfigured: boolean;
+  canManageBilling: boolean;
+};
+
 export const PLAN_LABELS: Record<UsageSummary["plan"], string> = {
   starter: "Starter",
   growth: "Growth",

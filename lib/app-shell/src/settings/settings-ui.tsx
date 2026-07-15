@@ -19,9 +19,24 @@ import {
   PLAN_LABELS,
   type AiProviderChoice,
   type SettingsAiSummary,
+  type SettingsBillingSummary,
   type SettingsTab,
   type UsageSummary,
 } from "./types";
+
+function formatRenewalDate(iso: string | null): string | null {
+  if (!iso) return null;
+  return new Date(iso).toLocaleDateString(undefined, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function subscriptionStatusLabel(status: string | null): string {
+  if (!status) return "No subscription";
+  return status.replace(/_/g, " ");
+}
 
 const AI_PROVIDER_OPTIONS: Array<{ value: AiProviderChoice; label: string }> = [
   { value: "gemini", label: "Google Gemini" },
@@ -129,6 +144,8 @@ export function SettingsView({
   onSaveProvider,
   providerSaving = false,
   providerMessage,
+  billingSummary,
+  billingLoading = false,
 }: {
   activeTab: SettingsTab;
   onTabChange: (tab: SettingsTab) => void;
@@ -189,6 +206,8 @@ export function SettingsView({
   }) => Promise<void>;
   providerSaving?: boolean;
   providerMessage?: string | null;
+  billingSummary?: SettingsBillingSummary | null;
+  billingLoading?: boolean;
 }) {
   const visibleTabs = TABS.filter((tab) => !tab.hideWhenGoogleOnly || !isGoogleOnly);
   const [geminiDialogOpen, setGeminiDialogOpen] = useState(false);
@@ -744,13 +763,80 @@ export function SettingsView({
       ) : null}
 
       {activeTab === "billing" ? (
-        <div className="paper-card space-y-3 p-6">
-          <h2 className="font-semibold">Billing</h2>
-          <p className="text-sm text-muted-foreground">
-            Plan upgrades and invoice history are available in the full product app at{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">localhost:3001/settings?tab=billing</code>{" "}
-            during local development.
-          </p>
+        <div className="paper-card space-y-4 p-6">
+          <div className="flex items-start gap-3">
+            <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
+            <div className="flex-1 space-y-4">
+              <div>
+                <h2 className="font-semibold">Plan</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {billingSummary?.plan === "growth"
+                    ? "Growth includes autopilot and platform features. BYOK recommended for unlimited AI."
+                    : "Consulting clients use BYOK for unlimited AI generations. Platform access is scoped per engagement."}
+                </p>
+              </div>
+
+              {billingLoading ? (
+                <p className="text-sm text-muted-foreground">Loading billing…</p>
+              ) : billingSummary ? (
+                <>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-2xl font-bold">
+                      {PLAN_LABELS[billingSummary.plan] ?? billingSummary.plan}
+                    </p>
+                    {billingSummary.plan === "starter" ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">
+                        <KeyRound className="h-3 w-3" aria-hidden />
+                        BYOK optional
+                      </span>
+                    ) : null}
+                    {billingSummary.subscriptionStatus ? (
+                      <span className="rounded-full border border-border px-2 py-0.5 text-xs capitalize">
+                        {subscriptionStatusLabel(billingSummary.subscriptionStatus)}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {billingSummary.hasActiveSubscription &&
+                  formatRenewalDate(billingSummary.currentPeriodEnd) ? (
+                    <p className="text-sm text-muted-foreground">
+                      {billingSummary.plan === "growth" ? "Subscription renews" : "Legacy subscription renews"}{" "}
+                      on{" "}
+                      <span className="text-foreground">
+                        {formatRenewalDate(billingSummary.currentPeriodEnd)}
+                      </span>
+                    </p>
+                  ) : null}
+
+                  {usage ? (
+                    <div className="space-y-2 rounded-lg border border-border p-4">
+                      <p className="text-sm font-medium">Usage this month</p>
+                      <p className="text-2xl font-bold tabular-nums">{usage.articlesThisMonth}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {usage.usesByok
+                          ? "Articles generated with your API key (unlimited)"
+                          : "Articles generated on platform key"}
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {!billingSummary.stripeConfigured ? (
+                    <p className="text-sm text-muted-foreground">
+                      Self-serve billing is not configured on this deployment.
+                    </p>
+                  ) : null}
+
+                  {billingSummary.hasStripeCustomer && billingSummary.canManageBilling ? (
+                    <p className="text-sm text-muted-foreground">
+                      Invoice history and subscription management are available in the full product app.
+                    </p>
+                  ) : null}
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">Billing unavailable.</p>
+              )}
+            </div>
+          </div>
         </div>
       ) : null}
 

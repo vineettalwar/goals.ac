@@ -14,6 +14,7 @@ export {
   PLAN_LABELS,
   type AiProviderChoice,
   type SettingsAiSummary,
+  type SettingsBillingSummary,
   type SettingsTab,
   type UsageSummary,
 } from "./types";

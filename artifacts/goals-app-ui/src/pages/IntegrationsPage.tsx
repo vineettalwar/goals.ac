@@ -1,21 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
+  BeehiivConnectDialog,
   CMS_NATIVE_CONNECT_PLATFORMS,
   CMS_PLATFORMS,
   CmsFullAppConnectDialog,
+  ConvertKitConnectDialog,
   DrupalConnectDialog,
+  ESP_NATIVE_CONNECT_PLATFORMS,
+  EspFullAppConnectDialog,
   GhostConnectDialog,
+  getEspDestinations,
   IntegrationsView,
   JoomlaConnectDialog,
+  MailchimpConnectDialog,
   NotionConnectDialog,
   ShopifyConnectDialog,
   WebflowConnectDialog,
   WordPressConnectDialog,
+  type BeehiivConnectPayload,
+  type ConvertKitConnectPayload,
   type DrupalConnectPayload,
+  type EspPlatformId,
   type GhostConnectPayload,
   type IntegrationsTab,
   type JoomlaConnectPayload,
+  type MailchimpConnectPayload,
   type NotionConnectPayload,
   type ShopifyConnectPayload,
   type WebflowConnectPayload,
@@ -41,6 +51,7 @@ export function IntegrationsPage() {
     searchError,
     reload,
     setIntegrations,
+    socialCount,
   } = useIntegrationsData(projectId);
 
   const [activeTab, setActiveTab] = useState<IntegrationsTab>("cms");
@@ -49,11 +60,17 @@ export function IntegrationsPage() {
   const [webhookSecret, setWebhookSecret] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [connectPlatform, setConnectPlatform] = useState<string | null>(null);
+  const [connectEsp, setConnectEsp] = useState<EspPlatformId | null>(null);
 
   const connectPlatformLabel = useMemo(() => {
     if (!connectPlatform) return "";
     return CMS_PLATFORMS.find(({ key }) => key === connectPlatform)?.label ?? connectPlatform;
   }, [connectPlatform]);
+
+  const connectEspLabel = useMemo(() => {
+    if (!connectEsp) return "";
+    return getEspDestinations().find((destination) => destination.id === connectEsp)?.label ?? connectEsp;
+  }, [connectEsp]);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login", { replace: true });
@@ -101,7 +118,10 @@ export function IntegrationsPage() {
 
   async function testPlatform(platform: string) {
     if (!projectId) return;
-    const label = CMS_PLATFORMS.find(({ key }) => key === platform)?.label ?? platform;
+    const label =
+      CMS_PLATFORMS.find(({ key }) => key === platform)?.label ??
+      getEspDestinations().find((destination) => destination.id === platform)?.label ??
+      platform;
     setSaving(true);
     setSaveMessage(null);
     try {
@@ -198,15 +218,44 @@ export function IntegrationsPage() {
     }
   }
 
+  async function saveBeehiiv(payload: BeehiivConnectPayload) {
+    const ok = await patchCmsIntegration({ beehiiv: payload }, "Beehiiv connected.");
+    if (ok) {
+      setConnectEsp(null);
+    }
+  }
+
+  async function saveConvertKit(payload: ConvertKitConnectPayload) {
+    const ok = await patchCmsIntegration({ convertkit: payload }, "ConvertKit connected.");
+    if (ok) {
+      setConnectEsp(null);
+    }
+  }
+
+  async function saveMailchimp(payload: MailchimpConnectPayload) {
+    const ok = await patchCmsIntegration({ mailchimp: payload }, "Mailchimp connected.");
+    if (ok) {
+      setConnectEsp(null);
+    }
+  }
+
   function closeConnectDialog() {
     if (saving) return;
     setConnectPlatform(null);
+  }
+
+  function closeEspConnectDialog() {
+    if (saving) return;
+    setConnectEsp(null);
   }
 
   const showFullAppDialog =
     connectPlatform !== null &&
     connectPlatform !== "webhook" &&
     !CMS_NATIVE_CONNECT_PLATFORMS.has(connectPlatform);
+
+  const showEspFullAppDialog =
+    connectEsp !== null && !ESP_NATIVE_CONNECT_PLATFORMS.has(connectEsp);
 
   if (authLoading || projectsLoading) {
     return <p className="p-8 text-muted-foreground">Loading…</p>;
@@ -234,10 +283,15 @@ export function IntegrationsPage() {
         onDisconnect={(platform) => void disconnect(platform)}
         onConnectPlatform={setConnectPlatform}
         onTestPlatform={(platform) => void testPlatform(platform)}
+        onConnectEsp={setConnectEsp}
+        onDisconnectEsp={(platform) => void disconnect(platform)}
+        onTestEsp={(platform) => void testPlatform(platform)}
         searchProperties={searchProperties}
         searchPropertiesLoading={searchLoading}
         searchPropertiesError={searchError}
         appOrigin={getAppOrigin()}
+        socialCount={socialCount}
+        onDisconnectSocial={(platform) => void disconnect(platform)}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}
@@ -314,6 +368,42 @@ export function IntegrationsPage() {
         onOpenChange={(open) => {
           if (!open) closeConnectDialog();
         }}
+      />
+
+      <BeehiivConnectDialog
+        open={connectEsp === "beehiiv"}
+        onOpenChange={(open) => {
+          if (!open) closeEspConnectDialog();
+        }}
+        saving={saving}
+        onSave={(payload) => void saveBeehiiv(payload)}
+      />
+
+      <ConvertKitConnectDialog
+        open={connectEsp === "convertkit"}
+        onOpenChange={(open) => {
+          if (!open) closeEspConnectDialog();
+        }}
+        saving={saving}
+        onSave={(payload) => void saveConvertKit(payload)}
+      />
+
+      <MailchimpConnectDialog
+        open={connectEsp === "mailchimp"}
+        onOpenChange={(open) => {
+          if (!open) closeEspConnectDialog();
+        }}
+        saving={saving}
+        onSave={(payload) => void saveMailchimp(payload)}
+      />
+
+      <EspFullAppConnectDialog
+        open={showEspFullAppDialog}
+        platformLabel={connectEspLabel}
+        onOpenChange={(open) => {
+          if (!open) closeEspConnectDialog();
+        }}
+        fullAppIntegrationsUrl={`${getAppOrigin().replace(/\/+$/, "")}/integrations`}
       />
     </>
   );

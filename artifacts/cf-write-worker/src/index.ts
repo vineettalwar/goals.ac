@@ -21,6 +21,7 @@ import { handleAiProvidersSettingsWrite } from "./ai-providers-settings";
 import { handleAuthOpenaiWrite } from "./auth-openai";
 import { handleAuthAnthropicWrite } from "./auth-anthropic";
 import { handleAuthBedrockWrite } from "./auth-bedrock";
+import { handleOrgMembersWrite } from "./org-members";
 
 export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
@@ -116,6 +117,9 @@ export default {
 
       const projectsHandled = await handleWebsiteProjectsWrite(request, path, userId);
       if (projectsHandled) return projectsHandled;
+
+      const orgMembersHandled = await handleOrgMembersWrite(request, path, userId);
+      if (orgMembersHandled) return orgMembersHandled;
 
       const contentPiecesHandled = await handleContentPiecesWrite(request, path, userId, (jobId, queue, meta) =>
         trackJob(env, jobId, queue, meta),

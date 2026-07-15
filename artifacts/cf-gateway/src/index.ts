@@ -38,6 +38,7 @@ function isReadPath(path: string, method: string): boolean {
     if (path === "/api/auth/openai-credentials") return true;
     if (path === "/api/auth/anthropic-credentials") return true;
     if (path === "/api/auth/bedrock-credentials") return true;
+    if (path === "/api/billing/status") return true;
     if (path.startsWith("/api/jobs/")) return true;
     return !isPublicPath(path) && !path.startsWith("/api/auth/");
   }
@@ -48,6 +49,10 @@ function isWritePath(path: string, method: string): boolean {
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return false;
   if (WRITE_PREFIXES.some((p) => path === p || path.startsWith(p))) return true;
   if (path === "/api/website-projects" && method === "POST") return true;
+  if (path === "/api/organizations/members" && method === "POST") return true;
+  if (/^\/api\/organizations\/members\/\d+$/.test(path) && (method === "PATCH" || method === "DELETE")) {
+    return true;
+  }
   if (/^\/api\/website-projects\/\d+$/.test(path) && (method === "PATCH" || method === "DELETE")) {
     return true;
   }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch, getAppOrigin } from "@/lib/api";
-import type { SettingsAiSummary, UsageSummary } from "@workspace/app-shell";
+import type { SettingsAiSummary, SettingsBillingSummary, UsageSummary } from "@workspace/app-shell";
 
 type MeResponse = {
   user?: {
@@ -53,6 +53,20 @@ export function useSettingsData() {
   const [aiSummary, setAiSummary] = useState<SettingsAiSummary | null>(null);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [orgRole, setOrgRole] = useState<string | null>(null);
+  const [billingSummary, setBillingSummary] = useState<SettingsBillingSummary | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+
+  const loadBillingSummary = useCallback(async () => {
+    setBillingLoading(true);
+    try {
+      const data = await apiFetch<{ billing?: SettingsBillingSummary }>("/api/billing/status");
+      setBillingSummary(data.billing ?? null);
+    } catch {
+      setBillingSummary(null);
+    } finally {
+      setBillingLoading(false);
+    }
+  }, []);
 
   const reload = useCallback(async () => {
     setLoading(true);
@@ -123,5 +137,8 @@ export function useSettingsData() {
     orgRole,
     reload,
     forgotPasswordHref: `${getAppOrigin()}/forgot-password`,
+    billingSummary,
+    billingLoading,
+    loadBillingSummary,
   };
 }

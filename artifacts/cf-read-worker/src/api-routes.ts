@@ -34,6 +34,8 @@ import { getUsageSummaryForUser } from "./usage";
 import { handleAuthRead } from "./auth-read";
 import { getAiProviderStatusForUser } from "./ai-providers-status";
 import { handleSearchPropertiesGet } from "./search-properties";
+import { handleOrgMembersRead } from "./org-members";
+import { handleBillingStatusGet } from "./billing-status";
 
 export type ReadWorkerEnv = {
   GOOGLE_CLIENT_ID?: string;
@@ -99,6 +101,9 @@ export async function handleAuthenticatedRead(
     const summary = await getUsageSummaryForUser(userId);
     return withCors(request, Response.json({ usage: summary }));
   }
+
+  const billingStatusHandled = await handleBillingStatusGet(request, userId);
+  if (billingStatusHandled) return billingStatusHandled;
 
   const authReadHandled = await handleAuthRead(request, path, userId);
   if (authReadHandled) return authReadHandled;

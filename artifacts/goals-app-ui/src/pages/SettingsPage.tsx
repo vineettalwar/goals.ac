@@ -30,6 +30,9 @@ export function SettingsPage() {
     orgRole,
     reload,
     forgotPasswordHref,
+    billingSummary,
+    billingLoading,
+    loadBillingSummary,
   } = useSettingsData();
 
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => parseTab(searchParams.get("tab")));
@@ -76,6 +79,12 @@ export function SettingsPage() {
     setActiveTab(tab);
     setSearchParams({ tab }, { replace: true });
   }
+
+  useEffect(() => {
+    if (activeTab === "billing") {
+      void loadBillingSummary();
+    }
+  }, [activeTab, loadBillingSummary]);
 
   async function saveProfile() {
     const trimmedName = name.trim();
@@ -421,6 +430,8 @@ export function SettingsPage() {
       onSaveProvider={saveProvider}
       providerSaving={providerSaving}
       providerMessage={providerMessage}
+      billingSummary={billingSummary}
+      billingLoading={billingLoading}
       aiProvidersNote={
         <div className="space-y-3">
           {geminiMessage ? (

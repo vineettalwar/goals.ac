@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api";
-import type {
-  CmsIntegrationRow,
-  SearchPropertyConnectionsResponse,
+import {
+  countEspConnections,
+  countSocialConnections,
+  type CmsIntegrationRow,
+  type SearchPropertyConnectionsResponse,
 } from "@workspace/app-shell";
 
 type IntegrationsLoadState = {
@@ -14,6 +16,8 @@ type IntegrationsLoadState = {
   searchError: string | null;
   reload: () => Promise<void>;
   setIntegrations: (value: Record<string, CmsIntegrationRow>) => void;
+  espCount: number;
+  socialCount: number;
 };
 
 export function useIntegrationsData(projectId: string | null): IntegrationsLoadState {
@@ -89,5 +93,7 @@ export function useIntegrationsData(projectId: string | null): IntegrationsLoadS
     searchError,
     reload,
     setIntegrations,
+    espCount: countEspConnections(integrations),
+    socialCount: countSocialConnections(integrations),
   };
 };
