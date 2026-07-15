@@ -337,6 +337,7 @@ export function StudioView({
   brandProfileLoading = false,
   aiReady = null,
   activeProvider = "gemini",
+  aiSettingsHref = "/settings",
   renderLink,
   onDeletePiece,
   onMarkReady,
@@ -355,6 +356,8 @@ export function StudioView({
   brandProfileLoading?: boolean;
   aiReady?: boolean | null;
   activeProvider?: string;
+  /** Where the AI-not-ready banner sends users (Next: `/integrations/ai`). */
+  aiSettingsHref?: string;
   renderLink: (props: StudioLinkProps) => ReactNode;
   onDeletePiece?: (id: number) => void | Promise<void>;
   onMarkReady?: (id: number) => void | Promise<void>;
@@ -443,6 +446,7 @@ export function StudioView({
       <StudioAiReadinessBanner
         ready={aiReady}
         activeProvider={activeProvider}
+        settingsHref={aiSettingsHref}
         renderLink={renderLink}
       />
 

@@ -192,6 +192,7 @@ function ContentPieceHeader({
   wordCount,
   onTitleChange,
   renderLink,
+  headerExtra,
 }: {
   piece: ContentPieceDetail;
   editing: boolean;
@@ -200,6 +201,7 @@ function ContentPieceHeader({
   wordCount: number;
   onTitleChange: (value: string) => void;
   renderLink: (props: ContentPieceLinkProps) => ReactNode;
+  headerExtra?: ReactNode;
 }) {
   const humanizationAudit = piece.pieceMetadata?.humanizationAudit;
   return (
@@ -242,6 +244,7 @@ function ContentPieceHeader({
               {formatHumanizationAuditLine(humanizationAudit)}
             </span>
           ) : null}
+          {headerExtra}
         </div>
       </div>
     </div>
@@ -402,7 +405,7 @@ function ContentPieceToolbar({
   onEnhance?: () => void | Promise<void>;
   onHumanize?: () => void;
   onMarkReady?: () => void | Promise<void>;
-  onGenerate?: () => void;
+  onGenerate?: () => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
 }) {
   const canEdit = Boolean(onStartEdit && onSave && onCancel && onTogglePreview);
@@ -543,9 +546,10 @@ function ContentPieceToolbar({
         {onGenerate ? (
           <button
             type="button"
-            onClick={onGenerate}
+            onClick={() => void onGenerate()}
             disabled={busy || editing}
             className={TOOLBAR_BTN}
+            title="Generate draft from the brief and keyword"
           >
             {generating ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
@@ -666,6 +670,7 @@ function ContentPieceAside({
   onPublish,
   onQueueSocial,
   queueingSocial = false,
+  asideExtra,
 }: {
   editing: boolean;
   plannedDateDraft: string;
@@ -684,6 +689,7 @@ function ContentPieceAside({
   onPublish?: () => void;
   onQueueSocial?: () => void;
   queueingSocial?: boolean;
+  asideExtra?: ReactNode;
 }) {
   const body = displayBody.trim();
   const [dual, setDual] = useState<DualContentScore | null>(null);
@@ -708,6 +714,7 @@ function ContentPieceAside({
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-6">
+      {asideExtra}
       {editing ? (
         <div className="paper-card space-y-3 rounded-xl p-4">
           <label className="block space-y-1 text-xs">
@@ -851,6 +858,8 @@ export function ContentPieceView({
   onResetGeneration,
   fetchDualScore,
   fetchBrief,
+  headerExtra,
+  asideExtra,
 }: {
   piece: ContentPieceDetail;
   renderLink: (props: ContentPieceLinkProps) => ReactNode;
@@ -858,7 +867,7 @@ export function ContentPieceView({
     contentPieceId: number,
   ) => Promise<DualContentScore | null>;
   fetchBrief?: (briefId: number) => Promise<ContentBriefSummary | null>;
-  onGenerate?: () => void;
+  onGenerate?: () => void | Promise<void>;
   generating?: boolean;
   generatingState?: ContentPieceGeneratingState | null;
   generateMessage?: string | null;
@@ -891,6 +900,10 @@ export function ContentPieceView({
   regeneratingImages?: boolean;
   staleGenerating?: boolean;
   onResetGeneration?: () => void | Promise<void>;
+  /** Host-specific header extras (e.g. performance badge). */
+  headerExtra?: ReactNode;
+  /** Host-specific aside extras (e.g. visual summary card). */
+  asideExtra?: ReactNode;
 }) {
   const [editor, dispatch] = useReducer(editorReducer, piece, createEditorState);
   const nextDraftKey = pieceDraftKey(piece);
@@ -901,6 +914,7 @@ export function ContentPieceView({
   const formatLabel = formatContentFormatType(piece.formatType);
   const displayBody = editor.editing ? editor.bodyDraft : (piece.bodyMarkdown ?? "");
   const body = displayBody.trim();
+  // Empty draft → Generate; body present → Regenerate (never both).
   const showGenerate =
     !body && contentPieceCanGenerate(piece.status) && Boolean(onGenerate);
   const showPublish = Boolean(contentPieceCanPublish(piece.status) && onPublish);
@@ -988,6 +1002,7 @@ export function ContentPieceView({
         wordCount={wordCount}
         onTitleChange={(value) => dispatch({ type: "set_title", value })}
         renderLink={renderLink}
+        headerExtra={headerExtra}
       />
 
       <ContentPieceStatusBanners
@@ -1072,6 +1087,7 @@ export function ContentPieceView({
           onPublish={onPublish}
           onQueueSocial={showQueueSocial ? onQueueSocial : undefined}
           queueingSocial={queueingSocial}
+          asideExtra={asideExtra}
         />
       </div>
     </div>

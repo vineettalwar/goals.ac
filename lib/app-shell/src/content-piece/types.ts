@@ -42,6 +42,7 @@ export type ContentPieceMetadata = {
   intendedEditorMode?: string | null;
   intendedPublishPlatform?: string | null;
   secondaryKeywords?: string[] | null;
+  visualSummaryMarkdown?: string | null;
 };
 
 export type ContentPieceDetail = {
