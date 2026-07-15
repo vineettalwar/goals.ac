@@ -1,5 +1,19 @@
 # Session Handoff
 
+## Competitive plan messaging — Waves 0–3.2 (2026-07-15)
+
+**Status:** Partner-facing docs + compare copy aligned to shipped Waves 0–3.2. Hosted blog (3.3) still deferred.
+
+### Updated
+- `docs/competitors/goals-ac-capability-audit.md` — humanizer/quality, Studio writing room, publish history, Queue social, integration health marked live
+- `docs/prd/content-studio-competitive-plan.md` — status Waves 0–3.2 shipped; only 3.3 deferred
+- Compare page — short “demo today” block: `/article-quality`, live draft score, 16 CMS + social health, Queue social
+
+### Deferred
+- Hosted blog (`blog.customer.goals.ac`) until self-serve GTM
+
+---
+
 ## Competitive plan Wave 3.1 — Autopilot activity panel (2026-07-15)
 
 **Status:** Shipped — partner-demo activity card on `/dashboard`.
@@ -19,12 +33,12 @@
 
 ---
 
-## Competitive plan Waves 0–2 — IN PROGRESS (2026-07-15)
+## Competitive plan Waves 0–3.2 — SHIPPED (2026-07-15)
 
 **PRD:** [docs/prd/content-studio-competitive-plan.md](docs/prd/content-studio-competitive-plan.md)  
 **Decision:** [docs/DECISIONS.md](docs/DECISIONS.md) — Execute Wave 0→1→2; partner-demo vs BLG/AutoSEO is primary ICP for 90 days.
 
-**Status:** Waves 0–1 shipped · Wave 2 partial (2.1–2.4) · Wave 2.5 + Wave 3 still queued.
+**Status:** Waves 0–3.2 shipped · Hosted blog (3.3) deferred · CF edge parity for new routes · messaging refresh applied.
 
 ### Shipped this session (parallel agents)
 
@@ -35,31 +49,28 @@
 | 1.1 Sticky brief/SERP context panel | Done — `ContentBriefPanel` + `briefId` |
 | 1.2 Live draft score (~2s debounce) + vs-saved delta | Done — local editorial; SERP from last fetch |
 | 1.5 Vite create → generate stream (angle/date fields) | Done — Next wizard unchanged (canonical) |
-| 2.1 Health cron 8→16 CMS | Done |
+| 2.1 Health cron CMS 16 + social/ESP 8 | Done — `lastHealth*` on tiles |
 | 2.2 Instagram image preflight | Done |
-| 2.3 Connect setup checklists parity | Done — webhook + long-tail CMS + social tiles |
-| 2.4 Publish history | Done — `GET .../publish-records` + `PublishHistoryPanel` on publishing tab |
+| 2.3 Connect setup checklists | Done — webhook + long-tail CMS + social (+ Next publishing cards) |
+| 2.4 Publish history | Done — `GET .../publish-records` + publishing tab |
+| 2.5 Article → social one-click | Done — "Queue social" → composer → `?tab=queue` (aside props spread fixed) |
+| 3.1 Autopilot activity panel | Done — `/dashboard` |
+| 3.2 H2 coverage % vs rival topics | Done — `serp.h2Coverage` in quality panels |
+| CF parity | Done — publish-records GET, health GET routing, command-center allowlist |
 
-### Still queued
+### Still queued / deferred
 
-| Wave | Focus |
+| Item | Notes |
 |------|-------|
-| **2.5** | Article → social one-click queue |
-| **3.1** | Autopilot/activity panel — **Done** (`AutopilotActivityPanel` on `/dashboard`) |
-| **3** | Coverage % H2s, hosted blog (self-serve only) |
-
-### Explicitly deferred (all waves)
-
-- Full Surfer NLP editor · hosted blog until self-serve · TikTok/YouTube/inbox · backlink exchange · detector APIs
+| **3.3 Hosted blog** | Deferred until self-serve GTM |
+| Full Surfer NLP · TikTok/YouTube/inbox · backlink exchange · detector APIs | Explicitly out of scope |
 
 ### Verify
 
 ```sh
 pnpm --filter @workspace/app-shell exec tsc --noEmit
-cd lib/content-engine && npx tsc --noEmit
-pnpm --filter @workspace/goals-app-ui exec tsc --noEmit
-# Manual :3001 — piece aside brief panel, type→score debounce, /article-quality demo, publishing tab history
-# Vite Studio — create with keyword/angle → generate → piece page
+cd lib/content-engine && npx tsc --noEmit && npx vitest run src/articles/serp-content-score.test.ts
+# Manual :3001 — Queue social, connect checklists on Integrations, /dashboard activity, H2 coverage line, /article-quality
 ```
 
 ---

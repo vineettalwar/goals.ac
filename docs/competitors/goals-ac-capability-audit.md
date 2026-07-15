@@ -22,7 +22,11 @@
 | Legacy company autopilot | hidden | `scheduled_articles`, redirects | Dual stack risk |
 | LLM visibility tracking | live | visibility settings + jobs | Not on autopilot dashboard |
 | Internal link hub | beta | compare page | Not marketed to SMB |
-| Humanizer + quality scores | live | content-engine | Under-marketed vs AutoSEO |
+| Humanizer + quality scores | live | content-engine, `/article-quality` | Demoable before/after |
+| Studio writing room | live | `ContentBriefPanel`, live draft score | Brief/SERP + dual score while editing |
+| Publish history | live | `publish_records`, publishing tab | Last-N publishes with status |
+| Queue social (article → social) | live | content piece aside → composer queue | One-click from approved article |
+| Integration health (CMS + social/ESP) | live | `connectionHealthCheck`, tiles | 16 CMS + social/ESP `lastHealth*` |
 
 ## 30 articles/month feasibility
 

@@ -1,6 +1,6 @@
 # PRD: Content Studio Competitive Plan
 
-**Status:** Active · Waves 0–1 shipped · Wave 2 partial (2.1–2.2, 2.4) · Wave 1 complete  
+**Status:** Waves 0–3.2 shipped · Only hosted blog (3.3) deferred  
 **ICP (90 days):** Partner-demo path vs BabyLoveGrowth / AutoSEO — consulting-led, not self-serve checkout  
 **Related:** [babylovegrowth-parity-planner.md](../competitors/babylovegrowth-parity-planner.md), [DECISIONS.md](../DECISIONS.md), [HANDOFF.md](../../HANDOFF.md)
 
@@ -14,9 +14,9 @@ goals.ac is **engine-rich and experience-thin**. The platform already ships stro
 
 | Competitor | What they win on | Where goals.ac lags in the room |
 |---|---|---|
-| **Surfer** | Live editor + real-time NLP term coverage while you write | No side-by-side brief/SERP panel during drafting; score feels post-hoc, not “writing room” |
-| **BLG / AutoSEO** | Volume simplicity — URL → daily articles → quality score on the homepage | Partner must dig through Studio, Publishing, and Integrations; humanize trust is under-demoed |
-| **Buffer** | Social polish — per-platform preview, voice, scheduling UX | Social exists but lacks humanize parity with articles and one-click article→social flow |
+| **Surfer** | Live editor + real-time NLP term coverage while you write | Brief/SERP panel + live dual score shipped; still no term-level NLP highlighting |
+| **BLG / AutoSEO** | Volume simplicity — URL → daily articles → quality score on the homepage | Humanize before/after + quality demo live; volume/billing packaging still partner-led |
+| **Buffer** | Social polish — per-platform preview, voice, scheduling UX | Queue social + social humanize shipped; Buffer-depth preview polish still lighter |
 
 **Root cause:** Packaging and reliability gaps, not missing core engines. Closing the competitive gap means surfacing what we already built and hardening humanize + integration trust before chasing Surfer-style live NLP.
 
@@ -73,7 +73,7 @@ flowchart LR
 
 ## Execution waves
 
-### Wave 0 — Humanize reliability + demo assets (in progress)
+### Wave 0 — Humanize reliability + demo assets (shipped)
 
 **Goal:** Make humanization trustworthy in production and demoable against BLG/AutoSEO samples.
 
@@ -90,7 +90,7 @@ flowchart LR
 
 ---
 
-### Wave 1 — Studio side panel + live draft score (not started)
+### Wave 1 — Studio side panel + live draft score (shipped)
 
 **Goal:** Surfer-like *feel* without building a live NLP engine — brief and SERP context beside the draft, score updates as the user edits.
 
@@ -104,7 +104,7 @@ flowchart LR
 
 ---
 
-### Wave 2 — Integration trust + distribution polish (planned)
+### Wave 2 — Integration trust + distribution polish (shipped)
 
 **Goal:** Win Buffer-style distribution confidence and reduce partner “will publish break?” anxiety.
 
@@ -118,15 +118,15 @@ flowchart LR
 
 ---
 
-### Wave 3 — Optional depth (backlog)
+### Wave 3 — Optional depth (3.1–3.2 shipped · 3.3 deferred)
 
 **Goal:** Partner-program polish and long-tail parity — only after Waves 0–2 demo path is solid.
 
 | # | Deliverable | Notes |
 |---|---|---|
-| 3.1 | **Optional autopilot dashboard** — Unified activity panel (articles, publishes, LLM citation delta, GEO trend) | Composes command center + visibility + geo audit |
-| 3.2 | **Coverage % H2s** — SERP score shows H2 topic coverage % vs competitor headings | Extends `serp-content-score.ts` coverage breakdown |
-| 3.3 | **Hosted blog** (`blog.customer.goals.ac`) | **Only when self-serve GTM ships** — not partner-demo priority |
+| 3.1 | **Optional autopilot dashboard** — Unified activity panel (articles, publishes, LLM citation delta, GEO trend) | Shipped — `/dashboard` activity panel |
+| 3.2 | **Coverage % H2s** — SERP score shows H2 topic coverage % vs competitor headings | Shipped — `serp.h2Coverage` in quality panels |
+| 3.3 | **Hosted blog** (`blog.customer.goals.ac`) | **Deferred** until self-serve GTM — not partner-demo priority |
 
 ---
 
@@ -209,7 +209,7 @@ pnpm --filter @workspace/marketing-persona-app run typecheck
 | Publishing tab | `artifacts/marketing-persona-app/src/components/projects/project-publishing-tab.tsx` |
 | One-click article→social | `lib/content-engine/src/content/content-studio-generator.ts` (`repurposeContentPiece`), repurpose API routes |
 
-### Wave 3 — Backlog
+### Wave 3 — Depth (3.3 still backlog)
 
 | Area | Files |
 |---|---|
