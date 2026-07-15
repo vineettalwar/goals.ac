@@ -5,27 +5,28 @@
 **PRD:** [docs/prd/content-studio-competitive-plan.md](docs/prd/content-studio-competitive-plan.md)  
 **Decision:** [docs/DECISIONS.md](docs/DECISIONS.md) — Execute Wave 0→1→2; partner-demo vs BLG/AutoSEO is primary ICP for 90 days.
 
-**Status:** Wave 0 mostly shipped · Wave 2.1–2.2 shipped early · Wave 1 **not started** · Wave 2.3+ still queued.
+**Status:** Waves 0–1 shipped · Wave 2 partial (2.1–2.2, 2.4) · Wave 2.3/2.5 + Wave 3 still queued.
 
 ### Shipped this session (parallel agents)
 
 | Item | Status |
 |------|--------|
-| 0.1 Safe sanitize (multi-word phrases only) | Done — `ai-writing-rules.ts` + tests |
-| 0.2 Secondary keywords + DeepL→re-humanize | Done — `humanizer.ts`, `content-studio-generator.ts` |
-| 0.3 All-social humanize eligibility | Done — `humanize-eligibility.ts` + Next/CF/app-shell |
-| 0.4 Blended human-voice score | Done — `article-quality-score.ts` |
-| 0.5 Audit strip in piece header | Done lite (`Humanize: N→M` / skipped) — dedicated before/after demo asset still open |
-| 2.1 Health cron 8→16 CMS | Done — `integration-health-service.ts` |
-| 2.2 Instagram image preflight + publish | Done — social hub + `social-publish.ts` |
+| 0.1–0.4 Humanize reliability + voice score | Done |
+| 0.5 Audit strip + `/article-quality` before/after demo | Done |
+| 1.1 Sticky brief/SERP context panel | Done — `ContentBriefPanel` + `briefId` |
+| 1.2 Live draft score (~2s debounce) + vs-saved delta | Done — local editorial; SERP from last fetch |
+| 1.5 Vite create → generate stream (angle/date fields) | Done — Next wizard unchanged (canonical) |
+| 2.1 Health cron 8→16 CMS | Done |
+| 2.2 Instagram image preflight | Done |
+| 2.4 Publish history | Done — `GET .../publish-records` + `PublishHistoryPanel` on publishing tab |
 
 ### Still queued
 
 | Wave | Focus |
 |------|-------|
-| **0.5 residual** | Partner before/after humanize demo asset (marketing/deck) |
-| **1** | Studio side panel brief/SERP, live draft score, unify create UX |
-| **2.3+** | Connect UX polish, publish history UI, article+social one-click; social/ESP health optional |
+| **2.3** | Connect UX checklists parity on remaining CMS/social tiles |
+| **2.5** | Article → social one-click queue |
+| **3** | Optional autopilot dashboard, coverage % H2s, hosted blog (self-serve only) |
 
 ### Explicitly deferred (all waves)
 
@@ -34,9 +35,11 @@
 ### Verify
 
 ```sh
-cd lib/content-engine && npx tsc --noEmit && npx vitest run src/content/ai-writing-rules.test.ts
 pnpm --filter @workspace/app-shell exec tsc --noEmit
-# Manual :3001 — humanize on social piece, IG compose without image blocked, Integrations health tiles for headless CMS
+cd lib/content-engine && npx tsc --noEmit
+pnpm --filter @workspace/goals-app-ui exec tsc --noEmit
+# Manual :3001 — piece aside brief panel, type→score debounce, /article-quality demo, publishing tab history
+# Vite Studio — create with keyword/angle → generate → piece page
 ```
 
 ---

@@ -1,6 +1,6 @@
 # PRD: Content Studio Competitive Plan
 
-**Status:** Active · Waves 0–2 in progress · Wave 1 not started  
+**Status:** Active · Waves 0–1 shipped · Wave 2 partial (2.1–2.2, 2.4) · Wave 1 complete  
 **ICP (90 days):** Partner-demo path vs BabyLoveGrowth / AutoSEO — consulting-led, not self-serve checkout  
 **Related:** [babylovegrowth-parity-planner.md](../competitors/babylovegrowth-parity-planner.md), [DECISIONS.md](../DECISIONS.md), [HANDOFF.md](../../HANDOFF.md)
 

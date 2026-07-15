@@ -37,6 +37,7 @@ export interface ContentPieceRecord {
   publishedUrl: string | null;
   createdAt: string;
   pieceMetadata?: ContentPieceMetadata | null;
+  briefId?: number | null;
 }
 
 function sanitizePieceMetadata(
@@ -88,6 +89,7 @@ export const loadContentPieceForUser = cache(async (
     publishedUrl: piece.publishedUrl ?? null,
     createdAt: piece.createdAt.toISOString(),
     pieceMetadata: sanitizePieceMetadata(piece.pieceMetadata),
+    briefId: piece.briefId ?? null,
   };
 });
 

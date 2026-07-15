@@ -1,20 +1,104 @@
 "use client";
 
-import Link from "next/link";
 import { ArticleQualityPanel } from "@/components/content/article-quality-panel";
+import { ScoreRing } from "@/components/content/score-ring";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
 import { PageHero } from "@/components/marketing/heroes/page-hero";
 import { MarketingSection } from "@/components/marketing/sections/marketing-section";
 import { MarketingCTA } from "@/components/marketing/sections/marketing-cta";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
-import { CONTACT_CTA_LABEL, CONTACT_HREF, PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
-import { ARTICLE_QUALITY_DEMO } from "@/lib/marketing/content/article-quality-demo";
+import {
+  CONTACT_CTA_LABEL,
+  CONTACT_HREF,
+  PRODUCT_CTA_HREF,
+  PRODUCT_CTA_PRIMARY,
+} from "@/lib/marketing/site/marketing-contact";
+import {
+  ARTICLE_QUALITY_DEMO,
+  HUMANIZE_DEMO_METRICS,
+} from "@/lib/marketing/content/article-quality-demo";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
 const glassCard = cardSurfaceClass("glass", false);
 
+function demoMarkdownToHtml(markdown: string): string {
+  return markdown
+    .replace(/^# (.+)$/m, "<h2>$1</h2>")
+    .replace(/^## (.+)$/gm, "<h3>$1</h3>")
+    .replace(/^### (.+)$/gm, "<h4>$1</h4>")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-primary">$1</a>')
+    .replace(/^> (.+)$/gm, "<blockquote><p>$1</p></blockquote>")
+    .replace(/\n\n/g, "</p><p>")
+    .replace(/^(.+)$/gm, (line) => (line.startsWith("<") ? line : `<p>${line}</p>`));
+}
+
+type HumanizeColumnProps = {
+  label: string;
+  accent: "before" | "after";
+  markdown: string;
+  tellCount: number;
+  qualityTotal: number;
+  humanVoiceScore: number;
+  humanVoiceMax: number;
+  humanVoiceDetail: string;
+};
+
+function HumanizeColumn({
+  label,
+  accent,
+  markdown,
+  tellCount,
+  qualityTotal,
+  humanVoiceScore,
+  humanVoiceMax,
+  humanVoiceDetail,
+}: HumanizeColumnProps) {
+  const isAfter = accent === "after";
+  const tellLabel = tellCount === 0 ? "No AI tells" : `${tellCount} AI tell${tellCount === 1 ? "" : "s"}`;
+
+  return (
+    <div
+      className={`${glassCard} p-5 space-y-4 ${
+        isAfter ? "border-emerald-500/30 ring-1 ring-emerald-500/20" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p
+            className={`text-[10px] font-semibold uppercase tracking-wide mb-1 ${
+              isAfter ? "text-emerald-400" : "text-white/70"
+            }`}
+          >
+            {label}
+          </p>
+          <p
+            className={`text-sm font-medium ${
+              isAfter ? "text-emerald-300" : "text-amber-300"
+            }`}
+          >
+            {tellLabel}
+          </p>
+          <p className="text-xs text-white/55 mt-1">
+            Human voice {humanVoiceScore}/{humanVoiceMax}
+            {humanVoiceDetail ? ` · ${humanVoiceDetail}` : ""}
+          </p>
+        </div>
+        <div className="shrink-0 [&_span]:text-white [&_.text-muted-foreground]:text-white/50 [&_.text-secondary]:text-white/20">
+          <ScoreRing score={qualityTotal} size={72} label="Quality" />
+        </div>
+      </div>
+
+      <div className="max-h-[320px] overflow-y-auto marketing-prose-dark text-sm leading-relaxed border-t border-white/10 pt-4">
+        <div dangerouslySetInnerHTML={{ __html: demoMarkdownToHtml(markdown) }} />
+      </div>
+    </div>
+  );
+}
+
 export function ArticleQualityDemoClient() {
   const demo = ARTICLE_QUALITY_DEMO;
+  const metrics = HUMANIZE_DEMO_METRICS;
 
   return (
     <MarketingPageShell
@@ -92,43 +176,43 @@ export function ArticleQualityDemoClient() {
             />
           </div>
 
-          <div className="space-y-6">
-            <div className={`${glassCard} p-5 max-h-[520px] overflow-y-auto marketing-prose-dark`}>
-              <p className="text-xs text-white/50 mb-4 not-prose">
-                {demo.metaTitle} · {demo.wordCount.toLocaleString()} words
-              </p>
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: demo.bodyMarkdown
-                    .replace(/^# (.+)$/m, "<h2>$1</h2>")
-                    .replace(/^## (.+)$/gm, "<h3>$1</h3>")
-                    .replace(/^### (.+)$/gm, "<h4>$1</h4>")
-                    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-                    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-primary">$1</a>')
-                    .replace(/^> (.+)$/gm, "<blockquote><p>$1</p></blockquote>")
-                    .replace(/\n\n/g, "</p><p>")
-                    .replace(/^(.+)$/gm, (line) =>
-                      line.startsWith("<") ? line : `<p>${line}</p>`,
-                    ),
-                }}
-              />
-            </div>
-
-            <div className={`${glassCard} p-5 space-y-4`}>
-              <h3 className="font-semibold text-sm text-white">Humanization pass</h3>
-              <p className="text-xs text-white/65">
-                Optional second pass rewrites for natural rhythm while preserving headings, keywords, and schema.
-              </p>
-              <div className="rounded-lg border border-white/10 bg-white/5 p-3">
-                <p className="text-[10px] font-semibold uppercase text-white/70 mb-1">Before</p>
-                <p className="text-xs text-white/65 italic">{demo.humanizationBefore}</p>
-              </div>
-              <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                <p className="text-[10px] font-semibold uppercase text-emerald-400 mb-1">After humanize</p>
-                <p className="text-xs text-white/80">{demo.humanizationAfter}</p>
-              </div>
-            </div>
+          <div className={`${glassCard} p-5 max-h-[640px] overflow-y-auto marketing-prose-dark`}>
+            <p className="text-xs text-white/50 mb-4 not-prose">
+              {demo.metaTitle} · {demo.wordCount.toLocaleString()} words
+            </p>
+            <div dangerouslySetInnerHTML={{ __html: demoMarkdownToHtml(demo.bodyMarkdown) }} />
           </div>
+        </div>
+      </MarketingSection>
+
+      <MarketingSection
+        bordered
+        className="py-16"
+        titleLine1="Before vs after"
+        titleLine2="humanize"
+        description={metrics.caption}
+      >
+        <div className="grid gap-6 lg:grid-cols-2">
+          <HumanizeColumn
+            label="Before · generic AI draft"
+            accent="before"
+            markdown={demo.beforeMarkdown}
+            tellCount={metrics.before.tellCount}
+            qualityTotal={metrics.before.qualityTotal}
+            humanVoiceScore={metrics.before.humanVoiceScore}
+            humanVoiceMax={metrics.before.humanVoiceMax}
+            humanVoiceDetail={metrics.before.humanVoiceDetail}
+          />
+          <HumanizeColumn
+            label="After · humanize pass"
+            accent="after"
+            markdown={demo.afterMarkdown}
+            tellCount={metrics.after.tellCount}
+            qualityTotal={metrics.after.qualityTotal}
+            humanVoiceScore={metrics.after.humanVoiceScore}
+            humanVoiceMax={metrics.after.humanVoiceMax}
+            humanVoiceDetail={metrics.after.humanVoiceDetail}
+          />
         </div>
       </MarketingSection>
 
@@ -137,8 +221,10 @@ export function ArticleQualityDemoClient() {
         titleLine2="on your drafts?"
         description="Sign up and run the same quality scoring on your own drafts in the content studio."
         variant="dark"
-        secondaryHref="/content-autopilot"
-        secondaryLabel="Content autopilot →"
+        primaryHref={PRODUCT_CTA_HREF}
+        primaryLabel={PRODUCT_CTA_PRIMARY}
+        secondaryHref={CONTACT_HREF}
+        secondaryLabel={CONTACT_CTA_LABEL}
       />
     </MarketingPageShell>
   );

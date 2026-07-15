@@ -1,4 +1,27 @@
 import { scoreArticleQuality } from "@workspace/content-engine/articles/article-quality-score";
+import { countAiSlopSignals } from "@workspace/content-engine/content/ai-writing-rules";
+
+/**
+ * Partner-facing before/after humanize samples (same brief/facts).
+ * Before is deliberately AI-slop laden so countAiSlopSignals / Human voice diverge.
+ */
+export const HUMANIZE_DEMO_BEFORE_MARKDOWN = `# GEO Audit Checklist for B2B SaaS
+
+In today's fast-paced world, businesses must leverage generative search to stay competitive. Moreover, organizations should delve into schema markup — a pivotal capability that can transform how AI systems cite your pages.
+
+It's important to note that implementing FAQ sections can be beneficial for visibility. Furthermore, companies should optimize their technical landscape to unlock seamless retrieval across ChatGPT and Perplexity. Additionally, adding citations to authoritative sources helps elevate trust and foster stronger rankings.
+
+Whether you're a founder, marketer, or SEO lead, a comprehensive GEO audit can facilitate better outcomes. Ultimately, teams that streamline schema, FAQ blocks, and llms.txt will navigate this evolving paradigm as we move forward.
+`;
+
+export const HUMANIZE_DEMO_AFTER_MARKDOWN = `# GEO Audit Checklist for B2B SaaS
+
+If ChatGPT keeps recommending your competitors, the issue is usually retrievability, not word count. Run a GEO audit on your homepage and top five money pages first.
+
+Start with Article and FAQ schema on your strongest guide. Add three real buyer questions with short answers. Link out to primary sources (Search Central, Schema.org) so models have something trustworthy to cite.
+
+Publish llms.txt at the domain root listing priority URLs, and keep robots.txt from blocking crawlers you actually want. Re-check monthly or after template changes. Those six checks beat another generic tips post.
+`;
 
 /** Sample article for public quality score demo (B2B SaaS GEO topic). */
 export const ARTICLE_QUALITY_DEMO = {
@@ -129,7 +152,51 @@ A machine-readable index that tells LLM crawlers which pages matter most on your
     "It is important to note that implementing schema markup can be beneficial for visibility in generative search engines. Organizations should consider adding FAQ sections.",
   humanizationAfter:
     "Start with Article + FAQ schema on your top guide. It's the fastest win we see in weekly GEO re-audits. Add three real buyer questions, not filler.",
+  beforeMarkdown: HUMANIZE_DEMO_BEFORE_MARKDOWN,
+  afterMarkdown: HUMANIZE_DEMO_AFTER_MARKDOWN,
 };
+
+const humanizeScoreInput = {
+  metaTitle: ARTICLE_QUALITY_DEMO.metaTitle,
+  metaDescription: ARTICLE_QUALITY_DEMO.metaDescription,
+  citations: ARTICLE_QUALITY_DEMO.citations,
+  faqSection: ARTICLE_QUALITY_DEMO.faqSection,
+  jsonLdSchema: ARTICLE_QUALITY_DEMO.jsonLdSchema,
+  internalLinkSuggestions: ARTICLE_QUALITY_DEMO.internalLinkSuggestions,
+} as const;
+
+const beforeQuality = scoreArticleQuality({
+  bodyMarkdown: HUMANIZE_DEMO_BEFORE_MARKDOWN,
+  ...humanizeScoreInput,
+});
+const afterQuality = scoreArticleQuality({
+  bodyMarkdown: HUMANIZE_DEMO_AFTER_MARKDOWN,
+  ...humanizeScoreInput,
+});
+
+function humanVoiceRow(result: ReturnType<typeof scoreArticleQuality>) {
+  return result.breakdown.find((row) => row.label === "Human voice");
+}
+
+/** Honest sample metrics from the same rubric as the editor (not invented detector %). */
+export const HUMANIZE_DEMO_METRICS = {
+  before: {
+    tellCount: countAiSlopSignals(HUMANIZE_DEMO_BEFORE_MARKDOWN),
+    qualityTotal: beforeQuality.total,
+    humanVoiceScore: humanVoiceRow(beforeQuality)?.score ?? 0,
+    humanVoiceMax: humanVoiceRow(beforeQuality)?.max ?? 15,
+    humanVoiceDetail: humanVoiceRow(beforeQuality)?.detail ?? "",
+  },
+  after: {
+    tellCount: countAiSlopSignals(HUMANIZE_DEMO_AFTER_MARKDOWN),
+    qualityTotal: afterQuality.total,
+    humanVoiceScore: humanVoiceRow(afterQuality)?.score ?? 0,
+    humanVoiceMax: humanVoiceRow(afterQuality)?.max ?? 15,
+    humanVoiceDetail: humanVoiceRow(afterQuality)?.detail ?? "",
+  },
+  caption:
+    "Same brief. Second pass removes AI tells and matches brand voice — editable before publish.",
+} as const;
 
 /** Computed from the sample article using the same rubric as the content editor. */
 export const ARTICLE_QUALITY_DEMO_SCORE = scoreArticleQuality({
