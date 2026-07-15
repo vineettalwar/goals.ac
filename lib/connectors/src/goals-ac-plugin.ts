@@ -67,6 +67,8 @@ export interface GoalsAcPublishPayload {
   template_suffix?: string;
   /** Shopify only */
   blogId?: string;
+  /** Shopify ArticleCreateInput.image.url (public https) */
+  featuredImageUrl?: string;
 }
 
 export interface GoalsAcPublishResult {

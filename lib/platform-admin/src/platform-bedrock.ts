@@ -3,7 +3,7 @@ import {
   organizationsTable,
   platformBedrockOrgGrantsTable,
   platformSettingsTable,
-} from "@workspace/db/schema-sqlite";
+} from "@workspace/db/active-schema";
 import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import { and, eq, inArray } from "drizzle-orm";
 import { lastFour } from "@workspace/billing";

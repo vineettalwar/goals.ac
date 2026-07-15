@@ -147,6 +147,9 @@ export const shopifyAdapter: CmsAdapter = {
         tags,
         meta: mapSeoToPluginMeta(seo),
         seo: seo as Record<string, string | undefined>,
+        ...(payload.featuredImageUrl?.trim()
+          ? { featuredImageUrl: payload.featuredImageUrl.trim() }
+          : {}),
       };
 
       const useMarkdown = payload.outputMode === "article_html";

@@ -31,6 +31,23 @@ import {
   isBlueskyManagedByEnv,
 } from "@workspace/content-engine/support/social/bluesky-platform-credentials";
 import { eq } from "drizzle-orm";
+import {
+  clearStoredPlatformBedrockCredentials,
+  getPlatformBedrockStatus,
+  savePlatformBedrockCredentials,
+  setPlatformBedrockOrgGrants,
+  type PlatformBedrockStatus,
+  type SavePlatformBedrockCredentialsInput,
+} from "@workspace/platform-admin/platform-bedrock";
+
+export {
+  clearStoredPlatformBedrockCredentials,
+  getPlatformBedrockStatus,
+  savePlatformBedrockCredentials,
+  setPlatformBedrockOrgGrants,
+  type PlatformBedrockStatus,
+  type SavePlatformBedrockCredentialsInput,
+};
 
 function isUnsplashManagedByEnv(): boolean {
   return Boolean(process.env.UNSPLASH_ACCESS_KEY?.trim());
@@ -107,6 +124,7 @@ export type PlatformIntegrationStatus = {
     clientName: { configured: boolean; value: string | null; source: "db" | "env" | null };
     privateKeyJwk: IntegrationFieldStatus;
   };
+  bedrock: PlatformBedrockStatus;
 };
 
 const STRIPE_ENV_VARS = [
@@ -181,33 +199,37 @@ function plainFieldStatus(
 }
 
 export async function getPlatformIntegrationStatus(): Promise<PlatformIntegrationStatus> {
-  const [row] = await db
-    .select({
-      encryptedStripeSecretKey: platformSettingsTable.encryptedStripeSecretKey,
-      encryptedStripeConnectAccessToken: platformSettingsTable.encryptedStripeConnectAccessToken,
-      encryptedStripeWebhookSecret: platformSettingsTable.encryptedStripeWebhookSecret,
-      stripePriceGrowthMonthly: platformSettingsTable.stripePriceGrowthMonthly,
-      stripePriceScaleMonthly: platformSettingsTable.stripePriceScaleMonthly,
-      stripeConnectAccountId: platformSettingsTable.stripeConnectAccountId,
-      stripeConnectLivemode: platformSettingsTable.stripeConnectLivemode,
-      stripeConnectConnectedAt: platformSettingsTable.stripeConnectConnectedAt,
-      encryptedResendApiKey: platformSettingsTable.encryptedResendApiKey,
-      resendFromEmail: platformSettingsTable.resendFromEmail,
-      encryptedUnsplashAccessKey: platformSettingsTable.encryptedUnsplashAccessKey,
-      encryptedPexelsApiKey: platformSettingsTable.encryptedPexelsApiKey,
-      linkedinClientId: platformSettingsTable.linkedinClientId,
-      encryptedLinkedinClientSecret: platformSettingsTable.encryptedLinkedinClientSecret,
-      twitterClientId: platformSettingsTable.twitterClientId,
-      encryptedTwitterClientSecret: platformSettingsTable.encryptedTwitterClientSecret,
-      metaAppId: platformSettingsTable.metaAppId,
-      encryptedMetaAppSecret: platformSettingsTable.encryptedMetaAppSecret,
-      blueskyClientName: platformSettingsTable.blueskyClientName,
-      encryptedBlueskyOauthPrivateKeyJwk:
-        platformSettingsTable.encryptedBlueskyOauthPrivateKeyJwk,
-    })
-    .from(platformSettingsTable)
-    .where(eq(platformSettingsTable.id, 1))
-    .limit(1);
+  const [rows, bedrock] = await Promise.all([
+    db
+      .select({
+        encryptedStripeSecretKey: platformSettingsTable.encryptedStripeSecretKey,
+        encryptedStripeConnectAccessToken: platformSettingsTable.encryptedStripeConnectAccessToken,
+        encryptedStripeWebhookSecret: platformSettingsTable.encryptedStripeWebhookSecret,
+        stripePriceGrowthMonthly: platformSettingsTable.stripePriceGrowthMonthly,
+        stripePriceScaleMonthly: platformSettingsTable.stripePriceScaleMonthly,
+        stripeConnectAccountId: platformSettingsTable.stripeConnectAccountId,
+        stripeConnectLivemode: platformSettingsTable.stripeConnectLivemode,
+        stripeConnectConnectedAt: platformSettingsTable.stripeConnectConnectedAt,
+        encryptedResendApiKey: platformSettingsTable.encryptedResendApiKey,
+        resendFromEmail: platformSettingsTable.resendFromEmail,
+        encryptedUnsplashAccessKey: platformSettingsTable.encryptedUnsplashAccessKey,
+        encryptedPexelsApiKey: platformSettingsTable.encryptedPexelsApiKey,
+        linkedinClientId: platformSettingsTable.linkedinClientId,
+        encryptedLinkedinClientSecret: platformSettingsTable.encryptedLinkedinClientSecret,
+        twitterClientId: platformSettingsTable.twitterClientId,
+        encryptedTwitterClientSecret: platformSettingsTable.encryptedTwitterClientSecret,
+        metaAppId: platformSettingsTable.metaAppId,
+        encryptedMetaAppSecret: platformSettingsTable.encryptedMetaAppSecret,
+        blueskyClientName: platformSettingsTable.blueskyClientName,
+        encryptedBlueskyOauthPrivateKeyJwk:
+          platformSettingsTable.encryptedBlueskyOauthPrivateKeyJwk,
+      })
+      .from(platformSettingsTable)
+      .where(eq(platformSettingsTable.id, 1))
+      .limit(1),
+    getPlatformBedrockStatus(),
+  ]);
+  const row = rows[0];
 
   const connectToken = safeDecrypt(row?.encryptedStripeConnectAccessToken);
 
@@ -274,6 +296,7 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
       ),
     },
+    bedrock,
   };
 }
 

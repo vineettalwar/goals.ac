@@ -6,6 +6,7 @@ import {
   clearStoredLinkedInCredentials,
   clearStoredMetaCredentials,
   clearStoredPexelsCredentials,
+  clearStoredPlatformBedrockCredentials,
   clearStoredResendCredentials,
   clearStoredStripeCredentials,
   clearStoredTwitterCredentials,
@@ -16,10 +17,12 @@ import {
   saveLinkedInCredentials,
   saveMetaCredentials,
   savePexelsCredentials,
+  savePlatformBedrockCredentials,
   saveResendCredentials,
   saveStripeCredentials,
   saveTwitterCredentials,
   saveUnsplashCredentials,
+  setPlatformBedrockOrgGrants,
 } from "@/lib/platform/platform-integration-secrets";
 
 const stripeBodySchema = z.object({
@@ -70,6 +73,16 @@ const blueskyBodySchema = z.object({
   privateKeyJwk: z.string().min(8).optional(),
 });
 
+const bedrockBodySchema = z.object({
+  integration: z.literal("bedrock"),
+  accessKeyId: z.string().min(16).optional(),
+  secretAccessKey: z.string().min(16).optional(),
+  sessionToken: z.string().trim().optional().nullable(),
+  region: z.string().trim().min(1).optional().nullable(),
+  model: z.string().trim().min(1).optional().nullable(),
+  organizationIds: z.array(z.number().int().positive()).optional(),
+});
+
 const patchSchema = z.discriminatedUnion("integration", [
   stripeBodySchema,
   resendBodySchema,
@@ -79,6 +92,7 @@ const patchSchema = z.discriminatedUnion("integration", [
   twitterBodySchema,
   metaBodySchema,
   blueskyBodySchema,
+  bedrockBodySchema,
 ]);
 
 const deleteSchema = z.object({
@@ -92,6 +106,7 @@ const deleteSchema = z.object({
     "twitter",
     "meta",
     "bluesky",
+    "bedrock",
   ]),
 });
 
@@ -191,7 +206,7 @@ export async function PATCH(req: Request) {
         appSecret: data.appSecret,
         updatedBy: admin.userId!,
       });
-    } else {
+    } else if (data.integration === "bluesky") {
       if (data.clientName === undefined && data.privateKeyJwk === undefined) {
         return NextResponse.json({ error: "No Bluesky fields to update" }, { status: 400 });
       }
@@ -201,6 +216,31 @@ export async function PATCH(req: Request) {
         privateKeyJwk: data.privateKeyJwk,
         updatedBy: admin.userId!,
       });
+    } else {
+      const hasCredFields =
+        data.accessKeyId !== undefined ||
+        data.secretAccessKey !== undefined ||
+        data.sessionToken !== undefined ||
+        data.region !== undefined ||
+        data.model !== undefined;
+      const hasGrants = data.organizationIds !== undefined;
+      if (!hasCredFields && !hasGrants) {
+        return NextResponse.json({ error: "No Bedrock fields to update" }, { status: 400 });
+      }
+
+      if (hasCredFields) {
+        await savePlatformBedrockCredentials({
+          accessKeyId: data.accessKeyId,
+          secretAccessKey: data.secretAccessKey,
+          sessionToken: data.sessionToken,
+          region: data.region,
+          model: data.model,
+          updatedBy: admin.userId!,
+        });
+      }
+      if (hasGrants) {
+        await setPlatformBedrockOrgGrants(data.organizationIds!, admin.userId!);
+      }
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : "Save failed";
@@ -250,6 +290,9 @@ export async function DELETE(req: Request) {
         break;
       case "bluesky":
         await clearStoredBlueskyCredentials(admin.userId!);
+        break;
+      case "bedrock":
+        await clearStoredPlatformBedrockCredentials(admin.userId!);
         break;
     }
   } catch (err) {

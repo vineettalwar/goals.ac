@@ -105,6 +105,7 @@
     "./strategy/roadmap-generator": "./src/strategy/roadmap-generator.ts",
     "./strategy/topical-map-generator": "./src/strategy/topical-map-generator.ts",
     "./support/ai/org-ai-settings": "./src/support/ai/org-ai-settings.ts",
+    "./support/ai/platform-bedrock": "./src/support/ai/platform-bedrock.ts",
     "./support/ai/resolve-ai-client": "./src/support/ai/resolve-ai-client.ts",
     "./support/ai/resolve-ai-client-for-user": "./src/support/ai/resolve-ai-client-for-user.ts",
     "./support/ai/user-ai-provider": "./src/support/ai/user-ai-provider.ts",
