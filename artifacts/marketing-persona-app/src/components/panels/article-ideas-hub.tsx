@@ -37,7 +37,8 @@ export type SourceFilter =
   | "imports"
   | "ai_analysis"
   | "competitor_gap"
-  | "rank_drop";
+  | "rank_drop"
+  | "content_refresh";
 
 const IMPORT_SOURCES = new Set(["csv_import", "google_sheets", "manual"]);
 
@@ -52,6 +53,7 @@ const FILTER_CHIPS: { id: SourceFilter; label: string }[] = [
   { id: "ai_analysis", label: "AI" },
   { id: "competitor_gap", label: "Competitor" },
   { id: "rank_drop", label: "Rank drop" },
+  { id: "content_refresh", label: "Needs refresh" },
 ];
 
 type GscSyncStatus = {
@@ -183,6 +185,26 @@ export function ArticleIdeasHub({
     onRefetch?.();
   }
 
+  async function handleQueueAndGenerate(id: number) {
+    const res = await fetch(`/api/keyword-opportunities/${id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ generate: true }),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error(queueOpportunityErrorMessage((data as { error?: string }).error));
+      return;
+    }
+    const data = (await res.json()) as { primaryPieceId?: number };
+    toast.success("Queued and generating draft");
+    await refetchOpportunities();
+    onRefetch?.();
+    if (data.primaryPieceId && activeProjectId) {
+      window.location.href = `/projects/${activeProjectId}/content-piece/${data.primaryPieceId}`;
+    }
+  }
+
   async function handleQueue(id: number) {
     const res = await fetch(`/api/keyword-opportunities/${id}`, { method: "POST" });
     if (!res.ok) {
@@ -217,9 +239,24 @@ export function ArticleIdeasHub({
             Project language is {semrushStatus.primaryLanguageLabel ?? contentLanguageLabel(semrushStatus.primaryLanguage)} but
             Semrush is set to {semrushDatabaseLabel(semrushStatus.database ?? "us")}.
             {" "}
-            <Link href="/settings" className="font-medium text-primary hover:underline">
-              Update in Settings
+            <Link href="/integrations/tools" className="font-medium text-primary hover:underline">
+              Update in Integrations → Tools
             </Link>
+          </p>
+        </div>
+      )}
+
+      {!semrushStatus?.configured && (
+        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+          <p className="font-medium">Working without Semrush</p>
+          <p className="mt-1 text-muted-foreground">
+            Use <span className="font-medium text-foreground">From GSC</span> for real query opportunities,
+            or <span className="font-medium text-foreground">AI gaps</span> for estimated clusters. Volume
+            and difficulty stay blank until you{" "}
+            <Link href="/integrations/tools" className="font-medium text-primary hover:underline">
+              connect Semrush
+            </Link>
+            .
           </p>
         </div>
       )}
@@ -239,7 +276,7 @@ export function ArticleIdeasHub({
           </div>
           {!semrushStatus?.configured && (
             <Button asChild variant="outline" size="sm">
-              <Link href="/settings">Connect</Link>
+              <Link href="/integrations/tools">Connect</Link>
             </Button>
           )}
         </div>
@@ -338,6 +375,7 @@ export function ArticleIdeasHub({
             queryMetrics={queryMetrics}
             activeProjectId={activeProjectId}
             onQueue={handleQueue}
+            onQueueAndGenerate={handleQueueAndGenerate}
             onDismiss={handleDismiss}
           />
         )}

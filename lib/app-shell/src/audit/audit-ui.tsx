@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, ExternalLink, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, ExternalLink, Search, FileText } from "lucide-react";
 import { cn } from "../cn";
 import { btnPrimary, inputClass, ScoreRing } from "../section-panels/shared";
 import {
@@ -222,7 +222,7 @@ export function GeoAuditDetailView({
           {Array.isArray(audit.recommendations) && (audit.recommendations as string[]).length > 0 ? (
             <div className="paper-card p-5">
               <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-                <Sparkles className="h-4 w-4 text-primary" /> Write next
+                <FileText className="h-4 w-4 text-primary" /> Write next
               </h2>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 {(audit.recommendations as string[]).map((item) => (

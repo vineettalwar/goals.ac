@@ -44,9 +44,9 @@ function appOrigin(): string {
   return process.env.NEXTAUTH_URL ?? "http://localhost:3001";
 }
 
-function redirectToIntegrations(params: Record<string, string>) {
+function redirectToIntegrations(projectId: number, params: Record<string, string>) {
   const qs = new URLSearchParams(params).toString();
-  return NextResponse.redirect(`${appOrigin()}/integrations?${qs}`);
+  return NextResponse.redirect(`${appOrigin()}/projects/${projectId}/integrations/search?${qs}`);
 }
 
 function callbackStatus(properties: Ga4PropertySummary[], matched: Ga4PropertySummary | null): string {
@@ -179,10 +179,10 @@ export async function handleGoogleAnalyticsCallback(
       }
     }
 
-    return redirectToIntegrations({
+    return redirectToIntegrations(project.id, {
       ga4: callbackStatus(properties, matched),
     });
   } catch {
-    return redirectToIntegrations({ ga4: "error" });
+    return redirectToIntegrations(project.id, { ga4: "error" });
   }
 }

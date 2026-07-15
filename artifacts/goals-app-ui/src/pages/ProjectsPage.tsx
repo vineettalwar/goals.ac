@@ -44,9 +44,9 @@ export function ProjectsPage() {
 
   return (
     <>
-      {error ? <p className="px-8 pt-8 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="px-4 pt-8 text-sm text-red-700 sm:px-6 lg:px-8">{error}</p> : null}
       {canManageTeam ? (
-        <div className="px-8 pt-8 max-w-5xl">
+        <div className="max-w-5xl px-4 pt-8 sm:px-6 lg:px-8">
           <TeamManagementView
             members={members}
             projects={projects}

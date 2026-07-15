@@ -28,7 +28,7 @@ export function DashboardPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { projectId, projects, loading: projectsLoading } = useActiveProject();
-  const { loading, error, activeProject, pieces, autopilotSettings } =
+  const { loading, error, activeProject, pieces, autopilotSettings, commandCenter } =
     useDashboardData(projectId, projects);
 
   useEffect(() => {
@@ -44,7 +44,7 @@ export function DashboardPage() {
   return (
     <>
       {error ? (
-        <p className="px-8 pt-8 text-sm text-red-700">{error}</p>
+        <p className="px-4 pt-8 text-sm text-red-700 sm:px-6 lg:px-8">{error}</p>
       ) : null}
       <DashboardView
         greeting={dashboardGreeting(user?.name)}
@@ -55,6 +55,7 @@ export function DashboardPage() {
         activeProjectId={activeProjectId}
         pieces={pieces}
         autopilotSettings={autopilotSettings}
+        commandCenter={commandCenter}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}

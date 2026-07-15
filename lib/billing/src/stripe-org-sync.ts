@@ -123,7 +123,11 @@ export async function applyStripeSubscriptionToOrganization(input: {
     return { ok: false, error: planResult.error };
   }
 
-  return { ok: true, plan: targetPlan, previousPlan: planResult.previousPlan };
+  return {
+    ok: true,
+    plan: targetPlan,
+    previousPlan: normalizePlanId(planResult.previousPlan),
+  };
 }
 
 export function subscriptionSnapshotFromStripe(subscription: {

@@ -17,9 +17,11 @@ import { formatTypeLabel, type StudioPiece } from "./types";
 function CalendarDay({
   dateKey,
   children,
+  className,
 }: {
   dateKey: string;
   children: React.ReactNode;
+  className?: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `day-${dateKey}` });
   return (
@@ -28,6 +30,7 @@ function CalendarDay({
       className={cn(
         "min-h-[88px] bg-background p-1.5",
         isOver && "bg-primary/5 ring-1 ring-primary/30",
+        className,
       )}
     >
       {children}
@@ -45,6 +48,7 @@ function CalendarDraggablePiece({
   const { attributes, listeners, setNodeRef, transform } = useDraggable({ id: `piece-${piece.id}` });
   const style = transform ? { transform: CSS.Translate.toString(transform) } : undefined;
   const label = formatTypeLabel(piece.formatType);
+  const title = piece.title ?? "";
 
   return (
     <div
@@ -56,9 +60,9 @@ function CalendarDraggablePiece({
         "cursor-grab truncate rounded bg-primary/10 px-1 py-0.5 text-[10px] leading-tight",
         isRescheduling && "opacity-50",
       )}
-      title={piece.title}
+      title={title}
     >
-      {label}: {piece.title.slice(0, 20)}
+      {label}: {title.slice(0, 20)}
     </div>
   );
 }
@@ -136,7 +140,55 @@ export function StudioCalendarView({
       ) : null}
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={onDragEnd}>
-        <div className="overflow-hidden rounded-lg border">
+        {/* Mobile agenda — day cells are too narrow under md */}
+        <div className="space-y-3 md:hidden">
+          {days.map((day) => {
+            const key = formatYmd(day);
+            const dayPieces = piecesByDate[key] ?? [];
+            if (dayPieces.length === 0) return null;
+            const isToday = key === todayKey;
+            return (
+              <div
+                key={`agenda-${key}`}
+                className="rounded-lg border border-border bg-card p-3"
+              >
+                <CalendarDay dateKey={key} className="min-h-0 bg-transparent p-0">
+                  <div className="mb-2 flex items-center gap-2">
+                    <span
+                      className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium",
+                        isToday ? "bg-primary text-primary-foreground" : "bg-secondary text-foreground",
+                      )}
+                    >
+                      {day.getDate()}
+                    </span>
+                    <span className="text-sm font-medium">
+                      {day.toLocaleDateString(undefined, {
+                        weekday: "short",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {dayPieces.map((piece) => (
+                      <CalendarDraggablePiece
+                        key={piece.id}
+                        piece={piece}
+                        isRescheduling={reschedulingId === piece.id}
+                      />
+                    ))}
+                  </div>
+                </CalendarDay>
+              </div>
+            );
+          })}
+          {Object.keys(piecesByDate).length === 0 && pieces.length > 0 ? (
+            <p className="text-sm text-muted-foreground">No pieces scheduled this month.</p>
+          ) : null}
+        </div>
+
+        <div className="hidden overflow-hidden rounded-lg border md:block">
           <div className="grid grid-cols-7 gap-px bg-border">
             {WEEK_DAY_LABELS.map((label) => (
               <div

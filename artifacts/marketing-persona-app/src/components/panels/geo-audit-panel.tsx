@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { Search, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ const CHECKS = ["Title & Meta", "Schema.org", "H1/H2 structure", "Open Graph"];
 
 export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const urlFromQuery = searchParams.get("url")?.trim() ?? "";
   const { activeProjectId, activeProject, isLoading: projectLoading } = useActiveProject();
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
   const { data: projectContent, isLoading, refetch } = useProjectContent(projectId);
@@ -25,10 +27,16 @@ export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
   const [urlProjectId, setUrlProjectId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  if (activeProject?.url && activeProjectId !== urlProjectId) {
-    setUrlProjectId(activeProjectId);
-    setUrl(normalizeHttpUrl(activeProject.url));
-  }
+  useEffect(() => {
+    if (urlFromQuery) {
+      setUrl(normalizeHttpUrl(urlFromQuery));
+      return;
+    }
+    if (activeProject?.url && activeProjectId !== urlProjectId) {
+      setUrlProjectId(activeProjectId);
+      setUrl(normalizeHttpUrl(activeProject.url));
+    }
+  }, [urlFromQuery, activeProject?.url, activeProjectId, urlProjectId]);
 
   async function handleAudit(e: React.FormEvent) {
     e.preventDefault();

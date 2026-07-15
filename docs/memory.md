@@ -4,6 +4,16 @@ Living document capturing architectural decisions, historical context, and lesso
 
 ---
 
+## Competitive packaging over engines (2026-07-15)
+
+**Lesson:** goals.ac was engine-rich and experience-thin vs Surfer/Clearscope/BLG. Closing gaps meant packaging existing pipelines (command center, seed→cluster, dual score, Fix gaps, CMS health, autopilot defaults) in `lib/content-engine` + `lib/app-shell` with Next + CF parity — not cloning Semrush or shipping a live NLP editor.
+
+**Deferred on purpose:** Surfer-style real-time NLP scoring; hosted blog fallback for CMS-less SMB.
+
+**See:** `docs/DECISIONS.md` (Competitive packaging), `HANDOFF.md` (shipped list).
+
+---
+
 ## No "ensure" — forbidden
 
 **Policy (2026-07-14):** The word **`ensure`** must never appear anywhere in this repo — identifiers, filenames, comments, strings, docs, or error messages.
@@ -13,6 +23,18 @@ Living document capturing architectural decisions, historical context, and lesso
 - Example renames: `ensureReferenceData` → `seedReferenceDataIfEmpty`, `ensureWorkspaceForOrganization` → `getOrCreateWorkspaceForOrganization`.
 
 **Enforced in:** `.cursor/rules/no-ensure.mdc`, `.agents/skills/goals-ac-conventions/SKILL.md`, `AGENTS.md`.
+
+---
+
+## No Sparkles / glitter icons — forbidden
+
+**Policy (2026-07-15):** Lucide **`Sparkles`** and glitter/sparkle-style icons are banned in product UI.
+
+- Do **not** put sparkle icons on Generate, Humanize, Enhance, or other action buttons.
+- Prefer concrete icons (`RefreshCw`, `PenLine`, `FileText`, `TrendingUp`) or text-only labels.
+- New product UI must not introduce `Sparkles`; migrate existing usages when those files are touched.
+
+**Enforced in:** `.cursor/rules/no-sparkles.mdc`, `.agents/skills/goals-ac-conventions/SKILL.md`.
 
 ---
 
@@ -138,6 +160,18 @@ UPDATE users SET role = 'super_admin' WHERE email = 'user@example.com';
 **Admin panel routes**: `GET /api/admin/content-strategies`, `GET /api/admin/users` — both require super-admin.
 
 **Files**: `artifacts/api-server/src/lib/auth.ts` (middleware), `artifacts/api-server/src/routes/auth.ts` (admin routes)
+
+---
+
+## Integration scopes (platform / org / project)
+
+| Scope | Route | Nav / page title |
+|---|---|---|
+| Platform | `/admin/integrations` | Platform integrations |
+| Org | `/integrations` (`?tab=ai\|tools`) | Nav: Integrations · Page: Org integrations |
+| Project | `/projects/:id/integrations` (`?tab=…`) | Project integrations |
+
+Helpers: `orgIntegrationsPath()`, `projectIntegrationsPath()` in `@workspace/app-shell`.
 
 ---
 

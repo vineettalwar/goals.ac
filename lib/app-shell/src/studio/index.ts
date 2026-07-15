@@ -1,6 +1,7 @@
 export {
   CreateContentDialog,
   type CreateContentDraftInput,
+  type CreateContentInitialValues,
 } from "./create-content-dialog";
 export {
   StudioNewContentButton,

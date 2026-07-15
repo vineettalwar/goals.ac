@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Calendar, Map, Pin, Plus, Sparkles, Target, TrendingUp } from "lucide-react";
+import { Calendar, FileText, Map, Pin, Plus, Target, TrendingUp } from "lucide-react";
 import { cn } from "../cn";
 import type { SectionLinkProps } from "../section/types";
 import { btnOutline, btnPrimary, inputClass, PanelLoading, StatusPill, StatCard } from "./shared";
@@ -233,11 +233,13 @@ export function StrategyGoalsView({
 
 export function StrategyCalendarView({
   pieces,
+  projectId,
   loading,
   error,
   renderLink,
 }: {
   pieces: CalendarPiece[];
+  projectId?: string | number | null;
   loading?: boolean;
   error?: string | null;
   renderLink: (props: SectionLinkProps) => ReactNode;
@@ -253,7 +255,7 @@ export function StrategyCalendarView({
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard label="Scheduled" value={scheduled.length} icon={<Calendar className="h-5 w-5" />} />
-        <StatCard label="Total pieces" value={pieces.length} icon={<Sparkles className="h-5 w-5" />} />
+        <StatCard label="Total pieces" value={pieces.length} icon={<FileText className="h-5 w-5" />} />
         <StatCard
           label="This month"
           value={scheduled.filter((p) => p.plannedDate?.startsWith(new Date().toISOString().slice(0, 7))).length}
@@ -268,7 +270,11 @@ export function StrategyCalendarView({
             <SectionLink
               key={piece.id}
               renderLink={renderLink}
-              href={`/content-piece/${piece.id}`}
+              href={
+                projectId
+                  ? `/projects/${projectId}/content-piece/${piece.id}`
+                  : `/content-piece/${piece.id}`
+              }
               className="flex items-center justify-between gap-4 px-4 py-3 text-sm transition-colors hover:bg-secondary/20"
             >
               <span className="truncate font-medium">{piece.title}</span>

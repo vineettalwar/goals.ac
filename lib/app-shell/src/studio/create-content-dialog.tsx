@@ -7,11 +7,9 @@ export type CreateContentDraftInput = {
   formatType: string;
 };
 
-const CREATE_FORMAT_OPTIONS = STUDIO_FORMAT_OPTIONS.filter((option) =>
-  (["blog_post", "guide", "landing_page_copy"] as const).includes(
-    option.value as "blog_post" | "guide" | "landing_page_copy",
-  ),
-);
+export type CreateContentInitialValues = Partial<CreateContentDraftInput>;
+
+const VALID_FORMATS = new Set(STUDIO_FORMAT_OPTIONS.map((option) => option.value));
 
 export function CreateContentDialog({
   open,
@@ -19,12 +17,14 @@ export function CreateContentDialog({
   onSubmit,
   submitting = false,
   error = null,
+  initialValues = null,
 }: {
   open: boolean;
   onClose: () => void;
   onSubmit: (input: CreateContentDraftInput) => void | Promise<void>;
   submitting?: boolean;
   error?: string | null;
+  initialValues?: CreateContentInitialValues | null;
 }) {
   const [title, setTitle] = useState("");
   const [targetKeyword, setTargetKeyword] = useState("");
@@ -35,8 +35,17 @@ export function CreateContentDialog({
       setTitle("");
       setTargetKeyword("");
       setFormatType("blog_post");
+      return;
     }
-  }, [open]);
+
+    const nextFormat =
+      initialValues?.formatType && VALID_FORMATS.has(initialValues.formatType as never)
+        ? initialValues.formatType
+        : "blog_post";
+    setTitle(initialValues?.title?.trim() ?? "");
+    setTargetKeyword(initialValues?.targetKeyword?.trim() ?? "");
+    setFormatType(nextFormat);
+  }, [open, initialValues]);
 
   if (!open) return null;
 
@@ -99,7 +108,7 @@ export function CreateContentDialog({
               onChange={(event) => setFormatType(event.target.value)}
               className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm"
             >
-              {CREATE_FORMAT_OPTIONS.map((option) => (
+              {STUDIO_FORMAT_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

@@ -70,8 +70,11 @@ const STATUS_LABELS: Record<string, string> = {
   failed: "Failed",
 };
 
-export function studioContentPiecePath(pieceId: number | string): string {
-  return `/content-piece/${pieceId}`;
+export function studioContentPiecePath(
+  projectId: number | string,
+  pieceId: number | string,
+): string {
+  return `/projects/${projectId}/content-piece/${pieceId}`;
 }
 
 export function studioProjectPath(projectId: number | string): string {
@@ -79,7 +82,7 @@ export function studioProjectPath(projectId: number | string): string {
 }
 
 export function studioHubPath(projectId: number | string): string {
-  return `/studio?project=${projectId}`;
+  return `/projects/${projectId}/content-studio`;
 }
 
 export function formatTypeLabel(formatType: string): string {
@@ -112,11 +115,11 @@ export function sortStudioPieces(pieces: StudioPiece[], sortKey: StudioSortKey):
       case "oldest":
         return pieceTimestamp(a) - pieceTimestamp(b);
       case "words_desc":
-        return b.wordCount - a.wordCount;
+        return (b.wordCount ?? 0) - (a.wordCount ?? 0);
       case "words_asc":
-        return a.wordCount - b.wordCount;
+        return (a.wordCount ?? 0) - (b.wordCount ?? 0);
       case "title_asc":
-        return a.title.localeCompare(b.title);
+        return (a.title ?? "").localeCompare(b.title ?? "");
       default:
         return 0;
     }

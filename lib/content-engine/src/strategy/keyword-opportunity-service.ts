@@ -726,6 +726,11 @@ export async function createRankDropOpportunity(params: {
     .limit(1);
   if (existing) return;
 
+  const linkedPieceId = await findLinkedContentPieceId(params.projectId, params.keyword);
+  const angle = linkedPieceId
+    ? `${opp.suggestedAngle} Open the existing draft/piece #${linkedPieceId} and refresh with Fix gaps.`
+    : opp.suggestedAngle;
+
   await db.insert(keywordOpportunitiesTable).values({
     websiteProjectId: params.projectId,
     keyword: opp.keyword,
@@ -735,7 +740,7 @@ export async function createRankDropOpportunity(params: {
     opportunityScore: opp.opportunityScore,
     intent: opp.intent ?? null,
     suggestedTitle: opp.suggestedTitle,
-    suggestedAngle: opp.suggestedAngle,
+    suggestedAngle: angle,
     status: "open",
   });
 }
@@ -832,6 +837,157 @@ export async function buildBriefFromOpportunity(opportunityId: number): Promise<
       opportunityScore: opp.opportunityScore,
     },
   };
+}
+
+export async function findLinkedContentPieceId(
+  projectId: number,
+  keyword: string,
+): Promise<number | null> {
+  const { contentPiecesTable } = await import("@workspace/db/schema");
+  const needle = keyword.trim().toLowerCase();
+  if (!needle) return null;
+
+  const rows = await db
+    .select({
+      id: contentPiecesTable.id,
+      targetKeyword: contentPiecesTable.targetKeyword,
+      status: contentPiecesTable.status,
+    })
+    .from(contentPiecesTable)
+    .where(
+      and(
+        eq(contentPiecesTable.websiteProjectId, projectId),
+        inArray(contentPiecesTable.status, ["published", "ready", "draft"]),
+      ),
+    )
+    .limit(300);
+
+  const published = rows.find(
+    (row) =>
+      row.status === "published" && row.targetKeyword?.trim().toLowerCase() === needle,
+  );
+  if (published) return published.id;
+
+  const ready = rows.find(
+    (row) => row.status === "ready" && row.targetKeyword?.trim().toLowerCase() === needle,
+  );
+  if (ready) return ready.id;
+
+  const draft = rows.find((row) => row.targetKeyword?.trim().toLowerCase() === needle);
+  return draft?.id ?? null;
+}
+
+export async function attachLinkedContentPieces<T extends { keyword: string; source: string }>(
+  projectId: number,
+  opportunities: T[],
+): Promise<Array<T & { linkedContentPieceId: number | null }>> {
+  const refreshSources = new Set(["rank_drop", "content_refresh"]);
+  const map = new Map<string, number | null>();
+  for (const opp of opportunities) {
+    const key = opp.keyword.toLowerCase();
+    if (map.has(key)) continue;
+    if (!refreshSources.has(opp.source) && opp.source !== "gsc_query") {
+      map.set(key, null);
+      continue;
+    }
+    map.set(key, await findLinkedContentPieceId(projectId, opp.keyword));
+  }
+  return opportunities.map((opp) => ({
+    ...opp,
+    linkedContentPieceId: map.get(opp.keyword.toLowerCase()) ?? null,
+  }));
+}
+
+/**
+ * When GSC clicks fall sharply vs the prior period for keywords tied to
+ * existing content, open a content_refresh opportunity.
+ */
+export async function createClickDeclineRefreshOpportunities(
+  projectId: number,
+): Promise<number> {
+  const { contentPiecesTable } = await import("@workspace/db/schema");
+  const recentRange = defaultSyncDateRange(14);
+  const priorRange = priorPeriodRange(recentRange.startDate, recentRange.endDate);
+
+  const [recentRows, priorRows, pieces] = await Promise.all([
+    getGscQueryRowsForProject(projectId, recentRange.startDate, recentRange.endDate),
+    getGscQueryRowsForProject(projectId, priorRange.startDate, priorRange.endDate),
+    db
+      .select({
+        id: contentPiecesTable.id,
+        targetKeyword: contentPiecesTable.targetKeyword,
+        title: contentPiecesTable.title,
+      })
+      .from(contentPiecesTable)
+      .where(
+        and(
+          eq(contentPiecesTable.websiteProjectId, projectId),
+          inArray(contentPiecesTable.status, ["published", "ready"]),
+        ),
+      )
+      .limit(200),
+  ]);
+
+  function aggregateClicks(
+    rows: Array<{ query: string; clicks: number; impressions: number }>,
+  ): Map<string, { clicks: number; impressions: number }> {
+    const map = new Map<string, { clicks: number; impressions: number }>();
+    for (const row of rows) {
+      const key = row.query.toLowerCase();
+      const prev = map.get(key) ?? { clicks: 0, impressions: 0 };
+      map.set(key, {
+        clicks: prev.clicks + (row.clicks ?? 0),
+        impressions: prev.impressions + (row.impressions ?? 0),
+      });
+    }
+    return map;
+  }
+
+  const recent = aggregateClicks(recentRows);
+  const prior = aggregateClicks(priorRows);
+  let inserted = 0;
+
+  for (const piece of pieces) {
+    const keyword = piece.targetKeyword?.trim();
+    if (!keyword) continue;
+    const key = keyword.toLowerCase();
+    const priorMetrics = prior.get(key);
+    const recentMetrics = recent.get(key);
+    if (!priorMetrics || priorMetrics.clicks < 10) continue;
+    const recentClicks = recentMetrics?.clicks ?? 0;
+    if (recentClicks > priorMetrics.clicks * 0.6) continue;
+
+    const [existing] = await db
+      .select({ id: keywordOpportunitiesTable.id })
+      .from(keywordOpportunitiesTable)
+      .where(
+        and(
+          eq(keywordOpportunitiesTable.websiteProjectId, projectId),
+          eq(keywordOpportunitiesTable.keyword, keyword),
+          inArray(keywordOpportunitiesTable.status, ["open", "queued"]),
+        ),
+      )
+      .limit(1);
+    if (existing) continue;
+
+    const dropPct = Math.round((1 - recentClicks / priorMetrics.clicks) * 100);
+    await db.insert(keywordOpportunitiesTable).values({
+      websiteProjectId: projectId,
+      keyword,
+      source: "content_refresh",
+      estimatedVolume: `${priorMetrics.clicks} clicks prior · ${recentClicks} recent`,
+      difficulty: "medium",
+      opportunityScore: Math.min(95, 55 + Math.min(35, dropPct)),
+      intent: "informational",
+      suggestedTitle: `Refresh: ${piece.title || keyword}`,
+      suggestedAngle: `GSC clicks dropped ~${dropPct}% vs the prior 14 days. Refresh the published article for "${keyword}" with updated sections, FAQ, and SERP gaps.`,
+      status: "open",
+    });
+    inserted += 1;
+    if (inserted >= 5) break;
+  }
+
+  return inserted;
 }
 
 export async function queueOpportunityAndGenerate(

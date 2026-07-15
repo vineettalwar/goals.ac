@@ -139,10 +139,11 @@ export function SidebarNav({ userName, userEmail, userRole, orgRole }: SidebarNa
           <ProjectSwitcher />
         </Suspense>
       }
-      renderLink={({ href, className, children, onMouseEnter, onFocus }) => (
+      renderLink={({ href, className, children, onClick, onMouseEnter, onFocus }) => (
         <Link
           href={href}
           className={className}
+          onClick={onClick}
           onMouseEnter={onMouseEnter}
           onFocus={onFocus}
         >

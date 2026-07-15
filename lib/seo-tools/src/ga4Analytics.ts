@@ -62,20 +62,10 @@ function parseMetricNumber(value: string | undefined): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
-export function formatGa4ApiDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-export function defaultSyncDateRange(days = 28): { startDate: string; endDate: string } {
-  const end = new Date();
-  end.setUTCDate(end.getUTCDate() - 3);
-  const start = new Date(end);
-  start.setUTCDate(start.getUTCDate() - (days - 1));
-  return {
-    startDate: formatGa4ApiDate(start),
-    endDate: formatGa4ApiDate(end),
-  };
-}
+export {
+  defaultSyncDateRange,
+  formatAnalyticsDate as formatGa4ApiDate,
+} from "./analyticsDateRange";
 
 export function formatGa4DateValue(ga4Date: string): string {
   if (/^\d{8}$/.test(ga4Date)) {

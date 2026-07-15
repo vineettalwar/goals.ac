@@ -1,3 +1,55 @@
+## 2026-07-15 — Competitive packaging over new engines
+
+**Decision:** Close Surfer/Clearscope/BLG-style gaps by packaging existing engines: command center, seed→cluster, dual editorial+SERP score, Fix-gaps enhance, CMS health sweep — shared in `lib/content-engine` + `lib/app-shell`, mirrored on Next and CF workers. No new Semrush clone or live NLP editor in this tranche.
+
+**Alternatives considered:**
+- Build a Surfer-style real-time NLP editor first — deferred (high cost, lower packaging ROI)
+- Parallel keyword/UX stack outside content-engine — rejected; keep one pipeline
+
+**Reason:** Product was engine-rich and experience-thin; competitors win on workflow coherence.
+
+**Implications:** Autopilot defaults favor auto-queue after fast-lane; enhance prompts ingest SERP gaps; connection health cron covers project CMS JSON creds as `project_cms`.
+
+## 2026-07-15 — Marketing static CSS stays render-blocking
+
+**Decision:** Do not convert marketing static-export stylesheets to async `preload` + `onload`. Keep `<link rel="stylesheet">` blocking first paint. Critical CSS must not apply bare `.absolute` without offsets.
+
+**Alternatives considered:**
+- Expand critical CSS to every above-the-fold Tailwind utility — rejected; brittle and drifts from hero markup
+- Hide `body` until CSS loads — rejected; worse empty flash than brief blocking
+
+**Reason:** Async CSS + incomplete critical CSS caused FOUC/CLS on https://goals.ac — hero copy flashed top-left because `position:absolute` applied without `top`/`bottom`/`left`/`right`.
+
+**Implications:** `scripts/build-marketing-static.mjs` no longer rewrites stylesheet links; `MARKETING_CRITICAL_CSS` uses `.absolute.inset-0` only and hides `.hero-anim` until full CSS.
+
+## 2026-07-15 — Three integration hubs by scope
+
+**Decision:** Split integrations into three pages by ownership scope:
+- **Organization** — `/integrations/ai` and `/integrations/tools` (AI BYOK, Semrush, DeepL, stock BYOK); bare `/integrations` redirects to `/integrations/ai`
+- **Project** — `/projects/:id/integrations/cms|social|esp|search`; bare `/projects/:id/integrations` redirects to `.../cms`
+- **Platform** — `/admin/integrations` (Stripe, Resend, Unsplash/Pexels platform keys)
+
+Tabs use **path segments**, not `?tab=` / `?project=` query params. Legacy `/integrations?project=:id` and `/integrations?tab=cms|social|esp|search` redirect to the project path. `/settings?tab=ai` redirects to `/integrations/ai`. OAuth callbacks may still append status query params (e.g. `?linkedin=connected`) on the matching tab path.
+
+**Alternatives considered:**
+- Single `/integrations` hub with six tabs (org + project mixed) — rejected; scopes were hard to discover and project gates polluted org flows
+- Org under `/settings/integrations` — rejected; user chose top-level `/integrations` for org credentials
+- Query-param tabs (`?tab=ai`) — rejected; path segments match project content-studio / social patterns and keep shareable URLs clean
+
+**Reason:** Platform vs org vs project credentials already live in different stores; matching UI routes makes ownership and RBAC obvious.
+
+**Implications:** OAuth success URLs return to `/projects/:id/integrations/social` or `/search` with status query params; nav footer "Organization integrations" → `/integrations`; helpers `orgIntegrationsPath()` / `projectIntegrationsPath()` build path-segment URLs.
+
+## 2026-07-15 — Org BYOK lives under Integrations (AI + Tools)
+
+**Decision:** ~~Move organization AI providers and non-AI org keys onto the same `/integrations` hub as project tabs.~~ Superseded by **Three integration hubs by scope** above — org credentials remain on `/integrations/ai` and `/integrations/tools`; project destinations live under `/projects/:id/integrations/:tab`.
+
+**Alternatives considered:** See superseded note above.
+
+**Reason:** Historical step toward separating Settings from credentials management.
+
+**Implications:** Deep links use `/integrations/ai` and `/integrations/tools` (path segments).
+
 ## 2026-07-14 — Per-platform CMS content output modes (contract v0.2)
 
 **Decision:** Generalize WordPress `editorMode` into a platform-aware `outputMode` registry with native-editor modes for Ghost (Lexical), Drupal (Layout Builder), TYPO3 (content elements), and Shopify (metafields / page sections). Bump shared plugin contract to v0.2 with structured publish payloads.

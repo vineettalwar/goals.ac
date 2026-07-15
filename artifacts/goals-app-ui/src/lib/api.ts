@@ -48,31 +48,70 @@ export function getApiBase(): string {
   return apiBase;
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+/** Abort hung requests so auth/studio loading cannot stick forever. */
+const API_FETCH_TIMEOUT_MS = 15_000;
+
+/** Long AI passes (humanize, enhance) need more than the default. */
+const API_FETCH_AI_TIMEOUT_MS = 120_000;
+
+export type ApiFetchInit = RequestInit & {
+  /** Override default request timeout (ms). */
+  timeoutMs?: number;
+};
+
+export async function apiFetch<T>(path: string, init?: ApiFetchInit): Promise<T> {
+  const { timeoutMs = API_FETCH_TIMEOUT_MS, signal: upstreamAbort, ...rest } = init ?? {};
   const url = path.startsWith("http") ? path : `${apiBase}${path}`;
-  const response = await fetch(url, {
-    ...init,
-    credentials: "include",
-    headers: {
-      accept: "application/json",
-      ...(init?.headers ?? {}),
-    },
-  });
-  if (!response.ok) {
-    const body = await response.json().catch(() => null);
-    const message =
-      (body &&
-        typeof body === "object" &&
-        "message" in body &&
-        typeof body.message === "string" &&
-        body.message) ||
-      (body && typeof body === "object" && "error" in body && String(body.error)) ||
-      `HTTP ${response.status}`;
-    throw new Error(message);
+  const timeoutController = new AbortController();
+  const timeoutId = setTimeout(() => timeoutController.abort(), timeoutMs);
+
+  const onUpstreamAbort = () => timeoutController.abort();
+  if (upstreamAbort) {
+    if (upstreamAbort.aborted) {
+      timeoutController.abort();
+    } else {
+      upstreamAbort.addEventListener("abort", onUpstreamAbort, { once: true });
+    }
   }
-  if (response.status === 204) return null as T;
-  return (await response.json()) as T;
+
+  try {
+    const response = await fetch(url, {
+      ...rest,
+      signal: timeoutController.signal,
+      credentials: "include",
+      headers: {
+        accept: "application/json",
+        ...(rest.headers ?? {}),
+      },
+    });
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const message =
+        (body &&
+          typeof body === "object" &&
+          "message" in body &&
+          typeof body.message === "string" &&
+          body.message) ||
+        (body && typeof body === "object" && "error" in body && String(body.error)) ||
+        `HTTP ${response.status}`;
+      throw new Error(message);
+    }
+    if (response.status === 204) return null as T;
+    return (await response.json()) as T;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("Request timed out");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeoutId);
+    if (upstreamAbort) {
+      upstreamAbort.removeEventListener("abort", onUpstreamAbort);
+    }
+  }
 }
+
+export { API_FETCH_AI_TIMEOUT_MS };
 
 export function authLoginUrl(): string {
   return `${getAppOrigin()}/login`;

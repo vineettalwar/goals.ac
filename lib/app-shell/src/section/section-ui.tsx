@@ -11,7 +11,7 @@ function SectionLink({
 
 export function SectionTabNav({
   tabs,
-  projectId,
+  projectId: _projectId,
   renderLink,
 }: {
   tabs: SectionTab[];
@@ -26,7 +26,7 @@ export function SectionTabNav({
         <SectionLink
           key={tab.to}
           renderLink={renderLink}
-          href={`${tab.to}${projectId ? `?project=${projectId}` : ""}`}
+          href={tab.to}
           className="rounded-full border border-border px-3 py-1 text-xs font-medium transition-colors hover:border-primary hover:text-primary"
         >
           {tab.label}
@@ -148,7 +148,7 @@ export function SectionShell({
     !projectSwitcher && requireProject && projectList.length > 0 && onProjectChange;
 
   return (
-    <div className="max-w-5xl px-8 py-8">
+    <div className="max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       <h1 className="mb-2 text-2xl font-bold">{title}</h1>
       <p className="mb-6 text-sm text-muted-foreground">{description}</p>
 
@@ -225,7 +225,7 @@ export function SectionDetailLayout({
   className?: string;
 }) {
   return (
-    <div className={cn("max-w-4xl px-8 py-8", className)}>
+    <div className={cn("max-w-4xl px-4 py-8 sm:px-6 lg:px-8", className)}>
       <SectionLink
         renderLink={renderLink}
         href={backHref}

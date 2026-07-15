@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { CMS_PLATFORMS } from "../integrations/types";
 import { CmsPlatformIcon, IntegrationIconBox } from "../integrations/integration-icons";
+import { projectIntegrationsPath } from "./types";
 import {
   BarChart3,
   ExternalLink,
@@ -223,7 +224,7 @@ function ContentTabPanel({
         <DetailLink
           key={piece.id}
           renderLink={renderLink}
-          href={contentPiecePath(piece.id)}
+          href={contentPiecePath(projectId, piece.id)}
           className="flex items-center justify-between gap-4 px-4 py-3 transition-colors hover:bg-secondary/30"
         >
           <div className="min-w-0">
@@ -260,7 +261,7 @@ function PublishingTabPanel({
         </p>
         <DetailLink
           renderLink={renderLink}
-          href={`/integrations?project=${projectId}`}
+          href={projectIntegrationsPath(projectId)}
           className="inline-flex rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary"
         >
           Manage integrations
@@ -273,7 +274,7 @@ function PublishingTabPanel({
             <DetailLink
               key={platform.key}
               renderLink={renderLink}
-              href={`/integrations?project=${projectId}`}
+              href={projectIntegrationsPath(projectId)}
               className={`paper-card flex items-center gap-3 p-4 transition-colors hover:bg-secondary/20 ${isConnected ? "border-emerald-500/25 bg-emerald-500/3" : ""}`}
             >
               <IntegrationIconBox>
@@ -338,7 +339,7 @@ export function ProjectDetailView({
   ];
 
   return (
-    <div className="max-w-5xl space-y-6 px-8 py-8">
+    <div className="max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <DetailLink
         renderLink={renderLink}
         href={backHref}
@@ -457,7 +458,7 @@ export function ProjectDetailView({
         <PublishingTabPanel projectId={project.id} renderLink={renderLink} connectedPlatforms={connectedPlatforms} />
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 pt-2 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 pt-2 sm:grid-cols-2 lg:grid-cols-4">
         {[
           {
             label: "Content Studio",

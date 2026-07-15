@@ -79,39 +79,6 @@ function resolveExportDir() {
   throw new Error("Static export directory not found after next build");
 }
 
-/** Load stylesheets without blocking first paint — critical CSS is inlined in layout. */
-function deferRenderBlockingCss(html) {
-  return html.replace(
-    /<link rel="stylesheet" href="([^"]+)"([^>]*)\/?>/g,
-    (_, href, attrs) => {
-      const attrSuffix = attrs.trim() ? ` ${attrs.trim()}` : "";
-      return (
-        `<link rel="preload" href="${href}" as="style" onload="this.onload=null;this.rel='stylesheet'"${attrSuffix}>` +
-        `<noscript><link rel="stylesheet" href="${href}"${attrSuffix}></noscript>`
-      );
-    },
-  );
-}
-
-function walkHtmlFiles(dir, visitor) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      walkHtmlFiles(fullPath, visitor);
-      continue;
-    }
-    if (entry.name.endsWith(".html")) visitor(fullPath);
-  }
-}
-
-function deferCssInStaticExport(distDir) {
-  walkHtmlFiles(distDir, (filePath) => {
-    const html = fs.readFileSync(filePath, "utf8");
-    const next = deferRenderBlockingCss(html);
-    if (next !== html) fs.writeFileSync(filePath, next);
-  });
-}
-
 /** Next.js injects polyfill-module unconditionally; strip it for modern-browser targets. */
 function stripLegacyPolyfills(distDir) {
   const chunksDir = path.join(distDir, "_next/static/chunks");
@@ -192,7 +159,8 @@ try {
   rmrf(pagesDist);
   copyDir(exportDir, pagesDist);
   stripLegacyPolyfills(pagesDist);
-  deferCssInStaticExport(pagesDist);
+  // Keep stylesheets render-blocking. Async CSS preload caused FOUC/CLS: critical CSS
+  // applied bare `position:absolute` without offsets, so hero copy flashed in the corner.
 
   const redirectsSrc = path.join(repoRoot, "artifacts/marketing-pages/public/_redirects");
   if (fs.existsSync(redirectsSrc)) {

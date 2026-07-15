@@ -37,6 +37,39 @@ type MeResponse = {
   supportOrganization?: SupportOrganizationInfo | null;
 };
 
+/** Express returns a flat user; Next/CF may nest under `user`. */
+function normalizeMeResponse(raw: unknown): MeResponse | null {
+  if (!raw || typeof raw !== "object") return null;
+  const data = raw as Record<string, unknown>;
+  const nested = data.user;
+  const source =
+    nested && typeof nested === "object"
+      ? (nested as Record<string, unknown>)
+      : data;
+
+  if (typeof source.id !== "number" || typeof source.email !== "string") {
+    return null;
+  }
+
+  return {
+    user: {
+      id: source.id,
+      email: source.email,
+      name: typeof source.name === "string" ? source.name : null,
+      role: typeof source.role === "string" ? source.role : "user",
+      avatarUrl: typeof source.avatarUrl === "string" ? source.avatarUrl : null,
+    },
+    organizationId:
+      typeof data.organizationId === "number" ? data.organizationId : null,
+    organizationName:
+      typeof data.organizationName === "string" ? data.organizationName : null,
+    orgRole: typeof data.orgRole === "string" ? data.orgRole : null,
+    impersonation: (data.impersonation as ImpersonationInfo | null) ?? null,
+    supportOrganization:
+      (data.supportOrganization as SupportOrganizationInfo | null) ?? null,
+  };
+}
+
 type AuthState = {
   user: AuthUser | null;
   organizationId: number | null;
@@ -97,7 +130,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const data = await apiFetch<MeResponse>("/api/auth/me");
+      const raw = await apiFetch<unknown>("/api/auth/me");
+      const data = normalizeMeResponse(raw);
+      if (!data) {
+        clearAuthState(setUser, setOrganizationId, setOrganizationName, setOrgRole, setImpersonation, setSupportOrganization);
+        return;
+      }
       applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole, setImpersonation, setSupportOrganization);
     } catch {
       clearAuthState(setUser, setOrganizationId, setOrganizationName, setOrgRole, setImpersonation, setSupportOrganization);
@@ -116,7 +154,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    const data = await apiFetch<MeResponse>("/api/auth/me");
+    const raw = await apiFetch<unknown>("/api/auth/me");
+    const data = normalizeMeResponse(raw);
+    if (!data) throw new Error("Invalid session response");
     applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole, setImpersonation, setSupportOrganization);
   }, []);
 
@@ -126,7 +166,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password }),
     });
-    const data = await apiFetch<MeResponse>("/api/auth/me");
+    const raw = await apiFetch<unknown>("/api/auth/me");
+    const data = normalizeMeResponse(raw);
+    if (!data) throw new Error("Invalid session response");
     applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole, setImpersonation, setSupportOrganization);
   }, []);
 

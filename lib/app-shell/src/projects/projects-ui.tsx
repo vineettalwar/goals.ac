@@ -50,8 +50,8 @@ export function ProjectsView({
   onDeleteProject?: (project: ProjectListItem) => void;
 }) {
   return (
-    <div className="px-8 py-8 max-w-5xl">
-      <div className="mb-6 flex items-center justify-between gap-4">
+    <div className="max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Projects</h1>
           <p className="mt-1 text-sm text-muted-foreground">

@@ -3,6 +3,7 @@ import { apiFetch } from "@/lib/api";
 import { queryKeys } from "@/lib/queries/keys";
 import type {
   DashboardAutopilotSettings,
+  DashboardCommandCenter,
   DashboardPiece,
   DashboardProject,
 } from "@workspace/app-shell";
@@ -29,6 +30,7 @@ type DashboardData = {
   activeProject: DashboardProject | null;
   pieces: DashboardPiece[];
   autopilotSettings: DashboardAutopilotSettings | null;
+  commandCenter: DashboardCommandCenter | null;
 };
 
 async function fetchDashboardData(
@@ -41,16 +43,21 @@ async function fetchDashboardData(
 
   let pieces: DashboardPiece[] = [];
   let autopilotSettings: DashboardAutopilotSettings | null = null;
+  let commandCenter: DashboardCommandCenter | null = null;
 
   if (active) {
-    const [pieceRows, autopilot] = await Promise.all([
+    const [pieceRows, autopilot, command] = await Promise.all([
       apiFetch<ContentPiece[]>(`/api/website-projects/${active.id}/content-pieces`),
       apiFetch<DashboardAutopilotSettings>(
         `/api/website-projects/${active.id}/autopilot-settings`,
       ).catch(() => null),
+      apiFetch<DashboardCommandCenter>(
+        `/api/website-projects/${active.id}/command-center`,
+      ).catch(() => null),
     ]);
     pieces = pieceRows.map((piece) => mapPiece(piece, active.name));
     autopilotSettings = autopilot;
+    commandCenter = command;
   } else if (allProjects.length > 0) {
     const allPieces = await apiFetch<ContentPiece[]>("/api/content-pieces").catch(() => []);
     const nameById = new Map(allProjects.map((project) => [project.id, project.name]));
@@ -62,6 +69,7 @@ async function fetchDashboardData(
     activeProject: active,
     pieces,
     autopilotSettings,
+    commandCenter,
   };
 }
 
@@ -86,5 +94,6 @@ export function useDashboardData(activeProjectId: string | null, allProjects: We
     activeProject: query.data?.activeProject ?? null,
     pieces: query.data?.pieces ?? [],
     autopilotSettings: query.data?.autopilotSettings ?? null,
+    commandCenter: query.data?.commandCenter ?? null,
   };
 }

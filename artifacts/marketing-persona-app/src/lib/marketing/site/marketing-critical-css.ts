@@ -8,8 +8,6 @@ body{margin:0;background:#000;color:#fff;font-family:var(--font-jakarta,'Plus Ja
 .flex-col{flex-direction:column}
 .flex-1{flex:1 1 0%}
 .relative{position:relative}
-.absolute{position:absolute}
-.inset-0{inset:0}
 .overflow-hidden{overflow:hidden}
 .w-full{width:100%}
 .h-screen{height:100vh;height:100dvh}
@@ -23,4 +21,8 @@ body{margin:0;background:#000;color:#fff;font-family:var(--font-jakarta,'Plus Ja
 .pointer-events-none{pointer-events:none}
 h1{margin:0;line-height:.95}
 .font-sans{font-family:var(--font-jakarta,'Plus Jakarta Sans',system-ui,sans-serif)}
+/* Do not apply bare .absolute — without offsets copy piles in the corner (CLS). */
+.absolute.inset-0{position:absolute;inset:0}
+/* Hide animated hero copy until full CSS positions + animates it. */
+.hero-anim{opacity:0}
 `.replace(/\s+/g, " ").trim();

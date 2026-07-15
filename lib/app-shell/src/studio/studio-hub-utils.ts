@@ -17,16 +17,16 @@ export function eachDayInMonth(month: Date): Date[] {
 export function aiProviderUnavailableMessage(activeProvider: string): string {
   switch (activeProvider) {
     case "gemini":
-      return "No Gemini API key configured. Add your key in Settings.";
+      return "No Gemini API key configured. Add your key in Integrations → AI.";
     case "bedrock":
-      return "AWS Bedrock is not configured. Add your credentials in Settings.";
+      return "AWS Bedrock is not configured. Add your credentials in Integrations → AI.";
     case "anthropic":
-      return "No Anthropic API key configured. Add your key in Settings.";
+      return "No Anthropic API key configured. Add your key in Integrations → AI.";
     case "openai":
-      return "No OpenAI API key configured. Add your key in Settings.";
+      return "No OpenAI API key configured. Add your key in Integrations → AI.";
     case "ollama":
-      return "Ollama is not reachable. Start Ollama locally or update your Ollama URL in Settings.";
+      return "Ollama is not reachable. Start Ollama locally or update your Ollama URL in Integrations → AI.";
     default:
-      return "No AI provider is configured. Check Settings.";
+      return "No AI provider is configured. Check Integrations → AI.";
   }
 }

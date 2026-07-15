@@ -3,10 +3,12 @@ import { contentPiecesTable, websiteProjectsTable } from "@workspace/db/schema";
 import { desc, inArray } from "drizzle-orm";
 import type {
   DashboardAutopilotSettings,
+  DashboardCommandCenter,
   DashboardPiece,
   DashboardProject,
 } from "@workspace/app-shell";
 import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
+import { loadCommandCenterSummary } from "@workspace/content-engine/analytics/command-center-service";
 import {
   getAccessibleProject,
   listAccessibleProjectIds,
@@ -17,6 +19,7 @@ export type DashboardPageData = {
   activeProject: DashboardProject | null;
   pieces: DashboardPiece[];
   autopilotSettings: DashboardAutopilotSettings | null;
+  commandCenter: DashboardCommandCenter | null;
 };
 
 function mapProject(row: { id: number; name: string; url: string }): DashboardProject {
@@ -48,12 +51,14 @@ export async function loadDashboardData(
 
   let activeProject: DashboardProject | null = null;
   let autopilotSettings: DashboardAutopilotSettings | null = null;
+  let commandCenter: DashboardCommandCenter | null = null;
 
   if (activeProjectId) {
     const project = await getAccessibleProject(activeProjectId, userId);
     if (project) {
       activeProject = mapProject(project);
       autopilotSettings = parseAutopilotSettings(project.autopilotSettings);
+      commandCenter = await loadCommandCenterSummary(activeProjectId);
     }
   }
 
@@ -90,5 +95,6 @@ export async function loadDashboardData(
     activeProject,
     pieces,
     autopilotSettings,
+    commandCenter,
   };
 }

@@ -1,4 +1,5 @@
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 
 const GeoAuditPanel = dynamic(
@@ -7,5 +8,9 @@ const GeoAuditPanel = dynamic(
 );
 
 export default function AuditPage() {
-  return <GeoAuditPanel />;
+  return (
+    <Suspense fallback={<PageSkeleton />}>
+      <GeoAuditPanel />
+    </Suspense>
+  );
 }

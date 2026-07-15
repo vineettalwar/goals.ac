@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, API_FETCH_AI_TIMEOUT_MS } from "@/lib/api";
 import { fetchStockCredentialsStatus, isStockImagesConfigured } from "@/lib/queries/fetchers";
 import { queryKeys } from "@/lib/queries/keys";
 import type {
@@ -458,6 +458,7 @@ export function useContentPieceData(pieceId: string | undefined) {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({}),
+        timeoutMs: API_FETCH_AI_TIMEOUT_MS,
       });
       setCachedPiece(mapPiece(updated));
       setRegenerateMessage("Content regenerated.");
@@ -476,6 +477,7 @@ export function useContentPieceData(pieceId: string | undefined) {
       const updated = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}/enhance`, {
         method: "POST",
         headers: { "content-type": "application/json" },
+        timeoutMs: API_FETCH_AI_TIMEOUT_MS,
       });
       setCachedPiece(mapPiece(updated));
       setEnhanceMessage("Quality enhanced.");
@@ -532,6 +534,7 @@ export function useContentPieceData(pieceId: string | undefined) {
         {
           method: "POST",
           headers: { "content-type": "application/json" },
+          timeoutMs: API_FETCH_AI_TIMEOUT_MS,
         },
       );
       setCachedPiece(mapPiece(updated));
@@ -604,6 +607,30 @@ export function useContentPieceData(pieceId: string | undefined) {
     );
   }, [piece?.websiteProjectId]);
 
+  const renderPreview = useCallback(
+    async (platform: PublishDestinationId) => {
+      if (!pieceId || !piece) {
+        throw new Error("Content piece not loaded");
+      }
+      const metadata = piece.pieceMetadata ?? {};
+      const outputMode = metadata.intendedOutputMode ?? metadata.intendedEditorMode ?? undefined;
+      return apiFetch<{
+        payloadKind?: string;
+        previewHtml?: string | null;
+        previewJson?: unknown;
+        warnings?: Array<{ code?: string; message: string }>;
+      }>(`/api/content-pieces/${pieceId}/render-preview`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          platform,
+          ...(outputMode ? { outputMode } : {}),
+        }),
+      });
+    },
+    [pieceId, piece],
+  );
+
   const queryError =
     query.error instanceof Error
       ? query.error.message
@@ -647,6 +674,7 @@ export function useContentPieceData(pieceId: string | undefined) {
     publishMessage,
     publishToDestination,
     loadCmsConnections,
+    renderPreview,
     reload: load,
   };
 }

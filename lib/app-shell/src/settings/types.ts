@@ -1,4 +1,4 @@
-export type SettingsTab = "profile" | "ai" | "security" | "billing" | "account";
+export type SettingsTab = "profile" | "security" | "billing" | "account";
 
 export type UsageSummary = {
   plan: "starter" | "growth" | "scale";

@@ -1,6 +1,10 @@
 import { useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AppSidebarShell, projectIdFromPathname } from "@workspace/app-shell";
+import {
+  APP_SHELL_MAIN_OFFSET,
+  AppSidebarShell,
+  projectIdFromPathname,
+} from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
@@ -25,12 +29,12 @@ export function AppShell() {
     }
   }, [loading, user, navigate, pathname]);
 
-  if (loading) {
-    return <p className="p-8 text-muted-foreground">Loading…</p>;
-  }
-
-  if (!user) {
-    return null;
+  if (loading || !user) {
+    return (
+      <p className="p-8 text-muted-foreground">
+        {loading ? "Loading…" : "Redirecting to sign in…"}
+      </p>
+    );
   }
 
   const displayName = user.name?.trim() || user.email;
@@ -46,10 +50,11 @@ export function AppShell() {
         userRole={user.role}
         projectSwitcher={<ProjectSwitcher />}
         onSignOut={() => void logout().then(() => navigate("/login", { replace: true }))}
-        renderLink={({ href, className, children, onMouseEnter, onFocus }) => (
+        renderLink={({ href, className, children, onClick, onMouseEnter, onFocus }) => (
           <Link
             to={href}
             className={className}
+            onClick={onClick}
             onMouseEnter={onMouseEnter}
             onFocus={onFocus}
           >
@@ -57,7 +62,9 @@ export function AppShell() {
           </Link>
         )}
       />
-      <main className="min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
+      <main
+        className={`min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable] ${APP_SHELL_MAIN_OFFSET}`}
+      >
         <Outlet />
       </main>
     </div>

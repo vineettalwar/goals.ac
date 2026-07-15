@@ -62,9 +62,9 @@ async function validateOAuthState(state: OAuthState | null): Promise<OAuthState>
   return state;
 }
 
-function publishingRedirect(_projectId: number, params: Record<string, string>): never {
+function publishingRedirect(projectId: number, params: Record<string, string>): never {
   const qs = new URLSearchParams(params).toString();
-  redirect(`${getNextFrontendOrigin()}/integrations?${qs}`);
+  redirect(`${getNextFrontendOrigin()}/projects/${projectId}/integrations/social?${qs}`);
 }
 
 export async function startLinkedInOAuth(projectId: number, userId: number): Promise<never> {

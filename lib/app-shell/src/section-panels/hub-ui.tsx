@@ -51,39 +51,38 @@ function HubTile({
 }
 
 export function StrategyHubGrid({
-  projectId,
+  projectId: _projectId,
   renderLink,
 }: {
   projectId: string;
   renderLink: (props: SectionLinkProps) => ReactNode;
 }) {
-  const q = projectId ? `?project=${projectId}` : "";
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       <HubTile
         renderLink={renderLink}
-        href={`/strategy/goals${q}`}
+        href="/strategy/goals"
         title="Goals"
         hint="Traffic, leads, and authority objectives"
         icon={<Target className="h-4 w-4 text-blue-600" />}
       />
       <HubTile
         renderLink={renderLink}
-        href={`/strategy/calendar${q}`}
+        href="/strategy/calendar"
         title="Calendar"
         hint="Planned content dates"
         icon={<Calendar className="h-4 w-4 text-violet-600" />}
       />
       <HubTile
         renderLink={renderLink}
-        href={`/strategy/roadmaps${q}`}
+        href="/strategy/roadmaps"
         title="Roadmaps"
         hint="Growth roadmap catalog"
         icon={<Map className="h-4 w-4 text-emerald-600" />}
       />
       <HubTile
         renderLink={renderLink}
-        href={`/strategy/topical-map${q}`}
+        href="/strategy/topical-map"
         title="Topical map"
         hint="Brand keywords and clusters"
         icon={<TrendingUp className="h-4 w-4 text-amber-600" />}
@@ -93,46 +92,45 @@ export function StrategyHubGrid({
 }
 
 export function SearchHubGrid({
-  projectId,
+  projectId: _projectId,
   renderLink,
 }: {
   projectId: string;
   renderLink: (props: SectionLinkProps) => ReactNode;
 }) {
-  const q = projectId ? `?project=${projectId}` : "";
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       <HubTile
         renderLink={renderLink}
-        href={`/search/keywords${q}`}
+        href="/search/keywords"
         title="Keywords"
         hint="Tracked rank terms"
         icon={<Search className="h-4 w-4 text-blue-600" />}
       />
       <HubTile
         renderLink={renderLink}
-        href={`/search/visibility${q}`}
+        href="/search/visibility"
         title="AI visibility"
         hint="LLM citation tracking"
         icon={<Eye className="h-4 w-4 text-violet-600" />}
       />
       <HubTile
         renderLink={renderLink}
-        href={`/search/performance${q}`}
+        href="/search/performance"
         title="Performance"
         hint="GSC and GA4 article metrics"
         icon={<BarChart3 className="h-4 w-4 text-emerald-600" />}
       />
       <HubTile
         renderLink={renderLink}
-        href={`/search/suggestions${q}`}
+        href="/search/suggestions"
         title="Suggestions"
         hint="Keyword opportunities"
         icon={<Lightbulb className="h-4 w-4 text-amber-600" />}
       />
       <HubTile
         renderLink={renderLink}
-        href={`/search/site${q}`}
+        href="/search/site"
         title="Site"
         hint="Crawl and index status"
         icon={<Globe className="h-4 w-4 text-sky-600" />}
@@ -142,27 +140,26 @@ export function SearchHubGrid({
 }
 
 export function ResearchHubGrid({
-  projectId,
+  projectId: _projectId,
   renderLink,
 }: {
   projectId: string;
   renderLink: (props: SectionLinkProps) => ReactNode;
 }) {
-  const q = projectId ? `?project=${projectId}` : "";
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       <HubTile
         renderLink={renderLink}
-        href={`/research/competitors${q}`}
+        href="/research/competitors"
         title="Competitors"
-        hint="AI competitor analyses"
+        hint="Watchlist and attack plans"
         icon={<Users className="h-4 w-4 text-red-600" />}
       />
       <HubTile
         renderLink={renderLink}
-        href={`/research/reddit${q}`}
-        title="Reddit"
-        hint="Community visibility research"
+        href="/research/reddit"
+        title="Signals"
+        hint="Community demand from Reddit"
         icon={<Globe className="h-4 w-4 text-orange-600" />}
       />
     </div>

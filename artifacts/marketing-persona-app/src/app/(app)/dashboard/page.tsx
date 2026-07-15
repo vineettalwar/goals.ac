@@ -40,6 +40,7 @@ export default async function DashboardPage() {
       activeProject={data.activeProject}
       pieces={data.pieces}
       autopilotSettings={data.autopilotSettings}
+      commandCenter={data.commandCenter}
     />
   );
 }

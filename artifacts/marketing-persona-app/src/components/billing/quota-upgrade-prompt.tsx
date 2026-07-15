@@ -13,8 +13,8 @@ export function QuotaUpgradePrompt({ message, className }: { message: string; cl
       <p className="text-sm text-destructive">{message}</p>
       <p className="text-xs text-muted-foreground">
         Consulting clients use BYOK for unlimited AI generations. Add your key in{" "}
-        <Link href="/settings?tab=ai" className="text-primary hover:underline">
-          Settings → AI Providers
+        <Link href="/integrations/ai" className="text-primary hover:underline">
+          Integrations → AI
         </Link>
         .
       </p>

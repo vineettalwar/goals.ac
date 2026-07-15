@@ -333,6 +333,7 @@ export function useKeywordOpportunities(projectId: string | null) {
           suggestedTitle: string;
           suggestedAngle: string;
           estimatedVolume?: string | null;
+          linkedContentPieceId?: number | null;
         }>;
       }>(`/api/website-projects/${projectId}/keyword-opportunities?status=open`);
       return data.opportunities ?? [];
@@ -359,10 +360,9 @@ export function useCompetitorAnalyses(projectId: string | null) {
   const query = useQuery({
     queryKey: queryKeys.competitorAnalyses(projectId),
     queryFn: async () => {
-      const data = await apiFetch<{
-        analyses: Array<{ id: number; competitorUrl: string; industry: string }>;
-      }>(`/api/competitor-analysis?projectId=${projectId}`);
-      return data.analyses ?? [];
+      const { flattenCompetitorAnalysisList } = await import("@workspace/app-shell");
+      const data = await apiFetch(`/api/competitor-analysis?projectId=${projectId}`);
+      return flattenCompetitorAnalysisList(data);
     },
     enabled: Boolean(projectId),
     staleTime: 30_000,
@@ -378,6 +378,7 @@ export function useCompetitorAnalyses(projectId: string | null) {
         : query.error
           ? "Failed to load analyses"
           : null,
+    reload: () => query.refetch(),
   };
 }
 

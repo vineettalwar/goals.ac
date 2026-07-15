@@ -20,6 +20,7 @@
     "./help": "./src/help/index.ts",
     "./growth-roadmap": "./src/growth-roadmap/index.ts",
     "./social": "./src/social/index.ts",
+    "./research": "./src/research/index.ts",
     "./section-panels": "./src/section-panels/index.ts"
   },
   "dependencies": {

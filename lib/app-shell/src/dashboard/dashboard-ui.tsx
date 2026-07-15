@@ -3,7 +3,11 @@ import {
   ArrowRight,
   FileText,
   FolderOpen,
+  Lightbulb,
   Plus,
+  ScanSearch,
+  Target,
+  TrendingUp,
   Zap,
 } from "lucide-react";
 import { cn } from "../cn";
@@ -11,6 +15,7 @@ import {
   contentPiecePath,
   countByStatus,
   type DashboardAutopilotSettings,
+  type DashboardCommandCenter,
   type DashboardLinkProps,
   type DashboardPiece,
   type DashboardProject,
@@ -67,7 +72,7 @@ export function DashboardStatsSection({
 }) {
   if (projectCount === 0) {
     return (
-      <div className="paper-card mb-8 flex items-center justify-between p-6">
+      <div className="paper-card mb-8 flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div>
           <p className="font-medium">Create your first project</p>
           <p className="mt-0.5 text-sm text-muted-foreground">
@@ -77,7 +82,7 @@ export function DashboardStatsSection({
         <DashLink
           renderLink={renderLink}
           href="/projects"
-          className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
+          className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
         >
           <Plus className="mr-1.5 h-4 w-4" /> New project
         </DashLink>
@@ -90,7 +95,7 @@ export function DashboardStatsSection({
   const publishedCount = (byStatus.published ?? 0) + (byStatus.ready ?? 0);
 
   return (
-    <div className="mb-8 grid grid-cols-3 gap-4">
+    <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
       <div className="paper-card p-5">
         <div className="flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Drafts</p>
@@ -117,6 +122,157 @@ export function DashboardStatsSection({
           {scopedToActiveProject ? "active project" : "accessible projects"}
         </p>
       </div>
+    </div>
+  );
+}
+
+export function DashboardCommandCenterSection({
+  projectId,
+  commandCenter,
+  autopilotSettings,
+  renderLink,
+}: {
+  projectId: number;
+  commandCenter: DashboardCommandCenter;
+  autopilotSettings: DashboardAutopilotSettings | null;
+  renderLink: (props: DashboardLinkProps) => ReactNode;
+}) {
+  return (
+    <div className="paper-card mb-8 p-6">
+      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Target className="h-4 w-4 text-primary" /> Content command center
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Ideas, calendar, drafts, and visibility — one place to steer the pipeline.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <DashLink
+            renderLink={renderLink}
+            href="/search/keywords"
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-card px-3 text-xs font-medium"
+          >
+            Keywords
+          </DashLink>
+          <DashLink
+            renderLink={renderLink}
+            href="/research"
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-card px-3 text-xs font-medium"
+          >
+            Research
+          </DashLink>
+          <DashLink
+            renderLink={renderLink}
+            href={`/projects/${projectId}/content-studio`}
+            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-card px-3 text-xs font-medium"
+          >
+            Studio
+          </DashLink>
+        </div>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <DashLink
+          renderLink={renderLink}
+          href="/search/keywords"
+          className="rounded-lg bg-secondary/40 px-3 py-3 text-center transition-colors hover:bg-secondary/60"
+        >
+          <p className="text-2xl font-bold">{commandCenter.openOpportunities}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Open ideas</p>
+        </DashLink>
+        <DashLink
+          renderLink={renderLink}
+          href="/strategy/calendar"
+          className="rounded-lg bg-secondary/40 px-3 py-3 text-center transition-colors hover:bg-secondary/60"
+        >
+          <p className="text-2xl font-bold">{commandCenter.calendarDraftItems}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Calendar slots</p>
+        </DashLink>
+        <div className="rounded-lg bg-secondary/40 px-3 py-3 text-center">
+          <p className="text-2xl font-bold">{commandCenter.draftsNeedingReview}</p>
+          <p className="mt-1 text-xs text-muted-foreground">Drafts to review</p>
+        </div>
+        <DashLink
+          renderLink={renderLink}
+          href="/search/visibility"
+          className="rounded-lg bg-secondary/40 px-3 py-3 text-center transition-colors hover:bg-secondary/60"
+        >
+          <p className="text-2xl font-bold">
+            {commandCenter.llmCitationRate != null ? `${commandCenter.llmCitationRate}%` : "—"}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">LLM citation rate</p>
+        </DashLink>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        <DashLink
+          renderLink={renderLink}
+          href="/audit"
+          className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/30"
+        >
+          <div className="flex items-center gap-2 text-sm">
+            <ScanSearch className="h-4 w-4 text-muted-foreground" />
+            <span>GEO score</span>
+          </div>
+          <span className="text-sm font-semibold tabular-nums">
+            {commandCenter.latestGeoScore != null ? `${commandCenter.latestGeoScore}/100` : "Run audit"}
+          </span>
+        </DashLink>
+        <DashLink
+          renderLink={renderLink}
+          href="/search/site"
+          className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:bg-muted/30"
+        >
+          <div className="flex items-center gap-2 text-sm">
+            <Target className="h-4 w-4 text-muted-foreground" />
+            <span>Internal links</span>
+          </div>
+          <span className="text-sm font-semibold tabular-nums">
+            {commandCenter.internalLinkCoverage != null
+              ? `${commandCenter.internalLinkCoverage}%`
+              : "—"}
+          </span>
+        </DashLink>
+        <div className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+          <div className="flex items-center gap-2 text-sm">
+            <Zap className="h-4 w-4 text-muted-foreground" />
+            <span>Autopilot</span>
+          </div>
+          <span className="text-sm font-medium">
+            {autopilotSettings?.enabled
+              ? `${autopilotSettings.cadence === "daily" ? "Daily" : "Weekly"}`
+              : "Off"}
+          </span>
+        </div>
+      </div>
+
+      {commandCenter.topOpportunities.length > 0 ? (
+        <div className="mt-4 border-t border-border pt-4">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Top opportunities
+          </p>
+          <div className="space-y-2">
+            {commandCenter.topOpportunities.map((opp) => (
+              <DashLink
+                key={opp.id}
+                renderLink={renderLink}
+                href={`/search/keywords?keyword=${encodeURIComponent(opp.keyword)}`}
+                className="group flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-secondary/50"
+              >
+                <Lightbulb className="h-3.5 w-3.5 shrink-0 text-primary" />
+                <span className="min-w-0 flex-1 truncate text-sm">{opp.keyword}</span>
+                <span className="flex shrink-0 items-center gap-1 text-xs text-muted-foreground">
+                  <TrendingUp className="h-3 w-3" />
+                  {opp.opportunityScore}
+                </span>
+                <ArrowRight className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100" />
+              </DashLink>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -167,7 +323,7 @@ export function DashboardAutopilotSection({
           </DashLink>
         </div>
       </div>
-      <div className="grid grid-cols-3 gap-3 text-center">
+      <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
         <div className="rounded-lg bg-secondary/40 px-3 py-3">
           <p className="text-2xl font-bold">{generating + drafts}</p>
           <p className="mt-1 text-xs text-muted-foreground">Drafts / generating</p>
@@ -247,8 +403,8 @@ export function DashboardRecentSection({
           View all <ArrowRight className="h-3 w-3" />
         </DashLink>
       </div>
-      <div className="paper-card overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="paper-card overflow-x-auto">
+        <table className="w-full min-w-[640px] text-sm">
           <thead>
             <tr className="border-b border-border bg-muted/40">
               <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Title</th>
@@ -312,20 +468,20 @@ export function DashboardProjectsSection({
         </DashLink>
       </div>
       {!project ? (
-        <div className="paper-card flex items-center justify-between p-6">
+        <div className="paper-card flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <p className="text-sm text-muted-foreground">
             No projects yet. Create one to use the content studio and roadmaps.
           </p>
           <DashLink
             renderLink={renderLink}
             href="/projects"
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-card px-3 text-xs font-medium"
+            className="inline-flex h-8 shrink-0 items-center justify-center rounded-lg border border-border bg-card px-3 text-xs font-medium"
           >
             <Plus className="mr-1.5 h-3.5 w-3.5" /> New project
           </DashLink>
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <DashLink
             renderLink={renderLink}
             href={`/projects/${project.id}`}
@@ -354,6 +510,7 @@ export function DashboardView({
   activeProjectId,
   pieces,
   autopilotSettings,
+  commandCenter,
   renderLink,
 }: {
   greeting: string;
@@ -364,12 +521,13 @@ export function DashboardView({
   activeProjectId: number | null;
   pieces: DashboardPiece[];
   autopilotSettings: DashboardAutopilotSettings | null;
+  commandCenter: DashboardCommandCenter | null;
   renderLink: (props: DashboardLinkProps) => ReactNode;
 }) {
   const drafts = pieces.filter((piece) => piece.status === "draft");
 
   return (
-    <div className="px-8 py-8 max-w-5xl">
+    <div className="max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-8">
         <h1 className="text-2xl font-bold">{greeting}</h1>
         {subtitle ? <p className="mt-1 text-muted-foreground">{subtitle}</p> : null}
@@ -381,6 +539,15 @@ export function DashboardView({
         pieces={pieces}
         renderLink={renderLink}
       />
+
+      {activeProjectId && commandCenter ? (
+        <DashboardCommandCenterSection
+          projectId={activeProjectId}
+          commandCenter={commandCenter}
+          autopilotSettings={autopilotSettings}
+          renderLink={renderLink}
+        />
+      ) : null}
 
       {activeProjectId ? (
         <>

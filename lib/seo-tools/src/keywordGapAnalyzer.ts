@@ -56,6 +56,73 @@ export function computeOpportunityScore(params: {
   return Math.max(0, Math.min(100, Math.round(raw)));
 }
 
+export type OpportunityScoreFactor = {
+  label: string;
+  points: number;
+  maxPoints: number;
+  detail: string;
+};
+
+export function explainOpportunityScore(params: {
+  opportunityScore: number;
+  estimatedVolume?: string | null;
+  difficulty?: KeywordDifficulty | null;
+  source: string;
+}): OpportunityScoreFactor[] {
+  const volume = parseVolumeEstimate(params.estimatedVolume ?? "500/mo");
+  const difficulty = params.difficulty ?? "medium";
+  const volumeFactor = Math.min(1, volume / 5000);
+  const volumePoints = Math.round(volumeFactor * 40);
+  const difficultyPoints = Math.round(difficultyMultiplier(difficulty) * 30);
+  const visibilityPoints = 10;
+  const intentPoints = 10;
+
+  const sourceDetail: Record<string, string> = {
+    gsc_query: "From your Search Console data — real impressions and position.",
+    semrush: "From Semrush keyword gap vs competitors.",
+    competitor_gap: "Topic gap vs a tracked competitor.",
+    rank_drop: "Your rank dropped — refresh opportunity.",
+    content_refresh: "GSC clicks declined on a published page — refresh opportunity.",
+    ai_analysis: "From AI keyword analysis.",
+    csv_import: "Imported keyword list.",
+    google_sheets: "Synced from Google Sheets.",
+    manual: "Manually added.",
+  };
+
+  return [
+    {
+      label: "Search volume",
+      points: volumePoints,
+      maxPoints: 40,
+      detail: params.estimatedVolume ?? `~${volume.toLocaleString()}/mo estimated`,
+    },
+    {
+      label: "Difficulty",
+      points: difficultyPoints,
+      maxPoints: 30,
+      detail: `${difficulty} competition — easier keywords score higher`,
+    },
+    {
+      label: "AI visibility",
+      points: visibilityPoints,
+      maxPoints: 20,
+      detail: "Baseline visibility potential for generative search",
+    },
+    {
+      label: "Intent fit",
+      points: intentPoints,
+      maxPoints: 10,
+      detail: sourceDetail[params.source] ?? "Source-weighted opportunity signal",
+    },
+    {
+      label: "Total",
+      points: params.opportunityScore,
+      maxPoints: 100,
+      detail: "Combined opportunity score",
+    },
+  ];
+}
+
 export function opportunitiesFromKeywordAnalysis(
   keywords: Array<{
     keyword: string;

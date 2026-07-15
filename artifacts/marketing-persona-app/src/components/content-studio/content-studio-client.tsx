@@ -218,7 +218,7 @@ export function ContentStudioClient({
       {aiReady === false && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
           {aiProviderUnavailableMessage(activeProvider)}{" "}
-          <Link href="/settings" className="text-primary hover:underline">Open AI settings</Link>
+          <Link href="/integrations/ai" className="text-primary hover:underline">Open AI settings</Link>
         </div>
       )}
 

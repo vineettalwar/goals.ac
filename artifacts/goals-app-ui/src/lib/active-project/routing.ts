@@ -16,5 +16,13 @@ export function navigationTargetForActiveProject(
     return `/projects/${newProjectId}`;
   }
 
+  if (pathname === "/studio" || pathname.startsWith("/studio/")) {
+    return `/projects/${newProjectId}/content-studio`;
+  }
+
+  if (pathname === "/social" || pathname.startsWith("/social/")) {
+    return `/projects/${newProjectId}/social`;
+  }
+
   return null;
 }

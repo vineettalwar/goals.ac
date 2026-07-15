@@ -1,0 +1,26 @@
+---
+description: Sparkles/glitter icons are banned in product UI
+alwaysApply: true
+---
+
+# No Sparkles / glitter icons — forbidden
+
+Lucide **`Sparkles`** (and glitter/sparkle-style icons) must **not** appear in product UI.
+
+## Do not use
+
+- `Sparkles` from `lucide-react` on buttons, nav, empty states, or section headers
+- Decorative glitter / four-point star “AI magic” icons next to Generate, Humanize, Enhance, or similar actions
+
+## Use instead
+
+| Action | Prefer |
+|---|---|
+| Generate / regenerate | `RefreshCw`, `FileText`, or text-only |
+| Humanize / rewrite | `PenLine`, `Pencil`, or text-only |
+| Enhance / improve | `TrendingUp`, `CheckCircle2`, or text-only |
+| Generic accent | Existing brand icons already in the screen — never sparkles |
+
+Marketing pages that already use Sparkles should be migrated when touched; new product UI must not introduce them.
+
+**Enforced in:** `docs/memory.md`, `.agents/skills/goals-ac-conventions/SKILL.md`.

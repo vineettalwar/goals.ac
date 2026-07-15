@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { SettingsView, type AiProviderChoice, type BedrockCredentialsForm, type SettingsTab, isSiteAdmin, isSuperAdmin } from "@workspace/app-shell";
+import { SettingsView, type SettingsTab, isSiteAdmin, isSuperAdmin } from "@workspace/app-shell";
 import { MfaSettingsPanel } from "@/components/mfa/MfaSettingsPanel";
 import { OrgSecurityPanel } from "@/components/org/OrgSecurityPanel";
 import { SettingsBillingPanel } from "@/components/settings/SettingsBillingPanel";
@@ -8,7 +8,7 @@ import { useAuth } from "@/context/auth";
 import { apiFetch } from "@/lib/api";
 import { useSettingsData } from "@/hooks/use-settings-data";
 
-const VALID_TABS: SettingsTab[] = ["profile", "ai", "security", "billing", "account"];
+const VALID_TABS: SettingsTab[] = ["profile", "security", "billing", "account"];
 
 function parseTab(value: string | null): SettingsTab {
   if (value && VALID_TABS.includes(value as SettingsTab)) {
@@ -28,11 +28,8 @@ export function SettingsPage() {
     hasPassword,
     usage,
     usageLoading,
-    aiSummary,
-    integrationsSummary,
     userRole,
     orgRole,
-    reload,
     forgotPasswordHref,
     billingSummary,
     billingLoading,
@@ -49,37 +46,20 @@ export function SettingsPage() {
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordMessage, setPasswordMessage] = useState<string | null>(null);
   const [deletingAccount, setDeletingAccount] = useState(false);
-  const [geminiSaving, setGeminiSaving] = useState(false);
-  const [geminiDeleting, setGeminiDeleting] = useState(false);
-  const [geminiMessage, setGeminiMessage] = useState<string | null>(null);
-  const [openaiSaving, setOpenaiSaving] = useState(false);
-  const [openaiDeleting, setOpenaiDeleting] = useState(false);
-  const [openaiMessage, setOpenaiMessage] = useState<string | null>(null);
-  const [anthropicSaving, setAnthropicSaving] = useState(false);
-  const [anthropicDeleting, setAnthropicDeleting] = useState(false);
-  const [anthropicMessage, setAnthropicMessage] = useState<string | null>(null);
-  const [bedrockSaving, setBedrockSaving] = useState(false);
-  const [bedrockDeleting, setBedrockDeleting] = useState(false);
-  const [bedrockMessage, setBedrockMessage] = useState<string | null>(null);
-  const [providerSaving, setProviderSaving] = useState(false);
-  const [providerMessage, setProviderMessage] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
   const [billingMessage, setBillingMessage] = useState<string | null>(null);
-  const [semrushSaving, setSemrushSaving] = useState(false);
-  const [semrushDeleting, setSemrushDeleting] = useState(false);
-  const [deeplSaving, setDeeplSaving] = useState(false);
-  const [deeplDeleting, setDeeplDeleting] = useState(false);
-  const [stockSavingProvider, setStockSavingProvider] = useState<string | null>(null);
-  const [stockRemovingProvider, setStockRemovingProvider] = useState<string | null>(null);
-  const [integrationsMessage, setIntegrationsMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login", { replace: true });
   }, [authLoading, user, navigate]);
 
   useEffect(() => {
+    if (searchParams.get("tab") === "ai") {
+      navigate("/integrations/ai", { replace: true });
+      return;
+    }
     setActiveTab(parseTab(searchParams.get("tab")));
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     if (user) {
@@ -199,356 +179,7 @@ export function SettingsPage() {
     }
   }
 
-  async function testGeminiKey(key: string) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/api-key/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key }),
-    });
-    return { ok: Boolean(data.ok), error: data.error };
-  }
-
-  async function saveGeminiKey(key: string) {
-    setGeminiSaving(true);
-    setGeminiMessage(null);
-    try {
-      await apiFetch("/api/auth/api-key", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key }),
-      });
-      await reload();
-      setGeminiMessage("Gemini API key saved.");
-    } catch (err) {
-      setGeminiMessage(err instanceof Error ? err.message : "Failed to save key");
-      throw err;
-    } finally {
-      setGeminiSaving(false);
-    }
-  }
-
-  async function deleteGeminiKey() {
-    if (!window.confirm("Remove the organization Gemini API key?")) return;
-    setGeminiDeleting(true);
-    setGeminiMessage(null);
-    try {
-      await apiFetch("/api/auth/api-key", { method: "DELETE" });
-      await reload();
-      setGeminiMessage("Gemini API key removed.");
-    } catch (err) {
-      setGeminiMessage(err instanceof Error ? err.message : "Failed to remove key");
-      throw err;
-    } finally {
-      setGeminiDeleting(false);
-    }
-  }
-
-  async function saveProvider(input: {
-    provider: AiProviderChoice;
-    ollamaBaseUrl: string;
-    ollamaModel: string;
-  }) {
-    setProviderSaving(true);
-    setProviderMessage(null);
-    try {
-      await apiFetch("/api/ai-providers/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          provider: input.provider,
-          ollamaBaseUrl: input.provider === "ollama" ? input.ollamaBaseUrl : null,
-          ollamaModel: input.provider === "ollama" ? input.ollamaModel : null,
-        }),
-      });
-      await reload();
-      setProviderMessage("AI provider updated.");
-    } catch (err) {
-      setProviderMessage(err instanceof Error ? err.message : "Failed to save provider");
-      throw err;
-    } finally {
-      setProviderSaving(false);
-    }
-  }
-
-  async function testOpenaiKey(key: string) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/openai-credentials/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key }),
-    });
-    return { ok: Boolean(data.ok), error: data.error };
-  }
-
-  async function saveOpenaiKey(key: string) {
-    setOpenaiSaving(true);
-    setOpenaiMessage(null);
-    try {
-      await apiFetch("/api/auth/openai-credentials", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key }),
-      });
-      await reload();
-      setOpenaiMessage("OpenAI API key saved.");
-    } catch (err) {
-      setOpenaiMessage(err instanceof Error ? err.message : "Failed to save key");
-      throw err;
-    } finally {
-      setOpenaiSaving(false);
-    }
-  }
-
-  async function deleteOpenaiKey() {
-    if (!window.confirm("Remove the organization OpenAI API key?")) return;
-    setOpenaiDeleting(true);
-    setOpenaiMessage(null);
-    try {
-      await apiFetch("/api/auth/openai-credentials", { method: "DELETE" });
-      await reload();
-      setOpenaiMessage("OpenAI API key removed.");
-    } catch (err) {
-      setOpenaiMessage(err instanceof Error ? err.message : "Failed to remove key");
-      throw err;
-    } finally {
-      setOpenaiDeleting(false);
-    }
-  }
-
-  async function testAnthropicKey(key: string) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/anthropic-credentials/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key }),
-    });
-    return { ok: Boolean(data.ok), error: data.error };
-  }
-
-  async function saveAnthropicKey(key: string) {
-    setAnthropicSaving(true);
-    setAnthropicMessage(null);
-    try {
-      await apiFetch("/api/auth/anthropic-credentials", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key }),
-      });
-      await reload();
-      setAnthropicMessage("Anthropic API key saved.");
-    } catch (err) {
-      setAnthropicMessage(err instanceof Error ? err.message : "Failed to save key");
-      throw err;
-    } finally {
-      setAnthropicSaving(false);
-    }
-  }
-
-  async function deleteAnthropicKey() {
-    if (!window.confirm("Remove the organization Anthropic API key?")) return;
-    setAnthropicDeleting(true);
-    setAnthropicMessage(null);
-    try {
-      await apiFetch("/api/auth/anthropic-credentials", { method: "DELETE" });
-      await reload();
-      setAnthropicMessage("Anthropic API key removed.");
-    } catch (err) {
-      setAnthropicMessage(err instanceof Error ? err.message : "Failed to remove key");
-      throw err;
-    } finally {
-      setAnthropicDeleting(false);
-    }
-  }
-
-  function bedrockPayloadFromForm(form: BedrockCredentialsForm) {
-    return {
-      accessKeyId: form.accessKeyId.trim(),
-      secretAccessKey: form.secretAccessKey.trim(),
-      sessionToken: form.sessionToken.trim() || null,
-      region: form.region.trim(),
-      model: form.model.trim(),
-    };
-  }
-
-  async function testBedrockCredentials(form: BedrockCredentialsForm) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/bedrock-credentials/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(bedrockPayloadFromForm(form)),
-    });
-    return { ok: Boolean(data.ok), error: data.error };
-  }
-
-  async function saveBedrockCredentials(form: BedrockCredentialsForm) {
-    setBedrockSaving(true);
-    setBedrockMessage(null);
-    try {
-      await apiFetch("/api/auth/bedrock-credentials", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bedrockPayloadFromForm(form)),
-      });
-      await reload();
-      setBedrockMessage("AWS Bedrock credentials saved.");
-    } catch (err) {
-      setBedrockMessage(err instanceof Error ? err.message : "Failed to save credentials");
-      throw err;
-    } finally {
-      setBedrockSaving(false);
-    }
-  }
-
-  async function deleteBedrockCredentials() {
-    if (!window.confirm("Remove the organization AWS Bedrock credentials?")) return;
-    setBedrockDeleting(true);
-    setBedrockMessage(null);
-    try {
-      await apiFetch("/api/auth/bedrock-credentials", { method: "DELETE" });
-      await reload();
-      setBedrockMessage("AWS Bedrock credentials removed.");
-    } catch (err) {
-      setBedrockMessage(err instanceof Error ? err.message : "Failed to remove credentials");
-      throw err;
-    } finally {
-      setBedrockDeleting(false);
-    }
-  }
-
-  async function testSemrushCredentials(input: { apiKey: string; database: string }) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/semrush-credentials/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    });
-    return { ok: Boolean(data.ok), error: data.error };
-  }
-
-  async function saveSemrushCredentials(input: { apiKey: string; database: string }) {
-    setSemrushSaving(true);
-    setIntegrationsMessage(null);
-    try {
-      await apiFetch("/api/auth/semrush-credentials", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      });
-      await reload();
-      setIntegrationsMessage("Semrush API key saved.");
-    } catch (err) {
-      setIntegrationsMessage(err instanceof Error ? err.message : "Failed to save Semrush credentials");
-      throw err;
-    } finally {
-      setSemrushSaving(false);
-    }
-  }
-
-  async function deleteSemrushCredentials() {
-    if (!window.confirm("Remove the organization Semrush API key?")) return;
-    setSemrushDeleting(true);
-    setIntegrationsMessage(null);
-    try {
-      await apiFetch("/api/auth/semrush-credentials", { method: "DELETE" });
-      await reload();
-      setIntegrationsMessage("Semrush credentials removed.");
-    } catch (err) {
-      setIntegrationsMessage(err instanceof Error ? err.message : "Failed to remove Semrush credentials");
-      throw err;
-    } finally {
-      setSemrushDeleting(false);
-    }
-  }
-
-  async function testDeeplKey(key: string) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/deepl-credentials/test", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ apiKey: key }),
-    });
-    return { ok: Boolean(data.ok), error: data.error };
-  }
-
-  async function saveDeeplKey(key: string) {
-    setDeeplSaving(true);
-    setIntegrationsMessage(null);
-    try {
-      await apiFetch("/api/auth/deepl-credentials", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ apiKey: key }),
-      });
-      await reload();
-      setIntegrationsMessage("DeepL API key saved.");
-    } catch (err) {
-      setIntegrationsMessage(err instanceof Error ? err.message : "Failed to save DeepL key");
-      throw err;
-    } finally {
-      setDeeplSaving(false);
-    }
-  }
-
-  async function deleteDeeplKey() {
-    if (!window.confirm("Remove the organization DeepL API key?")) return;
-    setDeeplDeleting(true);
-    setIntegrationsMessage(null);
-    try {
-      await apiFetch("/api/auth/deepl-credentials", { method: "DELETE" });
-      await reload();
-      setIntegrationsMessage("DeepL API key removed.");
-    } catch (err) {
-      setIntegrationsMessage(err instanceof Error ? err.message : "Failed to remove DeepL key");
-      throw err;
-    } finally {
-      setDeeplDeleting(false);
-    }
-  }
-
-  async function testStockCredentials(input: { provider: string; apiKey: string }) {
-    const data = await apiFetch<{ ok?: boolean; error?: string; note?: string }>(
-      "/api/auth/stock-credentials/test",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      },
-    );
-    return { ok: Boolean(data.ok), error: data.error, note: data.note };
-  }
-
-  async function saveStockCredentials(input: { provider: string; apiKey: string }) {
-    setStockSavingProvider(input.provider);
-    setIntegrationsMessage(null);
-    try {
-      await apiFetch("/api/auth/stock-credentials", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      });
-      await reload();
-      setIntegrationsMessage("Stock API key saved.");
-    } catch (err) {
-      setIntegrationsMessage(err instanceof Error ? err.message : "Failed to save stock API key");
-      throw err;
-    } finally {
-      setStockSavingProvider(null);
-    }
-  }
-
-  async function deleteStockCredentials(provider: string) {
-    setStockRemovingProvider(provider);
-    setIntegrationsMessage(null);
-    try {
-      await apiFetch(`/api/auth/stock-credentials?provider=${encodeURIComponent(provider)}`, {
-        method: "DELETE",
-      });
-      await reload();
-      setIntegrationsMessage("Stock API key removed.");
-    } catch (err) {
-      setIntegrationsMessage(err instanceof Error ? err.message : "Failed to remove stock API key");
-      throw err;
-    } finally {
-      setStockRemovingProvider(null);
-    }
-  }
-
-  if ((authLoading && !user) || (loading && !aiSummary && !email)) {
+  if ((authLoading && !user) || (loading && !email)) {
     return <p className="p-8 text-muted-foreground">Loading settings…</p>;
   }
 
@@ -572,7 +203,6 @@ export function SettingsPage() {
       profileMessage={profileMessage}
       usage={usage}
       usageLoading={usageLoading}
-      aiSummary={aiSummary}
       showSecurityTab={hasPassword}
       currentPassword={currentPassword}
       newPassword={newPassword}
@@ -589,54 +219,11 @@ export function SettingsPage() {
       )}
       onDeleteAccount={deleteAccount}
       deletingAccount={deletingAccount}
-      canManageGeminiKey={canManageProviderKeys}
-      canManageProviderKeys={canManageProviderKeys}
-      onSaveGeminiKey={saveGeminiKey}
-      onDeleteGeminiKey={deleteGeminiKey}
-      onTestGeminiKey={testGeminiKey}
-      geminiSaving={geminiSaving}
-      geminiDeleting={geminiDeleting}
-      onSaveOpenaiKey={saveOpenaiKey}
-      onDeleteOpenaiKey={deleteOpenaiKey}
-      onTestOpenaiKey={testOpenaiKey}
-      openaiSaving={openaiSaving}
-      openaiDeleting={openaiDeleting}
-      onSaveAnthropicKey={saveAnthropicKey}
-      onDeleteAnthropicKey={deleteAnthropicKey}
-      onTestAnthropicKey={testAnthropicKey}
-      anthropicSaving={anthropicSaving}
-      anthropicDeleting={anthropicDeleting}
-      onSaveBedrockCredentials={saveBedrockCredentials}
-      onDeleteBedrockCredentials={deleteBedrockCredentials}
-      onTestBedrockCredentials={testBedrockCredentials}
-      bedrockSaving={bedrockSaving}
-      bedrockDeleting={bedrockDeleting}
-      canManageProvider={canManageProviderKeys}
-      onSaveProvider={saveProvider}
-      providerSaving={providerSaving}
-      providerMessage={providerMessage}
       billingSummary={billingSummary}
       billingLoading={billingLoading}
       onOpenBillingPortal={openBillingPortal}
       portalLoading={portalLoading}
       billingMessage={billingMessage}
-      integrationsSummary={integrationsSummary}
-      onSaveSemrushCredentials={saveSemrushCredentials}
-      onDeleteSemrushCredentials={deleteSemrushCredentials}
-      onTestSemrushCredentials={testSemrushCredentials}
-      semrushSaving={semrushSaving}
-      semrushDeleting={semrushDeleting}
-      onSaveDeeplKey={saveDeeplKey}
-      onDeleteDeeplKey={deleteDeeplKey}
-      onTestDeeplKey={testDeeplKey}
-      deeplSaving={deeplSaving}
-      deeplDeleting={deeplDeleting}
-      onSaveStockCredentials={saveStockCredentials}
-      onDeleteStockCredentials={deleteStockCredentials}
-      onTestStockCredentials={testStockCredentials}
-      stockSavingProvider={stockSavingProvider}
-      stockRemovingProvider={stockRemovingProvider}
-      integrationsMessage={integrationsMessage}
       securitySupplement={
         <>
           <MfaSettingsPanel />
@@ -650,22 +237,6 @@ export function SettingsPage() {
           onOpenBillingPortal={() => void openBillingPortal()}
           portalLoading={portalLoading}
         />
-      }
-      aiProvidersNote={
-        <div className="space-y-3">
-          {geminiMessage ? (
-            <div className="paper-card p-4 text-sm text-muted-foreground">{geminiMessage}</div>
-          ) : null}
-          {openaiMessage ? (
-            <div className="paper-card p-4 text-sm text-muted-foreground">{openaiMessage}</div>
-          ) : null}
-          {anthropicMessage ? (
-            <div className="paper-card p-4 text-sm text-muted-foreground">{anthropicMessage}</div>
-          ) : null}
-          {bedrockMessage ? (
-            <div className="paper-card p-4 text-sm text-muted-foreground">{bedrockMessage}</div>
-          ) : null}
-        </div>
       }
     />
   );

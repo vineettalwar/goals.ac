@@ -262,8 +262,8 @@ export function SettingsBillingPanel() {
 
             <p className="text-sm text-muted-foreground">
               Add your Gemini or Bedrock key in{" "}
-              <Link href="/settings?tab=ai" className="text-primary hover:underline">
-                Settings → AI Providers
+              <Link href="/integrations/ai" className="text-primary hover:underline">
+                Integrations → AI
               </Link>{" "}
               for unlimited AI generations.
             </p>

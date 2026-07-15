@@ -1,5 +1,6 @@
 export {
   DashboardAutopilotSection,
+  DashboardCommandCenterSection,
   DashboardDraftsSection,
   DashboardProjectsSection,
   DashboardRecentSection,
@@ -10,6 +11,7 @@ export {
   contentPiecePath,
   countByStatus,
   type DashboardAutopilotSettings,
+  type DashboardCommandCenter,
   type DashboardData,
   type DashboardLinkProps,
   type DashboardPiece,

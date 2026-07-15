@@ -339,7 +339,7 @@ export async function assertCanCreateProject(
     return {
       ok: false,
       status: 402,
-      error: `You've reached the ${quota}-site limit on Starter. Add your API key in Settings → AI Providers for more capacity.`,
+      error: `You've reached the ${quota}-site limit on Starter. Add your API key in Integrations → AI for more capacity.`,
       code: "quota_exhausted",
       plan,
     };

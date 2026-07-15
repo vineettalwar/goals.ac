@@ -1,17 +1,16 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { Plus, Trash2, Search, TrendingUp, Lightbulb, BarChart3 } from "lucide-react";
+import { useState } from "react";
+import Link from "next/link";
+import { Plus, Trash2, Search, TrendingUp, Lightbulb, BarChart3, Map } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 
-const KeywordRankChart = dynamic(
-  () => import("@/components/visibility/keyword-rank-chart").then((m) => m.KeywordRankChart),
-  { loading: () => <div className="h-48 animate-pulse rounded-lg bg-secondary/50" /> },
-);
+import { KeywordRankChart, SerpFeaturesPanel, parseSerpFeatures } from "@workspace/app-shell";
 
 const DIFFICULTY_COLORS = {
   low: "success" as const,
@@ -39,6 +38,7 @@ export type { Analysis };
 interface RankSnapshot {
   checkedAt: string;
   position: number | null;
+  serpFeatures?: Record<string, unknown>;
 }
 
 export function KeywordRankTrackingTab({
@@ -54,7 +54,14 @@ export function KeywordRankTrackingTab({
   trackInput: string;
   onTrackInputChange: (v: string) => void;
   onTrackKeyword: () => void;
-  tracked: Array<{ id: number; keyword: string; latestSnapshot?: { position?: number | null } | null }>;
+  tracked: Array<{
+    id: number;
+    keyword: string;
+    latestSnapshot?: {
+      position?: number | null;
+      serpFeatures?: Record<string, unknown>;
+    } | null;
+  }>;
   selectedTrackedId: number | null;
   onSelectTracked: (id: number) => void;
   onDeleteTracked: (id: number) => void;
@@ -97,7 +104,17 @@ export function KeywordRankTrackingTab({
           </div>
         ))}
       </div>
-      {selectedTrackedId != null && <KeywordRankChart snapshots={snapshots} />}
+      {selectedTrackedId != null ? (
+        <>
+          <KeywordRankChart snapshots={snapshots} />
+          <SerpFeaturesPanel
+            features={parseSerpFeatures(
+              snapshots[0]?.serpFeatures ??
+                tracked.find((kw) => kw.id === selectedTrackedId)?.latestSnapshot?.serpFeatures,
+            )}
+          />
+        </>
+      ) : null}
     </div>
   );
 }
@@ -110,6 +127,7 @@ export function KeywordAnalyzerTab({
   onKeywordInputChange,
   onWebsiteUrlChange,
   onAnalyze,
+  projectId,
 }: {
   keywordInput: string;
   websiteUrl: string;
@@ -118,7 +136,46 @@ export function KeywordAnalyzerTab({
   onKeywordInputChange: (v: string) => void;
   onWebsiteUrlChange: (v: string) => void;
   onAnalyze: () => void;
+  projectId?: string;
 }) {
+  const [clustering, setClustering] = useState(false);
+  const [clusters, setClusters] = useState<{
+    topicalAuthority: number;
+    clusters: Array<{
+      pillarTopic: string;
+      pillarKeyword: string;
+      searchVolume: string;
+      difficulty: string;
+      supportingTopics: Array<{ title: string; keyword: string }>;
+    }>;
+    quickWinKeywords: string[];
+    recommendedNextArticle: string;
+    semrushUsed?: boolean;
+  } | null>(null);
+
+  async function handleCluster() {
+    if (!projectId) return;
+    const seeds = keywordInput
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (seeds.length === 0) return;
+    setClustering(true);
+    const res = await fetch(`/api/website-projects/${projectId}/keyword-clusters`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ seeds }),
+    });
+    setClustering(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      toast.error((data as { error?: string }).error ?? "Cluster generation failed");
+      return;
+    }
+    setClusters(await res.json());
+    toast.success("Topical clusters ready");
+  }
+
   return (
     <>
       <div className="paper-card p-6 rounded-xl space-y-4">
@@ -141,16 +198,87 @@ export function KeywordAnalyzerTab({
             onChange={(e) => onWebsiteUrlChange(e.target.value)}
           />
         </div>
-        <Button onClick={onAnalyze} disabled={loading}>
-          {loading ? (
-            <>
-              <Spinner size="sm" /> Analyzing…
-            </>
-          ) : (
-            "Analyze keywords"
-          )}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={onAnalyze} disabled={loading}>
+            {loading ? (
+              <>
+                <Spinner size="sm" /> Analyzing…
+              </>
+            ) : (
+              "Analyze keywords"
+            )}
+          </Button>
+          {projectId ? (
+            <Button
+              variant="outline"
+              onClick={() => void handleCluster()}
+              disabled={clustering || loading}
+            >
+              {clustering ? (
+                <>
+                  <Spinner size="sm" /> Clustering…
+                </>
+              ) : (
+                <>
+                  <Map className="h-4 w-4" />
+                  Seed → clusters
+                </>
+              )}
+            </Button>
+          ) : null}
+        </div>
       </div>
+
+      {clusters ? (
+        <div className="paper-card p-6 rounded-xl space-y-4">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <h2 className="font-semibold flex items-center gap-2">
+              <Map className="h-4 w-4" /> Topical clusters
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Authority {clusters.topicalAuthority}/100
+              {clusters.semrushUsed ? " · Semrush volumes" : " · AI estimates"}
+            </p>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            Next article: {clusters.recommendedNextArticle}
+          </p>
+          <div className="space-y-3">
+            {clusters.clusters.map((cluster) => (
+              <div key={cluster.pillarKeyword} className="rounded-lg border border-border p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium">{cluster.pillarTopic}</p>
+                  <Badge variant="secondary">{cluster.searchVolume}</Badge>
+                  <Badge variant="outline">{cluster.difficulty}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">{cluster.pillarKeyword}</p>
+                <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+                  {cluster.supportingTopics.slice(0, 4).map((topic) => (
+                    <li key={topic.keyword}>→ {topic.title}</li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </div>
+          {clusters.quickWinKeywords.length > 0 ? (
+            <p className="text-xs text-muted-foreground">
+              Quick wins: {clusters.quickWinKeywords.join(" · ")}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button variant="outline" size="sm" asChild>
+              <Link
+                href={`/search/keywords?keyword=${encodeURIComponent(clusters.recommendedNextArticle)}`}
+              >
+                Open recommended keyword
+              </Link>
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link href="/search/keywords">Promote clusters in Ideas</Link>
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {analysis && (
         <div className="space-y-4">

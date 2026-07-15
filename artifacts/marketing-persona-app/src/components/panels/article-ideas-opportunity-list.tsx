@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { PenLine, TrendingUp, X } from "lucide-react";
+import { useState } from "react";
+import { FileText, PenLine, RefreshCw, TrendingUp, X } from "lucide-react";
+import { explainOpportunityScore } from "@workspace/seo-tools/keywordGapAnalyzer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { KeywordOpportunity } from "@/lib/queries/types";
@@ -15,6 +17,7 @@ const SOURCE_LABELS: Record<string, string> = {
   ai_analysis: "AI analysis",
   competitor_gap: "Competitor gap",
   rank_drop: "Rank drop",
+  content_refresh: "Needs refresh",
 };
 
 const DIFFICULTY_COLORS = {
@@ -47,18 +50,47 @@ export function ArticleIdeasOpportunityList({
   queryMetrics,
   activeProjectId,
   onQueue,
+  onQueueAndGenerate,
   onDismiss,
 }: {
   opportunities: KeywordOpportunity[];
   queryMetrics: Map<string, GscQueryMetrics>;
   activeProjectId: number | null;
   onQueue: (id: number) => void;
+  onQueueAndGenerate?: (id: number) => void;
   onDismiss: (id: number) => void;
 }) {
+  const [briefLoadingId, setBriefLoadingId] = useState<number | null>(null);
+
+  async function openBrief(opp: KeywordOpportunity) {
+    setBriefLoadingId(opp.id);
+    const res = await fetch(`/api/keyword-opportunities/${opp.id}/brief`);
+    setBriefLoadingId(null);
+    if (!res.ok) return;
+    const data = (await res.json()) as { brief?: { outline?: string[] } };
+    const outline = data.brief?.outline?.join("\n• ") ?? "";
+    if (activeProjectId != null) {
+      window.location.href = contentStudioHref(activeProjectId, opp) + `&briefOutline=${encodeURIComponent(outline)}`;
+    }
+  }
+
   return (
     <div className="space-y-2">
       {opportunities.map((opp) => {
         const metrics = queryMetrics.get(opp.keyword.toLowerCase());
+        const scoreFactors = explainOpportunityScore({
+          opportunityScore: opp.opportunityScore,
+          estimatedVolume: opp.estimatedVolume,
+          difficulty:
+            opp.difficulty === "low" || opp.difficulty === "medium" || opp.difficulty === "high"
+              ? opp.difficulty
+              : undefined,
+          source: opp.source,
+        });
+        const scoreTitle = scoreFactors
+          .filter((factor) => factor.label !== "Total")
+          .map((factor) => `${factor.label}: ${factor.points}/${factor.maxPoints} — ${factor.detail}`)
+          .join("\n");
         return (
           <div
             key={opp.id}
@@ -81,7 +113,10 @@ export function ArticleIdeasOpportunityList({
                     {opp.difficulty}
                   </Badge>
                 )}
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <span
+                  className="text-xs text-muted-foreground flex items-center gap-1 cursor-help"
+                  title={scoreTitle}
+                >
                   <TrendingUp className="h-3 w-3" />
                   {opp.opportunityScore}
                 </span>
@@ -97,8 +132,31 @@ export function ArticleIdeasOpportunityList({
               )}
             </div>
             <div className="flex flex-col gap-1 shrink-0">
+              {opp.linkedContentPieceId ? (
+                <Button asChild size="sm">
+                  <Link href={`/content-piece/${opp.linkedContentPieceId}`}>
+                    <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                    Refresh article
+                  </Link>
+                </Button>
+              ) : null}
+              {onQueueAndGenerate && !opp.linkedContentPieceId ? (
+                <Button size="sm" onClick={() => onQueueAndGenerate(opp.id)}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                  Add & generate
+                </Button>
+              ) : null}
               <Button size="sm" variant="outline" onClick={() => onQueue(opp.id)}>
                 Queue
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={briefLoadingId === opp.id}
+                onClick={() => void openBrief(opp)}
+              >
+                <FileText className="h-3.5 w-3.5 mr-1" />
+                Brief
               </Button>
               {activeProjectId != null ? (
                 <Button asChild size="sm" variant="ghost">

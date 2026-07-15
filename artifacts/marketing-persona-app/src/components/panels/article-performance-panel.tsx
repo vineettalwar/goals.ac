@@ -219,7 +219,7 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
           <p className="text-muted-foreground">
             Google Analytics 4 is not connected.{" "}
-            <Link href="/integrations" className="text-primary hover:underline">
+            <Link href={`/projects/${projectId}/integrations/search`} className="text-primary hover:underline">
               Connect GA4
             </Link>{" "}
             to see session and engagement metrics.
@@ -232,7 +232,7 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
           <Search className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
           <p className="text-muted-foreground">
             Google Search Console is not connected.{" "}
-            <Link href="/integrations" className="text-primary hover:underline">
+            <Link href={`/projects/${projectId}/integrations/search`} className="text-primary hover:underline">
               Connect Search Console
             </Link>{" "}
             to see clicks and impressions.

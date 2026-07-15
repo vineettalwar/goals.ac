@@ -28,7 +28,9 @@ export {
   opportunitiesFromCompetitorGaps,
   buildRankDropAlert,
   rankDropToOpportunity,
+  explainOpportunityScore,
   type GapOpportunity,
+  type OpportunityScoreFactor,
 } from "./keywordGapAnalyzer";
 export {
   fetchGa4PageMetrics,
@@ -47,10 +49,10 @@ export {
   rankGa4Properties,
   type Ga4Property,
 } from "./ga4Admin";
+export { defaultSyncDateRange, formatAnalyticsDate } from "./analyticsDateRange";
 export {
   fetchSearchAnalytics,
   fetchAllSearchAnalytics,
-  defaultSyncDateRange,
   priorPeriodRange,
   formatGscDate,
   parseAnalyticsRowKeys,

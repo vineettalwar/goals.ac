@@ -28,11 +28,32 @@ export type DashboardAutopilotSettings = {
   publishMode?: string;
 };
 
+export type DashboardCommandCenter = {
+  openOpportunities: number;
+  queuedOpportunities: number;
+  calendarDraftItems: number;
+  draftsNeedingReview: number;
+  generatingPieces: number;
+  latestGeoScore: number | null;
+  latestGeoAuditAt: string | null;
+  llmCitationRate: number | null;
+  topOpportunities: Array<{
+    id: number;
+    keyword: string;
+    opportunityScore: number;
+    suggestedTitle: string;
+    source: string;
+  }>;
+  internalLinkCoverage?: number | null;
+  internalLinkSuggestions?: number;
+};
+
 export type DashboardData = {
   projects: DashboardProject[];
   activeProject: DashboardProject | null;
   pieces: DashboardPiece[];
   autopilotSettings: DashboardAutopilotSettings | null;
+  commandCenter: DashboardCommandCenter | null;
 };
 
 export function contentPiecePath(projectId: number | string, pieceId: number | string): string {

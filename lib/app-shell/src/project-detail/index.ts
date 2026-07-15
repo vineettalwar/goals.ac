@@ -13,6 +13,7 @@ export {
   formValuesToSavePayload,
   formValuesToVoiceSavePayload,
   isProjectDetailTab,
+  orgIntegrationsPath,
   projectIntegrationsPath,
   scrapeFailed,
   scrapeIsPending,

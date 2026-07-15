@@ -10,7 +10,6 @@ import {
   List,
   Plus,
   RefreshCw,
-  Sparkles,
   Trash2,
 } from "lucide-react";
 import { cn } from "../cn";
@@ -110,6 +109,7 @@ function FilterSelect({
 
 function StudioPieceCard({
   piece,
+  projectId,
   renderLink,
   viewMode,
   onDelete,
@@ -118,6 +118,7 @@ function StudioPieceCard({
   markingReadyId,
 }: {
   piece: StudioPiece;
+  projectId: string;
   renderLink: (props: StudioLinkProps) => ReactNode;
   viewMode: HubViewMode;
   onDelete?: (id: number) => void | Promise<void>;
@@ -127,6 +128,7 @@ function StudioPieceCard({
 }) {
   const isDeleting = deletingId === piece.id;
   const isMarkingReady = markingReadyId === piece.id;
+  const pieceHref = studioContentPiecePath(projectId, piece.id);
 
   return (
     <div
@@ -138,17 +140,17 @@ function StudioPieceCard({
       <div className="min-w-0 flex-1">
         <StudioLink
           renderLink={renderLink}
-          href={studioContentPiecePath(piece.id)}
+          href={pieceHref}
           className="block truncate font-medium hover:text-primary"
         >
-          {piece.title}
+          {piece.title ?? "Untitled"}
         </StudioLink>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
           <FormatBadge formatType={piece.formatType} />
           {piece.targetKeyword ? (
             <span className="text-xs text-muted-foreground">{piece.targetKeyword}</span>
           ) : null}
-          <span className="text-xs text-muted-foreground">{piece.wordCount} words</span>
+          <span className="text-xs text-muted-foreground">{piece.wordCount ?? 0} words</span>
           {piece.plannedDate ? (
             <span className="text-xs text-muted-foreground">· {piece.plannedDate}</span>
           ) : null}
@@ -170,16 +172,16 @@ function StudioPieceCard({
         {contentPieceCanGenerate(piece.status) ? (
           <StudioLink
             renderLink={renderLink}
-            href={`${studioContentPiecePath(piece.id)}?generate=1`}
+            href={`${pieceHref}?generate=1`}
             className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-medium text-primary transition-colors hover:bg-secondary"
           >
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
             Generate
           </StudioLink>
         ) : null}
         <StudioLink
           renderLink={renderLink}
-          href={studioContentPiecePath(piece.id)}
+          href={pieceHref}
           className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
         >
           <ExternalLink className="h-3.5 w-3.5" aria-hidden />
@@ -191,7 +193,7 @@ function StudioPieceCard({
             disabled={isDeleting || isMarkingReady}
             className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-600 disabled:opacity-50"
             onClick={() => {
-              if (window.confirm(`Delete "${piece.title}"? This cannot be undone.`)) {
+              if (window.confirm(`Delete "${piece.title ?? "Untitled"}"? This cannot be undone.`)) {
                 void onDelete(piece.id);
               }
             }}
@@ -391,7 +393,7 @@ export function StudioView({
   }
 
   return (
-    <div className="max-w-6xl space-y-6 px-8 py-8">
+    <div className="max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-2">
         <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
           <StudioLink
@@ -530,6 +532,7 @@ export function StudioView({
                 <StudioPieceCard
                   key={piece.id}
                   piece={piece}
+                  projectId={projectId}
                   renderLink={renderLink}
                   viewMode={viewMode}
                   onDelete={onDeletePiece}

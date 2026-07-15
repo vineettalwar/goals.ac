@@ -12,6 +12,7 @@
     "./keywordGapAnalyzer": "./src/keywordGapAnalyzer.ts",
     "./gscSearchAnalytics": "./src/gscSearchAnalytics.ts",
     "./ga4Analytics": "./src/ga4Analytics.ts",
+    "./analyticsDateRange": "./src/analyticsDateRange.ts",
     "./ga4Admin": "./src/ga4Admin.ts",
     "./gscOpportunityScorer": "./src/gscOpportunityScorer.ts",
     "./semrushGapAnalyzer": "./src/semrushGapAnalyzer.ts",

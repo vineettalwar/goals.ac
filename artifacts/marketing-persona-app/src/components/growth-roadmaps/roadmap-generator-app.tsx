@@ -113,7 +113,7 @@ export function RoadmapGeneratorApp({
           setGenerationError({
             message:
               errJson.message ??
-              "You've reached your monthly roadmap limit on the platform key. Add your API key in Settings → AI Providers.",
+              "You've reached your monthly roadmap limit on the platform key. Add your API key in Integrations → AI.",
           });
         } else {
           setGenerationError({

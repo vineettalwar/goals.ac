@@ -4,13 +4,13 @@ import { toast } from "sonner";
 
 export function showQuotaExhaustedToast(input: { message: string }): void {
   toast.error(input.message, {
-    description: "Add your Gemini or Bedrock key in Settings → AI Providers. BYOK clients have unlimited generations.",
+    description: "Add your Gemini or Bedrock key in Integrations → AI. BYOK clients have unlimited generations.",
   });
 }
 
 export function showInsufficientCreditsToast(input: { message: string }): void {
   toast.error(input.message, {
-    description: "Add your API key in Settings → AI Providers, or contact us to top up platform credits.",
+    description: "Add your API key in Integrations → AI, or contact us to top up platform credits.",
   });
 }
 

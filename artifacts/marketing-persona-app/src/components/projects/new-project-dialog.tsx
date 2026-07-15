@@ -49,7 +49,7 @@ export function NewProjectDialog({ open, onOpenChange, onCreated }: NewProjectDi
       const body = await res.json().catch(() => ({}));
       if (res.status === 402 && isQuotaExhaustedPayload(body)) {
         setQuotaError({
-          message: body.message ?? "Site quota exhausted. Add your API key in Settings → AI Providers.",
+          message: body.message ?? "Site quota exhausted. Add your API key in Integrations → AI.",
         });
         return;
       }

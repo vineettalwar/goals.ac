@@ -12,14 +12,27 @@ import type { ContentPiece } from "@/types/api";
 
 const STUDIO_POLL_MS = 3000;
 
+function asContentPieceRows(payload: unknown): ContentPiece[] {
+  if (Array.isArray(payload)) return payload as ContentPiece[];
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "pieces" in payload &&
+    Array.isArray((payload as { pieces: unknown }).pieces)
+  ) {
+    return (payload as { pieces: ContentPiece[] }).pieces;
+  }
+  return [];
+}
+
 function mapStudioPiece(piece: ContentPiece): StudioPiece {
   return {
     id: piece.id,
-    title: piece.title,
-    formatType: piece.formatType,
+    title: piece.title ?? "",
+    formatType: piece.formatType ?? "blog_post",
     targetKeyword: piece.targetKeyword ?? null,
-    status: piece.status,
-    wordCount: piece.wordCount,
+    status: piece.status ?? "draft",
+    wordCount: typeof piece.wordCount === "number" && Number.isFinite(piece.wordCount) ? piece.wordCount : 0,
     plannedDate: piece.plannedDate ?? null,
     updatedAt: piece.updatedAt,
   };
@@ -34,7 +47,10 @@ export function useStudioData(projectId: string | null) {
 
   const piecesQuery = useQuery({
     queryKey: queryKeys.contentPieces(projectId),
-    queryFn: () => fetchProjectContentPieces(projectId!),
+    queryFn: async () => {
+      const payload = await fetchProjectContentPieces(projectId!);
+      return asContentPieceRows(payload);
+    },
     enabled: Boolean(projectId),
     staleTime: 10_000,
     placeholderData: (previousData) => previousData,

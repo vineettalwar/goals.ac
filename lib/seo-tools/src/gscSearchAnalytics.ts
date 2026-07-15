@@ -1,3 +1,5 @@
+import { formatAnalyticsDate } from "./analyticsDateRange";
+
 export type GscSearchAnalyticsRow = {
   keys: string[];
   clicks: number;
@@ -81,20 +83,8 @@ export async function fetchAllSearchAnalytics(
   return all;
 }
 
-export function formatGscDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-export function defaultSyncDateRange(days = 28): { startDate: string; endDate: string } {
-  const end = new Date();
-  end.setUTCDate(end.getUTCDate() - 3);
-  const start = new Date(end);
-  start.setUTCDate(start.getUTCDate() - (days - 1));
-  return {
-    startDate: formatGscDate(start),
-    endDate: formatGscDate(end),
-  };
-}
+export { defaultSyncDateRange } from "./analyticsDateRange";
+export const formatGscDate = formatAnalyticsDate;
 
 export function priorPeriodRange(
   startDate: string,

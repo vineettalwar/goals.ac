@@ -119,7 +119,7 @@ export function FastLanePage() {
       clearAutopilotIntent();
     } catch (err) {
       setPhase("error");
-      setError(err instanceof Error ? err.message : "Setup failed. Check Settings → AI Providers for BYOK.");
+      setError(err instanceof Error ? err.message : "Setup failed. Check Integrations → AI for BYOK.");
     }
   }, [projectId, pollProgress]);
 
@@ -190,7 +190,7 @@ export function FastLanePage() {
                 articles in the dashboard.
               </p>
               {visibilitySnapshot ? (
-                <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-secondary/30 p-4 text-center">
+                <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-secondary/30 p-4 text-center sm:grid-cols-2">
                   <div>
                     <p className="text-xl font-bold">{visibilitySnapshot.visibilityScore}%</p>
                     <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
@@ -211,7 +211,7 @@ export function FastLanePage() {
               <div className="flex flex-col gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => navigate(`/integrations?project=${projectId}`)}
+                  onClick={() => navigate(`/projects/${projectId}/integrations`)}
                   className="rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
                 >
                   Connect WordPress →

@@ -81,6 +81,12 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
     if (isSourceFilter(source)) {
       setIdeasSourceFilter(source);
     }
+    const keyword = searchParams.get("keyword")?.trim();
+    if (keyword) {
+      setKeywordInput(keyword);
+      setTrackInput(keyword);
+      if (!tab) setActiveTab("analyzer");
+    }
     if (searchParams.get("sheets") === "connected") {
       toast.success("Google Sheets connected");
     }
@@ -264,6 +270,7 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
                 onKeywordInputChange={setKeywordInput}
                 onWebsiteUrlChange={setWebsiteUrl}
                 onAnalyze={handleAnalyze}
+                projectId={projectId}
               />
             </TabsContent>
           </Tabs>

@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import type { SectionLinkProps } from "../section/types";
 import { cn } from "../cn";
-import { KeywordRankChart, type KeywordRankSnapshot } from "./keyword-rank-chart";
+import { KeywordRankChart, SerpFeaturesPanel, parseSerpFeatures, type KeywordRankSnapshot } from "./keyword-rank-chart";
 import { btnOutline, btnPrimary, inputClass, PanelLoading, StatusPill } from "./shared";
 
 export type KeywordSourceFilter =
@@ -29,7 +29,8 @@ export type KeywordSourceFilter =
   | "imports"
   | "ai_analysis"
   | "competitor_gap"
-  | "rank_drop";
+  | "rank_drop"
+  | "content_refresh";
 
 export type KeywordOpportunityRow = {
   id: number;
@@ -40,6 +41,7 @@ export type KeywordOpportunityRow = {
   suggestedTitle: string;
   suggestedAngle: string;
   estimatedVolume?: string | null;
+  linkedContentPieceId?: number | null;
 };
 
 export type KeywordAlertRow = {
@@ -51,7 +53,10 @@ export type KeywordAlertRow = {
 export type TrackedKeywordRow = {
   id: number;
   keyword: string;
-  latestSnapshot?: { position?: number | null } | null;
+  latestSnapshot?: {
+    position?: number | null;
+    serpFeatures?: Record<string, unknown>;
+  } | null;
 };
 
 export type KeywordAnalysisResult = {
@@ -103,6 +108,7 @@ const SOURCE_LABELS: Record<string, string> = {
   ai_analysis: "AI analysis",
   competitor_gap: "Competitor gap",
   rank_drop: "Rank drop",
+  content_refresh: "Needs refresh",
 };
 
 const FILTER_CHIPS: Array<{ id: KeywordSourceFilter; label: string }> = [
@@ -115,6 +121,7 @@ const FILTER_CHIPS: Array<{ id: KeywordSourceFilter; label: string }> = [
   { id: "ai_analysis", label: "AI" },
   { id: "competitor_gap", label: "Competitor" },
   { id: "rank_drop", label: "Rank drop" },
+  { id: "content_refresh", label: "Needs refresh" },
 ];
 
 const IMPORT_SOURCES = new Set(["csv_import", "google_sheets", "manual"]);
@@ -162,19 +169,25 @@ function ArticleIdeasList({
   opportunities,
   queryMetrics,
   studioHref,
+  contentPieceHref,
   renderLink,
   onQueue,
+  onQueueAndGenerate,
   onDismiss,
   queueingId,
+  generatingId,
   dismissingId,
 }: {
   opportunities: KeywordOpportunityRow[];
   queryMetrics: Map<string, GscQueryMetric>;
   studioHref?: (opp: KeywordOpportunityRow) => string;
+  contentPieceHref?: (pieceId: number) => string;
   renderLink: (props: SectionLinkProps) => ReactNode;
   onQueue?: (id: number) => void;
+  onQueueAndGenerate?: (id: number) => void;
   onDismiss?: (id: number) => void;
   queueingId?: number | null;
+  generatingId?: number | null;
   dismissingId?: number | null;
 }) {
   return (
@@ -212,6 +225,26 @@ function ArticleIdeasList({
               ) : null}
             </div>
             <div className="flex shrink-0 flex-col gap-1">
+              {opp.linkedContentPieceId && contentPieceHref ? (
+                <SectionLink
+                  renderLink={renderLink}
+                  href={contentPieceHref(opp.linkedContentPieceId)}
+                  className={btnPrimary}
+                >
+                  <RefreshCw className="mr-1 inline h-3.5 w-3.5" />
+                  Refresh article
+                </SectionLink>
+              ) : null}
+              {onQueueAndGenerate && !opp.linkedContentPieceId ? (
+                <button
+                  type="button"
+                  disabled={generatingId === opp.id}
+                  className={btnPrimary}
+                  onClick={() => onQueueAndGenerate(opp.id)}
+                >
+                  {generatingId === opp.id ? "Generating…" : "Add & generate"}
+                </button>
+              ) : null}
               {onQueue ? (
                 <button
                   type="button"
@@ -269,8 +302,10 @@ export function KeywordTrackingView({
   onDiscover,
   onGscSync,
   onQueueOpportunity,
+  onQueueAndGenerate,
   onDismissOpportunity,
   queueingId,
+  generatingId,
   dismissingId,
   tracked,
   trackInput,
@@ -319,6 +354,7 @@ export function KeywordTrackingView({
   settingsHref,
   visibilityHref,
   studioHref,
+  contentPieceHref,
   renderLink,
   error,
 }: {
@@ -352,8 +388,10 @@ export function KeywordTrackingView({
   onDiscover?: (source: "semrush" | "gsc" | "ai", refresh?: boolean) => void;
   onGscSync?: () => void;
   onQueueOpportunity?: (id: number) => void;
+  onQueueAndGenerate?: (id: number) => void;
   onDismissOpportunity?: (id: number) => void;
   queueingId?: number | null;
+  generatingId?: number | null;
   dismissingId?: number | null;
   tracked: TrackedKeywordRow[];
   trackInput: string;
@@ -402,6 +440,7 @@ export function KeywordTrackingView({
   settingsHref?: string;
   visibilityHref?: string;
   studioHref?: (opp: KeywordOpportunityRow) => string;
+  contentPieceHref?: (pieceId: number) => string;
   renderLink: (props: SectionLinkProps) => ReactNode;
   error?: string | null;
 }) {
@@ -475,6 +514,30 @@ export function KeywordTrackingView({
                   to align the database.
                 </>
               ) : null}
+            </div>
+          ) : null}
+
+          {!semrushStatus?.configured ? (
+            <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
+              <p className="font-medium">Working without Semrush</p>
+              <p className="mt-1 text-muted-foreground">
+                Use From GSC for real query opportunities, or AI gaps for estimated clusters. Volume
+                stays blank until you connect Semrush
+                {settingsHref ? (
+                  <>
+                    {" "}
+                    in{" "}
+                    <SectionLink
+                      renderLink={renderLink}
+                      href={settingsHref}
+                      className="font-medium text-primary hover:underline"
+                    >
+                      Integrations → Tools
+                    </SectionLink>
+                  </>
+                ) : null}
+                .
+              </p>
             </div>
           ) : null}
 
@@ -588,10 +651,13 @@ export function KeywordTrackingView({
                 opportunities={filteredOpportunities}
                 queryMetrics={queryMetrics}
                 studioHref={studioHref}
+                contentPieceHref={contentPieceHref}
                 renderLink={renderLink}
                 onQueue={onQueueOpportunity}
+                onQueueAndGenerate={onQueueAndGenerate}
                 onDismiss={onDismissOpportunity}
                 queueingId={queueingId}
+                generatingId={generatingId}
                 dismissingId={dismissingId}
               />
             )}
@@ -883,7 +949,17 @@ export function KeywordTrackingView({
               </div>
             ))}
           </div>
-          {selectedTrackedId != null ? <KeywordRankChart snapshots={snapshots} /> : null}
+          {selectedTrackedId != null ? (
+            <>
+              <KeywordRankChart snapshots={snapshots} />
+              <SerpFeaturesPanel
+                features={parseSerpFeatures(
+                  snapshots[0]?.serpFeatures ??
+                    tracked.find((kw) => kw.id === selectedTrackedId)?.latestSnapshot?.serpFeatures,
+                )}
+              />
+            </>
+          ) : null}
         </div>
       ) : null}
 

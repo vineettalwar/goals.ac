@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { projectIdFromPathname } from "@workspace/app-shell";
 import { navigationTargetForActiveProject } from "@/lib/active-project/routing";
 import { fetchWebsiteProjects } from "@/lib/queries/fetchers";
 import { removeProjectScopedQueries } from "@/lib/queries/invalidate-project-queries";
@@ -32,7 +33,8 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
-  const paramId = searchParams.get("project");
+  const pathProjectId = projectIdFromPathname(pathname);
+  const rawParamId = searchParams.get("project");
 
   const {
     data: projects = [],
@@ -46,18 +48,20 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
   });
 
   const projectId = useMemo(() => {
-    const candidate = paramId ?? localStorage.getItem(STORAGE_KEY) ?? "";
+    const fromPath = pathProjectId != null ? String(pathProjectId) : "";
+    const candidate = fromPath || localStorage.getItem(STORAGE_KEY) || "";
     if (candidate && projects.some((row) => String(row.id) === candidate)) {
       return candidate;
     }
     return projects[0] ? String(projects[0].id) : candidate;
-  }, [paramId, projects]);
+  }, [pathProjectId, projects]);
 
   useEffect(() => {
     if (projects.length === 0) return;
 
+    const fromPath = pathProjectId != null ? String(pathProjectId) : "";
     const stored = localStorage.getItem(STORAGE_KEY);
-    const candidate = paramId ?? stored ?? "";
+    const candidate = fromPath || stored || "";
     const valid =
       candidate && projects.some((row) => String(row.id) === candidate)
         ? candidate
@@ -68,17 +72,19 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
     if (!valid) return;
 
     localStorage.setItem(STORAGE_KEY, valid);
-    if (paramId !== valid) {
+
+    // Strip legacy ?project= everywhere (path / storage own scope).
+    if (rawParamId != null) {
       setSearchParams(
         (prev) => {
           const next = new URLSearchParams(prev);
-          next.set("project", valid);
+          next.delete("project");
           return next;
         },
         { replace: true },
       );
     }
-  }, [projects, paramId, setSearchParams]);
+  }, [projects, pathProjectId, rawParamId, setSearchParams]);
 
   const setProjectId = useCallback(
     (id: string) => {
@@ -95,24 +101,13 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
         : null;
 
       if (navigationTarget) {
-        const query = searchParams.toString();
-        const nextQuery = new URLSearchParams(query);
-        nextQuery.set("project", id);
+        const nextQuery = new URLSearchParams(searchParams.toString());
+        nextQuery.delete("project");
         const queryString = nextQuery.toString();
         navigate(queryString ? `${navigationTarget}?${queryString}` : navigationTarget);
-        return;
       }
-
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set("project", id);
-          return next;
-        },
-        { replace: true },
-      );
     },
-    [queryClient, pathname, searchParams, navigate, setSearchParams],
+    [queryClient, pathname, searchParams, navigate],
   );
 
   const activeProject = useMemo(

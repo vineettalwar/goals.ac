@@ -35,6 +35,16 @@ Before finishing a change, grep for `\bensure\b` in touched paths and fix any hi
 
 Zero `.github/workflows/`. Deploy via Cloudflare Workers Builds. Validate locally: `pnpm run typecheck`, package builds, `docker compose config --quiet`.
 
+## No Sparkles / glitter icons
+
+Lucide **`Sparkles`** (glitter / “AI magic” star) is **banned** in product UI.
+
+- Do not put Sparkles on Generate, Humanize, Enhance, or similar actions.
+- Prefer `RefreshCw`, `PenLine`, `FileText`, `TrendingUp`, or text-only.
+- Before finishing UI work, grep touched paths for `Sparkles` and remove hits.
+
+**Enforced in:** `.cursor/rules/no-sparkles.mdc`, `docs/memory.md`.
+
 ## Build artifacts — do not commit
 
 These are generated locally or in CI/Workers Builds and are **gitignored**. Never add them to git:
