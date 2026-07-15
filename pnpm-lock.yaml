@@ -363,6 +363,12 @@ importers:
 
   artifacts/cf-read-worker:
     dependencies:
+      '@workspace/ai-providers':
+        specifier: workspace:*
+        version: link:../../lib/ai-providers
+      '@workspace/billing':
+        specifier: workspace:*
+        version: link:../../lib/billing
       '@workspace/cf-edge':
         specifier: workspace:*
         version: link:../../lib/cf-edge
@@ -372,6 +378,9 @@ importers:
       '@workspace/db':
         specifier: workspace:*
         version: link:../../lib/db
+      '@workspace/security':
+        specifier: workspace:*
+        version: link:../../lib/security
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
@@ -391,9 +400,18 @@ importers:
 
   artifacts/cf-write-worker:
     dependencies:
+      '@workspace/ai-providers':
+        specifier: workspace:*
+        version: link:../../lib/ai-providers
+      '@workspace/billing':
+        specifier: workspace:*
+        version: link:../../lib/billing
       '@workspace/cf-edge':
         specifier: workspace:*
         version: link:../../lib/cf-edge
+      '@workspace/connectors':
+        specifier: workspace:*
+        version: link:../../lib/connectors
       '@workspace/content-engine':
         specifier: workspace:*
         version: link:../../lib/content-engine
@@ -403,6 +421,12 @@ importers:
       '@workspace/jobs':
         specifier: workspace:*
         version: link:../../lib/jobs
+      '@workspace/security':
+        specifier: workspace:*
+        version: link:../../lib/security
+      bcryptjs:
+        specifier: ^3.0.3
+        version: 3.0.3
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.1(@cloudflare/workers-types@5.20260713.1)(@types/pg@8.18.0)(pg@8.20.0)
@@ -621,6 +645,9 @@ importers:
       '@workspace/api-client-react':
         specifier: workspace:*
         version: link:../../lib/api-client-react
+      '@workspace/app-shell':
+        specifier: workspace:*
+        version: link:../../lib/app-shell
       lucide-react:
         specifier: 'catalog:'
         version: 0.545.0(react@19.1.0)
@@ -718,6 +745,9 @@ importers:
       '@workspace/ai-providers':
         specifier: workspace:*
         version: link:../../lib/ai-providers
+      '@workspace/app-shell':
+        specifier: workspace:*
+        version: link:../../lib/app-shell
       '@workspace/billing':
         specifier: workspace:*
         version: link:../../lib/billing
@@ -1104,6 +1134,28 @@ importers:
       zod:
         specifier: 'catalog:'
         version: 3.25.76
+
+  lib/app-shell:
+    dependencies:
+      clsx:
+        specifier: 'catalog:'
+        version: 2.1.1
+      lucide-react:
+        specifier: 'catalog:'
+        version: 0.545.0(react@19.1.0)
+      react:
+        specifier: 'catalog:'
+        version: 19.1.0
+      tailwind-merge:
+        specifier: 'catalog:'
+        version: 3.5.0
+    devDependencies:
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      typescript:
+        specifier: ~5.9.2
+        version: 5.9.3
 
   lib/billing:
     dependencies:

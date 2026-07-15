@@ -145,9 +145,16 @@ Bindings are pre-wired in `wrangler.jsonc`. Enable **Cloudflare Images** on your
 pnpm run cf:edge:deploy
 pnpm run cf:deploy:jobs
 
-# Set secrets on read + write workers (same AUTH_SECRET as NextAuth)
-cd artifacts/cf-read-worker && pnpm exec wrangler secret put AUTH_SECRET
-cd ../cf-write-worker && pnpm exec wrangler secret put AUTH_SECRET
+# Set secrets on read + write workers (same AUTH_SECRET as NextAuth).
+# Use `versions secret put` — Workers Builds can leave uploaded versions undeployed,
+# and `wrangler secret put` fails in that state (it tries to auto-deploy).
+cd artifacts/cf-read-worker
+pnpm exec wrangler versions secret put AUTH_SECRET
+pnpm exec wrangler versions deploy -y
+
+cd ../cf-write-worker
+pnpm exec wrangler versions secret put AUTH_SECRET
+pnpm exec wrangler versions deploy -y
 ```
 
 ### 4. Deploy Pages
@@ -239,7 +246,7 @@ Connect three additional Workers Builds projects (or one build that runs `pnpm r
 | `goals-ac-write` | `pnpm --filter @workspace/cf-write-worker run deploy` |
 | `goals-ac-gateway` | `pnpm --filter @workspace/cf-gateway run deploy` |
 
-Set `AUTH_SECRET` on **read** and **write** Workers via dashboard secrets.
+Set `AUTH_SECRET` on **read** and **write** Workers via [dashboard secrets](#3-deploy-edge-mesh-workers) or `wrangler versions secret put` + `wrangler versions deploy -y` (see §3 above).
 
 ### 5. Pages — `goals-ac-marketing` and `goals-ac-app`
 
@@ -250,7 +257,7 @@ Direct-upload Pages projects **cannot** add Git later. If the dashboard shows **
 | Pages project | Build command | Output dir | Watch paths |
 |---|---|---|---|
 | `goals-ac-marketing` | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workspace/marketing-pages run build` | `artifacts/marketing-pages/dist` | `artifacts/marketing-pages/**`, `artifacts/marketing-persona-app/**`, `scripts/build-marketing-static.mjs` |
-| `goals-ac-app` | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workspace/goals-app-ui run build` | `artifacts/goals-app-ui/dist` | `artifacts/goals-app-ui/**`, `lib/api-client-react/**`, `lib/api-zod/**` |
+| `goals-ac-app` | `corepack enable && pnpm install --frozen-lockfile && pnpm --filter @workspace/goals-app-ui run build` | `artifacts/goals-app-ui/dist` | `artifacts/goals-app-ui/**`, `lib/app-shell/**`, `lib/api-client-react/**`, `lib/api-zod/**` |
 
 Dashboard fallback (per project): **Workers & Pages → project → Settings → Builds → Connect** → repo `vineettalwar/goals.ac`, branch `main`, root `/`, build command and output dir from the table above.
 
@@ -355,7 +362,8 @@ At scale, migrate brand voice retrieval from D1 JSON cosine to **Vectorize**. St
 | `no such table` | Run `pnpm run cf:migrate:d1` |
 | Jobs never run | Deploy `goals-ac-jobs` Worker; check queue consumer + DLQ |
 | Worker too large | Workers Paid; R2 cache enabled; audit server imports |
-| Rate limits not shared | Ensure KV `RATE_LIMIT` binding is set |
+| Rate limits not shared | Verify KV `RATE_LIMIT` binding is set |
+| `Secret edit failed… latest version isn't currently deployed` | Use `wrangler versions secret put KEY` then `wrangler versions deploy -y` instead of `wrangler secret put` |
 | Brand voice slow on D1 | Expected at scale — enable Vectorize (phase 5) |
 
 ## Files
