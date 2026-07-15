@@ -147,7 +147,7 @@ export function DashboardAutopilotSection({
           <p className="mt-1 text-sm text-muted-foreground">
             {settings?.enabled
               ? `${settings.cadence === "daily" ? "Daily" : "Weekly"} · ${settings.publishMode ?? "review"} publish mode`
-              : "Autopilot is off — enable in Publishing settings"}
+              : "Autopilot is off — enable on the Autopilot page"}
           </p>
         </div>
         <div className="flex shrink-0 gap-2">

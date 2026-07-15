@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../../../lib/app-shell/src";
 @import "@workspace/app-shell/product-theme.css";
 
 @theme inline {
