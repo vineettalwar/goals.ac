@@ -192,6 +192,10 @@ export function CreateContentDialog({
   const progress = ((stepIndex + 1) / steps.length) * 100;
   const isLinkedIn = formatType === "linkedin_post";
   const showGenerating = submitting && currentStep === "review";
+  const parsedCompetitorUrls = isSeoLongform(formatType)
+    ? parseCompetitorUrlInput(competitorUrlsText)
+    : [];
+  const competitorFocusUrl = parsedCompetitorUrls[0];
 
   function goBack() {
     if (submitting || stepIndex <= 0) return;
@@ -556,8 +560,15 @@ export function CreateContentDialog({
                     value={angleHint.trim()}
                   />
                 ) : null}
-                {competitorFocusUrl.trim() ? (
-                  <ReviewRow label="Competitor" value={competitorFocusUrl.trim()} />
+                {competitorFocusUrl ? (
+                  <ReviewRow
+                    label="Competitors"
+                    value={
+                      parsedCompetitorUrls.length > 1
+                        ? `${competitorFocusUrl} (primary) · ${parsedCompetitorUrls.length} total`
+                        : competitorFocusUrl
+                    }
+                  />
                 ) : null}
                 {plannedDate.trim() ? (
                   <ReviewRow label="Planned date" value={plannedDate.trim()} />

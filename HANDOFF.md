@@ -1,5 +1,27 @@
 # Session Handoff
 
+## Continuous polish closure (2026-07-16)
+
+Ship-complete demo polish across content, social, CMS, and shell — no open blockers in this batch.
+
+| Area | Done |
+|---|---|
+| SEO scores | Dual score honesty labels + Refresh SERP |
+| Dashboard | Autopilot settings block + articles X/30 + internal-links coverage chip |
+| Social | Preview chrome for all 6 platforms + calendar accents + analytics best-time slots |
+| Queue | Social push includes Meta FB/IG (IG when image present) |
+| Content visuals | Visual summary SVG callout + sharp PNG featured fallback |
+| Shell create | Multi-step wizard + LinkedIn archetypes/hooks + multi competitor URLs |
+| Shopify | Theme-snippet soft preflight + learn post |
+| CMS media | Ghost Lexical inline images + TYPO3 FAL textmedia |
+| Stories / briefs | Partner success-story template + Create from brief CTA |
+
+**Deferred (not blocking):** hosted blog, Surfer NLP, TikTok, Shopify theme app block.
+
+Detail sections below retain file pointers and edge notes from the work that got us here.
+
+---
+
 ## Social analytics best-time slots (2026-07-16)
 
 `bestTimeMode: analytics` in `suggestNextSlot` no longer stubs a single UTC hour.
