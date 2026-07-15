@@ -10,8 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "@workspace/ai-providers": "workspace:*",
+    "@workspace/billing": "workspace:*",
     "@workspace/cf-edge": "workspace:*",
+    "@workspace/connectors": "workspace:*",
     "@workspace/content-engine": "workspace:*",
+    "@workspace/security": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/jobs": "workspace:*",
     "drizzle-orm": "catalog:",

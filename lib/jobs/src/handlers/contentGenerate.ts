@@ -1,9 +1,14 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { contentPiecesTable, websiteProjectsTable } from "@workspace/db";
+import { contentPiecesTable, websiteProjectsTable, type ContentFormatType } from "@workspace/db";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { ContentGeneratePayload, PgBoss } from "@workspace/jobs";
-import { generateFromContentItem } from "@workspace/content-engine/strategy/autopilot-orchestrator";
+import {
+  generateFromContentItem,
+  type GenerateFromItemResult,
+} from "@workspace/content-engine/strategy/autopilot-orchestrator";
+import { generateContentPiece } from "@workspace/content-engine/content/content-studio-generator";
+import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
 import {
@@ -69,9 +74,90 @@ async function finalizeGeneratedPieces(params: {
   // manual mode — pieces remain draft for human review
 }
 
+async function generateExistingContentPiece(
+  contentPieceId: number,
+  projectId: number,
+  userId: number,
+  options: {
+    userApiKey?: string | null;
+    aiProviderOptions?: Awaited<ReturnType<typeof getUserAiProviderOptions>>;
+  },
+): Promise<GenerateFromItemResult> {
+  const [piece] = await db
+    .select()
+    .from(contentPiecesTable)
+    .where(eq(contentPiecesTable.id, contentPieceId))
+    .limit(1);
+  if (!piece) throw new Error("Content piece not found");
+
+  const [project] = await db
+    .select({ id: websiteProjectsTable.id })
+    .from(websiteProjectsTable)
+    .where(and(eq(websiteProjectsTable.id, projectId), eq(websiteProjectsTable.userId, userId)))
+    .limit(1);
+  if (!project || piece.websiteProjectId !== projectId) {
+    throw new Error("Project not found or access denied");
+  }
+
+  await db
+    .update(contentPiecesTable)
+    .set({ status: "generating" })
+    .where(eq(contentPiecesTable.id, contentPieceId));
+
+  try {
+    const brand = await loadBrandContextForProject(projectId);
+    if (!brand) throw new Error("Project not found");
+
+    const generated = await generateContentPiece(
+      piece.formatType as ContentFormatType,
+      brand,
+      piece.targetKeyword ?? "",
+      undefined,
+      true,
+      options.userApiKey,
+      options.aiProviderOptions,
+    );
+
+    const wordCount = generated.body_markdown.split(/\s+/).filter(Boolean).length;
+
+    await db
+      .update(contentPiecesTable)
+      .set({
+        title: generated.title || piece.title,
+        bodyMarkdown: generated.body_markdown,
+        wordCount,
+        status: "draft",
+        pieceMetadata: generated.pieceMetadata ?? null,
+      })
+      .where(eq(contentPiecesTable.id, contentPieceId));
+
+    return {
+      primaryPieceId: contentPieceId,
+      variantPieceIds: [],
+      generationUsage: generated.generationUsage,
+    };
+  } catch (err) {
+    await db
+      .update(contentPiecesTable)
+      .set({ status: "failed" })
+      .where(eq(contentPiecesTable.id, contentPieceId));
+    throw err;
+  }
+}
+
 export async function processContentGenerate(payload: ContentGeneratePayload): Promise<void> {
-  const { contentItemId, projectId, userId, generateVariants, schedulePublish, triggeredByAutopilot } =
-    payload;
+  const {
+    contentItemId,
+    contentPieceId,
+    projectId,
+    userId,
+    generateVariants,
+    schedulePublish,
+    triggeredByAutopilot,
+  } = payload;
+  if (!contentItemId && !contentPieceId) {
+    throw new Error("contentItemId or contentPieceId required");
+  }
   let billingCtx: AiBillingContext | null = null;
   try {
     const [userApiKey, aiProviderOptions] = await Promise.all([
@@ -89,16 +175,24 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
 
     if (!billingPrep.ok) {
       const reason = billingPrep.error.reason;
-      logger.warn({ contentItemId, userId, reason }, "Content generate job skipped: billing denied");
+      logger.warn(
+        { contentItemId, contentPieceId, userId, reason },
+        "Content generate job skipped: billing denied",
+      );
       throw new Error(`billing_denied:${reason}`);
     }
     billingCtx = billingPrep.ctx;
 
-    const result = await generateFromContentItem(contentItemId, projectId, userId, {
-      generateVariants: generateVariants !== false,
+    const genOptions = {
       userApiKey,
       aiProviderOptions,
-    });
+    };
+    const result = contentPieceId
+      ? await generateExistingContentPiece(contentPieceId, projectId, userId, genOptions)
+      : await generateFromContentItem(contentItemId!, projectId, userId, {
+          ...genOptions,
+          generateVariants: generateVariants !== false,
+        });
 
     const [project] = await db
       .select({ autopilotSettings: websiteProjectsTable.autopilotSettings })
@@ -124,7 +218,7 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
       totalTokens: result.generationUsage?.totalTokens,
     });
 
-    logger.info({ contentItemId, autoPublish, ...result }, "Content generate job completed");
+    logger.info({ contentItemId, contentPieceId, autoPublish, ...result }, "Content generate job completed");
   } catch (err) {
     if (billingCtx) {
       await cancelAiBillingSession(
@@ -132,7 +226,7 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
         err instanceof Error ? err.message : "content_generate_failed",
       );
     }
-    logger.error({ err, contentItemId }, "Content generate job failed");
+    logger.error({ err, contentItemId, contentPieceId }, "Content generate job failed");
     throw err;
   }
 }

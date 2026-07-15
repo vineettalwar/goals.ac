@@ -30,6 +30,7 @@ import {
   handleAuthLogout,
   handleAuthSignup,
 } from "./auth";
+import { handleGoogleAuthCallback, handleGoogleAuthStart } from "./auth-google";
 import { kvGetJson, kvPutJson } from "@workspace/cf-edge/kv-cache";
 import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
@@ -39,6 +40,8 @@ export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
   CF_EDGE_HTTP: string;
   AUTH_SECRET: string;
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
 }
 
 /** D1-only worker — `getDb()` is always SQLite after `setD1Binding()`. */
@@ -219,6 +222,16 @@ async function handle(request: Request, env: Env): Promise<Response> {
 
     if (path === "/api/auth/logout" && request.method === "POST") {
       const response = handleAuthLogout(request);
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/google" && request.method === "GET") {
+      const response = await handleGoogleAuthStart(request, env);
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/google/callback" && request.method === "GET") {
+      const response = await handleGoogleAuthCallback(request, env, db());
       return withCors(request, response);
     }
 

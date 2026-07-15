@@ -10,6 +10,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@workspace/ai-providers": "workspace:*",
+    "@workspace/security": "workspace:*",
+    "@workspace/billing": "workspace:*",
     "@workspace/cf-edge": "workspace:*",
     "@workspace/content-engine": "workspace:*",
     "@workspace/db": "workspace:*",

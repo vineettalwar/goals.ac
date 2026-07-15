@@ -9,6 +9,17 @@ import { verifySessionClaims } from "@workspace/cf-edge/jwt";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
 import { z } from "zod";
 import { handleCmsIntegrationsWrite } from "./cms-integrations";
+import { handleCmsIntegrationsTest } from "./cms-integrations-test";
+import { handleContentPiecesWrite } from "./content-pieces";
+import { handleAutopilotSettingsWrite } from "./autopilot-settings";
+import { handleWebsiteProjectsWrite } from "./website-projects";
+import { handleAuthMeWrite } from "./auth-me";
+import { handleAuthChangePassword } from "./auth-change-password";
+import { handleAuthDeleteAccount } from "./auth-delete-account";
+import { handleAuthApiKeyWrite } from "./auth-api-key";
+import { handleAiProvidersSettingsWrite } from "./ai-providers-settings";
+import { handleAuthOpenaiWrite } from "./auth-openai";
+import { handleAuthAnthropicWrite } from "./auth-anthropic";
 
 export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
@@ -18,12 +29,17 @@ export interface Env extends CfEdgeBindings {
   GEMINI_KEY_ENCRYPTION_SECRET: string;
 }
 
-const contentGenerateBody = z.object({
-  contentItemId: z.number().int().positive(),
-  projectId: z.number().int().positive(),
-  generateVariants: z.boolean().optional(),
-  schedulePublish: z.boolean().optional(),
-});
+const contentGenerateBody = z
+  .object({
+    contentItemId: z.number().int().positive().optional(),
+    contentPieceId: z.number().int().positive().optional(),
+    projectId: z.number().int().positive(),
+    generateVariants: z.boolean().optional(),
+    schedulePublish: z.boolean().optional(),
+  })
+  .refine((data) => data.contentItemId != null || data.contentPieceId != null, {
+    message: "contentItemId or contentPieceId required",
+  });
 
 const contentPublishBody = z.object({
   contentPieceId: z.number().int().positive(),
@@ -64,8 +80,43 @@ export default {
     const userId = Number.parseInt(session.id, 10);
 
     try {
+      const cmsTestHandled = await handleCmsIntegrationsTest(request, path, userId);
+      if (cmsTestHandled) return cmsTestHandled;
+
       const cmsHandled = await handleCmsIntegrationsWrite(request, path, userId);
       if (cmsHandled) return cmsHandled;
+
+      const authMeHandled = await handleAuthMeWrite(request, path, userId);
+      if (authMeHandled) return authMeHandled;
+
+      const changePasswordHandled = await handleAuthChangePassword(request, path, userId);
+      if (changePasswordHandled) return changePasswordHandled;
+
+      const deleteAccountHandled = await handleAuthDeleteAccount(request, path, userId);
+      if (deleteAccountHandled) return deleteAccountHandled;
+
+      const apiKeyHandled = await handleAuthApiKeyWrite(request, path, userId);
+      if (apiKeyHandled) return apiKeyHandled;
+
+      const openaiHandled = await handleAuthOpenaiWrite(request, path, userId);
+      if (openaiHandled) return openaiHandled;
+
+      const anthropicHandled = await handleAuthAnthropicWrite(request, path, userId);
+      if (anthropicHandled) return anthropicHandled;
+
+      const aiProvidersHandled = await handleAiProvidersSettingsWrite(request, path, userId);
+      if (aiProvidersHandled) return aiProvidersHandled;
+
+      const autopilotHandled = await handleAutopilotSettingsWrite(request, path, userId);
+      if (autopilotHandled) return autopilotHandled;
+
+      const projectsHandled = await handleWebsiteProjectsWrite(request, path, userId);
+      if (projectsHandled) return projectsHandled;
+
+      const contentPiecesHandled = await handleContentPiecesWrite(request, path, userId, (jobId, queue, meta) =>
+        trackJob(env, jobId, queue, meta),
+      );
+      if (contentPiecesHandled) return contentPiecesHandled;
 
       if (path === "/api/content-pieces/generate" && request.method === "POST") {
         const parsed = contentGenerateBody.safeParse(await request.json().catch(() => null));

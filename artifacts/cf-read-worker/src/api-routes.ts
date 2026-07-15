@@ -28,6 +28,11 @@ import {
   decryptCmsCredentials,
   maskCmsCredentials,
 } from "@workspace/content-engine/support/publishing/cms-integrations";
+import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
+import { parseVisibilitySettings } from "@workspace/content-engine/support/settings/visibility-settings";
+import { getUsageSummaryForUser } from "./usage";
+import { handleAuthRead } from "./auth-read";
+import { getAiProviderStatusForUser } from "./ai-providers-status";
 
 export async function handleAuthenticatedRead(
   request: Request,
@@ -37,21 +42,61 @@ export async function handleAuthenticatedRead(
   const url = new URL(request.url);
 
   if (path === "/api/auth/me" && request.method === "GET") {
-    const [user] = await db
-      .select({
-        id: usersTable.id,
-        email: usersTable.email,
-        name: usersTable.name,
-        role: usersTable.role,
-        avatarUrl: usersTable.avatarUrl,
-      })
-      .from(usersTable)
-      .where(eq(usersTable.id, userId))
-      .limit(1);
+    const [user, orgSettings, membership] = await Promise.all([
+      db
+        .select({
+          id: usersTable.id,
+          email: usersTable.email,
+          name: usersTable.name,
+          role: usersTable.role,
+          avatarUrl: usersTable.avatarUrl,
+          googleId: usersTable.googleId,
+          passwordHash: usersTable.passwordHash,
+        })
+        .from(usersTable)
+        .where(eq(usersTable.id, userId))
+        .limit(1)
+        .then((rows) => rows[0]),
+      getOrgAiSettingsForUser(userId),
+      db
+        .select({ orgRole: organizationMembersTable.role })
+        .from(organizationMembersTable)
+        .where(eq(organizationMembersTable.userId, userId))
+        .limit(1)
+        .then((rows) => rows[0]),
+    ]);
     if (!user) {
       return withCors(request, Response.json({ error: "User not found" }, { status: 404 }));
     }
-    return withCors(request, Response.json({ user }));
+    return withCors(
+      request,
+      Response.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          avatarUrl: user.avatarUrl,
+        },
+        hasGeminiKey: Boolean(orgSettings?.encryptedGeminiKey),
+        hasGoogleId: Boolean(user.googleId),
+        hasPassword: Boolean(user.passwordHash),
+        orgRole: membership?.orgRole ?? null,
+      }),
+    );
+  }
+
+  if (path === "/api/usage" && request.method === "GET") {
+    const summary = await getUsageSummaryForUser(userId);
+    return withCors(request, Response.json({ usage: summary }));
+  }
+
+  const authReadHandled = await handleAuthRead(request, path, userId);
+  if (authReadHandled) return authReadHandled;
+
+  if (path === "/api/ai-providers/status" && request.method === "GET") {
+    const status = await getAiProviderStatusForUser(userId);
+    return withCors(request, Response.json(status));
   }
 
   if (path === "/api/companies" && request.method === "GET") {
@@ -78,7 +123,7 @@ export async function handleAuthenticatedRead(
   }
 
   if (path === "/api/roadmaps" && request.method === "GET") {
-    const limit = Math.min(parsePositiveInt(url.searchParams.get("limit")) ?? 20, 50);
+    const limit = Math.min(parsePositiveInt(url.searchParams.get("limit")) ?? 20, 100);
     const roadmaps = await db
       .select()
       .from(roadmapsTable)
@@ -207,7 +252,15 @@ export async function handleAuthenticatedRead(
       .from(brandProfilesTable)
       .where(eq(brandProfilesTable.websiteProjectId, projectId))
       .limit(1);
-    return withCors(request, Response.json(brandProfile ?? null));
+    return withCors(
+      request,
+      Response.json({
+        ...(brandProfile ?? {}),
+        scrapeStatus: project.scrapeStatus,
+        pageCount: project.pageCount ?? 0,
+        primaryKeywords: brandProfile?.primaryKeywords ?? [],
+      }),
+    );
   }
 
   const projectAutopilotMatch = path.match(/^\/api\/website-projects\/(\d+)\/autopilot-settings$/);
@@ -227,7 +280,10 @@ export async function handleAuthenticatedRead(
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
-    return withCors(request, Response.json(project.visibilitySettings ?? {}));
+    return withCors(
+      request,
+      Response.json(parseVisibilitySettings(project.visibilitySettings)),
+    );
   }
 
   const keywordOppMatch = path.match(/^\/api\/website-projects\/(\d+)\/keyword-opportunities$/);
@@ -237,42 +293,34 @@ export async function handleAuthenticatedRead(
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
-    const status = url.searchParams.get("status");
+    const status = url.searchParams.get("status") ?? "open";
     const opportunities = await db
       .select()
       .from(keywordOpportunitiesTable)
       .where(
-        status
-          ? and(
-              eq(keywordOpportunitiesTable.websiteProjectId, projectId),
-              eq(keywordOpportunitiesTable.status, status),
-            )
-          : eq(keywordOpportunitiesTable.websiteProjectId, projectId),
+        and(
+          eq(keywordOpportunitiesTable.websiteProjectId, projectId),
+          eq(keywordOpportunitiesTable.status, status),
+        ),
       )
-      .orderBy(desc(keywordOpportunitiesTable.createdAt))
+      .orderBy(desc(keywordOpportunitiesTable.opportunityScore))
       .limit(100);
     return withCors(request, Response.json({ opportunities }));
   }
 
   if (path === "/api/goals" && request.method === "GET") {
     const projectId = parsePositiveInt(url.searchParams.get("projectId"));
-    if (projectId) {
-      const project = await ownedProject(projectId, userId);
-      if (!project) {
-        return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
-      }
-      const goals = await db
-        .select(getTableColumns(goalsTable))
-        .from(goalsTable)
-        .where(eq(goalsTable.projectId, projectId))
-        .orderBy(desc(goalsTable.updatedAt));
-      return withCors(request, Response.json({ goals }));
+    if (!projectId) {
+      return withCors(request, Response.json({ error: "projectId is required" }, { status: 400 }));
+    }
+    const project = await ownedProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
     const goals = await db
       .select(getTableColumns(goalsTable))
       .from(goalsTable)
-      .innerJoin(websiteProjectsTable, eq(goalsTable.projectId, websiteProjectsTable.id))
-      .where(eq(websiteProjectsTable.userId, userId))
+      .where(eq(goalsTable.projectId, projectId))
       .orderBy(desc(goalsTable.updatedAt));
     return withCors(request, Response.json({ goals }));
   }

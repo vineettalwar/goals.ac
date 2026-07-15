@@ -64,7 +64,10 @@ export type KeywordRankCheckSweepPayload = Record<string, never>;
 export type KeywordRankCheckJobData = KeywordRankCheckPayload | KeywordRankCheckSweepPayload;
 
 export interface ContentGeneratePayload {
-  contentItemId: number;
+  /** Strategy calendar item — creates new piece(s). */
+  contentItemId?: number;
+  /** Existing studio draft — fills body on this piece. */
+  contentPieceId?: number;
   projectId: number;
   userId: number;
   generateVariants?: boolean;
