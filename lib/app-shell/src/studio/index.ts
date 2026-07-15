@@ -8,7 +8,12 @@ export {
   StudioView,
 } from "./studio-ui";
 export { StudioCalendarView } from "./studio-calendar";
-export { BrandAiProfileCard, StudioAiReadinessBanner, type BrandProfileSummary } from "./brand-ai-profile-card";
+export {
+  BrandAiProfileCard,
+  StudioAiReadinessBanner,
+  type BrandProfileSummary,
+  type BrandScanDiscoveryMeta,
+} from "./brand-ai-profile-card";
 export { aiProviderUnavailableMessage } from "./studio-hub-utils";
 export {
   filterStudioPieces,
