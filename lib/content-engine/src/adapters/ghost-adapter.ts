@@ -39,6 +39,7 @@ export const ghostAdapter: CmsAdapter = {
     const seo = resolveSeoFromCanonical(content);
     const title = seoTitle(content, seo);
     const meta = seo.metaDescription ? { description: seo.metaDescription } : undefined;
+    const featuredImageUrl = content.pieceMetadata?.featuredImageUrl?.trim() || undefined;
 
     if (outputMode === "lexical") {
       const lexicalDoc = markdownToGhostLexical(content.markdown);
@@ -50,6 +51,7 @@ export const ghostAdapter: CmsAdapter = {
           title,
           lexical,
           meta,
+          featuredImageUrl,
         },
         warnings,
         previewJson: lexicalDoc,
@@ -64,6 +66,7 @@ export const ghostAdapter: CmsAdapter = {
         title,
         html,
         meta,
+        featuredImageUrl,
       },
       warnings,
       previewHtml: html,
@@ -86,6 +89,7 @@ export const ghostAdapter: CmsAdapter = {
         status,
         payload.meta?.description,
         tags,
+        payload.featuredImageUrl,
       );
       return { url: result.url };
     }
@@ -99,6 +103,7 @@ export const ghostAdapter: CmsAdapter = {
       payload.meta?.description,
       tags,
       payload.html,
+      payload.featuredImageUrl,
     );
     return { url: result.url };
   },

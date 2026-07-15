@@ -102,6 +102,8 @@ export type PlatformPayload =
       html?: string;
       lexical?: string;
       meta?: Record<string, string>;
+      /** https or data:image/png|jpeg — uploaded via Ghost Admin images/upload */
+      featuredImageUrl?: string;
     }
   | {
       kind: "drupal";

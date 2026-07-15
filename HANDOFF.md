@@ -1,5 +1,17 @@
 # Session Handoff
 
+## Parallel unfinished-work agents (2026-07-16, in flight)
+
+| Workstream | Notes |
+|---|---|
+| Unify publish-destination registries | Prefer extending existing UI SSOT `lib/app-shell/src/integrations/destination-ids.ts` + Next composition — avoid a third parallel rewrite |
+| Consolidate CMS/ESP connect dialogs | Schema-driven collapse of `cms-connect-dialogs.tsx` / `esp-connect-dialogs.tsx` |
+| Notion adapter image blocks | External HTTPS image blocks in `notion-adapter.ts` |
+
+Avoid conflicting edits on those files until agents land.
+
+---
+
 ## Closure — social OAuth, destinations, WP media, create progress (2026-07-16)
 
 Batch closure for admin-backed social OAuth, destination SSOT, WP data-URI featured, shell create progress, and DB-aware social gates. Deferred lists elsewhere in this file are unchanged.

@@ -234,6 +234,8 @@ export async function publishPieceToCms(
         status,
         seo.metaDescription,
         tags,
+        undefined,
+        piece.pieceMetadata?.featuredImageUrl,
       );
       return result.url;
     }
