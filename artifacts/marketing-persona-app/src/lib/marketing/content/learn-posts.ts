@@ -184,7 +184,9 @@ Without Semrush, goals.ac still surfaces GSC-based opportunities and AI-estimate
     cta: { label: "Brand voice", href: "/brand-voice" },
     body: `Set humanization to Off, Light, or Strong in **Project → Brand**. Light polishes rhythm; Strong rewrites for a distinctly human read while preserving headings, citations, and schema.
 
-Add a writing sample so the humanizer mimics your cadence.`,
+Add a writing sample so the humanizer mimics your cadence.
+
+See a before/after demo at [/article-quality](/article-quality). Humanize also covers all social formats—not just long-form articles.`,
   },
   {
     slug: "api-keys-headless",

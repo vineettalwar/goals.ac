@@ -1,5 +1,20 @@
 # Session Handoff
 
+## Shell convergence + migrate 0064 (2026-07-15)
+
+Next Studio surfaces thin-wrap shell views:
+- `ContentStudioClient` → `StudioView`
+- `ContentPieceClient` → `ContentPieceView`
+- Slots: `headerExtra` / `asideExtra`; Generate empty draft CTA wired through shell
+- Brand AI profile card parity on shell (`BrandAiProfileCard` + `discoveryMeta`)
+- `FORMAT_CONFIGS` anti-slop softened; seo-v8 prompt updates
+
+**Migrate:** Postgres `0064_publish_records_output_mode` applied locally. D1 skipped (`.dev.vars` missing).
+
+**Remaining:** Next create wizard still Next-only; unused local Next studio files (e.g. self-fetching `brand-ai-profile-card.tsx`).
+
+---
+
 ## Brand AI profile card shell parity (2026-07-15)
 
 Shell `BrandAiProfileCard` now matches Next’s richer fields: discovery summary (“Scanned via …”), last scanned date, voice traits (already present), +N more scan sources. `BrandProfileSummary.discoveryMeta` expanded to sitemap/GSC/CMS/homepage shape. Next Studio hub loads brand profile via `loadContentStudioData` (not `useBrandProfile`) and passes it into shell `StudioView`.
