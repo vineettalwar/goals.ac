@@ -13,10 +13,35 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { Loader2 } from "lucide-react";
 import { cn } from "../cn";
-import { WEEK_DAY_LABELS, type SocialQueueItem } from "./types";
+import {
+  getSocialPlatformLimit,
+  isSocialOverCharLimit,
+  resolveSocialPlatformId,
+  socialPostCharCount,
+  WEEK_DAY_LABELS,
+  type SocialPlatformId,
+  type SocialQueueItem,
+} from "./types";
 import type { SocialHubLinkProps } from "./social-queue-panel";
 
-export type SocialCalendarItem = Pick<SocialQueueItem, "id" | "title" | "platform" | "scheduledAt">;
+export type SocialCalendarItem = Pick<
+  SocialQueueItem,
+  "id" | "title" | "platform" | "scheduledAt" | "bodyMarkdown" | "formatType"
+>;
+
+/** Subtle Buffer-style platform accents for calendar cards. */
+function platformCardClass(platformId: SocialPlatformId | null): string {
+  if (platformId === "linkedin") {
+    return "border-l-[3px] border-l-[#0A66C2] border-y border-r border-y-border border-r-border";
+  }
+  if (platformId === "twitter") {
+    return "border-l-[3px] border-l-neutral-900 border-y border-r border-y-border border-r-border dark:border-l-neutral-100";
+  }
+  if (platformId === "instagram") {
+    return "border border-transparent [background:linear-gradient(var(--card),var(--card))_padding-box,linear-gradient(135deg,#f09433_0%,#e6683c_25%,#dc2743_50%,#cc2366_75%,#bc1888_100%)_border-box]";
+  }
+  return "border border-border";
+}
 
 function formatYmd(d: Date): string {
   const y = d.getFullYear();
@@ -177,7 +202,9 @@ export function SocialCalendarPanel({
             );
           })}
           {Object.keys(byDate).length === 0 && items.length > 0 ? (
-            <p className="text-sm text-muted-foreground">No posts scheduled this month.</p>
+            <p className="text-sm text-muted-foreground">
+              Nothing on the calendar this month. Drag a post onto a day to schedule it.
+            </p>
           ) : null}
         </div>
 
@@ -222,6 +249,11 @@ export function SocialCalendarPanel({
                       <div className="px-1 text-[10px] text-muted-foreground">
                         +{dayItems.length - 3} more
                       </div>
+                    ) : null}
+                    {dayItems.length === 0 ? (
+                      <p className="px-0.5 pt-1 text-[9px] leading-tight text-muted-foreground/45">
+                        Drop to schedule
+                      </p>
                     ) : null}
                   </div>
                 </CalendarDay>

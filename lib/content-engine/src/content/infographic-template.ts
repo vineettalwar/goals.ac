@@ -288,6 +288,9 @@ export function applyInfographicToContentPiece<
 
   if (!visualSummaryMarkdown && !visualSummarySvg) return result;
 
+  const hasStockFeatured = Boolean(result.pieceMetadata?.featuredImageUrl);
+  const useSvgAsFeatured = Boolean(visualSummarySvgDataUri) && !hasStockFeatured;
+
   return {
     ...result,
     body_markdown: body,
@@ -297,6 +300,12 @@ export function applyInfographicToContentPiece<
       ...(visualSummaryMarkdown ? { visualSummaryMarkdown } : {}),
       ...(visualSummarySvg ? { visualSummarySvg } : {}),
       ...(visualSummarySvgDataUri ? { visualSummarySvgDataUri } : {}),
+      ...(useSvgAsFeatured
+        ? {
+            featuredImageUrl: visualSummarySvgDataUri,
+            ogImageUrl: visualSummarySvgDataUri,
+          }
+        : {}),
     },
   };
 }

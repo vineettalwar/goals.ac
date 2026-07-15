@@ -15,6 +15,7 @@ export type ImageEnrichablePiece = {
     images?: ContentPieceImageRef[];
     featuredImageUrl?: string;
     ogImageUrl?: string;
+    visualSummarySvgDataUri?: string;
     [key: string]: unknown;
   };
 };
@@ -207,6 +208,7 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
   }
 
   const featuredImage = images.find((img) => img.role === "featured");
+  const svgFallback = piece.pieceMetadata?.visualSummarySvgDataUri;
 
   return {
     ...piece,
@@ -214,8 +216,9 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
     pieceMetadata: {
       ...piece.pieceMetadata,
       images,
-      featuredImageUrl: featuredImage?.remoteUrl ?? piece.pieceMetadata?.featuredImageUrl,
-      ogImageUrl: featuredImage?.remoteUrl ?? piece.pieceMetadata?.ogImageUrl,
+      featuredImageUrl:
+        featuredImage?.remoteUrl ?? piece.pieceMetadata?.featuredImageUrl ?? svgFallback,
+      ogImageUrl: featuredImage?.remoteUrl ?? piece.pieceMetadata?.ogImageUrl ?? svgFallback,
     },
   };
 }

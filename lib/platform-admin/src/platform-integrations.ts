@@ -53,6 +53,12 @@ export function hasLinkedInCredentials(): boolean {
   );
 }
 
+function isLinkedInManagedByEnv(): boolean {
+  return Boolean(
+    process.env.LINKEDIN_CLIENT_ID?.trim() || process.env.LINKEDIN_CLIENT_SECRET?.trim(),
+  );
+}
+
 export function hasTwitterCredentials(): boolean {
   return Boolean(
     process.env.TWITTER_CLIENT_ID?.trim() && process.env.TWITTER_CLIENT_SECRET?.trim(),
@@ -115,11 +121,14 @@ export function getIntegrationEnvStatus(): IntegrationEnvStatus {
 
 // ── Platform integration definitions ─────────────────────────────────────────
 
-export type PlatformIntegrationCategoryId = "billing" | "email" | "media";
+export type PlatformIntegrationCategoryId = "billing" | "email" | "media" | "social";
 
-export type PlatformIntegrationId = "stripe" | "resend" | "unsplash" | "pexels";
+export type PlatformIntegrationId = "stripe" | "resend" | "unsplash" | "pexels" | "linkedin";
 
-export type PlatformIntegrationSettingsKey = "stripeBillingEnabled" | "emailEnabled";
+export type PlatformIntegrationSettingsKey =
+  | "stripeBillingEnabled"
+  | "emailEnabled"
+  | "socialPublishingEnabled";
 
 export type PlatformIntegrationKind = "credentials" | "env";
 
@@ -159,6 +168,11 @@ export const PLATFORM_INTEGRATION_CATEGORIES: {
     id: "media",
     label: "Stock Images",
     description: "Free platform-wide API keys for keyword-matched article featured images.",
+  },
+  {
+    id: "social",
+    label: "Social publishing",
+    description: "OAuth apps so projects can connect LinkedIn and other networks.",
   },
 ];
 
@@ -230,6 +244,27 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
         { name: "PEXELS_API_KEY", configured: envConfigured("PEXELS_API_KEY"), required: true },
       ],
     },
+    {
+      id: "linkedin",
+      category: "social",
+      kind: "credentials",
+      label: "LinkedIn",
+      description: "OAuth app for project LinkedIn connect and publishing.",
+      settingsKey: "socialPublishingEnabled",
+      docsUrl: "https://www.linkedin.com/developers/",
+      envVars: [
+        {
+          name: "LINKEDIN_CLIENT_ID",
+          configured: envConfigured("LINKEDIN_CLIENT_ID"),
+          required: true,
+        },
+        {
+          name: "LINKEDIN_CLIENT_SECRET",
+          configured: envConfigured("LINKEDIN_CLIENT_SECRET"),
+          required: true,
+        },
+      ],
+    },
   ];
 }
 
@@ -264,6 +299,7 @@ const STRIPE_ENV_VARS = [
 const RESEND_ENV_VARS = ["RESEND_API_KEY", "RESEND_FROM_EMAIL"] as const;
 const UNSPLASH_ENV_VARS = ["UNSPLASH_ACCESS_KEY"] as const;
 const PEXELS_ENV_VARS = ["PEXELS_API_KEY"] as const;
+const LINKEDIN_ENV_VARS = ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"] as const;
 
 export function isStripeManagedByEnv(): boolean {
   return activeEnvVars(STRIPE_ENV_VARS).length > 0;
@@ -324,6 +360,12 @@ export type PlatformIntegrationStatus = {
     envVars: string[];
     apiKey: IntegrationFieldStatus;
   };
+  linkedin: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    clientSecret: IntegrationFieldStatus;
+  };
 };
 
 function fieldStatus(
@@ -371,6 +413,8 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       resendFromEmail: platformSettingsTable.resendFromEmail,
       encryptedUnsplashAccessKey: platformSettingsTable.encryptedUnsplashAccessKey,
       encryptedPexelsApiKey: platformSettingsTable.encryptedPexelsApiKey,
+      linkedinClientId: platformSettingsTable.linkedinClientId,
+      encryptedLinkedinClientSecret: platformSettingsTable.encryptedLinkedinClientSecret,
     })
     .from(platformSettingsTable)
     .where(eq(platformSettingsTable.id, 1))

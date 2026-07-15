@@ -14,6 +14,10 @@ import {
   deauthorizeStripeConnectAccount,
   stripeConnectOAuthAvailable,
 } from "@/lib/platform/stripe-connect-oauth";
+import {
+  invalidatePlatformLinkedInCredentialsCache,
+  isLinkedInManagedByEnv,
+} from "@workspace/content-engine/support/social/linkedin-platform-credentials";
 import { eq } from "drizzle-orm";
 
 function isUnsplashManagedByEnv(): boolean {
@@ -67,6 +71,12 @@ export type PlatformIntegrationStatus = {
     envVars: string[];
     apiKey: IntegrationFieldStatus;
   };
+  linkedin: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    clientSecret: IntegrationFieldStatus;
+  };
 };
 
 const STRIPE_ENV_VARS = [
@@ -79,6 +89,7 @@ const STRIPE_ENV_VARS = [
 const RESEND_ENV_VARS = ["RESEND_API_KEY", "RESEND_FROM_EMAIL"] as const;
 const UNSPLASH_ENV_VARS = ["UNSPLASH_ACCESS_KEY"] as const;
 const PEXELS_ENV_VARS = ["PEXELS_API_KEY"] as const;
+const LINKEDIN_ENV_VARS = ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"] as const;
 
 function activeEnvVars(names: readonly string[]): string[] {
   return names.filter((name) => Boolean(process.env[name]?.trim()));
@@ -151,6 +162,8 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       resendFromEmail: platformSettingsTable.resendFromEmail,
       encryptedUnsplashAccessKey: platformSettingsTable.encryptedUnsplashAccessKey,
       encryptedPexelsApiKey: platformSettingsTable.encryptedPexelsApiKey,
+      linkedinClientId: platformSettingsTable.linkedinClientId,
+      encryptedLinkedinClientSecret: platformSettingsTable.encryptedLinkedinClientSecret,
     })
     .from(platformSettingsTable)
     .where(eq(platformSettingsTable.id, 1))
@@ -194,6 +207,12 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       envVars: activeEnvVars(PEXELS_ENV_VARS),
       apiKey: fieldStatus(row?.encryptedPexelsApiKey, "PEXELS_API_KEY"),
     },
+    linkedin: {
+      managedByEnv: isLinkedInManagedByEnv(),
+      envVars: activeEnvVars(LINKEDIN_ENV_VARS),
+      clientId: plainFieldStatus(row?.linkedinClientId, "LINKEDIN_CLIENT_ID"),
+      clientSecret: fieldStatus(row?.encryptedLinkedinClientSecret, "LINKEDIN_CLIENT_SECRET"),
+    },
   };
 }
 
@@ -218,6 +237,12 @@ export type SaveUnsplashCredentialsInput = {
 
 export type SavePexelsCredentialsInput = {
   apiKey?: string;
+  updatedBy: number;
+};
+
+export type SaveLinkedInCredentialsInput = {
+  clientId?: string | null;
+  clientSecret?: string;
   updatedBy: number;
 };
 
@@ -331,6 +356,34 @@ export async function savePexelsCredentials(input: SavePexelsCredentialsInput): 
   invalidatePlatformStockCredentialsCache();
 }
 
+export async function saveLinkedInCredentials(input: SaveLinkedInCredentialsInput): Promise<void> {
+  if (isLinkedInManagedByEnv()) {
+    throw new Error("LinkedIn credentials are managed via server environment variables");
+  }
+  const patch: Partial<typeof platformSettingsTable.$inferInsert> = {
+    updatedBy: input.updatedBy,
+  };
+
+  if (input.clientId !== undefined) {
+    patch.linkedinClientId = input.clientId?.trim() || null;
+  }
+  if (input.clientSecret !== undefined) {
+    patch.encryptedLinkedinClientSecret = input.clientSecret
+      ? encryptSecret(input.clientSecret.trim())
+      : null;
+  }
+
+  await db
+    .insert(platformSettingsTable)
+    .values({ id: 1, ...patch })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.id,
+      set: patch,
+    });
+
+  invalidatePlatformLinkedInCredentialsCache();
+}
+
 export async function clearStoredStripeCredentials(updatedBy: number): Promise<void> {
   if (isStripeManagedByEnv()) {
     throw new Error("Stripe credentials are managed via server environment variables");
@@ -401,6 +454,13 @@ export async function clearStoredPexelsCredentials(updatedBy: number): Promise<v
     throw new Error("Pexels credentials are managed via server environment variables");
   }
   await savePexelsCredentials({ apiKey: "", updatedBy });
+}
+
+export async function clearStoredLinkedInCredentials(updatedBy: number): Promise<void> {
+  if (isLinkedInManagedByEnv()) {
+    throw new Error("LinkedIn credentials are managed via server environment variables");
+  }
+  await saveLinkedInCredentials({ clientId: null, clientSecret: "", updatedBy });
 }
 
 export async function isStripeIntegrationReady(): Promise<boolean> {
