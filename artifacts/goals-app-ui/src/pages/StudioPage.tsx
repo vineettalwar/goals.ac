@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
+  briefToCreateContentInitialValues,
   CreateContentDialog,
   flattenCompetitorAnalysisList,
   STUDIO_FORMAT_OPTIONS,
   StudioNewContentButton,
   StudioView,
   studioContentPiecePath,
+  type BriefDraftSource,
   type CreateCompetitorOption,
   type CreateContentInitialValues,
 } from "@workspace/app-shell";
@@ -125,6 +127,7 @@ export function StudioPage() {
     () => draftFromStudioSearchParams(searchParams),
     [searchParams],
   );
+  const briefIdParam = searchParams.get("briefId");
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login", { replace: true });
@@ -148,6 +151,44 @@ export function StudioPage() {
       { replace: true },
     );
   }, [deepLinkDraft, setSearchParams]);
+
+  // Create-from-brief deep link (?briefId=N), mirrors Next `/content-studio?briefId=`.
+  useEffect(() => {
+    if (!briefIdParam) return;
+    const clearParam = () =>
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("briefId");
+          return next;
+        },
+        { replace: true },
+      );
+
+    const briefId = Number(briefIdParam);
+    if (!Number.isFinite(briefId) || briefId <= 0) {
+      clearParam();
+      return;
+    }
+
+    let cancelled = false;
+    void apiFetch<BriefDraftSource>(`/api/briefs/${briefId}`)
+      .then((brief) => {
+        if (cancelled) return;
+        setCreateError(null);
+        setCreateInitialValues(briefToCreateContentInitialValues(brief));
+        setCreateOpen(true);
+      })
+      .catch(() => {
+        // Invalid or inaccessible brief — skip silently, don't block the page.
+      })
+      .finally(() => {
+        if (!cancelled) clearParam();
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [briefIdParam, setSearchParams]);
 
   if (authLoading || !user || (projectsLoading && projects.length === 0)) {
     return (

@@ -7,7 +7,7 @@ import { SuccessStoriesPageClient, type PublicArticleExample } from "@/component
 export const metadata: Metadata = {
   title: "Customer Stories | goals.ac",
   description:
-    "Customer case studies are coming soon. Explore live GEO audits, article quality demos, and the content studio while we onboard early clients.",
+    "No customer case studies published yet — we have not launched named stories. Explore GEO audits, article demos, and Content Studio meanwhile.",
 };
 
 export default async function Page() {

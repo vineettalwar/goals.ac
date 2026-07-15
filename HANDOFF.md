@@ -10,6 +10,7 @@
 | Public GEO | Anonymous (if landed) |
 | Instagram copy | Fixes |
 | Partner Story kit | Shared constants + template; honest (no fake names/metrics) |
+| Instagram queue stock CTA | "Use stock image" button when "Needs image" badge shown; reuses `/images/regenerate` API; queue reloads on success |
 
 **In flight:** none from this list.
 

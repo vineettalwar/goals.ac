@@ -20,6 +20,7 @@ type CreateGeneratePayload = {
   intendedPublishPlatform?: string;
   competitorFocusUrl?: string;
   competitorUrls?: string[];
+  briefId?: number;
 };
 
 function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGeneratePayload {
@@ -40,6 +41,7 @@ function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGener
     payload.competitorUrls = competitorUrls.slice(0, 5);
     if (!payload.competitorFocusUrl) payload.competitorFocusUrl = competitorUrls[0];
   }
+  if (input.briefId) payload.briefId = input.briefId;
   return payload;
 }
 

@@ -302,6 +302,7 @@ export function CreateContentDialog({
     setSourcePieceId("");
     setSourceContent("");
     setLoadingSourcePiece(false);
+    setBriefId(initialValues?.briefId);
   }, [open, initialValues]);
 
   // Merge project competitors once they arrive (async host fetch).
@@ -421,6 +422,7 @@ export function CreateContentDialog({
       intendedPublishPlatform: intendedPublishPlatform || undefined,
       competitorFocusUrl: focus || undefined,
       competitorUrls: urls.length > 0 ? urls : undefined,
+      briefId,
     });
   }
 

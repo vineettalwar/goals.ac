@@ -51,6 +51,7 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
     canQueueSocial,
     queueingSocial,
     handleQueueSocial,
+    setBodyDraft,
   } = p as {
     piece: {
       id?: number;
@@ -90,6 +91,7 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
     canQueueSocial?: boolean;
     queueingSocial?: boolean;
     handleQueueSocial?: () => void | Promise<void>;
+    setBodyDraft?: (value: string) => void;
   };
 
   const contentPieceId = typeof piece.id === "number" ? piece.id : null;
@@ -138,6 +140,11 @@ export function ContentPieceLayoutAside(p: Record<string, unknown>) {
         serpGaps={dual?.serp.gaps}
         competitorTopics={dual?.competitorDiff}
         pieceHasBody={Boolean(displayBody?.trim())}
+        onInsertOutline={
+          !displayBody?.trim() && editing && setBodyDraft
+            ? (markdown) => setBodyDraft(markdown)
+            : undefined
+        }
         ideasHref={
           piece.websiteProjectId
             ? `/projects/${piece.websiteProjectId}/content-studio`

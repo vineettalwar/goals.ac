@@ -80,7 +80,7 @@ export const SOLUTIONS_NAV: SolutionNavItem[] = [
 export const RESOURCES_NAV: NavLink[] = [
   { label: "Help", href: "/help", description: "Setup & publishing guides" },
   { label: "Learn", href: "/learn", description: "SEO & GEO academy" },
-  { label: "Customer Stories", href: "/success-stories", description: "Illustrative profile + verify CTAs." },
+  { label: "Customer Stories", href: "/success-stories", description: "Coming soon — none published yet." },
   { label: "Compare AI SEO tools", href: "/compare/ai-seo-tools", description: "goals.ac vs autopilot tools" },
   { label: "Product roadmap", href: "/product-roadmap", description: "What we're building next" },
 ];
