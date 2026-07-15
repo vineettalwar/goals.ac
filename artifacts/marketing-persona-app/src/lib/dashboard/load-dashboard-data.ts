@@ -2,6 +2,7 @@ import { db } from "@workspace/db";
 import { contentPiecesTable, websiteProjectsTable } from "@workspace/db/schema";
 import { desc, inArray } from "drizzle-orm";
 import type {
+  DashboardArticleUsage,
   DashboardAutopilotSettings,
   DashboardCommandCenter,
   DashboardPiece,
@@ -9,6 +10,7 @@ import type {
 } from "@workspace/app-shell";
 import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import { loadCommandCenterSummary } from "@workspace/content-engine/analytics/command-center-service";
+import { getUsageSummaryForUser } from "@/lib/billing/usage";
 import {
   getAccessibleProject,
   listAccessibleProjectIds,
@@ -20,6 +22,7 @@ export type DashboardPageData = {
   pieces: DashboardPiece[];
   autopilotSettings: DashboardAutopilotSettings | null;
   commandCenter: DashboardCommandCenter | null;
+  articleUsage: DashboardArticleUsage | null;
 };
 
 function mapProject(row: { id: number; name: string; url: string }): DashboardProject {
@@ -52,6 +55,8 @@ export async function loadDashboardData(
   let activeProject: DashboardProject | null = null;
   let autopilotSettings: DashboardAutopilotSettings | null = null;
   let commandCenter: DashboardCommandCenter | null = null;
+
+  const usagePromise = getUsageSummaryForUser(userId).catch(() => null);
 
   if (activeProjectId) {
     const project = await getAccessibleProject(activeProjectId, userId);
@@ -90,11 +95,22 @@ export async function loadDashboardData(
     }));
   }
 
+  const usage = await usagePromise;
+  const articleUsage: DashboardArticleUsage | null = usage
+    ? {
+        articlesThisMonth: usage.articlesThisMonth,
+        articleQuotaLimit: usage.quota,
+        articlesRemaining: usage.quotaRemaining,
+        usesByok: usage.usesByok,
+      }
+    : null;
+
   return {
     projects,
     activeProject,
     pieces,
     autopilotSettings,
     commandCenter,
+    articleUsage,
   };
 }

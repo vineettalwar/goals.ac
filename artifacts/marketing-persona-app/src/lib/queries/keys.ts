@@ -24,7 +24,16 @@ export const queryKeys = {
     ["article-performance", String(projectId), startDate, endDate] as const,
   gscSyncStatus: (projectId: string | number) => ["gsc-sync-status", String(projectId)] as const,
   semrushStatus: (projectId: string | number) => ["semrush-status", String(projectId)] as const,
-  gscQueries: (projectId: string | number) => ["gsc-queries", String(projectId)] as const,
+  gscQueries: (
+    projectId: string | number,
+    range?: { startDate: string; endDate: string },
+  ) =>
+    [
+      "gsc-queries",
+      String(projectId),
+      range?.startDate ?? "default",
+      range?.endDate ?? "default",
+    ] as const,
   cmsIntegrations: (projectId: string | number) => ["cms-integrations", String(projectId)] as const,
   competitorContext: (projectId: string | number) => ["competitor-context", String(projectId)] as const,
   roadmapFormOptions: ["roadmap-form-options"] as const,

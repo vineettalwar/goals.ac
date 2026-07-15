@@ -149,17 +149,28 @@ export async function fetchSemrushStatus(projectId: string) {
   return res.json();
 }
 
-export async function fetchGscQueries(projectId: string, limit = 200) {
-  const res = await fetch(`/api/website-projects/${projectId}/gsc-queries?limit=${limit}`);
+export type GscQueryRow = {
+  query: string;
+  impressions: number;
+  clicks: number;
+  ctr: number;
+  position: number;
+};
+
+export async function fetchGscQueries(
+  projectId: string,
+  limit = 200,
+  range?: { startDate: string; endDate: string },
+): Promise<GscQueryRow[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (range) {
+    params.set("startDate", range.startDate);
+    params.set("endDate", range.endDate);
+  }
+  const res = await fetch(`/api/website-projects/${projectId}/gsc-queries?${params}`);
   if (!res.ok) return [];
   const data = await res.json();
-  return (data.queries ?? []) as Array<{
-    query: string;
-    impressions: number;
-    clicks: number;
-    ctr: number;
-    position: number;
-  }>;
+  return (data.queries ?? []) as GscQueryRow[];
 }
 
 export async function fetchCmsIntegrations(projectId: string) {

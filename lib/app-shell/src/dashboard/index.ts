@@ -7,6 +7,7 @@ export {
   DashboardRecentSection,
   DashboardStatsSection,
   DashboardView,
+  formatArticleUsageLabel,
 } from "./dashboard-ui";
 export {
   contentPiecePath,

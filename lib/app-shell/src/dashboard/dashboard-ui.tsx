@@ -11,10 +11,11 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "../cn";
-import { AutopilotActivityPanel } from "./autopilot-activity-panel";
+import { AutopilotActivityPanel, formatArticleUsageLabel } from "./autopilot-activity-panel";
 import {
   contentPiecePath,
   countByStatus,
+  type DashboardArticleUsage,
   type DashboardAutopilotSettings,
   type DashboardCommandCenter,
   type DashboardLinkProps,
@@ -22,7 +23,7 @@ import {
   type DashboardProject,
 } from "./types";
 
-export { AutopilotActivityPanel } from "./autopilot-activity-panel";
+export { AutopilotActivityPanel, formatArticleUsageLabel } from "./autopilot-activity-panel";
 
 const STATUS_BADGE: Record<string, string> = {
   ready: "bg-emerald-100 text-emerald-800",
@@ -285,12 +286,14 @@ export function DashboardAutopilotSection({
   settings,
   pieces,
   commandCenter,
+  articleUsage,
   renderLink,
 }: {
   projectId: number;
   settings: DashboardAutopilotSettings | null;
   pieces: DashboardPiece[];
   commandCenter?: DashboardCommandCenter | null;
+  articleUsage?: DashboardArticleUsage | null;
   renderLink: (props: DashboardLinkProps) => ReactNode;
 }) {
   if (commandCenter) {
@@ -300,6 +303,7 @@ export function DashboardAutopilotSection({
         settings={settings}
         commandCenter={commandCenter}
         pieces={pieces}
+        articleUsage={articleUsage}
         renderLink={renderLink}
       />
     );
@@ -322,6 +326,12 @@ export function DashboardAutopilotSection({
               ? `${settings.cadence === "daily" ? "Daily" : "Weekly"} · ${settings.publishMode ?? "review"} publish mode`
               : "Autopilot is off — enable on the Autopilot page"}
           </p>
+          {articleUsage ? (
+            <p className="mt-1.5 inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+              <FileText className="mr-1.5 h-3 w-3 shrink-0" />
+              {formatArticleUsageLabel(articleUsage)}
+            </p>
+          ) : null}
         </div>
         <div className="flex shrink-0 gap-2">
           <DashLink
@@ -528,6 +538,7 @@ export function DashboardView({
   pieces,
   autopilotSettings,
   commandCenter,
+  articleUsage,
   renderLink,
 }: {
   greeting: string;
@@ -539,6 +550,7 @@ export function DashboardView({
   pieces: DashboardPiece[];
   autopilotSettings: DashboardAutopilotSettings | null;
   commandCenter: DashboardCommandCenter | null;
+  articleUsage?: DashboardArticleUsage | null;
   renderLink: (props: DashboardLinkProps) => ReactNode;
 }) {
   const drafts = pieces.filter((piece) => piece.status === "draft");
@@ -572,6 +584,7 @@ export function DashboardView({
           settings={autopilotSettings}
           commandCenter={commandCenter}
           pieces={pieces}
+          articleUsage={articleUsage}
           renderLink={renderLink}
         />
       ) : activeProjectId ? (
@@ -579,6 +592,7 @@ export function DashboardView({
           projectId={activeProjectId}
           settings={autopilotSettings}
           pieces={pieces}
+          articleUsage={articleUsage}
           renderLink={renderLink}
         />
       ) : null}

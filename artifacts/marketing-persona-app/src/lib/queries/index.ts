@@ -210,10 +210,14 @@ export function useSemrushStatus(projectId: string) {
   });
 }
 
-export function useGscQueries(projectId: string, enabled = true) {
+export function useGscQueries(
+  projectId: string,
+  enabled = true,
+  range?: { startDate: string; endDate: string },
+) {
   return useQuery({
-    queryKey: queryKeys.gscQueries(projectId),
-    queryFn: () => fetchGscQueries(projectId),
+    queryKey: queryKeys.gscQueries(projectId, range),
+    queryFn: () => fetchGscQueries(projectId, 200, range),
     enabled: enabled && Boolean(projectId),
   });
 }
