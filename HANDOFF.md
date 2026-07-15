@@ -1,5 +1,13 @@
 # Session Handoff
 
+## Brand AI profile card shell parity (2026-07-15)
+
+Shell `BrandAiProfileCard` now matches Next’s richer fields: discovery summary (“Scanned via …”), last scanned date, voice traits (already present), +N more scan sources. `BrandProfileSummary.discoveryMeta` expanded to sitemap/GSC/CMS/homepage shape. Next Studio hub loads brand profile via `loadContentStudioData` (not `useBrandProfile`) and passes it into shell `StudioView`.
+
+Local leftover: `artifacts/marketing-persona-app/.../brand-ai-profile-card.tsx` (self-fetching) remains unused by Studio hub.
+
+---
+
 ## Post-wave polish (2026-07-15)
 
 Continuous parallel ship after Waves 0–3.2. Packaging and UX polish — no new engines.
