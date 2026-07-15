@@ -74,7 +74,11 @@ export function ArticleQualityPanel({
   const [debouncedBody, setDebouncedBody] = useState(bodyMarkdown);
   const [debouncedWordCount, setDebouncedWordCount] = useState(wordCount);
   const [fetchedDual, setFetchedDual] = useState<DualContentScore | null>(null);
+  const [refreshingSerp, setRefreshingSerp] = useState(false);
   const dual = dualScore ?? fetchedDual;
+  const draftDiffersFromSaved =
+    savedBodyMarkdown != null && bodyMarkdown !== savedBodyMarkdown;
+  const canRefreshSerp = Boolean(contentPieceId && fetchDualScore);
 
   useEffect(() => {
     // Snap to saved baseline immediately on load/cancel/save; debounce live typing only.
@@ -152,6 +156,15 @@ export function ArticleQualityPanel({
   const scoreDelta =
     showScoreDelta && baselineTotal != null ? displayTotal - baselineTotal : 0;
 
+  const refreshSerpScore = () => {
+    if (!contentPieceId || !fetchDualScore || refreshingSerp) return;
+    setRefreshingSerp(true);
+    void fetchDualScore(contentPieceId)
+      .then((data) => setFetchedDual(data))
+      .catch(() => setFetchedDual(null))
+      .finally(() => setRefreshingSerp(false));
+  };
+
   return (
     <div className="paper-card space-y-4 rounded-xl p-5">
       <div className="flex items-center gap-4">
@@ -169,7 +182,17 @@ export function ArticleQualityPanel({
           </p>
           {dual ? (
             <p className="mt-1 text-xs text-muted-foreground">
-              Editorial {editorialTotal} · SERP {serpTotal} · Combined {displayTotal}
+              Editorial {editorialTotal} (live draft) · SERP {serpTotal} (last saved) · Combined{" "}
+              {displayTotal}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Editorial {editorialTotal} (live draft)
+            </p>
+          )}
+          {dual && draftDiffersFromSaved ? (
+            <p className="mt-1 text-xs text-muted-foreground">
+              SERP and H2 are from the last saved body — save or refresh to update.
             </p>
           ) : null}
           {scoreDelta !== 0 ? (
@@ -177,9 +200,24 @@ export function ArticleQualityPanel({
               {formatScoreDelta(scoreDelta)}
             </p>
           ) : null}
+          {canRefreshSerp ? (
+            <button
+              type="button"
+              className="mt-2 text-xs font-medium text-primary underline-offset-2 hover:underline disabled:opacity-50"
+              onClick={refreshSerpScore}
+              disabled={refreshingSerp}
+            >
+              {refreshingSerp ? "Refreshing SERP…" : "Refresh SERP score"}
+            </button>
+          ) : null}
         </div>
       </div>
       <ul className="space-y-2">
+        <li>
+          <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Editorial (live draft)
+          </p>
+        </li>
         {result.breakdown.map((item) => (
           <li key={item.label} className="flex items-center justify-between text-xs">
             <span className="text-muted-foreground">{item.label}</span>
@@ -193,7 +231,7 @@ export function ArticleQualityPanel({
       {dual?.serp.breakdown?.length ? (
         <div className="space-y-2 border-t border-border pt-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            SERP coverage
+            SERP / H2 (last saved)
           </p>
           {dual.serp.breakdown.map((item) => (
             <div key={item.label} className="flex items-center justify-between text-xs">
