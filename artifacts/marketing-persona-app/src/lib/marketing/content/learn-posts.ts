@@ -121,11 +121,27 @@ Use this in monthly client reports to justify content investment.`,
 
 **TYPO3:** Single text element or mapped content elements (header, text, textmedia).
 
-**Shopify:** Blog article HTML, article + section metafields, or OS 2.0 page sections.
+**Shopify:** Blog article HTML, article + section metafields, or OS 2.0 page sections. Metafields and page sections need a theme Liquid snippet — see [Shopify theme sections](/learn/shopify-theme-sections).
 
 **Webhook:** Markdown only, HTML only, both, or full canonical JSON (BYOK+).
 
 Change output format inline on a connected integration without disconnecting. Use render preview before publish to verify layout. Schema and llms.txt inject via goals.ac plugins when connected.`,
+  },
+  {
+    slug: "shopify-theme-sections",
+    title: "Shopify Theme Snippets for Metafields and Page Sections",
+    description:
+      "Install Liquid so article metafields and OS 2.0 page sections render on the storefront.",
+    cta: { label: "CMS publishing", href: "/integrations" },
+    body: `goals.ac can publish Shopify content as plain blog HTML, or as structured **article + section metafields** / **OS 2.0 page sections**.
+
+HTML mode works with any theme. Structured modes store section JSON in metafields — the Online Store will not render that JSON until you paste the Liquid from \`cms-plugins/shopify/theme-snippets/\` into the theme (Online Store → Themes → Edit code).
+
+**Why this matters:** Publishing succeeds even without the snippet. The storefront may look empty or only show fallback article body HTML — a common demo miss.
+
+**What to install:** Use the snippet set documented in the repo at \`docs/cms-plugins/shopify-theme-sections.md\` (\`page.goals-ac.json\` + section Liquid for page mode; article metafield renderer for metafields mode).
+
+Connect the goals.ac Shopify app plugin for metafield and page modes. Direct Admin API connections support blog article HTML only.`,
   },
   {
     slug: "brand-voice-rag",
