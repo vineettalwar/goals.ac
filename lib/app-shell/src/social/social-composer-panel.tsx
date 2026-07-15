@@ -1,10 +1,13 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { AlertCircle, Loader2, PenLine } from "lucide-react";
 import { cn } from "../cn";
+import { SocialPostPreview } from "./social-post-preview";
 import {
   INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   SOCIAL_PLATFORM_OPTIONS,
+  isSocialOverCharLimit,
   resolveSocialPieceImageUrl,
+  resolveSocialPlatformId,
   type SocialComposedPiece,
   type SocialComposerParent,
   type SocialPlatformId,
@@ -49,10 +52,10 @@ export function SocialComposerPanel({
     [parents, selectedParentId],
   );
 
+  const parentImageUrl = selectedParent ? resolveSocialPieceImageUrl(selectedParent) : undefined;
+
   const instagramSelected = selectedPlatforms.has("instagram");
-  const parentHasImage = Boolean(
-    selectedParent && resolveSocialPieceImageUrl(selectedParent),
-  );
+  const parentHasImage = Boolean(parentImageUrl);
   const instagramBlocked = instagramSelected && Boolean(selectedParent) && !parentHasImage;
 
   function togglePlatform(id: SocialPlatformId) {
@@ -145,7 +148,11 @@ export function SocialComposerPanel({
                   <span className="ml-auto rounded border border-border px-1.5 py-0.5 text-[10px]">
                     Not connected
                   </span>
-                ) : null}
+                ) : (
+                  <span className="ml-auto text-[10px] tabular-nums text-muted-foreground">
+                    {platform.limit.toLocaleString()} chars
+                  </span>
+                )}
               </label>
             );
           })}
@@ -188,60 +195,57 @@ export function SocialComposerPanel({
           <div>
             <h3 className="text-sm font-semibold">3. Preview</h3>
             <p className="text-sm text-muted-foreground">
-              Variants are queued with suggested schedule slots.
+              Variants are queued with suggested schedule slots. Red counts mean the body is over
+              that platform&apos;s limit.
             </p>
           </div>
-          {composed.map((piece) => {
-            const platform = SOCIAL_PLATFORM_OPTIONS.find((p) => p.id === piece.publishPlatform);
-            const limit = platform?.limit ?? 3000;
-            const len = piece.bodyMarkdown.length;
-            const isInstagram =
-              piece.publishPlatform === "instagram" || piece.formatType === "instagram_post";
-            const missingInstagramImage =
-              isInstagram && !resolveSocialPieceImageUrl(piece);
-            return (
-              <div key={piece.id} className="space-y-2 rounded-lg border border-border p-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-secondary px-2 py-0.5 text-xs">
-                    {piece.publishPlatform ?? piece.formatType}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {len}/{limit} chars
-                  </span>
-                  {len > limit ? (
-                    <span className="rounded-full bg-destructive/10 px-2 py-0.5 text-xs text-destructive">
-                      Over limit
-                    </span>
-                  ) : null}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {composed.map((piece) => {
+              const platformId = resolveSocialPlatformId(piece);
+              const overLimit = isSocialOverCharLimit(piece.bodyMarkdown, platformId);
+              const isInstagram =
+                platformId === "instagram" || piece.formatType === "instagram_post";
+              const imageUrl =
+                resolveSocialPieceImageUrl(piece) ?? parentImageUrl ?? undefined;
+              const missingInstagramImage = isInstagram && !imageUrl;
+              return (
+                <div key={piece.id} className="space-y-2">
+                  <SocialPostPreview
+                    publishPlatform={piece.publishPlatform}
+                    formatType={piece.formatType}
+                    title={piece.title}
+                    bodyMarkdown={piece.bodyMarkdown}
+                    imageUrl={imageUrl}
+                    lineClamp={8}
+                    className={overLimit ? "ring-1 ring-destructive/40" : undefined}
+                  />
+                  <div className="flex flex-wrap items-center gap-2 px-0.5">
+                    {piece.scheduledAt ? (
+                      <span className="text-xs text-muted-foreground">
+                        Scheduled {new Date(piece.scheduledAt).toLocaleString()}
+                      </span>
+                    ) : null}
+                    {missingInstagramImage ? (
+                      <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-200">
+                        Needs image
+                      </span>
+                    ) : null}
+                    {renderLink({
+                      href: pieceHref(piece.id),
+                      className:
+                        "inline-flex h-8 items-center rounded-lg border border-input px-3 text-sm hover:bg-muted/50",
+                      children: overLimit ? "Edit to fit limit" : "Edit in studio",
+                    })}
+                  </div>
                   {missingInstagramImage ? (
-                    <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-200">
-                      Needs image
-                    </span>
-                  ) : null}
-                  {piece.scheduledAt ? (
-                    <span className="text-xs text-muted-foreground">
-                      Scheduled {new Date(piece.scheduledAt).toLocaleString()}
-                    </span>
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      {INSTAGRAM_IMAGE_REQUIRED_MESSAGE}
+                    </p>
                   ) : null}
                 </div>
-                <p className="text-sm font-medium">{piece.title}</p>
-                <p className="line-clamp-6 whitespace-pre-wrap text-sm text-muted-foreground">
-                  {piece.bodyMarkdown}
-                </p>
-                {missingInstagramImage ? (
-                  <p className="text-xs text-amber-800 dark:text-amber-200">
-                    {INSTAGRAM_IMAGE_REQUIRED_MESSAGE}
-                  </p>
-                ) : null}
-                {renderLink({
-                  href: pieceHref(piece.id),
-                  className:
-                    "inline-flex h-8 items-center rounded-lg border border-input px-3 text-sm hover:bg-muted/50",
-                  children: "Edit in studio",
-                })}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       ) : null}
     </div>
