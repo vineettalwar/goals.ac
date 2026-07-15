@@ -143,12 +143,17 @@ export async function assertBingWebmasterEnabled(): Promise<void> {
 }
 
 export async function assertSocialPublishingEnabled(): Promise<void> {
-  const [{ socialPublishingAvailable }, settings] = await Promise.all([
-    import("./platform-features"),
+  const [{ hasPlatformLinkedInCredentials }, settings] = await Promise.all([
+    import("@workspace/content-engine/support/social/linkedin-platform-credentials"),
     getPlatformSettings(),
   ]);
-  if (!socialPublishingAvailable(settings)) {
+  if (!settings.socialPublishingEnabled) {
     throw new Error("Social publishing is disabled on this platform.");
+  }
+  const { hasTwitterCredentials, hasMetaCredentials } = await import("./platform-features");
+  const hasLinkedIn = await hasPlatformLinkedInCredentials();
+  if (!hasLinkedIn && !hasTwitterCredentials() && !hasMetaCredentials()) {
+    throw new Error("Social publishing is not configured on this platform.");
   }
 }
 

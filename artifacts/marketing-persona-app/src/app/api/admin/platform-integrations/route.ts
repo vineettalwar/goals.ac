@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
 import {
+  clearStoredLinkedInCredentials,
   clearStoredPexelsCredentials,
   clearStoredResendCredentials,
   clearStoredStripeCredentials,
   clearStoredUnsplashCredentials,
   disconnectStripeConnect,
   getPlatformIntegrationStatus,
+  saveLinkedInCredentials,
   savePexelsCredentials,
   saveResendCredentials,
   saveStripeCredentials,
@@ -38,15 +40,22 @@ const pexelsBodySchema = z.object({
   apiKey: z.string().min(8).optional(),
 });
 
+const linkedinBodySchema = z.object({
+  integration: z.literal("linkedin"),
+  clientId: z.string().trim().min(4).optional().nullable(),
+  clientSecret: z.string().min(8).optional(),
+});
+
 const patchSchema = z.discriminatedUnion("integration", [
   stripeBodySchema,
   resendBodySchema,
   unsplashBodySchema,
   pexelsBodySchema,
+  linkedinBodySchema,
 ]);
 
 const deleteSchema = z.object({
-  integration: z.enum(["stripe", "stripe_connect", "resend", "unsplash", "pexels"]),
+  integration: z.enum(["stripe", "stripe_connect", "resend", "unsplash", "pexels", "linkedin"]),
 });
 
 export async function GET() {
@@ -106,13 +115,23 @@ export async function PATCH(req: Request) {
         accessKey: data.accessKey,
         updatedBy: admin.userId!,
       });
-    } else {
+    } else if (data.integration === "pexels") {
       if (data.apiKey === undefined) {
         return NextResponse.json({ error: "No Pexels fields to update" }, { status: 400 });
       }
 
       await savePexelsCredentials({
         apiKey: data.apiKey,
+        updatedBy: admin.userId!,
+      });
+    } else {
+      if (data.clientId === undefined && data.clientSecret === undefined) {
+        return NextResponse.json({ error: "No LinkedIn fields to update" }, { status: 400 });
+      }
+
+      await saveLinkedInCredentials({
+        clientId: data.clientId,
+        clientSecret: data.clientSecret,
         updatedBy: admin.userId!,
       });
     }
@@ -152,6 +171,9 @@ export async function DELETE(req: Request) {
         break;
       case "pexels":
         await clearStoredPexelsCredentials(admin.userId!);
+        break;
+      case "linkedin":
+        await clearStoredLinkedInCredentials(admin.userId!);
         break;
     }
   } catch (err) {

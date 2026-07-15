@@ -13,15 +13,19 @@ export type IntegrationEnvStatus = {
   pexels: boolean;
 };
 
-export type PlatformIntegrationCategoryId = "billing" | "email" | "media";
+export type PlatformIntegrationCategoryId = "billing" | "email" | "media" | "social";
 
 export type PlatformIntegrationId =
   | "stripe"
   | "resend"
   | "unsplash"
-  | "pexels";
+  | "pexels"
+  | "linkedin";
 
-export type PlatformIntegrationSettingsKey = "stripeBillingEnabled" | "emailEnabled";
+export type PlatformIntegrationSettingsKey =
+  | "stripeBillingEnabled"
+  | "emailEnabled"
+  | "socialPublishingEnabled";
 
 export type PlatformIntegrationKind = "credentials" | "env";
 
@@ -61,6 +65,11 @@ export const PLATFORM_INTEGRATION_CATEGORIES: {
     id: "media",
     label: "Stock Images",
     description: "Free platform-wide API keys for keyword-matched article featured images.",
+  },
+  {
+    id: "social",
+    label: "Social publishing",
+    description: "OAuth apps so projects can connect LinkedIn and other networks.",
   },
 ];
 
@@ -220,6 +229,27 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
       docsUrl: "https://www.pexels.com/api/",
       envVars: [
         { name: "PEXELS_API_KEY", configured: envConfigured("PEXELS_API_KEY"), required: true },
+      ],
+    },
+    {
+      id: "linkedin",
+      category: "social",
+      kind: "credentials",
+      label: "LinkedIn",
+      description: "OAuth app for project LinkedIn connect and publishing.",
+      settingsKey: "socialPublishingEnabled",
+      docsUrl: "https://www.linkedin.com/developers/",
+      envVars: [
+        {
+          name: "LINKEDIN_CLIENT_ID",
+          configured: envConfigured("LINKEDIN_CLIENT_ID"),
+          required: true,
+        },
+        {
+          name: "LINKEDIN_CLIENT_SECRET",
+          configured: envConfigured("LINKEDIN_CLIENT_SECRET"),
+          required: true,
+        },
       ],
     },
   ];

@@ -461,6 +461,12 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       envVars: activeEnvVars(PEXELS_ENV_VARS),
       apiKey: fieldStatus(row?.encryptedPexelsApiKey, "PEXELS_API_KEY"),
     },
+    linkedin: {
+      managedByEnv: isLinkedInManagedByEnv(),
+      envVars: activeEnvVars(LINKEDIN_ENV_VARS),
+      clientId: plainFieldStatus(row?.linkedinClientId, "LINKEDIN_CLIENT_ID"),
+      clientSecret: fieldStatus(row?.encryptedLinkedinClientSecret, "LINKEDIN_CLIENT_SECRET"),
+    },
   };
 }
 
@@ -649,6 +655,45 @@ export async function clearStoredPexelsCredentials(updatedBy: number): Promise<v
     throw new Error("Pexels credentials are managed via server environment variables");
   }
   await savePexelsCredentials({ apiKey: "", updatedBy });
+}
+
+export type SaveLinkedInCredentialsInput = {
+  clientId?: string | null;
+  clientSecret?: string;
+  updatedBy: number;
+};
+
+export async function saveLinkedInCredentials(input: SaveLinkedInCredentialsInput): Promise<void> {
+  if (isLinkedInManagedByEnv()) {
+    throw new Error("LinkedIn credentials are managed via server environment variables");
+  }
+  const patch: Partial<typeof platformSettingsTable.$inferInsert> = {
+    updatedBy: input.updatedBy,
+  };
+
+  if (input.clientId !== undefined) {
+    patch.linkedinClientId = input.clientId?.trim() || null;
+  }
+  if (input.clientSecret !== undefined) {
+    patch.encryptedLinkedinClientSecret = input.clientSecret
+      ? encryptSecret(input.clientSecret.trim())
+      : null;
+  }
+
+  await db
+    .insert(platformSettingsTable)
+    .values({ id: 1, ...patch })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.id,
+      set: patch,
+    });
+}
+
+export async function clearStoredLinkedInCredentials(updatedBy: number): Promise<void> {
+  if (isLinkedInManagedByEnv()) {
+    throw new Error("LinkedIn credentials are managed via server environment variables");
+  }
+  await saveLinkedInCredentials({ clientId: null, clientSecret: "", updatedBy });
 }
 
 export async function isStripeIntegrationReady(): Promise<boolean> {
