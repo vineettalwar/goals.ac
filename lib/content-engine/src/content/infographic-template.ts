@@ -10,7 +10,11 @@ function extractKeyPoints(body: string, max = 4): string[] {
   const bullets = body.match(/^[-*] \*\*(.+?)\*\*[:—-]?\s*(.+)$/gm) ?? [];
   for (const line of bullets.slice(0, max)) {
     const m = line.match(/^[-*] \*\*(.+?)\*\*[:—-]?\s*(.+)$/);
-    if (m) points.push(`${m[1]}: ${m[2].slice(0, 80)}`);
+    if (m) {
+      const label = m[1].replace(/[:—-]\s*$/, "").trim();
+      const detail = m[2].trim().slice(0, 80);
+      points.push(detail ? `${label}: ${detail}` : label);
+    }
   }
   if (points.length >= 2) return points;
 
@@ -41,11 +45,13 @@ export function buildInfographicMarkdownBlock(
   const bullets = points
     .slice(0, 4)
     .map((p) => {
-      const [label, ...rest] = p.split(/[:—-]/);
-      const detail = rest.join(":").trim();
-      const topic = (label?.trim() || p).slice(0, 80);
-      if (detail) return `- **${topic}** — ${detail.slice(0, 120)}`;
-      return `- **${topic}**`;
+      const split = p.match(/^([^:—-]+?)\s*[:—-]\s*(.+)$/);
+      if (split) {
+        const topic = split[1]!.trim().slice(0, 80);
+        const detail = split[2]!.trim().slice(0, 120);
+        return `- **${topic}** — ${detail}`;
+      }
+      return `- **${p.slice(0, 80)}**`;
     })
     .join("\n");
 
