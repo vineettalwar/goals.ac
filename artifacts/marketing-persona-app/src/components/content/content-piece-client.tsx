@@ -3,14 +3,12 @@
 /**
  * Thin Next host for shared `ContentPieceView` (parity with Vite ContentPiecePage).
  *
- * Shell already owns: ContentBriefPanel, ArticleQualityPanel, Queue social, editor/toolbar,
- * featured image, publish CTA → ContentPiecePublishDialog.
+ * Shell owns layout + toolbar (including empty-draft Generate vs Regenerate).
+ * Next passes host-only extras via `headerExtra` / `asideExtra`, and wires
+ * `onGenerate` to the existing regenerate API (no separate [id]/generate route).
  *
- * Shell features still worth adopting (Next layout leftovers — do not re-fork UI):
- * - ArticlePerformanceBadge (GA4/GSC) in header when publishedUrl is set
- * - Visual summary markdown card in aside
- * - Status select while editing (shell save is title/body/plannedDate only)
- * - Empty-draft Generate (`POST .../generate`) — Next has regenerate only today
+ * Remaining Next-only leftover: status select while editing
+ * (shell save is title/body/plannedDate only).
  *
  * Kept Next-specific: cookie auth routes, SSR initialPiece/cmsConnections,
  * streaming ContentPieceRepurposeDialog, toast for hard failures.
@@ -19,11 +17,14 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
 import {
   ContentPiecePublishDialog,
   ContentPieceView,
   contentPieceCanDelete,
+  contentPieceCanEnhance,
+  contentPieceCanGenerate,
   contentPieceCanMarkReady,
   contentPieceCanPublish,
   contentPieceCanQueueSocial,
@@ -42,6 +43,8 @@ import {
 } from "@workspace/app-shell/content-piece";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRecord } from "@/lib/server/loaders";
+import { ArticlePerformanceBadge } from "@/components/content-studio/article-performance-badge";
+import { ContentMarkdown } from "@/components/content/content-markdown";
 import { ContentPieceRepurposeDialog } from "@/components/content/content-piece-repurpose-dialog";
 
 interface ContentPieceClientProps {
@@ -90,6 +93,8 @@ export function ContentPieceClient({
 
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [generating, setGenerating] = useState(false);
+  const [generateMessage, setGenerateMessage] = useState<string | null>(null);
   const [humanizing, setHumanizing] = useState(false);
   const [humanizeMessage, setHumanizeMessage] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
@@ -104,6 +109,10 @@ export function ContentPieceClient({
   const [queueingSocial, setQueueingSocial] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [repurposeDialogOpen, setRepurposeDialogOpen] = useState(false);
+
+  const visualSummaryMarkdown =
+    (pieceRecord.pieceMetadata as ContentPieceMetadata | null | undefined)
+      ?.visualSummaryMarkdown ?? null;
 
   const fetchDualScore = useCallback(async (contentPieceId: number) => {
     try {
@@ -182,6 +191,33 @@ export function ContentPieceClient({
     <>
       <ContentPieceView
         piece={piece}
+        headerExtra={
+          <>
+            <ArticlePerformanceBadge
+              projectId={String(piece.websiteProjectId)}
+              contentPieceId={piece.id}
+              publishedUrl={pieceRecord.publishedUrl}
+            />
+            {pieceRecord.publishedUrl ? (
+              <Link href="/search/performance" className="text-xs text-primary hover:underline">
+                View performance
+              </Link>
+            ) : null}
+          </>
+        }
+        asideExtra={
+          visualSummaryMarkdown && contentPieceCanEnhance(piece.formatType) ? (
+            <div className="paper-card space-y-2 rounded-xl p-4">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <LayoutTemplate className="h-4 w-4 text-primary" aria-hidden />
+                Visual summary
+              </div>
+              <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
+                <ContentMarkdown>{visualSummaryMarkdown}</ContentMarkdown>
+              </div>
+            </div>
+          ) : null
+        }
         saving={saving}
         saveMessage={saveMessage}
         onSave={async (payload) => {
@@ -209,6 +245,32 @@ export function ContentPieceClient({
             setSaving(false);
           }
         }}
+        generating={generating}
+        generateMessage={generateMessage}
+        onGenerate={
+          contentPieceCanGenerate(piece.status)
+            ? async () => {
+                setGenerating(true);
+                setGenerateMessage(null);
+                try {
+                  // Next has no [id]/generate route; regenerate fills an empty draft.
+                  const res = await fetch(`/api/content-pieces/${pieceId}/regenerate`, {
+                    method: "POST",
+                  });
+                  if (!res.ok) {
+                    setGenerateMessage("Generation failed");
+                    toast.error("Generation failed");
+                    return;
+                  }
+                  const updated = await res.json();
+                  setPieceRecord((prev) => mergePieceJson(updated, prev));
+                  setGenerateMessage("Content generated.");
+                } finally {
+                  setGenerating(false);
+                }
+              }
+            : undefined
+        }
         humanizing={humanizing}
         humanizeMessage={humanizeMessage}
         onHumanize={async () => {

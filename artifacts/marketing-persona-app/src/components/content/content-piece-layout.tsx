@@ -1,7 +1,7 @@
 "use client";
 /**
  * @deprecated Prefer ContentPieceView via content-piece-client.tsx.
- * Kept for Next-only polish still listed in that file (performance badge, visual summary, status select).
+ * Kept temporarily for status-select editing leftovers only.
  */
 import Link from "next/link";
 import Image from "next/image";
