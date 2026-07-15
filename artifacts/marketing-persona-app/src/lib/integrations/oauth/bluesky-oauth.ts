@@ -8,10 +8,7 @@ import {
 import { JoseKey } from "@atproto/jwk-jose";
 import type { BlueskyCredentials } from "@workspace/connectors/bluesky";
 import { publishToBluesky, testBlueskyConnection } from "@workspace/connectors/bluesky";
-import {
-  invalidatePlatformBlueskyCredentialsCache,
-  resolveBlueskyOAuthCredentials,
-} from "@workspace/content-engine/support/social/bluesky-platform-credentials";
+import { resolveBlueskyOAuthCredentials } from "@workspace/content-engine/support/social/bluesky-platform-credentials";
 
 const oauthStateStore = new Map<string, { state: NodeSavedState; expiresAt: number }>();
 const oauthSessionStore = new Map<string, NodeSavedSession>();
@@ -28,7 +25,6 @@ let oauthClientPromise: Promise<NodeOAuthClient> | null = null;
 /** Drop cached AT Proto client after admin credential changes. */
 export function invalidateBlueskyOAuthClient(): void {
   oauthClientPromise = null;
-  invalidatePlatformBlueskyCredentialsCache();
 }
 
 export function getNextApiOrigin(): string {

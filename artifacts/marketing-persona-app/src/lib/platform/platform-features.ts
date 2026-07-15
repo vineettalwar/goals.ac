@@ -7,6 +7,7 @@ export type IntegrationEnvStatus = {
   linkedin: boolean;
   twitter: boolean;
   meta: boolean;
+  bluesky: boolean;
   email: boolean;
   stripe: boolean;
   unsplash: boolean;
@@ -22,7 +23,8 @@ export type PlatformIntegrationId =
   | "pexels"
   | "linkedin"
   | "twitter"
-  | "meta";
+  | "meta"
+  | "bluesky";
 
 export type PlatformIntegrationSettingsKey =
   | "stripeBillingEnabled"
@@ -106,6 +108,10 @@ export function hasMetaCredentials(): boolean {
   return Boolean(process.env.META_APP_ID?.trim() && process.env.META_APP_SECRET?.trim());
 }
 
+export function hasBlueskyCredentials(): boolean {
+  return Boolean(process.env.BLUESKY_OAUTH_PRIVATE_KEY_JWK?.trim());
+}
+
 export function hasUnsplashCredentials(): boolean {
   return Boolean(process.env.UNSPLASH_ACCESS_KEY?.trim());
 }
@@ -115,7 +121,12 @@ export function hasPexelsCredentials(): boolean {
 }
 
 export function hasSocialCredentials(): boolean {
-  return hasLinkedInCredentials() || hasTwitterCredentials() || hasMetaCredentials();
+  return (
+    hasLinkedInCredentials() ||
+    hasTwitterCredentials() ||
+    hasMetaCredentials() ||
+    hasBlueskyCredentials()
+  );
 }
 
 export function hasResendCredentials(): boolean {
@@ -134,6 +145,7 @@ export function getIntegrationEnvStatus(): IntegrationEnvStatus {
     linkedin: hasLinkedInCredentials(),
     twitter: hasTwitterCredentials(),
     meta: hasMetaCredentials(),
+    bluesky: hasBlueskyCredentials(),
     email: hasResendCredentials(),
     stripe: hasStripeCredentials(),
     unsplash: hasUnsplashCredentials(),
@@ -293,6 +305,27 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
           name: "META_APP_SECRET",
           configured: envConfigured("META_APP_SECRET"),
           required: true,
+        },
+      ],
+    },
+    {
+      id: "bluesky",
+      category: "social",
+      kind: "credentials",
+      label: "Bluesky",
+      description: "AT Protocol OAuth signing key for project Bluesky connect.",
+      settingsKey: "socialPublishingEnabled",
+      docsUrl: "https://docs.bsky.app/docs/advanced-guides/oauth-client",
+      envVars: [
+        {
+          name: "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
+          configured: envConfigured("BLUESKY_OAUTH_PRIVATE_KEY_JWK"),
+          required: true,
+        },
+        {
+          name: "BLUESKY_CLIENT_NAME",
+          configured: envConfigured("BLUESKY_CLIENT_NAME"),
+          required: false,
         },
       ],
     },

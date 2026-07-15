@@ -26,6 +26,10 @@ import {
   invalidatePlatformMetaCredentialsCache,
   isMetaManagedByEnv,
 } from "@workspace/content-engine/support/social/meta-platform-credentials";
+import {
+  invalidatePlatformBlueskyCredentialsCache,
+  isBlueskyManagedByEnv,
+} from "@workspace/content-engine/support/social/bluesky-platform-credentials";
 import { eq } from "drizzle-orm";
 
 function isUnsplashManagedByEnv(): boolean {
@@ -97,6 +101,12 @@ export type PlatformIntegrationStatus = {
     appId: { configured: boolean; value: string | null; source: "db" | "env" | null };
     appSecret: IntegrationFieldStatus;
   };
+  bluesky: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientName: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    privateKeyJwk: IntegrationFieldStatus;
+  };
 };
 
 const STRIPE_ENV_VARS = [
@@ -112,6 +122,7 @@ const PEXELS_ENV_VARS = ["PEXELS_API_KEY"] as const;
 const LINKEDIN_ENV_VARS = ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"] as const;
 const TWITTER_ENV_VARS = ["TWITTER_CLIENT_ID", "TWITTER_CLIENT_SECRET"] as const;
 const META_ENV_VARS = ["META_APP_ID", "META_APP_SECRET"] as const;
+const BLUESKY_ENV_VARS = ["BLUESKY_OAUTH_PRIVATE_KEY_JWK", "BLUESKY_CLIENT_NAME"] as const;
 
 function activeEnvVars(names: readonly string[]): string[] {
   return names.filter((name) => Boolean(process.env[name]?.trim()));
@@ -190,6 +201,9 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       encryptedTwitterClientSecret: platformSettingsTable.encryptedTwitterClientSecret,
       metaAppId: platformSettingsTable.metaAppId,
       encryptedMetaAppSecret: platformSettingsTable.encryptedMetaAppSecret,
+      blueskyClientName: platformSettingsTable.blueskyClientName,
+      encryptedBlueskyOauthPrivateKeyJwk:
+        platformSettingsTable.encryptedBlueskyOauthPrivateKeyJwk,
     })
     .from(platformSettingsTable)
     .where(eq(platformSettingsTable.id, 1))
@@ -251,6 +265,15 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       appId: plainFieldStatus(row?.metaAppId, "META_APP_ID"),
       appSecret: fieldStatus(row?.encryptedMetaAppSecret, "META_APP_SECRET"),
     },
+    bluesky: {
+      managedByEnv: isBlueskyManagedByEnv(),
+      envVars: activeEnvVars(BLUESKY_ENV_VARS),
+      clientName: plainFieldStatus(row?.blueskyClientName, "BLUESKY_CLIENT_NAME"),
+      privateKeyJwk: fieldStatus(
+        row?.encryptedBlueskyOauthPrivateKeyJwk,
+        "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
+      ),
+    },
   };
 }
 
@@ -295,6 +318,31 @@ export type SaveMetaCredentialsInput = {
   appSecret?: string;
   updatedBy: number;
 };
+
+export type SaveBlueskyCredentialsInput = {
+  clientName?: string | null;
+  privateKeyJwk?: string;
+  updatedBy: number;
+};
+
+function parseBlueskyPrivateKeyJwk(raw: string): string {
+  const trimmed = raw.trim();
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error("Bluesky private key must be valid JSON JWK");
+  }
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    !("kty" in parsed) ||
+    typeof (parsed as { kty: unknown }).kty !== "string"
+  ) {
+    throw new Error("Bluesky private key JWK must include a kty field");
+  }
+  return trimmed;
+}
 
 export async function saveStripeCredentials(input: SaveStripeCredentialsInput): Promise<void> {
   if (isStripeManagedByEnv()) {
@@ -581,6 +629,43 @@ export async function clearStoredMetaCredentials(updatedBy: number): Promise<voi
     throw new Error("Meta credentials are managed via server environment variables");
   }
   await saveMetaCredentials({ appId: null, appSecret: "", updatedBy });
+}
+
+export async function saveBlueskyCredentials(input: SaveBlueskyCredentialsInput): Promise<void> {
+  if (isBlueskyManagedByEnv()) {
+    throw new Error("Bluesky credentials are managed via server environment variables");
+  }
+  const patch: Partial<typeof platformSettingsTable.$inferInsert> = {
+    updatedBy: input.updatedBy,
+  };
+
+  if (input.clientName !== undefined) {
+    patch.blueskyClientName = input.clientName?.trim() || null;
+  }
+  if (input.privateKeyJwk !== undefined) {
+    patch.encryptedBlueskyOauthPrivateKeyJwk = input.privateKeyJwk
+      ? encryptSecret(parseBlueskyPrivateKeyJwk(input.privateKeyJwk))
+      : null;
+  }
+
+  await db
+    .insert(platformSettingsTable)
+    .values({ id: 1, ...patch })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.id,
+      set: patch,
+    });
+
+  invalidatePlatformBlueskyCredentialsCache();
+  const { invalidateBlueskyOAuthClient } = await import("@/lib/integrations/oauth/bluesky-oauth");
+  invalidateBlueskyOAuthClient();
+}
+
+export async function clearStoredBlueskyCredentials(updatedBy: number): Promise<void> {
+  if (isBlueskyManagedByEnv()) {
+    throw new Error("Bluesky credentials are managed via server environment variables");
+  }
+  await saveBlueskyCredentials({ clientName: null, privateKeyJwk: "", updatedBy });
 }
 
 export async function isStripeIntegrationReady(): Promise<boolean> {
