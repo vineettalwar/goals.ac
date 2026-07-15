@@ -1,6 +1,6 @@
 import type { ContentFormatType, LinkedInArchetypeId, LinkedInHookId } from "./content-studio-format-data";
 import type { CmsConnectionSnapshot, PublishDestinationId } from "@/lib/projects/publishing-destinations";
-import type { ContentPieceRow } from "./content-studio-client";
+import type { ContentPieceRow } from "./content-studio-utils";
 import type { BriefContentDraft } from "./use-create-content-modal";
 
 export type CreateContentWizardProps = {

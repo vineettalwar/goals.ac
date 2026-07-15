@@ -1,43 +1,37 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+/**
+ * Thin Next host for shared `StudioView` (parity with Vite StudioPage).
+ *
+ * Shell owns: hub filters / list+grid cards, empty states, calendar DnD,
+ * BrandAiProfileCard (profile prop), AI readiness banner.
+ *
+ * Kept Next-specific: CreateContentModal (rich create wizard), CMS/publishing
+ * context for that modal, cookie-auth loaders, sonner toasts, brief deep-link draft.
+ *
+ * Local leftovers (do not re-fork hub UI): content-studio-calendar,
+ * content-studio-hub-filters, content-studio-list-items, brand-ai-profile-card.
+ */
+
+import { useCallback, useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
-  Plus,
-  FileText,
-  Calendar,
-  LayoutGrid,
-  PenLine,
-} from "lucide-react";
-import { PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
-import { aiProviderUnavailableMessage } from "@/lib/platform/ai-providers-status";
+  StudioNewContentButton,
+  StudioView,
+  type BrandProfileSummary,
+  type StudioPiece as ShellStudioPiece,
+} from "@workspace/app-shell/studio";
 import type { AiProviderId } from "@workspace/ai-providers/config";
-import { BrandAiProfileCard } from "./brand-ai-profile-card";
-import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
-import { loadContentStudioData } from "./content-studio-load-data";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
-import { cn } from "@/lib/utils";
-import { MonthCalendar } from "./content-studio-calendar";
-import { StudioPieceCard } from "./content-studio-list-items";
-import { ContentStudioHubFilters } from "./content-studio-hub-filters";
-import {
-  filterPieces,
-  pieceStatusCounts,
-  sortItems,
-  type ContentPieceRow,
-  type SortKey,
-  type StudioPiece,
-} from "./content-studio-utils";
+import { useBrandProfile } from "@/lib/queries";
+import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
+import { loadContentStudioData } from "./content-studio-load-data";
+import type { ContentPieceRow, StudioPiece } from "./content-studio-utils";
 
 export { FORMAT_OPTIONS };
 export type { ContentPieceRow };
-
-const KEYWORD_IDEAS_HREF = "/search/keywords?tab=ideas";
 
 interface Props {
   projectId: string;
@@ -73,6 +67,19 @@ function studioLoadReducer(
   return { ...state, pieces: action.updater(state.pieces) };
 }
 
+function toShellPieces(pieces: StudioPiece[]): ShellStudioPiece[] {
+  return pieces.map((piece) => ({
+    id: piece.id,
+    title: piece.title,
+    formatType: piece.formatType,
+    targetKeyword: piece.targetKeyword,
+    status: piece.status,
+    wordCount: piece.wordCount,
+    plannedDate: piece.plannedDate,
+    createdAt: piece.createdAt,
+  }));
+}
+
 export function ContentStudioClient({
   projectId,
   initialBriefDraft = null,
@@ -87,16 +94,15 @@ export function ContentStudioClient({
     cmsConnections,
     primaryBlogDestination,
   } = studioData;
-  const [tab, setTab] = useState<"hub" | "calendar">("hub");
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(initialCreateOpen);
   const [briefDraft, setBriefDraft] = useState<BriefContentDraft | null>(initialBriefDraft);
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [filterFormat, setFilterFormat] = useState("all");
-  const [sortKey, setSortKey] = useState<SortKey>("newest");
-  const [activeDragId, setActiveDragId] = useState<number | null>(null);
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [markingReadyId, setMarkingReadyId] = useState<number | null>(null);
   const [reschedulingId, setReschedulingId] = useState<number | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  const { data: brandProfileRaw, isLoading: brandProfileLoading } = useBrandProfile(projectId);
+  const brandProfile = (brandProfileRaw as BrandProfileSummary | null | undefined) ?? null;
 
   const loadData = useCallback(async () => {
     const data = await loadContentStudioData(projectId);
@@ -118,30 +124,44 @@ export function ContentStudioClient({
   }, [loadData]);
 
   async function handleDelete(pieceId: number) {
-    if (!confirm("Delete this content piece?")) return;
+    setDeletingId(pieceId);
     const res = await fetch(`/api/content-pieces/${pieceId}`, { method: "DELETE" });
+    setDeletingId(null);
     if (!res.ok) {
       toast.error("Failed to delete");
       return;
     }
-    dispatchStudioData({ type: "setPieces", updater: (prev) => prev.filter((p) => p.id !== pieceId) });
+    dispatchStudioData({
+      type: "setPieces",
+      updater: (prev) => prev.filter((p) => p.id !== pieceId),
+    });
     toast.success("Deleted");
   }
 
   async function handleMarkReady(pieceId: number) {
-    dispatchStudioData({ type: "setPieces", updater: (prev) => prev.map((p) => (p.id === pieceId ? { ...p, status: "ready" } : p)) });
+    setMarkingReadyId(pieceId);
+    dispatchStudioData({
+      type: "setPieces",
+      updater: (prev) =>
+        prev.map((p) => (p.id === pieceId ? { ...p, status: "ready" } : p)),
+    });
     const res = await fetch(`/api/content-pieces/${pieceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "ready" }),
     });
+    setMarkingReadyId(null);
     if (!res.ok) {
-      dispatchStudioData({ type: "setPieces", updater: (prev) => prev.map((p) => (p.id === pieceId ? { ...p, status: "draft" } : p)) });
+      dispatchStudioData({
+        type: "setPieces",
+        updater: (prev) =>
+          prev.map((p) => (p.id === pieceId ? { ...p, status: "draft" } : p)),
+      });
       toast.error("Failed to update status");
     }
   }
 
-  async function reschedulePiece(pieceId: number, plannedDate: string | null) {
+  async function handleReschedule(pieceId: number, plannedDate: string | null) {
     setReschedulingId(pieceId);
     const res = await fetch(`/api/content-pieces/${pieceId}`, {
       method: "PATCH",
@@ -158,183 +178,47 @@ export function ContentStudioClient({
       type: "setPieces",
       updater: (prev) =>
         prev.map((p) =>
-          p.id === pieceId ? { ...p, plannedDate: updated.plannedDate, status: updated.status } : p,
+          p.id === pieceId
+            ? { ...p, plannedDate: updated.plannedDate, status: updated.status }
+            : p,
         ),
     });
   }
 
-  const filtered = useMemo(
-    () => filterPieces(pieces, filterStatus, filterFormat),
-    [pieces, filterStatus, filterFormat],
+  const newContentAction = (
+    <StudioNewContentButton
+      onClick={() => {
+        setBriefDraft(null);
+        setCreateOpen(true);
+      }}
+    />
   );
-  const sorted = useMemo(() => sortItems(filtered, sortKey), [filtered, sortKey]);
-  const statsBreakdown = useMemo(() => pieceStatusCounts(pieces), [pieces]);
-
-  function handleDragEnd(event: DragEndEvent) {
-    setActiveDragId(null);
-    const { active, over } = event;
-    if (!over) return;
-    const pieceId = Number(String(active.id).replace("piece-", ""));
-    const newDate = String(over.id).replace("day-", "");
-    if (newDate === "Unscheduled") {
-      reschedulePiece(pieceId, null);
-      return;
-    }
-    reschedulePiece(pieceId, newDate);
-  }
 
   return (
-    <div className="px-8 py-8 max-w-6xl space-y-6">
-      <div className="mb-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-          <Link href="/dashboard" className="hover:text-foreground transition-colors">Dashboard</Link>
-          <span>›</span>
-          <Link href={`/projects/${projectId}`} className="hover:text-foreground transition-colors">
-            {projectName || "Project"}
+    <>
+      <StudioView
+        projectId={projectId}
+        projectName={projectName || null}
+        pieces={toShellPieces(pieces)}
+        loading={loading}
+        brandProfile={brandProfile}
+        brandProfileLoading={brandProfileLoading}
+        aiReady={aiReady}
+        activeProvider={activeProvider}
+        aiSettingsHref="/integrations/ai"
+        newContentAction={newContentAction}
+        onDeletePiece={handleDelete}
+        onMarkReady={handleMarkReady}
+        onReschedulePiece={handleReschedule}
+        deletingId={deletingId}
+        markingReadyId={markingReadyId}
+        reschedulingId={reschedulingId}
+        renderLink={({ href, className, children, title }) => (
+          <Link href={href} className={className} title={title}>
+            {children}
           </Link>
-          <span>›</span>
-          <span className="text-foreground">Content Studio</span>
-        </div>
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-2xl font-bold">Content Studio</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Generate, manage and schedule AI-powered content
-              {projectName ? ` for ${projectName}` : ""}.
-            </p>
-          </div>
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" /> Create content
-          </Button>
-        </div>
-      </div>
-
-      <BrandAiProfileCard projectId={projectId} />
-
-      {aiReady === false && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
-          {aiProviderUnavailableMessage(activeProvider)}{" "}
-          <Link href="/integrations/ai" className="text-primary hover:underline">Open AI settings</Link>
-        </div>
-      )}
-
-      <div className="flex gap-1 border-b border-border">
-        {(
-          [
-            { id: "hub" as const, label: "Hub", icon: LayoutGrid },
-            { id: "calendar" as const, label: "Calendar", icon: Calendar },
-          ] as const
-        ).map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            type="button"
-            onClick={() => setTab(id)}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 text-sm border-b-2 -mb-px transition-colors",
-              tab === id ? "border-primary text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-            {id === "hub" && pieces.length > 0 && (
-              <Badge variant="muted" className="text-xs">{pieces.length}</Badge>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {tab === "hub" && (
-        <ContentStudioHubFilters
-          filterFormat={filterFormat}
-          filterStatus={filterStatus}
-          sortKey={sortKey}
-          totalCount={pieces.length}
-          statsBreakdown={statsBreakdown}
-          onFilterFormatChange={setFilterFormat}
-          onFilterStatusChange={setFilterStatus}
-          onSortKeyChange={(v) => setSortKey(v as SortKey)}
-          onClearFilters={() => {
-            setFilterFormat("all");
-            setFilterStatus("all");
-          }}
-        />
-      )}
-
-      {loading ? (
-        <div className="flex items-center justify-center p-16"><Spinner size="lg" /></div>
-      ) : tab === "hub" ? (
-        sorted.length === 0 ? (
-          <div className="paper-card rounded-xl flex flex-col items-center justify-center p-16 text-center">
-            <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-              {pieces.length === 0 ? (
-                <PenLine className="h-7 w-7 text-primary" aria-hidden />
-              ) : (
-                <FileText className="h-7 w-7 text-muted-foreground" aria-hidden />
-              )}
-            </div>
-            {pieces.length === 0 ? (
-              <>
-                <h2 className="text-lg font-semibold">No content yet</h2>
-                <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                  Generate your first article from a keyword or brief
-                </p>
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                  <Button onClick={() => setCreateOpen(true)}>
-                    <Plus className="h-4 w-4" />
-                    Create content
-                  </Button>
-                  {projectId ? (
-                    <Link
-                      href={KEYWORD_IDEAS_HREF}
-                      className="text-sm font-medium text-primary hover:underline"
-                    >
-                      Browse keyword ideas
-                    </Link>
-                  ) : null}
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="font-medium">No items match filters</p>
-                <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                  Try clearing filters to see all content.
-                </p>
-                <Button
-                  variant="outline"
-                  className="mt-4"
-                  onClick={() => {
-                    setFilterFormat("all");
-                    setFilterStatus("all");
-                  }}
-                >
-                  Clear filters
-                </Button>
-              </>
-            )}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {sorted.map((piece) => (
-              <StudioPieceCard
-                key={piece.id}
-                piece={piece}
-                projectId={projectId}
-                onDelete={handleDelete}
-                onMarkReady={handleMarkReady}
-              />
-            ))}
-          </div>
-        )
-      ) : (
-        <MonthCalendar
-          pieces={pieces}
-          reschedulingId={reschedulingId}
-          sensors={sensors}
-          onDragStart={(id) => setActiveDragId(id)}
-          onDragEnd={handleDragEnd}
-          activeDragId={activeDragId}
-        />
-      )}
+        )}
+      />
 
       <CreateContentModal
         open={createOpen}
@@ -350,12 +234,15 @@ export function ContentStudioClient({
         onCreated={(piece) => {
           dispatchStudioData({
             type: "setPieces",
-            updater: (prev) => [{ ...piece, source: "studio" }, ...prev.filter((p) => p.id !== piece.id)],
+            updater: (prev) => [
+              { ...piece, source: "studio" },
+              ...prev.filter((p) => p.id !== piece.id),
+            ],
           });
           setBriefDraft(null);
-          loadData();
+          void loadData();
         }}
       />
-    </div>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import type { AiProviderId } from "@workspace/ai-providers/config";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
-import type { ContentPieceRow } from "./content-studio-client";
+import type { ContentPieceRow } from "./content-studio-utils";
 
 export type StudioLoadResult = {
   projectName: string;

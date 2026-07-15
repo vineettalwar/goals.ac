@@ -9,7 +9,7 @@ import {
   type CmsConnectionSnapshot,
   type PublishDestinationId,
 } from "@/lib/projects/publishing-destinations";
-import type { ContentPieceRow } from "./content-studio-client";
+import type { ContentPieceRow } from "./content-studio-utils";
 import type { Flow, WizardStepId } from "./create-content-modal-types";
 import {
   hostFromUrl,

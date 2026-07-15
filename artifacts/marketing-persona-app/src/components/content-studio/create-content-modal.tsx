@@ -1,7 +1,7 @@
 "use client";
 
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
-import type { ContentPieceRow } from "./content-studio-client";
+import type { ContentPieceRow } from "./content-studio-utils";
 import { CreateContentModalShell } from "./create-content-modal-shell";
 import { useCreateContentModal, type BriefContentDraft } from "./use-create-content-modal";
 
