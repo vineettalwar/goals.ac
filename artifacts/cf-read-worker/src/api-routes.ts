@@ -18,9 +18,9 @@ import {
 import { and, desc, eq, getTableColumns, inArray, isNull, or } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
 import {
-  ownedProject,
+  getAccessibleProject,
+  listAccessibleProjectIds,
   parsePositiveInt,
-  userProjectIds,
 } from "./project-access";
 
 import {
@@ -33,11 +33,20 @@ import { parseVisibilitySettings } from "@workspace/content-engine/support/setti
 import { getUsageSummaryForUser } from "./usage";
 import { handleAuthRead } from "./auth-read";
 import { getAiProviderStatusForUser } from "./ai-providers-status";
+import { handleSearchPropertiesGet } from "./search-properties";
+
+export type ReadWorkerEnv = {
+  GOOGLE_CLIENT_ID?: string;
+  GOOGLE_CLIENT_SECRET?: string;
+  BING_WEBMASTER_CLIENT_ID?: string;
+  BING_WEBMASTER_CLIENT_SECRET?: string;
+};
 
 export async function handleAuthenticatedRead(
   request: Request,
   path: string,
   userId: number,
+  env: ReadWorkerEnv,
 ): Promise<Response | null> {
   const url = new URL(request.url);
 
@@ -107,6 +116,9 @@ export async function handleAuthenticatedRead(
     return withCors(request, Response.json({ companies }));
   }
 
+  const orgMembersHandled = await handleOrgMembersRead(request, path, userId);
+  if (orgMembersHandled) return orgMembersHandled;
+
   if (path === "/api/organizations" && request.method === "GET") {
     const memberships = await db
       .select({ organization: organizationsTable })
@@ -133,18 +145,22 @@ export async function handleAuthenticatedRead(
   }
 
   if (path === "/api/website-projects" && request.method === "GET") {
-    const projects = await db
-      .select()
-      .from(websiteProjectsTable)
-      .where(eq(websiteProjectsTable.userId, userId))
-      .orderBy(desc(websiteProjectsTable.updatedAt));
+    const accessibleIds = await listAccessibleProjectIds(userId);
+    const projects =
+      accessibleIds.length === 0
+        ? []
+        : await db
+            .select()
+            .from(websiteProjectsTable)
+            .where(inArray(websiteProjectsTable.id, accessibleIds))
+            .orderBy(desc(websiteProjectsTable.updatedAt));
     return withCors(request, Response.json(projects));
   }
 
   const projectMatch = path.match(/^\/api\/website-projects\/(\d+)$/);
   if (projectMatch && request.method === "GET") {
     const projectId = Number.parseInt(projectMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -156,10 +172,16 @@ export async function handleAuthenticatedRead(
     return withCors(request, Response.json({ ...project, brandProfile: brandProfile ?? null }));
   }
 
+  const projectSearchPropsMatch = path.match(/^\/api\/website-projects\/(\d+)\/search-properties$/);
+  if (projectSearchPropsMatch && request.method === "GET") {
+    const projectId = Number.parseInt(projectSearchPropsMatch[1]!, 10);
+    return handleSearchPropertiesGet(request, projectId, userId, env);
+  }
+
   const projectCmsMatch = path.match(/^\/api\/website-projects\/(\d+)\/cms-integrations$/);
   if (projectCmsMatch && request.method === "GET") {
     const projectId = Number.parseInt(projectCmsMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -176,7 +198,7 @@ export async function handleAuthenticatedRead(
   const projectPiecesMatch = path.match(/^\/api\/website-projects\/(\d+)\/content-pieces$/);
   if (projectPiecesMatch && request.method === "GET") {
     const projectId = Number.parseInt(projectPiecesMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -192,7 +214,7 @@ export async function handleAuthenticatedRead(
   const projectContentMatch = path.match(/^\/api\/website-projects\/(\d+)\/content$/);
   if (projectContentMatch && request.method === "GET") {
     const projectId = Number.parseInt(projectContentMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -243,7 +265,7 @@ export async function handleAuthenticatedRead(
   const projectBrandMatch = path.match(/^\/api\/website-projects\/(\d+)\/brand-profile$/);
   if (projectBrandMatch && request.method === "GET") {
     const projectId = Number.parseInt(projectBrandMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -266,7 +288,7 @@ export async function handleAuthenticatedRead(
   const projectAutopilotMatch = path.match(/^\/api\/website-projects\/(\d+)\/autopilot-settings$/);
   if (projectAutopilotMatch && request.method === "GET") {
     const projectId = Number.parseInt(projectAutopilotMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -276,7 +298,7 @@ export async function handleAuthenticatedRead(
   const projectVisibilityMatch = path.match(/^\/api\/website-projects\/(\d+)\/visibility-settings$/);
   if (projectVisibilityMatch && request.method === "GET") {
     const projectId = Number.parseInt(projectVisibilityMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -289,7 +311,7 @@ export async function handleAuthenticatedRead(
   const keywordOppMatch = path.match(/^\/api\/website-projects\/(\d+)\/keyword-opportunities$/);
   if (keywordOppMatch && request.method === "GET") {
     const projectId = Number.parseInt(keywordOppMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -313,7 +335,7 @@ export async function handleAuthenticatedRead(
     if (!projectId) {
       return withCors(request, Response.json({ error: "projectId is required" }, { status: 400 }));
     }
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -330,7 +352,7 @@ export async function handleAuthenticatedRead(
     if (!projectId) {
       return withCors(request, Response.json({ error: "projectId required" }, { status: 400 }));
     }
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -348,7 +370,7 @@ export async function handleAuthenticatedRead(
     if (!projectId) {
       return withCors(request, Response.json({ error: "projectId required" }, { status: 400 }));
     }
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -362,7 +384,7 @@ export async function handleAuthenticatedRead(
 
   if (path === "/api/geo-audits" && request.method === "GET") {
     const projectId = parsePositiveInt(url.searchParams.get("projectId"));
-    const projectIds = await userProjectIds(userId);
+    const projectIds = await listAccessibleProjectIds(userId);
     if (projectId) {
       if (!projectIds.includes(projectId)) {
         return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
@@ -400,7 +422,7 @@ export async function handleAuthenticatedRead(
   const geoAuditMatch = path.match(/^\/api\/geo-audits\/(\d+)$/);
   if (geoAuditMatch && request.method === "GET") {
     const id = Number.parseInt(geoAuditMatch[1]!, 10);
-    const projectIds = await userProjectIds(userId);
+    const projectIds = await listAccessibleProjectIds(userId);
     const [audit] = await db
       .select()
       .from(geoAuditsTable)
@@ -420,9 +442,12 @@ export async function handleAuthenticatedRead(
 
   if (path === "/api/competitor-analysis" && request.method === "GET") {
     const projectId = parsePositiveInt(url.searchParams.get("projectId"));
-    const projectIds = projectId ? [projectId] : await userProjectIds(userId);
-    if (projectId && !(await ownedProject(projectId, userId))) {
-      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    const projectIds = projectId ? [projectId] : await listAccessibleProjectIds(userId);
+    if (projectId) {
+      const access = await getAccessibleProject(projectId, userId);
+      if (!access) {
+        return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+      }
     }
     const rows =
       projectIds.length === 0
@@ -439,14 +464,19 @@ export async function handleAuthenticatedRead(
   const contentMatch = path.match(/^\/api\/content-pieces\/(\d+)$/);
   if (contentMatch && request.method === "GET") {
     const id = Number.parseInt(contentMatch[1]!, 10);
+    const accessibleIds = await listAccessibleProjectIds(userId);
+    if (accessibleIds.length === 0) {
+      return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+    }
     const [piece] = await db
       .select(getTableColumns(contentPiecesTable))
       .from(contentPiecesTable)
-      .innerJoin(
-        websiteProjectsTable,
-        eq(contentPiecesTable.websiteProjectId, websiteProjectsTable.id),
+      .where(
+        and(
+          eq(contentPiecesTable.id, id),
+          inArray(contentPiecesTable.websiteProjectId, accessibleIds),
+        ),
       )
-      .where(and(eq(contentPiecesTable.id, id), eq(websiteProjectsTable.userId, userId)))
       .limit(1);
     if (!piece) {
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
@@ -455,16 +485,16 @@ export async function handleAuthenticatedRead(
   }
 
   if (path === "/api/content-pieces" && request.method === "GET") {
-    const pieces = await db
-      .select(getTableColumns(contentPiecesTable))
-      .from(contentPiecesTable)
-      .innerJoin(
-        websiteProjectsTable,
-        eq(contentPiecesTable.websiteProjectId, websiteProjectsTable.id),
-      )
-      .where(eq(websiteProjectsTable.userId, userId))
-      .orderBy(desc(contentPiecesTable.updatedAt))
-      .limit(100);
+    const accessibleIds = await listAccessibleProjectIds(userId);
+    const pieces =
+      accessibleIds.length === 0
+        ? []
+        : await db
+            .select(getTableColumns(contentPiecesTable))
+            .from(contentPiecesTable)
+            .where(inArray(contentPiecesTable.websiteProjectId, accessibleIds))
+            .orderBy(desc(contentPiecesTable.updatedAt))
+            .limit(100);
     return withCors(request, Response.json(pieces));
   }
 

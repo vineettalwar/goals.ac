@@ -6,3 +6,4 @@ export * from "./enqueue-http";
 export * from "./jwt";
 export * from "./session-cookie";
 export * from "./wire";
+export * from "./project-access";

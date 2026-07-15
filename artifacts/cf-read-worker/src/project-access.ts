@@ -1,34 +1,8 @@
-import { db } from "@workspace/db";
-import { websiteProjectsTable } from "@workspace/db/schema-sqlite";
-import { and, eq, inArray } from "drizzle-orm";
-
-export async function ownedProject(projectId: number, userId: number) {
-  const [project] = await db
-    .select()
-    .from(websiteProjectsTable)
-    .where(
-      and(
-        eq(websiteProjectsTable.id, projectId),
-        eq(websiteProjectsTable.userId, userId),
-      ),
-    )
-    .limit(1);
-  return project ?? null;
-}
-
-export async function userProjectIds(userId: number): Promise<number[]> {
-  const rows = await db
-    .select({ id: websiteProjectsTable.id })
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.userId, userId));
-  return rows.map((r) => r.id);
-}
-
-export async function requireOwnedProject(projectId: number, userId: number) {
-  const project = await ownedProject(projectId, userId);
-  if (!project) return null;
-  return project;
-}
+export {
+  getAccessibleProject,
+  listAccessibleProjectIds,
+  requireProjectAccess,
+} from "@workspace/cf-edge/project-access";
 
 export function parsePositiveInt(value: string | null): number | null {
   if (!value) return null;

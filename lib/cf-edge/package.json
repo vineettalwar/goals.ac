@@ -13,11 +13,16 @@
     "./enqueue": "./src/enqueue-http.ts",
     "./jwt": "./src/jwt.ts",
     "./session-cookie": "./src/session-cookie.ts",
-    "./wire": "./src/wire.ts"
+    "./wire": "./src/wire.ts",
+    "./project-access": "./src/project-access.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
     "@workspace/jobs": "workspace:*",
+    "drizzle-orm": "catalog:",
     "next-auth": "^5.0.0-beta.30"
   },
   "devDependencies": {

@@ -9,7 +9,7 @@ import { sendToCfQueue } from "@workspace/jobs/cf-queues";
 import { QUEUES } from "@workspace/jobs/queues";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { ownedProject } from "./project-access";
+import { getAccessibleProject } from "./project-access";
 
 const GENERATABLE_STATUSES = new Set(["draft", "pending", "failed"]);
 
@@ -39,7 +39,7 @@ export async function handleContentPiecesWrite(
   if (!match || request.method !== "POST") return null;
 
   const projectId = Number.parseInt(match[1]!, 10);
-  const project = await ownedProject(projectId, userId);
+  const project = await getAccessibleProject(projectId, userId);
   if (!project) {
     return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
   }
@@ -93,7 +93,7 @@ async function handleContentPieceGenerate(
     return withCors(request, Response.json({ error: "Content piece not found" }, { status: 404 }));
   }
 
-  const project = await ownedProject(piece.websiteProjectId, userId);
+  const project = await getAccessibleProject(piece.websiteProjectId, userId);
   if (!project) {
     return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
   }

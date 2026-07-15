@@ -5,7 +5,7 @@ import type { AutopilotSettings } from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";
 import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import { z } from "zod";
-import { ownedProject } from "./project-access";
+import { getAccessibleProject } from "./project-access";
 
 const autopilotSettingsBody = z.object({
   enabled: z.boolean().optional(),
@@ -28,7 +28,7 @@ export async function handleAutopilotSettingsWrite(
   }
 
   const projectId = Number.parseInt(match[1]!, 10);
-  const project = await ownedProject(projectId, userId);
+  const project = await getAccessibleProject(projectId, userId);
   if (!project) {
     return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
   }

@@ -14,7 +14,7 @@ import { normalizePlanId, type PlanId } from "@workspace/billing/plans";
 import { resolvePlanProjectQuota } from "./plan-quotas";
 import { sendToCfQueue } from "@workspace/jobs/cf-queues";
 import { QUEUES } from "@workspace/jobs/queues";
-import { ownedProject } from "./project-access";
+import { getAccessibleProject, requireSiteAdminAccess } from "./project-access";
 
 function normalizeProjectHost(url: string): string {
   try {
@@ -277,7 +277,15 @@ export async function handleWebsiteProjectsWrite(
   const projectMatch = path.match(/^\/api\/website-projects\/(\d+)$/);
   if (projectMatch && request.method === "DELETE") {
     const projectId = Number.parseInt(projectMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const siteAdmin = await requireSiteAdminAccess(userId);
+    if (!siteAdmin.ok) {
+      return withCors(
+        request,
+        Response.json({ error: siteAdmin.error }, { status: siteAdmin.status }),
+      );
+    }
+
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -288,7 +296,7 @@ export async function handleWebsiteProjectsWrite(
 
   if (projectMatch && request.method === "PATCH") {
     const projectId = Number.parseInt(projectMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }

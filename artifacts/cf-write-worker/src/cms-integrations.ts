@@ -9,7 +9,7 @@ import {
   encryptCmsCredentials,
   maskCmsCredentials,
 } from "@workspace/content-engine/support/publishing/cms-integrations";
-import { ownedProject } from "./project-access";
+import { getAccessibleProject } from "./project-access";
 
 function requireEncryptionSecret(request: Request): Response | null {
   if (process.env.GEMINI_KEY_ENCRYPTION_SECRET) return null;
@@ -160,7 +160,7 @@ export async function handleCmsIntegrationsWrite(
     if (configError) return configError;
 
     const projectId = Number.parseInt(patchMatch[1]!, 10);
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
@@ -197,7 +197,7 @@ export async function handleCmsIntegrationsWrite(
       return withCors(request, Response.json({ error: "Invalid platform" }, { status: 400 }));
     }
 
-    const project = await ownedProject(projectId, userId);
+    const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }

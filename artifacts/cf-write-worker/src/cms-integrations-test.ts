@@ -10,7 +10,7 @@ import {
   parseAvailableOutputModes,
   parseRecommendedOutputMode,
 } from "@workspace/connectors/goals-ac-plugin";
-import { ownedProject } from "./project-access";
+import { getAccessibleProject } from "./project-access";
 
 export type IntegrationHealthEntry = {
   ok: boolean;
@@ -221,7 +221,7 @@ export async function handleCmsIntegrationsTest(
     return withCors(request, Response.json({ error: "Invalid project id" }, { status: 400 }));
   }
 
-  const project = await ownedProject(projectId, userId);
+  const project = await getAccessibleProject(projectId, userId);
   if (!project) {
     return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
   }
