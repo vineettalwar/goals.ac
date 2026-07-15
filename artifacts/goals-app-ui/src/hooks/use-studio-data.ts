@@ -43,10 +43,28 @@ function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGener
   return payload;
 }
 
+/** Mirror Next extractSections: headings from streamed body_markdown JSON. */
+export function extractStreamingSections(jsonAccumulated: string): string[] {
+  const bodyIdx = jsonAccumulated.indexOf('"body_markdown"');
+  if (bodyIdx === -1) return [];
+  const afterKey = jsonAccumulated.slice(bodyIdx + '"body_markdown"'.length);
+  const valueMatch = afterKey.match(/:\s*"([\s\S]*)/);
+  if (!valueMatch) return [];
+  const rawValue = valueMatch[1];
+  const lines = rawValue.split("\\n");
+  return lines.flatMap((l) => {
+    const trimmed = l.replace(/\\"/g, '"').trim();
+    if (!/^#{1,3}\s/.test(trimmed)) return [];
+    const heading = trimmed.replace(/^#+\s*/, "").trim();
+    return heading ? [heading] : [];
+  });
+}
+
 /** Mirror Next CreateContentModal: stream create+generate, then sync POST fallback. */
 async function createPieceViaStream(
   projectId: string,
   payload: CreateGeneratePayload,
+  onProgress?: (sections: string[]) => void,
 ): Promise<ContentPiece | null> {
   const path = `/api/website-projects/${projectId}/content-pieces/generate/stream`;
   const base = getApiBase();
@@ -72,6 +90,7 @@ async function createPieceViaStream(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let jsonAccumulated = "";
   let pendingEvent: string | null = null;
   let finalPiece: ContentPiece | null = null;
 
@@ -108,8 +127,27 @@ async function createPieceViaStream(
         } catch {
           // ignore malformed payload
         }
+        pendingEvent = null;
+        continue;
       }
       pendingEvent = null;
+
+      try {
+        const parsed = JSON.parse(eventPayload) as { text?: string } | ContentPiece;
+        if ("text" in parsed && parsed.text) {
+          jsonAccumulated += parsed.text;
+          const sections = extractStreamingSections(jsonAccumulated);
+          if (sections.length > 0) {
+            onProgress?.(sections);
+          } else if (jsonAccumulated.length > 30) {
+            onProgress?.(["Crafting title…"]);
+          }
+        } else if (parsed && typeof parsed === "object" && "id" in parsed) {
+          finalPiece = parsed as ContentPiece;
+        }
+      } catch {
+        // partial JSON during streaming
+      }
     }
   }
 
@@ -184,7 +222,10 @@ export function useStudioData(projectId: string | null) {
   }, [projectId, queryClient]);
 
   const createPiece = useCallback(
-    async (input: CreateContentDraftInput) => {
+    async (
+      input: CreateContentDraftInput,
+      options?: { onProgress?: (sections: string[]) => void },
+    ) => {
       if (!projectId) {
         throw new Error("No project selected");
       }
@@ -194,8 +235,9 @@ export function useStudioData(projectId: string | null) {
         throw new Error("Target keyword is required");
       }
 
-      let piece = await createPieceViaStream(projectId, payload);
+      let piece = await createPieceViaStream(projectId, payload, options?.onProgress);
       if (!piece) {
+        options?.onProgress?.(["Finishing…"]);
         piece = await apiFetch<ContentPiece>(
           `/api/website-projects/${projectId}/content-pieces`,
           {

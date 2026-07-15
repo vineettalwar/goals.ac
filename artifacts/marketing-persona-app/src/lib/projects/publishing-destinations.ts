@@ -400,46 +400,49 @@ function buildExportDestinations(): PublishDestinationDefinition[] {
 }
 
 function buildSocialDestinations(): PublishDestinationDefinition[] {
-  const fromShell = getShellSocialDestinations().flatMap((shell) => {
+  const fromShell: PublishDestinationDefinition[] = [];
+
+  for (const shell of getShellSocialDestinations()) {
     if (shell.id === "meta") {
-      return (["instagram", "facebook"] as const).map((id) => ({
-        id,
-        label: id === "instagram" ? "Instagram" : "Facebook",
-        category: "social" as const,
-        integrationKey: "meta",
-        description:
-          id === "instagram"
-            ? "Publish Instagram posts via a connected Meta account."
-            : "Publish Facebook posts via a connected Meta account.",
-        listColorClassName: SOCIAL_LIST_COLORS[id],
-        connectionMethods: ["oauth"] as ConnectionMethod[],
-        connectionMethodLabels: { oauth: SOCIAL_OAUTH_LABEL.meta ?? "Meta OAuth" },
-        hideSettingsCard: true,
-        isConnected: hasMeta,
-        matchesFormat: (f: ContentFormatType) => SOCIAL_FORMAT_DESTINATION[f] === id,
-      }));
+      for (const id of ["instagram", "facebook"] as const) {
+        fromShell.push({
+          id,
+          label: id === "instagram" ? "Instagram" : "Facebook",
+          category: "social",
+          integrationKey: "meta",
+          description:
+            id === "instagram"
+              ? "Publish Instagram posts via a connected Meta account."
+              : "Publish Facebook posts via a connected Meta account.",
+          listColorClassName: SOCIAL_LIST_COLORS[id],
+          connectionMethods: ["oauth"],
+          connectionMethodLabels: { oauth: SOCIAL_OAUTH_LABEL.meta ?? "Meta OAuth" },
+          hideSettingsCard: true,
+          isConnected: hasMeta,
+          matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === id,
+        });
+      }
+      continue;
     }
 
     const id = shell.id as SocialPublishId;
-    return [
-      {
-        id,
-        label: shell.label,
-        category: "social" as const,
-        integrationKey: shell.integrationKey,
-        description: shell.description,
-        listColorClassName: SOCIAL_LIST_COLORS[id],
-        connectionMethods: ["oauth"] as ConnectionMethod[],
-        connectionMethodLabels: {
-          oauth: SOCIAL_OAUTH_LABEL[shell.id] ?? "OAuth",
-        },
-        oauthPath: shell.oauthPath,
-        hideSettingsCard: id === "bluesky" || id === "mastodon" ? true : undefined,
-        isConnected: (c: CmsConnectionSnapshot) => !!c[shell.integrationKey],
-        matchesFormat: (f: ContentFormatType) => SOCIAL_FORMAT_DESTINATION[f] === id,
+    fromShell.push({
+      id,
+      label: shell.label,
+      category: "social",
+      integrationKey: shell.integrationKey,
+      description: shell.description,
+      listColorClassName: SOCIAL_LIST_COLORS[id],
+      connectionMethods: ["oauth"],
+      connectionMethodLabels: {
+        oauth: SOCIAL_OAUTH_LABEL[shell.id] ?? "OAuth",
       },
-    ];
-  });
+      oauthPath: shell.oauthPath,
+      hideSettingsCard: id === "bluesky" || id === "mastodon" ? true : undefined,
+      isConnected: (c) => !!c[shell.integrationKey],
+      matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === id,
+    });
+  }
 
   // Guard: shell social list must cover every Next social publish id except IG/FB (from meta).
   const covered = new Set(fromShell.map((d) => d.id));

@@ -470,7 +470,7 @@ export async function handleSearchPropertyCallback(
   const oauthError = url.searchParams.get("error");
 
   const secret = requireAuthSecret(env);
-  const state = stateParam ? await verifySearchOAuthState(stateParam, secret) : null;
+  const state = stateParam && secret ? await verifySearchOAuthState(stateParam, secret) : null;
   const fallbackReturn = defaultProjectIntegrationsUrl(state?.projectId);
   const returnUrl = state
     ? normalizeReturnUrl(state.returnUrl, request, state.projectId)

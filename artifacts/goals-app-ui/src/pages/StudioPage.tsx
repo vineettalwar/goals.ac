@@ -100,6 +100,7 @@ export function StudioPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
+  const [generatingHeadings, setGeneratingHeadings] = useState<string[]>([]);
   const [createInitialValues, setCreateInitialValues] =
     useState<CreateContentInitialValues | null>(null);
 
@@ -192,25 +193,32 @@ export function StudioPage() {
         cmsConnections={integrations ?? {}}
         projectCompetitors={projectCompetitors}
         competitorsLoading={competitorQuery.isPending && !competitorQuery.data}
+        generatingHeadings={creating ? generatingHeadings : null}
         onClose={() => {
           if (creating) return;
           setCreateOpen(false);
           setCreateInitialValues(null);
+          setGeneratingHeadings([]);
         }}
         submitting={creating}
         error={createError}
         onSubmit={async (input) => {
           setCreating(true);
           setCreateError(null);
+          setGeneratingHeadings([]);
           try {
-            const piece = await createPiece(input);
+            const piece = await createPiece(input, {
+              onProgress: (sections) => setGeneratingHeadings(sections),
+            });
             setCreateOpen(false);
             setCreateInitialValues(null);
+            setGeneratingHeadings([]);
             if (projectId && piece?.id) {
               navigate(studioContentPiecePath(projectId, piece.id));
             }
           } catch (err) {
             setCreateError(err instanceof Error ? err.message : "Failed to create content");
+            setGeneratingHeadings([]);
           } finally {
             setCreating(false);
           }

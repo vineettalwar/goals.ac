@@ -1,5 +1,11 @@
 # Session Handoff
 
+## Shell create streaming headings (2026-07-16)
+
+Vite Studio create stream now parses SSE `text` chunks, extracts markdown headings from partial `body_markdown` (same algorithm as Next `extractSections`), and passes them into `CreateContentDialog` via `generatingHeadings`. Falls back to timed Analyzing/Drafting/Finishing labels until the first heading arrives; sync POST fallback shows “Finishing…”.
+
+---
+
 ## Shell create competitor picker (2026-07-16)
 
 `CreateContentDialog` competitors step now mirrors Next: load project brand URLs + analyses via host props (`projectCompetitors` / `competitorsLoading`), tap-to-focus cards, quick-add URL, optional focus.
@@ -191,7 +197,7 @@ Next Studio surfaces thin-wrap shell views:
 
 **Migrate:** Postgres `0064_publish_records_output_mode` applied locally. D1 skipped (`.dev.vars` missing).
 
-**Remaining (stale section below — updated):** Shell create destination + project competitor picker shipped 2026-07-16. Still open vs Next richness: repurpose flow, streaming generate headings. Unused local Next studio leftovers remain deletable.
+**Remaining (stale section below — updated):** Shell create destination + competitor picker + streaming headings shipped 2026-07-16. Still open vs Next richness: repurpose flow. Unused local Next studio leftovers remain deletable.
 
 ---
 

@@ -126,6 +126,7 @@ export function CreateContentDialog({
   cmsConnections = null,
   projectCompetitors = null,
   competitorsLoading = false,
+  generatingHeadings = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -138,6 +139,8 @@ export function CreateContentDialog({
   /** Project brand + analysis competitors for the optional picker step. */
   projectCompetitors?: CreateCompetitorOption[] | null;
   competitorsLoading?: boolean;
+  /** Live headings extracted from stream tokens while submitting. */
+  generatingHeadings?: string[] | null;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [title, setTitle] = useState("");
@@ -396,31 +399,52 @@ export function CreateContentDialog({
 
           {showGenerating ? (
             <div className="mt-8 space-y-3" aria-live="polite" aria-busy="true">
-              {GENERATING_LABELS.map((label, index) => {
-                const done = index < generatingLabelIndex;
-                const active = index === generatingLabelIndex;
-                return (
-                  <div
-                    key={label}
-                    className={
-                      active
-                        ? "flex items-center gap-3 text-sm font-medium text-foreground"
-                        : done
-                          ? "flex items-center gap-3 text-sm text-muted-foreground"
-                          : "flex items-center gap-3 text-sm text-muted-foreground/50"
-                    }
-                  >
-                    {active ? (
-                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
-                    ) : done ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                    ) : (
-                      <span className="h-4 w-4 shrink-0 rounded-full border border-border" />
-                    )}
-                    {label}
-                  </div>
-                );
-              })}
+              {generatingHeadings && generatingHeadings.length > 0
+                ? generatingHeadings.map((section, index) => {
+                    const isLast = index === generatingHeadings.length - 1;
+                    return (
+                      <div
+                        key={`${index}-${section}`}
+                        className={
+                          isLast
+                            ? "flex items-center gap-3 text-sm font-medium text-foreground"
+                            : "flex items-center gap-3 text-sm text-muted-foreground"
+                        }
+                      >
+                        {isLast ? (
+                          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+                        ) : (
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                        )}
+                        {section}
+                      </div>
+                    );
+                  })
+                : GENERATING_LABELS.map((label, index) => {
+                    const done = index < generatingLabelIndex;
+                    const active = index === generatingLabelIndex;
+                    return (
+                      <div
+                        key={label}
+                        className={
+                          active
+                            ? "flex items-center gap-3 text-sm font-medium text-foreground"
+                            : done
+                              ? "flex items-center gap-3 text-sm text-muted-foreground"
+                              : "flex items-center gap-3 text-sm text-muted-foreground/50"
+                        }
+                      >
+                        {active ? (
+                          <Loader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
+                        ) : done ? (
+                          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                        ) : (
+                          <span className="h-4 w-4 shrink-0 rounded-full border border-border" />
+                        )}
+                        {label}
+                      </div>
+                    );
+                  })}
             </div>
           ) : null}
 
