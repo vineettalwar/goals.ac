@@ -105,7 +105,7 @@ function BrandTabPanel({
     return (
       <div className="paper-card rounded-xl border-dashed p-12 text-center">
         <p className="text-sm text-muted-foreground">
-          No brand profile yet. Run a website scan or add details in the full product app.
+          No brand profile yet. Run a website scan on the Brand tab.
         </p>
       </div>
     );

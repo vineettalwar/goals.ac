@@ -1,9 +1,23 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { SettingsView, type AiProviderChoice, type BedrockCredentialsForm, type SettingsTab, isSiteAdmin, isSuperAdmin } from "@workspace/app-shell";
-import { useAuth } from "@/context/auth";
-import { apiFetch } from "@/lib/api";
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
+import { useSession } from "next-auth/react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  SettingsView,
+  isSiteAdmin,
+  isSuperAdmin,
+  type AiProviderChoice,
+  type BedrockCredentialsForm,
+  type SettingsTab,
+} from "@workspace/app-shell";
+import { MfaSettingsPanel } from "@/components/mfa/mfa-settings-panel";
+import { OrgSecurityPanel } from "@/components/org/org-security-panel";
+import { PublicApiKeysPanel } from "@/components/settings/public-api-keys-panel";
+import { SettingsBillingPanel } from "@/components/settings/settings-billing-panel";
 import { useSettingsData } from "@/hooks/use-settings-data";
+import type { SettingsInitialData } from "@/lib/server/loaders";
 
 const VALID_TABS: SettingsTab[] = ["profile", "ai", "security", "billing", "account"];
 
@@ -14,10 +28,19 @@ function parseTab(value: string | null): SettingsTab {
   return "profile";
 }
 
-export function SettingsPage() {
-  const { user, loading: authLoading, refresh } = useAuth();
-  const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
+function credentialTestResult(data: { ok?: boolean; error?: string }) {
+  return { ok: Boolean(data.ok), error: data.error };
+}
+
+type SettingsPageClientProps = {
+  initialData: SettingsInitialData;
+};
+
+export function SettingsPageClient({ initialData }: SettingsPageClientProps) {
+  const { data: session, update } = useSession();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const {
     loading,
     email,
@@ -26,19 +49,20 @@ export function SettingsPage() {
     usage,
     usageLoading,
     aiSummary,
-    integrationsSummary,
     userRole,
     orgRole,
+    integrationsSummary,
     reload,
     forgotPasswordHref,
     billingSummary,
     billingLoading,
     loadBillingSummary,
-  } = useSettingsData();
+    canManageAiSettings: initialCanManage,
+  } = useSettingsData(initialData);
 
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => parseTab(searchParams.get("tab")));
-  const [name, setName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [name, setName] = useState(session?.user.name ?? "");
+  const [avatarUrl, setAvatarUrl] = useState(session?.user.image ?? "");
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -48,20 +72,14 @@ export function SettingsPage() {
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [geminiSaving, setGeminiSaving] = useState(false);
   const [geminiDeleting, setGeminiDeleting] = useState(false);
-  const [geminiMessage, setGeminiMessage] = useState<string | null>(null);
   const [openaiSaving, setOpenaiSaving] = useState(false);
   const [openaiDeleting, setOpenaiDeleting] = useState(false);
-  const [openaiMessage, setOpenaiMessage] = useState<string | null>(null);
   const [anthropicSaving, setAnthropicSaving] = useState(false);
   const [anthropicDeleting, setAnthropicDeleting] = useState(false);
-  const [anthropicMessage, setAnthropicMessage] = useState<string | null>(null);
   const [bedrockSaving, setBedrockSaving] = useState(false);
   const [bedrockDeleting, setBedrockDeleting] = useState(false);
-  const [bedrockMessage, setBedrockMessage] = useState<string | null>(null);
   const [providerSaving, setProviderSaving] = useState(false);
   const [providerMessage, setProviderMessage] = useState<string | null>(null);
-  const [portalLoading, setPortalLoading] = useState(false);
-  const [billingMessage, setBillingMessage] = useState<string | null>(null);
   const [semrushSaving, setSemrushSaving] = useState(false);
   const [semrushDeleting, setSemrushDeleting] = useState(false);
   const [deeplSaving, setDeeplSaving] = useState(false);
@@ -69,25 +87,25 @@ export function SettingsPage() {
   const [stockSavingProvider, setStockSavingProvider] = useState<string | null>(null);
   const [stockRemovingProvider, setStockRemovingProvider] = useState<string | null>(null);
   const [integrationsMessage, setIntegrationsMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!authLoading && !user) navigate("/login", { replace: true });
-  }, [authLoading, user, navigate]);
+  const [portalLoading, setPortalLoading] = useState(false);
+  const [billingMessage, setBillingMessage] = useState<string | null>(null);
 
   useEffect(() => {
     setActiveTab(parseTab(searchParams.get("tab")));
   }, [searchParams]);
 
   useEffect(() => {
-    if (user) {
-      setName(user.name ?? "");
-      setAvatarUrl(user.avatarUrl ?? "");
+    if (session?.user) {
+      setName(session.user.name ?? "");
+      setAvatarUrl(session.user.image ?? "");
     }
-  }, [user]);
+  }, [session]);
 
   function changeTab(tab: SettingsTab) {
     setActiveTab(tab);
-    setSearchParams({ tab }, { replace: true });
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", tab);
+    router.replace(`${pathname}?${params.toString()}`);
   }
 
   useEffect(() => {
@@ -98,21 +116,41 @@ export function SettingsPage() {
 
   useEffect(() => {
     const checkout = searchParams.get("checkout");
+    const topup = searchParams.get("topup");
     if (checkout === "success") {
       setBillingMessage("Billing updated.");
       void loadBillingSummary();
-    } else if (checkout === "cancel") {
+    } else if (checkout === "cancel" || topup === "cancelled") {
       setBillingMessage("Checkout canceled.");
+    } else if (topup === "success") {
+      setBillingMessage("Credits added to your workspace.");
     }
   }, [searchParams, loadBillingSummary]);
+
+  const canManageProviderKeys =
+    initialCanManage ??
+    (isSuperAdmin(userRole) ||
+      isSiteAdmin(orgRole) ||
+      isSuperAdmin(session?.user?.role) ||
+      isSiteAdmin(session?.user?.orgRole));
+
+  if (loading && !session) {
+    return <p className="p-8 text-muted-foreground">Loading settings…</p>;
+  }
+
+  if (!session?.user) return null;
+
+  const isGoogleOnly = hasGoogleId && !hasPassword;
+  const displayEmail = email || session.user.email || "";
 
   async function openBillingPortal() {
     setPortalLoading(true);
     setBillingMessage(null);
     try {
-      const data = await apiFetch<{ url?: string }>("/api/billing/portal", { method: "POST" });
-      if (!data.url) {
-        throw new Error("Could not open billing portal");
+      const res = await fetch("/api/billing/portal", { method: "POST" });
+      const data = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+      if (!res.ok || !data.url) {
+        throw new Error(data.error ?? "Could not open billing portal");
       }
       window.location.href = data.url;
     } catch (err) {
@@ -131,17 +169,18 @@ export function SettingsPage() {
     setProfileMessage(null);
     try {
       const payload: { name: string; avatarUrl?: string | null } = { name: trimmedName };
-      if (avatarUrl.trim()) {
-        payload.avatarUrl = avatarUrl.trim();
-      } else {
-        payload.avatarUrl = null;
-      }
-      await apiFetch("/api/auth/me", {
+      payload.avatarUrl = avatarUrl.trim() ? avatarUrl.trim() : null;
+      const res = await fetch("/api/auth/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      await refresh();
+      if (!res.ok) {
+        throw new Error("Failed to save profile");
+      }
+      const body = (await res.json()) as { user?: { name?: string; avatarUrl?: string | null } };
+      const nextAvatar = body.user?.avatarUrl ?? (payload.avatarUrl ?? undefined);
+      await update({ name: trimmedName, image: nextAvatar ?? undefined });
       setProfileMessage("Profile updated.");
     } catch (err) {
       setProfileMessage(err instanceof Error ? err.message : "Failed to save profile");
@@ -158,11 +197,15 @@ export function SettingsPage() {
     setPasswordSaving(true);
     setPasswordMessage(null);
     try {
-      await apiFetch("/api/auth/change-password", {
+      const res = await fetch("/api/auth/change-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error ?? "Failed to change password");
+      }
       setCurrentPassword("");
       setNewPassword("");
       setPasswordMessage("Password updated.");
@@ -177,7 +220,10 @@ export function SettingsPage() {
     if (!window.confirm("Delete your account and all projects? This cannot be undone.")) return;
     setDeletingAccount(true);
     try {
-      await apiFetch("/api/auth/me/delete", { method: "DELETE" });
+      const res = await fetch("/api/auth/me/delete", { method: "DELETE" });
+      if (!res.ok) {
+        throw new Error("Failed to delete account");
+      }
       window.location.href = "/login";
     } catch (err) {
       setProfileMessage(err instanceof Error ? err.message : "Failed to delete account");
@@ -186,28 +232,25 @@ export function SettingsPage() {
   }
 
   async function testGeminiKey(key: string) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/api-key/test", {
+    const res = await fetch("/api/auth/api-key/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key }),
     });
-    return { ok: Boolean(data.ok), error: data.error };
+    const data = (await res.json()) as { ok?: boolean; error?: string };
+    return credentialTestResult(data);
   }
 
   async function saveGeminiKey(key: string) {
     setGeminiSaving(true);
-    setGeminiMessage(null);
     try {
-      await apiFetch("/api/auth/api-key", {
+      const res = await fetch("/api/auth/api-key", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key }),
       });
-      await reload();
-      setGeminiMessage("Gemini API key saved.");
-    } catch (err) {
-      setGeminiMessage(err instanceof Error ? err.message : "Failed to save key");
-      throw err;
+      if (!res.ok) throw new Error("Failed to save key");
+      await reload(false);
     } finally {
       setGeminiSaving(false);
     }
@@ -216,14 +259,10 @@ export function SettingsPage() {
   async function deleteGeminiKey() {
     if (!window.confirm("Remove the organization Gemini API key?")) return;
     setGeminiDeleting(true);
-    setGeminiMessage(null);
     try {
-      await apiFetch("/api/auth/api-key", { method: "DELETE" });
-      await reload();
-      setGeminiMessage("Gemini API key removed.");
-    } catch (err) {
-      setGeminiMessage(err instanceof Error ? err.message : "Failed to remove key");
-      throw err;
+      const res = await fetch("/api/auth/api-key", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove key");
+      await reload(false);
     } finally {
       setGeminiDeleting(false);
     }
@@ -237,7 +276,7 @@ export function SettingsPage() {
     setProviderSaving(true);
     setProviderMessage(null);
     try {
-      await apiFetch("/api/ai-providers/settings", {
+      const res = await fetch("/api/ai-providers/settings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -246,7 +285,8 @@ export function SettingsPage() {
           ollamaModel: input.provider === "ollama" ? input.ollamaModel : null,
         }),
       });
-      await reload();
+      if (!res.ok) throw new Error("Failed to save provider");
+      await reload(false);
       setProviderMessage("AI provider updated.");
     } catch (err) {
       setProviderMessage(err instanceof Error ? err.message : "Failed to save provider");
@@ -257,28 +297,24 @@ export function SettingsPage() {
   }
 
   async function testOpenaiKey(key: string) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/openai-credentials/test", {
+    const res = await fetch("/api/auth/openai-credentials/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key }),
     });
-    return { ok: Boolean(data.ok), error: data.error };
+    return credentialTestResult((await res.json()) as { ok?: boolean; error?: string });
   }
 
   async function saveOpenaiKey(key: string) {
     setOpenaiSaving(true);
-    setOpenaiMessage(null);
     try {
-      await apiFetch("/api/auth/openai-credentials", {
+      const res = await fetch("/api/auth/openai-credentials", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key }),
       });
-      await reload();
-      setOpenaiMessage("OpenAI API key saved.");
-    } catch (err) {
-      setOpenaiMessage(err instanceof Error ? err.message : "Failed to save key");
-      throw err;
+      if (!res.ok) throw new Error("Failed to save key");
+      await reload(false);
     } finally {
       setOpenaiSaving(false);
     }
@@ -287,42 +323,34 @@ export function SettingsPage() {
   async function deleteOpenaiKey() {
     if (!window.confirm("Remove the organization OpenAI API key?")) return;
     setOpenaiDeleting(true);
-    setOpenaiMessage(null);
     try {
-      await apiFetch("/api/auth/openai-credentials", { method: "DELETE" });
-      await reload();
-      setOpenaiMessage("OpenAI API key removed.");
-    } catch (err) {
-      setOpenaiMessage(err instanceof Error ? err.message : "Failed to remove key");
-      throw err;
+      const res = await fetch("/api/auth/openai-credentials", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove key");
+      await reload(false);
     } finally {
       setOpenaiDeleting(false);
     }
   }
 
   async function testAnthropicKey(key: string) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/anthropic-credentials/test", {
+    const res = await fetch("/api/auth/anthropic-credentials/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ key }),
     });
-    return { ok: Boolean(data.ok), error: data.error };
+    return credentialTestResult((await res.json()) as { ok?: boolean; error?: string });
   }
 
   async function saveAnthropicKey(key: string) {
     setAnthropicSaving(true);
-    setAnthropicMessage(null);
     try {
-      await apiFetch("/api/auth/anthropic-credentials", {
+      const res = await fetch("/api/auth/anthropic-credentials", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ key }),
       });
-      await reload();
-      setAnthropicMessage("Anthropic API key saved.");
-    } catch (err) {
-      setAnthropicMessage(err instanceof Error ? err.message : "Failed to save key");
-      throw err;
+      if (!res.ok) throw new Error("Failed to save key");
+      await reload(false);
     } finally {
       setAnthropicSaving(false);
     }
@@ -331,14 +359,10 @@ export function SettingsPage() {
   async function deleteAnthropicKey() {
     if (!window.confirm("Remove the organization Anthropic API key?")) return;
     setAnthropicDeleting(true);
-    setAnthropicMessage(null);
     try {
-      await apiFetch("/api/auth/anthropic-credentials", { method: "DELETE" });
-      await reload();
-      setAnthropicMessage("Anthropic API key removed.");
-    } catch (err) {
-      setAnthropicMessage(err instanceof Error ? err.message : "Failed to remove key");
-      throw err;
+      const res = await fetch("/api/auth/anthropic-credentials", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove key");
+      await reload(false);
     } finally {
       setAnthropicDeleting(false);
     }
@@ -355,28 +379,24 @@ export function SettingsPage() {
   }
 
   async function testBedrockCredentials(form: BedrockCredentialsForm) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/bedrock-credentials/test", {
+    const res = await fetch("/api/auth/bedrock-credentials/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(bedrockPayloadFromForm(form)),
     });
-    return { ok: Boolean(data.ok), error: data.error };
+    return credentialTestResult((await res.json()) as { ok?: boolean; error?: string });
   }
 
   async function saveBedrockCredentials(form: BedrockCredentialsForm) {
     setBedrockSaving(true);
-    setBedrockMessage(null);
     try {
-      await apiFetch("/api/auth/bedrock-credentials", {
+      const res = await fetch("/api/auth/bedrock-credentials", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bedrockPayloadFromForm(form)),
       });
-      await reload();
-      setBedrockMessage("AWS Bedrock credentials saved.");
-    } catch (err) {
-      setBedrockMessage(err instanceof Error ? err.message : "Failed to save credentials");
-      throw err;
+      if (!res.ok) throw new Error("Failed to save credentials");
+      await reload(false);
     } finally {
       setBedrockSaving(false);
     }
@@ -385,38 +405,35 @@ export function SettingsPage() {
   async function deleteBedrockCredentials() {
     if (!window.confirm("Remove the organization AWS Bedrock credentials?")) return;
     setBedrockDeleting(true);
-    setBedrockMessage(null);
     try {
-      await apiFetch("/api/auth/bedrock-credentials", { method: "DELETE" });
-      await reload();
-      setBedrockMessage("AWS Bedrock credentials removed.");
-    } catch (err) {
-      setBedrockMessage(err instanceof Error ? err.message : "Failed to remove credentials");
-      throw err;
+      const res = await fetch("/api/auth/bedrock-credentials", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove credentials");
+      await reload(false);
     } finally {
       setBedrockDeleting(false);
     }
   }
 
   async function testSemrushCredentials(input: { apiKey: string; database: string }) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/semrush-credentials/test", {
+    const res = await fetch("/api/auth/semrush-credentials/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
-    return { ok: Boolean(data.ok), error: data.error };
+    return credentialTestResult((await res.json()) as { ok?: boolean; error?: string });
   }
 
   async function saveSemrushCredentials(input: { apiKey: string; database: string }) {
     setSemrushSaving(true);
     setIntegrationsMessage(null);
     try {
-      await apiFetch("/api/auth/semrush-credentials", {
+      const res = await fetch("/api/auth/semrush-credentials", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
-      await reload();
+      if (!res.ok) throw new Error("Failed to save Semrush credentials");
+      await reload(false);
       setIntegrationsMessage("Semrush API key saved.");
     } catch (err) {
       setIntegrationsMessage(err instanceof Error ? err.message : "Failed to save Semrush credentials");
@@ -431,8 +448,9 @@ export function SettingsPage() {
     setSemrushDeleting(true);
     setIntegrationsMessage(null);
     try {
-      await apiFetch("/api/auth/semrush-credentials", { method: "DELETE" });
-      await reload();
+      const res = await fetch("/api/auth/semrush-credentials", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove Semrush credentials");
+      await reload(false);
       setIntegrationsMessage("Semrush credentials removed.");
     } catch (err) {
       setIntegrationsMessage(err instanceof Error ? err.message : "Failed to remove Semrush credentials");
@@ -443,24 +461,26 @@ export function SettingsPage() {
   }
 
   async function testDeeplKey(key: string) {
-    const data = await apiFetch<{ ok?: boolean; error?: string }>("/api/auth/deepl-credentials/test", {
+    const res = await fetch("/api/auth/deepl-credentials/test", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ apiKey: key }),
     });
-    return { ok: Boolean(data.ok), error: data.error };
+    const data = (await res.json()) as { ok?: boolean; error?: string; note?: string };
+    return { ...credentialTestResult(data), note: data.note };
   }
 
   async function saveDeeplKey(key: string) {
     setDeeplSaving(true);
     setIntegrationsMessage(null);
     try {
-      await apiFetch("/api/auth/deepl-credentials", {
+      const res = await fetch("/api/auth/deepl-credentials", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ apiKey: key }),
       });
-      await reload();
+      if (!res.ok) throw new Error("Failed to save DeepL key");
+      await reload(false);
       setIntegrationsMessage("DeepL API key saved.");
     } catch (err) {
       setIntegrationsMessage(err instanceof Error ? err.message : "Failed to save DeepL key");
@@ -475,8 +495,9 @@ export function SettingsPage() {
     setDeeplDeleting(true);
     setIntegrationsMessage(null);
     try {
-      await apiFetch("/api/auth/deepl-credentials", { method: "DELETE" });
-      await reload();
+      const res = await fetch("/api/auth/deepl-credentials", { method: "DELETE" });
+      if (!res.ok) throw new Error("Failed to remove DeepL key");
+      await reload(false);
       setIntegrationsMessage("DeepL API key removed.");
     } catch (err) {
       setIntegrationsMessage(err instanceof Error ? err.message : "Failed to remove DeepL key");
@@ -487,30 +508,29 @@ export function SettingsPage() {
   }
 
   async function testStockCredentials(input: { provider: string; apiKey: string }) {
-    const data = await apiFetch<{ ok?: boolean; error?: string; note?: string }>(
-      "/api/auth/stock-credentials/test",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      },
-    );
-    return { ok: Boolean(data.ok), error: data.error, note: data.note };
+    const res = await fetch("/api/auth/stock-credentials/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const data = (await res.json()) as { ok?: boolean; error?: string; note?: string };
+    return { ...credentialTestResult(data), note: data.note };
   }
 
   async function saveStockCredentials(input: { provider: string; apiKey: string }) {
     setStockSavingProvider(input.provider);
     setIntegrationsMessage(null);
     try {
-      await apiFetch("/api/auth/stock-credentials", {
+      const res = await fetch("/api/auth/stock-credentials", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
-      await reload();
-      setIntegrationsMessage("Stock API key saved.");
+      if (!res.ok) throw new Error("Failed to save stock credentials");
+      await reload(false);
+      setIntegrationsMessage(`${input.provider} API key saved.`);
     } catch (err) {
-      setIntegrationsMessage(err instanceof Error ? err.message : "Failed to save stock API key");
+      setIntegrationsMessage(err instanceof Error ? err.message : "Failed to save stock credentials");
       throw err;
     } finally {
       setStockSavingProvider(null);
@@ -518,42 +538,37 @@ export function SettingsPage() {
   }
 
   async function deleteStockCredentials(provider: string) {
+    if (!window.confirm(`Remove the organization ${provider} API key?`)) return;
     setStockRemovingProvider(provider);
     setIntegrationsMessage(null);
     try {
-      await apiFetch(`/api/auth/stock-credentials?provider=${encodeURIComponent(provider)}`, {
+      const res = await fetch("/api/auth/stock-credentials", {
         method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider }),
       });
-      await reload();
-      setIntegrationsMessage("Stock API key removed.");
+      if (!res.ok) throw new Error("Failed to remove stock credentials");
+      await reload(false);
+      setIntegrationsMessage(`${provider} API key removed.`);
     } catch (err) {
-      setIntegrationsMessage(err instanceof Error ? err.message : "Failed to remove stock API key");
+      setIntegrationsMessage(err instanceof Error ? err.message : "Failed to remove stock credentials");
       throw err;
     } finally {
       setStockRemovingProvider(null);
     }
   }
 
-  if (authLoading || loading) {
-    return <p className="p-8 text-muted-foreground">Loading settings…</p>;
-  }
-
-  if (!user) return null;
-
-  const isGoogleOnly = hasGoogleId && !hasPassword;
-  const canManageProviderKeys = isSuperAdmin(userRole) || isSiteAdmin(orgRole);
-
   return (
     <SettingsView
       activeTab={activeTab}
       onTabChange={changeTab}
       isGoogleOnly={isGoogleOnly}
-      email={email || user.email}
+      email={displayEmail}
       name={name}
       avatarUrl={avatarUrl}
       onNameChange={setName}
       onAvatarUrlChange={setAvatarUrl}
-      onSaveProfile={saveProfile}
+      onSaveProfile={() => void saveProfile()}
       profileSaving={profileSaving}
       profileMessage={profileMessage}
       usage={usage}
@@ -564,16 +579,16 @@ export function SettingsPage() {
       newPassword={newPassword}
       onCurrentPasswordChange={setCurrentPassword}
       onNewPasswordChange={setNewPassword}
-      onChangePassword={changePassword}
+      onChangePassword={() => void changePassword()}
       passwordSaving={passwordSaving}
       passwordMessage={passwordMessage}
       forgotPasswordHref={forgotPasswordHref}
       renderForgotPasswordLink={({ href, className, children }) => (
-        <a href={href} className={className}>
+        <Link href={href} className={className}>
           {children}
-        </a>
+        </Link>
       )}
-      onDeleteAccount={deleteAccount}
+      onDeleteAccount={() => void deleteAccount()}
       deletingAccount={deletingAccount}
       canManageGeminiKey={canManageProviderKeys}
       canManageProviderKeys={canManageProviderKeys}
@@ -623,22 +638,18 @@ export function SettingsPage() {
       stockSavingProvider={stockSavingProvider}
       stockRemovingProvider={stockRemovingProvider}
       integrationsMessage={integrationsMessage}
-      aiProvidersNote={
-        <div className="space-y-3">
-          {geminiMessage ? (
-            <div className="paper-card p-4 text-sm text-muted-foreground">{geminiMessage}</div>
-          ) : null}
-          {openaiMessage ? (
-            <div className="paper-card p-4 text-sm text-muted-foreground">{openaiMessage}</div>
-          ) : null}
-          {anthropicMessage ? (
-            <div className="paper-card p-4 text-sm text-muted-foreground">{anthropicMessage}</div>
-          ) : null}
-          {bedrockMessage ? (
-            <div className="paper-card p-4 text-sm text-muted-foreground">{bedrockMessage}</div>
-          ) : null}
-        </div>
+      securitySupplement={
+        <>
+          <MfaSettingsPanel />
+          <OrgSecurityPanel canManage={canManageProviderKeys} />
+        </>
       }
+      billingContent={
+        <Suspense fallback={<p className="text-sm text-muted-foreground">Loading billing…</p>}>
+          <SettingsBillingPanel />
+        </Suspense>
+      }
+      aiProvidersNote={<PublicApiKeysPanel canManage={canManageProviderKeys} />}
     />
   );
 }

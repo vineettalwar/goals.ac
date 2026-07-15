@@ -20,6 +20,14 @@ export type HelpResourceLink = {
   description?: string;
 };
 
+function isCanonicalAppOrigin(href: string): boolean {
+  try {
+    return new URL(href).hostname === "app.goals.ac";
+  } catch {
+    return href.includes("app.goals.ac");
+  }
+}
+
 export function HelpView({
   advancedAppHref,
   checklist,
@@ -32,6 +40,7 @@ export function HelpView({
   renderLink: (props: HelpLinkProps) => ReactNode;
 }) {
   const doneCount = checklist.filter((item) => item.done).length;
+  const showAdvancedAppLink = !isCanonicalAppOrigin(advancedAppHref);
 
   return (
     <div className="space-y-6">
@@ -91,21 +100,23 @@ export function HelpView({
         </ul>
       </div>
 
-      <div className="paper-card p-6 text-sm text-muted-foreground">
-        <p>
-          Advanced workflows — CMS publishing, AI provider keys, admin tools, and social scheduling — are
-          available in the full product app.
-        </p>
-        <a
-          href={advancedAppHref}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-3 inline-flex items-center gap-1 font-medium text-primary hover:underline"
-        >
-          Open full product app
-          <ExternalLink className="h-3.5 w-3.5" />
-        </a>
-      </div>
+      {showAdvancedAppLink ? (
+        <div className="paper-card p-6 text-sm text-muted-foreground">
+          <p>
+            Advanced workflows — CMS publishing, AI provider keys, admin tools, and social scheduling — are
+            available in the product app.
+          </p>
+          <a
+            href={advancedAppHref}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex items-center gap-1 font-medium text-primary hover:underline"
+          >
+            Open product app
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+      ) : null}
     </div>
   );
 }

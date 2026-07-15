@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   BeehiivConnectDialog,
   CMS_NATIVE_CONNECT_PLATFORMS,
@@ -27,6 +27,7 @@ import {
   type JoomlaConnectPayload,
   type MailchimpConnectPayload,
   type NotionConnectPayload,
+  type SearchPropertyProvider,
   type ShopifyConnectPayload,
   type WebflowConnectPayload,
   type WordPressConnectPayload,
@@ -34,7 +35,7 @@ import {
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { useIntegrationsData } from "@/hooks/use-integrations-data";
-import { apiFetch, getAppOrigin } from "@/lib/api";
+import { apiFetch, getApiBase, getAppOrigin } from "@/lib/api";
 
 type CmsIntegrationsResponse = Record<string, { connected?: boolean } & Record<string, unknown>>;
 
@@ -61,6 +62,61 @@ export function IntegrationsPage() {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [connectPlatform, setConnectPlatform] = useState<string | null>(null);
   const [connectEsp, setConnectEsp] = useState<EspPlatformId | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [metaPageToken, setMetaPageToken] = useState<string | null>(null);
+  const [disconnectingSearchProvider, setDisconnectingSearchProvider] =
+    useState<SearchPropertyProvider | null>(null);
+  const [syncingGsc, setSyncingGsc] = useState(false);
+
+  const socialOauthNotice = useMemo(() => {
+    const linkedin = searchParams.get("linkedin");
+    const twitter = searchParams.get("twitter");
+    const meta = searchParams.get("meta");
+    const bluesky = searchParams.get("bluesky");
+    const mastodon = searchParams.get("mastodon");
+
+    if (linkedin === "connected") return "LinkedIn connected.";
+    if (linkedin === "error") return "LinkedIn connection failed.";
+    if (twitter === "connected") return "X connected.";
+    if (twitter === "error") return "X connection failed.";
+    if (bluesky === "connected") return "Bluesky connected.";
+    if (bluesky === "error") return "Bluesky connection failed.";
+    if (mastodon === "connected") return "Mastodon connected.";
+    if (mastodon === "error") return "Mastodon connection failed.";
+    if (meta === "error") return "Meta connection failed.";
+    if (meta === "no_pages") return "No Facebook pages found on this account.";
+    if (meta === "select_page" || metaPageToken) {
+      return "Choose a Facebook Page to finish Meta setup.";
+    }
+    return null;
+  }, [searchParams, metaPageToken]);
+
+  useEffect(() => {
+    const linkedin = searchParams.get("linkedin");
+    const twitter = searchParams.get("twitter");
+    const meta = searchParams.get("meta");
+    const bluesky = searchParams.get("bluesky");
+    const mastodon = searchParams.get("mastodon");
+    const token = searchParams.get("token");
+
+    if (!linkedin && !twitter && !meta && !bluesky && !mastodon) return;
+
+    if (meta === "select_page" && token) {
+      setMetaPageToken(token);
+      setActiveTab("social");
+    } else if (linkedin || twitter || bluesky || mastodon || meta) {
+      setActiveTab("social");
+    }
+
+    const next = new URLSearchParams(searchParams);
+    next.delete("linkedin");
+    next.delete("twitter");
+    next.delete("meta");
+    next.delete("bluesky");
+    next.delete("mastodon");
+    next.delete("token");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   const connectPlatformLabel = useMemo(() => {
     if (!connectPlatform) return "";
@@ -239,6 +295,60 @@ export function IntegrationsPage() {
     }
   }
 
+  async function disconnectSearchProvider(provider: SearchPropertyProvider) {
+    if (!projectId) return;
+    setDisconnectingSearchProvider(provider);
+    setSaveMessage(null);
+    try {
+      await apiFetch(`/api/website-projects/${projectId}/search-properties?provider=${provider}`, {
+        method: "DELETE",
+      });
+      setSaveMessage(`${provider === "google_search_console" ? "Search Console" : "Bing Webmaster"} disconnected.`);
+      await reload();
+    } catch (err) {
+      setSaveMessage(err instanceof Error ? err.message : "Failed to disconnect search property");
+    } finally {
+      setDisconnectingSearchProvider(null);
+    }
+  }
+
+  async function selectSearchProperty(provider: SearchPropertyProvider, propertyUrl: string) {
+    if (!projectId) return;
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      await apiFetch(`/api/website-projects/${projectId}/search-properties`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ provider, propertyUrl }),
+      });
+      setSaveMessage("Search property linked.");
+      await reload();
+    } catch (err) {
+      setSaveMessage(err instanceof Error ? err.message : "Failed to save property selection");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function syncGscQueries() {
+    if (!projectId) return;
+    setSyncingGsc(true);
+    setSaveMessage(null);
+    try {
+      await apiFetch(`/api/website-projects/${projectId}/search-properties/gsc/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      setSaveMessage("GSC query sync queued.");
+    } catch (err) {
+      setSaveMessage(err instanceof Error ? err.message : "GSC sync failed");
+    } finally {
+      setSyncingGsc(false);
+    }
+  }
+
   function closeConnectDialog() {
     if (saving) return;
     setConnectPlatform(null);
@@ -289,9 +399,25 @@ export function IntegrationsPage() {
         searchProperties={searchProperties}
         searchPropertiesLoading={searchLoading}
         searchPropertiesError={searchError}
+        apiBase={getApiBase() || "http://localhost:8787"}
         appOrigin={getAppOrigin()}
+        onDisconnectSearch={(provider) => void disconnectSearchProvider(provider)}
+        onSyncGsc={() => void syncGscQueries()}
+        onSelectSearchProperty={(provider, propertyUrl) =>
+          void selectSearchProperty(provider, propertyUrl)
+        }
+        onRefreshSearch={() => void reload()}
+        disconnectingSearchProvider={disconnectingSearchProvider}
+        syncingGsc={syncingGsc}
         socialCount={socialCount}
         onDisconnectSocial={(platform) => void disconnect(platform)}
+        metaPageToken={metaPageToken}
+        onMetaPageConnected={() => {
+          setMetaPageToken(null);
+          setSaveMessage("Meta page connected.");
+          void reload();
+        }}
+        socialOauthNotice={socialOauthNotice}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}
@@ -368,6 +494,7 @@ export function IntegrationsPage() {
         onOpenChange={(open) => {
           if (!open) closeConnectDialog();
         }}
+        fullAppIntegrationsUrl={`${getAppOrigin().replace(/\/+$/, "")}/integrations`}
       />
 
       <BeehiivConnectDialog

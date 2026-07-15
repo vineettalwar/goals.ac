@@ -130,7 +130,7 @@ export type EspDestinationDefinition = {
   description: string;
   connectionMethods: ConnectionMethod[];
   connectionMethodLabel: string;
-  /** When true, goals-app-ui shows a link to the full product app instead of a connect dialog. */
+  /** When true, goals-app-ui shows a link to Integrations instead of a connect dialog. */
   fullAppOnly?: boolean;
   isConnected: (connections: CmsConnectionSnapshot) => boolean;
 };

@@ -188,7 +188,7 @@ export function AutopilotView({
           <p className="text-sm text-muted-foreground">
             {editable
               ? "Autopilot is off. Enable it to schedule content automatically from your strategy calendar."
-              : "Autopilot is off. Enable it in project Publishing settings on the full product app to schedule content automatically."}
+              : "Autopilot is off. Enable autopilot below to schedule content automatically."}
           </p>
         ) : null}
 

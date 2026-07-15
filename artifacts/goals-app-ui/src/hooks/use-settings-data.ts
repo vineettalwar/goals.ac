@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { apiFetch, getAppOrigin } from "@/lib/api";
-import type { SettingsAiSummary, SettingsBillingSummary, UsageSummary } from "@workspace/app-shell";
+import { apiFetch } from "@/lib/api";
+import type { SettingsAiSummary, SettingsBillingSummary, SettingsIntegrationsSummary, UsageSummary } from "@workspace/app-shell";
 
 type MeResponse = {
   user?: {
@@ -29,6 +29,24 @@ type BedrockCredentialsResponse = {
   hasSessionToken?: boolean;
 };
 
+type StockCredentialsResponse = {
+  platform?: SettingsIntegrationsSummary["stock"]["platform"];
+  org?: SettingsIntegrationsSummary["stock"]["org"];
+  providers?: SettingsIntegrationsSummary["stock"]["providers"];
+};
+
+type SemrushCredentialsResponse = {
+  hasCredentials?: boolean;
+  apiKeyLastFour?: string | null;
+  database?: string;
+};
+
+type DeeplCredentialsResponse = {
+  configured?: boolean;
+  apiKeyLastFour?: string | null;
+  docsUrl?: string;
+};
+
 type AiStatusResponse = {
   activeProvider?: string;
   source?: "app" | "env" | "auto";
@@ -55,6 +73,7 @@ export function useSettingsData() {
   const [orgRole, setOrgRole] = useState<string | null>(null);
   const [billingSummary, setBillingSummary] = useState<SettingsBillingSummary | null>(null);
   const [billingLoading, setBillingLoading] = useState(false);
+  const [integrationsSummary, setIntegrationsSummary] = useState<SettingsIntegrationsSummary | null>(null);
 
   const loadBillingSummary = useCallback(async () => {
     setBillingLoading(true);
@@ -72,7 +91,18 @@ export function useSettingsData() {
     setLoading(true);
     setUsageLoading(true);
     try {
-      const [me, usageData, keyData, openaiData, anthropicData, bedrockData, aiData] = await Promise.all([
+      const [
+        me,
+        usageData,
+        keyData,
+        openaiData,
+        anthropicData,
+        bedrockData,
+        aiData,
+        semrushData,
+        deeplData,
+        stockData,
+      ] = await Promise.all([
         apiFetch<MeResponse>("/api/auth/me"),
         apiFetch<{ usage?: UsageSummary }>("/api/usage").catch(() => null),
         apiFetch<ApiKeyResponse>("/api/auth/api-key").catch(() => null),
@@ -80,6 +110,9 @@ export function useSettingsData() {
         apiFetch<ApiKeyResponse>("/api/auth/anthropic-credentials").catch(() => null),
         apiFetch<BedrockCredentialsResponse>("/api/auth/bedrock-credentials").catch(() => null),
         apiFetch<AiStatusResponse>("/api/ai-providers/status").catch(() => null),
+        apiFetch<SemrushCredentialsResponse>("/api/auth/semrush-credentials").catch(() => null),
+        apiFetch<DeeplCredentialsResponse>("/api/auth/deepl-credentials").catch(() => null),
+        apiFetch<StockCredentialsResponse>("/api/auth/stock-credentials").catch(() => null),
       ]);
 
       if (me.user) {
@@ -115,6 +148,23 @@ export function useSettingsData() {
         },
         ollama: aiData?.ollama,
       });
+      setIntegrationsSummary({
+        semrush: {
+          hasCredentials: Boolean(semrushData?.hasCredentials),
+          apiKeyLastFour: semrushData?.apiKeyLastFour ?? null,
+          database: semrushData?.database ?? "us",
+        },
+        deepl: {
+          configured: Boolean(deeplData?.configured),
+          apiKeyLastFour: deeplData?.apiKeyLastFour ?? null,
+          docsUrl: deeplData?.docsUrl,
+        },
+        stock: {
+          platform: stockData?.platform,
+          org: stockData?.org ?? [],
+          providers: stockData?.providers ?? [],
+        },
+      });
     } finally {
       setLoading(false);
       setUsageLoading(false);
@@ -133,10 +183,11 @@ export function useSettingsData() {
     usage,
     usageLoading,
     aiSummary,
+    integrationsSummary,
     userRole,
     orgRole,
     reload,
-    forgotPasswordHref: `${getAppOrigin()}/forgot-password`,
+    forgotPasswordHref: "/forgot-password",
     billingSummary,
     billingLoading,
     loadBillingSummary,

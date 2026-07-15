@@ -46,6 +46,40 @@ export type SettingsBillingSummary = {
   canManageBilling: boolean;
 };
 
+export type SettingsStockCredential = {
+  provider: string;
+  apiKeyLastFour: string;
+  billing: "free" | "paid";
+  searchImplemented: boolean;
+};
+
+export type SettingsStockProviderMeta = {
+  id: string;
+  label: string;
+  billing: "free" | "paid";
+  searchImplemented: boolean;
+  byokAllowed: boolean;
+  docsUrl: string;
+};
+
+export type SettingsIntegrationsSummary = {
+  semrush: {
+    hasCredentials: boolean;
+    apiKeyLastFour: string | null;
+    database: string;
+  };
+  deepl: {
+    configured: boolean;
+    apiKeyLastFour: string | null;
+    docsUrl?: string;
+  };
+  stock: {
+    platform?: { configured: boolean; unsplash: boolean; pexels: boolean };
+    org: SettingsStockCredential[];
+    providers: SettingsStockProviderMeta[];
+  };
+};
+
 export const PLAN_LABELS: Record<UsageSummary["plan"], string> = {
   starter: "Starter",
   growth: "Growth",

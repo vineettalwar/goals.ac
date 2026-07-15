@@ -11,6 +11,8 @@ import {
 import { cn } from "../cn";
 import { SettingsGeminiDialog } from "./settings-gemini-dialog";
 import { SettingsBedrockDialog, type BedrockCredentialsForm } from "./settings-bedrock-dialog";
+import { SettingsSemrushDialog, semrushDatabaseLabel } from "./settings-semrush-dialog";
+import { SettingsStockByokPanel } from "./settings-stock-byok-panel";
 import {
   SettingsProviderKeyDialog,
   type ProviderKeyDialogConfig,
@@ -20,6 +22,7 @@ import {
   type AiProviderChoice,
   type SettingsAiSummary,
   type SettingsBillingSummary,
+  type SettingsIntegrationsSummary,
   type SettingsTab,
   type UsageSummary,
 } from "./types";
@@ -90,6 +93,18 @@ const ANTHROPIC_KEY_DIALOG: ProviderKeyDialogConfig = {
   permissionMessage: "Only organization owners and site admins can manage the Anthropic API key.",
 };
 
+const DEEPL_KEY_DIALOG: ProviderKeyDialogConfig = {
+  providerLabel: "DeepL",
+  inputId: "deepl-api-key",
+  dialogTitleId: "deepl-key-dialog-title",
+  placeholder: "DeepL Pro API key",
+  helpText: "Get a key at",
+  helpUrl: "https://www.deepl.com/pro-api",
+  helpLinkLabel: "deepl.com/pro-api",
+  removeConfirmMessage: "Remove the organization DeepL API key?",
+  permissionMessage: "Only organization owners and site admins can manage the DeepL API key.",
+};
+
 export function SettingsView({
   activeTab,
   onTabChange,
@@ -146,6 +161,28 @@ export function SettingsView({
   providerMessage,
   billingSummary,
   billingLoading = false,
+  onOpenBillingPortal,
+  portalLoading = false,
+  billingMessage,
+  integrationsSummary,
+  onSaveSemrushCredentials,
+  onDeleteSemrushCredentials,
+  onTestSemrushCredentials,
+  semrushSaving = false,
+  semrushDeleting = false,
+  onSaveDeeplKey,
+  onDeleteDeeplKey,
+  onTestDeeplKey,
+  deeplSaving = false,
+  deeplDeleting = false,
+  onSaveStockCredentials,
+  onDeleteStockCredentials,
+  onTestStockCredentials,
+  stockSavingProvider = null,
+  stockRemovingProvider = null,
+  integrationsMessage,
+  securitySupplement,
+  billingContent,
 }: {
   activeTab: SettingsTab;
   onTabChange: (tab: SettingsTab) => void;
@@ -208,12 +245,42 @@ export function SettingsView({
   providerMessage?: string | null;
   billingSummary?: SettingsBillingSummary | null;
   billingLoading?: boolean;
+  onOpenBillingPortal?: () => Promise<void>;
+  portalLoading?: boolean;
+  billingMessage?: string | null;
+  integrationsSummary?: SettingsIntegrationsSummary | null;
+  onSaveSemrushCredentials?: (input: { apiKey: string; database: string }) => Promise<void>;
+  onDeleteSemrushCredentials?: () => Promise<void>;
+  onTestSemrushCredentials?: (input: {
+    apiKey: string;
+    database: string;
+  }) => Promise<{ ok: boolean; error?: string }>;
+  semrushSaving?: boolean;
+  semrushDeleting?: boolean;
+  onSaveDeeplKey?: (key: string) => Promise<void>;
+  onDeleteDeeplKey?: () => Promise<void>;
+  onTestDeeplKey?: (key: string) => Promise<{ ok: boolean; error?: string }>;
+  deeplSaving?: boolean;
+  deeplDeleting?: boolean;
+  onSaveStockCredentials?: (input: { provider: string; apiKey: string }) => Promise<void>;
+  onDeleteStockCredentials?: (provider: string) => Promise<void>;
+  onTestStockCredentials?: (input: {
+    provider: string;
+    apiKey: string;
+  }) => Promise<{ ok: boolean; error?: string; note?: string }>;
+  stockSavingProvider?: string | null;
+  stockRemovingProvider?: string | null;
+  integrationsMessage?: string | null;
+  securitySupplement?: ReactNode;
+  billingContent?: ReactNode;
 }) {
   const visibleTabs = TABS.filter((tab) => !tab.hideWhenGoogleOnly || !isGoogleOnly);
   const [geminiDialogOpen, setGeminiDialogOpen] = useState(false);
   const [openaiDialogOpen, setOpenaiDialogOpen] = useState(false);
   const [anthropicDialogOpen, setAnthropicDialogOpen] = useState(false);
   const [bedrockDialogOpen, setBedrockDialogOpen] = useState(false);
+  const [semrushDialogOpen, setSemrushDialogOpen] = useState(false);
+  const [deeplDialogOpen, setDeeplDialogOpen] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<AiProviderChoice>("gemini");
   const [ollamaBaseUrl, setOllamaBaseUrl] = useState("http://localhost:11434");
   const [ollamaModel, setOllamaModel] = useState("");
@@ -708,12 +775,176 @@ export function SettingsView({
             />
           ) : null}
 
+          <div className="paper-card space-y-4 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">Semrush (BYOK)</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Connect your Semrush API key for keyword gaps, search volume, and difficulty in content
+                  suggestions.
+                </p>
+              </div>
+              {onSaveSemrushCredentials ? (
+                <button
+                  type="button"
+                  onClick={() => setSemrushDialogOpen(true)}
+                  disabled={!canManageProviderKeys}
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+                >
+                  {integrationsSummary?.semrush.hasCredentials ? "Replace key" : "Add key"}
+                </button>
+              ) : null}
+            </div>
+            {integrationsSummary?.semrush.hasCredentials ? (
+              <div className="flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Organization Semrush API key connected</p>
+                  <p className="text-xs text-muted-foreground">
+                    Key ending in ••••{integrationsSummary.semrush.apiKeyLastFour ?? "••••"}
+                    {integrationsSummary.semrush.database
+                      ? ` · database: ${semrushDatabaseLabel(integrationsSummary.semrush.database)}`
+                      : ""}
+                  </p>
+                </div>
+                {onDeleteSemrushCredentials && canManageProviderKeys ? (
+                  <button
+                    type="button"
+                    onClick={() => void onDeleteSemrushCredentials()}
+                    disabled={semrushDeleting}
+                    className="text-sm text-red-700 hover:underline disabled:opacity-50"
+                  >
+                    {semrushDeleting ? "Removing…" : "Remove"}
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No organization Semrush credentials configured.</p>
+            )}
+            {!canManageProviderKeys ? (
+              <p className="text-xs text-muted-foreground">
+                Only organization owners and site admins can manage Semrush credentials.
+              </p>
+            ) : null}
+          </div>
+
+          {onSaveSemrushCredentials && onTestSemrushCredentials && onDeleteSemrushCredentials ? (
+            <SettingsSemrushDialog
+              open={semrushDialogOpen}
+              onOpenChange={setSemrushDialogOpen}
+              hasCredentials={Boolean(integrationsSummary?.semrush.hasCredentials)}
+              apiKeyLastFour={integrationsSummary?.semrush.apiKeyLastFour ?? null}
+              database={integrationsSummary?.semrush.database ?? "us"}
+              onSave={onSaveSemrushCredentials}
+              onDelete={onDeleteSemrushCredentials}
+              onTest={onTestSemrushCredentials}
+              canManage={canManageProviderKeys}
+              saving={semrushSaving}
+              deleting={semrushDeleting}
+            />
+          ) : null}
+
+          <div className="paper-card space-y-4 p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">DeepL translation (BYOK)</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Optional DeepL API key to refine non-English drafts after humanization.
+                </p>
+              </div>
+              {onSaveDeeplKey ? (
+                <button
+                  type="button"
+                  onClick={() => setDeeplDialogOpen(true)}
+                  disabled={!canManageProviderKeys}
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+                >
+                  {integrationsSummary?.deepl.configured ? "Replace key" : "Add key"}
+                </button>
+              ) : null}
+            </div>
+            {integrationsSummary?.deepl.configured ? (
+              <div className="flex items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3">
+                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" aria-hidden />
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Organization DeepL API key connected</p>
+                  <p className="text-xs text-muted-foreground">
+                    Key ending in ••••{integrationsSummary.deepl.apiKeyLastFour ?? "••••"}
+                  </p>
+                </div>
+                {onDeleteDeeplKey && canManageProviderKeys ? (
+                  <button
+                    type="button"
+                    onClick={() => void onDeleteDeeplKey()}
+                    disabled={deeplDeleting}
+                    className="text-sm text-red-700 hover:underline disabled:opacity-50"
+                  >
+                    {deeplDeleting ? "Removing…" : "Remove"}
+                  </button>
+                ) : null}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No organization DeepL API key configured.</p>
+            )}
+            {!canManageProviderKeys ? (
+              <p className="text-xs text-muted-foreground">
+                Only organization owners and site admins can manage the DeepL API key.
+              </p>
+            ) : null}
+          </div>
+
+          {onSaveDeeplKey && onTestDeeplKey && onDeleteDeeplKey ? (
+            <SettingsProviderKeyDialog
+              open={deeplDialogOpen}
+              onOpenChange={setDeeplDialogOpen}
+              hasKey={Boolean(integrationsSummary?.deepl.configured)}
+              lastFour={integrationsSummary?.deepl.apiKeyLastFour ?? null}
+              onSave={onSaveDeeplKey}
+              onDelete={onDeleteDeeplKey}
+              onTest={onTestDeeplKey}
+              canManage={canManageProviderKeys}
+              saving={deeplSaving}
+              deleting={deeplDeleting}
+              config={DEEPL_KEY_DIALOG}
+            />
+          ) : null}
+
+          <div className="paper-card space-y-4 p-6">
+            <div>
+              <h2 className="font-semibold">Stock photos (Unsplash / Pexels)</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Optional API keys for copyright-free stock search. Platform keys are used when unset.
+              </p>
+            </div>
+            {onSaveStockCredentials && onTestStockCredentials && onDeleteStockCredentials ? (
+              <SettingsStockByokPanel
+                platform={integrationsSummary?.stock.platform}
+                orgCredentials={integrationsSummary?.stock.org ?? []}
+                providers={integrationsSummary?.stock.providers ?? []}
+                canManage={canManageProviderKeys}
+                onSave={onSaveStockCredentials}
+                onDelete={onDeleteStockCredentials}
+                onTest={onTestStockCredentials}
+                savingProvider={stockSavingProvider}
+                removingProvider={stockRemovingProvider}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">Stock credential settings unavailable.</p>
+            )}
+          </div>
+
+          {integrationsMessage ? (
+            <div className="paper-card p-4 text-sm text-muted-foreground">{integrationsMessage}</div>
+          ) : null}
+
           {aiProvidersNote}
         </div>
       ) : null}
 
       {activeTab === "security" && showSecurityTab ? (
-        <div className="paper-card space-y-4 p-6">
+        <div className="space-y-6">
+          {securitySupplement}
+          <div className="paper-card space-y-4 p-6">
           <h2 className="font-semibold">Change password</h2>
           <div className="space-y-1.5">
             <label htmlFor="current-password" className="text-sm font-medium">
@@ -759,10 +990,12 @@ export function SettingsView({
               Forgot password?
             </a>
           )}
+          </div>
         </div>
       ) : null}
 
       {activeTab === "billing" ? (
+        billingContent ?? (
         <div className="paper-card space-y-4 p-6">
           <div className="flex items-start gap-3">
             <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
@@ -826,10 +1059,19 @@ export function SettingsView({
                     </p>
                   ) : null}
 
-                  {billingSummary.hasStripeCustomer && billingSummary.canManageBilling ? (
-                    <p className="text-sm text-muted-foreground">
-                      Invoice history and subscription management are available in the full product app.
-                    </p>
+                  {billingSummary.canManageBilling && billingSummary.stripeConfigured && onOpenBillingPortal ? (
+                    <button
+                      type="button"
+                      onClick={() => void onOpenBillingPortal()}
+                      disabled={portalLoading}
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+                    >
+                      {portalLoading ? "Opening…" : "Manage billing"}
+                    </button>
+                  ) : null}
+
+                  {billingMessage ? (
+                    <p className="text-sm text-muted-foreground">{billingMessage}</p>
                   ) : null}
                 </>
               ) : (
@@ -838,6 +1080,7 @@ export function SettingsView({
             </div>
           </div>
         </div>
+        )
       ) : null}
 
       {activeTab === "account" ? (

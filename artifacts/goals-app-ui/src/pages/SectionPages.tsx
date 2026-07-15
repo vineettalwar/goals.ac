@@ -1,20 +1,34 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   AutopilotView,
+  CMS_PLATFORMS,
   GeoAuditDetailView,
   GeoAuditListView,
   GrowthRoadmapView,
   HelpView,
+  projectDetailPath,
   SocialHubView,
+  type CmsIntegrationRow,
   type GrowthRoadmap,
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
+import { NewProjectButton } from "@/components/NewProjectButton";
 import { SectionShell } from "@/components/SectionShell";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { useAuditDetailData, useAuditListData } from "@/hooks/use-audit-data";
 import { useAutopilotData } from "@/hooks/use-autopilot-data";
+import { useIntegrationsData } from "@/hooks/use-integrations-data";
+import { useProjectsData } from "@/hooks/use-projects-data";
+import { useSocialData } from "@/hooks/use-social-data";
 import { apiFetch, getAppOrigin } from "@/lib/api";
+import type { ContentPiece } from "@/types/api";
+
+const integrationsAppUrl = `${getAppOrigin()}/integrations`;
+
+function cmsConnectedCount(integrations: Record<string, CmsIntegrationRow>): number {
+  return CMS_PLATFORMS.filter(({ key }) => Boolean(integrations[key]?.connected)).length;
+}
 
 const strategyTabs = [
   { label: "Overview", to: "/strategy" },
@@ -81,7 +95,7 @@ export function StrategyGoalsPage() {
         {goals.map((goal) => (
           <div key={goal.id} className="px-4 py-3 flex justify-between text-sm">
             <span className="font-medium capitalize">{goal.objective}</span>
-            <span className="text-(--muted)">{goal.status} · {goal.targetMetric}</span>
+            <span className="text-muted-foreground">{goal.status} · {goal.targetMetric}</span>
           </div>
         ))}
       </DataPanel>
@@ -110,7 +124,7 @@ export function StrategyCalendarPage() {
           <Link key={piece.id} to={`/content-piece/${piece.id}`} className="block px-4 py-3 hover:bg-[#f5f3ef] text-sm">
             <div className="flex justify-between gap-4">
               <span className="font-medium truncate">{piece.title}</span>
-              <span className="text-(--muted) shrink-0">{piece.plannedDate}</span>
+              <span className="text-muted-foreground shrink-0">{piece.plannedDate}</span>
             </div>
           </Link>
         ))}
@@ -160,7 +174,15 @@ export function StrategyTopicalMapPage() {
 
   return (
     <SectionShell title="Topical map" description="Primary keyword clusters from your brand profile." tabs={strategyTabs}>
-      <DataPanel title="Primary keywords" empty={keywords.length === 0 ? "Add keywords in brand profile (local app)." : undefined} error={error}>
+      <DataPanel
+        title="Primary keywords"
+        empty={
+          keywords.length === 0
+            ? "Add keywords in your brand profile on app.goals.ac (Integrations → brand profile)."
+            : undefined
+        }
+        error={error}
+      >
         {keywords.map((kw) => (
           <div key={kw} className="px-4 py-3 text-sm font-medium">{kw}</div>
         ))}
@@ -201,7 +223,7 @@ export function SearchKeywordsPage() {
         {keywords.map((kw) => (
           <div key={kw.id} className="px-4 py-3 flex justify-between text-sm">
             <span className="font-medium">{kw.keyword}</span>
-            <span className="text-(--muted)">{kw.isActive ? "Active" : "Paused"}</span>
+            <span className="text-muted-foreground">{kw.isActive ? "Active" : "Paused"}</span>
           </div>
         ))}
       </DataPanel>
@@ -231,9 +253,56 @@ export function SearchVisibilityPage() {
 }
 
 export function SearchPerformancePage() {
+  const { projectId } = useActiveProject();
+  const { searchProperties, searchLoading, searchError } = useIntegrationsData(projectId);
+
+  const gscConnection = searchProperties?.connections.find(
+    (row) => row.provider === "google_search_console",
+  );
+  const gscConnected = Boolean(gscConnection?.connected && gscConnection.propertyVerified);
+
   return (
-    <SectionShell title="Search performance" description="GSC/GA4 performance views are being ported to the edge API." tabs={searchTabs}>
-      <p className="text-sm text-(--muted)">Connect Google Search Console in Integrations (local app) to unlock performance charts.</p>
+    <SectionShell
+      title="Search performance"
+      description="GSC and GA4 performance views for your active project."
+      tabs={searchTabs}
+    >
+      <DataPanel title="Performance data" error={searchError}>
+        {searchLoading ? (
+          <p className="p-4 text-sm text-muted-foreground">Loading search connections…</p>
+        ) : gscConnected ? (
+          <div className="p-4 text-sm space-y-2">
+            <p>
+              Google Search Console is connected. Open{" "}
+              <a
+                href={integrationsAppUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-primary hover:underline"
+              >
+                Integrations on app.goals.ac
+              </a>{" "}
+              to view performance charts and AI search reports.
+            </p>
+            {gscConnection?.propertyUrl ? (
+              <p className="text-xs text-muted-foreground">Property: {gscConnection.propertyUrl}</p>
+            ) : null}
+          </div>
+        ) : (
+          <p className="p-4 text-sm text-muted-foreground">
+            Connect Google Search Console in{" "}
+            <a
+              href={integrationsAppUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-primary hover:underline"
+            >
+              Integrations on app.goals.ac
+            </a>{" "}
+            to unlock performance charts.
+          </p>
+        )}
+      </DataPanel>
     </SectionShell>
   );
 }
@@ -261,9 +330,9 @@ export function SearchSitePage() {
     <SectionShell title="Site health" description="Crawl status and page inventory for the active project." tabs={searchTabs}>
       {activeProject ? (
         <div className="rounded-xl border border-(--border) bg-white p-4 text-sm space-y-3">
-          <p><span className="text-(--muted)">Crawl status:</span> {activeProject.crawlStatus}</p>
-          <p><span className="text-(--muted)">Pages indexed:</span> {activeProject.pageCount}</p>
-          <p><span className="text-(--muted)">URL:</span> {activeProject.url}</p>
+          <p><span className="text-muted-foreground">Crawl status:</span> {activeProject.crawlStatus}</p>
+          <p><span className="text-muted-foreground">Pages indexed:</span> {activeProject.pageCount}</p>
+          <p><span className="text-muted-foreground">URL:</span> {activeProject.url}</p>
           <button
             type="button"
             disabled={scraping}
@@ -272,7 +341,7 @@ export function SearchSitePage() {
           >
             {scraping ? "Queueing…" : "Queue site crawl"}
           </button>
-          {scrapeMessage ? <p className="text-xs text-(--muted)">{scrapeMessage}</p> : null}
+          {scrapeMessage ? <p className="text-xs text-muted-foreground">{scrapeMessage}</p> : null}
         </div>
       ) : null}
     </SectionShell>
@@ -299,7 +368,7 @@ export function SearchSuggestionsPage() {
         {opportunities.map((row) => (
           <div key={row.id} className="px-4 py-3 text-sm">
             <p className="font-medium">{row.keyword}</p>
-            <p className="text-(--muted) text-xs mt-1">Score {row.opportunityScore} · {row.suggestedTitle}</p>
+            <p className="text-muted-foreground text-xs mt-1">Score {row.opportunityScore} · {row.suggestedTitle}</p>
           </div>
         ))}
       </DataPanel>
@@ -343,7 +412,7 @@ export function ResearchHubPage() {
     <SectionShell title="Research" description="Competitive and community research for content angles." tabs={researchTabs}>
       <div className="grid gap-3 sm:grid-cols-2">
         <HubCard to={`/research/competitors?project=${projectId}`} title="Competitors" hint="AI competitor analyses" />
-        <HubCard to={`/research/reddit?project=${projectId}`} title="Reddit" hint="Community visibility (coming soon)" />
+        <HubCard to={`/research/reddit?project=${projectId}`} title="Reddit" hint="Community visibility research" />
       </div>
     </SectionShell>
   );
@@ -367,7 +436,7 @@ export function ResearchCompetitorsPage() {
         {analyses.map((row) => (
           <div key={row.id} className="px-4 py-3 text-sm">
             <p className="font-medium">{row.competitorUrl}</p>
-            <p className="text-xs text-(--muted) mt-1">{row.industry}</p>
+            <p className="text-xs text-muted-foreground mt-1">{row.industry}</p>
           </div>
         ))}
       </DataPanel>
@@ -377,8 +446,27 @@ export function ResearchCompetitorsPage() {
 
 export function ResearchRedditPage() {
   return (
-    <SectionShell title="Reddit visibility" description="Track subreddit mentions and threads — queue worker support coming soon." tabs={researchTabs}>
-      <p className="text-sm text-(--muted)">This module requires background jobs not yet on the edge write worker.</p>
+    <SectionShell
+      title="Reddit visibility"
+      description="Track subreddit mentions and community threads for content angles."
+      tabs={researchTabs}
+    >
+      <DataPanel title="Reddit research">
+        <div className="p-4 text-sm space-y-2">
+          <p className="text-muted-foreground">
+            Community visibility tracking surfaces Reddit threads and subreddit conversations relevant
+            to your keywords and brand.
+          </p>
+          <a
+            href="https://goals.ac/help"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
+          >
+            Learn more in the goals.ac help center
+          </a>
+        </div>
+      </DataPanel>
     </SectionShell>
   );
 }
@@ -402,18 +490,72 @@ export function AutopilotPage() {
 
 export function SocialHubPage() {
   const { projectId } = useActiveProject();
+  const {
+    queue,
+    queueLoading,
+    queueError,
+    metrics,
+    metricsLoading,
+    platformFilter,
+    setPlatformFilter,
+    reload,
+  } = useSocialData(projectId);
 
   return (
-    <SectionShell title="Social hub" description="Schedule and publish social variants — write APIs rolling out on edge.">
-      <SocialHubView projectId={projectId} renderLink={renderLink} />
+    <SectionShell title="Social hub" description="Schedule and publish social variants.">
+      <SocialHubView
+        projectId={projectId}
+        renderLink={renderLink}
+        queue={queue}
+        queueLoading={queueLoading}
+        queueError={queueError}
+        platformFilter={platformFilter}
+        onPlatformFilterChange={setPlatformFilter}
+        onRefreshQueue={reload}
+        metrics={metrics}
+        metricsLoading={metricsLoading}
+      />
     </SectionShell>
   );
 }
 
 export function PartnerPage() {
+  const { organizationId, organizationName, orgRole, loading } = useAuth();
+  const { projects } = useActiveProject();
+
   return (
     <SectionShell title="Partner portal" description="Agency billing and client workspaces." requireProject={false}>
-      <p className="text-sm text-(--muted)">Partner features require organization admin role — port in progress.</p>
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading organization…</p>
+      ) : organizationId ? (
+        <DataPanel title="Organization">
+          <div className="px-4 py-3 text-sm space-y-2">
+            <p>
+              <span className="text-muted-foreground">Name:</span>{" "}
+              <span className="font-medium">{organizationName ?? "—"}</span>
+            </p>
+            <p>
+              <span className="text-muted-foreground">Organization ID:</span>{" "}
+              <span className="font-medium">{organizationId}</span>
+            </p>
+            {orgRole ? (
+              <p>
+                <span className="text-muted-foreground">Your role:</span>{" "}
+                <span className="font-medium capitalize">{orgRole.replace(/_/g, " ")}</span>
+              </p>
+            ) : null}
+            <p>
+              <span className="text-muted-foreground">Client projects:</span>{" "}
+              <span className="font-medium">{projects.length}</span>
+            </p>
+          </div>
+        </DataPanel>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Partner features require an organization membership. Contact support to set up agency billing
+          and client workspaces.
+        </p>
+      )}
     </SectionShell>
   );
 }
@@ -421,6 +563,47 @@ export function PartnerPage() {
 export function HelpPage() {
   const { projects, projectId } = useActiveProject();
   const hasProject = projects.length > 0;
+  const [hasCmsIntegration, setHasCmsIntegration] = useState(false);
+  const [hasContentPiece, setHasContentPiece] = useState(false);
+  const [checklistLoading, setChecklistLoading] = useState(false);
+
+  useEffect(() => {
+    if (!projectId) {
+      setHasCmsIntegration(false);
+      setHasContentPiece(false);
+      return;
+    }
+
+    let cancelled = false;
+    setChecklistLoading(true);
+
+    void Promise.allSettled([
+      apiFetch<Record<string, CmsIntegrationRow>>(
+        `/api/website-projects/${projectId}/cms-integrations`,
+      ),
+      apiFetch<ContentPiece[]>(`/api/website-projects/${projectId}/content-pieces`),
+    ])
+      .then(([integrationsResult, piecesResult]) => {
+        if (cancelled) return;
+        if (integrationsResult.status === "fulfilled") {
+          setHasCmsIntegration(cmsConnectedCount(integrationsResult.value) > 0);
+        } else {
+          setHasCmsIntegration(false);
+        }
+        if (piecesResult.status === "fulfilled") {
+          setHasContentPiece(piecesResult.value.length > 0);
+        } else {
+          setHasContentPiece(false);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setChecklistLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId]);
 
   return (
     <SectionShell title="Help" description="Product docs and setup guides." requireProject={false}>
@@ -454,13 +637,13 @@ export function HelpPage() {
           {
             id: "integrations",
             label: "Connect a CMS integration",
-            done: false,
+            done: !checklistLoading && hasCmsIntegration,
             href: "/integrations",
           },
           {
             id: "content",
             label: "Generate your first content piece",
-            done: false,
+            done: !checklistLoading && hasContentPiece,
             href: projectId ? `/studio?project=${projectId}` : "/studio",
           },
         ]}
@@ -472,10 +655,34 @@ export function HelpPage() {
 
 export function AdminPage() {
   const { user } = useAuth();
+  const appOrigin = getAppOrigin().replace(/\/+$/, "");
+
   return (
     <SectionShell title="Admin" description="Platform administration." requireProject={false}>
-      {user?.role === "super_admin" || user?.role === "admin" ? (
-        <p className="text-sm text-(--muted)">Admin APIs are not yet exposed on api.goals.ac. Use local dev for full admin panel.</p>
+      {user?.role === "super_admin" ? (
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p>Platform administration runs on the canonical Next.js app.</p>
+          <a
+            href="https://goals.ac/admin"
+            className="font-medium text-primary hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open admin panel at goals.ac
+          </a>
+        </div>
+      ) : user?.role === "admin" ? (
+        <div className="space-y-3 text-sm text-muted-foreground">
+          <p>Platform administration runs on the canonical Next.js app.</p>
+          <a
+            href={`${appOrigin}/admin`}
+            className="font-medium text-primary hover:underline"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Open admin panel at {appOrigin}
+          </a>
+        </div>
       ) : (
         <p className="text-sm text-red-700">Admin access required.</p>
       )}
@@ -484,10 +691,42 @@ export function AdminPage() {
 }
 
 export function OnboardingPage() {
+  const navigate = useNavigate();
+  const { loading, projects } = useProjectsData();
+
+  if (loading) {
+    return (
+      <SectionShell title="Onboarding" description="Set up your first project and brand profile." requireProject={false}>
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </SectionShell>
+    );
+  }
+
+  if (projects.length === 0) {
+    return (
+      <SectionShell title="Onboarding" description="Set up your first project and brand profile." requireProject={false}>
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Create your first project to analyze your site and build your brand profile.
+          </p>
+          <NewProjectButton
+            onCreated={(project) => {
+              navigate(projectDetailPath(project.id));
+            }}
+          />
+        </div>
+      </SectionShell>
+    );
+  }
+
   return (
     <SectionShell title="Onboarding" description="Set up your first project and brand profile." requireProject={false}>
-      <p className="text-sm text-(--muted)">
-        You already have projects synced. Visit <Link to="/projects" className="text-(--forest) font-medium">Projects</Link> to manage them.
+      <p className="text-sm text-muted-foreground">
+        You already have projects synced. Visit{" "}
+        <Link to="/projects" className="font-medium text-primary hover:underline">
+          Projects
+        </Link>{" "}
+        to manage them.
       </p>
     </SectionShell>
   );
@@ -538,7 +777,7 @@ function HubCard({ to, title, hint }: { to: string; title: string; hint: string 
   return (
     <Link to={to} className="rounded-xl border border-(--border) bg-white p-4 hover:border-(--forest)">
       <p className="font-semibold text-sm">{title}</p>
-      <p className="text-xs text-(--muted) mt-1">{hint}</p>
+      <p className="text-xs text-muted-foreground mt-1">{hint}</p>
     </Link>
   );
 }
@@ -560,7 +799,7 @@ function DataPanel({
       {error ? <p className="text-sm text-red-700 mb-2">{error}</p> : null}
       <div className="rounded-xl border border-(--border) bg-white divide-y">
         {children}
-        {empty ? <p className="p-4 text-sm text-(--muted)">{empty}</p> : null}
+        {empty ? <p className="p-4 text-sm text-muted-foreground">{empty}</p> : null}
       </div>
     </section>
   );

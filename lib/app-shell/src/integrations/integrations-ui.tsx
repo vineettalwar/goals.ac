@@ -10,6 +10,7 @@ import {
   IntegrationsSearchPanel,
   searchConnectedCount,
   type SearchPropertyConnectionsResponse,
+  type SearchPropertyProvider,
 } from "./integrations-search-ui";
 import {
   IntegrationsSocialPanel,
@@ -51,17 +52,6 @@ function cmsConnectedCount(integrations: Record<string, CmsIntegrationRow>): num
   return CMS_PLATFORMS.filter(({ key }) => Boolean(integrations[key]?.connected)).length;
 }
 
-function PlaceholderTabPanel() {
-  return (
-    <div className="paper-card p-8 text-center text-sm text-muted-foreground">
-      <p>Available in the full product app at</p>
-      <p className="mt-2">
-        <code className="rounded bg-muted px-1.5 py-0.5 text-xs">localhost:3001/integrations</code>
-      </p>
-    </div>
-  );
-}
-
 export function IntegrationsView({
   projectId,
   projectName,
@@ -86,9 +76,19 @@ export function IntegrationsView({
   searchProperties,
   searchPropertiesLoading,
   searchPropertiesError,
+  apiBase,
+  onDisconnectSearch,
+  onSyncGsc,
+  onSelectSearchProperty,
+  onRefreshSearch,
+  disconnectingSearchProvider,
+  syncingGsc,
   appOrigin,
   socialCount,
   onDisconnectSocial,
+  metaPageToken,
+  onMetaPageConnected,
+  socialOauthNotice,
   renderLink,
 }: {
   projectId: string | null;
@@ -114,9 +114,20 @@ export function IntegrationsView({
   searchProperties?: SearchPropertyConnectionsResponse | null;
   searchPropertiesLoading?: boolean;
   searchPropertiesError?: string | null;
+  /** API origin for OAuth start URLs (e.g. https://api.goals.ac or empty for dev proxy). */
+  apiBase?: string;
+  onDisconnectSearch?: (provider: SearchPropertyProvider) => void;
+  onSyncGsc?: () => void;
+  onSelectSearchProperty?: (provider: SearchPropertyProvider, propertyUrl: string) => void;
+  onRefreshSearch?: () => void;
+  disconnectingSearchProvider?: SearchPropertyProvider | null;
+  syncingGsc?: boolean;
   appOrigin?: string;
   socialCount?: number;
   onDisconnectSocial?: (platform: string) => void;
+  metaPageToken?: string | null;
+  onMetaPageConnected?: () => void;
+  socialOauthNotice?: string | null;
   renderLink: (props: ProjectLinkProps) => ReactNode;
 }) {
   const cmsCount = cmsConnectedCount(integrations);
@@ -277,8 +288,7 @@ export function IntegrationsView({
               <section className="paper-card max-w-lg space-y-3 p-4">
                 <h2 className="text-sm font-semibold">Connect webhook</h2>
                 <p className="text-xs text-muted-foreground">
-                  Other CMS platforms use the same API; full connection forms are available in the
-                  full product app.
+                  Receive publish events at your endpoint when content is pushed from goals.ac.
                 </p>
                 <div className="space-y-3">
                   <label className="block text-sm">
@@ -314,17 +324,20 @@ export function IntegrationsView({
           ) : null}
 
           {activeTab === "search" && projectId ? (
-            searchProperties != null || searchPropertiesLoading || searchPropertiesError ? (
-              <IntegrationsSearchPanel
-                projectId={projectId}
-                data={searchProperties ?? null}
-                loading={Boolean(searchPropertiesLoading)}
-                error={searchPropertiesError ?? null}
-                appOrigin={appOrigin ?? "http://localhost:3001"}
-              />
-            ) : (
-              <PlaceholderTabPanel />
-            )
+            <IntegrationsSearchPanel
+              projectId={projectId}
+              data={searchProperties ?? null}
+              loading={Boolean(searchPropertiesLoading)}
+              error={searchPropertiesError ?? null}
+              apiBase={apiBase ?? "http://localhost:8787"}
+              saving={saving}
+              disconnectingProvider={disconnectingSearchProvider ?? null}
+              syncingGsc={syncingGsc}
+              onDisconnect={onDisconnectSearch}
+              onSyncGsc={onSyncGsc}
+              onSelectProperty={onSelectSearchProperty}
+              onRefresh={onRefreshSearch}
+            />
           ) : null}
 
           {activeTab === "esp" ? (
@@ -349,12 +362,12 @@ export function IntegrationsView({
               integrations={integrations}
               loading={integrationsLoading}
               error={loadError}
-              appOrigin={appOrigin ?? "http://localhost:3001"}
+              apiBase={apiBase ?? ""}
               saving={saving}
               onDisconnect={onDisconnectSocial}
-              fullAppIntegrationsUrl={
-                appOrigin ? `${appOrigin.replace(/\/+$/, "")}/integrations` : undefined
-              }
+              metaPageToken={metaPageToken}
+              onMetaPageConnected={onMetaPageConnected}
+              oauthNotice={socialOauthNotice}
             />
           ) : null}
         </>

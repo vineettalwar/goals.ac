@@ -37,7 +37,11 @@ function featuredImageFromPiece(piece: {
   });
 }
 
-async function publishPiece(pieceId: number, userId: number): Promise<void> {
+async function publishPiece(
+  pieceId: number,
+  userId: number,
+  platformOverride?: string,
+): Promise<void> {
   const [piece] = await db
     .select()
     .from(contentPiecesTable)
@@ -59,7 +63,7 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
   const autopilot = parseAutopilotSettings(project.autopilotSettings);
   const wpStatus = wordpressPublishStatus(autopilot);
   const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
-  const platform = piece.publishPlatform ?? FORMAT_TO_PLATFORM[piece.formatType];
+  const platform = platformOverride ?? piece.publishPlatform ?? FORMAT_TO_PLATFORM[piece.formatType];
   const publishable = {
     id: piece.id,
     title: piece.title,
@@ -170,9 +174,9 @@ async function publishPiece(pieceId: number, userId: number): Promise<void> {
 }
 
 export async function processContentPublish(payload: ContentPublishPayload): Promise<void> {
-  const { contentPieceId, userId } = payload;
+  const { contentPieceId, userId, platform } = payload;
   try {
-    await publishPiece(contentPieceId, userId);
+    await publishPiece(contentPieceId, userId, platform);
     logger.info({ contentPieceId }, "Content publish job completed");
   } catch (err) {
     const message = err instanceof Error ? err.message : "Publish failed";

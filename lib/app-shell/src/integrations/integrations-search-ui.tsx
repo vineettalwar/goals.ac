@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useState } from "react";
 import { cn } from "../cn";
 
 export type SearchPropertyProvider = "google_search_console" | "bing_webmaster";
@@ -21,6 +22,17 @@ export type SearchPropertyConnectionsResponse = {
     googleSearchConsole: boolean;
     bingWebmaster: boolean;
   };
+};
+
+export type AvailableSearchProperty = {
+  propertyUrl: string;
+  label: string;
+  recommended: boolean;
+};
+
+export type AvailableSearchPropertiesResponse = {
+  properties: AvailableSearchProperty[];
+  projectUrl: string;
 };
 
 const PROVIDER_META = {
@@ -54,21 +66,138 @@ function searchConnectedCount(data: SearchPropertyConnectionsResponse | null): n
 
 export { searchConnectedCount };
 
+function PropertyPicker({
+  projectId,
+  provider,
+  shortLabel,
+  apiBase,
+  saving,
+  onSelectProperty,
+}: {
+  projectId: string;
+  provider: SearchPropertyProvider;
+  shortLabel: string;
+  apiBase: string;
+  saving?: boolean;
+  onSelectProperty: (provider: SearchPropertyProvider, propertyUrl: string) => void | Promise<void>;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [available, setAvailable] = useState<AvailableSearchPropertiesResponse | null>(null);
+  const [selected, setSelected] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const base = apiBase.replace(/\/+$/, "");
+      const res = await fetch(
+        `${base}/api/website-projects/${projectId}/search-properties/available?provider=${provider}`,
+        { method: "POST", credentials: "include" },
+      );
+      if (!res.ok) {
+        setError("Could not load verified properties from your account.");
+        return;
+      }
+      const data = (await res.json()) as AvailableSearchPropertiesResponse;
+      setAvailable(data);
+      const recommended = data.properties.find((property) => property.recommended);
+      setSelected(recommended?.propertyUrl ?? data.properties[0]?.propertyUrl ?? "");
+    } catch {
+      setError("Could not load verified properties from your account.");
+    } finally {
+      setLoading(false);
+    }
+  }, [apiBase, projectId, provider]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  if (loading) {
+    return <p className="text-xs text-muted-foreground">Loading verified properties…</p>;
+  }
+
+  if (error) {
+    return <p className="text-xs text-red-700">{error}</p>;
+  }
+
+  if (!available?.properties.length) {
+    return (
+      <p className="text-xs text-amber-700">
+        No verified properties found on this account. Add and verify your site in {shortLabel}, then
+        reconnect.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border border-dashed border-amber-300/70 bg-amber-50/40 p-3">
+      <div>
+        <p className="text-xs font-medium text-foreground">Choose a property</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          We couldn&apos;t auto-match{" "}
+          <span className="font-medium">{available.projectUrl}</span>. Pick the verified property that
+          belongs to this project.
+        </p>
+      </div>
+      <label className="block text-xs">
+        <span className="mb-1 block text-muted-foreground">Verified property</span>
+        <select
+          value={selected}
+          onChange={(event) => setSelected(event.target.value)}
+          className="h-9 w-full rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/20"
+        >
+          {available.properties.map((property) => (
+            <option key={property.propertyUrl} value={property.propertyUrl}>
+              {property.label}
+              {property.recommended ? " (Recommended)" : ""}
+            </option>
+          ))}
+        </select>
+      </label>
+      {selected ? (
+        <p className="break-all text-[11px] text-muted-foreground">{selected}</p>
+      ) : null}
+      <button
+        type="button"
+        disabled={!selected || saving}
+        onClick={() => void onSelectProperty(provider, selected)}
+        className="h-8 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+      >
+        {saving ? "Saving…" : "Use this property"}
+      </button>
+    </div>
+  );
+}
+
 export function IntegrationsSearchPanel({
   projectId,
   data,
   loading,
   error,
-  appOrigin,
-  fullAppIntegrationsUrl = "http://localhost:3001/integrations",
+  apiBase,
+  saving,
+  disconnectingProvider,
+  syncingGsc,
+  onDisconnect,
+  onSyncGsc,
+  onSelectProperty,
+  onRefresh,
 }: {
   projectId: string;
   data: SearchPropertyConnectionsResponse | null;
   loading: boolean;
   error: string | null;
-  /** Origin for OAuth start URLs (Next.js product app). */
-  appOrigin: string;
-  fullAppIntegrationsUrl?: string;
+  /** API origin for OAuth start URLs (api.goals.ac). */
+  apiBase: string;
+  saving?: boolean;
+  disconnectingProvider?: SearchPropertyProvider | null;
+  syncingGsc?: boolean;
+  onDisconnect?: (provider: SearchPropertyProvider) => void | Promise<void>;
+  onSyncGsc?: () => void | Promise<void>;
+  onSelectProperty?: (provider: SearchPropertyProvider, propertyUrl: string) => void | Promise<void>;
+  onRefresh?: () => void | Promise<void>;
 }) {
   if (loading) {
     return <p className="text-sm text-muted-foreground">Loading search connections…</p>;
@@ -88,19 +217,14 @@ export function IntegrationsSearchPanel({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        Property selection, disconnect, and query sync are available in the full product app at{" "}
-        <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{fullAppIntegrationsUrl}</code>
-        .
-      </p>
-
       <div className="grid gap-3 sm:grid-cols-2">
         {data.connections.map((connection) => {
           const meta = PROVIDER_META[connection.provider];
           const oauthReady = isOAuthReady(connection.provider, data.oauthConfigured);
           const verified = connection.connected && connection.propertyVerified;
           const pending = connection.connected && !connection.propertyVerified;
-          const connectHref = `${appOrigin.replace(/\/+$/, "")}/api/auth/${meta.connectPath}?projectId=${encodeURIComponent(projectId)}`;
+          const connectHref = `${apiBase.replace(/\/+$/, "")}/api/auth/${meta.connectPath}?projectId=${encodeURIComponent(projectId)}`;
+          const disconnecting = disconnectingProvider === connection.provider;
 
           return (
             <div
@@ -121,10 +245,26 @@ export function IntegrationsSearchPanel({
                   </p>
                 ) : null}
                 {pending ? (
-                  <p className="text-xs text-amber-700">Account linked — pick a verified property in the full app.</p>
+                  <p className="text-xs text-amber-700">
+                    Account linked — pick a verified property below.
+                  </p>
                 ) : null}
                 {connection.apiIngestionNote ? (
                   <p className="text-xs text-muted-foreground">{connection.apiIngestionNote}</p>
+                ) : null}
+
+                {pending && onSelectProperty ? (
+                  <PropertyPicker
+                    projectId={projectId}
+                    provider={connection.provider}
+                    shortLabel={meta.shortLabel}
+                    apiBase={apiBase}
+                    saving={saving}
+                    onSelectProperty={async (provider, propertyUrl) => {
+                      await onSelectProperty(provider, propertyUrl);
+                      await onRefresh?.();
+                    }}
+                  />
                 ) : null}
               </div>
 
@@ -151,8 +291,32 @@ export function IntegrationsSearchPanel({
                       Connect {meta.shortLabel}
                     </a>
                   ) : (
-                    <span className="text-xs text-muted-foreground">OAuth not configured on this deployment.</span>
+                    <span className="text-xs text-muted-foreground">
+                      OAuth not configured on this deployment.
+                    </span>
                   )
+                ) : null}
+
+                {verified && connection.provider === "google_search_console" && onSyncGsc ? (
+                  <button
+                    type="button"
+                    disabled={Boolean(saving || syncingGsc)}
+                    onClick={() => void onSyncGsc()}
+                    className="h-8 rounded-lg border border-border px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50"
+                  >
+                    {syncingGsc ? "Syncing…" : "Sync GSC queries"}
+                  </button>
+                ) : null}
+
+                {connection.connected && onDisconnect ? (
+                  <button
+                    type="button"
+                    disabled={Boolean(saving || disconnecting)}
+                    onClick={() => void onDisconnect(connection.provider)}
+                    className="h-8 rounded-lg border border-red-200 px-3 text-xs font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {disconnecting ? "Disconnecting…" : "Disconnect"}
+                  </button>
                 ) : null}
 
                 {verified && connection.aiReportUrl ? (
@@ -163,15 +327,6 @@ export function IntegrationsSearchPanel({
                     className="text-xs font-medium text-primary hover:underline"
                   >
                     Open {connection.aiReportLabel}
-                  </a>
-                ) : null}
-
-                {pending && oauthReady ? (
-                  <a
-                    href={connectHref}
-                    className="text-xs font-medium text-primary hover:underline"
-                  >
-                    Finish setup in full app
                   </a>
                 ) : null}
               </div>

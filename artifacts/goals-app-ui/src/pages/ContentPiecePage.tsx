@@ -1,7 +1,8 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ContentPieceNotFound,
+  ContentPiecePublishDialog,
   ContentPieceView,
   contentPieceCanGenerate,
   contentPieceCanPublish,
@@ -15,6 +16,7 @@ export function ContentPiecePage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const autoGenerateRequested = useRef(false);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const {
     loading,
     error,
@@ -24,9 +26,17 @@ export function ContentPiecePage() {
     generatingState,
     generateMessage,
     generate,
+    saving,
+    saveMessage,
+    save,
+    humanizing,
+    humanizeMessage,
+    humanize,
     publishing,
+    publishingState,
     publishMessage,
-    publish,
+    publishToDestination,
+    loadCmsConnections,
   } = useContentPieceData(id);
 
   useEffect(() => {
@@ -77,20 +87,44 @@ export function ContentPiecePage() {
   }
 
   return (
-    <ContentPieceView
-      piece={piece}
-      generating={generating}
-      generatingState={generatingState}
-      generateMessage={generateMessage}
-      onGenerate={contentPieceCanGenerate(piece.status) ? generate : undefined}
-      publishing={publishing}
-      publishMessage={publishMessage}
-      onPublish={contentPieceCanPublish(piece.status) ? publish : undefined}
-      renderLink={({ href, className, children }) => (
-        <Link to={href} className={className}>
-          {children}
-        </Link>
-      )}
-    />
+    <>
+      <ContentPieceView
+        piece={piece}
+        generating={generating}
+        generatingState={generatingState}
+        generateMessage={generateMessage}
+        onGenerate={contentPieceCanGenerate(piece.status) ? generate : undefined}
+        saving={saving}
+        saveMessage={saveMessage}
+        onSave={save}
+        humanizing={humanizing}
+        humanizeMessage={humanizeMessage}
+        onHumanize={humanize}
+        publishing={publishing || Boolean(publishingState)}
+        publishingState={publishingState}
+        publishMessage={publishMessage}
+        onPublish={
+          contentPieceCanPublish(piece.status) ? () => setPublishDialogOpen(true) : undefined
+        }
+        renderLink={({ href, className, children }) => (
+          <Link to={href} className={className}>
+            {children}
+          </Link>
+        )}
+      />
+
+      <ContentPiecePublishDialog
+        open={publishDialogOpen}
+        onClose={() => !publishing && setPublishDialogOpen(false)}
+        formatType={piece.formatType}
+        loadConnections={loadCmsConnections}
+        publishing={publishing}
+        integrationsHref="/integrations"
+        onPublish={async (platform) => {
+          await publishToDestination(platform);
+          setPublishDialogOpen(false);
+        }}
+      />
+    </>
   );
 }

@@ -340,7 +340,7 @@ export function EspFullAppConnectDialog({
   open,
   platformLabel,
   onOpenChange,
-  fullAppIntegrationsUrl = "http://localhost:3001/integrations",
+  fullAppIntegrationsUrl,
 }: ConnectDialogBaseProps & {
   platformLabel: string;
   fullAppIntegrationsUrl?: string;
@@ -358,13 +358,24 @@ export function EspFullAppConnectDialog({
     >
       <div className="space-y-4 text-sm">
         <p className="text-muted-foreground">
-          {platformLabel} uses OAuth or advanced setup in the full product app.
+          {platformLabel} uses OAuth or advanced setup.
         </p>
-        <p>
-          Open{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{fullAppIntegrationsUrl}</code> to
-          configure this platform.
-        </p>
+        {fullAppIntegrationsUrl ? (
+          <p>
+            Open{" "}
+            <a
+              href={fullAppIntegrationsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary hover:underline"
+            >
+              Integrations
+            </a>{" "}
+            to configure this platform.
+          </p>
+        ) : (
+          <p>Open Integrations to configure this platform.</p>
+        )}
         <div className="flex justify-end pt-2">
           <button
             type="button"

@@ -1332,8 +1332,10 @@ export function CmsFullAppConnectDialog({
   open,
   platformLabel,
   onOpenChange,
+  fullAppIntegrationsUrl,
 }: ConnectDialogBaseProps & {
   platformLabel: string;
+  fullAppIntegrationsUrl?: string;
 }) {
   function close() {
     onOpenChange(false);
@@ -1348,13 +1350,22 @@ export function CmsFullAppConnectDialog({
     >
       <div className="space-y-4 text-sm">
         <p className="text-muted-foreground">
-          Full connection forms for {platformLabel} are available in the product app.
+          Full connection forms for {platformLabel} are available in Integrations.
         </p>
-        <p>
-          Open{" "}
-          <code className="rounded bg-muted px-1.5 py-0.5 text-xs">localhost:3001/integrations</code>{" "}
-          to connect this platform.
-        </p>
+        {fullAppIntegrationsUrl ? (
+          <p>
+            Open{" "}
+            <a
+              href={fullAppIntegrationsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-primary hover:underline"
+            >
+              Integrations
+            </a>{" "}
+            to connect this platform.
+          </p>
+        ) : null}
         <div className="flex justify-end pt-2">
           <button
             type="button"

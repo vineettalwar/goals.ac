@@ -17,7 +17,7 @@ export function IntegrationsEspPanel({
   onDisconnect,
   onConnectPlatform,
   onTestPlatform,
-  fullAppIntegrationsUrl = "http://localhost:3001/integrations",
+  fullAppIntegrationsUrl,
 }: {
   integrations: Record<string, CmsIntegrationRow>;
   loading: boolean;
@@ -41,11 +41,24 @@ export function IntegrationsEspPanel({
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        Publish email sequences from Content Studio. Advanced ESP setup is available in the full
-        product app at{" "}
-        <code className="rounded bg-muted px-1.5 py-0.5 text-[11px]">{fullAppIntegrationsUrl}</code>.
-      </p>
+      {fullAppIntegrationsUrl ? (
+        <p className="text-xs text-muted-foreground">
+          Publish email sequences from Content Studio. OAuth ESPs can be configured in{" "}
+          <a
+            href={fullAppIntegrationsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-primary hover:underline"
+          >
+            Integrations
+          </a>
+          .
+        </p>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Publish email sequences from Content Studio.
+        </p>
+      )}
 
       {saveMessage ? (
         <p
@@ -121,15 +134,17 @@ export function IntegrationsEspPanel({
                       Disconnect
                     </button>
                   </div>
-                ) : fullAppOnly ? (
+                ) : fullAppOnly && fullAppIntegrationsUrl ? (
                   <a
                     href={fullAppIntegrationsUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="h-8 rounded-lg border border-border px-3 text-xs font-medium leading-8 hover:bg-secondary"
                   >
-                    Configure in full app
+                    Configure in Integrations
                   </a>
+                ) : fullAppOnly ? (
+                  <span className="text-xs text-muted-foreground">OAuth setup required</span>
                 ) : (
                   <button
                     type="button"

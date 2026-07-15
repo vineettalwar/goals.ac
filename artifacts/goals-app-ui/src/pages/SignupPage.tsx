@@ -4,17 +4,18 @@ import { AuthPageShell, AuthView } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { getApiBase } from "@/lib/api";
 
-export function LoginPage() {
-  const { user, loading, login } = useAuth();
+export function SignupPage() {
+  const { user, loading, signup } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const from = (location.state as { from?: string } | null)?.from ?? "/dashboard";
+  const from = (location.state as { from?: string } | null)?.from ?? "/onboarding";
 
   useEffect(() => {
     if (!loading && user) navigate(from, { replace: true });
@@ -25,7 +26,7 @@ export function LoginPage() {
     setError(null);
     setSubmitting(true);
     try {
-      await login(email.trim(), password);
+      await signup(name.trim(), email.trim(), password);
       navigate(from, { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Request failed");
@@ -37,24 +38,18 @@ export function LoginPage() {
   return (
     <AuthPageShell>
       <AuthView
-        mode="login"
-        name=""
+        mode="signup"
+        name={name}
         email={email}
         password={password}
-        onNameChange={() => {}}
+        onNameChange={setName}
         onEmailChange={setEmail}
         onPasswordChange={setPassword}
         error={error}
         submitting={submitting}
         onSubmit={onSubmit}
-        forgotPasswordHref="/forgot-password"
-        googleSignInHref={`${getApiBase()}/api/auth/google?returnUrl=${encodeURIComponent(window.location.origin + "/dashboard")}`}
+        googleSignInHref={`${getApiBase()}/api/auth/google?returnUrl=${encodeURIComponent(window.location.origin + "/onboarding")}`}
         renderLink={({ href, className, children }) => (
-          <Link to={href} className={className}>
-            {children}
-          </Link>
-        )}
-        renderForgotPasswordLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}
           </Link>

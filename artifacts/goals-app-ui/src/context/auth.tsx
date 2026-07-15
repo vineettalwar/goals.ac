@@ -17,8 +17,18 @@ type AuthUser = {
   avatarUrl: string | null;
 };
 
+type MeResponse = {
+  user: AuthUser;
+  organizationId?: number | null;
+  organizationName?: string | null;
+  orgRole?: string | null;
+};
+
 type AuthState = {
   user: AuthUser | null;
+  organizationId: number | null;
+  organizationName: string | null;
+  orgRole: string | null;
   loading: boolean;
   refresh: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
@@ -28,16 +38,44 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+function applyMeResponse(
+  data: MeResponse,
+  setUser: (user: AuthUser | null) => void,
+  setOrganizationId: (id: number | null) => void,
+  setOrganizationName: (name: string | null) => void,
+  setOrgRole: (role: string | null) => void,
+) {
+  setUser(data.user);
+  setOrganizationId(data.organizationId ?? null);
+  setOrganizationName(data.organizationName ?? null);
+  setOrgRole(data.orgRole ?? null);
+}
+
+function clearAuthState(
+  setUser: (user: AuthUser | null) => void,
+  setOrganizationId: (id: number | null) => void,
+  setOrganizationName: (name: string | null) => void,
+  setOrgRole: (role: string | null) => void,
+) {
+  setUser(null);
+  setOrganizationId(null);
+  setOrganizationName(null);
+  setOrgRole(null);
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [organizationId, setOrganizationId] = useState<number | null>(null);
+  const [organizationName, setOrganizationName] = useState<string | null>(null);
+  const [orgRole, setOrgRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
-      const data = await apiFetch<{ user: AuthUser }>("/api/auth/me");
-      setUser(data.user);
+      const data = await apiFetch<MeResponse>("/api/auth/me");
+      applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole);
     } catch {
-      setUser(null);
+      clearAuthState(setUser, setOrganizationId, setOrganizationName, setOrgRole);
     } finally {
       setLoading(false);
     }
@@ -48,21 +86,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const data = await apiFetch<{ user: AuthUser }>("/api/auth/login", {
+    await apiFetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    setUser(data.user);
+    const data = await apiFetch<MeResponse>("/api/auth/me");
+    applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole);
   }, []);
 
   const signup = useCallback(async (name: string, email: string, password: string) => {
-    const data = await apiFetch<{ user: AuthUser }>("/api/auth/signup", {
+    await apiFetch("/api/auth/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name, email, password }),
     });
-    setUser(data.user);
+    const data = await apiFetch<MeResponse>("/api/auth/me");
+    applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole);
   }, []);
 
   const logout = useCallback(async () => {
@@ -71,13 +111,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore network errors on logout
     } finally {
-      setUser(null);
+      clearAuthState(setUser, setOrganizationId, setOrganizationName, setOrgRole);
     }
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, refresh, login, signup, logout }),
-    [user, loading, refresh, login, signup, logout],
+    () => ({
+      user,
+      organizationId,
+      organizationName,
+      orgRole,
+      loading,
+      refresh,
+      login,
+      signup,
+      logout,
+    }),
+    [user, organizationId, organizationName, orgRole, loading, refresh, login, signup, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

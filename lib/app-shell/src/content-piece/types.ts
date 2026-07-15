@@ -16,6 +16,13 @@ export type ContentPieceGeneratingState = {
   jobId?: string | null;
 };
 
+export type ContentPiecePublishingState = {
+  message: string;
+  jobStatus?: string | null;
+  jobId?: string | null;
+  platform?: string | null;
+};
+
 export function formatContentFormatType(formatType: string): string {
   return formatType.replace(/_/g, " ");
 }
@@ -42,4 +49,22 @@ export function contentPieceCanPublish(status: string): boolean {
 
 export function contentPieceCanGenerate(status: string): boolean {
   return status === "draft" || status === "pending" || status === "failed";
+}
+
+export function contentPieceCanHumanize(formatType: string): boolean {
+  const longform = new Set([
+    "blog_post",
+    "guide",
+    "tutorial",
+    "pillar_page",
+    "whitepaper",
+    "faq_article",
+    "news_article",
+    "location_page",
+  ]);
+  return longform.has(formatType) || formatType === "linkedin_post";
+}
+
+export function contentPieceCanEdit(status: string): boolean {
+  return status !== "generating" && status !== "published";
 }

@@ -78,6 +78,7 @@ export interface ContentGeneratePayload {
 export interface ContentPublishPayload {
   contentPieceId: number;
   userId: number;
+  platform?: string;
 }
 
 export type ScheduledPublishSweepPayload = Record<string, never>;
