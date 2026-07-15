@@ -81,7 +81,7 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const { formatType, targetKeyword, angleHint, plannedDate, briefId, intendedPublishPlatform, intendedOutputMode, intendedEditorMode, competitorFocusUrl } = parsed.data;
+  const { formatType, targetKeyword, angleHint, plannedDate, briefId, intendedPublishPlatform, intendedOutputMode, intendedEditorMode, competitorFocusUrl, competitorUrls } = parsed.data;
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
 
@@ -96,6 +96,7 @@ export async function POST(
     intendedOutputMode,
     intendedEditorMode,
     competitorFocusUrl,
+    competitorUrls,
   });
 
   const bypassCache = req.headers.get("x-bypass-cache") === "true";
@@ -106,6 +107,7 @@ export async function POST(
     angleHint,
     generationContext.intendedPublishPlatform,
     generationContext.competitorFocusUrl,
+    generationContext.competitorUrls,
   );
 
   if (!bypassCache) {

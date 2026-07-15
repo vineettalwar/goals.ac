@@ -21,7 +21,13 @@ import {
   cacheGet,
   cacheSet,
   type BrandContext,
+  type ContentGenerationContext,
 } from "../services/contentStudioGenerator";
+import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor/competitor-generation-context";
+import {
+  normalizeCompetitorUrl,
+  normalizeCompetitorUrlList,
+} from "@workspace/content-engine/support/competitor/competitor-url";
 import { logger } from "../lib/logger";
 import { getDecryptedUserGeminiKey } from "../lib/userApiKey";
 import { decryptSecret } from "@workspace/security/encryption";
@@ -49,7 +55,36 @@ const GenerateBody = z.object({
   formatType: z.enum(CONTENT_FORMAT_TYPES as unknown as [string, ...string[]]),
   targetKeyword: z.string().min(1, "Target keyword is required"),
   angleHint: z.string().optional(),
+  competitorFocusUrl: z.string().optional(),
+  competitorUrls: z.array(z.string()).max(5).optional(),
 });
+
+async function resolveCompetitorGenerationContext(
+  projectId: number,
+  input: { competitorFocusUrl?: string; competitorUrls?: string[] },
+): Promise<ContentGenerationContext> {
+  const pieceUrls = input.competitorUrls?.length
+    ? normalizeCompetitorUrlList(input.competitorUrls)
+    : undefined;
+  const focus =
+    (input.competitorFocusUrl?.trim()
+      ? normalizeCompetitorUrl(input.competitorFocusUrl)
+      : null) ?? pieceUrls?.[0];
+  const competitorContext = await loadCompetitorGenerationContext(
+    projectId,
+    focus ?? undefined,
+    pieceUrls,
+  );
+  return {
+    competitorPromptBlock: competitorContext.promptBlock || undefined,
+    competitorFocusUrl: competitorContext.focusUrl,
+    competitorUrls:
+      pieceUrls ??
+      (competitorContext.competitorUrls.length > 0
+        ? competitorContext.competitorUrls
+        : undefined),
+  };
+}
 
 const ALLOWED_STATUSES = ["draft", "ready", "published"] as const;
 
@@ -90,7 +125,8 @@ router.post(
       return;
     }
 
-    const { formatType, targetKeyword, angleHint } = parsed.data;
+    const { formatType, targetKeyword, angleHint, competitorFocusUrl, competitorUrls } =
+      parsed.data;
 
     try {
       const [project] = await db
@@ -125,12 +161,20 @@ router.post(
         contentStyle: project.contentStyle ?? null,
       };
 
+      const generationContext = await resolveCompetitorGenerationContext(projectId, {
+        competitorFocusUrl,
+        competitorUrls,
+      });
+
       const bypassCache = req.headers["x-bypass-cache"] === "true";
       const cacheKeyStr = buildCacheKey(
         formatType,
         targetKeyword,
         brand,
         angleHint,
+        undefined,
+        generationContext.competitorFocusUrl,
+        generationContext.competitorUrls,
       );
 
       if (!bypassCache) {
@@ -163,6 +207,8 @@ router.post(
         angleHint,
         bypassCache,
         userApiKey,
+        undefined,
+        generationContext,
       );
       const wordCount = result.body_markdown
         .split(/\s+/)

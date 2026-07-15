@@ -19,6 +19,7 @@ type CreateGeneratePayload = {
   plannedDate?: string;
   intendedPublishPlatform?: string;
   competitorFocusUrl?: string;
+  competitorUrls?: string[];
 };
 
 function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGeneratePayload {
@@ -34,6 +35,11 @@ function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGener
   if (platform) payload.intendedPublishPlatform = platform;
   const competitor = input.competitorFocusUrl?.trim();
   if (competitor) payload.competitorFocusUrl = competitor;
+  const competitorUrls = input.competitorUrls?.map((u) => u.trim()).filter(Boolean);
+  if (competitorUrls && competitorUrls.length > 0) {
+    payload.competitorUrls = competitorUrls.slice(0, 5);
+    if (!payload.competitorFocusUrl) payload.competitorFocusUrl = competitorUrls[0];
+  }
   return payload;
 }
 

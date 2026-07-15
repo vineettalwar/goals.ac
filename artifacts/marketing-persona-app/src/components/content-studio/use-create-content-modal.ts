@@ -241,6 +241,20 @@ const resolvedCompetitorFocusUrl = useCallback((): string | undefined => {
   return normalizeCompetitorUrl(competitorFocusUrl) ?? undefined;
 }, [competitorFocusUrl]);
 
+const resolvedCompetitorUrls = useCallback((): string[] | undefined => {
+  const urls = normalizeCompetitorUrlList(competitorUrls);
+  return urls.length > 0 ? urls : undefined;
+}, [competitorUrls]);
+
+const competitorGenerateFields = useCallback(() => {
+  const focus = resolvedCompetitorFocusUrl();
+  const urls = resolvedCompetitorUrls();
+  return {
+    ...(focus ? { competitorFocusUrl: focus } : urls?.[0] ? { competitorFocusUrl: urls[0] } : {}),
+    ...(urls ? { competitorUrls: urls } : {}),
+  };
+}, [resolvedCompetitorFocusUrl, resolvedCompetitorUrls]);
+
 const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> => {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (bypassCache) headers["x-bypass-cache"] = "true";
@@ -255,7 +269,7 @@ const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> =>
       plannedDate: plannedDate || undefined,
       briefId: briefId ?? undefined,
       ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
-      ...(resolvedCompetitorFocusUrl() ? { competitorFocusUrl: resolvedCompetitorFocusUrl() } : {}),
+      ...competitorGenerateFields(),
     }),
   });
 
@@ -268,11 +282,11 @@ const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> =>
 }, [
   bypassCache,
   briefId,
+  competitorGenerateFields,
   intendedDestination,
   keyword,
   plannedDate,
   projectId,
-  resolvedCompetitorFocusUrl,
   selectedFormat,
   buildAngleHint,
 ]);
@@ -292,7 +306,7 @@ const runGeneration = useCallback(async () => {
     plannedDate: plannedDate || undefined,
     briefId: briefId ?? undefined,
     ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
-    ...(resolvedCompetitorFocusUrl() ? { competitorFocusUrl: resolvedCompetitorFocusUrl() } : {}),
+    ...competitorGenerateFields(),
   };
 
   try {

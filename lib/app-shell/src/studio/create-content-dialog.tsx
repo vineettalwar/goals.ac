@@ -22,7 +22,7 @@ export type CreateContentDraftInput = {
   intendedPublishPlatform?: string;
   /** Primary competitor URL sent to generate as competitorFocusUrl. */
   competitorFocusUrl?: string;
-  /** All parsed competitor URLs from the multi-input (first = focus). API takes focus only. */
+  /** All parsed competitor URLs (max 5; first = focus). Sent as competitorUrls. */
   competitorUrls?: string[];
 };
 
@@ -510,8 +510,8 @@ export function CreateContentDialog({
                 />
               </label>
               <p className="text-xs text-muted-foreground">
-                Up to {MAX_COMPETITOR_URLS} URLs. First is sent as competitorFocusUrl; extras stay
-                on the draft for later. Skip for project-level competitors only.
+                Up to {MAX_COMPETITOR_URLS} URLs. First is primary (competitorFocusUrl); all are
+                sent as competitorUrls. Skip for project-level competitors only.
               </p>
             </div>
           ) : null}
