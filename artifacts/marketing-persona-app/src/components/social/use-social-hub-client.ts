@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
   INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   SOCIAL_FORMAT_TYPES,
-  resolveSocialPieceImageUrl,
+  resolveSocialPiecePublicImageUrl,
   socialPieceNeedsInstagramImage,
   type HistorySyncPlatformStatus,
   type PlatformVoiceProfile,
@@ -218,7 +218,7 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
     if (
       piece &&
       socialPieceNeedsInstagramImage(piece) &&
-      !resolveSocialPieceImageUrl(piece)
+      !resolveSocialPiecePublicImageUrl(piece)
     ) {
       toast.error(INSTAGRAM_IMAGE_REQUIRED_MESSAGE);
       return;
@@ -273,7 +273,7 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
       newDateKey != null &&
       piece &&
       socialPieceNeedsInstagramImage(piece) &&
-      !resolveSocialPieceImageUrl(piece)
+      !resolveSocialPiecePublicImageUrl(piece)
     ) {
       toast.error(INSTAGRAM_IMAGE_REQUIRED_MESSAGE);
       return;

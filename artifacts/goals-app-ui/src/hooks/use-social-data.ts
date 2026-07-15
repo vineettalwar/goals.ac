@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   SOCIAL_FORMAT_TYPES,
-  resolveSocialPieceImageUrl,
+  resolveSocialPiecePublicImageUrl,
   socialPieceNeedsInstagramImage,
   type HistorySyncPlatformStatus,
   type PlatformVoiceProfile,
@@ -235,7 +235,7 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
       if (
         piece &&
         socialPieceNeedsInstagramImage(piece) &&
-        !resolveSocialPieceImageUrl(piece)
+        !resolveSocialPiecePublicImageUrl(piece)
       ) {
         notify("error", INSTAGRAM_IMAGE_REQUIRED_MESSAGE);
         return;
@@ -305,7 +305,7 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
         newDateKey != null &&
         piece &&
         socialPieceNeedsInstagramImage(piece) &&
-        !resolveSocialPieceImageUrl(piece)
+        !resolveSocialPiecePublicImageUrl(piece)
       ) {
         notify("error", INSTAGRAM_IMAGE_REQUIRED_MESSAGE);
         return;

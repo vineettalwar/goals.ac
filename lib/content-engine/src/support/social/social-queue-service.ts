@@ -302,6 +302,33 @@ export async function suggestNextSlot(
   return nextSlotFromSettings(settings, platform, after, projectId);
 }
 
+function isPublicHttpImageUrl(url?: string | null): boolean {
+  const trimmed = url?.trim();
+  return Boolean(trimmed && /^https?:\/\//i.test(trimmed));
+}
+
+/** Instagram Graph `image_url` must be http(s). Data-URI visual-summary PNGs do not qualify. */
+function resolvePublicSocialImageUrl(piece: {
+  bodyMarkdown?: string | null;
+  pieceMetadata?: ContentPieceMetadata | null;
+}): string | undefined {
+  const meta = piece.pieceMetadata ?? null;
+  const candidates: Array<string | null | undefined> = [
+    featuredImageFromMetadata({
+      bodyMarkdown: piece.bodyMarkdown ?? undefined,
+      pieceMetadata: meta,
+    }),
+    meta?.featuredImageUrl,
+    meta?.ogImageUrl,
+    ...(meta?.images ?? []).flatMap((img) => [img.publishedUrl, img.remoteUrl]),
+    piece.bodyMarkdown?.match(/!\[[^\]]*\]\((https?:\/\/[^)]+)\)/)?.[1],
+  ];
+  for (const url of candidates) {
+    if (isPublicHttpImageUrl(url)) return url!.trim();
+  }
+  return undefined;
+}
+
 export async function createMultiPlatformBundle(params: {
   projectId: number;
   parentPieceId: number;
@@ -330,7 +357,7 @@ export async function createMultiPlatformBundle(params: {
     );
 
     const slot = await suggestNextSlot(params.projectId, platform);
-    // Instagram needs a public image URL; inherit parent featured/stock when repurpose
+    // Instagram needs a public HTTPS image; inherit parent featured/stock when repurpose
     // did not attach one (image enricher sets metadata on longform / LinkedIn generates).
     let pieceMetadata: ContentPieceMetadata | null = generated.pieceMetadata ?? null;
     if (platform === "instagram") {
@@ -358,17 +385,25 @@ export async function createMultiPlatformBundle(params: {
           images: pieceMetadata?.images?.length ? pieceMetadata.images : parentMeta.images,
         };
       }
+      // Skip IG when only visual-summary data: PNG / no image — do not create a stuck piece.
+      const publicImage =
+        resolvePublicSocialImageUrl({
+          bodyMarkdown: generated.body_markdown,
+          pieceMetadata,
+        }) ??
+        resolvePublicSocialImageUrl({
+          bodyMarkdown: parent.bodyMarkdown,
+          pieceMetadata: parentMeta,
+        });
+      if (!publicImage) continue;
     }
     const canAutoSchedule =
       platform !== "instagram" ||
       Boolean(
-        featuredImageFromMetadata({
+        resolvePublicSocialImageUrl({
           bodyMarkdown: generated.body_markdown,
           pieceMetadata,
-        }) ||
-          pieceMetadata?.featuredImageUrl ||
-          pieceMetadata?.images?.some((img) => img.publishedUrl || img.remoteUrl) ||
-          pieceMetadata?.ogImageUrl,
+        }),
       );
     const [piece] = await db
       .insert(contentPiecesTable)

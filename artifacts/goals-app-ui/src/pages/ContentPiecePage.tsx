@@ -12,8 +12,10 @@ import {
   contentPieceCanQueueSocial,
   formatQueueSocialSuccessMessage,
   isMetaCmsConnected,
+  QUEUE_SOCIAL_INSTAGRAM_SKIPPED_MESSAGE,
   queueSocialComposerPayload,
-  resolveSocialPieceImageUrl,
+  queueSocialInstagramSkipped,
+  resolveSocialPiecePublicImageUrl,
   socialComposerPath,
   socialHubQueuePath,
 } from "@workspace/app-shell";
@@ -147,15 +149,28 @@ export function ContentPiecePage() {
       } catch {
         // Queue LinkedIn+X only when connections cannot be loaded.
       }
-      const payload = queueSocialComposerPayload(piece.id, {
-        metaConnected: isMetaCmsConnected(connections),
-        hasImage: Boolean(
-          resolveSocialPieceImageUrl({
-            bodyMarkdown: piece.bodyMarkdown,
-            pieceMetadata: piece.pieceMetadata,
-          }),
-        ),
-      });
+      const metaConnected = isMetaCmsConnected(connections);
+      let bodyMarkdown = piece.bodyMarkdown;
+      let pieceMetadata = piece.pieceMetadata;
+      let hasImage = Boolean(
+        resolveSocialPiecePublicImageUrl({ bodyMarkdown, pieceMetadata }),
+      );
+      if (metaConnected && !hasImage && stockImagesConfigured) {
+        try {
+          const enriched = await regenerateImages();
+          if (enriched) {
+            bodyMarkdown = enriched.bodyMarkdown;
+            pieceMetadata = enriched.pieceMetadata;
+            hasImage = Boolean(
+              resolveSocialPiecePublicImageUrl({ bodyMarkdown, pieceMetadata }),
+            );
+          }
+        } catch {
+          // Keep current hasImage; Instagram will be skipped below if still missing.
+        }
+      }
+      const queueOptions = { metaConnected, hasImage };
+      const payload = queueSocialComposerPayload(piece.id, queueOptions);
       const data = await apiFetch<{ pieces?: unknown[]; error?: string }>(
         socialComposerPath(piece.websiteProjectId),
         {
@@ -164,12 +179,15 @@ export function ContentPiecePage() {
           body: JSON.stringify(payload),
         },
       );
+      const successMessage = formatQueueSocialSuccessMessage(
+        data.pieces?.length ?? 0,
+        payload.platforms,
+      );
       setQueueSocialFlash({
         level: "success",
-        message: formatQueueSocialSuccessMessage(
-          data.pieces?.length ?? 0,
-          payload.platforms,
-        ),
+        message: queueSocialInstagramSkipped(queueOptions)
+          ? `${successMessage}. ${QUEUE_SOCIAL_INSTAGRAM_SKIPPED_MESSAGE}`
+          : successMessage,
       });
       navigate(socialHubQueuePath(piece.websiteProjectId));
     } catch (err) {

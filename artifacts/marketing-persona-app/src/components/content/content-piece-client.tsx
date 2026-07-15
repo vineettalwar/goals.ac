@@ -30,7 +30,9 @@ import {
   formatQueueSocialSuccessMessage,
   humanizeAuditFromResponse,
   isMetaCmsConnected,
+  QUEUE_SOCIAL_INSTAGRAM_SKIPPED_MESSAGE,
   queueSocialComposerPayload,
+  queueSocialInstagramSkipped,
   socialComposerPath,
   socialHubQueuePath,
   type ContentPieceDetail,
@@ -38,7 +40,7 @@ import {
   type PublishDestinationId,
   type RenderPreviewResult,
 } from "@workspace/app-shell/content-piece";
-import { resolveSocialPieceImageUrl } from "@workspace/app-shell/social";
+import { resolveSocialPiecePublicImageUrl } from "@workspace/app-shell/social";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRecord } from "@/lib/server/loaders";
 import { ArticlePerformanceBadge } from "@/components/content-studio/article-performance-badge";
@@ -178,15 +180,37 @@ export function ContentPieceClient({
       } catch {
         // Fall back to SSR snapshot when refresh fails.
       }
-      const payload = queueSocialComposerPayload(piece.id, {
-        metaConnected: isMetaCmsConnected(connections),
-        hasImage: Boolean(
-          resolveSocialPieceImageUrl({
-            bodyMarkdown: piece.bodyMarkdown,
-            pieceMetadata: piece.pieceMetadata,
-          }),
-        ),
-      });
+      const metaConnected = isMetaCmsConnected(connections);
+      let bodyMarkdown = piece.bodyMarkdown;
+      let pieceMetadata = piece.pieceMetadata;
+      let hasImage = Boolean(
+        resolveSocialPiecePublicImageUrl({ bodyMarkdown, pieceMetadata }),
+      );
+      // Generate already enriches before save. If Meta needs IG and we still lack a
+      // public HTTPS image (enhance-only visual summary, CF sharp stub, stock miss),
+      // try one stock enrich pass before omitting Instagram.
+      if (metaConnected && !hasImage && stockImagesConfigured) {
+        try {
+          const enrichRes = await fetch(`/api/content-pieces/${pieceId}/images/regenerate`, {
+            method: "POST",
+          });
+          if (enrichRes.ok) {
+            const enrichData = (await enrichRes.json()) as { piece: ContentPieceRecord };
+            setPieceRecord(enrichData.piece);
+            bodyMarkdown = enrichData.piece.bodyMarkdown ?? bodyMarkdown;
+            pieceMetadata =
+              (enrichData.piece.pieceMetadata as ContentPieceMetadata | null | undefined) ??
+              pieceMetadata;
+            hasImage = Boolean(
+              resolveSocialPiecePublicImageUrl({ bodyMarkdown, pieceMetadata }),
+            );
+          }
+        } catch {
+          // Keep current hasImage; Instagram will be skipped below if still missing.
+        }
+      }
+      const queueOptions = { metaConnected, hasImage };
+      const payload = queueSocialComposerPayload(piece.id, queueOptions);
       const res = await fetch(socialComposerPath(piece.websiteProjectId), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -201,6 +225,9 @@ export function ContentPieceClient({
       toast.success(
         formatQueueSocialSuccessMessage(data?.pieces?.length ?? 0, payload.platforms),
       );
+      if (queueSocialInstagramSkipped(queueOptions)) {
+        toast.message(QUEUE_SOCIAL_INSTAGRAM_SKIPPED_MESSAGE);
+      }
       router.push(socialHubQueuePath(piece.websiteProjectId));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not queue social posts");

@@ -509,7 +509,7 @@ export function useContentPieceData(pieceId: string | undefined) {
   );
 
   const regenerateImages = useCallback(async () => {
-    if (!pieceId || !piece) return;
+    if (!pieceId || !piece) return null;
     setRegeneratingImages(true);
     try {
       const response = await apiFetch<{ piece: ContentPiece }>(
@@ -519,7 +519,9 @@ export function useContentPieceData(pieceId: string | undefined) {
           headers: { "content-type": "application/json" },
         },
       );
-      setCachedPiece(mapPiece(response.piece));
+      const mapped = mapPiece(response.piece);
+      setCachedPiece(mapped);
+      return mapped;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Image regeneration failed");
       throw err;
