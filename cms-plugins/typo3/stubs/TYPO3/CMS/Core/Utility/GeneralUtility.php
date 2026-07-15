@@ -15,4 +15,14 @@ class GeneralUtility
     {
         throw new \BadMethodCallException('IDE stub only.');
     }
+
+    public static function getUrl(string $url): string|false
+    {
+        throw new \BadMethodCallException('IDE stub only.');
+    }
+
+    public static function tempnam(string $prefix): string
+    {
+        throw new \BadMethodCallException('IDE stub only.');
+    }
 }

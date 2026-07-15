@@ -12,6 +12,8 @@ final class ContentPublisher
 {
     private const MANAGED_CTYPES = ['header', 'text', 'textmedia'];
 
+    private const FAL_UPLOAD_FOLDER = 'user_upload/goals-ac';
+
     /**
      * @param array<string, mixed> $payload
      * @return array{remote_id: int, url: string, action: string}
@@ -112,10 +114,29 @@ final class ContentPublisher
             $fields = is_array($element['fields'] ?? null) ? $element['fields'] : [];
             $colPos = (int)($element['colPos'] ?? $element['col_pos'] ?? 0);
             $sorting = (int)($element['sorting'] ?? ($index + 1) * $defaultSorting);
-            $record = $this->mapContentElementRecord($ctype, $fields, $pageUid, $hidden, $colPos, $sorting);
 
             $newContentId = 'NEW' . uniqid('', true);
-            $dataHandler->datamap['tt_content'][$newContentId] = $record;
+            if ($ctype === 'textmedia') {
+                $this->addTextmediaToDatamap(
+                    $dataHandler,
+                    $newContentId,
+                    $fields,
+                    $pageUid,
+                    $hidden,
+                    $colPos,
+                    $sorting,
+                );
+                continue;
+            }
+
+            $dataHandler->datamap['tt_content'][$newContentId] = $this->mapContentElementRecord(
+                $ctype,
+                $fields,
+                $pageUid,
+                $hidden,
+                $colPos,
+                $sorting,
+            );
         }
 
         $dataHandler->process_datamap();
@@ -147,25 +168,290 @@ final class ContentPublisher
             return $record;
         }
 
-        if ($ctype === 'text') {
-            $record['bodytext'] = $this->sanitizeContent((string)($fields['bodytext'] ?? ''));
-            return $record;
-        }
+        $record['bodytext'] = $this->sanitizeContent((string)($fields['bodytext'] ?? ''));
+        return $record;
+    }
 
+    /**
+     * Prefer FAL sys_file_reference on textmedia.assets; fall back to bodytext img.
+     *
+     * @param array<string, mixed> $fields
+     */
+    private function addTextmediaToDatamap(
+        DataHandler $dataHandler,
+        string $newContentId,
+        array $fields,
+        int $pageUid,
+        int $hidden,
+        int $colPos,
+        int $sorting,
+    ): void {
         $imageUrl = trim((string)($fields['image'] ?? $fields['image_url'] ?? ''));
         $imageAlt = trim((string)($fields['imagealt'] ?? $fields['image_alt'] ?? $fields['alt'] ?? ''));
         $bodytext = trim((string)($fields['bodytext'] ?? ''));
 
-        if ($imageUrl !== '') {
-            $safeUrl = htmlspecialchars($imageUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $safeAlt = htmlspecialchars($imageAlt, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $figure = '<figure class="image"><img src="' . $safeUrl . '" alt="' . $safeAlt
-                . '" loading="lazy" /></figure>';
-            $bodytext = $bodytext !== '' ? $bodytext . "\n" . $figure : $figure;
+        $record = [
+            'pid' => $pageUid,
+            'CType' => 'textmedia',
+            'colPos' => $colPos,
+            'sorting' => $sorting,
+            'hidden' => $hidden,
+            'bodytext' => $this->sanitizeContent($bodytext),
+        ];
+
+        $fileUid = $imageUrl !== '' ? $this->resolveOrImportFalFile($imageUrl) : null;
+        if ($fileUid !== null) {
+            $newRefId = 'NEW' . uniqid('', true);
+            $record['assets'] = $newRefId;
+            $dataHandler->datamap['sys_file_reference'][$newRefId] = [
+                'uid_local' => $fileUid,
+                'tablenames' => 'tt_content',
+                'uid_foreign' => $newContentId,
+                'fieldname' => 'assets',
+                'pid' => $pageUid,
+                'alternative' => $imageAlt,
+                'title' => $imageAlt,
+            ];
+        } elseif ($imageUrl !== '') {
+            $record['bodytext'] = $this->sanitizeContent(
+                $this->appendInlineImageFigure($bodytext, $imageUrl, $imageAlt),
+            );
         }
 
-        $record['bodytext'] = $this->sanitizeContent($bodytext);
-        return $record;
+        $dataHandler->datamap['tt_content'][$newContentId] = $record;
+    }
+
+    private function appendInlineImageFigure(string $bodytext, string $imageUrl, string $imageAlt): string
+    {
+        $safeUrl = htmlspecialchars($imageUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $safeAlt = htmlspecialchars($imageAlt, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $figure = '<figure class="image"><img src="' . $safeUrl . '" alt="' . $safeAlt
+            . '" loading="lazy" /></figure>';
+
+        return $bodytext !== '' ? $bodytext . "\n" . $figure : $figure;
+    }
+
+    private function resolveOrImportFalFile(string $imageUrl): ?int
+    {
+        try {
+            if (!class_exists(\TYPO3\CMS\Core\Resource\StorageRepository::class)) {
+                return null;
+            }
+
+            $storageRepository = GeneralUtility::makeInstance(
+                \TYPO3\CMS\Core\Resource\StorageRepository::class,
+            );
+            $storage = $storageRepository->getDefaultStorage();
+            if ($storage === null) {
+                return null;
+            }
+
+            $existingUid = $this->resolveExistingFalUid($storage, $imageUrl);
+            if ($existingUid !== null) {
+                return $existingUid;
+            }
+
+            return $this->importRemoteImageToFal($storage, $imageUrl);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * @param object $storage TYPO3 ResourceStorage
+     */
+    private function resolveExistingFalUid(object $storage, string $imageUrl): ?int
+    {
+        $identifier = $this->fileadminIdentifierFromUrl($imageUrl);
+        if ($identifier === null) {
+            return null;
+        }
+
+        if (!method_exists($storage, 'hasFile') || !method_exists($storage, 'getFile')) {
+            return null;
+        }
+
+        if (!$storage->hasFile($identifier)) {
+            return null;
+        }
+
+        $file = $storage->getFile($identifier);
+        if (!is_object($file) || !method_exists($file, 'getUid')) {
+            return null;
+        }
+
+        $uid = (int)$file->getUid();
+        return $uid > 0 ? $uid : null;
+    }
+
+    private function fileadminIdentifierFromUrl(string $imageUrl): ?string
+    {
+        $path = parse_url($imageUrl, PHP_URL_PATH);
+        if (!is_string($path) || $path === '') {
+            $path = $imageUrl;
+        }
+
+        $normalized = '/' . ltrim(str_replace('\\', '/', $path), '/');
+        $marker = '/fileadmin/';
+        $pos = strpos($normalized, $marker);
+        if ($pos === false) {
+            if (str_starts_with(ltrim($normalized, '/'), 'fileadmin/')) {
+                $relative = substr(ltrim($normalized, '/'), strlen('fileadmin'));
+                return '/' . ltrim($relative, '/');
+            }
+            return null;
+        }
+
+        $relative = substr($normalized, $pos + strlen($marker));
+        return '/' . ltrim($relative, '/');
+    }
+
+    /**
+     * @param object $storage TYPO3 ResourceStorage
+     */
+    private function importRemoteImageToFal(object $storage, string $imageUrl): ?int
+    {
+        if (!$this->isSafeRemoteImageUrl($imageUrl)) {
+            return null;
+        }
+
+        $downloaded = $this->downloadImageToTempFile($imageUrl);
+        if ($downloaded === null) {
+            return null;
+        }
+
+        [$tempPath, $filename] = $downloaded;
+
+        try {
+            $folder = $this->resolveGoalsAcUploadFolder($storage);
+            if ($folder === null || !method_exists($storage, 'addFile')) {
+                return null;
+            }
+
+            $file = $storage->addFile($tempPath, $folder, $filename);
+            if (!is_object($file) || !method_exists($file, 'getUid')) {
+                return null;
+            }
+
+            $uid = (int)$file->getUid();
+            return $uid > 0 ? $uid : null;
+        } finally {
+            if (is_file($tempPath)) {
+                @unlink($tempPath);
+            }
+        }
+    }
+
+    /**
+     * @param object $storage TYPO3 ResourceStorage
+     * @return object|null Folder
+     */
+    private function resolveGoalsAcUploadFolder(object $storage): ?object
+    {
+        if (method_exists($storage, 'hasFolder') && method_exists($storage, 'getFolder')
+            && $storage->hasFolder(self::FAL_UPLOAD_FOLDER)
+        ) {
+            return $storage->getFolder(self::FAL_UPLOAD_FOLDER);
+        }
+
+        if (method_exists($storage, 'getFolder') && method_exists($storage, 'createFolder')) {
+            try {
+                $parent = $storage->getFolder('user_upload');
+                if (method_exists($parent, 'hasFolder') && $parent->hasFolder('goals-ac')
+                    && method_exists($parent, 'getSubfolder')
+                ) {
+                    return $parent->getSubfolder('goals-ac');
+                }
+                if (method_exists($parent, 'createFolder')) {
+                    return $parent->createFolder('goals-ac');
+                }
+            } catch (\Throwable) {
+                // Fall through to default folder.
+            }
+        }
+
+        if (method_exists($storage, 'getDefaultFolder')) {
+            return $storage->getDefaultFolder();
+        }
+
+        return method_exists($storage, 'getRootLevelFolder') ? $storage->getRootLevelFolder() : null;
+    }
+
+    /**
+     * @return array{0: string, 1: string}|null [tempPath, filename]
+     */
+    private function downloadImageToTempFile(string $imageUrl): ?array
+    {
+        if (!method_exists(GeneralUtility::class, 'getUrl') || !method_exists(GeneralUtility::class, 'tempnam')) {
+            return null;
+        }
+
+        $binary = GeneralUtility::getUrl($imageUrl);
+        if (!is_string($binary) || $binary === '') {
+            return null;
+        }
+
+        $path = parse_url($imageUrl, PHP_URL_PATH);
+        $basename = is_string($path) ? basename($path) : '';
+        $basename = preg_replace('/[^a-zA-Z0-9._-]/', '', $basename) ?? '';
+        if ($basename === '' || !str_contains($basename, '.')) {
+            $basename = 'image-' . substr(sha1($imageUrl), 0, 12) . '.jpg';
+        }
+
+        $tempPath = GeneralUtility::tempnam('goals_ac_img_');
+        if (!is_string($tempPath) || $tempPath === '') {
+            return null;
+        }
+
+        if (file_put_contents($tempPath, $binary) === false) {
+            @unlink($tempPath);
+            return null;
+        }
+
+        return [$tempPath, $basename];
+    }
+
+    private function isSafeRemoteImageUrl(string $url): bool
+    {
+        if (filter_var($url, FILTER_VALIDATE_URL) === false) {
+            return false;
+        }
+
+        $parts = parse_url($url);
+        if (!is_array($parts)) {
+            return false;
+        }
+
+        $scheme = strtolower((string)($parts['scheme'] ?? ''));
+        if (!in_array($scheme, ['http', 'https'], true)) {
+            return false;
+        }
+
+        $host = strtolower((string)($parts['host'] ?? ''));
+        if ($host === '' || $host === 'localhost' || str_ends_with($host, '.localhost')
+            || $host === 'metadata.google.internal'
+        ) {
+            return false;
+        }
+
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return (bool)filter_var(
+                $host,
+                FILTER_VALIDATE_IP,
+                FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
+            );
+        }
+
+        $resolved = gethostbyname($host);
+        if ($resolved !== $host && filter_var($resolved, FILTER_VALIDATE_IP)) {
+            return (bool)filter_var(
+                $resolved,
+                FILTER_VALIDATE_IP,
+                FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE,
+            );
+        }
+
+        return true;
     }
 
     private function removeManagedContentElements(int $pageUid, string $replaceStrategy): void
