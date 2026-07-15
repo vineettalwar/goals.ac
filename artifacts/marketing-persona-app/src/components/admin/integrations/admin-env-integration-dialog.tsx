@@ -18,7 +18,9 @@ export function AdminEnvIntegrationDialog({ controller }: { controller: AdminInt
     activeDialog === "resend" ||
     activeDialog === "unsplash" ||
     activeDialog === "pexels" ||
-    activeDialog === "linkedin"
+    activeDialog === "linkedin" ||
+    activeDialog === "twitter" ||
+    activeDialog === "meta"
   ) {
     return null;
   }

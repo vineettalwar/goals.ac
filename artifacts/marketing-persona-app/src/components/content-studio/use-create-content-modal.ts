@@ -424,7 +424,7 @@ const runGeneration = useCallback(async () => {
   onCreated,
   handleClose,
   handleGenerateFallback,
-  resolvedCompetitorFocusUrl,
+  competitorGenerateFields,
   buildAngleHint,
 ]);
 

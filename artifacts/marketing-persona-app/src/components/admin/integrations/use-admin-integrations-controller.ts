@@ -524,6 +524,8 @@ export function useAdminIntegrationsController() {
     saveUnsplash,
     savePexels,
     saveLinkedIn,
+    saveTwitter,
+    saveMeta,
     disconnectStripeOAuth,
     clearStored,
     savingToggle,
@@ -532,6 +534,8 @@ export function useAdminIntegrationsController() {
     savingUnsplash,
     savingPexels,
     savingLinkedIn,
+    savingTwitter,
+    savingMeta,
     stripeSecretKey,
     setStripeSecretKey,
     stripeWebhookSecret,
@@ -555,6 +559,14 @@ export function useAdminIntegrationsController() {
     setLinkedinClientId,
     linkedinClientSecret,
     setLinkedinClientSecret,
+    twitterClientId,
+    setTwitterClientId,
+    twitterClientSecret,
+    setTwitterClientSecret,
+    metaAppId,
+    setMetaAppId,
+    metaAppSecret,
+    setMetaAppSecret,
   };
 }
 

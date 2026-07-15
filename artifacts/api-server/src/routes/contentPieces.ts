@@ -78,11 +78,7 @@ async function resolveCompetitorGenerationContext(
   return {
     competitorPromptBlock: competitorContext.promptBlock || undefined,
     competitorFocusUrl: competitorContext.focusUrl,
-    competitorUrls:
-      pieceUrls ??
-      (competitorContext.competitorUrls.length > 0
-        ? competitorContext.competitorUrls
-        : undefined),
+    competitorUrls: pieceUrls,
   };
 }
 
@@ -256,7 +252,8 @@ router.post(
       return;
     }
 
-    const { formatType, targetKeyword, angleHint } = parsed.data;
+    const { formatType, targetKeyword, angleHint, competitorFocusUrl, competitorUrls } =
+      parsed.data;
 
     try {
       const [project] = await db
@@ -291,6 +288,11 @@ router.post(
         contentStyle: project.contentStyle ?? null,
       };
 
+      const generationContext = await resolveCompetitorGenerationContext(projectId, {
+        competitorFocusUrl,
+        competitorUrls,
+      });
+
       res.setHeader("Content-Type", "text/event-stream");
       res.setHeader("Cache-Control", "no-cache");
       res.setHeader("Connection", "keep-alive");
@@ -307,6 +309,9 @@ router.post(
         targetKeyword,
         brand,
         angleHint,
+        undefined,
+        generationContext.competitorFocusUrl,
+        generationContext.competitorUrls,
       );
 
       if (!bypassCache) {
@@ -370,6 +375,8 @@ router.post(
           (chunk) => sendEvent("chunk", { text: chunk }),
           angleHint,
           userApiKey,
+          undefined,
+          generationContext,
         );
       } catch (streamErr) {
         logger.warn(
@@ -383,6 +390,8 @@ router.post(
           angleHint,
           true,
           userApiKey,
+          undefined,
+          generationContext,
         );
       }
 

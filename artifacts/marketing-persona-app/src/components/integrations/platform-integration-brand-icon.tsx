@@ -59,12 +59,38 @@ function LinkedInLogo({ className }: { className?: string }) {
   );
 }
 
+function XLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#000" />
+      <path
+        fill="#fff"
+        d="M16.8 6.8h1.9l-4.1 4.7 4.9 5.7h-3.8l-3-3.5-3.4 3.5H6.4l4.4-5.1L6.2 6.8h3.9l2.7 3.2 3-3.2Zm-.7 9.4h1.1L9 7.7H7.9l8.2 8.5Z"
+      />
+    </svg>
+  );
+}
+
+function MetaLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#0866FF" />
+      <path
+        fill="#fff"
+        d="M7.2 14.6c-1.1 0-1.9-.8-1.9-2 0-1.8 1.5-3.4 3.3-3.4.7 0 1.3.2 1.8.6l-.9 1.1c-.3-.2-.6-.3-1-.3-.9 0-1.6.8-1.6 1.9 0 .5.3.9.8.9.7 0 1.2-.8 1.6-1.7.5-1.1 1-2.2 2.1-2.2.9 0 1.5.6 1.5 1.6 0 .3 0 .6-.1.9l-1.5 4.8h-1.5l1.4-4.5c0-.2.1-.4.1-.6 0-.3-.1-.5-.4-.5-.5 0-.9.7-1.3 1.5-.6 1.3-1.3 2.9-2.9 2.9Zm6.1 0c-1.1 0-1.9-.8-1.9-2 0-1.8 1.5-3.4 3.3-3.4.7 0 1.3.2 1.8.6l-.9 1.1c-.3-.2-.6-.3-1-.3-.9 0-1.6.8-1.6 1.9 0 .5.3.9.8.9.7 0 1.2-.8 1.6-1.7.2-.4.4-.8.6-1.1h1.5c-.2.5-.3 1-.5 1.5-.5 1.3-1.3 2.5-2.7 2.5Z"
+      />
+    </svg>
+  );
+}
+
 const LOGOS: Record<PlatformIntegrationId, ComponentType<{ className?: string }>> = {
   stripe: StripeLogo,
   resend: ResendLogo,
   unsplash: UnsplashLogo,
   pexels: PexelsLogo,
   linkedin: LinkedInLogo,
+  twitter: XLogo,
+  meta: MetaLogo,
 };
 
 export function PlatformIntegrationBrandIcon({
