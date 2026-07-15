@@ -1,5 +1,20 @@
 # Session Handoff
 
+## Demo polish batch (2026-07-15)
+
+Just shipped:
+
+- Dashboard articles X/30 chip on AutopilotActivityPanel
+- Social platform preview chrome + over-limit gates + thumbnails
+- Goals panel real GSC keyword movement (not connection placeholder)
+- Ghost Lexical inline images split into paragraph/image cards
+- Status select while editing on shell ContentPieceView
+- Learn post humanizer → /article-quality
+
+Still open: TYPO3 FAL / Shopify theme block (agents in flight), hosted blog deferred.
+
+---
+
 ## Buffer-polish — social preview frames (2026-07-15)
 
 Compose + Queue use shared `SocialPostPreview` (CSS-only LinkedIn / X / Instagram chrome — no logos). Char count goes red over platform limit; Queue Submit / Approve / Schedule disabled when over limit (or Instagram missing image). Featured/parent image shows as thumbnail when available.
@@ -195,7 +210,7 @@ cd lib/content-engine && npx tsc --noEmit && npx vitest run src/articles/serp-co
 ### Next (optional)
 - Ghost Lexical inline images inside paragraphs (standalone image lines supported)
 - TYPO3 FAL sys_file references for textmedia (currently embeds img in bodytext HTML)
-- Shopify theme app block (vs manual Liquid snippet)
+- Shopify theme app block (still deferred) — demos use manual Liquid in `cms-plugins/shopify/theme-snippets/` + docs/cms-plugins/shopify-theme-sections.md; ConnectSetupSteps + health `theme_snippet_required_for` call that out
 - ~~Publish history showing output mode used~~ → done 2026-07-15 (see top of HANDOFF; run migrate)
 
 ### Done (2026-07-14 follow-up)

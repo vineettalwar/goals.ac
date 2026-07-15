@@ -58,13 +58,13 @@ export const PLATFORM_OUTPUT_MODES: Partial<Record<AdapterPlatformId, PlatformOu
     {
       value: "article_metafields",
       label: "Article + section metafields",
-      hint: "Stores structured sections as article metafield JSON.",
+      hint: "Stores section JSON on the article metafield. Theme needs the Liquid snippet from theme-snippets/.",
       requiresEntitlement: "byok",
     },
     {
       value: "page_sections",
       label: "OS 2.0 page sections",
-      hint: "Creates a landing page with theme sections.",
+      hint: "Creates a page with template suffix goals-ac. Theme needs page.goals-ac.json + section Liquid.",
       requiresEntitlement: "byok",
     },
   ],

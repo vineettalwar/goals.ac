@@ -46,8 +46,9 @@ export const CMS_CONNECT_STEPS: Record<string, string[]> = {
     "Save, then Run health check before first publish.",
   ],
   shopify: [
-    "Prefer Admin API: create a custom app with write_content and paste the shop domain + token.",
-    "Or install the goals.ac plugin and paste the site URL + site key.",
+    "Prefer Admin API: create a custom app with write_content and paste the shop domain + token (article HTML only).",
+    "Or install the goals.ac plugin and paste the site URL + site key (required for metafield / page section modes).",
+    "For metafields or page sections: paste Liquid from cms-plugins/shopify/theme-snippets/ into the theme (Edit code) — storefront will not render section JSON without it. See docs/cms-plugins/shopify-theme-sections.md.",
     "Save and Run health check; set primary blog destination after connect.",
   ],
 };
