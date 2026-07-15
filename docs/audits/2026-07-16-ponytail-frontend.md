@@ -132,6 +132,7 @@ Sources: `HANDOFF.md`, competitive plan Waves 0–3.2, create-wizard diff, TYPO3
 ## Related
 
 - Skill: `.agents/skills/ponytail-audit/SKILL.md`
+- **Re-audit (same day pm):** [`docs/audits/2026-07-16-ponytail-frontend-reaudit.md`](./2026-07-16-ponytail-frontend-reaudit.md) — additional ~−2.3k LOC candidates after morning cleanup
 - Prior session: `HANDOFF.md` (create wizard parity + deferred list)
 - Deploy truth: `docs/deploy-cloudflare.md` (`app.goals.ac` → `goals-app-ui`)
 - Competitive deferred: `docs/prd/content-studio-competitive-plan.md` § Explicitly deferred

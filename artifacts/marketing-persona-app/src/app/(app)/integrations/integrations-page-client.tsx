@@ -113,24 +113,24 @@ export function IntegrationsPageClient({ tab }: { tab: string }) {
       }
       footer={
         <p className="text-sm text-muted-foreground">
-        Project CMS, social, email, and search connections live under each project — use the
-        <span className="font-medium text-foreground"> Project integrations </span>
-        card above
-        {activeProjectId == null ? (
-          <>
-            {" "}
-            or{" "}
-            <Link href="/projects" className="text-primary hover:underline">
-              choose a project
-            </Link>
-          </>
-        ) : null}
-        . Need setup instructions?{" "}
-        <Link href="/help" className="text-primary hover:underline">
-          Help center
-        </Link>
-        .
-      </p>
+          Project CMS, social, email, and search connections live under each project — use the
+          <span className="font-medium text-foreground"> Project integrations </span>
+          card above
+          {activeProjectId == null ? (
+            <>
+              {" "}
+              or{" "}
+              <Link href="/projects" className="text-primary hover:underline">
+                choose a project
+              </Link>
+            </>
+          ) : null}
+          . Need setup instructions?{" "}
+          <Link href="/help" className="text-primary hover:underline">
+            Help center
+          </Link>
+          .
+        </p>
       }
     />
   );

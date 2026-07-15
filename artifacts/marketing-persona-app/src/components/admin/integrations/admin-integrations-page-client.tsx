@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import {
   AdminIntegrationsContent,
 } from "@/components/admin/integrations/admin-integrations-panel";
@@ -62,6 +63,37 @@ export function AdminIntegrationsPageClient() {
         </p>
       </div>
 
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Link
+          href="/integrations/ai"
+          className="group flex items-center gap-3 rounded-xl border border-border/60 bg-card px-3 py-2.5 transition-all hover:border-border hover:bg-muted/20 hover:shadow-sm"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#4285F4] text-xs font-bold text-white">
+            AI
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Org integrations</p>
+            <p className="truncate text-xs text-muted-foreground">BYOK AI keys &amp; tools</p>
+          </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-muted-foreground" />
+        </Link>
+        <Link
+          href="/projects"
+          className="group flex items-center gap-3 rounded-xl border border-border/60 bg-card px-3 py-2.5 transition-all hover:border-border hover:bg-muted/20 hover:shadow-sm"
+        >
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-xs font-bold text-white">
+            CMS
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium">Project integrations</p>
+            <p className="truncate text-xs text-muted-foreground">
+              Open a project → Integrations for CMS, social, email, search
+            </p>
+          </div>
+          <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/40 group-hover:text-muted-foreground" />
+        </Link>
+      </div>
+
       {loadError ? (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 px-4 py-6 text-center">
           <p className="text-sm font-medium text-foreground">Could not load platform integrations</p>
@@ -100,17 +132,9 @@ export function AdminIntegrationsPageClient() {
       )}
 
       <p
-        className={cn(
-          "text-sm text-muted-foreground",
-          loading && "invisible",
-        )}
+        className={cn("text-sm text-muted-foreground", loading && "invisible")}
         aria-hidden={loading}
       >
-        Organization AI keys and tools live in{" "}
-        <Link href="/integrations" className="text-primary hover:underline">
-          Org integrations
-        </Link>
-        . Project CMS, social, and search connections live on each project&apos;s integrations page.
         Need setup instructions?{" "}
         <Link href="/help" className="text-primary hover:underline">
           Help center

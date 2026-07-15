@@ -141,23 +141,17 @@ export function IntegrationsPage() {
       }
       footer={
         <p className="text-sm text-muted-foreground">
-          Project CMS, social, email, and search connections live on each project&apos;s integrations
-          page
-          {projectId ? (
+          Project CMS, social, email, and search live under{" "}
+          <span className="font-medium text-foreground">Project integrations</span> above
+          {projectId == null ? (
             <>
-              {" — "}
-              <Link to={projectIntegrationsPath(projectId)} className="text-primary hover:underline">
-                open current project
-              </Link>
-            </>
-          ) : (
-            <>
-              {" — "}
+              {" "}
+              or{" "}
               <Link to="/projects" className="text-primary hover:underline">
                 choose a project
               </Link>
             </>
-          )}
+          ) : null}
           .
         </p>
       }
