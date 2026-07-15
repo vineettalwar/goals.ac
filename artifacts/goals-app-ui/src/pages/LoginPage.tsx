@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { AuthPageShell, AuthView, type AuthMode } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
-
-type AuthMode = "login" | "signup";
+import { getApiBase, getAppOrigin } from "@/lib/api";
 
 export function LoginPage() {
   const { user, loading, login, signup } = useAuth();
@@ -41,96 +41,31 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-6">
-      <div className="w-full max-w-md rounded-2xl border border-(--border) bg-white p-8 shadow-sm">
-        <h1 className="text-2xl font-bold text-(--forest)">
-          {mode === "signup" ? "Create your account" : "Sign in to goals.ac"}
-        </h1>
-        <p className="text-sm text-(--muted) mt-2 mb-6">
-          {mode === "signup"
-            ? "Start with email and password — Google sign-in coming soon."
-            : "Use the email and password for your goals.ac account."}
-        </p>
-
-        <form onSubmit={onSubmit} className="space-y-4">
-          {error ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          ) : null}
-
-          {mode === "signup" ? (
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Name</span>
-              <input
-                type="text"
-                required
-                autoComplete="name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="h-10 w-full rounded-lg border border-(--border) px-3"
-              />
-            </label>
-          ) : null}
-
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Email</span>
-            <input
-              type="email"
-              required
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-10 w-full rounded-lg border border-(--border) px-3"
-            />
-          </label>
-
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium">Password</span>
-            <input
-              type="password"
-              required
-              minLength={mode === "signup" ? 8 : 1}
-              autoComplete={mode === "signup" ? "new-password" : "current-password"}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="h-10 w-full rounded-lg border border-(--border) px-3"
-            />
-          </label>
-
-          <button
-            type="submit"
-            disabled={submitting}
-            className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-(--forest) px-4 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {submitting
-              ? mode === "signup"
-                ? "Creating account…"
-                : "Signing in…"
-              : mode === "signup"
-                ? "Create account"
-                : "Sign in"}
-          </button>
-        </form>
-
-        <p className="text-sm text-(--muted) mt-6 text-center">
-          {mode === "signup" ? (
-            <>
-              Already have an account?{" "}
-              <Link to="/login" className="font-medium text-(--forest)">
-                Sign in
-              </Link>
-            </>
-          ) : (
-            <>
-              New here?{" "}
-              <Link to="/signup" className="font-medium text-(--forest)">
-                Create an account
-              </Link>
-            </>
-          )}
-        </p>
-      </div>
-    </div>
+    <AuthPageShell>
+      <AuthView
+        mode={mode}
+        name={name}
+        email={email}
+        password={password}
+        onNameChange={setName}
+        onEmailChange={setEmail}
+        onPasswordChange={setPassword}
+        error={error}
+        submitting={submitting}
+        onSubmit={onSubmit}
+        forgotPasswordHref={`${getAppOrigin()}/forgot-password`}
+        googleSignInHref={`${getApiBase()}/api/auth/google?returnUrl=${encodeURIComponent(window.location.origin + "/dashboard")}`}
+        renderLink={({ href, className, children }) => (
+          <Link to={href} className={className}>
+            {children}
+          </Link>
+        )}
+        renderForgotPasswordLink={({ href, className, children }) => (
+          <a href={href} className={className}>
+            {children}
+          </a>
+        )}
+      />
+    </AuthPageShell>
   );
 }

@@ -1,57 +1,70 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "@/context/auth";
-import { apiFetch } from "@/lib/api";
 import {
-  formatProjectUrl,
-  formatTimestamp,
-  type ContentPiece,
-  type WebsiteProject,
-} from "@/types/api";
+  ProjectsView,
+  projectDetailPath,
+  type ProjectListItem,
+} from "@workspace/app-shell";
+import { DeleteProjectDialog } from "@/components/DeleteProjectDialog";
+import { NewProjectButton } from "@/components/NewProjectButton";
+import { useAuth } from "@/context/auth";
+import { useActiveProject } from "@/hooks/use-active-project";
+import { useProjectsData } from "@/hooks/use-projects-data";
 
 export function ProjectsPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [projects, setProjects] = useState<WebsiteProject[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const { loading, error, projects, quotaLabel, reload } = useProjectsData();
+  const { projectId, setProjectId } = useActiveProject();
+  const [deleteTarget, setDeleteTarget] = useState<ProjectListItem | null>(null);
 
   useEffect(() => {
-    if (!loading && !user) navigate("/login", { replace: true });
-  }, [loading, user, navigate]);
+    if (!authLoading && !user) navigate("/login", { replace: true });
+  }, [authLoading, user, navigate]);
 
-  useEffect(() => {
-    if (!user) return;
-    void apiFetch<WebsiteProject[]>("/api/website-projects")
-      .then(setProjects)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load projects"));
-  }, [user]);
+  if (authLoading || loading) {
+    return <p className="p-8 text-muted-foreground">Loading…</p>;
+  }
 
-  if (loading) return <p className="p-8 text-(--muted)">Loading…</p>;
+  if (!user) {
+    return null;
+  }
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
-      <h1 className="text-2xl font-bold mb-6">Projects</h1>
-      {error ? <p className="text-sm text-red-700 mb-4">{error}</p> : null}
-      <div className="grid gap-4">
-        {projects.map((project) => (
-          <Link
-            key={project.id}
-            to={`/projects/${project.id}`}
-            className="block rounded-xl border border-(--border) bg-white p-4 hover:border-(--forest)"
-          >
-            <p className="font-semibold">{project.name}</p>
-            <p className="text-sm text-(--muted) mt-1">
-              {formatProjectUrl(project)} · Updated {formatTimestamp(project.updatedAt)}
-            </p>
+    <>
+      {error ? <p className="px-8 pt-8 text-sm text-red-700">{error}</p> : null}
+      <ProjectsView
+        quotaLabel={quotaLabel}
+        projects={projects}
+        newProjectAction={
+          <NewProjectButton
+            onCreated={(project) => {
+              void reload();
+              navigate(projectDetailPath(project.id));
+            }}
+          />
+        }
+        renderLink={({ href, className, children }) => (
+          <Link to={href} className={className}>
+            {children}
           </Link>
-        ))}
-        {projects.length === 0 ? (
-          <p className="text-sm text-(--muted)">No projects yet.</p>
-        ) : null}
-      </div>
-    </div>
+        )}
+        onDeleteProject={setDeleteTarget}
+      />
+      <DeleteProjectDialog
+        project={deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onDeleted={() => {
+          if (deleteTarget && String(deleteTarget.id) === projectId) {
+            const remaining = projects.filter((row) => row.id !== deleteTarget.id);
+            const next = remaining[0];
+            if (next) setProjectId(String(next.id));
+          }
+          void reload();
+        }}
+      />
+    </>
   );
 }
 
-// Re-export types used by dashboard
-export type { ContentPiece, WebsiteProject };
+export type { ContentPiece, WebsiteProject } from "@/types/api";

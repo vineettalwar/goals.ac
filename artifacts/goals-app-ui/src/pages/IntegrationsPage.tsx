@@ -1,70 +1,121 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import {
+  CMS_NATIVE_CONNECT_PLATFORMS,
+  CMS_PLATFORMS,
+  CmsFullAppConnectDialog,
+  DrupalConnectDialog,
+  GhostConnectDialog,
+  IntegrationsView,
+  JoomlaConnectDialog,
+  NotionConnectDialog,
+  ShopifyConnectDialog,
+  WebflowConnectDialog,
+  WordPressConnectDialog,
+  type DrupalConnectPayload,
+  type GhostConnectPayload,
+  type IntegrationsTab,
+  type JoomlaConnectPayload,
+  type NotionConnectPayload,
+  type ShopifyConnectPayload,
+  type WebflowConnectPayload,
+  type WordPressConnectPayload,
+} from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
+import { useIntegrationsData } from "@/hooks/use-integrations-data";
 import { apiFetch } from "@/lib/api";
-import { formatProjectUrl } from "@/types/api";
 
-const CMS_PLATFORMS = [
-  { key: "wordpress", label: "WordPress" },
-  { key: "ghost", label: "Ghost" },
-  { key: "shopify", label: "Shopify" },
-  { key: "webflow", label: "Webflow" },
-  { key: "notion", label: "Notion" },
-  { key: "drupal", label: "Drupal" },
-  { key: "joomla", label: "Joomla" },
-  { key: "webhook", label: "Webhook" },
-] as const;
-
-type CmsRow = { connected?: boolean } & Record<string, unknown>;
+type CmsIntegrationsResponse = Record<string, { connected?: boolean } & Record<string, unknown>>;
 
 export function IntegrationsPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { projects, projectId, activeProject, error: projectError, setProjectId, loading: projectsLoading } =
-    useActiveProject();
-  const [integrations, setIntegrations] = useState<Record<string, CmsRow>>({});
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const { projectId, activeProject, loading: projectsLoading } = useActiveProject();
+  const { loading, error, integrations, reload, setIntegrations } = useIntegrationsData(projectId);
+
+  const [activeTab, setActiveTab] = useState<IntegrationsTab>("cms");
   const [saving, setSaving] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [webhookSecret, setWebhookSecret] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [connectPlatform, setConnectPlatform] = useState<string | null>(null);
+
+  const connectPlatformLabel = useMemo(() => {
+    if (!connectPlatform) return "";
+    return CMS_PLATFORMS.find(({ key }) => key === connectPlatform)?.label ?? connectPlatform;
+  }, [connectPlatform]);
 
   useEffect(() => {
-    if (!loading && !user) navigate("/login", { replace: true });
-  }, [loading, user, navigate]);
+    if (!authLoading && !user) navigate("/login", { replace: true });
+  }, [authLoading, user, navigate]);
 
-  useEffect(() => {
-    if (!user || !projectId) return;
-    setLoadError(null);
-    void apiFetch<Record<string, CmsRow>>(`/api/website-projects/${projectId}/cms-integrations`)
-      .then(setIntegrations)
-      .catch((err) =>
-        setLoadError(err instanceof Error ? err.message : "Failed to load integrations"),
-      );
-  }, [user, projectId]);
-
-  async function saveWebhook() {
-    if (!projectId || !webhookUrl.trim() || !webhookSecret.trim()) return;
+  async function patchCmsIntegration(
+    body: Record<string, unknown>,
+    successMessage: string,
+  ): Promise<boolean> {
+    if (!projectId) return false;
     setSaving(true);
     setSaveMessage(null);
     try {
-      const updated = await apiFetch<Record<string, CmsRow>>(
+      const updated = await apiFetch<CmsIntegrationsResponse>(
         `/api/website-projects/${projectId}/cms-integrations`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            webhook: { url: webhookUrl.trim(), signingSecret: webhookSecret.trim() },
-          }),
+          body: JSON.stringify(body),
         },
       );
       setIntegrations(updated);
-      setSaveMessage("Webhook saved.");
+      setSaveMessage(successMessage);
+      await reload();
+      return true;
+    } catch (err) {
+      setSaveMessage(err instanceof Error ? err.message : "Failed to save integration");
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function saveWebhook() {
+    if (!webhookUrl.trim() || !webhookSecret.trim()) return;
+    const ok = await patchCmsIntegration(
+      { webhook: { url: webhookUrl.trim(), signingSecret: webhookSecret.trim() } },
+      "Webhook saved.",
+    );
+    if (ok) {
       setWebhookUrl("");
       setWebhookSecret("");
+    }
+  }
+
+  async function testPlatform(platform: string) {
+    if (!projectId) return;
+    const label = CMS_PLATFORMS.find(({ key }) => key === platform)?.label ?? platform;
+    setSaving(true);
+    setSaveMessage(null);
+    try {
+      const health = await apiFetch<
+        Record<string, { ok: boolean; error?: string; siteName?: string }>
+      >(`/api/website-projects/${projectId}/cms-integrations/test`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform }),
+      });
+      const entry = health[platform];
+      if (!entry) {
+        setSaveMessage(`${label}: not connected or no credentials found.`);
+        return;
+      }
+      if (entry.ok) {
+        const site = entry.siteName ? ` (${entry.siteName})` : "";
+        setSaveMessage(`${label} connection OK${site}.`);
+      } else {
+        setSaveMessage(`${label} test failed: ${entry.error ?? "Unknown error"}.`);
+      }
     } catch (err) {
-      setSaveMessage(err instanceof Error ? err.message : "Failed to save webhook");
+      setSaveMessage(err instanceof Error ? err.message : `${label} test failed.`);
     } finally {
       setSaving(false);
     }
@@ -75,12 +126,13 @@ export function IntegrationsPage() {
     setSaving(true);
     setSaveMessage(null);
     try {
-      const updated = await apiFetch<Record<string, CmsRow>>(
+      const updated = await apiFetch<CmsIntegrationsResponse>(
         `/api/website-projects/${projectId}/cms-integrations/${platform}`,
         { method: "DELETE" },
       );
       setIntegrations(updated);
       setSaveMessage(`${platform} disconnected.`);
+      await reload();
     } catch (err) {
       setSaveMessage(err instanceof Error ? err.message : "Failed to disconnect");
     } finally {
@@ -88,137 +140,168 @@ export function IntegrationsPage() {
     }
   }
 
-  if (loading || projectsLoading) return <p className="p-8 text-(--muted)">Loading…</p>;
+  async function saveWordPress(payload: WordPressConnectPayload) {
+    const ok = await patchCmsIntegration({ wordpress: payload }, "WordPress connected.");
+    if (ok) {
+      setConnectPlatform(null);
+    }
+  }
+
+  async function saveGhost(payload: GhostConnectPayload) {
+    const ok = await patchCmsIntegration({ ghost: payload }, "Ghost connected.");
+    if (ok) {
+      setConnectPlatform(null);
+    }
+  }
+
+  async function saveShopify(payload: ShopifyConnectPayload) {
+    const ok = await patchCmsIntegration({ shopify: payload }, "Shopify connected.");
+    if (ok) {
+      setConnectPlatform(null);
+    }
+  }
+
+  async function saveDrupal(payload: DrupalConnectPayload) {
+    const ok = await patchCmsIntegration({ drupal: payload }, "Drupal connected.");
+    if (ok) {
+      setConnectPlatform(null);
+    }
+  }
+
+  async function saveJoomla(payload: JoomlaConnectPayload) {
+    const ok = await patchCmsIntegration({ joomla: payload }, "Joomla connected.");
+    if (ok) {
+      setConnectPlatform(null);
+    }
+  }
+
+  async function saveNotion(payload: NotionConnectPayload) {
+    const ok = await patchCmsIntegration({ notion: payload }, "Notion connected.");
+    if (ok) {
+      setConnectPlatform(null);
+    }
+  }
+
+  async function saveWebflow(payload: WebflowConnectPayload) {
+    const ok = await patchCmsIntegration({ webflow: payload }, "Webflow connected.");
+    if (ok) {
+      setConnectPlatform(null);
+    }
+  }
+
+  function closeConnectDialog() {
+    if (saving) return;
+    setConnectPlatform(null);
+  }
+
+  const showFullAppDialog =
+    connectPlatform !== null &&
+    connectPlatform !== "webhook" &&
+    !CMS_NATIVE_CONNECT_PLATFORMS.has(connectPlatform);
+
+  if (authLoading || projectsLoading) {
+    return <p className="p-8 text-muted-foreground">Loading…</p>;
+  }
+
+  if (!user) return null;
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
-      <h1 className="text-2xl font-bold mb-2">Integrations</h1>
-      <p className="text-sm text-(--muted) mb-6">
-        Connect CMS and publishing destinations per project. Webhook connections can be saved here;
-        other platforms use the same API and will get full forms in a follow-up.
-      </p>
+    <>
+      <IntegrationsView
+        projectId={projectId || null}
+        projectName={activeProject?.name ?? null}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        integrations={integrations}
+        integrationsLoading={loading}
+        loadError={error}
+        saveMessage={saveMessage}
+        saving={saving}
+        webhookUrl={webhookUrl}
+        webhookSecret={webhookSecret}
+        onWebhookUrlChange={setWebhookUrl}
+        onWebhookSecretChange={setWebhookSecret}
+        onSaveWebhook={() => void saveWebhook()}
+        onDisconnect={(platform) => void disconnect(platform)}
+        onConnectPlatform={setConnectPlatform}
+        onTestPlatform={(platform) => void testPlatform(platform)}
+        renderLink={({ href, className, children }) => (
+          <Link to={href} className={className}>
+            {children}
+          </Link>
+        )}
+      />
 
-      {projectError ? <p className="text-sm text-red-700 mb-4">{projectError}</p> : null}
+      <WordPressConnectDialog
+        open={connectPlatform === "wordpress"}
+        onOpenChange={(open) => {
+          if (!open) closeConnectDialog();
+        }}
+        saving={saving}
+        onSave={(payload) => void saveWordPress(payload)}
+      />
 
-      {projects.length === 0 ? (
-        <p className="text-sm text-(--muted)">Create a project first from the dashboard.</p>
-      ) : (
-        <>
-          <label className="block text-sm mb-6 max-w-md">
-            <span className="mb-1 block font-medium">Project</span>
-            <select
-              value={projectId}
-              onChange={(e) => setProjectId(e.target.value)}
-              className="h-10 w-full rounded-lg border border-(--border) px-3 bg-white"
-            >
-              {projects.map((project) => (
-                <option key={project.id} value={project.id}>
-                  {project.name} — {formatProjectUrl(project)}
-                </option>
-              ))}
-            </select>
-          </label>
+      <GhostConnectDialog
+        open={connectPlatform === "ghost"}
+        onOpenChange={(open) => {
+          if (!open) closeConnectDialog();
+        }}
+        saving={saving}
+        onSave={(payload) => void saveGhost(payload)}
+      />
 
-          {activeProject ? (
-            <p className="text-sm text-(--muted) mb-4">
-              Managing connections for{" "}
-              <span className="font-medium text-(--ink)">{activeProject.name}</span>
-            </p>
-          ) : null}
+      <ShopifyConnectDialog
+        open={connectPlatform === "shopify"}
+        onOpenChange={(open) => {
+          if (!open) closeConnectDialog();
+        }}
+        saving={saving}
+        onSave={(payload) => void saveShopify(payload)}
+      />
 
-          {loadError ? <p className="text-sm text-red-700 mb-4">{loadError}</p> : null}
-          {saveMessage ? (
-            <p className={`text-sm mb-4 ${saveMessage.includes("Failed") ? "text-red-700" : "text-(--forest)"}`}>
-              {saveMessage}
-            </p>
-          ) : null}
+      <DrupalConnectDialog
+        open={connectPlatform === "drupal"}
+        onOpenChange={(open) => {
+          if (!open) closeConnectDialog();
+        }}
+        saving={saving}
+        onSave={(payload) => void saveDrupal(payload)}
+      />
 
-          <div className="grid gap-3 sm:grid-cols-2 mb-8">
-            {CMS_PLATFORMS.map(({ key, label }) => {
-              const row = integrations[key];
-              const connected = Boolean(row?.connected);
-              return (
-                <div
-                  key={key}
-                  className="rounded-xl border border-(--border) bg-white p-4 flex items-start justify-between gap-3"
-                >
-                  <div>
-                    <p className="font-semibold text-sm">{label}</p>
-                    <p className="text-xs text-(--muted) mt-1">
-                      {connected ? "Connected" : "Not connected"}
-                    </p>
-                    {connected && key === "webhook" && typeof row?.url === "string" ? (
-                      <p className="text-xs text-(--muted) mt-1 truncate">{row.url}</p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-col items-end gap-2">
-                    <span
-                      className={`text-xs font-medium px-2 py-1 rounded-full ${
-                        connected
-                          ? "bg-emerald-50 text-emerald-800"
-                          : "bg-[#f5f3ef] text-(--muted)"
-                      }`}
-                    >
-                      {connected ? "On" : "Off"}
-                    </span>
-                    {connected ? (
-                      <button
-                        type="button"
-                        disabled={saving}
-                        onClick={() => void disconnect(key)}
-                        className="text-xs text-red-700 hover:underline disabled:opacity-50"
-                      >
-                        Disconnect
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      <JoomlaConnectDialog
+        open={connectPlatform === "joomla"}
+        onOpenChange={(open) => {
+          if (!open) closeConnectDialog();
+        }}
+        saving={saving}
+        onSave={(payload) => void saveJoomla(payload)}
+      />
 
-          <section className="rounded-xl border border-(--border) bg-white p-4 max-w-lg">
-            <h2 className="text-sm font-semibold mb-3">Connect webhook</h2>
-            <div className="space-y-3">
-              <label className="block text-sm">
-                <span className="mb-1 block text-(--muted)">Webhook URL</span>
-                <input
-                  type="url"
-                  value={webhookUrl}
-                  onChange={(e) => setWebhookUrl(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-(--border) px-3"
-                  placeholder="https://example.com/hooks/goals-ac"
-                />
-              </label>
-              <label className="block text-sm">
-                <span className="mb-1 block text-(--muted)">Signing secret</span>
-                <input
-                  type="password"
-                  value={webhookSecret}
-                  onChange={(e) => setWebhookSecret(e.target.value)}
-                  className="h-10 w-full rounded-lg border border-(--border) px-3"
-                />
-              </label>
-              <button
-                type="button"
-                disabled={saving || !webhookUrl.trim() || !webhookSecret.trim()}
-                onClick={() => void saveWebhook()}
-                className="h-10 px-4 rounded-lg bg-(--forest) text-white text-sm font-medium disabled:opacity-50"
-              >
-                {saving ? "Saving…" : "Save webhook"}
-              </button>
-            </div>
-          </section>
+      <NotionConnectDialog
+        open={connectPlatform === "notion"}
+        onOpenChange={(open) => {
+          if (!open) closeConnectDialog();
+        }}
+        saving={saving}
+        onSave={(payload) => void saveNotion(payload)}
+      />
 
-          {activeProject ? (
-            <p className="text-xs text-(--muted) mt-6">
-              <Link to={`/projects/${activeProject.id}`} className="text-(--forest) font-medium">
-                Open project overview
-              </Link>
-            </p>
-          ) : null}
-        </>
-      )}
-    </div>
+      <WebflowConnectDialog
+        open={connectPlatform === "webflow"}
+        onOpenChange={(open) => {
+          if (!open) closeConnectDialog();
+        }}
+        saving={saving}
+        onSave={(payload) => void saveWebflow(payload)}
+      />
+
+      <CmsFullAppConnectDialog
+        open={showFullAppDialog}
+        platformLabel={connectPlatformLabel}
+        onOpenChange={(open) => {
+          if (!open) closeConnectDialog();
+        }}
+      />
+    </>
   );
 }

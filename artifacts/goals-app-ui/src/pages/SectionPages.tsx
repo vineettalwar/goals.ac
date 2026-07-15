@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  AutopilotView,
+  GeoAuditDetailView,
+  GeoAuditListView,
+  GrowthRoadmapView,
+  HelpView,
+  SocialHubView,
+  type GrowthRoadmap,
+} from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { SectionShell } from "@/components/SectionShell";
-import { DataPanel } from "@/components/DataPanel";
 import { useActiveProject } from "@/hooks/use-active-project";
-import { apiFetch } from "@/lib/api";
-import { formatTimestamp } from "@/types/api";
+import { useAuditDetailData, useAuditListData } from "@/hooks/use-audit-data";
+import { useAutopilotData } from "@/hooks/use-autopilot-data";
+import { apiFetch, getAppOrigin } from "@/lib/api";
 
 const strategyTabs = [
   { label: "Overview", to: "/strategy" },
@@ -29,6 +38,12 @@ const researchTabs = [
   { label: "Competitors", to: "/research/competitors" },
   { label: "Reddit", to: "/research/reddit" },
 ];
+
+const renderLink = ({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) => (
+  <Link to={href} className={className}>
+    {children}
+  </Link>
+);
 
 export function StrategyHubPage() {
   const { projectId } = useActiveProject();
@@ -293,50 +308,31 @@ export function SearchSuggestionsPage() {
 }
 
 export function AuditListPage() {
-  const [audits, setAudits] = useState<Array<{ id: number; url: string; geoScore: number; createdAt: number | string }>>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void apiFetch<{ audits: typeof audits }>("/api/geo-audits")
-      .then((data) => setAudits(data.audits ?? []))
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load audits"));
-  }, []);
+  const { audits, loading, error } = useAuditListData();
 
   return (
     <SectionShell title="GEO audits" description="Generative engine optimization audits for your URLs." requireProject={false}>
-      <DataPanel title="Audits" empty={audits.length === 0 ? "No GEO audits yet." : undefined} error={error}>
-        {audits.map((audit) => (
-          <Link key={audit.id} to={`/audit/${audit.id}`} className="block px-4 py-3 hover:bg-[#f5f3ef] text-sm">
-            <div className="flex justify-between gap-4">
-              <span className="font-medium truncate">{audit.url}</span>
-              <span className="text-(--muted) shrink-0">Score {audit.geoScore}</span>
-            </div>
-            <p className="text-xs text-(--muted) mt-1">{formatTimestamp(audit.createdAt)}</p>
-          </Link>
-        ))}
-      </DataPanel>
+      <GeoAuditListView
+        audits={audits}
+        loading={loading}
+        error={error}
+        renderLink={renderLink}
+      />
     </SectionShell>
   );
 }
 
 export function AuditDetailPage({ auditId }: { auditId: string }) {
-  const [audit, setAudit] = useState<Record<string, unknown> | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    void apiFetch<Record<string, unknown>>(`/api/geo-audits/${auditId}`)
-      .then(setAudit)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load audit"));
-  }, [auditId]);
+  const { audit, loading, error } = useAuditDetailData(auditId);
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
-      <Link to="/audit" className="text-sm text-(--muted) hover:text-(--forest)">← GEO audits</Link>
-      <h1 className="text-2xl font-bold mt-4 mb-4">GEO audit</h1>
-      {error ? <p className="text-sm text-red-700 mb-4">{error}</p> : null}
-      <pre className="rounded-xl border border-(--border) bg-white p-4 text-xs overflow-auto">
-        {JSON.stringify(audit, null, 2)}
-      </pre>
+    <div className="px-8 py-8 max-w-5xl">
+      <GeoAuditDetailView
+        audit={audit}
+        loading={loading}
+        error={error}
+        renderLink={renderLink}
+      />
     </div>
   );
 }
@@ -389,31 +385,27 @@ export function ResearchRedditPage() {
 
 export function AutopilotPage() {
   const { projectId } = useActiveProject();
-  const [settings, setSettings] = useState<Record<string, unknown> | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!projectId) return;
-    void apiFetch<Record<string, unknown>>(`/api/website-projects/${projectId}/autopilot-settings`)
-      .then(setSettings)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load autopilot"));
-  }, [projectId]);
+  const { settings, loading, error, saveSettings, saving } = useAutopilotData(projectId);
 
   return (
     <SectionShell title="Autopilot" description="Automated content cadence and publish mode for the active project.">
-      <DataPanel title="Autopilot settings" error={error}>
-        <pre className="p-4 text-xs overflow-auto">{JSON.stringify(settings ?? { enabled: false }, null, 2)}</pre>
-      </DataPanel>
+      <AutopilotView
+        settings={settings}
+        loading={loading}
+        error={error}
+        onSave={projectId ? saveSettings : undefined}
+        saving={saving}
+      />
     </SectionShell>
   );
 }
 
 export function SocialHubPage() {
+  const { projectId } = useActiveProject();
+
   return (
     <SectionShell title="Social hub" description="Schedule and publish social variants — write APIs rolling out on edge.">
-      <p className="text-sm text-(--muted)">
-        Open <Link to="/studio" className="text-(--forest) font-medium">Content studio</Link> for social-format drafts.
-      </p>
+      <SocialHubView projectId={projectId} renderLink={renderLink} />
     </SectionShell>
   );
 }
@@ -427,16 +419,53 @@ export function PartnerPage() {
 }
 
 export function HelpPage() {
+  const { projects, projectId } = useActiveProject();
+  const hasProject = projects.length > 0;
+
   return (
     <SectionShell title="Help" description="Product docs and setup guides." requireProject={false}>
-      <a
-        href="https://goals.ac/help"
-        target="_blank"
-        rel="noreferrer"
-        className="inline-flex text-sm font-medium text-(--forest)"
-      >
-        Open help center on goals.ac →
-      </a>
+      <HelpView
+        advancedAppHref={getAppOrigin()}
+        resourceLinks={[
+          {
+            label: "Help center on goals.ac",
+            href: "https://goals.ac/help",
+            description: "Guides, FAQs, and product documentation.",
+          },
+          {
+            label: "Integrations setup",
+            href: "https://goals.ac/help/integrations",
+            description: "Connect WordPress, Shopify, and other CMS platforms.",
+          },
+        ]}
+        checklist={[
+          {
+            id: "project",
+            label: "Create a website project",
+            done: hasProject,
+            href: "/projects",
+          },
+          {
+            id: "brand",
+            label: "Complete brand profile",
+            done: false,
+            href: projectId ? `/projects/${projectId}` : "/projects",
+          },
+          {
+            id: "integrations",
+            label: "Connect a CMS integration",
+            done: false,
+            href: "/integrations",
+          },
+          {
+            id: "content",
+            label: "Generate your first content piece",
+            done: false,
+            href: projectId ? `/studio?project=${projectId}` : "/studio",
+          },
+        ]}
+        renderLink={renderLink}
+      />
     </SectionShell>
   );
 }
@@ -465,31 +494,42 @@ export function OnboardingPage() {
 }
 
 export function GrowthRoadmapPage({ slug }: { slug: string }) {
-  const [roadmap, setRoadmap] = useState<Record<string, unknown> | null>(null);
+  const [roadmap, setRoadmap] = useState<GrowthRoadmap | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    void apiFetch<{ roadmaps: Array<Record<string, unknown>> }>("/api/roadmaps?limit=50")
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    void apiFetch<{ roadmaps: GrowthRoadmap[] }>("/api/roadmaps?limit=50")
       .then((data) => {
-        const hit = (data.roadmaps ?? []).find((r) => String(r.slug) === slug);
-        setRoadmap(hit ?? null);
+        if (cancelled) return;
+        const hit = (data.roadmaps ?? []).find((row) => row.slug === slug) ?? null;
+        setRoadmap(hit);
+        setLoading(false);
       })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load roadmap"));
+      .catch((err) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load roadmap");
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [slug]);
 
   return (
-    <div className="px-8 py-8 max-w-4xl">
-      <Link to="/strategy/roadmaps" className="text-sm text-(--muted) hover:text-(--forest)">← Roadmaps</Link>
-      <h1 className="text-2xl font-bold mt-4 mb-4">
-        {roadmap ? `${String(roadmap.industry)} · ${String(roadmap.location)}` : slug}
-      </h1>
-      {error ? <p className="text-sm text-red-700 mb-4">{error}</p> : null}
-      {!roadmap && !error ? <p className="text-sm text-(--muted)">Roadmap not found.</p> : null}
-      {roadmap ? (
-        <pre className="rounded-xl border border-(--border) bg-white p-4 text-xs overflow-auto">
-          {JSON.stringify(roadmap, null, 2)}
-        </pre>
-      ) : null}
+    <div className="px-8 py-8 max-w-5xl">
+      <GrowthRoadmapView
+        roadmap={roadmap}
+        slug={slug}
+        loading={loading}
+        error={error}
+        renderLink={renderLink}
+      />
     </div>
   );
 }
@@ -500,5 +540,28 @@ function HubCard({ to, title, hint }: { to: string; title: string; hint: string 
       <p className="font-semibold text-sm">{title}</p>
       <p className="text-xs text-(--muted) mt-1">{hint}</p>
     </Link>
+  );
+}
+
+function DataPanel({
+  title,
+  empty,
+  error,
+  children,
+}: {
+  title: string;
+  empty?: string;
+  error?: string | null;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="mb-6">
+      <h2 className="text-sm font-semibold mb-3">{title}</h2>
+      {error ? <p className="text-sm text-red-700 mb-2">{error}</p> : null}
+      <div className="rounded-xl border border-(--border) bg-white divide-y">
+        {children}
+        {empty ? <p className="p-4 text-sm text-(--muted)">{empty}</p> : null}
+      </div>
+    </section>
   );
 }

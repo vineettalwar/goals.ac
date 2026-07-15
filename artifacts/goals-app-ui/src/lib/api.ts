@@ -5,7 +5,7 @@ type DeployStage = "production" | "staging" | "development";
 const STAGE_APP_ORIGINS: Record<DeployStage, string> = {
   production: "https://app.goals.ac",
   staging: "https://goals-ac-app.pages.dev",
-  development: "http://localhost:5174",
+  development: "http://localhost:3001",
 };
 
 function resolveDeployStage(): DeployStage {
@@ -43,6 +43,10 @@ const apiBase =
   (import.meta.env.DEV ? "" : "https://api.goals.ac");
 
 setBaseUrl(apiBase || null);
+
+export function getApiBase(): string {
+  return apiBase;
+}
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const url = path.startsWith("http") ? path : `${apiBase}${path}`;

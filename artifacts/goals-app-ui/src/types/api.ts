@@ -9,6 +9,8 @@ export type WebsiteProject = {
   sitemapUrl: string | null;
   pageCount: number;
   crawlStatus: string;
+  scrapeStatus?: string | null;
+  contentStyle?: Record<string, unknown> | null;
   createdAt: number | string;
   updatedAt: number | string;
 };
@@ -19,6 +21,9 @@ export type BrandProfile = {
   companyName: string;
   industry: string;
   targetAudience: string;
+  voiceTone?: string | null;
+  primaryKeywords?: string[] | null;
+  competitorUrls?: string[] | null;
 };
 
 export type WebsiteProjectDetail = WebsiteProject & {
@@ -32,6 +37,7 @@ export type ContentPiece = {
   status: string;
   formatType: string;
   wordCount: number;
+  targetKeyword?: string | null;
   updatedAt: number | string;
   bodyMarkdown?: string;
 };

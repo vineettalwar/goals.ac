@@ -1,104 +1,77 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  CreateContentDialog,
+  StudioNewContentButton,
+  StudioView,
+} from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
-import { apiFetch } from "@/lib/api";
-import { formatTimestamp, type ContentPiece, type WebsiteProject } from "@/types/api";
+import { useActiveProject } from "@/hooks/use-active-project";
+import { useStudioData } from "@/hooks/use-studio-data";
 
 export function StudioPage() {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [projects, setProjects] = useState<WebsiteProject[]>([]);
-  const [pieces, setPieces] = useState<ContentPiece[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  const projectId = searchParams.get("project") ?? "";
-
-  useEffect(() => {
-    if (!loading && !user) navigate("/login", { replace: true });
-  }, [loading, user, navigate]);
+  const { projectId, activeProject, loading: projectsLoading } = useActiveProject();
+  const { loading, error, pieces, createPiece } = useStudioData(projectId || null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-    void apiFetch<WebsiteProject[]>("/api/website-projects")
-      .then((rows) => {
-        setProjects(rows);
-        if (!projectId && rows[0]) {
-          setSearchParams({ project: String(rows[0].id) }, { replace: true });
-        }
-      })
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load projects"));
-  }, [user, projectId, setSearchParams]);
+    if (!authLoading && !user) navigate("/login", { replace: true });
+  }, [authLoading, user, navigate]);
 
-  useEffect(() => {
-    if (!user || !projectId) return;
-    void apiFetch<ContentPiece[]>(`/api/website-projects/${projectId}/content-pieces`)
-      .then(setPieces)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load content"));
-  }, [user, projectId]);
+  if (authLoading || projectsLoading) {
+    return <p className="p-8 text-muted-foreground">Loading…</p>;
+  }
 
-  const activeProject = useMemo(
-    () => projects.find((p) => String(p.id) === projectId) ?? null,
-    [projects, projectId],
+  if (!user) {
+    return null;
+  }
+
+  const newContentAction = (
+    <StudioNewContentButton
+      onClick={() => {
+        setCreateError(null);
+        setCreateOpen(true);
+      }}
+    />
   );
 
-  if (loading) return <p className="p-8 text-(--muted)">Loading…</p>;
-
   return (
-    <div className="px-8 py-8 max-w-5xl">
-      <h1 className="text-2xl font-bold mb-2">Content studio</h1>
-      <p className="text-sm text-(--muted) mb-6">
-        Browse and open drafts for a project. Full generation and calendar views are coming to the
-        edge app — use local dev for the complete studio.
-      </p>
-
-      {error ? <p className="text-sm text-red-700 mb-4">{error}</p> : null}
-
-      {projects.length > 0 ? (
-        <label className="block text-sm mb-6 max-w-md">
-          <span className="mb-1 block font-medium">Project</span>
-          <select
-            value={projectId}
-            onChange={(e) => setSearchParams({ project: e.target.value })}
-            className="h-10 w-full rounded-lg border border-(--border) px-3 bg-white"
-          >
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : null}
-
-      {activeProject ? (
-        <p className="text-sm text-(--muted) mb-4">
-          Showing content for <span className="font-medium text-(--ink)">{activeProject.name}</span>
-        </p>
-      ) : null}
-
-      <div className="rounded-xl border border-(--border) bg-white divide-y">
-        {pieces.length === 0 ? (
-          <p className="p-4 text-sm text-(--muted)">No content pieces yet.</p>
-        ) : (
-          pieces.map((piece) => (
-            <Link
-              key={piece.id}
-              to={`/content-piece/${piece.id}`}
-              className="flex justify-between gap-4 px-4 py-3 hover:bg-[#f5f3ef]"
-            >
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{piece.title}</p>
-                <p className="text-xs text-(--muted) mt-0.5">
-                  {piece.formatType.replace(/_/g, " ")} · {piece.wordCount} words ·{" "}
-                  {formatTimestamp(piece.updatedAt)}
-                </p>
-              </div>
-              <span className="text-xs text-(--muted) uppercase shrink-0">{piece.status}</span>
-            </Link>
-          ))
+    <>
+      {error ? <p className="px-8 pt-8 text-sm text-red-700">{error}</p> : null}
+      <StudioView
+        projectId={projectId}
+        projectName={activeProject?.name ?? null}
+        pieces={pieces}
+        loading={loading}
+        newContentAction={newContentAction}
+        renderLink={({ href, className, children }) => (
+          <Link to={href} className={className}>
+            {children}
+          </Link>
         )}
-      </div>
-    </div>
+      />
+      <CreateContentDialog
+        open={createOpen}
+        onClose={() => !creating && setCreateOpen(false)}
+        submitting={creating}
+        error={createError}
+        onSubmit={async (input) => {
+          setCreating(true);
+          setCreateError(null);
+          try {
+            await createPiece(input);
+            setCreateOpen(false);
+          } catch (err) {
+            setCreateError(err instanceof Error ? err.message : "Failed to create content");
+          } finally {
+            setCreating(false);
+          }
+        }}
+      />
+    </>
   );
 }
