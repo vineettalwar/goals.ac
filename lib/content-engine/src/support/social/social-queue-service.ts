@@ -183,7 +183,7 @@ function nextSlotFromSettings(
   settings: SocialScheduleSettings,
   platform: SocialPlatformId,
   after: Date,
-  projectId?: number,
+  _projectId?: number,
 ): Date | null {
   const config = settings.platforms[platform];
   if (!config?.enabled) return null;
@@ -196,15 +196,56 @@ function nextSlotFromSettings(
     const local = localPartsInTimezone(candidateDay, timeZone);
     if (!config.preferredDays.includes(local.dow)) continue;
 
-    const times = config.preferredTimes;
-
-    for (const time of times) {
+    for (const time of config.preferredTimes) {
       const [hh, mm] = time.split(":").map(Number);
       const slot = zonedDateTimeToUtc(timeZone, local.year, local.month, local.day, hh ?? 9, mm ?? 0);
       if (slot > after) return slot;
     }
   }
   return null;
+}
+
+/** Merge analytics hour/day ranks into platform schedule config when data is sufficient. */
+export function applyEngagementBiasToScheduleConfig(
+  config: SocialPlatformScheduleConfig,
+  bias: {
+    preferredHours: number[];
+    preferredDays: number[];
+    sufficient: boolean;
+  },
+): SocialPlatformScheduleConfig {
+  if (!bias.sufficient) return config;
+
+  const analyticsTimes =
+    bias.preferredHours.length > 0
+      ? bias.preferredHours.map((hour) => `${String(hour).padStart(2, "0")}:00`)
+      : config.preferredTimes;
+
+  // Prefer strong analytics days that already appear in user prefs; then fill from analytics.
+  let preferredDays = config.preferredDays;
+  if (bias.preferredDays.length > 0) {
+    const preferredSet = new Set(config.preferredDays);
+    const overlap = bias.preferredDays.filter((dow) => preferredSet.has(dow));
+    preferredDays =
+      overlap.length > 0
+        ? [...overlap, ...bias.preferredDays.filter((dow) => !preferredSet.has(dow))].slice(
+            0,
+            Math.max(config.preferredDays.length, 3),
+          )
+        : bias.preferredDays.slice(0, Math.max(config.preferredDays.length, 3));
+  }
+
+  // Keep any manual times that analytics did not surface so cadence stays usable.
+  const mergedTimes = [...analyticsTimes];
+  for (const time of config.preferredTimes) {
+    if (!mergedTimes.includes(time)) mergedTimes.push(time);
+  }
+
+  return {
+    ...config,
+    preferredTimes: mergedTimes.slice(0, Math.max(analyticsTimes.length, 3)),
+    preferredDays,
+  };
 }
 
 export async function suggestNextSlot(
@@ -240,17 +281,18 @@ export async function suggestNextSlot(
     after.setHours(after.getHours() + config.minHoursBetweenPosts);
   }
 
-  if (settings.bestTimeMode === "analytics") {
-    const topHour = await getTopEngagementHour(projectId, platform);
-    if (topHour != null && config) {
+  if (settings.bestTimeMode === "analytics" && config) {
+    const bias = await getEngagementSlotBias(
+      projectId,
+      platform,
+      settings.timezone || "UTC",
+    );
+    if (bias?.sufficient) {
       const patched = {
         ...settings,
         platforms: {
           ...settings.platforms,
-          [platform]: {
-            ...config,
-            preferredTimes: [`${String(topHour).padStart(2, "0")}:00`],
-          },
+          [platform]: applyEngagementBiasToScheduleConfig(config, bias),
         },
       };
       return nextSlotFromSettings(patched, platform, after, projectId);

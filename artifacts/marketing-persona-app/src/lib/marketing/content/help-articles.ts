@@ -293,14 +293,21 @@ Enable **Share on LinkedIn** and **Sign In with LinkedIn**. Required scopes used
 - \`w_member_social\`
 - \`email\`
 
-**4. Environment variables**
+**4. Credentials (pick one)**
+
+**A. Platform Admin (recommended)**  
+\`/admin/integrations\` → **Social** → **LinkedIn** → paste Client ID + Secret → Save.  
+Keep social publishing enabled.
+
+**B. Environment variables**
 \`\`\`
 LINKEDIN_CLIENT_ID=your_client_id
 LINKEDIN_CLIENT_SECRET=your_client_secret
 NEXTAUTH_URL=https://app.goals.ac
 \`\`\`
+If env vars are set, they override admin values and the admin dialog is read-only.
 
-Restart the Next.js app after updating \`.env\`.`,
+Restart the Next.js app after updating \`.env\`. Admin-saved credentials apply without a restart.`,
   },
   {
     slug: "admin-x-developer-app",

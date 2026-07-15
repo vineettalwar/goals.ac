@@ -1,5 +1,19 @@
 # Session Handoff
 
+## Platform Admin LinkedIn OAuth (2026-07-16)
+
+LinkedIn app credentials can be stored in platform admin (not only env):
+
+- Schema: `platform_settings.linkedin_client_id` + `encrypted_linkedin_client_secret` (migration `0065`, D1 `0002_silly_energizer`)
+- Resolve: `lib/content-engine/.../linkedin-platform-credentials.ts` (env wins over DB)
+- Admin UI: `/admin/integrations` → **Social** → LinkedIn tile
+- OAuth + token refresh read via `resolveLinkedInOAuthCredentials()`
+- Done when: paste Client ID/Secret in admin → project Connect LinkedIn works without `.env` LinkedIn vars
+
+**Still env-only:** X/Twitter, Meta. CF public-worker LinkedIn auth still uses bindings if that path is used.
+
+---
+
 ## Content polish batch (2026-07-16)
 
 - **Visual summary** — markdown callout + SVG data-URI “At a glance” graphic (`visualSummarySvg` / `visualSummarySvgDataUri`); piece aside shows `<img>`
