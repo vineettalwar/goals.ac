@@ -10,6 +10,7 @@ import {
   type GoalsAcHealthResponse,
   parseAvailableOutputModes,
   parseRecommendedOutputMode,
+  parseThemeSnippetRequiredFor,
 } from "@workspace/connectors/goals-ac-plugin";
 
 export type IntegrationHealthEntry = {
@@ -18,6 +19,7 @@ export type IntegrationHealthEntry = {
   siteName?: string;
   recommendedOutputMode?: string;
   availableOutputModes?: string[];
+  themeSnippetRequiredFor?: string[];
 };
 
 function pluginHealthEntry(result: {
@@ -30,11 +32,13 @@ function pluginHealthEntry(result: {
     return { ok: false, error: result.error };
   }
   const health = result.health;
+  const themeSnippetRequiredFor = health ? parseThemeSnippetRequiredFor(health) : [];
   return {
     ok: true,
     siteName: result.siteName ?? health?.version,
     recommendedOutputMode: health ? parseRecommendedOutputMode(health) : undefined,
     availableOutputModes: health ? parseAvailableOutputModes(health) : undefined,
+    ...(themeSnippetRequiredFor.length > 0 ? { themeSnippetRequiredFor } : {}),
   };
 }
 

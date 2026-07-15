@@ -9,6 +9,11 @@ import {
   type PublishDestinationId,
 } from "./publish-destinations";
 import { sanitizePreviewHtml } from "./sanitize-preview-html";
+import {
+  readShopifyThemeSnippetRequiredFor,
+  shopifyOutputModeNeedsThemeSnippet,
+  ShopifyThemeSnippetPreflight,
+} from "./shopify-theme-snippet-preflight";
 
 export type RenderPreviewResult = {
   payloadKind?: string;
@@ -28,6 +33,7 @@ export function ContentPiecePublishDialog({
   pieceBodyMarkdown,
   publishing = false,
   integrationsHref,
+  shopifyThemeLearnHref,
 }: {
   open: boolean;
   onClose: () => void;
@@ -40,6 +46,8 @@ export function ContentPiecePublishDialog({
   publishing?: boolean;
   /** Link target when no CMS destinations are connected (e.g. /integrations). */
   integrationsHref?: string;
+  /** Learn path for Shopify theme snippet install. */
+  shopifyThemeLearnHref?: string;
 }) {
   const [platform, setPlatform] = useState<PublishDestinationId>("wordpress");
   const [connections, setConnections] = useState<CmsConnectionSnapshot | null>(null);
@@ -50,6 +58,7 @@ export function ContentPiecePublishDialog({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [preview, setPreview] = useState<RenderPreviewResult | null>(null);
+  const [shopifyThemeSnippetAck, setShopifyThemeSnippetAck] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -59,6 +68,7 @@ export function ContentPiecePublishDialog({
       setPlatformInitialized(false);
       setPreview(null);
       setPreviewError(null);
+      setShopifyThemeSnippetAck(false);
       return;
     }
 
@@ -97,6 +107,19 @@ export function ContentPiecePublishDialog({
 
   const selectedDestination = availableDestinations.find((d) => d.id === platform);
   const isExportOnly = Boolean(selectedDestination?.exportOnly);
+  const shopifyConnection =
+    platform === "shopify" && connections?.shopify && typeof connections.shopify === "object"
+      ? (connections.shopify as Record<string, unknown>)
+      : null;
+  const shopifyOutputMode = shopifyConnection
+    ? String(shopifyConnection.outputMode ?? "article_html")
+    : null;
+  const showShopifyThemeSnippetWarning =
+    platform === "shopify" &&
+    shopifyOutputModeNeedsThemeSnippet(
+      shopifyOutputMode,
+      readShopifyThemeSnippetRequiredFor(shopifyConnection),
+    );
   const hasPublishable =
     availableDestinations.some((d) => !d.exportOnly) || availableDestinations.length > 0;
   const gridCols =
@@ -203,6 +226,7 @@ export function ContentPiecePublishDialog({
                         setPublishError(null);
                         setPreview(null);
                         setPreviewError(null);
+                        setShopifyThemeSnippetAck(false);
                       }}
                       disabled={publishing}
                       className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-hidden disabled:opacity-50 ${

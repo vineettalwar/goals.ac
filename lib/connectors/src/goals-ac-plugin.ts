@@ -259,6 +259,15 @@ export function parseRecommendedOutputMode(health: GoalsAcHealthResponse): strin
   return available.length === 1 ? available[0] : undefined;
 }
 
+/** Shopify (and similar) modes that need a merchant theme Liquid snippet to render. */
+export function parseThemeSnippetRequiredFor(health: GoalsAcHealthResponse): string[] {
+  const fromCapabilities = health.capabilities?.theme_snippet_required_for;
+  if (Array.isArray(fromCapabilities)) {
+    return fromCapabilities.filter((m): m is string => typeof m === "string");
+  }
+  return [];
+}
+
 export async function testGoalsAcPluginConnection(
   credentials: GoalsAcPluginCredentials,
 ): Promise<{ ok: boolean; health?: GoalsAcHealthResponse; error?: string }> {

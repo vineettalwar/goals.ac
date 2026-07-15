@@ -9,6 +9,7 @@ import {
   type GoalsAcHealthResponse,
   parseAvailableOutputModes,
   parseRecommendedOutputMode,
+  parseThemeSnippetRequiredFor,
 } from "@workspace/connectors/goals-ac-plugin";
 import { getAccessibleProject } from "./project-access";
 
@@ -18,6 +19,7 @@ export type IntegrationHealthEntry = {
   siteName?: string;
   recommendedOutputMode?: string;
   availableOutputModes?: string[];
+  themeSnippetRequiredFor?: string[];
 };
 
 const testBody = z.object({
@@ -45,11 +47,13 @@ function pluginHealthEntry(result: {
     return { ok: false, error: result.error };
   }
   const health = result.health;
+  const themeSnippetRequiredFor = health ? parseThemeSnippetRequiredFor(health) : [];
   return {
     ok: true,
     siteName: result.siteName ?? health?.version,
     recommendedOutputMode: health ? parseRecommendedOutputMode(health) : undefined,
     availableOutputModes: health ? parseAvailableOutputModes(health) : undefined,
+    ...(themeSnippetRequiredFor.length > 0 ? { themeSnippetRequiredFor } : {}),
   };
 }
 

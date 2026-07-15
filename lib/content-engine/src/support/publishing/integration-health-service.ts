@@ -13,13 +13,20 @@ export type PlatformHealthStatus = {
   ok: boolean | null;
   error?: string;
   siteName?: string;
+  /** Shopify plugin: output modes that need merchant theme Liquid. */
+  themeSnippetRequiredFor?: string[];
   lastCheckedAt: string;
 };
 
 async function testPlatform(
   key: string,
   creds: CmsIntegrationCredentials,
-): Promise<{ ok: boolean; error?: string; siteName?: string } | null> {
+): Promise<{
+  ok: boolean;
+  error?: string;
+  siteName?: string;
+  themeSnippetRequiredFor?: string[];
+} | null> {
   switch (key) {
     case "notion": {
       if (!creds.notion) return null;
@@ -80,15 +87,26 @@ async function testPlatform(
     case "shopify": {
       if (!creds.shopify) return null;
       if (creds.shopify.connectionType === "plugin") {
-        const { testGoalsAcPluginConnection } = await import("@workspace/connectors/goals-ac-plugin");
+        const {
+          testGoalsAcPluginConnection,
+          parseThemeSnippetRequiredFor,
+        } = await import("@workspace/connectors/goals-ac-plugin");
         const result = await testGoalsAcPluginConnection({
           siteUrl: creds.shopify.siteUrl!,
           siteKey: creds.shopify.siteKey!,
           platform: "shopify",
         });
-        return result.ok
-          ? { ok: true, siteName: result.health?.version }
-          : { ok: false, error: result.error };
+        if (!result.ok) {
+          return { ok: false, error: result.error };
+        }
+        const themeSnippetRequiredFor = result.health
+          ? parseThemeSnippetRequiredFor(result.health)
+          : [];
+        return {
+          ok: true,
+          siteName: result.health?.version,
+          ...(themeSnippetRequiredFor.length > 0 ? { themeSnippetRequiredFor } : {}),
+        };
       }
       const { testShopifyConnection } = await import("@workspace/connectors/shopify");
       const result = await testShopifyConnection({
@@ -374,6 +392,7 @@ export async function runProjectIntegrationHealth(
         ok: result.ok,
         error: result.error,
         siteName: result.siteName,
+        themeSnippetRequiredFor: result.themeSnippetRequiredFor,
         lastCheckedAt: checkedAt,
       });
     } catch (err) {
@@ -398,6 +417,9 @@ export async function runProjectIntegrationHealth(
       lastHealthOk: status.ok,
       lastHealthError: status.error ?? null,
       lastHealthCheckedAt: checkedAt,
+      ...(status.themeSnippetRequiredFor && status.themeSnippetRequiredFor.length > 0
+        ? { lastHealthThemeSnippetRequiredFor: status.themeSnippetRequiredFor }
+        : {}),
     };
   }
 

@@ -747,6 +747,7 @@ const LAST_HEALTH_KEYS = [
   "lastHealthOk",
   "lastHealthError",
   "lastHealthCheckedAt",
+  "lastHealthThemeSnippetRequiredFor",
 ] as const;
 
 /** Copy persisted health meta from the raw stored blob onto a masked row. */
