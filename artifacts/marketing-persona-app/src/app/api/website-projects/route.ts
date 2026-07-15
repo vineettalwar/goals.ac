@@ -5,7 +5,7 @@ import type { ContentStyle } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/auth/require-auth";
 import {
   assertCanCreateProject,
-  ensureOrganizationForUser,
+  getOrCreateOrganizationForUser,
   listAccessibleProjects,
   resolveOrganizationIdForUser,
 } from "@/lib/org/org-access";
@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   try {
     let organizationId = await resolveOrganizationIdForUser(userId!);
     if (organizationId == null) {
-      organizationId = await ensureOrganizationForUser({
+      organizationId = await getOrCreateOrganizationForUser({
         userId: userId!,
         name: "My Organization",
       });

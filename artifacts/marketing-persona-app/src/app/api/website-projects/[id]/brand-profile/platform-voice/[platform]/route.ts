@@ -6,7 +6,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
 import { z } from "zod";
 import {
-  ensurePlatformVoice,
+  getOrCreatePlatformVoice,
   isValidChannel,
   isValidSocialPlatform,
   PLATFORM_CHANNELS,
@@ -45,7 +45,7 @@ export async function GET(
     .where(eq(brandProfilesTable.websiteProjectId, projectId))
     .limit(1);
 
-  const profile = ensurePlatformVoice(brandProfile?.platformVoices, platformRaw);
+  const profile = getOrCreatePlatformVoice(brandProfile?.platformVoices, platformRaw);
   return Response.json({
     platform: platformRaw,
     channels: PLATFORM_CHANNELS[platformRaw],

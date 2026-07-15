@@ -3,7 +3,7 @@ import { db } from "@workspace/db";
 import { companiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { ensureOrganizationForUser } from "@/lib/org/org-access";
+import { getOrCreateOrganizationForUser } from "@/lib/org/org-access";
 import { z } from "zod";
 
 const createSchema = z.object({
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     .values({ ...parsed.data, userId: userId! })
     .returning();
 
-  const organizationId = await ensureOrganizationForUser({
+  const organizationId = await getOrCreateOrganizationForUser({
     userId: userId!,
     name: parsed.data.name,
     companyId: company.id,

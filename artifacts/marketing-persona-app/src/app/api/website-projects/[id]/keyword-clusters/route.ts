@@ -44,7 +44,7 @@ export async function POST(
     quotaKind: "article",
   });
   if (!billingPrep.ok) {
-    return NextResponse.json({ error: billingPrep.error }, { status: billingPrep.status });
+    return billingPrep.response;
   }
 
   try {
@@ -58,7 +58,9 @@ export async function POST(
       eventType: "keyword_cluster",
       usedByok: billingPrep.usedByok,
       tier: "planning",
-      usage: result.generationUsage,
+      promptTokens: result.generationUsage?.promptTokens,
+      outputTokens: result.generationUsage?.outputTokens,
+      totalTokens: result.generationUsage?.totalTokens,
     });
     return NextResponse.json(result);
   } catch (err) {
