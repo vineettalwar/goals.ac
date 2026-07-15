@@ -8,9 +8,9 @@ import {
   updateArticle,
   updatePage,
   type Article,
-  type ArticleImageInput,
   type Page,
 } from "../lib/shopify-graphql.js";
+import { resolveArticleImageFromFeaturedUrl } from "../lib/featured-image.js";
 import { getCachedResponse, setCachedResponse } from "../lib/idempotency.js";
 import { badRequest } from "../lib/errors.js";
 
@@ -47,16 +47,11 @@ interface ContentRequest {
   metafield_namespace?: string;
   metafield_key?: string;
   template_suffix?: string;
-  /** Public https URL for ArticleCreateInput.image (mirrors Admin connector). */
+  /**
+   * ArticleCreateInput.image source: public https URL, or PNG/JPEG data URI
+   * (staged upload → resource URL). SVG and other schemes are skipped.
+   */
   featuredImageUrl?: string;
-}
-
-/** Remote https only — plugin has no staged upload; data: URIs are ignored. */
-function resolveArticleImage(body: ContentRequest): ArticleImageInput | undefined {
-  const raw = body.featuredImageUrl?.trim();
-  if (!raw || !/^https?:\/\//i.test(raw)) return undefined;
-  const altText = body.title?.trim();
-  return altText ? { url: raw, altText } : { url: raw };
 }
 
 interface ContentResponse {
@@ -123,7 +118,7 @@ async function publishArticleMetafields(
       tags: body.tags,
       isPublished,
       publishedAt,
-      image: resolveArticleImage(body),
+      image: await resolveArticleImageFromFeaturedUrl(body.featuredImageUrl, body.title),
     });
     article = result.article;
     action = "created";
@@ -257,7 +252,10 @@ router.post("/content", hmacAuth, async (req, res) => {
           tags: body.tags,
           isPublished,
           publishedAt,
-          image: resolveArticleImage(body),
+          image: await resolveArticleImageFromFeaturedUrl(
+            body.featuredImageUrl,
+            body.title,
+          ),
         });
         action = "created";
       }

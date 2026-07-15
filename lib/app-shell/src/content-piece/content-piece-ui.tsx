@@ -888,6 +888,8 @@ export function ContentPieceView({
   stockImagesConfigured = false,
   onRegenerateImages,
   regeneratingImages = false,
+  onAttachFeaturedImageUrl,
+  attachingFeaturedImageUrl = false,
   staleGenerating = false,
   onResetGeneration,
   fetchDualScore,
@@ -932,6 +934,8 @@ export function ContentPieceView({
   stockImagesConfigured?: boolean;
   onRegenerateImages?: () => void | Promise<void>;
   regeneratingImages?: boolean;
+  onAttachFeaturedImageUrl?: (url: string) => void | Promise<void>;
+  attachingFeaturedImageUrl?: boolean;
   staleGenerating?: boolean;
   onResetGeneration?: () => void | Promise<void>;
   /** Host-specific header extras (e.g. performance badge). */
@@ -974,6 +978,7 @@ export function ContentPieceView({
   );
   const featuredImage =
     piece.pieceMetadata?.images?.find((image) => image.role === "featured") ?? null;
+  const featuredImageUrl = piece.pieceMetadata?.featuredImageUrl ?? null;
   const supportsStockImages = contentPieceSupportsStockImages(piece.formatType);
   const showMarkReady = Boolean(
     contentPieceCanMarkReady(piece.status, piece.bodyMarkdown) && onMarkReady,
@@ -1001,6 +1006,7 @@ export function ContentPieceView({
     regenerating ||
     enhancing ||
     regeneratingImages ||
+    attachingFeaturedImageUrl ||
     queueingSocial;
   const wordCount = (editor.editing ? editor.bodyDraft : (piece.bodyMarkdown ?? ""))
     .split(/\s+/)
@@ -1057,10 +1063,13 @@ export function ContentPieceView({
         <div className="min-w-0 space-y-4">
           <ContentPieceFeaturedImage
             featuredImage={featuredImage}
+            featuredImageUrl={featuredImageUrl}
             supportsStockImages={supportsStockImages}
             stockImagesConfigured={stockImagesConfigured}
             regenerating={regeneratingImages}
+            attachingUrl={attachingFeaturedImageUrl}
             onRegenerateImages={onRegenerateImages}
+            onAttachFeaturedImageUrl={onAttachFeaturedImageUrl}
           />
           <div className="paper-card overflow-hidden rounded-xl">
             <ContentPieceToolbar

@@ -139,6 +139,7 @@ export function useContentPieceData(pieceId: string | undefined) {
   const [enhancing, setEnhancing] = useState(false);
   const [enhanceMessage, setEnhanceMessage] = useState<string | null>(null);
   const [regeneratingImages, setRegeneratingImages] = useState(false);
+  const [attachingFeaturedImageUrl, setAttachingFeaturedImageUrl] = useState(false);
   const generateJobPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const publishJobPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -530,6 +531,27 @@ export function useContentPieceData(pieceId: string | undefined) {
     }
   }, [pieceId, piece, setCachedPiece]);
 
+  const attachFeaturedImageUrl = useCallback(
+    async (url: string) => {
+      if (!pieceId || !piece) return;
+      setAttachingFeaturedImageUrl(true);
+      try {
+        const updated = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ featuredImageUrl: url }),
+        });
+        setCachedPiece(mapPiece(updated));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not attach image URL");
+        throw err;
+      } finally {
+        setAttachingFeaturedImageUrl(false);
+      }
+    },
+    [pieceId, piece, setCachedPiece],
+  );
+
   const humanize = useCallback(async () => {
     if (!pieceId || !piece) return;
     setHumanizing(true);
@@ -663,6 +685,8 @@ export function useContentPieceData(pieceId: string | undefined) {
     repurpose,
     regeneratingImages,
     regenerateImages,
+    attachingFeaturedImageUrl,
+    attachFeaturedImageUrl,
     stockImagesConfigured: isStockImagesConfigured(stockQuery.data),
     publishing,
     publishingState,

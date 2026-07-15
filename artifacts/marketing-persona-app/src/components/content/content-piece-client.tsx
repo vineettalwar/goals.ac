@@ -102,6 +102,7 @@ export function ContentPieceClient({
   const [enhancing, setEnhancing] = useState(false);
   const [enhanceMessage, setEnhanceMessage] = useState<string | null>(null);
   const [regeneratingImages, setRegeneratingImages] = useState(false);
+  const [attachingFeaturedImageUrl, setAttachingFeaturedImageUrl] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [markingReady, setMarkingReady] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -429,6 +430,27 @@ export function ContentPieceClient({
               }
             : undefined
         }
+        attachingFeaturedImageUrl={attachingFeaturedImageUrl}
+        onAttachFeaturedImageUrl={async (url) => {
+          setAttachingFeaturedImageUrl(true);
+          try {
+            const res = await fetch(`/api/content-pieces/${pieceId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ featuredImageUrl: url }),
+            });
+            if (!res.ok) {
+              const data = (await res.json().catch(() => null)) as { error?: string } | null;
+              toast.error(data?.error ?? "Could not attach image URL");
+              return;
+            }
+            const updated = await res.json();
+            setPieceRecord((prev) => mergePieceJson(updated, prev));
+            toast.success("Featured image URL attached");
+          } finally {
+            setAttachingFeaturedImageUrl(false);
+          }
+        }}
         publishing={publishing}
         publishMessage={publishMessage}
         onPublish={

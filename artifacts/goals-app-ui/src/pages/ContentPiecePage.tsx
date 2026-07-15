@@ -67,6 +67,8 @@ export function ContentPiecePage() {
     repurpose,
     regeneratingImages,
     regenerateImages,
+    attachingFeaturedImageUrl,
+    attachFeaturedImageUrl,
     stockImagesConfigured,
     publishing,
     publishingState,
@@ -237,6 +239,14 @@ export function ContentPiecePage() {
         onRegenerateImages={
           stockImagesConfigured ? () => void regenerateImages() : undefined
         }
+        attachingFeaturedImageUrl={attachingFeaturedImageUrl}
+        onAttachFeaturedImageUrl={async (url) => {
+          try {
+            await attachFeaturedImageUrl(url);
+          } catch {
+            /* error already set on hook */
+          }
+        }}
         publishing={publishing || Boolean(publishingState)}
         publishingState={publishingState}
         publishMessage={publishMessage}
