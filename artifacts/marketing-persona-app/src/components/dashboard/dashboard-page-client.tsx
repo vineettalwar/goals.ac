@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   DashboardView,
+  type DashboardArticleUsage,
   type DashboardAutopilotSettings,
   type DashboardCommandCenter,
   type DashboardPiece,
@@ -17,6 +18,7 @@ export type DashboardPageClientProps = {
   pieces: DashboardPiece[];
   autopilotSettings: DashboardAutopilotSettings | null;
   commandCenter: DashboardCommandCenter | null;
+  articleUsage: DashboardArticleUsage | null;
 };
 
 export function DashboardPageClient({
@@ -27,6 +29,7 @@ export function DashboardPageClient({
   pieces,
   autopilotSettings,
   commandCenter,
+  articleUsage,
 }: DashboardPageClientProps) {
   const activeProjectId = activeProject?.id ?? null;
 
@@ -41,6 +44,7 @@ export function DashboardPageClient({
       pieces={pieces}
       autopilotSettings={autopilotSettings}
       commandCenter={commandCenter}
+      articleUsage={articleUsage}
       renderLink={({ href, className, children }) => (
         <Link href={href} className={className}>
           {children}

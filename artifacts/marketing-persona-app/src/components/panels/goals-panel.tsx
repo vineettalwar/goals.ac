@@ -1,21 +1,91 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Plus, Target, Layers, Map, TrendingUp } from "lucide-react";
+import { Map, TrendingDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { Textarea } from "@/components/ui/textarea";
 import { useActiveProject } from "@/context/use-active-project";
-import { useBriefs, useGoals, useGscSyncStatus } from "@/lib/queries";
+import {
+  useGoals,
+  useBriefs,
+  useGscSyncStatus,
+  useGscQueries,
+  useKeywordAlerts,
+} from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
 import type { Brief, Goal } from "@/lib/queries/types";
+import type { GscQueryRow } from "@/lib/queries/fetchers";
 import { GoalsPanelBriefsSection } from "./goals-panel-briefs";
-import { formatDisplayDateTime } from "@/lib/format/date";
+import {
+  defaultSyncDateRange,
+  priorPeriodRange,
+} from "@workspace/seo-tools/gscSearchAnalytics";
+
+type QueryMover = {
+  query: string;
+  clicksDelta: number;
+  impressionsDelta: number;
+  clicks: number;
+  impressions: number;
+};
+
+function sumMetric(rows: GscQueryRow[], key: "clicks" | "impressions") {
+  return rows.reduce((acc, row) => acc + (Number(row[key]) || 0), 0);
+}
+
+function buildQueryMovers(current: GscQueryRow[], prior: GscQueryRow[]) {
+  const priorMap = new Map(prior.map((row) => [row.query.toLowerCase(), row]));
+  const movers: QueryMover[] = current.map((row) => {
+    const prev = priorMap.get(row.query.toLowerCase());
+    const clicks = Number(row.clicks) || 0;
+    const impressions = Number(row.impressions) || 0;
+    const prevClicks = Number(prev?.clicks) || 0;
+    const prevImpressions = Number(prev?.impressions) || 0;
+    return {
+      query: row.query,
+      clicks,
+      impressions,
+      clicksDelta: clicks - prevClicks,
+      impressionsDelta: impressions - prevImpressions,
+    };
+  });
+
+  const improving = [...movers]
+    .filter((m) => m.clicksDelta > 0 || m.impressionsDelta > 0)
+    .sort((a, b) => b.clicksDelta - a.clicksDelta || b.impressionsDelta - a.impressionsDelta)
+    .slice(0, 3);
+  const declining = [...movers]
+    .filter((m) => m.clicksDelta < 0 || m.impressionsDelta < 0)
+    .sort((a, b) => a.clicksDelta - b.clicksDelta || a.impressionsDelta - b.impressionsDelta)
+    .slice(0, 3);
+
+  return {
+    improving,
+    declining,
+    totals: {
+      clicks: sumMetric(current, "clicks"),
+      impressions: sumMetric(current, "impressions"),
+      clicksDelta: sumMetric(current, "clicks") - sumMetric(prior, "clicks"),
+      impressionsDelta: sumMetric(current, "impressions") - sumMetric(prior, "impressions"),
+    },
+  };
+}
+
+function formatDelta(value: number, suffix = "") {
+  if (value === 0) return `0${suffix}`;
+  const sign = value > 0 ? "+" : "";
+  return `${sign}${value.toLocaleString()}${suffix}`;
+}
+
+function deltaClass(value: number) {
+  if (value > 0) return "text-emerald-600";
+  if (value < 0) return "text-rose-600";
+  return "text-muted-foreground";
+}
 
 export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
   const queryClient = useQueryClient();
@@ -27,7 +97,47 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
   const [goalForm, setGoalForm] = useState({ objective: "traffic", targetMetric: "" });
   const [briefForm, setBriefForm] = useState({ workingTitle: "", targetKeywordCluster: "", outline: "" });
   const [compilingGoalId, setCompilingGoalId] = useState<number | null>(null);
-  const { data: gscStatus = null } = useGscSyncStatus(projectId);
+  const { data: gscStatus = null, isLoading: gscStatusLoading } = useGscSyncStatus(projectId);
+
+  const recentRange = useMemo(() => defaultSyncDateRange(14), []);
+  const priorRange = useMemo(
+    () => priorPeriodRange(recentRange.startDate, recentRange.endDate),
+    [recentRange.endDate, recentRange.startDate],
+  );
+  const gscEnabled = Boolean(projectId && gscStatus?.connected);
+  const { data: recentQueries = [], isLoading: recentLoading } = useGscQueries(
+    projectId,
+    gscEnabled,
+    recentRange,
+  );
+  const { data: priorQueries = [], isLoading: priorLoading } = useGscQueries(
+    projectId,
+    gscEnabled,
+    priorRange,
+  );
+  const { data: alerts = [], isLoading: alertsLoading } = useKeywordAlerts(projectId);
+
+  const movement = useMemo(
+    () => buildQueryMovers(recentQueries, priorQueries),
+    [priorQueries, recentQueries],
+  );
+  const rankMovers = useMemo(
+    () =>
+      alerts
+        .filter((a) => a.previousPosition != null && a.currentPosition != null)
+        .slice(0, 4),
+    [alerts],
+  );
+  const hasGscMovement =
+    recentQueries.length > 0 &&
+    (movement.improving.length > 0 ||
+      movement.declining.length > 0 ||
+      movement.totals.clicks > 0 ||
+      movement.totals.impressions > 0);
+  const hasRankMovement = rankMovers.length > 0;
+  const progressLoading =
+    gscStatusLoading || (gscEnabled && (recentLoading || priorLoading)) || alertsLoading;
+  const searchIntegrationsHref = projectId ? `/projects/${projectId}/integrations/search` : "#";
 
   const clusterMap = briefs.reduce<Record<string, Brief[]>>((acc, brief) => {
     const cluster = brief.targetKeywordCluster?.trim() || "Unclustered";
@@ -181,39 +291,129 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
                 <TrendingUp className="h-4 w-4" /> GSC progress
               </h2>
               <p className="text-xs text-muted-foreground">
-                Search Console query sync feeds opportunity scoring for goal-aligned briefs.
+                Keyword movement from Search Console (last 14d vs prior 14d) and tracked-rank alerts.
               </p>
-              {!gscStatus ? (
-                <p className="text-sm text-muted-foreground">Loading GSC status…</p>
-              ) : !gscStatus.connected ? (
-                <p className="text-sm text-muted-foreground">
-                  Connect Google Search Console in project integrations to track ranking progress.
-                </p>
+              {progressLoading ? (
+                <p className="text-sm text-muted-foreground">Loading keyword progress…</p>
+              ) : !hasGscMovement && !hasRankMovement ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Connect Search Console for keyword progress
+                  </p>
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={searchIntegrationsHref}>Connect Search Console</Link>
+                  </Button>
+                </div>
               ) : (
-                <dl className="grid gap-2 text-sm">
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-muted-foreground">Property</dt>
-                    <dd>{gscStatus.propertyVerified ? "Verified" : "Pending verification"}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-muted-foreground">Queries indexed</dt>
-                    <dd>{gscStatus.queryCount}</dd>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <dt className="text-muted-foreground">Last sync</dt>
-                    <dd>
-                      {gscStatus.lastSyncedAt
-                        ? formatDisplayDateTime(gscStatus.lastSyncedAt)
-                        : "Not synced yet"}
-                    </dd>
-                  </div>
-                </dl>
+                <div className="space-y-3">
+                  {hasGscMovement ? (
+                    <>
+                      <dl className="grid gap-2 text-sm">
+                        <div className="flex justify-between gap-2">
+                          <dt className="text-muted-foreground">Clicks (14d)</dt>
+                          <dd>
+                            {movement.totals.clicks.toLocaleString()}{" "}
+                            <span className={deltaClass(movement.totals.clicksDelta)}>
+                              ({formatDelta(movement.totals.clicksDelta)})
+                            </span>
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <dt className="text-muted-foreground">Impressions (14d)</dt>
+                          <dd>
+                            {movement.totals.impressions.toLocaleString()}{" "}
+                            <span className={deltaClass(movement.totals.impressionsDelta)}>
+                              ({formatDelta(movement.totals.impressionsDelta)})
+                            </span>
+                          </dd>
+                        </div>
+                      </dl>
+                      {movement.improving.length > 0 ? (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-muted-foreground">Improving</p>
+                          <ul className="space-y-1">
+                            {movement.improving.map((row) => (
+                              <li
+                                key={`up-${row.query}`}
+                                className="flex items-center justify-between gap-2 text-sm"
+                              >
+                                <span className="truncate" title={row.query}>
+                                  {row.query}
+                                </span>
+                                <span className={`shrink-0 inline-flex items-center gap-1 ${deltaClass(row.clicksDelta || row.impressionsDelta)}`}>
+                                  <TrendingUp className="h-3 w-3" />
+                                  {row.clicksDelta !== 0
+                                    ? formatDelta(row.clicksDelta, " clk")
+                                    : formatDelta(row.impressionsDelta, " impr")}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                      {movement.declining.length > 0 ? (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-muted-foreground">Declining</p>
+                          <ul className="space-y-1">
+                            {movement.declining.map((row) => (
+                              <li
+                                key={`down-${row.query}`}
+                                className="flex items-center justify-between gap-2 text-sm"
+                              >
+                                <span className="truncate" title={row.query}>
+                                  {row.query}
+                                </span>
+                                <span className={`shrink-0 inline-flex items-center gap-1 ${deltaClass(row.clicksDelta || row.impressionsDelta)}`}>
+                                  <TrendingDown className="h-3 w-3" />
+                                  {row.clicksDelta !== 0
+                                    ? formatDelta(row.clicksDelta, " clk")
+                                    : formatDelta(row.impressionsDelta, " impr")}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : null}
+                  {hasRankMovement ? (
+                    <div className="space-y-1.5">
+                      <p className="text-xs font-medium text-muted-foreground">
+                        {hasGscMovement ? "Rank alerts" : "Tracked keyword movement"}
+                      </p>
+                      <ul className="space-y-1">
+                        {rankMovers.map((alert) => {
+                          const improved =
+                            (alert.previousPosition ?? 0) > (alert.currentPosition ?? 0);
+                          return (
+                            <li
+                              key={alert.id}
+                              className="flex items-center justify-between gap-2 text-sm"
+                            >
+                              <span className="truncate" title={alert.keyword}>
+                                {alert.keyword}
+                              </span>
+                              <span
+                                className={`shrink-0 inline-flex items-center gap-1 ${improved ? "text-emerald-600" : "text-rose-600"}`}
+                              >
+                                {improved ? (
+                                  <TrendingUp className="h-3 w-3" />
+                                ) : (
+                                  <TrendingDown className="h-3 w-3" />
+                                )}
+                                #{alert.previousPosition} → #{alert.currentPosition}
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <Button variant="outline" size="sm" asChild>
+                    <Link href={searchIntegrationsHref}>Search integrations</Link>
+                  </Button>
+                </div>
               )}
-              <Button variant="outline" size="sm" asChild disabled={!projectId}>
-                <Link href={projectId ? `/projects/${projectId}/integrations` : "#"}>
-                  Manage GSC connection
-                </Link>
-              </Button>
             </div>
           </div>
 

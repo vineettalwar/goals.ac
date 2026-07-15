@@ -66,6 +66,14 @@ export function useTrackedKeywords(projectId: string) {
   });
 }
 
+export function useKeywordAlerts(projectId: string, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.keywordAlerts(projectId),
+    queryFn: () => fetchKeywordAlerts(projectId),
+    enabled: enabled && Boolean(projectId),
+  });
+}
+
 export function useKeywordIntelligence(projectId: string) {
   const opportunities = useQuery({
     queryKey: queryKeys.keywordOpportunities(projectId),
@@ -73,11 +81,7 @@ export function useKeywordIntelligence(projectId: string) {
     enabled: Boolean(projectId),
   });
 
-  const alerts = useQuery({
-    queryKey: queryKeys.keywordAlerts(projectId),
-    queryFn: () => fetchKeywordAlerts(projectId),
-    enabled: Boolean(projectId),
-  });
+  const alerts = useKeywordAlerts(projectId);
 
   return {
     opportunities: opportunities.data ?? [],

@@ -41,6 +41,7 @@ export default async function DashboardPage() {
       pieces={data.pieces}
       autopilotSettings={data.autopilotSettings}
       commandCenter={data.commandCenter}
+      articleUsage={data.articleUsage}
     />
   );
 }

@@ -28,12 +28,9 @@ export const queryKeys = {
     projectId: string | number,
     range?: { startDate: string; endDate: string },
   ) =>
-    [
-      "gsc-queries",
-      String(projectId),
-      range?.startDate ?? "default",
-      range?.endDate ?? "default",
-    ] as const,
+    range
+      ? (["gsc-queries", String(projectId), range.startDate, range.endDate] as const)
+      : (["gsc-queries", String(projectId)] as const),
   cmsIntegrations: (projectId: string | number) => ["cms-integrations", String(projectId)] as const,
   competitorContext: (projectId: string | number) => ["competitor-context", String(projectId)] as const,
   roadmapFormOptions: ["roadmap-form-options"] as const,

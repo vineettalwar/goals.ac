@@ -2,10 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 import { queryKeys } from "@/lib/queries/keys";
 import type {
+  DashboardArticleUsage,
   DashboardAutopilotSettings,
   DashboardCommandCenter,
   DashboardPiece,
   DashboardProject,
+  UsageSummary,
 } from "@workspace/app-shell";
 import type { ContentPiece, WebsiteProject } from "@/types/api";
 
@@ -25,12 +27,23 @@ function mapPiece(piece: ContentPiece, projectName?: string): DashboardPiece {
   };
 }
 
+function mapArticleUsage(usage: UsageSummary | null | undefined): DashboardArticleUsage | null {
+  if (!usage) return null;
+  return {
+    articlesThisMonth: usage.articlesThisMonth,
+    articleQuotaLimit: usage.quota,
+    articlesRemaining: usage.quotaRemaining,
+    usesByok: usage.usesByok,
+  };
+}
+
 type DashboardData = {
   projects: DashboardProject[];
   activeProject: DashboardProject | null;
   pieces: DashboardPiece[];
   autopilotSettings: DashboardAutopilotSettings | null;
   commandCenter: DashboardCommandCenter | null;
+  articleUsage: DashboardArticleUsage | null;
 };
 
 async function fetchDashboardData(
@@ -44,6 +57,10 @@ async function fetchDashboardData(
   let pieces: DashboardPiece[] = [];
   let autopilotSettings: DashboardAutopilotSettings | null = null;
   let commandCenter: DashboardCommandCenter | null = null;
+
+  const usagePromise = apiFetch<{ usage?: UsageSummary }>("/api/usage")
+    .then((res) => mapArticleUsage(res.usage))
+    .catch(() => null);
 
   if (active) {
     const [pieceRows, autopilot, command] = await Promise.all([
@@ -70,6 +87,7 @@ async function fetchDashboardData(
     pieces,
     autopilotSettings,
     commandCenter,
+    articleUsage: await usagePromise,
   };
 }
 
@@ -95,5 +113,6 @@ export function useDashboardData(activeProjectId: string | null, allProjects: We
     pieces: query.data?.pieces ?? [],
     autopilotSettings: query.data?.autopilotSettings ?? null,
     commandCenter: query.data?.commandCenter ?? null,
+    articleUsage: query.data?.articleUsage ?? null,
   };
 }
