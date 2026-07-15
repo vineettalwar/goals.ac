@@ -777,6 +777,11 @@ function ContentPieceAside({
         serpGaps={dual?.serp.gaps}
         competitorTopics={dual?.competitorDiff}
         pieceHasBody={Boolean(body)}
+        onInsertOutline={
+          !body && editor.editing
+            ? (markdown) => dispatch({ type: "set_body", value: markdown })
+            : undefined
+        }
         renderLink={renderLink}
       />
 

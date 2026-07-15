@@ -388,6 +388,7 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
         return;
       }
       toast.success("Stock image attached for Instagram");
+      void loadQueue();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Stock image search failed");
     } finally {

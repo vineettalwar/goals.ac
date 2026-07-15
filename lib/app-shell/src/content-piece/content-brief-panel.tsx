@@ -100,11 +100,13 @@ export function ContentBriefPanel({
   competitorTopics,
   ideasHref,
   pieceHasBody = false,
+  onInsertOutline,
   renderLink,
 }: ContentBriefPanelProps) {
   const [brief, setBrief] = useState<ContentBriefSummary | null>(null);
   const [loading, setLoading] = useState(Boolean(briefId));
   const [loadFailed, setLoadFailed] = useState(false);
+  const [copied, setCopied] = useState(false);
   const fetchBriefRef = useRef(fetchBrief);
   fetchBriefRef.current = fetchBrief;
 
@@ -170,6 +172,26 @@ export function ContentBriefPanel({
         {children}
       </a>
     );
+
+  const handleCopyOutline = async () => {
+    if (outlineBullets.length === 0) return;
+    const markdown = outlineToMarkdown(outlineBullets);
+    try {
+      await navigator.clipboard.writeText(markdown);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API failed
+    }
+  };
+
+  const handleInsertOutline = () => {
+    if (!onInsertOutline || outlineBullets.length === 0) return;
+    const markdown = outlineToMarkdown(outlineBullets);
+    onInsertOutline(markdown);
+  };
+
+  const showInsertButton = !pieceHasBody && onInsertOutline;
 
   if (!briefId) {
     return (
@@ -249,13 +271,43 @@ export function ContentBriefPanel({
                   </li>
                 ))}
               </ul>
-              {!pieceHasBody && createFromBriefHref
-                ? link(
-                    createFromBriefHref,
-                    "mt-2 inline-block text-xs text-primary hover:underline",
-                    "Create from brief",
-                  )
-                : null}
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleCopyOutline}
+                  className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium hover:bg-secondary disabled:opacity-50"
+                  disabled={copied}
+                >
+                  {copied ? (
+                    <>
+                      <Check className="h-3 w-3" aria-hidden />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-3 w-3" aria-hidden />
+                      Copy outline
+                    </>
+                  )}
+                </button>
+                {showInsertButton ? (
+                  <button
+                    type="button"
+                    onClick={handleInsertOutline}
+                    className="inline-flex h-7 items-center gap-1.5 rounded-lg border border-input bg-card px-2 text-xs font-medium hover:bg-secondary"
+                  >
+                    <PenLine className="h-3 w-3" aria-hidden />
+                    Insert into draft
+                  </button>
+                ) : null}
+                {!pieceHasBody && createFromBriefHref
+                  ? link(
+                      createFromBriefHref,
+                      "text-xs text-primary hover:underline",
+                      "Create from brief",
+                    )
+                  : null}
+              </div>
             </div>
           ) : null}
         </div>

@@ -179,6 +179,8 @@ export function SocialHubView({
           requireApproval={Object.values(settings?.platforms ?? {}).some(
             (platform) => platform?.requireApproval === true,
           )}
+          attachingImage={attachingImage}
+          onUseStockImage={onUseStockImage}
         />
       ) : null}
 

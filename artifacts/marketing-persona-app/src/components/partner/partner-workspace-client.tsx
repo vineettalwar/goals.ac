@@ -174,6 +174,111 @@ export function PartnerWorkspaceClient({ projects, organizationName }: Props) {
           </table>
         </div>
       )}
+
+      <div className="paper-card p-6 sm:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-xl font-bold mb-2">Story kit</h2>
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              Build honest success stories with placeholder templates and verifiable metrics. No fake company names or
+              invented lift numbers allowed.
+            </p>
+          </div>
+          <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground border border-border rounded-md px-2.5 py-1">
+            <FileText className="h-3.5 w-3.5" />
+            Illustrative only
+          </span>
+        </div>
+
+        <div className="rounded-lg border border-border bg-secondary/20 px-4 py-4 mb-6">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-3">
+            Partner swap checklist
+          </p>
+          <ol className="space-y-2 list-decimal list-inside">
+            {ILLUSTRATIVE_PROFILE.partnerSwapSteps.map((step) => (
+              <li key={step} className="text-sm text-foreground/80 leading-relaxed pl-1">
+                {step}
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <div className="rounded-lg border border-border bg-card p-5 mb-6">
+          <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-1">
+                Markdown template
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Placeholders only — no fake metrics. Replace every <code className="text-xs">[PLACEHOLDER]</code> before
+                publishing.
+              </p>
+            </div>
+            <Button onClick={handleCopyTemplate} size="sm" variant="outline" className="shrink-0">
+              {copied ? (
+                <>
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-emerald-600" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy template
+                </>
+              )}
+            </Button>
+          </div>
+          <pre className="text-xs text-muted-foreground bg-secondary/40 rounded-md p-3 overflow-x-auto max-h-64 overflow-y-auto border border-border">
+            {STORY_KIT_MARKDOWN_TEMPLATE}
+          </pre>
+        </div>
+
+        <div className="rounded-lg border border-border bg-secondary/20 px-4 py-4 mb-6">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-3">
+            Screenshot & audit slots
+          </p>
+          <div className="grid sm:grid-cols-3 gap-3">
+            {ILLUSTRATIVE_PROFILE.metrics.map((slot) => (
+              <div key={slot.label} className="rounded-md border border-border bg-card px-3 py-4">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-2">{slot.label}</p>
+                <p className="text-xs text-foreground/70 leading-relaxed">{slot.hint}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-6">
+          <p className="text-xs uppercase tracking-wide text-muted-foreground font-semibold mb-3">Verification tools</p>
+          <div className="flex flex-wrap gap-3 mb-4">
+            {VERIFY_CTAS.map((cta) => (
+              <Link
+                key={cta.label}
+                href={cta.href}
+                className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3.5 py-2 text-sm font-medium hover:bg-secondary transition-colors"
+              >
+                {cta.label}
+                <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+              </Link>
+            ))}
+          </div>
+          <ul className="space-y-2">
+            {VERIFY_CTAS.map((cta) => (
+              <li key={`${cta.label}-desc`} className="text-xs text-muted-foreground leading-relaxed">
+                <span className="text-foreground font-medium">{cta.label}:</span> {cta.desc}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="rounded-lg border-l-4 border-l-primary bg-secondary/30 px-4 py-3 mt-6">
+          <p className="text-xs font-semibold text-foreground mb-1">No named clients published yet</p>
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            The public <Link href="/company/success-stories" className="text-primary hover:underline">success stories page</Link> shows
+            illustrative ranges only. When you publish a real story, every metric must be backed by a GSC screenshot, GEO audit link,
+            or third-party tool export — no invented lift.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
