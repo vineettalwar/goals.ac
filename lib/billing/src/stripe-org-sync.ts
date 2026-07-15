@@ -2,9 +2,9 @@ import { db } from "@workspace/db";
 import { organizationsTable } from "@workspace/db/schema";
 import {
   normalizePlanId,
-  planFromStripePriceIdResolved,
   type PlanId,
 } from "./plans";
+import { planFromStripePriceIdResolved } from "./platform-credentials";
 import { eq } from "drizzle-orm";
 import { updateOrganizationPlan } from "@workspace/platform-admin";
 
