@@ -1,5 +1,20 @@
 # Session Handoff
 
+## Social analytics best-time slots (2026-07-16)
+
+`bestTimeMode: analytics` in `suggestNextSlot` no longer stubs a single UTC hour.
+
+- Loads published posts with `social_post_metrics` (90d), buckets by **project timezone** hour + weekday
+- Engagement score: likes + 2×comments + 3×shares + 2×clicks (impressions ×0.01 fallback)
+- Bayesian shrink toward mean; needs **≥3** metric samples (`MIN_ENGAGEMENT_SLOT_SAMPLES`) before bias applies
+- Merges top hours/days into schedule prefs (overlap with user preferred days first); else falls back to manual/suggested slots
+
+**Sparse data:** New or lightly synced projects stay on configured preferred days/times until Analytics sync has enough posts. Hour uses `scheduledAt ?? updatedAt` (history imports often lack schedule).
+
+**Files:** `lib/content-engine/src/social/social-metrics-service.ts`, `support/social/social-queue-service.ts`.
+
+---
+
 ## Platform Admin LinkedIn OAuth (2026-07-16)
 
 LinkedIn app credentials can be stored in platform admin (not only env):
