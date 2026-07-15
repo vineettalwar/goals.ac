@@ -5,15 +5,27 @@
 **PRD:** [docs/prd/content-studio-competitive-plan.md](docs/prd/content-studio-competitive-plan.md)  
 **Decision:** [docs/DECISIONS.md](docs/DECISIONS.md) — Execute Wave 0→1→2; partner-demo vs BLG/AutoSEO is primary ICP for 90 days.
 
-**Status:** Wave 0 in progress · Wave 1 **not started** · Wave 2 planned after Wave 1.
+**Status:** Wave 0 mostly shipped · Wave 2.1–2.2 shipped early · Wave 1 **not started** · Wave 2.3+ still queued.
 
-### Parallel workstreams
+### Shipped this session (parallel agents)
 
-| Wave | Focus | Key deliverables |
-|------|-------|------------------|
-| **0** (active) | Humanize reliability + demo | Sanitize fix, secondary keywords in humanizer, DeepL re-humanize, all-social humanize, human-voice score in panel, before/after demo asset |
-| **1** (queued) | Studio writing room | Side panel brief/SERP, live draft score, unify create UX (Next + app-shell) |
-| **2** (planned) | Integration trust + distribution | Health cron expansion (social/ESP), IG image gate, connect UX, publish history UI, article+social one-click |
+| Item | Status |
+|------|--------|
+| 0.1 Safe sanitize (multi-word phrases only) | Done — `ai-writing-rules.ts` + tests |
+| 0.2 Secondary keywords + DeepL→re-humanize | Done — `humanizer.ts`, `content-studio-generator.ts` |
+| 0.3 All-social humanize eligibility | Done — `humanize-eligibility.ts` + Next/CF/app-shell |
+| 0.4 Blended human-voice score | Done — `article-quality-score.ts` |
+| 0.5 Audit strip in piece header | Done lite (`Humanize: N→M` / skipped) — dedicated before/after demo asset still open |
+| 2.1 Health cron 8→16 CMS | Done — `integration-health-service.ts` |
+| 2.2 Instagram image preflight + publish | Done — social hub + `social-publish.ts` |
+
+### Still queued
+
+| Wave | Focus |
+|------|-------|
+| **0.5 residual** | Partner before/after humanize demo asset (marketing/deck) |
+| **1** | Studio side panel brief/SERP, live draft score, unify create UX |
+| **2.3+** | Connect UX polish, publish history UI, article+social one-click; social/ESP health optional |
 
 ### Explicitly deferred (all waves)
 
@@ -22,19 +34,18 @@
 ### Verify
 
 ```sh
-pnpm run typecheck
-cd lib/content-engine && npx vitest run src/articles/serp-content-score.test.ts
-cd lib/seo-tools && npx vitest run src/keywordGapAnalyzer.refresh.test.ts
-pnpm --filter @workspace/marketing-persona-app run typecheck
+cd lib/content-engine && npx tsc --noEmit && npx vitest run src/content/ai-writing-rules.test.ts
+pnpm --filter @workspace/app-shell exec tsc --noEmit
+# Manual :3001 — humanize on social piece, IG compose without image blocked, Integrations health tiles for headless CMS
 ```
-
-Manual `:3001` + CF: humanize (article + social), serp-score, article-quality panel, integrations/health, content-studio create flow.
 
 ---
 
 ## Competitive gap packaging — SHIPPED (2026-07-15)
 
 **Status:** Packaging tranche complete for competitive gaps vs Surfer/Clearscope/BLG/AutoSEO. Engine packing > new engines.
+
+**Diagnosis:** [docs/competitors/executive-diagnosis.md](docs/competitors/executive-diagnosis.md) — engine-rich, experience-thin; competitors win on packaging, not capability.
 
 ### Done (all phases + follow-ups)
 - **0:** Command center, 16 CMS tiles, SERP features in rank UI, fast-lane → dashboard
@@ -52,7 +63,7 @@ Manual `:3001` + CF: humanize (article + social), serp-score, article-quality pa
 - Local `:3001` + CF: command-center, keyword-clusters, serp-score, integrations/health, Add & generate / Refresh article, Fix gaps
 - Vite Keywords: Add & generate + Refresh article + no-Semrush banner
 - **Unit (2026-07-15):** `serp-content-score` + `keywordGapAnalyzer.refresh` + gsc/keyword-ui — 12/12; seo/billing/articles suite — 27/27
-- React Doctor `--scope changed`: 73 (warnings only; no blockers)
+- React Doctor `--scope changed`: **100 / 100** (cleanup pass completed 2026-07-15)
 
 ---
 

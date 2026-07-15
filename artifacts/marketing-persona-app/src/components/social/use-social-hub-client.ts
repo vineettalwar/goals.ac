@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
+  INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   SOCIAL_FORMAT_TYPES,
+  resolveSocialPieceImageUrl,
+  socialPieceNeedsInstagramImage,
   type HistorySyncPlatformStatus,
   type PlatformVoiceProfile,
   type ScheduleSettings,
@@ -68,9 +71,12 @@ export function useSocialHubClient(projectId: string) {
     try {
       const res = await fetch(`/api/website-projects/${projectId}/content-pieces`);
       if (!res.ok) throw new Error("Failed to load content");
-      const data = (await res.json()) as SocialComposerParent[];
+      const data = (await res.json()) as
+        | SocialComposerParent[]
+        | { pieces?: SocialComposerParent[] };
+      const list = Array.isArray(data) ? data : (data.pieces ?? []);
       setComposerParents(
-        data.filter(
+        list.filter(
           (piece) =>
             !SOCIAL_FORMAT_TYPES.has(piece.formatType) &&
             (piece.bodyMarkdown?.trim().length ?? 0) > 50,
@@ -206,6 +212,15 @@ export function useSocialHubClient(projectId: string) {
   }, [tab, loadSettings]);
 
   async function schedulePiece(pieceId: number, value: string) {
+    const piece = queue.find((item) => item.id === pieceId);
+    if (
+      piece &&
+      socialPieceNeedsInstagramImage(piece) &&
+      !resolveSocialPieceImageUrl(piece)
+    ) {
+      toast.error(INSTAGRAM_IMAGE_REQUIRED_MESSAGE);
+      return;
+    }
     const scheduledAt = value ? new Date(value).toISOString() : null;
     const res = await fetch(`/api/content-pieces/${pieceId}`, {
       method: "PATCH",
@@ -242,6 +257,15 @@ export function useSocialHubClient(projectId: string) {
 
   async function reschedulePiece(pieceId: number, newDateKey: string | null) {
     const piece = queue.find((item) => item.id === pieceId);
+    if (
+      newDateKey != null &&
+      piece &&
+      socialPieceNeedsInstagramImage(piece) &&
+      !resolveSocialPieceImageUrl(piece)
+    ) {
+      toast.error(INSTAGRAM_IMAGE_REQUIRED_MESSAGE);
+      return;
+    }
     setReschedulingId(pieceId);
     try {
       if (newDateKey == null) {

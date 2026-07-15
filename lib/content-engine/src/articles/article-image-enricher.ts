@@ -111,11 +111,12 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
   const format = piece.formatType ?? "blog_post";
   const isLongform = isSeoLongformFormat(format);
   const isLinkedIn = format === "linkedin_post";
+  const isInstagram = format === "instagram_post";
   const stockCredentials = options?.stockCredentials;
   const shouldEnrich =
     isStockSearchAvailable(stockCredentials) &&
     settings.autoFeaturedImage !== false &&
-    (isLongform || isLinkedIn);
+    (isLongform || isLinkedIn || isInstagram);
 
   if (!shouldEnrich) {
     return {

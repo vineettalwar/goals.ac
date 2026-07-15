@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   SOCIAL_FORMAT_TYPES,
+  resolveSocialPieceImageUrl,
+  socialPieceNeedsInstagramImage,
   type HistorySyncPlatformStatus,
   type PlatformVoiceProfile,
   type ScheduleSettings,
@@ -89,11 +92,12 @@ export function useSocialData(projectId: string | null) {
     if (!projectId) return;
     setComposerParentsLoading(true);
     try {
-      const data = await apiFetch<SocialComposerParent[]>(
+      const data = await apiFetch<SocialComposerParent[] | { pieces?: SocialComposerParent[] }>(
         `/api/website-projects/${projectId}/content-pieces`,
       );
+      const list = Array.isArray(data) ? data : (data.pieces ?? []);
       setComposerParents(
-        data.filter(
+        list.filter(
           (piece) =>
             !SOCIAL_FORMAT_TYPES.has(piece.formatType) &&
             (piece.bodyMarkdown?.trim().length ?? 0) > 50,
@@ -104,7 +108,7 @@ export function useSocialData(projectId: string | null) {
     } finally {
       setComposerParentsLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, notify]);
 
   const loadComposerConnections = useCallback(async () => {
     if (!projectId) return;
@@ -226,6 +230,15 @@ export function useSocialData(projectId: string | null) {
 
   const schedulePiece = useCallback(
     async (pieceId: number, value: string) => {
+      const piece = queueQuery.data?.items.find((item) => item.id === pieceId);
+      if (
+        piece &&
+        socialPieceNeedsInstagramImage(piece) &&
+        !resolveSocialPieceImageUrl(piece)
+      ) {
+        notify("error", INSTAGRAM_IMAGE_REQUIRED_MESSAGE);
+        return;
+      }
       try {
         await apiFetch(`/api/content-pieces/${pieceId}`, {
           method: "PATCH",
@@ -241,7 +254,7 @@ export function useSocialData(projectId: string | null) {
         notify("error", "Failed to schedule");
       }
     },
-    [reloadQueue],
+    [reloadQueue, notify, queueQuery.data?.items],
   );
 
   const submitReview = useCallback(
@@ -274,6 +287,15 @@ export function useSocialData(projectId: string | null) {
     async (pieceId: number, newDateKey: string | null) => {
       if (!projectId) return;
       const piece = queueQuery.data?.items.find((item) => item.id === pieceId);
+      if (
+        newDateKey != null &&
+        piece &&
+        socialPieceNeedsInstagramImage(piece) &&
+        !resolveSocialPieceImageUrl(piece)
+      ) {
+        notify("error", INSTAGRAM_IMAGE_REQUIRED_MESSAGE);
+        return;
+      }
       setReschedulingId(pieceId);
       try {
         if (newDateKey == null) {
@@ -310,7 +332,7 @@ export function useSocialData(projectId: string | null) {
         setReschedulingId(null);
       }
     },
-    [projectId, queueQuery.data?.items, reloadQueue],
+    [projectId, queueQuery.data?.items, reloadQueue, notify],
   );
 
   const compose = useCallback(
