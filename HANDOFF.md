@@ -1,5 +1,15 @@
 # Session Handoff
 
+## WordPress featured data URI upload (2026-07-16)
+
+**Supported** (connector, not PHP plugin): when `featuredImageUrl` is `data:image/png` or `data:image/jpeg` base64 and no stock featured image was uploaded, `prepareWordPressImages` decodes, optimizes to WebP, and uploads via plugin `/media` or WP REST.
+
+- SVG data URIs ignored
+- Plugin PHP unchanged (already accepts base64 payloads; no URL fetch of data: schemes)
+- Call sites: `cms-publish.ts`, `wordpress-adapter.ts`
+
+---
+
 ## Shell create destination step (2026-07-16)
 
 `CreateContentDialog` now inserts an optional **destination** step when `getConnectedDestinationsForFormat` returns options for the selected format (connected CMS/social + export-only Medium/Substack for longform).
