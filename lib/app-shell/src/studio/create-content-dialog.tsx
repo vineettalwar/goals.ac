@@ -35,9 +35,38 @@ export type CreateContentDraftInput = {
   competitorFocusUrl?: string;
   /** All selected competitor URLs (max 5; focus first when set). Sent as competitorUrls. */
   competitorUrls?: string[];
+  /** Source brief this piece was created from (deep-linked via ?briefId=). */
+  briefId?: number;
 };
 
 export type CreateContentInitialValues = Partial<CreateContentDraftInput>;
+
+/** Minimal brief shape needed to seed the create dialog — matches the briefs API row. */
+export type BriefDraftSource = {
+  id: number;
+  workingTitle: string;
+  targetKeywordCluster?: string | null;
+  angle?: string | null;
+  format?: string | null;
+};
+
+/** Mirrors Next `briefToDraft` (content-studio-utils.ts) for the shell create dialog. */
+export function briefToCreateContentInitialValues(
+  brief: BriefDraftSource,
+): CreateContentInitialValues {
+  const parts = [`Title: ${brief.workingTitle}`];
+  if (brief.targetKeywordCluster) parts.push(`Keywords: ${brief.targetKeywordCluster}`);
+  if (brief.angle) parts.push(brief.angle);
+
+  return {
+    briefId: brief.id,
+    title: brief.workingTitle,
+    targetKeyword: brief.targetKeywordCluster?.trim() || brief.workingTitle,
+    formatType:
+      brief.format && VALID_FORMATS.has(brief.format as never) ? brief.format : "blog_post",
+    angleHint: parts.join("\n"),
+  };
+}
 
 /** Project-level competitor row for the create-wizard picker. */
 export type CreateCompetitorOption = {
@@ -206,6 +235,7 @@ export function CreateContentDialog({
   const [sourcePieceId, setSourcePieceId] = useState("");
   const [sourceContent, setSourceContent] = useState("");
   const [loadingSourcePiece, setLoadingSourcePiece] = useState(false);
+  const [briefId, setBriefId] = useState<number | undefined>(undefined);
 
   const contentFormat = asContentFormat(formatType);
   const destinations = useMemo(() => {
@@ -241,6 +271,7 @@ export function CreateContentDialog({
       setSourcePieceId("");
       setSourceContent("");
       setLoadingSourcePiece(false);
+      setBriefId(undefined);
       return;
     }
 

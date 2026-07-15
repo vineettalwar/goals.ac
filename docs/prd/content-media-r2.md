@@ -50,8 +50,8 @@ As a publisher, when I generate longform without stock featured, I get an HTTPS 
 ## Ops (manual / done 2026-07-16)
 
 1. ~~`npx wrangler r2 bucket create goals-ac-content-media` (+ staging)~~ **done**
-2. ~~Enable public access (r2.dev)~~ **done**
-   - prod: `https://pub-b86c42258b4e40ce979e65390f79588c.r2.dev`
+2. ~~Enable public access (r2.dev)~~ **done** (+ custom domain)
+   - prod: **https://media.goals.ac** (ownership/SSL active); r2.dev fallback `https://pub-b86c42258b4e40ce979e65390f79588c.r2.dev`
    - staging: `https://pub-2b41b9b8da9b4805a574284ef3c146ae.r2.dev`
-3. ~~Set `CONTENT_MEDIA_PUBLIC_BASE_URL` in wrangler vars~~ **done** (r2.dev; prefer custom domain for production later)
-4. Deploy Workers with new binding
+3. ~~Set `CONTENT_MEDIA_PUBLIC_BASE_URL`~~ **done** → `https://media.goals.ac` (staging keeps r2.dev)
+4. Deploy Workers with new binding (next deploy picks up binding + var)

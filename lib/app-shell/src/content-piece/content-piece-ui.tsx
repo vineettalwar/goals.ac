@@ -684,6 +684,7 @@ function ContentPieceAside({
   onPublish,
   onQueueSocial,
   queueingSocial = false,
+  onInsertOutline,
   asideExtra,
 }: {
   editing: boolean;
@@ -705,6 +706,7 @@ function ContentPieceAside({
   onPublish?: () => void;
   onQueueSocial?: () => void;
   queueingSocial?: boolean;
+  onInsertOutline?: (markdown: string) => void;
   asideExtra?: ReactNode;
 }) {
   const body = displayBody.trim();
@@ -777,11 +779,7 @@ function ContentPieceAside({
         serpGaps={dual?.serp.gaps}
         competitorTopics={dual?.competitorDiff}
         pieceHasBody={Boolean(body)}
-        onInsertOutline={
-          !body && editor.editing
-            ? (markdown) => dispatch({ type: "set_body", value: markdown })
-            : undefined
-        }
+        onInsertOutline={onInsertOutline}
         renderLink={renderLink}
       />
 
@@ -1139,6 +1137,11 @@ export function ContentPieceView({
           onPublish={onPublish}
           onQueueSocial={showQueueSocial ? onQueueSocial : undefined}
           queueingSocial={queueingSocial}
+          onInsertOutline={
+            !body && editor.editing
+              ? (markdown) => dispatch({ type: "set_body", value: markdown })
+              : undefined
+          }
           asideExtra={asideExtra}
         />
       </div>

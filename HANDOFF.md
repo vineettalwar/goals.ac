@@ -9,6 +9,7 @@
 | Success UI | Illustrative card |
 | Public GEO | Anonymous (if landed) |
 | Instagram copy | Fixes |
+| Partner Story kit | Shared constants + template; honest (no fake names/metrics) |
 
 **In flight:** none from this list.
 
@@ -36,8 +37,8 @@ Public host for raster featured data URIs → HTTPS (`docs/prd/content-media-r2.
 - Lib: `@workspace/media` `hostRasterFeaturedDataUri` / R2 binding + optional S3 API
 - Enrich + CMS/social/Notion publish fallback
 - Wrangler: `CONTENT_MEDIA_R2` on marketing OpenNext + jobs worker
-- **Buckets created:** `goals-ac-content-media` → `https://pub-b86c42258b4e40ce979e65390f79588c.r2.dev`; staging → `https://pub-2b41b9b8da9b4805a574284ef3c146ae.r2.dev`
-- Public r2.dev enabled; `CONTENT_MEDIA_PUBLIC_BASE_URL` set in wrangler vars (swap to custom domain later for prod cache/WAF)
+- **Buckets created:** `goals-ac-content-media` → custom domain **https://media.goals.ac** (SSL active); staging uses r2.dev `https://pub-2b41b9b8da9b4805a574284ef3c146ae.r2.dev`
+- `CONTENT_MEDIA_PUBLIC_BASE_URL` wired in wrangler vars (prod/jobs → media.goals.ac)
 
 ---
 
