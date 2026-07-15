@@ -57,10 +57,11 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
         platformFilter !== "all" ? `?platform=${encodeURIComponent(platformFilter)}` : "";
       const res = await fetch(`/api/website-projects/${projectId}/social/queue${qs}`);
       if (!res.ok) throw new Error("Failed to load queue");
-      const data = (await res.json()) as { items: SocialQueueItem[] };
-      setQueue(data.items);
+      const data = (await res.json()) as { items?: SocialQueueItem[] };
+      setQueue(Array.isArray(data.items) ? data.items : []);
     } catch {
       toast.error("Could not load social queue");
+      setQueue([]);
     } finally {
       setLoadingQueue(false);
     }
@@ -207,9 +208,10 @@ export function useSocialHubClient(projectId: string, initialTab: SocialHubTab =
     }
   }, [tab, loadVoice, loadHistorySync]);
 
+  // Load schedule settings with the project so Queue honor requireApproval without visiting Settings.
   useEffect(() => {
-    if (tab === "settings") void loadSettings();
-  }, [tab, loadSettings]);
+    void loadSettings();
+  }, [loadSettings]);
 
   async function schedulePiece(pieceId: number, value: string) {
     const piece = queue.find((item) => item.id === pieceId);

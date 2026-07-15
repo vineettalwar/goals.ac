@@ -29,7 +29,7 @@ async function fetchQueue(projectId: string, platformFilter: string): Promise<{
     const data = await apiFetch<SocialQueueResponse>(
       `/api/website-projects/${projectId}/social/queue${platformQuery}`,
     );
-    return { items: data.items, error: null };
+    return { items: data.items ?? [], error: null };
   } catch (err) {
     return {
       items: [],
@@ -224,9 +224,10 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
     }
   }, [tab, projectId, loadVoice, loadHistorySync]);
 
+  // Load schedule settings with the project so Queue honor requireApproval without visiting Settings.
   useEffect(() => {
-    if (tab === "settings" && projectId) void loadSettings();
-  }, [tab, projectId, loadSettings]);
+    if (projectId) void loadSettings();
+  }, [projectId, loadSettings]);
 
   const schedulePiece = useCallback(
     async (pieceId: number, value: string) => {

@@ -178,7 +178,7 @@ export function SocialHubView({
 
       {tab === "calendar" ? (
         <SocialCalendarPanel
-          items={queue.map((item) => ({
+          items={(queue ?? []).map((item) => ({
             id: item.id,
             title: item.title,
             platform: item.platform,

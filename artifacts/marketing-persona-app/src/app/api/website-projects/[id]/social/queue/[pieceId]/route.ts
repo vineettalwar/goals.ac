@@ -69,3 +69,45 @@ export async function PATCH(
 
   return NextResponse.json(updated);
 }
+
+export async function DELETE(
+  _req: Request,
+  { params }: { params: Promise<{ id: string; pieceId: string }> },
+) {
+  const { userId, error } = await requireAuth();
+  if (error) return error;
+
+  const { id, pieceId: pieceIdStr } = await params;
+  const projectId = Number(id);
+  const pieceId = Number(pieceIdStr);
+  if (isNaN(projectId) || isNaN(pieceId)) {
+    return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+  }
+
+  const access = await requireProjectAccess(projectId, userId!);
+  if (!access.ok) {
+    return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  const [piece] = await db
+    .select({ id: contentPiecesTable.id })
+    .from(contentPiecesTable)
+    .where(
+      and(
+        eq(contentPiecesTable.id, pieceId),
+        eq(contentPiecesTable.websiteProjectId, projectId),
+      ),
+    )
+    .limit(1);
+
+  if (!piece) {
+    return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
+  }
+
+  await db
+    .update(contentPiecesTable)
+    .set({ scheduledAt: null, queuePosition: null, status: "draft" })
+    .where(eq(contentPiecesTable.id, pieceId));
+
+  return NextResponse.json({ ok: true });
+}

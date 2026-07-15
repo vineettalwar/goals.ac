@@ -670,7 +670,9 @@ export function SocialHubPage() {
         projectId={projectId}
         studioHref={studioHref}
         integrationsHref={integrationsHref}
-        pieceHref={(pieceId) => `/content-piece/${pieceId}`}
+        pieceHref={(pieceId) =>
+          projectId ? `/projects/${projectId}/content-piece/${pieceId}` : `/content-piece/${pieceId}`
+        }
         renderLink={renderLink}
         tab={hub.tab}
         onTabChange={hub.setTab}

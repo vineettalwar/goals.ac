@@ -85,19 +85,19 @@ export function SocialQueuePanel({
 
       {queueError ? (
         <div className="paper-card px-4 py-8 text-sm text-destructive">{queueError}</div>
-      ) : loadingQueue && queue.length === 0 ? (
+      ) : loadingQueue && (queue ?? []).length === 0 ? (
         <div className="flex items-center gap-2 px-1 py-8 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading queue…
         </div>
-      ) : queue.length === 0 ? (
+      ) : (queue ?? []).length === 0 ? (
         <div className="paper-card px-4 py-10 text-center text-sm text-muted-foreground">
           No social posts in the queue yet. Create LinkedIn, X, or Instagram posts in Content Studio,
           then schedule them here.
         </div>
       ) : (
         <div className="space-y-4">
-          {queue.map((item) => {
+          {(queue ?? []).map((item) => {
             const platformId = resolveSocialPlatformId(item);
             const overLimit = isSocialOverCharLimit(item.bodyMarkdown, platformId);
             const needsImage = socialPieceNeedsInstagramImage(item);
@@ -122,7 +122,7 @@ export function SocialQueuePanel({
                               : "bg-muted text-muted-foreground",
                       )}
                     >
-                      {item.approvalStatus.replace(/_/g, " ")}
+                      {(item.approvalStatus ?? "draft").replace(/_/g, " ")}
                     </span>
                     {imageBlocked ? (
                       <span className="inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-xs text-amber-800 dark:text-amber-200">
