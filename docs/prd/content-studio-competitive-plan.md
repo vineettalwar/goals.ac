@@ -1,8 +1,25 @@
 # PRD: Content Studio Competitive Plan
 
-**Status:** Waves 0–3.2 shipped · Social preview chrome, calendar polish, Queue social Meta, dashboard autopilot settings, SVG visual summary live · Only hosted blog (3.3) deferred  
+**Status:** Waves 0–3.2 shipped · **Wave 4 in progress** (trust surfaces: product before/after, social humanize UI, light term checklist, distribution records) · Hosted blog (3.3) still deferred · No ponytail deletes in this tranche  
 **ICP (90 days):** Partner-demo path vs BabyLoveGrowth / AutoSEO — consulting-led, not self-serve checkout  
 **Related:** [babylovegrowth-parity-planner.md](../competitors/babylovegrowth-parity-planner.md), [DECISIONS.md](../DECISIONS.md), [HANDOFF.md](../../HANDOFF.md)
+
+---
+
+## Post–Wave 3 audit (2026-07-16) — why Wave 4
+
+Engines are largely shipped; remaining losses are **inspectability** and **demo coherence**, not missing backends.
+
+| # | Weakness | Competitor who wins that moment | Wave 4 response |
+|---|---|---|---|
+| 1 | Humanize proof lives on marketing `/article-quality`, not Studio (body overwrite-only) | BLG / AutoSEO quality confidence | **4.0** Product before/after |
+| 2 | No Surfer-style NLP terms (honest deferred) | Surfer | **4.3** Light secondary/PAA checklist (labeled non-Surfer) |
+| 3 | Dual score is half-live (editorial live; SERP last-saved) | Surfer | **4.4** Honesty + save/ debounce SERP refresh |
+| 4 | Brief → draft friction; insert only when body empty | Clearscope | **4.5** Outline append/replace when body present |
+| 5 | Social humanize in pipeline, not composer UI | Buffer | **4.2** Composer Humanize |
+| 6 | Publish history CMS-only; featured/media uneven | Buffer / BLG WP wizard | **4.6** Social publish records + soft media honesty |
+
+**Still deferred:** full Surfer NLP editor, hosted blog, TikTok/YouTube inbox, backlink exchange, detector APIs, invent R2 public host, Drupal File entities, ponytail mass deletes.
 
 ---
 
@@ -127,6 +144,28 @@ flowchart LR
 | 3.1 | **Optional autopilot dashboard** — Unified activity panel (articles, publishes, LLM citation delta, GEO trend) + compact autopilot settings | Shipped — `/dashboard` activity panel + save autopilot settings |
 | 3.2 | **Coverage % H2s** — SERP score shows H2 topic coverage % vs competitor headings | Shipped — `serp.h2Coverage` in quality panels |
 | 3.3 | **Hosted blog** (`blog.customer.goals.ac`) | **Deferred** until self-serve GTM — not partner-demo priority |
+
+---
+
+### Wave 4 — Trust surfaces (in progress · overnight execute)
+
+**Goal:** Make humanize, SERP feedback, and distribution **demo-inspectable** in product UI — without building Surfer NLP or BLG hosted blog.
+
+**Done when (partner demo ≤20 min):** Studio shows before/after after Humanize; social composer can Humanize; quality panel shows a light term checklist + human-voice detail; SERP label matches refresh behavior; publish history includes social rows for LinkedIn/X/Meta.
+
+| # | Deliverable | Acceptance | Verify |
+|---|---|---|---|
+| **4.0** | **Product before/after** — Persist `preHumanizeBodyMarkdown` on successful humanize; Studio toggle/diff (raw vs current); revert optional | After Humanize, toggle shows prior body; re-humanize updates snapshot | Manual Studio + unit on metadata apply |
+| **4.1** | **Human-voice detail** — Surface `scoreHumanVoice` detail strings in quality panels (not score-only) | At least one actionable bullet under Human voice row | Typecheck app-shell |
+| **4.2** | **Social composer Humanize** — CTA on LinkedIn/X/IG/FB/Bluesky/Mastodon drafts; respects length limits + audit badge | Composer → Humanize → body updates; score/audit visible | Typecheck shell + social host |
+| **4.3** | **Light term checklist** — Secondary keywords + PAA/H2 tokens covered vs missing in draft (honest label: “Coverage checklist — not Surfer NLP”) | Checklist updates with editorial debounce | Unit on coverage helper + panel |
+| **4.4** | **SERP refresh honesty** — Auto-refresh SERP on save and/or debounced server score; UI never implies live SERP if stale | After save, SERP updates without manual Refresh; or clear “last scored at” | Manual + typecheck |
+| **4.5** | **Brief outline on non-empty** — Copy always; Insert offers Append / Replace when body present | Confirm dialog; no silent overwrite | Manual brief panel |
+| **4.6** | **Social publish_records** — `publishPieceToSocial` writes publish history; Publishing tab shows CMS + social | Social publish creates history row | Typecheck content-engine |
+
+**Out of Wave 4:** Full Surfer NLP highlighting, Content-media R2 bucket provisioning (ops), named GSC case studies, TYPO3 live-site smoke, dual create wizard merge, ponytail deletes.
+
+**Execution discipline (overnight):** Fable-5 step loop; commit roughly every ≤5 files; **no Cloudflare deploy** (morning operator); **no ponytail deletes**.
 
 ---
 

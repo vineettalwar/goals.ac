@@ -1,24 +1,41 @@
 # Session Handoff
 
-## Stopped for night — start here tomorrow (2026-07-16 / 17)
+## Overnight mode (2026-07-16 → 17) — Wave 4
 
-Session closed after continuous competitive polish. Do **not** reopen Surfer NLP, hosted blog, TikTok, invent R2 public host, or Drupal File/Media entities unless asked.
+**Running:** Wave 4 competitive trust surfaces (commits ~every 5 files).  
+**Not running:** Cloudflare deploy (prep commits only — you deploy morning), ponytail deletes, Surfer NLP, hosted blog, R2 bucket ops, dual create merge.
 
-### Tomorrow kickoff (ranked)
+### Wave 4 queue
 
-1. **Dual Studio create (optional)** — Next still mounts fat `CreateContentModal` (`content-studio-client.tsx` + `create-content-*`); shell has `CreateContentDialog`. Ponytail reaudit tags dual wizards as intentional `yagni` for now — only converge if product wants one create path; otherwise leave.
-2. **Content-media R2 ops** — code ready; create public buckets + set `CONTENT_MEDIA_PUBLIC_BASE_URL` (see `docs/prd/content-media-r2.md`).
-3. **Named GSC success stories** — partner Story kit + illustrative card shipped; still no permissioned named case.
-4. **TYPO3 live smoke** — `/media` + textmedia FAL on a real TYPO3 install.
-5. **Wrangler lock leftovers** — uncommitted `pnpm-workspace.yaml` age-gate excludes + lock `wrangler@4.111.0` — review/commit or revert with morning CF work.
+| # | Item | Status |
+|---|---|---|
+| 4.0 | Product humanize before/after in Studio | in flight |
+| 4.1 | Human-voice actionable detail | queued |
+| 4.2 | Social composer Humanize | queued |
+| 4.3 | Light term checklist (secondary/PAA) | queued |
+| 4.4 | SERP refresh honesty | queued |
+| 4.5 | Brief outline insert when body present | queued |
+| 4.6 | Social publish_records | queued |
 
-### Closed this wrap (final 3)
+**Plan:** `docs/prd/content-studio-competitive-plan.md` § Wave 4 · `docs/DECISIONS.md` 2026-07-16 Wave 4
 
-| Item | Result |
-|---|---|
-| TYPO3 preflight host wiring | Next + Vite pass `pieceFeaturedImageUrl` into `ContentPiecePublishDialog` |
-| Integrations leftover | Already landed earlier (`9c3bd9d` / related) |
-| Dual create converge | **Deferred** — too large for night stop; see kickoff #1 |
+### Morning deploy (you)
+
+```sh
+pnpm run typecheck
+# then when green:
+pnpm run cf:edge:deploy && pnpm run cf:deploy:jobs && pnpm run cf:pages:marketing && pnpm run cf:pages:app
+```
+
+---
+
+## Stopped earlier — historical kickoff (superseded by Wave 4 overnight)
+
+1. Dual Studio create (optional / yagni) — still deferred  
+2. Content-media R2 ops — still morning ops  
+3. Named GSC stories — still partner-gated  
+4. TYPO3 live smoke — still manual  
+5. Wrangler lock leftovers — review with morning CF work  
 
 ---
 
@@ -39,7 +56,7 @@ Session closed after continuous competitive polish. Do **not** reopen Surfer NLP
 | briefId persist | Legacy Express + CF write worker now link generated pieces to their brief (parity with Next); brief marked `done` once real content lands |
 | Shell `?briefId=` | Vite Studio deep-link opens create dialog prefilled + generate payload includes briefId |
 
-**In flight:** none — stopped for night.
+**In flight:** Wave 4.0+ (see Overnight mode).
 
 ### TYPO3 media upload
 

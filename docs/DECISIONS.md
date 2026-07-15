@@ -1,3 +1,16 @@
+## 2026-07-16 — Wave 4 trust surfaces (no Surfer NLP, no ponytail deletes)
+
+**Decision:** After Waves 0–3.2, execute **Wave 4** focused on demo-inspectable trust: product humanize before/after, social composer Humanize, light secondary/PAA term checklist (explicitly labeled non-Surfer), SERP refresh honesty, brief outline insert on non-empty drafts, and social rows in `publish_records`. Do **not** run ponytail delete sweeps. Do **not** provision Content-media R2 or CF production deploy overnight — ops morning.
+
+**Alternatives considered:**
+- Build full Surfer NLP term editor — still deferred (high cost); light checklist covers the demo honesty gap
+- Converge dual Studio create wizards — deferred (ponytail yagni; both hosts ship)
+- Overnight CF production deploy — rejected; operator-led morning deploy after green commits
+
+**Reason:** Remaining competitive losses vs BLG/Surfer/Buffer are inspectability and distribution trust surfaces, not missing engines.
+
+**Implications:** PRD Wave 4 in `docs/prd/content-studio-competitive-plan.md`; HANDOFF overnight mode; commit cadence ~5 files.
+
 ## 2026-07-16 — Ponytail audit is advisory; do not delete goals-app-ui
 
 **Decision:** Treat the 2026-07-16 ponytail frontend audit as a complexity backlog, not a delete mandate. Keep `artifacts/goals-app-ui` — it is the Cloudflare Pages product host for `app.goals.ac`. Prefer high-confidence leftover deletion (Next studio forks) and implement-first parity gaps over package removal.
