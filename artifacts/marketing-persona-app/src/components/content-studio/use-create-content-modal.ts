@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { toast } from "sonner";
 import { useCompetitorContext } from "@/lib/queries";
-import type { ContentFormatType, LinkedInArchetypeId, LinkedInHookId } from "./content-studio-format-data";
+import type { ContentFormatType } from "./content-studio-format-data";
+import type { LinkedInArchetypeId, LinkedInHookId } from "@workspace/app-shell/studio";
 import {
   resolveSuggestedDestination,
   type CmsConnectionSnapshot,
