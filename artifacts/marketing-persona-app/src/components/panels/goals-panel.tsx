@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { Map, TrendingDown, TrendingUp } from "lucide-react";
+import { Map as MapIcon, TrendingDown, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
@@ -258,7 +258,7 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="paper-card p-6 rounded-xl space-y-3">
               <h2 className="font-semibold flex items-center gap-2 text-sm">
-                <Map className="h-4 w-4" /> Cluster map
+                <MapIcon className="h-4 w-4" /> Cluster map
               </h2>
               <p className="text-xs text-muted-foreground">
                 Briefs grouped by keyword cluster — full topical map lives in Search → Topical map.

@@ -1,5 +1,13 @@
 # Session Handoff
 
+## Buffer-polish — social preview frames (2026-07-15)
+
+Compose + Queue use shared `SocialPostPreview` (CSS-only LinkedIn / X / Instagram chrome — no logos). Char count goes red over platform limit; Queue Submit / Approve / Schedule disabled when over limit (or Instagram missing image). Featured/parent image shows as thumbnail when available.
+
+**Files:** `lib/app-shell/src/social/social-post-preview.tsx`, `social-composer-panel.tsx`, `social-queue-panel.tsx`, `types.ts` (`resolveSocialPlatformId`, `isSocialOverCharLimit`, …).
+
+---
+
 ## Shell convergence + migrate 0064 (2026-07-15)
 
 Next Studio surfaces thin-wrap shell views:

@@ -2,6 +2,7 @@ export { SocialHubView, useSocialHubTab, type SocialHubLinkProps } from "./socia
 export { SocialQueuePanel } from "./social-queue-panel";
 export { SocialCalendarPanel, type SocialCalendarItem } from "./social-calendar-panel";
 export { SocialComposerPanel } from "./social-composer-panel";
+export { SocialPostPreview } from "./social-post-preview";
 export { SocialAnalyticsPanel } from "./social-analytics-panel";
 export { SocialVoicePanel } from "./social-voice-panel";
 export { SocialSettingsPanel } from "./social-settings-panel";
@@ -29,6 +30,10 @@ export {
   socialContentPiecePath,
   extractMarkdownImageUrl,
   resolveSocialPieceImageUrl,
+  resolveSocialPlatformId,
+  getSocialPlatformLimit,
+  socialPostCharCount,
+  isSocialOverCharLimit,
   socialPieceNeedsInstagramImage,
   parseSocialHubTab,
 } from "./types";
