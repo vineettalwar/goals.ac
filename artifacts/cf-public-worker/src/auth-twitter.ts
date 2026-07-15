@@ -1,5 +1,6 @@
 import type { GoalsD1Database } from "@workspace/db/d1";
 import { generatePkce } from "@workspace/content-engine/support/social/social-tokens";
+import { resolveTwitterOAuthCredentials } from "@workspace/content-engine/support/social/twitter-platform-credentials";
 import { getAccessibleProject } from "@workspace/cf-edge/project-access";
 import {
   appOriginFromRequest,
@@ -16,10 +17,7 @@ import {
   type SocialOAuthEnv,
 } from "./auth-social-shared";
 
-type TwitterAuthEnv = SocialOAuthEnv & {
-  TWITTER_CLIENT_ID?: string;
-  TWITTER_CLIENT_SECRET?: string;
-};
+type TwitterAuthEnv = SocialOAuthEnv;
 
 const CALLBACK_PATH = "/api/auth/twitter/callback";
 
@@ -31,9 +29,8 @@ export async function handleTwitterAuthStart(
   request: Request,
   env: TwitterAuthEnv,
 ): Promise<Response> {
-  const clientId = env.TWITTER_CLIENT_ID?.trim();
-  const clientSecret = env.TWITTER_CLIENT_SECRET?.trim();
-  if (!clientId || !clientSecret) {
+  const twitterApp = await resolveTwitterOAuthCredentials();
+  if (!twitterApp) {
     return Response.json({ error: "X OAuth is not configured" }, { status: 503 });
   }
 
@@ -67,7 +64,7 @@ export async function handleTwitterAuthStart(
 
   const params = new URLSearchParams({
     response_type: "code",
-    client_id: clientId,
+    client_id: twitterApp.clientId,
     redirect_uri: resolveOAuthRedirectUri(request, CALLBACK_PATH),
     scope: "tweet.read tweet.write users.read offline.access",
     state,
@@ -88,11 +85,10 @@ export async function handleTwitterAuthCallback(
   const oauthError = url.searchParams.get("error");
   const stateParam = url.searchParams.get("state");
 
-  const clientId = env.TWITTER_CLIENT_ID?.trim();
-  const clientSecret = env.TWITTER_CLIENT_SECRET?.trim();
   const secret = env.AUTH_SECRET?.trim();
+  const twitterApp = await resolveTwitterOAuthCredentials();
 
-  if (!secret || !clientId || !clientSecret) {
+  if (!secret || !twitterApp) {
     return redirectResponse(integrationsRedirectUrl(appOriginFromRequest(request), 0, { twitter: "error" }));
   }
 
@@ -115,7 +111,7 @@ export async function handleTwitterAuthCallback(
       method: "POST",
       headers: {
         "Content-Type": "application/x-www-form-urlencoded",
-        Authorization: `Basic ${twitterBasicAuth(clientId, clientSecret)}`,
+        Authorization: `Basic ${twitterBasicAuth(twitterApp.clientId, twitterApp.clientSecret)}`,
       },
       body: new URLSearchParams({
         grant_type: "authorization_code",

@@ -6,6 +6,7 @@ import {
 } from "@atproto/oauth-client-node";
 import { JoseKey } from "@atproto/jwk-jose";
 import type { BlueskyCredentials } from "@workspace/connectors/bluesky";
+import { resolveBlueskyOAuthCredentials } from "@workspace/content-engine/support/social/bluesky-platform-credentials";
 import type { KvNamespaceBinding } from "@workspace/cf-edge/bindings";
 import { kvGetJson, kvPutJson } from "@workspace/cf-edge/kv-cache";
 import { apiOriginFromRequest } from "./auth-social-shared";
@@ -15,8 +16,6 @@ const BLUESKY_STATE_PREFIX = "bluesky_oauth_state:";
 const BLUESKY_SESSION_PREFIX = "bluesky_oauth_session:";
 
 type BlueskyAuthEnv = {
-  BLUESKY_OAUTH_PRIVATE_KEY_JWK?: string;
-  BLUESKY_CLIENT_NAME?: string;
   AI_CACHE?: KvNamespaceBinding;
 };
 
@@ -43,13 +42,15 @@ async function getBlueskyOAuthClient(
     pending = (async () => {
       const clientId = getBlueskyClientMetadataUrl(origin);
       const redirectUri = getBlueskyRedirectUri(origin);
-      const clientName = env.BLUESKY_CLIENT_NAME?.trim() || "goals.ac";
+      const resolved = await resolveBlueskyOAuthCredentials();
+      const clientName = resolved?.clientName ?? "goals.ac";
 
       let keyset: JoseKey[];
-      const jwkRaw = env.BLUESKY_OAUTH_PRIVATE_KEY_JWK?.trim();
+      const jwkRaw = resolved?.privateKeyJwk;
       if (jwkRaw) {
         keyset = [await JoseKey.fromImportable(JSON.parse(jwkRaw), "goals-ac-key")];
       } else {
+        // Ephemeral — OAuth breaks after isolate recycle. Prefer env or admin-stored JWK.
         keyset = [await JoseKey.generate(["RS256"], "goals-ac-key")];
       }
 

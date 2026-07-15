@@ -1,5 +1,6 @@
 import type { GoalsD1Database } from "@workspace/db/d1";
 import { fetchLinkedInAuthorUrn } from "@workspace/connectors/linkedin";
+import { resolveLinkedInOAuthCredentials } from "@workspace/content-engine/support/social/linkedin-platform-credentials";
 import { getAccessibleProject } from "@workspace/cf-edge/project-access";
 import {
   appOriginFromRequest,
@@ -16,10 +17,7 @@ import {
   type SocialOAuthEnv,
 } from "./auth-social-shared";
 
-type LinkedInAuthEnv = SocialOAuthEnv & {
-  LINKEDIN_CLIENT_ID?: string;
-  LINKEDIN_CLIENT_SECRET?: string;
-};
+type LinkedInAuthEnv = SocialOAuthEnv;
 
 const CALLBACK_PATH = "/api/auth/linkedin/callback";
 
@@ -27,9 +25,8 @@ export async function handleLinkedInAuthStart(
   request: Request,
   env: LinkedInAuthEnv,
 ): Promise<Response> {
-  const clientId = env.LINKEDIN_CLIENT_ID?.trim();
-  const clientSecret = env.LINKEDIN_CLIENT_SECRET?.trim();
-  if (!clientId || !clientSecret) {
+  const linkedInApp = await resolveLinkedInOAuthCredentials();
+  if (!linkedInApp) {
     return Response.json({ error: "LinkedIn OAuth is not configured" }, { status: 503 });
   }
 
@@ -61,7 +58,7 @@ export async function handleLinkedInAuthStart(
 
   const params = new URLSearchParams({
     response_type: "code",
-    client_id: clientId,
+    client_id: linkedInApp.clientId,
     redirect_uri: resolveOAuthRedirectUri(request, CALLBACK_PATH),
     state,
     scope: "openid profile w_member_social email",
@@ -80,11 +77,10 @@ export async function handleLinkedInAuthCallback(
   const oauthError = url.searchParams.get("error");
   const stateParam = url.searchParams.get("state");
 
-  const clientId = env.LINKEDIN_CLIENT_ID?.trim();
-  const clientSecret = env.LINKEDIN_CLIENT_SECRET?.trim();
   const secret = env.AUTH_SECRET?.trim();
+  const linkedInApp = await resolveLinkedInOAuthCredentials();
 
-  if (!secret || !clientId || !clientSecret) {
+  if (!secret || !linkedInApp) {
     return redirectResponse(integrationsRedirectUrl(appOriginFromRequest(request), 0, { linkedin: "error" }));
   }
 
@@ -104,8 +100,8 @@ export async function handleLinkedInAuthCallback(
         grant_type: "authorization_code",
         code,
         redirect_uri: resolveOAuthRedirectUri(request, CALLBACK_PATH),
-        client_id: clientId,
-        client_secret: clientSecret,
+        client_id: linkedInApp.clientId,
+        client_secret: linkedInApp.clientSecret,
       }),
     });
 

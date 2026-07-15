@@ -4,6 +4,7 @@ import {
   fetchMetaPages,
   type MetaPageInfo,
 } from "@workspace/connectors/meta";
+import { resolveMetaOAuthCredentials } from "@workspace/content-engine/support/social/meta-platform-credentials";
 import {
   appOriginFromRequest,
   integrationsRedirectUrl,
@@ -20,8 +21,6 @@ import { storeMetaPagesSession } from "./auth-meta-pages";
 import type { KvNamespaceBinding } from "@workspace/cf-edge/bindings";
 
 type MetaAuthEnv = SocialOAuthEnv & {
-  META_APP_ID?: string;
-  META_APP_SECRET?: string;
   AI_CACHE?: KvNamespaceBinding;
 };
 
@@ -39,9 +38,8 @@ export async function handleMetaAuthStart(
   request: Request,
   env: MetaAuthEnv,
 ): Promise<Response> {
-  const appId = env.META_APP_ID?.trim();
-  const appSecret = env.META_APP_SECRET?.trim();
-  if (!appId || !appSecret) {
+  const metaApp = await resolveMetaOAuthCredentials();
+  if (!metaApp) {
     return Response.json({ error: "Meta OAuth is not configured" }, { status: 503 });
   }
 
@@ -72,7 +70,7 @@ export async function handleMetaAuthStart(
   );
 
   const params = new URLSearchParams({
-    client_id: appId,
+    client_id: metaApp.appId,
     redirect_uri: resolveOAuthRedirectUri(request, CALLBACK_PATH),
     state,
     scope: META_SCOPE,
@@ -92,11 +90,10 @@ export async function handleMetaAuthCallback(
   const oauthError = url.searchParams.get("error");
   const stateParam = url.searchParams.get("state");
 
-  const appId = env.META_APP_ID?.trim();
-  const appSecret = env.META_APP_SECRET?.trim();
   const secret = env.AUTH_SECRET?.trim();
+  const metaApp = await resolveMetaOAuthCredentials();
 
-  if (!secret || !appId || !appSecret) {
+  if (!secret || !metaApp) {
     return redirectResponse(integrationsRedirectUrl(appOriginFromRequest(request), 0, { meta: "error" }));
   }
 
@@ -110,7 +107,7 @@ export async function handleMetaAuthCallback(
 
   try {
     const redirectUri = resolveOAuthRedirectUri(request, CALLBACK_PATH);
-    const tokenUrl = `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${encodeURIComponent(appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${encodeURIComponent(appSecret)}&code=${encodeURIComponent(code)}`;
+    const tokenUrl = `https://graph.facebook.com/v21.0/oauth/access_token?client_id=${encodeURIComponent(metaApp.appId)}&redirect_uri=${encodeURIComponent(redirectUri)}&client_secret=${encodeURIComponent(metaApp.appSecret)}&code=${encodeURIComponent(code)}`;
     const tokenRes = await fetch(tokenUrl);
     const tokenData = (await tokenRes.json()) as { access_token?: string };
 
@@ -125,8 +122,8 @@ export async function handleMetaAuthCallback(
     try {
       const longLived = await exchangeMetaLongLivedToken(
         tokenData.access_token,
-        appId,
-        appSecret,
+        metaApp.appId,
+        metaApp.appSecret,
       );
       userAccessToken = longLived.accessToken;
       if (longLived.expiresIn) {
