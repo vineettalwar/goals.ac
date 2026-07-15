@@ -37,17 +37,22 @@ Detail sections below retain file pointers and edge notes from the work that got
 
 ---
 
-## Platform Admin LinkedIn OAuth (2026-07-16)
+## Platform Admin social OAuth credentials (2026-07-16)
 
-LinkedIn app credentials can be stored in platform admin (not only env):
+LinkedIn, X, and Meta app credentials can be stored in platform admin (not only env):
 
-- Schema: `platform_settings.linkedin_client_id` + `encrypted_linkedin_client_secret` (migration `0065`, D1 `0002_silly_energizer`)
-- Resolve: `lib/content-engine/.../linkedin-platform-credentials.ts` (env wins over DB)
-- Admin UI: `/admin/integrations` → **Social** → LinkedIn tile
-- OAuth + token refresh read via `resolveLinkedInOAuthCredentials()`
-- Done when: paste Client ID/Secret in admin → project Connect LinkedIn works without `.env` LinkedIn vars
+| Network | Columns | Resolve |
+|---|---|---|
+| LinkedIn | `linkedin_client_id` + `encrypted_linkedin_client_secret` | `linkedin-platform-credentials.ts` |
+| X | `twitter_client_id` + `encrypted_twitter_client_secret` | `twitter-platform-credentials.ts` |
+| Meta | `meta_app_id` + `encrypted_meta_app_secret` | `meta-platform-credentials.ts` |
 
-**Still env-only:** X/Twitter, Meta. CF public-worker LinkedIn auth still uses bindings if that path is used.
+- Migrations: PG `0065` (LinkedIn) + `0066_platform_twitter_meta_credentials`; D1 `0002_silly_energizer` + `0003_platform_twitter_meta_credentials`
+- **Migrate required:** `pnpm --filter @workspace/db run migrate` (and `pnpm run cf:migrate:d1:local` for D1)
+- Env wins over encrypted DB values; admin UI: `/admin/integrations` → **Social**
+- Done when: paste credentials in admin → project Connect works without matching `.env` vars
+
+**Still env/bindings-only:** CF public-worker social auth paths if used.
 
 ---
 

@@ -137,6 +137,8 @@
     "./support/social/social-publish": "./src/support/social/social-publish.ts",
     "./support/social/social-queue-service": "./src/support/social/social-queue-service.ts",
     "./support/social/linkedin-platform-credentials": "./src/support/social/linkedin-platform-credentials.ts",
+    "./support/social/twitter-platform-credentials": "./src/support/social/twitter-platform-credentials.ts",
+    "./support/social/meta-platform-credentials": "./src/support/social/meta-platform-credentials.ts",
     "./support/social/social-tokens": "./src/support/social/social-tokens.ts",
     "./topical-map-generator": "./src/strategy/topical-map-generator.ts",
     "./utils": "./src/core/utils.ts"

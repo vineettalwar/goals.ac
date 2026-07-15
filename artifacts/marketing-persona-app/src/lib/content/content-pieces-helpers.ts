@@ -241,9 +241,7 @@ export async function loadGenerationContext(
       : undefined,
     competitorPromptBlock: competitorContext.promptBlock || undefined,
     competitorFocusUrl: competitorContext.focusUrl,
-    competitorUrls:
-      pieceCompetitorUrls ??
-      (competitorContext.competitorUrls.length > 0 ? competitorContext.competitorUrls : undefined),
+    competitorUrls: pieceCompetitorUrls,
   };
 }
 
