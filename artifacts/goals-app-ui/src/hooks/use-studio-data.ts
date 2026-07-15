@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, API_FETCH_AI_TIMEOUT_MS, getApiBase } from "@/lib/api";
 import {
   fetchAiProviderStatus,
   fetchProjectBrandProfile,
@@ -11,6 +11,98 @@ import type { BrandProfileSummary, CreateContentDraftInput, StudioPiece } from "
 import type { ContentPiece } from "@/types/api";
 
 const STUDIO_POLL_MS = 3000;
+
+type CreateGeneratePayload = {
+  formatType: string;
+  targetKeyword: string;
+  angleHint?: string;
+  plannedDate?: string;
+};
+
+function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGeneratePayload {
+  const payload: CreateGeneratePayload = {
+    formatType: input.formatType,
+    targetKeyword: input.targetKeyword.trim(),
+  };
+  const angle = input.angleHint?.trim();
+  if (angle) payload.angleHint = angle;
+  const planned = input.plannedDate?.trim();
+  if (planned) payload.plannedDate = planned;
+  return payload;
+}
+
+/** Mirror Next CreateContentModal: stream create+generate, then sync POST fallback. */
+async function createPieceViaStream(
+  projectId: string,
+  payload: CreateGeneratePayload,
+): Promise<ContentPiece | null> {
+  const path = `/api/website-projects/${projectId}/content-pieces/generate/stream`;
+  const base = getApiBase();
+  const url = base ? `${base}${path}` : path;
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        accept: "text/event-stream",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    return null;
+  }
+
+  if (!response.ok || !response.body) return null;
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let pendingEvent: string | null = null;
+  let finalPiece: ContentPiece | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (line.startsWith("event: ")) {
+        pendingEvent = line.slice(7).trim();
+        continue;
+      }
+      if (!line.startsWith("data: ")) continue;
+      const eventPayload = line.slice(6);
+      if (pendingEvent === "error") {
+        let message = "Generation failed";
+        try {
+          const errData = JSON.parse(eventPayload) as { error?: string };
+          if (errData.error) message = errData.error;
+        } catch {
+          // keep default
+        }
+        throw new Error(message);
+      }
+      if (pendingEvent === "done" || pendingEvent === "cached") {
+        try {
+          const parsed = JSON.parse(eventPayload) as ContentPiece;
+          if (parsed && typeof parsed === "object" && "id" in parsed) {
+            finalPiece = parsed;
+          }
+        } catch {
+          // ignore malformed payload
+        }
+      }
+      pendingEvent = null;
+    }
+  }
+
+  return finalPiece;
+}
 
 function asContentPieceRows(payload: unknown): ContentPiece[] {
   if (Array.isArray(payload)) return payload as ContentPiece[];
@@ -85,14 +177,37 @@ export function useStudioData(projectId: string | null) {
         throw new Error("No project selected");
       }
 
-      const piece = await apiFetch<ContentPiece>(
-        `/api/website-projects/${projectId}/content-pieces`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(input),
-        },
-      );
+      const payload = buildCreateGeneratePayload(input);
+      if (!payload.targetKeyword) {
+        throw new Error("Target keyword is required");
+      }
+
+      let piece = await createPieceViaStream(projectId, payload);
+      if (!piece) {
+        piece = await apiFetch<ContentPiece>(
+          `/api/website-projects/${projectId}/content-pieces`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+            timeoutMs: API_FETCH_AI_TIMEOUT_MS,
+          },
+        );
+      }
+
+      const preferredTitle = input.title?.trim();
+      if (preferredTitle && preferredTitle !== piece.title) {
+        try {
+          piece = await apiFetch<ContentPiece>(`/api/content-pieces/${piece.id}`, {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ title: preferredTitle }),
+          });
+        } catch {
+          // Generated body is still usable; keep AI title if rename fails
+        }
+      }
+
       await reload();
       return piece;
     },

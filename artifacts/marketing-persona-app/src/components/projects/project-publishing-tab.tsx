@@ -21,6 +21,7 @@ import {
 import type { PublishingPendingAction } from "@/components/projects/publishing-settings-pending";
 import { ProjectAutomationPanel } from "@/components/projects/project-automation-panel";
 import { ProjectPrimaryDestinationPanel } from "@/components/projects/project-primary-destination-panel";
+import { ProjectPublishHistoryPanel } from "@/components/projects/project-publish-history-panel";
 import { useCmsIntegrations, useMetaPages } from "@/lib/queries";
 
 interface Props {
@@ -299,6 +300,10 @@ export function ProjectPublishingTab({
         onSelectMetaPage={onSelectMetaPage}
       />
       </div>
+
+      {categoryFilter === "all" || categoryFilter === "cms" ? (
+        <ProjectPublishHistoryPanel projectId={projectId} />
+      ) : null}
     </div>
   );
 }

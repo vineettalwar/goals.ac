@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
-import { publishRecordsTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { contentPiecesTable, publishRecordsTable } from "@workspace/db/schema";
+import { desc, eq } from "drizzle-orm";
 
 export function buildPublishIdempotencyKey(
   contentPieceId: number,
@@ -84,6 +84,56 @@ export interface PublishAttemptResult {
   publishedUrl: string;
   publishPlatform: string;
   remotePostId?: string;
+}
+
+export type PublishRecordListItem = {
+  id: number;
+  contentPieceId: number;
+  websiteProjectId: number;
+  provider: string;
+  status: string;
+  remoteUrl: string | null;
+  errorMessage: string | null;
+  publishedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+  pieceTitle: string | null;
+  /** Not stored on publish_records today; reserved for UI when available. */
+  outputMode: string | null;
+};
+
+export async function listPublishRecordsForProject(
+  websiteProjectId: number,
+  limit = 50,
+): Promise<PublishRecordListItem[]> {
+  const rows = await db
+    .select({
+      id: publishRecordsTable.id,
+      contentPieceId: publishRecordsTable.contentPieceId,
+      websiteProjectId: publishRecordsTable.websiteProjectId,
+      provider: publishRecordsTable.provider,
+      status: publishRecordsTable.status,
+      remoteUrl: publishRecordsTable.remoteUrl,
+      errorMessage: publishRecordsTable.errorMessage,
+      publishedAt: publishRecordsTable.publishedAt,
+      createdAt: publishRecordsTable.createdAt,
+      updatedAt: publishRecordsTable.updatedAt,
+      pieceTitle: contentPiecesTable.title,
+    })
+    .from(publishRecordsTable)
+    .leftJoin(
+      contentPiecesTable,
+      eq(publishRecordsTable.contentPieceId, contentPiecesTable.id),
+    )
+    .where(eq(publishRecordsTable.websiteProjectId, websiteProjectId))
+    .orderBy(desc(publishRecordsTable.createdAt))
+    .limit(limit);
+
+  return rows.map((row) => ({
+    ...row,
+    pieceTitle: row.pieceTitle ?? null,
+    outputMode: null,
+  }));
 }
 
 export async function withPublishRecord(

@@ -5,6 +5,7 @@ import {
   STUDIO_FORMAT_OPTIONS,
   StudioNewContentButton,
   StudioView,
+  studioContentPiecePath,
   type CreateContentInitialValues,
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
@@ -19,6 +20,7 @@ function draftFromStudioSearchParams(
   const keyword = searchParams.get("keyword")?.trim() ?? "";
   const title = searchParams.get("title")?.trim() ?? "";
   const format = searchParams.get("format")?.trim() ?? "";
+  const angle = searchParams.get("angle")?.trim() ?? "";
   const createFlag = searchParams.get("create") === "1";
 
   if (!keyword && !title && !createFlag) return null;
@@ -27,6 +29,7 @@ function draftFromStudioSearchParams(
     title: title || keyword,
     targetKeyword: keyword || title,
     formatType: format && VALID_FORMATS.has(format as never) ? format : "blog_post",
+    ...(angle ? { angleHint: angle } : {}),
   };
 }
 
@@ -142,9 +145,12 @@ export function StudioPage() {
           setCreating(true);
           setCreateError(null);
           try {
-            await createPiece(input);
+            const piece = await createPiece(input);
             setCreateOpen(false);
             setCreateInitialValues(null);
+            if (projectId && piece?.id) {
+              navigate(studioContentPiecePath(projectId, piece.id));
+            }
           } catch (err) {
             setCreateError(err instanceof Error ? err.message : "Failed to create content");
           } finally {

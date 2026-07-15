@@ -3,6 +3,11 @@ export { OrgIntegrationsView } from "./org-integrations-ui";
 export { OrgAiProvidersPanel } from "./org-ai-providers-panel";
 export { OrgToolsPanel } from "./org-tools-panel";
 export {
+  PublishHistoryPanel,
+  type PublishHistoryLinkProps,
+  type PublishHistoryRecord,
+} from "./publish-history-panel";
+export {
   IntegrationsSearchPanel,
   searchConnectedCount,
   type SearchPropertyConnectionStatus,

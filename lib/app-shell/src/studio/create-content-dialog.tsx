@@ -5,6 +5,8 @@ export type CreateContentDraftInput = {
   title: string;
   targetKeyword: string;
   formatType: string;
+  angleHint?: string;
+  plannedDate?: string | null;
 };
 
 export type CreateContentInitialValues = Partial<CreateContentDraftInput>;
@@ -29,12 +31,16 @@ export function CreateContentDialog({
   const [title, setTitle] = useState("");
   const [targetKeyword, setTargetKeyword] = useState("");
   const [formatType, setFormatType] = useState("blog_post");
+  const [angleHint, setAngleHint] = useState("");
+  const [plannedDate, setPlannedDate] = useState("");
 
   useEffect(() => {
     if (!open) {
       setTitle("");
       setTargetKeyword("");
       setFormatType("blog_post");
+      setAngleHint("");
+      setPlannedDate("");
       return;
     }
 
@@ -45,13 +51,24 @@ export function CreateContentDialog({
     setTitle(initialValues?.title?.trim() ?? "");
     setTargetKeyword(initialValues?.targetKeyword?.trim() ?? "");
     setFormatType(nextFormat);
+    setAngleHint(initialValues?.angleHint?.trim() ?? "");
+    setPlannedDate(initialValues?.plannedDate?.trim() || "");
   }, [open, initialValues]);
 
   if (!open) return null;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    await onSubmit({ title: title.trim(), targetKeyword: targetKeyword.trim(), formatType });
+    const keyword = targetKeyword.trim();
+    if (!keyword) return;
+
+    await onSubmit({
+      title: title.trim(),
+      targetKeyword: keyword,
+      formatType,
+      angleHint: angleHint.trim() || undefined,
+      plannedDate: plannedDate.trim() || null,
+    });
   }
 
   return (
@@ -66,37 +83,26 @@ export function CreateContentDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-content-title"
-        className="paper-card relative z-10 w-full max-w-md p-6 shadow-lg"
+        className="paper-card relative z-10 w-full max-w-lg p-6 shadow-lg"
       >
         <h2 id="create-content-title" className="text-lg font-semibold">
           Create content
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Start a draft piece. You can generate and edit the body after creation.
+          Pick a format and keyword — we generate the draft, then open the editor.
         </p>
 
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
           <label className="block space-y-1.5">
-            <span className="text-sm font-medium">Title</span>
+            <span className="text-sm font-medium">
+              Title <span className="font-normal text-muted-foreground">(optional)</span>
+            </span>
             <input
               type="text"
-              required
               autoFocus
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="e.g. How to improve SEO for SaaS"
-              className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm"
-            />
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-sm font-medium">Target keyword</span>
-            <input
-              type="text"
-              required
-              value={targetKeyword}
-              onChange={(event) => setTargetKeyword(event.target.value)}
-              placeholder="e.g. saas seo strategy"
               className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm"
             />
           </label>
@@ -116,6 +122,43 @@ export function CreateContentDialog({
             </select>
           </label>
 
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium">Target keyword</span>
+            <input
+              type="text"
+              required
+              value={targetKeyword}
+              onChange={(event) => setTargetKeyword(event.target.value)}
+              placeholder="e.g. saas seo strategy"
+              className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm"
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium">
+              Angle / hint <span className="font-normal text-muted-foreground">(optional)</span>
+            </span>
+            <textarea
+              rows={3}
+              value={angleHint}
+              onChange={(event) => setAngleHint(event.target.value)}
+              placeholder="Tone, audience, or angle for the AI…"
+              className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm"
+            />
+          </label>
+
+          <label className="block space-y-1.5">
+            <span className="text-sm font-medium">
+              Planned date <span className="font-normal text-muted-foreground">(optional)</span>
+            </span>
+            <input
+              type="date"
+              value={plannedDate}
+              onChange={(event) => setPlannedDate(event.target.value)}
+              className="h-9 w-full max-w-xs rounded-lg border border-input bg-card px-3 text-sm"
+            />
+          </label>
+
           {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
           <div className="flex justify-end gap-2 pt-2">
@@ -129,10 +172,10 @@ export function CreateContentDialog({
             </button>
             <button
               type="submit"
-              disabled={submitting || !title.trim() || !targetKeyword.trim()}
+              disabled={submitting || !targetKeyword.trim()}
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              {submitting ? "Creating…" : "Create draft"}
+              {submitting ? "Generating…" : "Generate"}
             </button>
           </div>
         </form>
