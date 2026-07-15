@@ -82,6 +82,8 @@ export const DEFAULT_AUTOPILOT_SETTINGS: AutopilotSettings = {
   timezone: "UTC",
   publishMode: "draft",
   preferredRunHour: 9,
+  autoQueueOpportunities: true,
+  opportunityScoreThreshold: 70,
 };
 
 export interface VisibilitySettings {

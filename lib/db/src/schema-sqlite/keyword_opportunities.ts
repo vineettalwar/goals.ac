@@ -5,6 +5,7 @@ import { contentItemsTable } from "./content_strategies";
 export type KeywordOpportunitySource =
   | "competitor_gap"
   | "rank_drop"
+  | "content_refresh"
   | "ai_analysis"
   | "manual"
   | "gsc_query"

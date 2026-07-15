@@ -36,6 +36,7 @@ export interface KeywordOpportunity {
   estimatedVolume: string | null;
   intent: string | null;
   status: string;
+  linkedContentPieceId?: number | null;
 }
 
 export interface KeywordAlert {

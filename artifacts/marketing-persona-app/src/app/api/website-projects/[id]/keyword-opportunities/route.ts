@@ -4,7 +4,10 @@ import { keywordOpportunitiesTable } from "@workspace/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
-import { discoverOpportunities } from "@workspace/content-engine/strategy/keyword-opportunity-service";
+import {
+  attachLinkedContentPieces,
+  discoverOpportunities,
+} from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { getDecryptedSemrushCredentialsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
@@ -36,7 +39,8 @@ export async function GET(
     )
     .orderBy(desc(keywordOpportunitiesTable.opportunityScore));
 
-  return NextResponse.json({ opportunities });
+  const enriched = await attachLinkedContentPieces(projectId, opportunities);
+  return NextResponse.json({ opportunities: enriched });
 }
 
 export async function POST(

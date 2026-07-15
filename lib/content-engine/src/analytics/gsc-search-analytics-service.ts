@@ -215,7 +215,10 @@ export async function sweepGscSyncProjects(): Promise<void> {
       ),
     );
 
-  const { discoverOpportunities } = await import("../strategy/keyword-opportunity-service");
+  const {
+    createClickDeclineRefreshOpportunities,
+    discoverOpportunities,
+  } = await import("../strategy/keyword-opportunity-service");
 
   for (const { projectId } of connections) {
     try {
@@ -227,6 +230,7 @@ export async function sweepGscSyncProjects(): Promise<void> {
         .limit(1);
       if (project) {
         await discoverOpportunities(projectId, project.userId, { sources: ["gsc"] });
+        await createClickDeclineRefreshOpportunities(projectId);
       }
     } catch (err) {
       logger.warn({ err, projectId }, "GSC sync failed for project");

@@ -3,7 +3,10 @@ import {
   syncGscSearchAnalytics,
   sweepGscSyncProjects,
 } from "@workspace/content-engine/analytics/gsc-search-analytics-service";
-import { discoverOpportunities } from "@workspace/content-engine/strategy/keyword-opportunity-service";
+import {
+  createClickDeclineRefreshOpportunities,
+  discoverOpportunities,
+} from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
@@ -42,6 +45,10 @@ async function runGscSyncForProject(projectId: number, userId?: number): Promise
       .limit(1);
     if (project) {
       await discoverOpportunities(projectId, userId ?? project.userId, { sources: ["gsc"] });
+      const refreshCount = await createClickDeclineRefreshOpportunities(projectId);
+      if (refreshCount > 0) {
+        logger.info({ projectId, refreshCount }, "Created content_refresh opportunities from GSC click decline");
+      }
     }
   } catch (err) {
     logger.error({ err, projectId }, "GSC search analytics sync failed");

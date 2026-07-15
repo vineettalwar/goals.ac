@@ -38,14 +38,15 @@ export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
  * Health-check job for a single CMS/integration connection.
  *
  * `kind` disambiguates which table `connectionId` refers to:
- *  - "wordpress"  → `wordpress_connections.id`
+ *  - "wordpress"   → `wordpress_connections.id`
+ *  - "project_cms" → `website_projects.id` (all CMS credentials on the project)
  *
  * The sweep (cron-triggered, no single connection) is represented by an
- * empty payload `{}`; the handler enumerates every WordPress connection and
- * enqueues one `ConnectionHealthCheckPayload` job per row.
+ * empty payload `{}`; the handler enumerates WordPress rows and projects with
+ * connected CMS integrations, then enqueues one job per target.
  */
 export interface ConnectionHealthCheckPayload {
-  kind: "wordpress";
+  kind: "wordpress" | "project_cms";
   connectionId: number;
 }
 
