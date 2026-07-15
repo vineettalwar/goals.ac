@@ -89,7 +89,7 @@ export async function handleAdminRead(
   if (path === "/api/admin/platform-settings" && method === "GET") {
     const [settings, env, integrations] = await Promise.all([
       getPlatformSettings(),
-      Promise.resolve(getIntegrationEnvStatus()),
+      getIntegrationEnvStatus(),
       Promise.resolve(getPlatformIntegrationDefinitions()),
     ]);
     return withCors(request, Response.json({ ...settings, env, integrations }));

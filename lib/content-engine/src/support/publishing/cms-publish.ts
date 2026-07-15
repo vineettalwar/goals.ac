@@ -1,5 +1,8 @@
 import { marked } from "marked";
-import { prepareWordPressImages } from "@workspace/connectors/wordpress-images";
+import {
+  isRasterFeaturedDataUri,
+  prepareWordPressImages,
+} from "@workspace/connectors/wordpress-images";
 import { publishToGhost } from "@workspace/connectors/ghost";
 import { publishToWebhook } from "@workspace/connectors/webhook";
 import type { WebhookArticlePayload } from "@workspace/connectors/webhook";
@@ -95,7 +98,9 @@ export async function publishPieceToWordPress(
   const connectionType = resolveWordPressConnectionType(creds.wordpress);
   const keyword = piece.targetKeyword ?? piece.title;
 
-  const hasImages = (piece.pieceMetadata?.images?.length ?? 0) > 0;
+  const needsImagePrep =
+    (piece.pieceMetadata?.images?.length ?? 0) > 0 ||
+    isRasterFeaturedDataUri(piece.pieceMetadata?.featuredImageUrl);
 
   if (connectionType === "plugin") {
     if (!creds.wordpress.siteKey) {
@@ -113,20 +118,21 @@ export async function publishPieceToWordPress(
     let hostedOgUrl: string | undefined;
     let updatedMetadata = piece.pieceMetadata;
 
-    if (hasImages) {
+    if (needsImagePrep) {
       const prepared = await prepareWordPressImages({
         bodyMarkdown: piece.bodyMarkdown,
         targetKeyword: keyword,
         images: piece.pieceMetadata?.images,
+        featuredImageUrl: piece.pieceMetadata?.featuredImageUrl,
         pluginCreds,
       });
       bodyMarkdown = prepared.bodyMarkdown;
       featuredImageId = prepared.featuredImageId;
       hostedOgUrl = prepared.featuredHostedUrl;
-      if (prepared.updatedImages) {
+      if (prepared.featuredHostedUrl || prepared.updatedImages) {
         updatedMetadata = {
           ...piece.pieceMetadata,
-          images: prepared.updatedImages,
+          ...(prepared.updatedImages ? { images: prepared.updatedImages } : {}),
           featuredImageUrl: prepared.featuredHostedUrl ?? piece.pieceMetadata?.featuredImageUrl,
           ogImageUrl: prepared.featuredHostedUrl ?? piece.pieceMetadata?.ogImageUrl,
         };
@@ -170,20 +176,21 @@ export async function publishPieceToWordPress(
   let hostedOgUrl: string | undefined;
   let updatedMetadata = piece.pieceMetadata;
 
-  if (hasImages) {
+  if (needsImagePrep) {
     const prepared = await prepareWordPressImages({
       bodyMarkdown: piece.bodyMarkdown,
       targetKeyword: keyword,
       images: piece.pieceMetadata?.images,
+      featuredImageUrl: piece.pieceMetadata?.featuredImageUrl,
       wpCreds,
     });
     bodyMarkdown = prepared.bodyMarkdown;
     featuredMediaId = prepared.featuredImageId;
     hostedOgUrl = prepared.featuredHostedUrl;
-    if (prepared.updatedImages) {
+    if (prepared.featuredHostedUrl || prepared.updatedImages) {
       updatedMetadata = {
         ...piece.pieceMetadata,
-        images: prepared.updatedImages,
+        ...(prepared.updatedImages ? { images: prepared.updatedImages } : {}),
         featuredImageUrl: prepared.featuredHostedUrl ?? piece.pieceMetadata?.featuredImageUrl,
         ogImageUrl: prepared.featuredHostedUrl ?? piece.pieceMetadata?.ogImageUrl,
       };

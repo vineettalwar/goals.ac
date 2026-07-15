@@ -1,4 +1,7 @@
-import { prepareWordPressImages } from "@workspace/connectors/wordpress-images";
+import {
+  isRasterFeaturedDataUri,
+  prepareWordPressImages,
+} from "@workspace/connectors/wordpress-images";
 import { publishToWordPress } from "@workspace/connectors/wordpress";
 import { publishToGoalsAcPlugin } from "@workspace/connectors/goals-ac-plugin";
 import type { CanonicalContent } from "../content/canonical-content";
@@ -181,8 +184,10 @@ export async function prepareWordPressPayload(
   const render = await wordpressAdapter.render(content, renderOpts);
   if (render.payload.kind !== "wordpress") return { render };
 
-  const hasImages = (content.pieceMetadata?.images?.length ?? 0) > 0;
-  if (!hasImages || !creds.wordpress) return { render };
+  const needsImagePrep =
+    (content.pieceMetadata?.images?.length ?? 0) > 0 ||
+    isRasterFeaturedDataUri(content.pieceMetadata?.featuredImageUrl);
+  if (!needsImagePrep || !creds.wordpress) return { render };
 
   const keyword = content.targetKeyword ?? content.meta.title;
   const connectionType = resolveWordPressConnectionType(creds.wordpress);
@@ -192,6 +197,7 @@ export async function prepareWordPressPayload(
       bodyMarkdown: content.markdown,
       targetKeyword: keyword,
       images: content.pieceMetadata?.images,
+      featuredImageUrl: content.pieceMetadata?.featuredImageUrl,
       pluginCreds: {
         siteUrl: creds.wordpress.siteUrl,
         siteKey: creds.wordpress.siteKey,
@@ -201,14 +207,16 @@ export async function prepareWordPressPayload(
     const updatedContent: CanonicalContent = {
       ...content,
       markdown: prepared.bodyMarkdown,
-      pieceMetadata: prepared.updatedImages
-        ? {
-            ...content.pieceMetadata,
-            images: prepared.updatedImages,
-            featuredImageUrl: prepared.featuredHostedUrl ?? content.pieceMetadata?.featuredImageUrl,
-            ogImageUrl: prepared.featuredHostedUrl ?? content.pieceMetadata?.ogImageUrl,
-          }
-        : content.pieceMetadata,
+      pieceMetadata:
+        prepared.featuredHostedUrl || prepared.updatedImages
+          ? {
+              ...content.pieceMetadata,
+              ...(prepared.updatedImages ? { images: prepared.updatedImages } : {}),
+              featuredImageUrl:
+                prepared.featuredHostedUrl ?? content.pieceMetadata?.featuredImageUrl,
+              ogImageUrl: prepared.featuredHostedUrl ?? content.pieceMetadata?.ogImageUrl,
+            }
+          : content.pieceMetadata,
     };
     const rerender = await wordpressAdapter.render(updatedContent, renderOpts);
     return {
@@ -224,6 +232,7 @@ export async function prepareWordPressPayload(
       bodyMarkdown: content.markdown,
       targetKeyword: keyword,
       images: content.pieceMetadata?.images,
+      featuredImageUrl: content.pieceMetadata?.featuredImageUrl,
       wpCreds: {
         siteUrl: creds.wordpress.siteUrl,
         username: creds.wordpress.username,
@@ -233,14 +242,16 @@ export async function prepareWordPressPayload(
     const updatedContent: CanonicalContent = {
       ...content,
       markdown: prepared.bodyMarkdown,
-      pieceMetadata: prepared.updatedImages
-        ? {
-            ...content.pieceMetadata,
-            images: prepared.updatedImages,
-            featuredImageUrl: prepared.featuredHostedUrl ?? content.pieceMetadata?.featuredImageUrl,
-            ogImageUrl: prepared.featuredHostedUrl ?? content.pieceMetadata?.ogImageUrl,
-          }
-        : content.pieceMetadata,
+      pieceMetadata:
+        prepared.featuredHostedUrl || prepared.updatedImages
+          ? {
+              ...content.pieceMetadata,
+              ...(prepared.updatedImages ? { images: prepared.updatedImages } : {}),
+              featuredImageUrl:
+                prepared.featuredHostedUrl ?? content.pieceMetadata?.featuredImageUrl,
+              ogImageUrl: prepared.featuredHostedUrl ?? content.pieceMetadata?.ogImageUrl,
+            }
+          : content.pieceMetadata,
     };
     const rerender = await wordpressAdapter.render(updatedContent, renderOpts);
     return {
