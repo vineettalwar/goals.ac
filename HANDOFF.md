@@ -10,7 +10,7 @@
 | # | Item | Status |
 |---|---|---|
 | 4.0 | Product humanize before/after in Studio | in flight |
-| 4.1 | Human-voice actionable detail | queued |
+| 4.1 | Human-voice actionable detail | done |
 | 4.2 | Social composer Humanize | queued |
 | 4.3 | Light term checklist (secondary/PAA) | queued |
 | 4.4 | SERP refresh honesty | queued |

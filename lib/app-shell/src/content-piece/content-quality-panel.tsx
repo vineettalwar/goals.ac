@@ -220,11 +220,18 @@ export function ArticleQualityPanel({
         </p>
         <ul className="space-y-2">
           {result.breakdown.map((item) => (
-            <li key={item.label} className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">{item.label}</span>
-              <span className={item.score === 0 ? "font-medium text-red-600" : "font-medium"}>
-                {item.score}/{item.max}
-              </span>
+            <li key={item.label} className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{item.label}</span>
+                <span className={item.score === 0 ? "font-medium text-red-600" : "font-medium"}>
+                  {item.score}/{item.max}
+                </span>
+              </div>
+              {item.label === "Human voice" && item.detail ? (
+                <p className="text-[11px] leading-relaxed text-muted-foreground/80">
+                  {item.detail}
+                </p>
+              ) : null}
             </li>
           ))}
         </ul>
