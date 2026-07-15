@@ -1,33 +1,81 @@
 "use client";
 
-import { useMemo, useRef, useState, useCallback } from "react";
+/**
+ * Thin Next host for shared `ContentPieceView` (parity with Vite ContentPiecePage).
+ *
+ * Shell already owns: ContentBriefPanel, ArticleQualityPanel, Queue social, editor/toolbar,
+ * featured image, publish CTA → ContentPiecePublishDialog.
+ *
+ * Shell features still worth adopting (Next layout leftovers — do not re-fork UI):
+ * - ArticlePerformanceBadge (GA4/GSC) in header when publishedUrl is set
+ * - Visual summary markdown card in aside
+ * - Status select while editing (shell save is title/body/plannedDate only)
+ * - Empty-draft Generate (`POST .../generate`) — Next has regenerate only today
+ *
+ * Kept Next-specific: cookie auth routes, SSR initialPiece/cmsConnections,
+ * streaming ContentPieceRepurposeDialog, toast for hard failures.
+ */
+
+import { useCallback, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { scoreArticleQuality } from "@workspace/content-engine/articles/article-quality-score";
-import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
-import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
 import {
+  ContentPiecePublishDialog,
+  ContentPieceView,
+  contentPieceCanDelete,
+  contentPieceCanMarkReady,
+  contentPieceCanPublish,
   contentPieceCanQueueSocial,
-  contentPieceSupportsStockImages,
-} from "@workspace/app-shell/content-piece";
-import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
-import {
-  type ContentFormatType,
+  formatEnhanceFailureMessage,
+  formatEnhanceSuccessMessage,
+  formatHumanizeResultMessage,
+  formatQueueSocialSuccessMessage,
+  humanizeAuditFromResponse,
+  queueSocialComposerPayload,
+  socialComposerPath,
+  socialHubQueuePath,
+  type ContentPieceDetail,
+  type ContentPieceMetadata,
   type PublishDestinationId,
-  getConnectedDestinationsForFormat,
-  getDestinationsForFormat,
-  type CmsConnectionSnapshot,
-} from "@/lib/projects/publishing-destinations";
+  type RenderPreviewResult,
+} from "@workspace/app-shell/content-piece";
+import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRecord } from "@/lib/server/loaders";
-import { ContentPieceLayout } from "@/components/content/content-piece-layout";
-import { defaultPublishPlatform } from "@/components/content/content-piece-utils";
-import { useContentPieceHandlers } from "@/components/content/use-content-piece-handlers";
+import { ContentPieceRepurposeDialog } from "@/components/content/content-piece-repurpose-dialog";
 
 interface ContentPieceClientProps {
   pieceId: string;
   initialPiece: ContentPieceRecord;
   initialCmsConnections: CmsConnectionSnapshot;
   stockImagesConfigured: boolean;
+}
+
+function toDetail(piece: ContentPieceRecord): ContentPieceDetail {
+  return {
+    id: piece.id,
+    websiteProjectId: piece.websiteProjectId,
+    title: piece.title,
+    status: piece.status,
+    formatType: piece.formatType,
+    wordCount: piece.wordCount,
+    targetKeyword: piece.targetKeyword ?? null,
+    plannedDate: piece.plannedDate ?? null,
+    updatedAt: piece.createdAt,
+    bodyMarkdown: piece.bodyMarkdown ?? null,
+    pieceMetadata: (piece.pieceMetadata as ContentPieceMetadata | null | undefined) ?? null,
+    briefId: piece.briefId ?? null,
+  };
+}
+
+function mergePieceJson(raw: unknown, prev: ContentPieceRecord): ContentPieceRecord {
+  const data = (raw ?? {}) as Record<string, unknown>;
+  const nested = data.piece;
+  const next =
+    nested && typeof nested === "object"
+      ? { ...prev, ...(nested as ContentPieceRecord) }
+      : { ...prev, ...(data as Partial<ContentPieceRecord>) };
+  return next as ContentPieceRecord;
 }
 
 export function ContentPieceClient({
@@ -37,133 +85,84 @@ export function ContentPieceClient({
   stockImagesConfigured,
 }: ContentPieceClientProps) {
   const router = useRouter();
-  const [piece, setPiece] = useState(initialPiece);
-  const [publishing, setPublishing] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [editingPreview, setEditingPreview] = useState(false);
-  const [bodyDraft, setBodyDraft] = useState(initialPiece.bodyMarkdown ?? "");
-  const [titleDraft, setTitleDraft] = useState(initialPiece.title ?? "");
-  const [statusDraft, setStatusDraft] = useState(initialPiece.status);
-  const [plannedDateDraft, setPlannedDateDraft] = useState(initialPiece.plannedDate ?? "");
+  const [pieceRecord, setPieceRecord] = useState(initialPiece);
+  const piece = toDetail(pieceRecord);
+
   const [saving, setSaving] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
-  const [repurposeOpen, setRepurposeOpen] = useState(false);
-  const [publishPlatform, setPublishPlatform] = useState<PublishDestinationId>(() =>
-    defaultPublishPlatform(initialPiece.formatType, initialCmsConnections, initialPiece.pieceMetadata),
-  );
-  const [previewLoading, setPreviewLoading] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
-  const [previewJson, setPreviewJson] = useState<unknown>(null);
-  const [previewWarnings, setPreviewWarnings] = useState<{ code: string; message: string }[]>([]);
-  const [previewKind, setPreviewKind] = useState<string | null>(null);
-  const [cmsConnections] = useState(initialCmsConnections);
-  const [deleting, setDeleting] = useState(false);
-  const [enhancing, setEnhancing] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [humanizing, setHumanizing] = useState(false);
+  const [humanizeMessage, setHumanizeMessage] = useState<string | null>(null);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateMessage, setRegenerateMessage] = useState<string | null>(null);
+  const [enhancing, setEnhancing] = useState(false);
+  const [enhanceMessage, setEnhanceMessage] = useState<string | null>(null);
   const [regeneratingImages, setRegeneratingImages] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [markingReady, setMarkingReady] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [publishMessage, setPublishMessage] = useState<string | null>(null);
   const [queueingSocial, setQueueingSocial] = useState(false);
-  const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [repurposeDialogOpen, setRepurposeDialogOpen] = useState(false);
 
-  const featuredImage = piece.pieceMetadata?.images?.find((img) => img.role === "featured");
-  const supportsStockImages = contentPieceSupportsStockImages(piece.formatType);
-
-  const displayBody = editing ? bodyDraft : piece.bodyMarkdown;
-  const displayTitle = editing ? titleDraft : piece.title;
-  const seoTitle = piece.pieceMetadata?.seoTitle ?? displayTitle;
-  const displayWordCount = useMemo(
-    () => (editing ? bodyDraft.split(/\s+/).filter(Boolean).length : piece.wordCount),
-    [editing, bodyDraft, piece.wordCount],
-  );
-
-  const visualSummaryMarkdown = useMemo(() => {
-    const fromMeta = piece.pieceMetadata?.visualSummaryMarkdown;
-    if (fromMeta) return fromMeta;
-    const match = displayBody.match(/##\s*Visual Summary[\s\S]*?(?=\n##\s|$)/i);
-    return match?.[0] ?? null;
-  }, [piece.pieceMetadata?.visualSummaryMarkdown, displayBody]);
-
-  const canEnhance = isSeoLongformFormat(piece.formatType as ContentFormatType);
-  const canHumanize = isHumanizableFormat(piece.formatType);
-  const humanizationAudit = piece.pieceMetadata?.humanizationAudit;
-  // Toolbar Enhance emphasis only — ring score lives in ArticleQualityPanel (debounced).
-  const qualityScore = useMemo(
-    () =>
-      scoreArticleQuality({
-        bodyMarkdown: displayBody,
-        metaTitle: seoTitle,
-        metaDescription: piece.pieceMetadata?.metaDescription,
-        citations: piece.pieceMetadata?.citations,
-        faqSection: piece.pieceMetadata?.faqSection,
-        jsonLdSchema: piece.pieceMetadata?.jsonLdSchema,
-        internalLinkSuggestions: piece.pieceMetadata?.internalLinkSuggestions,
-        wordCount: displayWordCount,
-      }).total,
-    [displayBody, seoTitle, displayWordCount, piece.pieceMetadata],
-  );
-
-  const {
-    handleSave,
-    cancelEdit,
-    startEdit,
-    handleRegenerate,
-    handleEnhance,
-    handleHumanize,
-    regenerateImages,
-    handlePublishPreview,
-    handlePublish,
-    handleDelete,
-    handleMarkReady,
-    handleCopy,
-  } = useContentPieceHandlers({
-    pieceId,
-    piece,
-    setPiece,
-    titleDraft,
-    bodyDraft,
-    statusDraft,
-    plannedDateDraft,
-    publishPlatform,
-    displayBody,
-    setSaving,
-    setEditing,
-    setEditingPreview,
-    setTitleDraft,
-    setBodyDraft,
-    setStatusDraft,
-    setPlannedDateDraft,
-    setRegenerating,
-    setEnhancing,
-    setHumanizing,
-    setRegeneratingImages,
-    setPreviewLoading,
-    setPreviewHtml,
-    setPreviewJson,
-    setPreviewWarnings,
-    setPreviewKind,
-    setPublishing,
-    setDeleting,
-    setCopied,
-    router,
-  });
-
-  const canQueueSocial = contentPieceCanQueueSocial(
-    piece.formatType,
-    piece.status,
-    piece.bodyMarkdown,
-  );
-
-  const handleQueueSocial = useCallback(async () => {
-    if (!piece.websiteProjectId || !canQueueSocial) return;
-    setQueueingSocial(true);
+  const fetchDualScore = useCallback(async (contentPieceId: number) => {
     try {
-      const res = await fetch(`/api/website-projects/${piece.websiteProjectId}/social/composer`, {
+      const res = await fetch(`/api/content-pieces/${contentPieceId}/serp-score`);
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const fetchBrief = useCallback(async (briefId: number) => {
+    try {
+      const res = await fetch(`/api/briefs/${briefId}`);
+      if (!res.ok) return null;
+      return res.json();
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const loadCmsConnections = useCallback(async (): Promise<CmsConnectionSnapshot> => {
+    const res = await fetch(
+      `/api/website-projects/${piece.websiteProjectId}/cms-integrations`,
+    );
+    if (!res.ok) {
+      return initialCmsConnections;
+    }
+    return (await res.json()) as CmsConnectionSnapshot;
+  }, [piece.websiteProjectId, initialCmsConnections]);
+
+  const renderPreview = useCallback(
+    async (platform: PublishDestinationId): Promise<RenderPreviewResult> => {
+      const res = await fetch(`/api/content-pieces/${pieceId}/render-preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          parentPieceId: piece.id,
-          platforms: ["linkedin", "twitter"],
+          platform,
+          outputMode:
+            pieceRecord.pieceMetadata?.intendedOutputMode ??
+            pieceRecord.pieceMetadata?.intendedEditorMode,
         }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to load publish preview");
+      }
+      return res.json() as Promise<RenderPreviewResult>;
+    },
+    [pieceId, pieceRecord.pieceMetadata],
+  );
+
+  async function queueSocial() {
+    if (!piece.websiteProjectId) return;
+    setQueueingSocial(true);
+    try {
+      const res = await fetch(socialComposerPath(piece.websiteProjectId), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(queueSocialComposerPayload(piece.id)),
       });
       const data = (await res.json().catch(() => null)) as
         | { pieces?: unknown[]; error?: string }
@@ -171,49 +170,257 @@ export function ContentPieceClient({
       if (!res.ok) {
         throw new Error(data?.error ?? "Could not queue social posts");
       }
-      const count = data?.pieces?.length ?? 0;
-      toast.success(`Queued ${count} LinkedIn + X variants`);
-      router.push(`/projects/${piece.websiteProjectId}/social?tab=queue`);
+      toast.success(formatQueueSocialSuccessMessage(data?.pieces?.length ?? 0));
+      router.push(socialHubQueuePath(piece.websiteProjectId));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Could not queue social posts");
     } finally {
       setQueueingSocial(false);
     }
-  }, [piece.websiteProjectId, piece.id, canQueueSocial, router]);
+  }
 
-  const formatLabel =
-    FORMAT_OPTIONS.find((o) => o.value === piece.formatType)?.label ?? piece.formatType;
+  return (
+    <>
+      <ContentPieceView
+        piece={piece}
+        saving={saving}
+        saveMessage={saveMessage}
+        onSave={async (payload) => {
+          setSaving(true);
+          setSaveMessage(null);
+          try {
+            const res = await fetch(`/api/content-pieces/${pieceId}`, {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                title: payload.title,
+                bodyMarkdown: payload.bodyMarkdown,
+                plannedDate: payload.plannedDate ?? null,
+              }),
+            });
+            if (!res.ok) {
+              setSaveMessage("Save failed");
+              toast.error("Save failed");
+              return;
+            }
+            const updated = await res.json();
+            setPieceRecord(mergePieceJson(updated, pieceRecord));
+            setSaveMessage("Saved.");
+          } finally {
+            setSaving(false);
+          }
+        }}
+        humanizing={humanizing}
+        humanizeMessage={humanizeMessage}
+        onHumanize={async () => {
+          setHumanizing(true);
+          setHumanizeMessage(null);
+          try {
+            const res = await fetch(`/api/content-pieces/${pieceId}/humanize`, {
+              method: "POST",
+            });
+            if (!res.ok) {
+              const data = (await res.json().catch(() => null)) as { error?: string } | null;
+              const msg = data?.error ?? "Humanization failed";
+              setHumanizeMessage(msg);
+              toast.error(msg);
+              return;
+            }
+            const updated = await res.json();
+            setPieceRecord(mergePieceJson(updated, pieceRecord));
+            setHumanizeMessage(
+              formatHumanizeResultMessage(humanizeAuditFromResponse(updated)),
+            );
+          } finally {
+            setHumanizing(false);
+          }
+        }}
+        regenerating={regenerating}
+        regenerateMessage={regenerateMessage}
+        onRegenerate={async () => {
+          if (!confirm("Regenerate this content? The current draft will be replaced.")) {
+            return;
+          }
+          setRegenerating(true);
+          setRegenerateMessage(null);
+          try {
+            const res = await fetch(`/api/content-pieces/${pieceId}/regenerate`, {
+              method: "POST",
+            });
+            if (!res.ok) {
+              setRegenerateMessage("Regeneration failed");
+              toast.error("Regeneration failed");
+              return;
+            }
+            const updated = await res.json();
+            setPieceRecord(mergePieceJson(updated, pieceRecord));
+            setRegenerateMessage("Content regenerated.");
+          } finally {
+            setRegenerating(false);
+          }
+        }}
+        enhancing={enhancing}
+        enhanceMessage={enhanceMessage}
+        onEnhance={async () => {
+          setEnhancing(true);
+          setEnhanceMessage(null);
+          try {
+            const res = await fetch(`/api/content-pieces/${pieceId}/enhance`, {
+              method: "POST",
+            });
+            if (!res.ok) {
+              const data = (await res.json().catch(() => null)) as { error?: string } | null;
+              const msg = formatEnhanceFailureMessage(data?.error);
+              setEnhanceMessage(msg);
+              toast.error(msg);
+              return;
+            }
+            const updated = await res.json();
+            setPieceRecord(mergePieceJson(updated, pieceRecord));
+            setEnhanceMessage(formatEnhanceSuccessMessage());
+          } finally {
+            setEnhancing(false);
+          }
+        }}
+        regeneratingImages={regeneratingImages}
+        onRegenerateImages={
+          stockImagesConfigured
+            ? async () => {
+                setRegeneratingImages(true);
+                try {
+                  const res = await fetch(
+                    `/api/content-pieces/${pieceId}/images/regenerate`,
+                    { method: "POST" },
+                  );
+                  if (!res.ok) {
+                    const data = (await res.json().catch(() => null)) as {
+                      error?: string;
+                    } | null;
+                    toast.error(data?.error ?? "Failed to regenerate images");
+                    return;
+                  }
+                  const data = (await res.json()) as { piece: ContentPieceRecord };
+                  setPieceRecord(data.piece);
+                } finally {
+                  setRegeneratingImages(false);
+                }
+              }
+            : undefined
+        }
+        publishing={publishing}
+        publishMessage={publishMessage}
+        onPublish={
+          contentPieceCanPublish(piece.status)
+            ? () => setPublishDialogOpen(true)
+            : undefined
+        }
+        deleting={deleting}
+        onDelete={
+          contentPieceCanDelete(piece.status)
+            ? async () => {
+                if (!confirm("Delete this content piece?")) return;
+                setDeleting(true);
+                try {
+                  const res = await fetch(`/api/content-pieces/${pieceId}`, {
+                    method: "DELETE",
+                  });
+                  if (!res.ok) {
+                    toast.error("Delete failed");
+                    return;
+                  }
+                  toast.success("Deleted");
+                  router.push(`/projects/${piece.websiteProjectId}/content-studio`);
+                } finally {
+                  setDeleting(false);
+                }
+              }
+            : undefined
+        }
+        markingReady={markingReady}
+        onMarkReady={
+          contentPieceCanMarkReady(piece.status, piece.bodyMarkdown)
+            ? async () => {
+                setMarkingReady(true);
+                try {
+                  const res = await fetch(`/api/content-pieces/${pieceId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ status: "ready" }),
+                  });
+                  if (!res.ok) {
+                    toast.error("Failed to update status");
+                    return;
+                  }
+                  const updated = await res.json();
+                  setPieceRecord(mergePieceJson(updated, pieceRecord));
+                } finally {
+                  setMarkingReady(false);
+                }
+              }
+            : undefined
+        }
+        onRepurpose={() => setRepurposeDialogOpen(true)}
+        onQueueSocial={
+          contentPieceCanQueueSocial(piece.formatType, piece.status, piece.bodyMarkdown)
+            ? () => void queueSocial()
+            : undefined
+        }
+        queueingSocial={queueingSocial}
+        stockImagesConfigured={stockImagesConfigured}
+        fetchDualScore={fetchDualScore}
+        fetchBrief={fetchBrief}
+        renderLink={({ href, className, children }) => (
+          <Link href={href} className={className}>
+            {children}
+          </Link>
+        )}
+      />
 
-  const publishDestinations = getDestinationsForFormat(piece.formatType as ContentFormatType);
-  const connectedDestinations = getConnectedDestinationsForFormat(
-    piece.formatType as ContentFormatType,
-    cmsConnections,
+      <ContentPiecePublishDialog
+        open={publishDialogOpen}
+        onClose={() => !publishing && setPublishDialogOpen(false)}
+        formatType={piece.formatType}
+        loadConnections={loadCmsConnections}
+        publishing={publishing}
+        integrationsHref={`/projects/${piece.websiteProjectId}/integrations`}
+        pieceTitle={piece.title}
+        pieceBodyMarkdown={piece.bodyMarkdown}
+        onRenderPreview={renderPreview}
+        onPublish={async (platform) => {
+          setPublishing(true);
+          setPublishMessage(null);
+          try {
+            const res = await fetch(`/api/content-pieces/${pieceId}/publish`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ platform, async: true }),
+            });
+            if (!res.ok) {
+              setPublishMessage("Failed to publish");
+              toast.error("Failed to publish");
+              return;
+            }
+            const updated = await res.json();
+            if (updated.queued) {
+              setPublishMessage(`Publishing to ${platform} — running in the background`);
+            } else {
+              setPieceRecord(mergePieceJson(updated, pieceRecord));
+              setPublishMessage(`Published to ${platform}.`);
+            }
+            setPublishDialogOpen(false);
+          } finally {
+            setPublishing(false);
+          }
+        }}
+      />
+
+      <ContentPieceRepurposeDialog
+        open={repurposeDialogOpen}
+        onClose={() => setRepurposeDialogOpen(false)}
+        pieceId={piece.id}
+        projectId={piece.websiteProjectId}
+        currentFormat={piece.formatType}
+      />
+    </>
   );
-
-  return <ContentPieceLayout
-    piece={piece} pieceId={pieceId} editing={editing} editingPreview={editingPreview}
-    displayBody={displayBody} displayTitle={displayTitle} displayWordCount={displayWordCount}
-    titleDraft={titleDraft} bodyDraft={bodyDraft} statusDraft={statusDraft} plannedDateDraft={plannedDateDraft}
-    formatLabel={formatLabel} qualityScore={qualityScore}
-    publishDestinations={publishDestinations} connectedDestinations={connectedDestinations}
-    publishPlatform={publishPlatform} setPublishPlatform={setPublishPlatform}
-    publishing={publishing} saving={saving} regenerating={regenerating} enhancing={enhancing}
-    humanizing={humanizing} regeneratingImages={regeneratingImages} deleting={deleting}
-    copied={copied} previewLoading={previewLoading} previewHtml={previewHtml}
-    previewJson={previewJson} previewWarnings={previewWarnings} previewKind={previewKind}
-    repurposeOpen={repurposeOpen} setRepurposeOpen={setRepurposeOpen}
-    featuredImage={featuredImage} supportsStockImages={supportsStockImages}
-    stockImagesConfigured={stockImagesConfigured} canEnhance={canEnhance} canHumanize={canHumanize}
-    humanizationAudit={humanizationAudit} visualSummaryMarkdown={visualSummaryMarkdown}
-    seoTitle={seoTitle} bodyTextareaRef={bodyTextareaRef}
-    handleSave={handleSave} cancelEdit={cancelEdit} startEdit={startEdit}
-    handleRegenerate={handleRegenerate} handleEnhance={handleEnhance} handleHumanize={handleHumanize}
-    regenerateImages={regenerateImages} handlePublishPreview={handlePublishPreview}
-    handlePublish={handlePublish} handleDelete={handleDelete} handleMarkReady={handleMarkReady}
-    handleCopy={handleCopy} setEditingPreview={setEditingPreview}
-    setTitleDraft={setTitleDraft} setBodyDraft={setBodyDraft} setStatusDraft={setStatusDraft}
-    setPlannedDateDraft={setPlannedDateDraft} router={router}
-    canQueueSocial={canQueueSocial} queueingSocial={queueingSocial}
-    handleQueueSocial={handleQueueSocial}
-  />;
 }

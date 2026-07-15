@@ -22,6 +22,19 @@ export {
   type PublishDestinationId,
 } from "./publish-destinations";
 export {
+  QUEUE_SOCIAL_PLATFORMS,
+  formatEnhanceFailureMessage,
+  formatEnhanceSuccessMessage,
+  formatHumanizeResultMessage,
+  formatQueueSocialSuccessMessage,
+  humanizeAuditFromResponse,
+  queueSocialComposerPayload,
+  socialComposerPath,
+  socialHubQueuePath,
+  type HumanizeActionResult,
+  type HumanizeAuditSnapshot,
+} from "./content-piece-actions";
+export {
   contentPieceCanDelete,
   contentPieceCanEdit,
   contentPieceCanEnhance,
