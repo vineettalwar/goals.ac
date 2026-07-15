@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 export type StudioLinkProps = {
   href: string;
   className?: string;
+  title?: string;
   children: ReactNode;
 };
 
@@ -16,6 +17,19 @@ export type StudioPiece = {
   plannedDate?: string | null;
   createdAt?: string | number | null;
   updatedAt?: string | number | null;
+};
+
+/** Pre-studio content surfaced in the hub (SEO articles, strategies, audits, roadmaps). */
+export type LegacyItem = {
+  id: number;
+  title: string;
+  keyword: string;
+  wordCount: number;
+  status: string;
+  createdAt: string;
+  source: "seo_article" | "content_strategy" | "geo_audit" | "roadmap";
+  linkTo: string;
+  subtitle?: string;
 };
 
 export type StudioSortKey = "newest" | "oldest" | "words_desc" | "words_asc" | "title_asc";

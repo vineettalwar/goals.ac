@@ -3,13 +3,11 @@
 import Link from "next/link";
 import { ExternalLink, Trash2, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import { FormatBadge, StatusBadge } from "./content-studio-format-meta";
 import { ArticlePerformanceBadge } from "./article-performance-badge";
 import { cn } from "@/lib/utils";
 import type { StudioPiece } from "./content-studio-utils";
-import type { LegacyItem } from "./content-studio-load-data";
 
 export function FilterSelect({
   value,
@@ -88,32 +86,6 @@ export function StudioPieceCard({
           </Button>
         </Link>
       </div>
-    </div>
-  );
-}
-
-export function LegacyCard({ item }: { item: LegacyItem }) {
-  const sourceLabel = {
-    seo_article: "SEO Article",
-    content_strategy: "Strategy Item",
-    geo_audit: "GEO Audit",
-    roadmap: "Roadmap",
-  }[item.source];
-
-  return (
-    <div className="paper-card rounded-xl p-5 flex items-start justify-between gap-4">
-      <div className="min-w-0 flex-1">
-        <Link href={item.linkTo} className="font-medium hover:text-primary line-clamp-2 flex items-center gap-1">
-          {item.title}
-          <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0" />
-        </Link>
-        {item.subtitle && <p className="text-xs text-muted-foreground mt-0.5">{item.subtitle}</p>}
-        <div className="flex items-center gap-2 mt-1.5">
-          <Badge variant="muted">{sourceLabel}</Badge>
-          <span className="text-xs text-muted-foreground">{item.keyword}</span>
-        </div>
-      </div>
-      <Badge variant="muted">{item.status}</Badge>
     </div>
   );
 }

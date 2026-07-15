@@ -1,17 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-import type { CreateContentDraftInput, StudioPiece } from "@workspace/app-shell";
+import {
+  fetchAiProviderStatus,
+  fetchProjectBrandProfile,
+  fetchProjectContentPieces,
+} from "@/lib/queries/fetchers";
+import { queryKeys } from "@/lib/queries/keys";
+import type { BrandProfileSummary, CreateContentDraftInput, StudioPiece } from "@workspace/app-shell";
 import type { ContentPiece } from "@/types/api";
 
 const STUDIO_POLL_MS = 3000;
-
-type StudioLoadState = {
-  loading: boolean;
-  error: string | null;
-  pieces: StudioPiece[];
-  reload: () => Promise<void>;
-  createPiece: (input: CreateContentDraftInput) => Promise<ContentPiece>;
-};
 
 function mapStudioPiece(piece: ContentPiece): StudioPiece {
   return {
@@ -21,67 +20,48 @@ function mapStudioPiece(piece: ContentPiece): StudioPiece {
     targetKeyword: piece.targetKeyword ?? null,
     status: piece.status,
     wordCount: piece.wordCount,
+    plannedDate: piece.plannedDate ?? null,
     updatedAt: piece.updatedAt,
   };
 }
 
-export function useStudioData(projectId: string | null): StudioLoadState {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [pieces, setPieces] = useState<StudioPiece[]>([]);
+export function useStudioData(projectId: string | null) {
+  const queryClient = useQueryClient();
+  const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [markingReadyId, setMarkingReadyId] = useState<number | null>(null);
+  const [reschedulingId, setReschedulingId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
-  const reloadPieces = useCallback(
-    async (options?: { silent?: boolean }) => {
-      if (!projectId) {
-        setPieces([]);
-        if (!options?.silent) {
-          setLoading(false);
-        }
-        setError(null);
-        return;
-      }
-
-      if (!options?.silent) {
-        setLoading(true);
-      }
-      setError(null);
-      try {
-        const rows = await apiFetch<ContentPiece[]>(
-          `/api/website-projects/${projectId}/content-pieces`,
-        );
-        setPieces(rows.map(mapStudioPiece));
-      } catch (err) {
-        if (!options?.silent) {
-          setError(err instanceof Error ? err.message : "Failed to load content");
-        }
-      } finally {
-        if (!options?.silent) {
-          setLoading(false);
-        }
-      }
+  const piecesQuery = useQuery({
+    queryKey: queryKeys.contentPieces(projectId),
+    queryFn: () => fetchProjectContentPieces(projectId!),
+    enabled: Boolean(projectId),
+    staleTime: 10_000,
+    placeholderData: (previousData) => previousData,
+    select: (rows) => rows.map(mapStudioPiece),
+    refetchInterval: (currentQuery) => {
+      const pieces = currentQuery.state.data ?? [];
+      return pieces.some((piece) => piece.status === "generating") ? STUDIO_POLL_MS : false;
     },
-    [projectId],
-  );
+  });
+
+  const brandQuery = useQuery({
+    queryKey: queryKeys.projectBrandProfile(projectId),
+    queryFn: () => fetchProjectBrandProfile(projectId!),
+    enabled: Boolean(projectId),
+    staleTime: 60_000,
+  });
+
+  const aiStatusQuery = useQuery({
+    queryKey: queryKeys.aiProviderStatus,
+    queryFn: fetchAiProviderStatus,
+    staleTime: 60_000,
+  });
 
   const reload = useCallback(async () => {
-    await reloadPieces();
-  }, [reloadPieces]);
-
-  useEffect(() => {
-    void reloadPieces();
-  }, [reloadPieces]);
-
-  const hasGenerating = pieces.some((piece) => piece.status === "generating");
-
-  useEffect(() => {
-    if (!projectId || !hasGenerating) return;
-
-    const interval = setInterval(() => {
-      void reloadPieces({ silent: true });
-    }, STUDIO_POLL_MS);
-
-    return () => clearInterval(interval);
-  }, [projectId, hasGenerating, reloadPieces]);
+    if (!projectId) return;
+    await queryClient.invalidateQueries({ queryKey: queryKeys.contentPieces(projectId) });
+  }, [projectId, queryClient]);
 
   const createPiece = useCallback(
     async (input: CreateContentDraftInput) => {
@@ -103,5 +83,88 @@ export function useStudioData(projectId: string | null): StudioLoadState {
     [projectId, reload],
   );
 
-  return { loading, error, pieces, reload, createPiece };
+  const deletePiece = useCallback(
+    async (pieceId: number) => {
+      setDeletingId(pieceId);
+      setActionError(null);
+      try {
+        await apiFetch(`/api/content-pieces/${pieceId}`, { method: "DELETE" });
+        await reload();
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : "Failed to delete content piece");
+        throw err;
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [reload],
+  );
+
+  const markReady = useCallback(
+    async (pieceId: number) => {
+      setMarkingReadyId(pieceId);
+      setActionError(null);
+      try {
+        await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ status: "ready" }),
+        });
+        await reload();
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : "Failed to mark content ready");
+        throw err;
+      } finally {
+        setMarkingReadyId(null);
+      }
+    },
+    [reload],
+  );
+
+  const reschedulePiece = useCallback(
+    async (pieceId: number, plannedDate: string | null) => {
+      setReschedulingId(pieceId);
+      setActionError(null);
+      try {
+        await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}`, {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ plannedDate }),
+        });
+        await reload();
+      } catch (err) {
+        setActionError(err instanceof Error ? err.message : "Failed to reschedule content");
+        throw err;
+      } finally {
+        setReschedulingId(null);
+      }
+    },
+    [reload],
+  );
+
+  const loading = piecesQuery.isPending && !piecesQuery.data;
+
+  return {
+    loading,
+    error:
+      actionError ??
+      (piecesQuery.error instanceof Error
+        ? piecesQuery.error.message
+        : piecesQuery.error
+          ? "Failed to load content"
+          : null),
+    pieces: piecesQuery.data ?? [],
+    brandProfile: (brandQuery.data ?? null) as BrandProfileSummary | null,
+    brandProfileLoading: brandQuery.isPending && !brandQuery.data,
+    aiReady: aiStatusQuery.data?.ready ?? null,
+    activeProvider: aiStatusQuery.data?.activeProvider ?? "gemini",
+    reload,
+    createPiece,
+    deletePiece,
+    markReady,
+    reschedulePiece,
+    deletingId,
+    markingReadyId,
+    reschedulingId,
+  };
 }

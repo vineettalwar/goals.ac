@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { SettingsView, type AiProviderChoice, type BedrockCredentialsForm, type SettingsTab, isSiteAdmin, isSuperAdmin } from "@workspace/app-shell";
+import { MfaSettingsPanel } from "@/components/mfa/MfaSettingsPanel";
+import { OrgSecurityPanel } from "@/components/org/OrgSecurityPanel";
+import { SettingsBillingPanel } from "@/components/settings/SettingsBillingPanel";
 import { useAuth } from "@/context/auth";
 import { apiFetch } from "@/lib/api";
 import { useSettingsData } from "@/hooks/use-settings-data";
@@ -105,11 +108,15 @@ export function SettingsPage() {
 
   useEffect(() => {
     const checkout = searchParams.get("checkout");
+    const topup = searchParams.get("topup");
     if (checkout === "success") {
       setBillingMessage("Billing updated.");
       void loadBillingSummary();
-    } else if (checkout === "cancel") {
+    } else if (checkout === "cancel" || topup === "cancelled") {
       setBillingMessage("Checkout canceled.");
+    } else if (topup === "success") {
+      setBillingMessage("Credits added to your workspace.");
+      void loadBillingSummary();
     }
   }, [searchParams, loadBillingSummary]);
 
@@ -541,7 +548,7 @@ export function SettingsPage() {
     }
   }
 
-  if (authLoading || loading) {
+  if ((authLoading && !user) || (loading && !aiSummary && !email)) {
     return <p className="p-8 text-muted-foreground">Loading settings…</p>;
   }
 
@@ -630,6 +637,20 @@ export function SettingsPage() {
       stockSavingProvider={stockSavingProvider}
       stockRemovingProvider={stockRemovingProvider}
       integrationsMessage={integrationsMessage}
+      securitySupplement={
+        <>
+          <MfaSettingsPanel />
+          <OrgSecurityPanel canManage={canManageProviderKeys} />
+        </>
+      }
+      billingContent={
+        <SettingsBillingPanel
+          billingSummary={billingSummary}
+          usage={usage}
+          onOpenBillingPortal={() => void openBillingPortal()}
+          portalLoading={portalLoading}
+        />
+      }
       aiProvidersNote={
         <div className="space-y-3">
           {geminiMessage ? (

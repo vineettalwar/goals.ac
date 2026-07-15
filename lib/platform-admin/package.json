@@ -1,0 +1,33 @@
+{
+  "name": "@workspace/platform-admin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./guard": "./src/guard.ts",
+    "./overview": "./src/admin-overview.ts",
+    "./users": "./src/users.ts",
+    "./organizations": "./src/organizations.ts",
+    "./org-detail": "./src/org-detail.ts",
+    "./org-mutations": "./src/org-mutations.ts",
+    "./invites": "./src/invites.ts",
+    "./org-audit": "./src/org-audit.ts",
+    "./content-strategies": "./src/content-strategies.ts",
+    "./platform-settings-write": "./src/platform-settings-write.ts",
+    "./platform-integrations": "./src/platform-integrations.ts",
+    "./stripe-connect-oauth": "./src/stripe-connect-oauth.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@workspace/billing": "workspace:*",
+    "@workspace/db": "workspace:*",
+    "@workspace/security": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.2"
+  }
+}

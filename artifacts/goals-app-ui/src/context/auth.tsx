@@ -17,11 +17,24 @@ type AuthUser = {
   avatarUrl: string | null;
 };
 
+type ImpersonationInfo = {
+  adminId: number;
+  adminName: string | null;
+  adminEmail: string | null;
+};
+
+type SupportOrganizationInfo = {
+  id: number;
+  name: string;
+};
+
 type MeResponse = {
   user: AuthUser;
   organizationId?: number | null;
   organizationName?: string | null;
   orgRole?: string | null;
+  impersonation?: ImpersonationInfo | null;
+  supportOrganization?: SupportOrganizationInfo | null;
 };
 
 type AuthState = {
@@ -29,6 +42,8 @@ type AuthState = {
   organizationId: number | null;
   organizationName: string | null;
   orgRole: string | null;
+  impersonation: ImpersonationInfo | null;
+  supportOrganization: SupportOrganizationInfo | null;
   loading: boolean;
   refresh: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
@@ -44,11 +59,15 @@ function applyMeResponse(
   setOrganizationId: (id: number | null) => void,
   setOrganizationName: (name: string | null) => void,
   setOrgRole: (role: string | null) => void,
+  setImpersonation: (info: ImpersonationInfo | null) => void,
+  setSupportOrganization: (info: SupportOrganizationInfo | null) => void,
 ) {
   setUser(data.user);
   setOrganizationId(data.organizationId ?? null);
   setOrganizationName(data.organizationName ?? null);
   setOrgRole(data.orgRole ?? null);
+  setImpersonation(data.impersonation ?? null);
+  setSupportOrganization(data.supportOrganization ?? null);
 }
 
 function clearAuthState(
@@ -56,11 +75,15 @@ function clearAuthState(
   setOrganizationId: (id: number | null) => void,
   setOrganizationName: (name: string | null) => void,
   setOrgRole: (role: string | null) => void,
+  setImpersonation: (info: ImpersonationInfo | null) => void,
+  setSupportOrganization: (info: SupportOrganizationInfo | null) => void,
 ) {
   setUser(null);
   setOrganizationId(null);
   setOrganizationName(null);
   setOrgRole(null);
+  setImpersonation(null);
+  setSupportOrganization(null);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -68,14 +91,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [organizationId, setOrganizationId] = useState<number | null>(null);
   const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [orgRole, setOrgRole] = useState<string | null>(null);
+  const [impersonation, setImpersonation] = useState<ImpersonationInfo | null>(null);
+  const [supportOrganization, setSupportOrganization] = useState<SupportOrganizationInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     try {
       const data = await apiFetch<MeResponse>("/api/auth/me");
-      applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole);
+      applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole, setImpersonation, setSupportOrganization);
     } catch {
-      clearAuthState(setUser, setOrganizationId, setOrganizationName, setOrgRole);
+      clearAuthState(setUser, setOrganizationId, setOrganizationName, setOrgRole, setImpersonation, setSupportOrganization);
     } finally {
       setLoading(false);
     }
@@ -92,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ email, password }),
     });
     const data = await apiFetch<MeResponse>("/api/auth/me");
-    applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole);
+    applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole, setImpersonation, setSupportOrganization);
   }, []);
 
   const signup = useCallback(async (name: string, email: string, password: string) => {
@@ -102,7 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       body: JSON.stringify({ name, email, password }),
     });
     const data = await apiFetch<MeResponse>("/api/auth/me");
-    applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole);
+    applyMeResponse(data, setUser, setOrganizationId, setOrganizationName, setOrgRole, setImpersonation, setSupportOrganization);
   }, []);
 
   const logout = useCallback(async () => {
@@ -111,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore network errors on logout
     } finally {
-      clearAuthState(setUser, setOrganizationId, setOrganizationName, setOrgRole);
+      clearAuthState(setUser, setOrganizationId, setOrganizationName, setOrgRole, setImpersonation, setSupportOrganization);
     }
   }, []);
 
@@ -121,13 +146,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       organizationId,
       organizationName,
       orgRole,
+      impersonation,
+      supportOrganization,
       loading,
       refresh,
       login,
       signup,
       logout,
     }),
-    [user, organizationId, organizationName, orgRole, loading, refresh, login, signup, logout],
+    [user, organizationId, organizationName, orgRole, impersonation, supportOrganization, loading, refresh, login, signup, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

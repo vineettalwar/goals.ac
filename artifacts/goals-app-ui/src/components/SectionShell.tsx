@@ -30,7 +30,7 @@ export function SectionShell({
       projectId={projectId}
       activeProject={activeProject}
       onProjectChange={setProjectId}
-      projectsLoading={loading}
+      projectsLoading={loading && projects.length === 0}
       projectsError={error}
       formatProjectLabel={(project) =>
         `${project.name} — ${project.url?.trim() || "No website"}`

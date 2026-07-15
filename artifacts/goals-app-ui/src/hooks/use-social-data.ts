@@ -1,89 +1,72 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { queryKeys } from "@/lib/queries/keys";
 import type { SocialMetricsResponse, SocialQueueItem, SocialQueueResponse } from "@workspace/app-shell";
 
-type SocialDataState = {
+type SocialData = {
   queue: SocialQueueItem[];
-  queueLoading: boolean;
-  queueError: string | null;
   metrics: SocialMetricsResponse | null;
-  metricsLoading: boolean;
+  queueError: string | null;
   metricsError: string | null;
-  platformFilter: string;
-  setPlatformFilter: (value: string) => void;
-  reload: () => Promise<void>;
 };
 
-export function useSocialData(projectId: string | null): SocialDataState {
-  const [queue, setQueue] = useState<SocialQueueItem[]>([]);
-  const [queueLoading, setQueueLoading] = useState(false);
-  const [queueError, setQueueError] = useState<string | null>(null);
-  const [metrics, setMetrics] = useState<SocialMetricsResponse | null>(null);
-  const [metricsLoading, setMetricsLoading] = useState(false);
-  const [metricsError, setMetricsError] = useState<string | null>(null);
-  const [platformFilter, setPlatformFilter] = useState("all");
+async function fetchSocialData(
+  projectId: string,
+  platformFilter: string,
+): Promise<SocialData> {
+  const platformQuery =
+    platformFilter !== "all" ? `?platform=${encodeURIComponent(platformFilter)}` : "";
 
-  const reload = useCallback(async () => {
-    if (!projectId) {
-      setQueue([]);
-      setMetrics(null);
-      setQueueError(null);
-      setMetricsError(null);
-      setQueueLoading(false);
-      setMetricsLoading(false);
-      return;
-    }
-
-    setQueueLoading(true);
-    setMetricsLoading(true);
-    setQueueError(null);
-    setMetricsError(null);
-
-    const platformQuery =
-      platformFilter !== "all" ? `?platform=${encodeURIComponent(platformFilter)}` : "";
-
-    const [queueResult, metricsResult] = await Promise.allSettled([
-      apiFetch<SocialQueueResponse>(`/api/website-projects/${projectId}/social/queue${platformQuery}`),
-      apiFetch<SocialMetricsResponse>(`/api/website-projects/${projectId}/social/metrics`),
-    ]);
-
-    if (queueResult.status === "fulfilled") {
-      setQueue(queueResult.value.items);
-    } else {
-      setQueue([]);
-      setQueueError(
-        queueResult.reason instanceof Error
-          ? queueResult.reason.message
-          : "Failed to load social queue",
-      );
-    }
-
-    if (metricsResult.status === "fulfilled") {
-      setMetrics(metricsResult.value);
-    } else {
-      setMetrics(null);
-      setMetricsError(
-        metricsResult.reason instanceof Error
-          ? metricsResult.reason.message
-          : "Failed to load social metrics",
-      );
-    }
-
-    setQueueLoading(false);
-    setMetricsLoading(false);
-  }, [projectId, platformFilter]);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
+  const [queueResult, metricsResult] = await Promise.allSettled([
+    apiFetch<SocialQueueResponse>(`/api/website-projects/${projectId}/social/queue${platformQuery}`),
+    apiFetch<SocialMetricsResponse>(`/api/website-projects/${projectId}/social/metrics`),
+  ]);
 
   return {
-    queue,
-    queueLoading,
-    queueError: queueError ?? metricsError,
-    metrics,
-    metricsLoading,
-    metricsError,
+    queue: queueResult.status === "fulfilled" ? queueResult.value.items : [],
+    metrics: metricsResult.status === "fulfilled" ? metricsResult.value : null,
+    queueError:
+      queueResult.status === "rejected"
+        ? queueResult.reason instanceof Error
+          ? queueResult.reason.message
+          : "Failed to load social queue"
+        : null,
+    metricsError:
+      metricsResult.status === "rejected"
+        ? metricsResult.reason instanceof Error
+          ? metricsResult.reason.message
+          : "Failed to load social metrics"
+        : null,
+  };
+}
+
+export function useSocialData(projectId: string | null) {
+  const queryClient = useQueryClient();
+  const [platformFilter, setPlatformFilter] = useState("all");
+
+  const query = useQuery({
+    queryKey: queryKeys.social(projectId, platformFilter),
+    queryFn: () => fetchSocialData(projectId!, platformFilter),
+    enabled: Boolean(projectId),
+    staleTime: 15_000,
+    placeholderData: (previousData) => previousData,
+  });
+
+  const reload = useCallback(async () => {
+    if (!projectId) return;
+    await queryClient.invalidateQueries({ queryKey: queryKeys.social(projectId, platformFilter) });
+  }, [projectId, platformFilter, queryClient]);
+
+  const data = query.data;
+
+  return {
+    queue: data?.queue ?? [],
+    queueLoading: query.isPending && !data,
+    queueError: data?.queueError ?? data?.metricsError ?? null,
+    metrics: data?.metrics ?? null,
+    metricsLoading: query.isPending && !data,
+    metricsError: data?.metricsError ?? null,
     platformFilter,
     setPlatformFilter,
     reload,

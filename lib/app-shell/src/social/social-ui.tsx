@@ -1,6 +1,17 @@
-import type { ReactNode } from "react";
-import { Loader2, RefreshCw, Share2 } from "lucide-react";
+import { useState, type ReactNode } from "react";
+import {
+  BarChart3,
+  Calendar,
+  Clock,
+  Loader2,
+  Mic2,
+  PenLine,
+  RefreshCw,
+  Settings2,
+  Share2,
+} from "lucide-react";
 import { cn } from "../cn";
+import { SectionTabs } from "../section-panels/shared";
 import type { SocialMetricsResponse, SocialQueueItem } from "./types";
 import { SOCIAL_PLATFORM_OPTIONS } from "./types";
 
@@ -72,30 +83,125 @@ export function SocialHubView({
   metrics: SocialMetricsResponse | null;
   metricsLoading: boolean;
 }) {
+  const [tab, setTab] = useState("queue");
   const studioHref = projectId ? `/studio?project=${projectId}` : "/studio";
+  const integrationsHref = projectId ? `/integrations?project=${projectId}` : "/integrations";
+
+  const tabs = [
+    { id: "queue", label: "Queue", icon: <Clock className="h-3.5 w-3.5" /> },
+    { id: "calendar", label: "Calendar", icon: <Calendar className="h-3.5 w-3.5" /> },
+    { id: "compose", label: "Compose", icon: <PenLine className="h-3.5 w-3.5" /> },
+    { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-3.5 w-3.5" /> },
+    { id: "voice", label: "Voice", icon: <Mic2 className="h-3.5 w-3.5" /> },
+    { id: "settings", label: "Settings", icon: <Settings2 className="h-3.5 w-3.5" /> },
+  ];
 
   return (
     <div className="space-y-4">
-      <div className="paper-card p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Share2 className="h-4 w-4 text-primary" />
-          <h2 className="text-sm font-semibold">Social publishing</h2>
+      <SectionTabs tabs={tabs} active={tab} onChange={setTab} />
+
+      {tab === "queue" ? (
+        <QueuePanel
+          queue={queue}
+          queueLoading={queueLoading}
+          queueError={queueError}
+          platformFilter={platformFilter}
+          onPlatformFilterChange={onPlatformFilterChange}
+          onRefreshQueue={onRefreshQueue}
+        />
+      ) : null}
+
+      {tab === "calendar" ? (
+        <div className="paper-card p-5">
+          <h3 className="text-sm font-semibold">Publishing calendar</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {queue.filter((item) => item.scheduledAt).length} scheduled posts in queue.
+          </p>
+          <div className="mt-4 space-y-2">
+            {queue
+              .filter((item) => item.scheduledAt)
+              .slice(0, 12)
+              .map((item) => (
+                <div key={item.id} className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm">
+                  <span className="truncate font-medium">{item.title}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{formatScheduledAt(item.scheduledAt)}</span>
+                </div>
+              ))}
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Schedule and publish social variants from content pieces. Queue management write APIs are
-          rolling out on the edge worker.
-        </p>
-        <div className="mt-4">
+      ) : null}
+
+      {tab === "compose" ? (
+        <div className="paper-card p-6">
+          <Share2 className="h-8 w-8 text-primary" />
+          <h3 className="mt-3 text-sm font-semibold">Compose social posts</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Create LinkedIn, X, and Instagram variants in Content Studio, then queue them here.
+          </p>
           {renderLink({
             href: studioHref,
-            className:
-              "inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground",
-            children: "Open content studio",
+            className: "mt-4 inline-flex h-9 items-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground",
+            children: "Open Content Studio",
           })}
         </div>
-      </div>
+      ) : null}
 
-      <div className="paper-card overflow-hidden">
+      {tab === "analytics" ? (
+        <MetricsPanel metrics={metrics} metricsLoading={metricsLoading} />
+      ) : null}
+
+      {tab === "voice" ? (
+        <div className="paper-card p-6">
+          <Mic2 className="h-8 w-8 text-violet-600" />
+          <h3 className="mt-3 text-sm font-semibold">Platform voice</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Train tone per channel by syncing OAuth-connected accounts or importing sample posts.
+          </p>
+          {renderLink({
+            href: integrationsHref,
+            className: "mt-4 inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-secondary",
+            children: "Connect social accounts",
+          })}
+        </div>
+      ) : null}
+
+      {tab === "settings" ? (
+        <div className="paper-card p-6">
+          <Settings2 className="h-8 w-8 text-muted-foreground" />
+          <h3 className="mt-3 text-sm font-semibold">Social settings</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Default platforms, approval workflow, and autopilot cadence are configured per project.
+          </p>
+          {projectId
+            ? renderLink({
+                href: `/projects/${projectId}`,
+                className: "mt-4 inline-flex text-sm font-medium text-primary hover:underline",
+                children: "Open project settings",
+              })
+            : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function QueuePanel({
+  queue,
+  queueLoading,
+  queueError,
+  platformFilter,
+  onPlatformFilterChange,
+  onRefreshQueue,
+}: {
+  queue: SocialQueueItem[];
+  queueLoading: boolean;
+  queueError: string | null;
+  platformFilter: string;
+  onPlatformFilterChange: (value: string) => void;
+  onRefreshQueue: () => void;
+}) {
+  return (
+    <div className="paper-card overflow-hidden">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-4 py-3">
           <div>
             <h3 className="text-sm font-semibold">Posting queue</h3>
@@ -169,7 +275,17 @@ export function SocialHubView({
           </div>
         )}
       </div>
+  );
+}
 
+function MetricsPanel({
+  metrics,
+  metricsLoading,
+}: {
+  metrics: SocialMetricsResponse | null;
+  metricsLoading: boolean;
+}) {
+  return (
       <div className="paper-card overflow-hidden">
         <div className="border-b border-border px-4 py-3">
           <h3 className="text-sm font-semibold">Performance (30 days)</h3>
@@ -237,6 +353,5 @@ export function SocialHubView({
           </>
         )}
       </div>
-    </div>
   );
 }

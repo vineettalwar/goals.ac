@@ -20,6 +20,7 @@ import {
   completeAiBilling,
   prepareAiBilling,
 } from "@/lib/billing/ai-billing";
+import { edgeStreamingBlocked } from "@/lib/cf-edge-http";
 import { z } from "zod";
 
 const sseHeaders = {
@@ -63,6 +64,9 @@ export async function POST(req: Request) {
   if (projectId != null) {
     const { userId, error } = await requireAuth();
     if (error) return error;
+
+    const blocked = edgeStreamingBlocked();
+    if (blocked) return blocked;
 
     authenticatedUserId = userId!;
     userAiSettings = await loadUserAiSettings(userId!);

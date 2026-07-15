@@ -38,8 +38,10 @@ export type ContentPiece = {
   formatType: string;
   wordCount: number;
   targetKeyword?: string | null;
+  plannedDate?: string | null;
   updatedAt: number | string;
   bodyMarkdown?: string;
+  pieceMetadata?: Record<string, unknown> | null;
 };
 
 export type CmsIntegrationSummary = Record<string, { connected?: boolean } & Record<string, unknown>>;

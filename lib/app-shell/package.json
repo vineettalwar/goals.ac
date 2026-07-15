@@ -19,12 +19,17 @@
     "./autopilot": "./src/autopilot/index.ts",
     "./help": "./src/help/index.ts",
     "./growth-roadmap": "./src/growth-roadmap/index.ts",
-    "./social": "./src/social/index.ts"
+    "./social": "./src/social/index.ts",
+    "./section-panels": "./src/section-panels/index.ts"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@workspace/content-engine": "workspace:*",
     "clsx": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",
+    "recharts": "^2.15.2",
     "tailwind-merge": "catalog:"
   },
   "devDependencies": {

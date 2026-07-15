@@ -1033,7 +1033,7 @@ export function SettingsView({
                   {billingSummary.hasActiveSubscription &&
                   formatRenewalDate(billingSummary.currentPeriodEnd) ? (
                     <p className="text-sm text-muted-foreground">
-                      {billingSummary.plan === "growth" ? "Subscription renews" : "Legacy subscription renews"}{" "}
+                      Subscription renews{" "}
                       on{" "}
                       <span className="text-foreground">
                         {formatRenewalDate(billingSummary.currentPeriodEnd)}

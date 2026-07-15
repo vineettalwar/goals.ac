@@ -36,4 +36,16 @@
     border-radius: var(--radius);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
   }
+
+  .step-dot {
+    @apply flex h-7 w-7 items-center justify-center rounded-full border border-border text-xs font-medium text-muted-foreground;
+  }
+
+  .step-dot.active {
+    @apply border-primary bg-primary text-primary-foreground;
+  }
+
+  .step-dot.complete {
+    @apply border-primary bg-primary/10 text-primary;
+  }
 }

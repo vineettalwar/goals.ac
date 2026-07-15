@@ -1,0 +1,461 @@
+import { withCors } from "@workspace/cf-edge/cors";
+import { db } from "@workspace/db";
+import {
+  brandProfilesTable,
+  CONTENT_FORMAT_TYPES,
+  contentPiecesTable,
+  websiteProjectsTable,
+  type ContentFormatType,
+} from "@workspace/db/schema-sqlite";
+import {
+  buildCacheKey,
+  generateContentPiece,
+  repurposeContentPiece,
+} from "@workspace/content-engine/content/content-studio-generator";
+import { enhanceContentPiece } from "@workspace/content-engine/content/content-piece-enhance";
+import {
+  enrichContentPieceImages,
+  parseImageSettings,
+} from "@workspace/content-engine/articles/article-image-enricher";
+import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
+import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
+import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
+import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
+import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
+import { loadStockCredentialContextForProject } from "@workspace/content-engine/support/integrations/stock-credentials";
+import { rateLimitResponse, RATE_LIMITS } from "@workspace/content-engine/core/rate-limit";
+import { eq } from "drizzle-orm";
+import { z } from "zod";
+import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "./ai-billing";
+import { getAccessibleProject } from "./project-access";
+
+function wordCountFromMarkdown(body: string): number {
+  return body.split(/\s+/).filter(Boolean).length;
+}
+
+async function loadPieceForUser(contentPieceId: number, userId: number) {
+  const [piece] = await db
+    .select()
+    .from(contentPiecesTable)
+    .where(eq(contentPiecesTable.id, contentPieceId))
+    .limit(1);
+
+  if (!piece) return { piece: null, error: "not_found" as const };
+
+  const project = await getAccessibleProject(piece.websiteProjectId, userId);
+  if (!project) return { piece: null, error: "forbidden" as const };
+
+  return { piece, error: null };
+}
+
+async function loadExistingPieceTitles(projectId: number): Promise<string[]> {
+  const rows = await db
+    .select({ title: contentPiecesTable.title })
+    .from(contentPiecesTable)
+    .where(eq(contentPiecesTable.websiteProjectId, projectId));
+  return rows.map((row) => row.title);
+}
+
+async function loadUserAiSettings(userId: number) {
+  const [userApiKey, aiProviderOptions] = await Promise.all([
+    getDecryptedUserGeminiKey(userId),
+    getUserAiProviderOptions(userId),
+  ]);
+  return { userApiKey, aiProviderOptions };
+}
+
+const regenerateBody = z.object({
+  angleHint: z.string().optional(),
+});
+
+const repurposeBody = z.object({
+  targetFormat: z.enum(CONTENT_FORMAT_TYPES as unknown as [string, ...string[]]),
+  existingContent: z.string().optional(),
+});
+
+export async function handleContentPiecesAiWrite(
+  request: Request,
+  path: string,
+  userId: number,
+): Promise<Response | null> {
+  const regenerateMatch = path.match(/^\/api\/content-pieces\/(\d+)\/regenerate$/);
+  if (regenerateMatch && request.method === "POST") {
+    return handleRegenerate(request, Number.parseInt(regenerateMatch[1]!, 10), userId);
+  }
+
+  const enhanceMatch = path.match(/^\/api\/content-pieces\/(\d+)\/enhance$/);
+  if (enhanceMatch && request.method === "POST") {
+    return handleEnhance(request, Number.parseInt(enhanceMatch[1]!, 10), userId);
+  }
+
+  const repurposeMatch = path.match(/^\/api\/content-pieces\/(\d+)\/repurpose$/);
+  if (repurposeMatch && request.method === "POST") {
+    return handleRepurpose(request, Number.parseInt(repurposeMatch[1]!, 10), userId);
+  }
+
+  const imagesMatch = path.match(/^\/api\/content-pieces\/(\d+)\/images\/regenerate$/);
+  if (imagesMatch && request.method === "POST") {
+    return handleImagesRegenerate(request, Number.parseInt(imagesMatch[1]!, 10), userId);
+  }
+
+  return null;
+}
+
+async function handleRegenerate(
+  request: Request,
+  contentPieceId: number,
+  userId: number,
+): Promise<Response> {
+  const limited = await rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs,
+  );
+  if (limited) return withCors(request, limited);
+
+  const body = await request.json().catch(() => ({}));
+  const parsed = regenerateBody.safeParse(body);
+  const angleHint = parsed.success ? parsed.data.angleHint : undefined;
+
+  const access = await loadPieceForUser(contentPieceId, userId);
+  if (access.error === "not_found") {
+    return withCors(request, Response.json({ error: "Content piece not found" }, { status: 404 }));
+  }
+  if (access.error === "forbidden") {
+    return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
+  }
+
+  const piece = access.piece!;
+  const brand = await loadBrandContextForProject(piece.websiteProjectId);
+  if (!brand) {
+    return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId),
+    prepareAiBilling({ userId, tier: "execution", quotaKind: "article" }),
+  ]);
+  if (!billingPrep.ok) return withCors(request, billingPrep.response);
+
+  try {
+    const existingPieceTitles = await loadExistingPieceTitles(piece.websiteProjectId);
+    const result = await generateContentPiece(
+      piece.formatType as ContentFormatType,
+      brand,
+      piece.targetKeyword ?? "",
+      angleHint,
+      true,
+      userApiKey,
+      aiProviderOptions,
+      { existingPieceTitles },
+    );
+
+    const cacheKeyStr = buildCacheKey(
+      piece.formatType,
+      piece.targetKeyword ?? "",
+      brand,
+      angleHint,
+    );
+
+    const [updated] = await db
+      .update(contentPiecesTable)
+      .set({
+        title: result.title,
+        targetKeyword: result.target_keyword,
+        bodyMarkdown: result.body_markdown,
+        wordCount: wordCountFromMarkdown(result.body_markdown),
+        cacheKey: cacheKeyStr,
+        status: "draft",
+        pieceMetadata: result.pieceMetadata ?? null,
+      })
+      .where(eq(contentPiecesTable.id, contentPieceId))
+      .returning();
+
+    await completeAiBilling(billingPrep.ctx, {
+      userId,
+      eventType: "content_regenerate",
+      usedByok: billingPrep.usedByok,
+      tier: "execution",
+      promptTokens: result.generationUsage?.promptTokens,
+      outputTokens: result.generationUsage?.outputTokens,
+      totalTokens: result.generationUsage?.totalTokens,
+    });
+
+    return withCors(request, Response.json(updated));
+  } catch (err) {
+    await cancelAiBilling(billingPrep.ctx);
+    const message = err instanceof Error ? err.message : "Regeneration failed";
+    return withCors(request, Response.json({ error: message }, { status: 503 }));
+  }
+}
+
+async function handleEnhance(
+  request: Request,
+  contentPieceId: number,
+  userId: number,
+): Promise<Response> {
+  const limited = await rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs,
+  );
+  if (limited) return withCors(request, limited);
+
+  const access = await loadPieceForUser(contentPieceId, userId);
+  if (access.error === "not_found") {
+    return withCors(request, Response.json({ error: "Content piece not found" }, { status: 404 }));
+  }
+  if (access.error === "forbidden") {
+    return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
+  }
+
+  const piece = access.piece!;
+  const formatType = piece.formatType as ContentFormatType;
+  if (!isSeoLongformFormat(formatType)) {
+    return withCors(
+      request,
+      Response.json(
+        {
+          error:
+            "Enhance quality is available for blog posts, guides, and other long-form SEO formats",
+        },
+        { status: 400 },
+      ),
+    );
+  }
+
+  const brand = await loadBrandContextForProject(piece.websiteProjectId);
+  if (!brand) {
+    return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const [{ userApiKey, aiProviderOptions }, existingPieceTitles, billingPrep] = await Promise.all([
+    loadUserAiSettings(userId),
+    loadExistingPieceTitles(piece.websiteProjectId),
+    prepareAiBilling({ userId, tier: "rapid", quotaKind: "article" }),
+  ]);
+  if (!billingPrep.ok) return withCors(request, billingPrep.response);
+
+  try {
+    const result = await enhanceContentPiece(
+      {
+        title: piece.title,
+        targetKeyword: piece.targetKeyword ?? "",
+        bodyMarkdown: piece.bodyMarkdown ?? "",
+        formatType,
+        brand: { ...brand, projectId: piece.websiteProjectId },
+        metaDescription: piece.pieceMetadata?.metaDescription ?? null,
+      },
+      existingPieceTitles.filter((title) => title !== piece.title),
+      userApiKey,
+      aiProviderOptions,
+      brand,
+    );
+
+    const [updated] = await db
+      .update(contentPiecesTable)
+      .set({
+        title: result.title,
+        targetKeyword: result.target_keyword,
+        bodyMarkdown: result.body_markdown,
+        wordCount: wordCountFromMarkdown(result.body_markdown),
+        pieceMetadata: result.pieceMetadata ?? null,
+        status: "draft",
+      })
+      .where(eq(contentPiecesTable.id, contentPieceId))
+      .returning();
+
+    await completeAiBilling(billingPrep.ctx, {
+      userId,
+      eventType: "content_enhance",
+      usedByok: billingPrep.usedByok,
+      tier: "rapid",
+    });
+
+    return withCors(request, Response.json(updated));
+  } catch (err) {
+    await cancelAiBilling(billingPrep.ctx);
+    const message = err instanceof Error ? err.message : "Enhancement failed";
+    return withCors(request, Response.json({ error: message }, { status: 503 }));
+  }
+}
+
+async function handleRepurpose(
+  request: Request,
+  contentPieceId: number,
+  userId: number,
+): Promise<Response> {
+  const limited = await rateLimitResponse(
+    `ai-gen:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs,
+  );
+  if (limited) return withCors(request, limited);
+
+  const body = await request.json().catch(() => null);
+  const parsed = repurposeBody.safeParse(body);
+  if (!parsed.success) {
+    return withCors(
+      request,
+      Response.json(
+        { error: parsed.error.errors[0]?.message ?? "Invalid request" },
+        { status: 400 },
+      ),
+    );
+  }
+
+  const access = await loadPieceForUser(contentPieceId, userId);
+  if (access.error === "not_found") {
+    return withCors(request, Response.json({ error: "Content piece not found" }, { status: 404 }));
+  }
+  if (access.error === "forbidden") {
+    return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
+  }
+
+  const piece = access.piece!;
+  const brand = await loadBrandContextForProject(piece.websiteProjectId);
+  if (!brand) {
+    return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const { userApiKey, aiProviderOptions } = await loadUserAiSettings(userId);
+  const sourceContent = parsed.data.existingContent ?? piece.bodyMarkdown ?? "";
+
+  const billingPrep = await prepareAiBilling({
+    userId,
+    tier: "execution",
+    quotaKind: "article",
+  });
+  if (!billingPrep.ok) return withCors(request, billingPrep.response);
+
+  try {
+    const result = await repurposeContentPiece(
+      parsed.data.targetFormat as ContentFormatType,
+      brand,
+      sourceContent,
+      piece.targetKeyword ?? "",
+      userApiKey,
+      aiProviderOptions,
+    );
+
+    const [inserted] = await db
+      .insert(contentPiecesTable)
+      .values({
+        websiteProjectId: piece.websiteProjectId,
+        formatType: parsed.data.targetFormat as ContentFormatType,
+        title: result.title,
+        targetKeyword: result.target_keyword,
+        bodyMarkdown: result.body_markdown,
+        wordCount: wordCountFromMarkdown(result.body_markdown),
+        status: "draft",
+        pieceMetadata: result.pieceMetadata ?? null,
+      })
+      .returning();
+
+    await completeAiBilling(billingPrep.ctx, {
+      userId,
+      eventType: "content_repurpose",
+      usedByok: billingPrep.usedByok,
+      tier: "execution",
+    });
+
+    return withCors(request, Response.json(inserted, { status: 201 }));
+  } catch (err) {
+    await cancelAiBilling(billingPrep.ctx);
+    const message = err instanceof Error ? err.message : "Repurpose failed";
+    return withCors(request, Response.json({ error: message }, { status: 503 }));
+  }
+}
+
+async function handleImagesRegenerate(
+  request: Request,
+  contentPieceId: number,
+  userId: number,
+): Promise<Response> {
+  const access = await loadPieceForUser(contentPieceId, userId);
+  if (access.error === "not_found") {
+    return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+  }
+  if (access.error === "forbidden") {
+    return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
+  }
+
+  const piece = access.piece!;
+  const [[project], [brandProfile], billingPrep] = await Promise.all([
+    db
+      .select({ contentStyle: websiteProjectsTable.contentStyle })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, piece.websiteProjectId))
+      .limit(1),
+    db
+      .select({ companyName: brandProfilesTable.companyName })
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, piece.websiteProjectId))
+      .limit(1),
+    prepareAiBilling({
+      userId,
+      tier: "rapid",
+      quotaKind: "article",
+      companyId: piece.websiteProjectId,
+    }),
+  ]);
+  if (!billingPrep.ok) return withCors(request, billingPrep.response);
+
+  let ai;
+  try {
+    const resolved = await resolveAiClientForUser(userId);
+    ai = resolved.client;
+  } catch {
+    ai = undefined;
+  }
+
+  const excludeImageIds =
+    piece.pieceMetadata?.images?.map((img) => `${img.provider}:${img.remoteId}`) ?? [];
+
+  try {
+    const stockCredentials = await loadStockCredentialContextForProject(piece.websiteProjectId);
+    const enriched = await enrichContentPieceImages(
+      {
+        title: piece.title,
+        target_keyword: piece.targetKeyword,
+        body_markdown: piece.bodyMarkdown,
+        formatType: piece.formatType,
+        pieceMetadata: piece.pieceMetadata ?? undefined,
+      },
+      {
+        imageSettings: parseImageSettings(project?.contentStyle ?? null),
+        ai,
+        brandName: brandProfile?.companyName ?? undefined,
+        excludeImageIds,
+        stockCredentials,
+      },
+    );
+
+    const [updated] = await db
+      .update(contentPiecesTable)
+      .set({
+        bodyMarkdown: enriched.body_markdown,
+        pieceMetadata: enriched.pieceMetadata,
+        wordCount: wordCountFromMarkdown(enriched.body_markdown),
+      })
+      .where(eq(contentPiecesTable.id, contentPieceId))
+      .returning();
+
+    await completeAiBilling(billingPrep.ctx, {
+      userId,
+      eventType: "image_regeneration",
+      usedByok: billingPrep.usedByok,
+      tier: "rapid",
+      companyId: piece.websiteProjectId,
+    });
+
+    return withCors(request, Response.json({ piece: updated }));
+  } catch (err) {
+    await cancelAiBilling(
+      billingPrep.ctx,
+      err instanceof Error ? err.message : "image_regeneration_failed",
+    );
+    const message = err instanceof Error ? err.message : "Image regeneration failed";
+    return withCors(request, Response.json({ error: message }, { status: 500 }));
+  }
+}

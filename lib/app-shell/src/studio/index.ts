@@ -6,6 +6,9 @@ export {
   StudioNewContentButton,
   StudioView,
 } from "./studio-ui";
+export { StudioCalendarView } from "./studio-calendar";
+export { BrandAiProfileCard, StudioAiReadinessBanner, type BrandProfileSummary } from "./brand-ai-profile-card";
+export { aiProviderUnavailableMessage } from "./studio-hub-utils";
 export {
   filterStudioPieces,
   formatTypeLabel,
@@ -16,6 +19,7 @@ export {
   studioHubPath,
   studioProjectPath,
   studioStatusCounts,
+  type LegacyItem,
   type StudioLinkProps,
   type StudioPiece,
   type StudioSortKey,

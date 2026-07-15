@@ -3,8 +3,11 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import {
   ContentPieceNotFound,
   ContentPiecePublishDialog,
+  ContentPieceRepurposeDialog,
   ContentPieceView,
+  contentPieceCanDelete,
   contentPieceCanGenerate,
+  contentPieceCanMarkReady,
   contentPieceCanPublish,
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
@@ -17,6 +20,7 @@ export function ContentPiecePage() {
   const navigate = useNavigate();
   const autoGenerateRequested = useRef(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
+  const [repurposeDialogOpen, setRepurposeDialogOpen] = useState(false);
   const {
     loading,
     error,
@@ -34,6 +38,20 @@ export function ContentPiecePage() {
     humanizing,
     humanizeMessage,
     humanize,
+    deleting,
+    deletePiece,
+    markingReady,
+    markReady,
+    regenerating,
+    regenerateMessage,
+    regenerate,
+    enhancing,
+    enhanceMessage,
+    enhance,
+    repurpose,
+    regeneratingImages,
+    regenerateImages,
+    stockImagesConfigured,
     publishing,
     publishingState,
     publishMessage,
@@ -57,7 +75,7 @@ export function ContentPiecePage() {
     void generate();
   }, [searchParams, piece, generate, setSearchParams]);
 
-  if (authLoading || loading) {
+  if ((authLoading && !user) || (loading && !piece)) {
     return <p className="p-8 text-muted-foreground">Loading content…</p>;
   }
 
@@ -104,12 +122,35 @@ export function ContentPiecePage() {
         humanizing={humanizing}
         humanizeMessage={humanizeMessage}
         onHumanize={humanize}
+        regenerating={regenerating}
+        regenerateMessage={regenerateMessage}
+        onRegenerate={regenerate}
+        enhancing={enhancing}
+        enhanceMessage={enhanceMessage}
+        onEnhance={enhance}
+        regeneratingImages={regeneratingImages}
+        onRegenerateImages={stockImagesConfigured ? regenerateImages : undefined}
         publishing={publishing || Boolean(publishingState)}
         publishingState={publishingState}
         publishMessage={publishMessage}
         onPublish={
           contentPieceCanPublish(piece.status) ? () => setPublishDialogOpen(true) : undefined
         }
+        onDelete={
+          contentPieceCanDelete(piece.status)
+            ? async () => {
+                await deletePiece();
+                navigate(`/studio?project=${piece.websiteProjectId}`, { replace: true });
+              }
+            : undefined
+        }
+        deleting={deleting}
+        onMarkReady={
+          contentPieceCanMarkReady(piece.status, piece.bodyMarkdown) ? markReady : undefined
+        }
+        markingReady={markingReady}
+        onRepurpose={() => setRepurposeDialogOpen(true)}
+        stockImagesConfigured={stockImagesConfigured}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}
@@ -127,6 +168,17 @@ export function ContentPiecePage() {
         onPublish={async (platform) => {
           await publishToDestination(platform);
           setPublishDialogOpen(false);
+        }}
+      />
+
+      <ContentPieceRepurposeDialog
+        open={repurposeDialogOpen}
+        onClose={() => setRepurposeDialogOpen(false)}
+        pieceId={piece.id}
+        currentFormat={piece.formatType}
+        onRepurpose={repurpose}
+        onSuccess={(newPieceId) => {
+          navigate(`/content-piece/${newPieceId}`, { replace: true });
         }}
       />
     </>

@@ -16,4 +16,6 @@ export * from "./autopilot";
 export * from "./help";
 export * from "./growth-roadmap";
 export * from "./social";
+export * from "./section-panels";
 export * from "./section";
+export type { BrandProfileSummary, LegacyItem } from "./studio";

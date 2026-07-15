@@ -7,8 +7,6 @@ import {
   brandProfilesTable,
   briefsTable,
   geoAuditsTable,
-  trackedKeywordsTable,
-  keywordOpportunitiesTable,
   competitorAnalysesTable,
   roadmapsTable,
   companiesTable,
@@ -16,6 +14,7 @@ import {
   organizationMembersTable,
 } from "@workspace/db/schema-sqlite";
 import { and, desc, eq, getTableColumns, inArray, isNull, or } from "drizzle-orm";
+import type { SessionClaims } from "@workspace/cf-edge/jwt";
 import { withCors } from "@workspace/cf-edge/cors";
 import {
   getAccessibleProject,
@@ -37,12 +36,15 @@ import { handleSearchPropertiesGet, handleSearchPropertiesAvailablePost } from "
 import { handleOrgMembersRead } from "./org-members";
 import { handleBillingStatusGet } from "./billing-status";
 import { handleSocialMetricsGet, handleSocialQueueGet } from "./social-queue";
+import { getPlatformStockImageStatus } from "@workspace/stock-images";
 
 export type ReadWorkerEnv = {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   BING_WEBMASTER_CLIENT_ID?: string;
   BING_WEBMASTER_CLIENT_SECRET?: string;
+  UNSPLASH_ACCESS_KEY?: string;
+  PEXELS_API_KEY?: string;
 };
 
 export async function handleAuthenticatedRead(
@@ -50,8 +52,15 @@ export async function handleAuthenticatedRead(
   path: string,
   userId: number,
   env: ReadWorkerEnv,
+  session?: SessionClaims,
 ): Promise<Response | null> {
   const url = new URL(request.url);
+
+  if (path === "/api/platform/stock-images/status" && request.method === "GET") {
+    if (env.UNSPLASH_ACCESS_KEY) process.env.UNSPLASH_ACCESS_KEY = env.UNSPLASH_ACCESS_KEY;
+    if (env.PEXELS_API_KEY) process.env.PEXELS_API_KEY = env.PEXELS_API_KEY;
+    return withCors(request, Response.json(getPlatformStockImageStatus()));
+  }
 
   if (path === "/api/auth/me" && request.method === "GET") {
     const [user, orgSettings, membership] = await Promise.all([
@@ -88,6 +97,30 @@ export async function handleAuthenticatedRead(
     if (!user) {
       return withCors(request, Response.json({ error: "User not found" }, { status: 404 }));
     }
+
+    const impersonation =
+      session?.impersonatorId != null
+        ? {
+            adminId: Number.parseInt(session.impersonatorId, 10),
+            adminName: session.impersonatorName ?? null,
+            adminEmail: session.impersonatorEmail ?? null,
+          }
+        : null;
+
+    const supportOrganization =
+      session?.supportOrganizationId != null
+        ? {
+            id: session.supportOrganizationId,
+            name: session.supportOrganizationName ?? "",
+          }
+        : null;
+
+    const organizationId =
+      session?.supportOrganizationId ?? membership?.organizationId ?? null;
+    const organizationName =
+      session?.supportOrganizationName ?? membership?.organizationName ?? null;
+    const orgRole = session?.supportOrganizationId ? "owner" : (membership?.orgRole ?? null);
+
     return withCors(
       request,
       Response.json({
@@ -101,9 +134,11 @@ export async function handleAuthenticatedRead(
         hasGeminiKey: Boolean(orgSettings?.encryptedGeminiKey),
         hasGoogleId: Boolean(user.googleId),
         hasPassword: Boolean(user.passwordHash),
-        orgRole: membership?.orgRole ?? null,
-        organizationId: membership?.organizationId ?? null,
-        organizationName: membership?.organizationName ?? null,
+        orgRole,
+        organizationId,
+        organizationName,
+        impersonation,
+        supportOrganization,
       }),
     );
   }
@@ -241,57 +276,6 @@ export async function handleAuthenticatedRead(
     return withCors(request, Response.json(pieces));
   }
 
-  const projectContentMatch = path.match(/^\/api\/website-projects\/(\d+)\/content$/);
-  if (projectContentMatch && request.method === "GET") {
-    const projectId = Number.parseInt(projectContentMatch[1]!, 10);
-    const project = await getAccessibleProject(projectId, userId);
-    if (!project) {
-      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
-    }
-    const [contentPieces, geoAudits, competitorAnalyses, projectGoals] = await Promise.all([
-      db
-        .select(getTableColumns(contentPiecesTable))
-        .from(contentPiecesTable)
-        .where(eq(contentPiecesTable.websiteProjectId, projectId))
-        .orderBy(desc(contentPiecesTable.updatedAt))
-        .limit(50),
-      db
-        .select()
-        .from(geoAuditsTable)
-        .where(
-          or(
-            eq(geoAuditsTable.websiteProjectId, projectId),
-            isNull(geoAuditsTable.websiteProjectId),
-          ),
-        )
-        .orderBy(desc(geoAuditsTable.createdAt))
-        .limit(20),
-      db
-        .select()
-        .from(competitorAnalysesTable)
-        .where(eq(competitorAnalysesTable.websiteProjectId, projectId))
-        .orderBy(desc(competitorAnalysesTable.createdAt))
-        .limit(20),
-      db
-        .select(getTableColumns(goalsTable))
-        .from(goalsTable)
-        .where(eq(goalsTable.projectId, projectId))
-        .orderBy(desc(goalsTable.updatedAt)),
-    ]);
-    return withCors(
-      request,
-      Response.json({
-        contentPieces,
-        geoAudits,
-        competitorAnalyses,
-        goals: projectGoals,
-        contentStrategies: [],
-        seoArticles: [],
-        roadmaps: [],
-      }),
-    );
-  }
-
   const projectBrandMatch = path.match(/^\/api\/website-projects\/(\d+)\/brand-profile$/);
   if (projectBrandMatch && request.method === "GET") {
     const projectId = Number.parseInt(projectBrandMatch[1]!, 10);
@@ -311,6 +295,34 @@ export async function handleAuthenticatedRead(
         scrapeStatus: project.scrapeStatus,
         pageCount: project.pageCount ?? 0,
         primaryKeywords: brandProfile?.primaryKeywords ?? [],
+      }),
+    );
+  }
+
+  const projectBrandVoiceMatch = path.match(/^\/api\/website-projects\/(\d+)\/brand-profile\/voice$/);
+  if (projectBrandVoiceMatch && request.method === "GET") {
+    const projectId = Number.parseInt(projectBrandVoiceMatch[1]!, 10);
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+    const [brandProfile] = await db
+      .select()
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, projectId))
+      .limit(1);
+    if (!brandProfile) {
+      return withCors(request, Response.json({ error: "Brand profile not found" }, { status: 404 }));
+    }
+    return withCors(
+      request,
+      Response.json({
+        writingExamples: brandProfile.writingExamples,
+        brandGlossary: brandProfile.brandGlossary,
+        antiPatterns: brandProfile.antiPatterns,
+        typicalStructure: brandProfile.typicalStructure,
+        doWords: brandProfile.doWords,
+        dontWords: brandProfile.dontWords,
       }),
     );
   }
@@ -336,28 +348,6 @@ export async function handleAuthenticatedRead(
       request,
       Response.json(parseVisibilitySettings(project.visibilitySettings)),
     );
-  }
-
-  const keywordOppMatch = path.match(/^\/api\/website-projects\/(\d+)\/keyword-opportunities$/);
-  if (keywordOppMatch && request.method === "GET") {
-    const projectId = Number.parseInt(keywordOppMatch[1]!, 10);
-    const project = await getAccessibleProject(projectId, userId);
-    if (!project) {
-      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
-    }
-    const status = url.searchParams.get("status") ?? "open";
-    const opportunities = await db
-      .select()
-      .from(keywordOpportunitiesTable)
-      .where(
-        and(
-          eq(keywordOpportunitiesTable.websiteProjectId, projectId),
-          eq(keywordOpportunitiesTable.status, status),
-        ),
-      )
-      .orderBy(desc(keywordOpportunitiesTable.opportunityScore))
-      .limit(100);
-    return withCors(request, Response.json({ opportunities }));
   }
 
   if (path === "/api/goals" && request.method === "GET") {
@@ -393,23 +383,6 @@ export async function handleAuthenticatedRead(
       .where(eq(goalsTable.projectId, projectId))
       .orderBy(desc(briefsTable.updatedAt));
     return withCors(request, Response.json({ briefs }));
-  }
-
-  if (path === "/api/tracked-keywords" && request.method === "GET") {
-    const projectId = parsePositiveInt(url.searchParams.get("projectId"));
-    if (!projectId) {
-      return withCors(request, Response.json({ error: "projectId required" }, { status: 400 }));
-    }
-    const project = await getAccessibleProject(projectId, userId);
-    if (!project) {
-      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
-    }
-    const trackedKeywords = await db
-      .select()
-      .from(trackedKeywordsTable)
-      .where(eq(trackedKeywordsTable.websiteProjectId, projectId))
-      .orderBy(desc(trackedKeywordsTable.updatedAt));
-    return withCors(request, Response.json({ trackedKeywords }));
   }
 
   if (path === "/api/geo-audits" && request.method === "GET") {
@@ -489,6 +462,33 @@ export async function handleAuthenticatedRead(
             .orderBy(desc(competitorAnalysesTable.createdAt))
             .limit(50);
     return withCors(request, Response.json({ analyses: rows }));
+  }
+
+  const competitorAnalysisMatch = path.match(/^\/api\/competitor-analyses\/(\d+)$/);
+  if (competitorAnalysisMatch && request.method === "GET") {
+    const id = Number.parseInt(competitorAnalysisMatch[1]!, 10);
+    if (!Number.isFinite(id)) {
+      return withCors(request, Response.json({ error: "Invalid analysis id" }, { status: 400 }));
+    }
+
+    const [row] = await db
+      .select()
+      .from(competitorAnalysesTable)
+      .where(eq(competitorAnalysesTable.id, id))
+      .limit(1);
+
+    if (!row) {
+      return withCors(request, Response.json({ error: "Competitor analysis not found" }, { status: 404 }));
+    }
+
+    if (row.websiteProjectId) {
+      const access = await getAccessibleProject(row.websiteProjectId, userId);
+      if (!access) {
+        return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+      }
+    }
+
+    return withCors(request, Response.json({ id: row.id, ...row.result, createdAt: row.createdAt }));
   }
 
   const contentMatch = path.match(/^\/api\/content-pieces\/(\d+)$/);

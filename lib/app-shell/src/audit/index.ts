@@ -1,6 +1,7 @@
 export {
   GeoAuditDetailView,
   GeoAuditListView,
+  GeoAuditRunPanel,
 } from "./audit-ui";
 export {
   auditDetailPath,

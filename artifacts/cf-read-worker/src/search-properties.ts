@@ -1,11 +1,12 @@
-import { db } from "@workspace/db";
+import { db, countDistinctAsInt } from "@workspace/db";
 import {
+  gscSearchQueriesTable,
   platformSettingsTable,
   SEARCH_PROPERTY_PROVIDERS,
   searchPropertyConnectionsTable,
   type SearchPropertyProvider,
 } from "@workspace/db/schema-sqlite";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
 import {
   encryptStoredTokens,
@@ -15,7 +16,7 @@ import {
   resolveAccessToken,
   type SearchPropertyTokenEnv,
 } from "@workspace/cf-edge/search-property-client";
-import { getAccessibleProject } from "./project-access";
+import { getAccessibleProject, requireProjectAccess } from "./project-access";
 
 const AI_REPORT_LABELS: Record<SearchPropertyProvider, string> = {
   google_search_console: "Generative AI performance (Search Console)",
@@ -135,6 +136,56 @@ async function oauthConfigured(env: {
     googleSearchConsole: googleIntegrationsEnabled && hasGoogleCredentials(env),
     bingWebmaster: bingWebmasterEnabled && hasBingCredentials(env),
   };
+}
+
+export async function handleGscSyncStatusGet(
+  request: Request,
+  projectId: number,
+  userId: number,
+): Promise<Response> {
+  const access = await requireProjectAccess(projectId, userId);
+  if (!access.ok) {
+    return withCors(request, Response.json({ error: access.error }, { status: access.status }));
+  }
+
+  const [connection] = await db
+    .select({
+      propertyVerified: searchPropertyConnectionsTable.propertyVerified,
+      propertyUrl: searchPropertyConnectionsTable.propertyUrl,
+    })
+    .from(searchPropertyConnectionsTable)
+    .where(
+      and(
+        eq(searchPropertyConnectionsTable.projectId, projectId),
+        eq(searchPropertyConnectionsTable.provider, "google_search_console"),
+      ),
+    )
+    .limit(1);
+
+  const [stats] = await db
+    .select({
+      lastSyncedAt: sql<Date | null>`max(${gscSearchQueriesTable.ingestedAt})`,
+      queryCount: countDistinctAsInt(gscSearchQueriesTable.query),
+    })
+    .from(gscSearchQueriesTable)
+    .where(eq(gscSearchQueriesTable.projectId, projectId));
+
+  const lastSyncedAt =
+    stats?.lastSyncedAt instanceof Date
+      ? stats.lastSyncedAt.toISOString()
+      : stats?.lastSyncedAt != null
+        ? String(stats.lastSyncedAt)
+        : null;
+
+  return withCors(
+    request,
+    Response.json({
+      connected: Boolean(connection?.propertyUrl),
+      propertyVerified: connection?.propertyVerified ?? false,
+      lastSyncedAt,
+      queryCount: stats?.queryCount ?? 0,
+    }),
+  );
 }
 
 export async function handleSearchPropertiesGet(

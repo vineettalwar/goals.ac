@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthPageShell, AuthView } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { getApiBase } from "@/lib/api";
@@ -8,14 +8,19 @@ export function SignupPage() {
   const { user, loading, signup } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
 
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(searchParams.get("email") ?? "");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const from = (location.state as { from?: string } | null)?.from ?? "/onboarding";
+  const callbackUrl = searchParams.get("callbackUrl");
+  const from =
+    callbackUrl ??
+    (location.state as { from?: string } | null)?.from ??
+    "/onboarding";
 
   useEffect(() => {
     if (!loading && user) navigate(from, { replace: true });

@@ -6,10 +6,12 @@
   "exports": {
     ".": "./src/index.ts",
     "./plans": "./src/plans.ts",
-    "./public-plans": "./src/public-plans.ts"
+    "./public-plans": "./src/public-plans.ts",
+    "./stripe-org-sync": "./src/stripe-org-sync.ts"
   },
   "dependencies": {
     "@workspace/db": "workspace:*",
+    "@workspace/platform-admin": "workspace:*",
     "@workspace/security": "workspace:*",
     "drizzle-orm": "catalog:",
     "stripe": "^18.4.0"

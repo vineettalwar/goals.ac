@@ -23,18 +23,18 @@ import { aiProviderUnavailableMessage } from "@/lib/platform/ai-providers-status
 import type { AiProviderId } from "@workspace/ai-providers/config";
 import { BrandAiProfileCard } from "./brand-ai-profile-card";
 import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
-import { loadContentStudioData, type LegacyItem } from "./content-studio-load-data";
+import { loadContentStudioData } from "./content-studio-load-data";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import { cn } from "@/lib/utils";
 import { MonthCalendar } from "./content-studio-calendar";
-import { LegacyCard, StudioPieceCard } from "./content-studio-list-items";
+import { StudioPieceCard } from "./content-studio-list-items";
 import { ContentStudioHubFilters } from "./content-studio-hub-filters";
 import {
-  isStudioPiece,
+  filterPieces,
+  pieceStatusCounts,
   sortItems,
   type ContentPieceRow,
-  type HubItem,
   type SortKey,
   type StudioPiece,
 } from "./content-studio-utils";
@@ -53,7 +53,6 @@ type StudioLoadState = {
   aiReady: boolean | null;
   activeProvider: AiProviderId;
   pieces: StudioPiece[];
-  legacyItems: LegacyItem[];
   cmsConnections: CmsConnectionSnapshot;
   primaryBlogDestination: string | null;
 };
@@ -63,7 +62,6 @@ const initialStudioLoadState: StudioLoadState = {
   aiReady: null,
   activeProvider: "gemini",
   pieces: [],
-  legacyItems: [],
   cmsConnections: {},
   primaryBlogDestination: null,
 };
@@ -90,7 +88,6 @@ export function ContentStudioClient({
     aiReady,
     activeProvider,
     pieces,
-    legacyItems,
     cmsConnections,
     primaryBlogDestination,
   } = studioData;
@@ -99,7 +96,6 @@ export function ContentStudioClient({
   const [createOpen, setCreateOpen] = useState(initialCreateOpen);
   const [briefDraft, setBriefDraft] = useState<BriefContentDraft | null>(initialBriefDraft);
   const [filterStatus, setFilterStatus] = useState("all");
-  const [filterSource, setFilterSource] = useState("all");
   const [filterFormat, setFilterFormat] = useState("all");
   const [sortKey, setSortKey] = useState<SortKey>("newest");
   const [activeDragId, setActiveDragId] = useState<number | null>(null);
@@ -115,7 +111,6 @@ export function ContentStudioClient({
         aiReady: data.aiReady,
         activeProvider: data.activeProvider,
         pieces: data.pieces,
-        legacyItems: data.legacyItems,
         cmsConnections: data.cmsConnections,
         primaryBlogDestination: data.primaryBlogDestination,
       },
@@ -172,29 +167,12 @@ export function ContentStudioClient({
     });
   }
 
-  const allItems: HubItem[] = useMemo(() => [...pieces, ...legacyItems], [pieces, legacyItems]);
-
-  const filtered = allItems.filter((item) => {
-    if (filterSource !== "all" && item.source !== filterSource) return false;
-    if (filterStatus !== "all" && item.status !== filterStatus) return false;
-    if (filterFormat !== "all") {
-      if (!isStudioPiece(item)) return false;
-      if (item.formatType !== filterFormat) return false;
-    }
-    return true;
-  });
-
-  const sorted = sortItems(filtered, sortKey);
-  const studioSorted = sorted.filter(isStudioPiece);
-  const legacySorted = sorted.filter((i) => !isStudioPiece(i)) as LegacyItem[];
-
-  const statsBreakdown = [
-    { label: "Studio", count: pieces.length, color: "text-primary" },
-    { label: "Strategy Items", count: legacyItems.filter((i) => i.source === "content_strategy").length, color: "text-purple-500" },
-    { label: "SEO Articles", count: legacyItems.filter((i) => i.source === "seo_article").length, color: "text-blue-500" },
-    { label: "GEO Audits", count: legacyItems.filter((i) => i.source === "geo_audit").length, color: "text-emerald-500" },
-    { label: "Roadmaps", count: legacyItems.filter((i) => i.source === "roadmap").length, color: "text-amber-500" },
-  ].filter((s) => s.count > 0);
+  const filtered = useMemo(
+    () => filterPieces(pieces, filterStatus, filterFormat),
+    [pieces, filterStatus, filterFormat],
+  );
+  const sorted = useMemo(() => sortItems(filtered, sortKey), [filtered, sortKey]);
+  const statsBreakdown = useMemo(() => pieceStatusCounts(pieces), [pieces]);
 
   function handleDragEnd(event: DragEndEvent) {
     setActiveDragId(null);
@@ -262,8 +240,8 @@ export function ContentStudioClient({
           >
             <Icon className="h-4 w-4" />
             {label}
-            {id === "hub" && allItems.length > 0 && (
-              <Badge variant="muted" className="text-xs">{allItems.length}</Badge>
+            {id === "hub" && pieces.length > 0 && (
+              <Badge variant="muted" className="text-xs">{pieces.length}</Badge>
             )}
           </button>
         ))}
@@ -271,17 +249,18 @@ export function ContentStudioClient({
 
       {tab === "hub" && (
         <ContentStudioHubFilters
-          filterSource={filterSource}
           filterFormat={filterFormat}
           filterStatus={filterStatus}
           sortKey={sortKey}
-          allItems={allItems}
+          totalCount={pieces.length}
           statsBreakdown={statsBreakdown}
-          onFilterSourceChange={setFilterSource}
           onFilterFormatChange={setFilterFormat}
           onFilterStatusChange={setFilterStatus}
           onSortKeyChange={(v) => setSortKey(v as SortKey)}
-          onClearFilters={() => { setFilterFormat("all"); setFilterStatus("all"); setFilterSource("all"); }}
+          onClearFilters={() => {
+            setFilterFormat("all");
+            setFilterStatus("all");
+          }}
         />
       )}
 
@@ -291,34 +270,19 @@ export function ContentStudioClient({
         sorted.length === 0 ? (
           <div className="paper-card rounded-xl flex flex-col items-center justify-center p-16 text-center">
             <FileText className="h-10 w-10 text-muted-foreground mb-3" />
-            <p className="font-medium">{allItems.length === 0 ? "No content yet" : "No items match filters"}</p>
+            <p className="font-medium">{pieces.length === 0 ? "No content yet" : "No items match filters"}</p>
           </div>
         ) : (
-          <div className="space-y-6">
-            {studioSorted.length > 0 && (
-              <section className="space-y-3">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Studio pieces</h3>
-                {studioSorted.map((piece) => (
-                  <StudioPieceCard
-                    key={piece.id}
-                    piece={piece}
-                    projectId={projectId}
-                    onDelete={handleDelete}
-                    onMarkReady={handleMarkReady}
-                  />
-                ))}
-              </section>
-            )}
-            {legacySorted.length > 0 && (
-              <section className="space-y-3">
-                <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                  Legacy content <Badge variant="muted" className="ml-2">{legacySorted.length}</Badge>
-                </h3>
-                {legacySorted.map((item) => (
-                  <LegacyCard key={`${item.source}-${item.id}`} item={item} />
-                ))}
-              </section>
-            )}
+          <div className="space-y-3">
+            {sorted.map((piece) => (
+              <StudioPieceCard
+                key={piece.id}
+                piece={piece}
+                projectId={projectId}
+                onDelete={handleDelete}
+                onMarkReady={handleMarkReady}
+              />
+            ))}
           </div>
         )
       ) : (

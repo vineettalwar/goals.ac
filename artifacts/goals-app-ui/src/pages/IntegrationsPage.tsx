@@ -42,7 +42,7 @@ type CmsIntegrationsResponse = Record<string, { connected?: boolean } & Record<s
 export function IntegrationsPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { projectId, activeProject, loading: projectsLoading } = useActiveProject();
+  const { projectId, activeProject, loading: projectsLoading, projects } = useActiveProject();
   const {
     loading,
     error,
@@ -367,7 +367,7 @@ export function IntegrationsPage() {
   const showEspFullAppDialog =
     connectEsp !== null && !ESP_NATIVE_CONNECT_PLATFORMS.has(connectEsp);
 
-  if (authLoading || projectsLoading) {
+  if (authLoading || (projectsLoading && projects.length === 0)) {
     return <p className="p-8 text-muted-foreground">Loading…</p>;
   }
 

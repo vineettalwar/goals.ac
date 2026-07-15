@@ -18,6 +18,8 @@
     "@workspace/keyword-research-provider": "workspace:*",
     "@workspace/stock-images": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@workspace/platform-admin": "workspace:*",
+    "@workspace/seo-tools": "workspace:*",
     "drizzle-orm": "catalog:",
     "next-auth": "^5.0.0-beta.30"
   },

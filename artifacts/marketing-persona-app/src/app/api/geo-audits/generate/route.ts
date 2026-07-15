@@ -5,6 +5,8 @@ import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { requireProjectAccess } from "@/lib/projects/project-access";
 import { normalizeHttpUrl } from "@/lib/utils/normalize-url";
+import { enqueueOnEdge, shouldQueueWrites } from "@/lib/cf-edge-http";
+import { QUEUES } from "@workspace/jobs/queues";
 import { z } from "zod";
 
 const CreateBody = z.object({
@@ -32,6 +34,15 @@ export async function POST(req: Request) {
   if (parsed.data.websiteProjectId) {
     const access = await requireProjectAccess(parsed.data.websiteProjectId, userId!);
     if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+  }
+
+  if (shouldQueueWrites() && parsed.data.websiteProjectId) {
+    const queued = await enqueueOnEdge(
+      QUEUES.geoReauditSweep,
+      { projectId: parsed.data.websiteProjectId },
+      { userId },
+    );
+    if (queued) return queued;
   }
 
   let auditResult;

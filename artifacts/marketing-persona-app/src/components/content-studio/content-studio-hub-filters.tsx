@@ -8,46 +8,31 @@ import { FilterSelect } from "./content-studio-list-items";
 import type { SortKey } from "./content-studio-utils";
 
 export function ContentStudioHubFilters({
-  filterSource,
   filterFormat,
   filterStatus,
   sortKey,
-  allItems,
+  totalCount,
   statsBreakdown,
-  onFilterSourceChange,
   onFilterFormatChange,
   onFilterStatusChange,
   onSortKeyChange,
   onClearFilters,
 }: {
-  filterSource: string;
   filterFormat: string;
   filterStatus: string;
   sortKey: SortKey;
-  allItems: Array<unknown>;
+  totalCount: number;
   statsBreakdown: Array<{ label: string; count: number; color: string }>;
-  onFilterSourceChange: (v: string) => void;
   onFilterFormatChange: (v: string) => void;
   onFilterStatusChange: (v: string) => void;
   onSortKeyChange: (v: SortKey) => void;
   onClearFilters: () => void;
 }) {
+  const hasActiveFilters = filterFormat !== "all" || filterStatus !== "all";
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-2">
-        <FilterSelect
-          value={filterSource}
-          onChange={onFilterSourceChange}
-          ariaLabel="Filter by source"
-          options={[
-            { value: "all", label: "All sources" },
-            { value: "studio", label: "Studio" },
-            { value: "seo_article", label: "SEO Articles" },
-            { value: "content_strategy", label: "Strategy Items" },
-            { value: "geo_audit", label: "GEO Audits" },
-            { value: "roadmap", label: "Roadmaps" },
-          ]}
-        />
         <FilterSelect
           value={filterFormat}
           onChange={onFilterFormatChange}
@@ -82,16 +67,16 @@ export function ContentStudioHubFilters({
           ]}
           icon={<ArrowUpDown className="h-3 w-3" />}
         />
-        {(filterFormat !== "all" || filterStatus !== "all" || filterSource !== "all") && (
+        {hasActiveFilters ? (
           <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={onClearFilters}>
             <RefreshCw className="h-3 w-3 mr-1" /> Clear
           </Button>
-        )}
+        ) : null}
       </div>
 
-      {statsBreakdown.length > 0 && (
+      {totalCount > 0 ? (
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>{allItems.length} total</span>
+          <span>{totalCount} total</span>
           {statsBreakdown.map((s) => (
             <span key={s.label} className="flex items-center gap-1.5">
               <span className="w-px h-3 bg-border" />
@@ -100,7 +85,7 @@ export function ContentStudioHubFilters({
             </span>
           ))}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

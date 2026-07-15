@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Search, Sparkles } from "lucide-react";
 import { cn } from "../cn";
+import { btnPrimary, inputClass, ScoreRing } from "../section-panels/shared";
 import {
   auditDetailPath,
   formatAuditDate,
@@ -50,52 +51,98 @@ function IssueStatusBadge({ status }: { status: GeoIssue["status"] }) {
   );
 }
 
+export function GeoAuditRunPanel({
+  url,
+  onUrlChange,
+  onSubmit,
+  running,
+  error,
+}: {
+  url: string;
+  onUrlChange: (value: string) => void;
+  onSubmit?: () => void;
+  running?: boolean;
+  error?: string | null;
+}) {
+  return (
+    <div className="paper-card mb-6 space-y-4 p-5">
+      <div>
+        <h2 className="flex items-center gap-2 text-sm font-semibold">
+          <Search className="h-4 w-4 text-violet-600" /> Run GEO audit
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Checks title, schema.org, heading structure, and Open Graph for AI discoverability.
+        </p>
+      </div>
+      {error ? <p className="text-sm text-red-700">{error}</p> : null}
+      <div className="flex flex-wrap gap-2">
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => onUrlChange(e.target.value)}
+          placeholder="https://yoursite.com/page"
+          className={cn(inputClass, "max-w-xl flex-1")}
+        />
+        <button type="button" disabled={running || !url.trim()} onClick={onSubmit} className={btnPrimary}>
+          {running ? "Auditing…" : "Run audit"}
+        </button>
+      </div>
+      <ul className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+        {["Title & Meta", "Schema.org", "H1/H2 structure", "Open Graph"].map((check) => (
+          <li key={check} className="rounded-full border border-border px-2 py-1">
+            {check}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function GeoAuditListView({
   audits,
   error,
   loading,
   renderLink,
+  runPanel,
 }: {
   audits: GeoAuditListItem[];
   error?: string | null;
   loading?: boolean;
   renderLink: (props: AuditLinkProps) => ReactNode;
+  runPanel?: ReactNode;
 }) {
-  if (loading) {
-    return <p className="text-sm text-muted-foreground">Loading audits…</p>;
-  }
-
-  if (error) {
-    return <p className="text-sm text-red-700">{error}</p>;
-  }
-
-  if (audits.length === 0) {
-    return (
-      <div className="paper-card p-8 text-center text-sm text-muted-foreground">
-        No GEO audits yet. Run an audit from AI visibility or the marketing tools.
-      </div>
-    );
-  }
-
   return (
-    <div className="paper-card divide-y overflow-hidden">
-      {audits.map((audit) => (
-        <AuditLink
-          key={audit.id}
-          renderLink={renderLink}
-          href={auditDetailPath(audit.id)}
-          className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-secondary/30"
-        >
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="truncate text-sm font-medium">{audit.url}</p>
-              <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-            </div>
-            <p className="mt-0.5 text-xs text-muted-foreground">{formatAuditDate(audit.createdAt)}</p>
-          </div>
-          <GeoScoreBadge score={audit.geoScore} />
-        </AuditLink>
-      ))}
+    <div className="space-y-4">
+      {runPanel}
+      {loading ? (
+        <p className="text-sm text-muted-foreground">Loading audits…</p>
+      ) : error ? (
+        <p className="text-sm text-red-700">{error}</p>
+      ) : audits.length === 0 ? (
+        <div className="paper-card p-8 text-center text-sm text-muted-foreground">
+          No GEO audits yet. Run your first audit above.
+        </div>
+      ) : (
+        <div className="paper-card divide-y overflow-hidden">
+          {audits.map((audit) => (
+            <AuditLink
+              key={audit.id}
+              renderLink={renderLink}
+              href={auditDetailPath(audit.id)}
+              className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-secondary/30"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-medium">{audit.url}</p>
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
+                <p className="mt-0.5 text-xs text-muted-foreground">{formatAuditDate(audit.createdAt)}</p>
+              </div>
+              <GeoScoreBadge score={audit.geoScore} />
+            </AuditLink>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -133,7 +180,7 @@ export function GeoAuditDetailView({
 
       {audit ? (
         <div className="mt-4 space-y-4">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="paper-card flex flex-wrap items-start justify-between gap-4 p-5">
             <div className="min-w-0">
               <h1 className="text-2xl font-bold">GEO audit</h1>
               <a
@@ -147,7 +194,7 @@ export function GeoAuditDetailView({
               </a>
               <p className="mt-1 text-xs text-muted-foreground">{formatAuditDate(audit.createdAt)}</p>
             </div>
-            <GeoScoreBadge score={audit.geoScore} className="text-sm" />
+            <ScoreRing score={audit.geoScore} />
           </div>
 
           {Array.isArray(audit.issues) && audit.issues.length > 0 ? (
@@ -169,6 +216,19 @@ export function GeoAuditDetailView({
                   </div>
                 ))}
               </div>
+            </div>
+          ) : null}
+
+          {Array.isArray(audit.recommendations) && (audit.recommendations as string[]).length > 0 ? (
+            <div className="paper-card p-5">
+              <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                <Sparkles className="h-4 w-4 text-primary" /> Write next
+              </h2>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                {(audit.recommendations as string[]).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
             </div>
           ) : null}
 

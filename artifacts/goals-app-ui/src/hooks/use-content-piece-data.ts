@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { fetchStockCredentialsStatus, isStockImagesConfigured } from "@/lib/queries/fetchers";
+import { queryKeys } from "@/lib/queries/keys";
 import type {
   ContentPieceDetail,
   ContentPieceGeneratingState,
+  ContentPieceMetadata,
   ContentPiecePublishingState,
   PublishDestinationId,
 } from "@workspace/app-shell";
@@ -61,8 +65,10 @@ function mapPiece(piece: ContentPiece): ContentPieceDetail {
     formatType: piece.formatType,
     wordCount: piece.wordCount,
     targetKeyword: piece.targetKeyword ?? null,
+    plannedDate: piece.plannedDate ?? null,
     updatedAt: piece.updatedAt,
     bodyMarkdown: piece.bodyMarkdown ?? null,
+    pieceMetadata: (piece.pieceMetadata as ContentPieceMetadata | null | undefined) ?? null,
   };
 }
 
@@ -70,11 +76,44 @@ function isTerminalJobStatus(status: string | undefined): boolean {
   return status != null && TERMINAL_JOB_STATUSES.has(status);
 }
 
+type ContentPieceCache = {
+  piece: ContentPieceDetail | null;
+  notFound: boolean;
+};
+
+async function fetchContentPieceCache(pieceId: string): Promise<ContentPieceCache> {
+  try {
+    const row = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}`);
+    return { piece: mapPiece(row), notFound: false };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to load content piece";
+    if (message.toLowerCase().includes("not found")) {
+      return { piece: null, notFound: true };
+    }
+    throw err;
+  }
+}
+
 export function useContentPieceData(pieceId: string | undefined) {
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const query = useQuery({
+    queryKey: queryKeys.contentPiece(pieceId),
+    queryFn: () => fetchContentPieceCache(pieceId!),
+    enabled: Boolean(pieceId),
+    staleTime: 30_000,
+    placeholderData: (previousData) => previousData,
+  });
+
+  const stockQuery = useQuery({
+    queryKey: queryKeys.stockCredentials,
+    queryFn: fetchStockCredentialsStatus,
+    staleTime: 120_000,
+  });
+
+  const piece = query.data?.piece ?? null;
+  const notFound = query.data?.notFound ?? false;
+  const loading = query.isPending && !query.data;
   const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [piece, setPiece] = useState<ContentPieceDetail | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [publishMessage, setPublishMessage] = useState<string | null>(null);
   const [publishingState, setPublishingState] = useState<ContentPiecePublishingState | null>(
@@ -89,6 +128,13 @@ export function useContentPieceData(pieceId: string | undefined) {
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [humanizing, setHumanizing] = useState(false);
   const [humanizeMessage, setHumanizeMessage] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [markingReady, setMarkingReady] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateMessage, setRegenerateMessage] = useState<string | null>(null);
+  const [enhancing, setEnhancing] = useState(false);
+  const [enhanceMessage, setEnhanceMessage] = useState<string | null>(null);
+  const [regeneratingImages, setRegeneratingImages] = useState(false);
   const generateJobPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const publishJobPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -106,14 +152,24 @@ export function useContentPieceData(pieceId: string | undefined) {
     }
   }, []);
 
+  const setCachedPiece = useCallback(
+    (next: ContentPieceDetail | null) => {
+      if (!pieceId) return;
+      queryClient.setQueryData<ContentPieceCache>(queryKeys.contentPiece(pieceId), {
+        piece: next,
+        notFound: false,
+      });
+    },
+    [pieceId, queryClient],
+  );
+
   const loadPiece = useCallback(
     async (options?: { silent?: boolean }) => {
       if (!pieceId) return null;
       try {
         const row = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}`);
         const mapped = mapPiece(row);
-        setPiece(mapped);
-        setNotFound(false);
+        setCachedPiece(mapped);
         setError(null);
         if (mapped.status !== "generating") {
           setGeneratingState(null);
@@ -127,15 +183,17 @@ export function useContentPieceData(pieceId: string | undefined) {
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to load content piece";
         if (message.toLowerCase().includes("not found")) {
-          setNotFound(true);
-          setPiece(null);
+          queryClient.setQueryData<ContentPieceCache>(queryKeys.contentPiece(pieceId), {
+            piece: null,
+            notFound: true,
+          });
         } else if (!options?.silent) {
           setError(message);
         }
         return null;
       }
     },
-    [pieceId, stopGenerateJobPoll, stopPublishJobPoll],
+    [pieceId, stopGenerateJobPoll, stopPublishJobPoll, setCachedPiece, queryClient],
   );
 
   const load = useCallback(async () => {
@@ -144,9 +202,8 @@ export function useContentPieceData(pieceId: string | undefined) {
 
   useEffect(() => {
     if (!pieceId) return;
-    setLoading(true);
-    void loadPiece().finally(() => setLoading(false));
-  }, [pieceId, loadPiece]);
+    setError(null);
+  }, [pieceId]);
 
   const pollGenerateJobOnce = useCallback(
     async (jobId: string) => {
@@ -269,7 +326,7 @@ export function useContentPieceData(pieceId: string | undefined) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ status: "draft" }),
       });
-      setPiece(mapPiece(updated));
+      setCachedPiece(mapPiece(updated));
     } catch (err) {
       setGenerateMessage(err instanceof Error ? err.message : "Failed to reset content piece");
     }
@@ -304,7 +361,9 @@ export function useContentPieceData(pieceId: string | undefined) {
         jobId: jobId ?? null,
         jobStatus: response.status ?? "queued",
       });
-      setPiece((prev) => (prev ? { ...prev, status: "generating" } : prev));
+      if (piece) {
+        setCachedPiece({ ...piece, status: "generating" });
+      }
       if (jobId) {
         startGenerateJobPoll(jobId);
       } else {
@@ -321,7 +380,12 @@ export function useContentPieceData(pieceId: string | undefined) {
   }, [pieceId, piece, startGenerateJobPoll]);
 
   const save = useCallback(
-    async (payload: { title: string; bodyMarkdown: string }) => {
+    async (payload: {
+      title: string;
+      bodyMarkdown: string;
+      status?: "draft" | "ready";
+      plannedDate?: string | null;
+    }) => {
       if (!pieceId || !piece) return;
       setSaving(true);
       setSaveMessage(null);
@@ -332,9 +396,11 @@ export function useContentPieceData(pieceId: string | undefined) {
           body: JSON.stringify({
             title: payload.title,
             bodyMarkdown: payload.bodyMarkdown,
+            ...(payload.status ? { status: payload.status } : {}),
+            ...(payload.plannedDate !== undefined ? { plannedDate: payload.plannedDate } : {}),
           }),
         });
-        setPiece(mapPiece(updated));
+        setCachedPiece(mapPiece(updated));
         setSaveMessage("Saved.");
       } catch (err) {
         setSaveMessage(err instanceof Error ? err.message : "Save failed");
@@ -342,8 +408,119 @@ export function useContentPieceData(pieceId: string | undefined) {
         setSaving(false);
       }
     },
-    [pieceId, piece],
+    [pieceId, piece, setCachedPiece],
   );
+
+  const deletePiece = useCallback(async () => {
+    if (!pieceId || !piece) return;
+    setDeleting(true);
+    try {
+      await apiFetch(`/api/content-pieces/${pieceId}`, { method: "DELETE" });
+      queryClient.removeQueries({ queryKey: queryKeys.contentPiece(pieceId) });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.contentPieces(String(piece.websiteProjectId)),
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete content piece");
+      throw err;
+    } finally {
+      setDeleting(false);
+    }
+  }, [pieceId, piece, queryClient]);
+
+  const markReady = useCallback(async () => {
+    if (!pieceId || !piece) return;
+    setMarkingReady(true);
+    setSaveMessage(null);
+    try {
+      const updated = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "ready" }),
+      });
+      setCachedPiece(mapPiece(updated));
+      setSaveMessage("Marked ready.");
+    } catch (err) {
+      setSaveMessage(err instanceof Error ? err.message : "Failed to mark ready");
+      throw err;
+    } finally {
+      setMarkingReady(false);
+    }
+  }, [pieceId, piece, setCachedPiece]);
+
+  const regenerate = useCallback(async () => {
+    if (!pieceId || !piece) return;
+    if (!window.confirm("Regenerate will replace the current draft. Continue?")) return;
+    setRegenerating(true);
+    setRegenerateMessage(null);
+    try {
+      const updated = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}/regenerate`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      setCachedPiece(mapPiece(updated));
+      setRegenerateMessage("Content regenerated.");
+    } catch (err) {
+      setRegenerateMessage(err instanceof Error ? err.message : "Regeneration failed");
+    } finally {
+      setRegenerating(false);
+    }
+  }, [pieceId, piece, setCachedPiece]);
+
+  const enhance = useCallback(async () => {
+    if (!pieceId || !piece) return;
+    setEnhancing(true);
+    setEnhanceMessage(null);
+    try {
+      const updated = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}/enhance`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+      });
+      setCachedPiece(mapPiece(updated));
+      setEnhanceMessage("Quality enhanced.");
+    } catch (err) {
+      setEnhanceMessage(err instanceof Error ? err.message : "Enhancement failed");
+    } finally {
+      setEnhancing(false);
+    }
+  }, [pieceId, piece, setCachedPiece]);
+
+  const repurpose = useCallback(
+    async (targetFormat: string) => {
+      if (!pieceId || !piece) throw new Error("Content piece not loaded");
+      const inserted = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}/repurpose`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ targetFormat }),
+      });
+      await queryClient.invalidateQueries({
+        queryKey: queryKeys.contentPieces(String(piece.websiteProjectId)),
+      });
+      return { id: inserted.id };
+    },
+    [pieceId, piece, queryClient],
+  );
+
+  const regenerateImages = useCallback(async () => {
+    if (!pieceId || !piece) return;
+    setRegeneratingImages(true);
+    try {
+      const response = await apiFetch<{ piece: ContentPiece }>(
+        `/api/content-pieces/${pieceId}/images/regenerate`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+        },
+      );
+      setCachedPiece(mapPiece(response.piece));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Image regeneration failed");
+      throw err;
+    } finally {
+      setRegeneratingImages(false);
+    }
+  }, [pieceId, piece, setCachedPiece]);
 
   const humanize = useCallback(async () => {
     if (!pieceId || !piece) return;
@@ -357,7 +534,7 @@ export function useContentPieceData(pieceId: string | undefined) {
           headers: { "content-type": "application/json" },
         },
       );
-      setPiece(mapPiece(updated));
+      setCachedPiece(mapPiece(updated));
       const audit = updated.audit ?? updated.pieceMetadata?.humanizationAudit;
       if (audit?.rejected) {
         setHumanizeMessage("Humanization skipped — structure preserved.");
@@ -427,9 +604,16 @@ export function useContentPieceData(pieceId: string | undefined) {
     );
   }, [piece?.websiteProjectId]);
 
+  const queryError =
+    query.error instanceof Error
+      ? query.error.message
+      : query.error
+        ? "Failed to load content piece"
+        : null;
+
   return {
     loading,
-    error,
+    error: error ?? queryError,
     notFound,
     piece,
     generating,
@@ -444,6 +628,20 @@ export function useContentPieceData(pieceId: string | undefined) {
     humanizing,
     humanizeMessage,
     humanize,
+    deleting,
+    deletePiece,
+    markingReady,
+    markReady,
+    regenerating,
+    regenerateMessage,
+    regenerate,
+    enhancing,
+    enhanceMessage,
+    enhance,
+    repurpose,
+    regeneratingImages,
+    regenerateImages,
+    stockImagesConfigured: isStockImagesConfigured(stockQuery.data),
     publishing,
     publishingState,
     publishMessage,

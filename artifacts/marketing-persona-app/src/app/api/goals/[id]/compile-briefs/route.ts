@@ -7,6 +7,7 @@ import { requireProjectAccess } from "@/lib/org/org-access";
 import { compileBriefsFromGoal } from "@workspace/content-engine/strategy/goal-brief-compiler";
 import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { isCfEdgeHttp } from "@/lib/cf-edge-http";
 
 export async function POST(
   _req: Request,
@@ -14,6 +15,16 @@ export async function POST(
 ) {
   const { userId, error } = await requireAuth();
   if (error) return error;
+
+  if (isCfEdgeHttp()) {
+    return NextResponse.json(
+      {
+        error: "Goal brief compilation is unavailable on Cloudflare edge preview. Use local dev.",
+        code: "EDGE_INLINE_DISABLED",
+      },
+      { status: 501 },
+    );
+  }
 
   const goalId = Number((await params).id);
   if (isNaN(goalId)) return NextResponse.json({ error: "Invalid goal id" }, { status: 400 });

@@ -26,6 +26,7 @@
     "cf:migrate:d1:local": "pnpm --filter @workspace/db run migrate:d1:local",
     "cf:seed:d1": "pnpm --filter @workspace/db run seed:d1",
     "cf:seed:d1:local": "pnpm --filter @workspace/db run seed:d1:local",
+    "cf:hash-password": "pnpm --filter @workspace/db run hash-password",
     "cf:sync-pg-to-d1": "pnpm --filter @workspace/db run sync-pg-to-d1",
     "cf:setup": "node scripts/cf-setup.mjs",
     "cf:pages:git-setup": "node scripts/cf-pages-git-setup.mjs",
@@ -34,7 +35,9 @@
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
     "test:e2e": "playwright test",
-    "test:e2e:ui": "playwright test --ui"
+    "test:e2e:ui": "playwright test --ui",
+    "parity:matrix": "node scripts/generate-parity-matrix.mjs",
+    "parity:smoke": "node scripts/parity-smoke.mjs"
   },
   "private": true,
   "devDependencies": {

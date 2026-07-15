@@ -8,6 +8,8 @@
  * Credentials (dev/test only — never use in production):
  *   Email:    demo@gold.edu
  *   Password: GoldSuite2026!
+ *
+ * Hash for manual D1 updates: pnpm run cf:hash-password -- GoldSuite2026!
  */
 import bcrypt from "bcryptjs";
 import { eq } from "drizzle-orm";

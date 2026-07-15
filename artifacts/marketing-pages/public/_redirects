@@ -13,3 +13,5 @@
 /dashboard https://app.goals.ac/dashboard 301
 /projects https://app.goals.ac/projects 301
 /projects/* https://app.goals.ac/projects/:splat 301
+/admin https://app.goals.ac/admin 301
+/admin/* https://app.goals.ac/admin/:splat 301

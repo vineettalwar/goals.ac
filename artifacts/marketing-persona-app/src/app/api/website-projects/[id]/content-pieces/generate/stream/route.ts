@@ -25,6 +25,7 @@ import {
 } from "@/lib/billing/ai-billing";
 import { logger } from "@/lib/utils/logger";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { edgeStreamingBlocked } from "@/lib/cf-edge-http";
 
 const sseHeaders = {
   "Content-Type": "text/event-stream",
@@ -38,6 +39,9 @@ export async function POST(
 ) {
   const { userId, error } = await requireAuth();
   if (error) return error;
+
+  const blocked = edgeStreamingBlocked();
+  if (blocked) return blocked;
 
   const limited = await rateLimitResponse(
     `ai-gen:user:${userId}`,

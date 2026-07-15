@@ -2,19 +2,22 @@ import { useEffect } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AppSidebarShell, projectIdFromPathname } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
+import { useActiveProject } from "@/hooks/use-active-project";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
 
 export function AppShell() {
   const { user, loading, logout } = useAuth();
+  const { projectId: activeProjectIdRaw } = useActiveProject();
   const navigate = useNavigate();
   const location = useLocation();
   const pathname = location.pathname;
 
-  const storedProjectId =
-    typeof window !== "undefined" ? localStorage.getItem("goals.activeProjectId") : null;
+  const activeProjectIdFromContext = activeProjectIdRaw
+    ? Number.parseInt(activeProjectIdRaw, 10)
+    : NaN;
   const activeProjectId =
-    projectIdFromPathname(pathname) ??
-    (storedProjectId ? Number.parseInt(storedProjectId, 10) : null);
+    (Number.isFinite(activeProjectIdFromContext) ? activeProjectIdFromContext : null) ??
+    projectIdFromPathname(pathname);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -36,7 +39,7 @@ export function AppShell() {
     <div className="flex h-screen overflow-hidden bg-background">
       <AppSidebarShell
         pathname={pathname}
-        activeProjectId={Number.isFinite(activeProjectId) ? activeProjectId : null}
+        activeProjectId={activeProjectId}
         userName={displayName}
         userEmail={user.email}
         userImage={user.avatarUrl}

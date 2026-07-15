@@ -3,9 +3,11 @@ import type { GoalsD1Database } from "@workspace/db/d1";
 import {
   contactSubmissionsTable,
   industriesTable,
+  leadCapturesTable,
   locationsTable,
   planQuotaConfigTable,
   platformSettingsTable,
+  roadmapsTable,
   waitlistSignupsTable,
 } from "@workspace/db/schema-sqlite";
 import { seedReferenceDataIfEmpty } from "@workspace/db/reference-data";
@@ -17,7 +19,7 @@ import {
   type PlanQuotaLimits,
 } from "@workspace/billing/plans";
 import { buildPublicPlanCatalog } from "@workspace/billing/public-plans";
-import { asc, eq } from "drizzle-orm";
+import { asc, and, eq } from "drizzle-orm";
 import { sendToCfQueue } from "@workspace/jobs/cf-queues";
 import { QUEUES } from "@workspace/jobs/queues";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
@@ -36,7 +38,15 @@ import {
 } from "./auth-password-reset";
 import { handleGoogleAuthCallback, handleGoogleAuthStart } from "./auth-google";
 import { handleGscAuthCallback, handleGscAuthStart } from "./auth-gsc";
+import {
+  handleGoogleSheetsAuthCallback,
+  handleGoogleSheetsAuthStart,
+} from "./auth-google-sheets";
 import { handleBingAuthCallback, handleBingAuthStart } from "./auth-bing";
+import {
+  handleGoogleAnalyticsAuthCallback,
+  handleGoogleAnalyticsAuthStart,
+} from "./auth-google-analytics";
 import { handleLinkedInAuthCallback, handleLinkedInAuthStart } from "./auth-linkedin";
 import { handleTwitterAuthCallback, handleTwitterAuthStart } from "./auth-twitter";
 import { handleMetaAuthCallback, handleMetaAuthStart } from "./auth-meta";
@@ -48,6 +58,8 @@ import {
   handleBlueskyAuthStart,
 } from "./auth-bluesky";
 import { handleMastodonAuthCallback, handleMastodonAuthStart } from "./auth-mastodon";
+import { handleStripeWebhook } from "./stripe-webhook";
+import { handlePublicInviteGet } from "./invite-routes";
 import { kvGetJson, kvPutJson } from "@workspace/cf-edge/kv-cache";
 import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
@@ -181,6 +193,12 @@ const contactBody = z.object({
 const waitlistBody = z.object({
   email: z.string().email(),
   featureKey: z.string().min(1).max(64),
+});
+
+const leadCaptureBody = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  companyUrl: z.string().url().optional(),
 });
 
 const urlBody = z.object({ url: z.string().url() });
@@ -402,6 +420,88 @@ async function handle(request: Request, env: Env): Promise<Response> {
     if (path === "/api/auth/bing-webmaster/callback" && request.method === "GET") {
       const response = await handleBingAuthCallback(request, env, db());
       return withCors(request, response);
+    }
+
+    if (path === "/api/auth/google-analytics" && request.method === "GET") {
+      const response = await handleGoogleAnalyticsAuthStart(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/google-analytics/callback" && request.method === "GET") {
+      const response = await handleGoogleAnalyticsAuthCallback(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/google-sheets" && request.method === "GET") {
+      const response = await handleGoogleSheetsAuthStart(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/auth/google-sheets/callback" && request.method === "GET") {
+      const response = await handleGoogleSheetsAuthCallback(request, env, db());
+      return withCors(request, response);
+    }
+
+    if (path === "/api/webhooks/stripe" && request.method === "POST") {
+      return handleStripeWebhook(request);
+    }
+
+    const inviteHandled = await handlePublicInviteGet(request, path);
+    if (inviteHandled) return inviteHandled;
+
+    const leadCaptureMatch = path.match(/^\/api\/roadmaps\/([^/]+)\/lead-capture$/);
+    if (leadCaptureMatch && request.method === "POST") {
+      const parsed = leadCaptureBody.safeParse(await request.json().catch(() => null));
+      if (!parsed.success) {
+        return withCors(
+          request,
+          Response.json({ error: `Invalid request: ${parsed.error.message}` }, { status: 400 }),
+        );
+      }
+
+      const slug = leadCaptureMatch[1]!;
+      const [roadmap] = await db()
+        .select({ id: roadmapsTable.id })
+        .from(roadmapsTable)
+        .where(eq(roadmapsTable.slug, slug))
+        .limit(1);
+
+      if (!roadmap) {
+        return withCors(request, Response.json({ error: "Roadmap not found" }, { status: 404 }));
+      }
+
+      const [existing] = await db()
+        .select({ id: leadCapturesTable.id })
+        .from(leadCapturesTable)
+        .where(
+          and(
+            eq(leadCapturesTable.roadmapId, roadmap.id),
+            eq(leadCapturesTable.email, parsed.data.email),
+          ),
+        )
+        .limit(1);
+
+      if (existing) {
+        return withCors(
+          request,
+          Response.json({ id: existing.id, message: "Lead already captured" }, { status: 201 }),
+        );
+      }
+
+      const [lead] = await db()
+        .insert(leadCapturesTable)
+        .values({
+          roadmapId: roadmap.id,
+          name: parsed.data.name,
+          email: parsed.data.email,
+          companyUrl: parsed.data.companyUrl ?? "",
+        })
+        .returning({ id: leadCapturesTable.id });
+
+      return withCors(
+        request,
+        Response.json({ id: lead.id, message: "Lead captured successfully" }, { status: 201 }),
+      );
     }
 
     if (path === "/api/contact" && request.method === "POST") {

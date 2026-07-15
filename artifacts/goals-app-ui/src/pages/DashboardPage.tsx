@@ -29,13 +29,13 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const { projectId, projects, loading: projectsLoading } = useActiveProject();
   const { loading, error, activeProject, pieces, autopilotSettings } =
-    useDashboardData(projectId);
+    useDashboardData(projectId, projects);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login", { replace: true });
   }, [authLoading, user, navigate]);
 
-  if (authLoading || projectsLoading || loading) {
+  if ((authLoading && !user) || (projectsLoading && projects.length === 0) || (loading && !activeProject && pieces.length === 0)) {
     return <p className="p-8 text-muted-foreground">Loading…</p>;
   }
 

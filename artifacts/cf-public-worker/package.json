@@ -19,6 +19,7 @@
     "@workspace/content-engine": "workspace:*",
     "@workspace/db": "workspace:*",
     "@workspace/jobs": "workspace:*",
+    "@workspace/platform-admin": "workspace:*",
     "@workspace/security": "workspace:*",
     "@workspace/seo-tools": "workspace:*",
     "bcryptjs": "^3.0.3",

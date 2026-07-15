@@ -1,0 +1,103 @@
+import { getPlatformSettings } from "./platform-settings";
+import { getPlatformStats } from "./platform-stats";
+import { listAllOrganizations } from "./organizations";
+import { listAllUsers } from "./users";
+
+export type AdminAttentionItem = {
+  label: string;
+  href: string;
+  tone: "warning" | "destructive";
+};
+
+export type AdminOverview = {
+  stats: Awaited<ReturnType<typeof getPlatformStats>>;
+  attention: AdminAttentionItem[];
+  recentUsers: Array<{
+    id: number;
+    name: string;
+    email: string;
+    organizationName: string | null;
+    createdAt: string;
+    status: "active" | "pending_invite" | "no_org";
+  }>;
+  recentOrganizations: Array<{
+    id: number;
+    name: string;
+    plan: string;
+    ownerName: string;
+    memberCount: number;
+    projectCount: number;
+    createdAt: string;
+    suspendedAt: string | null;
+  }>;
+};
+
+export async function getAdminOverview(): Promise<AdminOverview> {
+  const [stats, settings, usersResult, organizations] = await Promise.all([
+    getPlatformStats(),
+    getPlatformSettings(),
+    listAllUsers({ limit: 5 }),
+    listAllOrganizations(5),
+  ]);
+
+  const attention: AdminAttentionItem[] = [];
+
+  if (!settings.platformEnabled) {
+    attention.push({
+      label: "Public access is off — visitors see the maintenance page",
+      href: "/admin/platform",
+      tone: "warning",
+    });
+  }
+  if (!settings.aiGenerationEnabled) {
+    attention.push({
+      label: "AI services are paused",
+      href: "/admin/platform",
+      tone: "warning",
+    });
+  }
+  if (!settings.signupsEnabled) {
+    attention.push({
+      label: "Public signups are off — invite-only onboarding",
+      href: "/admin/platform",
+      tone: "warning",
+    });
+  }
+  if (stats.pendingInviteCount > 0) {
+    attention.push({
+      label: `${stats.pendingInviteCount} pending invite${stats.pendingInviteCount === 1 ? "" : "s"}`,
+      href: "/admin/users",
+      tone: "warning",
+    });
+  }
+  if (stats.suspendedOrgCount > 0) {
+    attention.push({
+      label: `${stats.suspendedOrgCount} suspended org${stats.suspendedOrgCount === 1 ? "" : "s"}`,
+      href: "/admin/organizations",
+      tone: "destructive",
+    });
+  }
+
+  return {
+    stats,
+    attention,
+    recentUsers: usersResult.users.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      organizationName: user.organizationName,
+      createdAt: user.createdAt,
+      status: user.status,
+    })),
+    recentOrganizations: organizations.map((org) => ({
+      id: org.id,
+      name: org.name,
+      plan: org.plan,
+      ownerName: org.ownerName,
+      memberCount: org.memberCount,
+      projectCount: org.projectCount,
+      createdAt: org.createdAt,
+      suspendedAt: org.suspendedAt,
+    })),
+  };
+}

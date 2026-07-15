@@ -1,15 +1,22 @@
 import { useMemo, useState, type ReactNode } from "react";
+import { PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import {
   ArrowUpDown,
+  CalendarDays,
+  CheckCircle2,
   ExternalLink,
   FileText,
   LayoutGrid,
+  List,
   Plus,
   RefreshCw,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { cn } from "../cn";
 import { contentPieceCanGenerate } from "../content-piece/types";
+import { BrandAiProfileCard, StudioAiReadinessBanner, type BrandProfileSummary } from "./brand-ai-profile-card";
+import { StudioCalendarView } from "./studio-calendar";
 import {
   filterStudioPieces,
   formatTypeLabel,
@@ -39,6 +46,9 @@ const STATUS_DOT_COLORS: Record<string, string> = {
   generating: "bg-amber-400",
   failed: "bg-red-500",
 };
+
+type StudioTab = "hub" | "calendar";
+type HubViewMode = "list" | "grid";
 
 function FormatBadge({ formatType }: { formatType: string }) {
   return (
@@ -101,12 +111,30 @@ function FilterSelect({
 function StudioPieceCard({
   piece,
   renderLink,
+  viewMode,
+  onDelete,
+  onMarkReady,
+  deletingId,
+  markingReadyId,
 }: {
   piece: StudioPiece;
   renderLink: (props: StudioLinkProps) => ReactNode;
+  viewMode: HubViewMode;
+  onDelete?: (id: number) => void | Promise<void>;
+  onMarkReady?: (id: number) => void | Promise<void>;
+  deletingId?: number | null;
+  markingReadyId?: number | null;
 }) {
+  const isDeleting = deletingId === piece.id;
+  const isMarkingReady = markingReadyId === piece.id;
+
   return (
-    <div className="paper-card group flex items-start justify-between gap-4 rounded-xl p-5">
+    <div
+      className={cn(
+        "paper-card group flex rounded-xl p-5",
+        viewMode === "grid" ? "h-full flex-col gap-3" : "items-start justify-between gap-4",
+      )}
+    >
       <div className="min-w-0 flex-1">
         <StudioLink
           renderLink={renderLink}
@@ -126,8 +154,19 @@ function StudioPieceCard({
           ) : null}
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className={cn("flex shrink-0 items-center gap-2", viewMode === "grid" && "justify-between")}>
         <StatusBadge status={piece.status} />
+        {piece.status === "draft" && onMarkReady ? (
+          <button
+            type="button"
+            title="Mark ready"
+            disabled={isMarkingReady || isDeleting}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
+            onClick={() => void onMarkReady(piece.id)}
+          >
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ) : null}
         {contentPieceCanGenerate(piece.status) ? (
           <StudioLink
             renderLink={renderLink}
@@ -145,6 +184,21 @@ function StudioPieceCard({
         >
           <ExternalLink className="h-3.5 w-3.5" aria-hidden />
         </StudioLink>
+        {onDelete ? (
+          <button
+            type="button"
+            title="Delete"
+            disabled={isDeleting || isMarkingReady}
+            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-600 disabled:opacity-50"
+            onClick={() => {
+              if (window.confirm(`Delete "${piece.title}"? This cannot be undone.`)) {
+                void onDelete(piece.id);
+              }
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -154,21 +208,25 @@ function StudioHubFilters({
   filterFormat,
   filterStatus,
   sortKey,
+  viewMode,
   totalCount,
   statsBreakdown,
   onFilterFormatChange,
   onFilterStatusChange,
   onSortKeyChange,
+  onViewModeChange,
   onClearFilters,
 }: {
   filterFormat: string;
   filterStatus: string;
   sortKey: StudioSortKey;
+  viewMode: HubViewMode;
   totalCount: number;
   statsBreakdown: Array<{ label: string; count: number; color: string }>;
   onFilterFormatChange: (value: string) => void;
   onFilterStatusChange: (value: string) => void;
   onSortKeyChange: (value: StudioSortKey) => void;
+  onViewModeChange: (value: HubViewMode) => void;
   onClearFilters: () => void;
 }) {
   const hasActiveFilters = filterFormat !== "all" || filterStatus !== "all";
@@ -213,6 +271,30 @@ function StudioHubFilters({
             { value: "title_asc", label: "A → Z" },
           ]}
         />
+        <div className="ml-auto flex rounded-lg border border-input p-0.5">
+          <button
+            type="button"
+            aria-label="List view"
+            className={cn(
+              "inline-flex h-7 w-7 items-center justify-center rounded-md",
+              viewMode === "list" ? "bg-secondary text-foreground" : "text-muted-foreground",
+            )}
+            onClick={() => onViewModeChange("list")}
+          >
+            <List className="h-3.5 w-3.5" aria-hidden />
+          </button>
+          <button
+            type="button"
+            aria-label="Grid view"
+            className={cn(
+              "inline-flex h-7 w-7 items-center justify-center rounded-md",
+              viewMode === "grid" ? "bg-secondary text-foreground" : "text-muted-foreground",
+            )}
+            onClick={() => onViewModeChange("grid")}
+          >
+            <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        </div>
         {hasActiveFilters ? (
           <button
             type="button"
@@ -248,7 +330,17 @@ export function StudioView({
   loading,
   newContentAction,
   newContentNote,
+  brandProfile = null,
+  brandProfileLoading = false,
+  aiReady = null,
+  activeProvider = "gemini",
   renderLink,
+  onDeletePiece,
+  onMarkReady,
+  onReschedulePiece,
+  deletingId = null,
+  markingReadyId = null,
+  reschedulingId = null,
 }: {
   projectId: string;
   projectName: string | null;
@@ -256,11 +348,25 @@ export function StudioView({
   loading: boolean;
   newContentAction: ReactNode;
   newContentNote?: ReactNode;
+  brandProfile?: BrandProfileSummary | null;
+  brandProfileLoading?: boolean;
+  aiReady?: boolean | null;
+  activeProvider?: string;
   renderLink: (props: StudioLinkProps) => ReactNode;
+  onDeletePiece?: (id: number) => void | Promise<void>;
+  onMarkReady?: (id: number) => void | Promise<void>;
+  onReschedulePiece?: (id: number, plannedDate: string | null) => void | Promise<void>;
+  deletingId?: number | null;
+  markingReadyId?: number | null;
+  reschedulingId?: number | null;
 }) {
+  const [activeTab, setActiveTab] = useState<StudioTab>("hub");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterFormat, setFilterFormat] = useState("all");
   const [sortKey, setSortKey] = useState<StudioSortKey>("newest");
+  const [viewMode, setViewMode] = useState<HubViewMode>("list");
+  const [activeDragId, setActiveDragId] = useState<number | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const filtered = useMemo(
     () => filterStudioPieces(pieces, filterStatus, filterFormat),
@@ -268,6 +374,21 @@ export function StudioView({
   );
   const sorted = useMemo(() => sortStudioPieces(filtered, sortKey), [filtered, sortKey]);
   const statsBreakdown = useMemo(() => studioStatusCounts(pieces), [pieces]);
+  const scheduledCount = pieces.filter((piece) => piece.plannedDate).length;
+
+  function handleDragEnd(event: DragEndEvent) {
+    setActiveDragId(null);
+    if (!onReschedulePiece) return;
+    const { active, over } = event;
+    if (!over) return;
+    const pieceId = Number(String(active.id).replace("piece-", ""));
+    const newDate = String(over.id).replace("day-", "");
+    if (newDate === "Unscheduled") {
+      void onReschedulePiece(pieceId, null);
+      return;
+    }
+    void onReschedulePiece(pieceId, newDate);
+  }
 
   return (
     <div className="max-w-6xl space-y-6 px-8 py-8">
@@ -314,8 +435,25 @@ export function StudioView({
         </div>
       ) : null}
 
+      <BrandAiProfileCard profile={brandProfile} loading={brandProfileLoading} />
+
+      <StudioAiReadinessBanner
+        ready={aiReady}
+        activeProvider={activeProvider}
+        renderLink={renderLink}
+      />
+
       <div className="flex gap-1 border-b border-border">
-        <span className="-mb-px flex items-center gap-2 border-b-2 border-primary px-4 py-2 text-sm font-medium text-foreground">
+        <button
+          type="button"
+          className={cn(
+            "-mb-px flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors",
+            activeTab === "hub"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+          onClick={() => setActiveTab("hub")}
+        >
           <LayoutGrid className="h-4 w-4" aria-hidden />
           Hub
           {pieces.length > 0 ? (
@@ -323,50 +461,99 @@ export function StudioView({
               {pieces.length}
             </span>
           ) : null}
-        </span>
+        </button>
+        <button
+          type="button"
+          className={cn(
+            "-mb-px flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors",
+            activeTab === "calendar"
+              ? "border-primary text-foreground"
+              : "border-transparent text-muted-foreground hover:text-foreground",
+          )}
+          onClick={() => setActiveTab("calendar")}
+        >
+          <CalendarDays className="h-4 w-4" aria-hidden />
+          Calendar
+          {scheduledCount > 0 ? (
+            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+              {scheduledCount}
+            </span>
+          ) : null}
+        </button>
       </div>
 
-      <StudioHubFilters
-        filterFormat={filterFormat}
-        filterStatus={filterStatus}
-        sortKey={sortKey}
-        totalCount={pieces.length}
-        statsBreakdown={statsBreakdown}
-        onFilterFormatChange={setFilterFormat}
-        onFilterStatusChange={setFilterStatus}
-        onSortKeyChange={setSortKey}
-        onClearFilters={() => {
-          setFilterFormat("all");
-          setFilterStatus("all");
-        }}
-      />
+      {activeTab === "hub" ? (
+        <>
+          <StudioHubFilters
+            filterFormat={filterFormat}
+            filterStatus={filterStatus}
+            sortKey={sortKey}
+            viewMode={viewMode}
+            totalCount={pieces.length}
+            statsBreakdown={statsBreakdown}
+            onFilterFormatChange={setFilterFormat}
+            onFilterStatusChange={setFilterStatus}
+            onSortKeyChange={setSortKey}
+            onViewModeChange={setViewMode}
+            onClearFilters={() => {
+              setFilterFormat("all");
+              setFilterStatus("all");
+            }}
+          />
 
-      {loading ? (
+          {loading ? (
+            <div className="flex items-center justify-center p-16 text-sm text-muted-foreground">
+              Loading content…
+            </div>
+          ) : sorted.length === 0 ? (
+            <div className="paper-card flex flex-col items-center justify-center rounded-xl p-16 text-center">
+              <FileText className="mb-3 h-10 w-10 text-muted-foreground" aria-hidden />
+              <p className="font-medium">
+                {pieces.length === 0 ? "No content yet" : "No items match filters"}
+              </p>
+              <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                {pieces.length === 0
+                  ? "Create your first draft with the button above, then open it to generate or edit."
+                  : "Try clearing filters to see all content."}
+              </p>
+              {pieces.length === 0 ? <div className="mt-4">{newContentAction}</div> : null}
+            </div>
+          ) : (
+            <div
+              className={cn(
+                viewMode === "grid"
+                  ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                  : "space-y-3",
+              )}
+            >
+              {sorted.map((piece) => (
+                <StudioPieceCard
+                  key={piece.id}
+                  piece={piece}
+                  renderLink={renderLink}
+                  viewMode={viewMode}
+                  onDelete={onDeletePiece}
+                  onMarkReady={onMarkReady}
+                  deletingId={deletingId}
+                  markingReadyId={markingReadyId}
+                />
+              ))}
+            </div>
+          )}
+        </>
+      ) : loading ? (
         <div className="flex items-center justify-center p-16 text-sm text-muted-foreground">
-          Loading content…
-        </div>
-      ) : sorted.length === 0 ? (
-        <div className="paper-card flex flex-col items-center justify-center rounded-xl p-16 text-center">
-          <FileText className="mb-3 h-10 w-10 text-muted-foreground" aria-hidden />
-          <p className="font-medium">
-            {pieces.length === 0 ? "No content yet" : "No items match filters"}
-          </p>
-          <p className="mt-1 max-w-md text-sm text-muted-foreground">
-            {pieces.length === 0
-              ? "Create your first draft with the button above, then open it to generate or edit."
-              : "Try clearing filters to see all studio pieces."}
-          </p>
-          {pieces.length === 0 ? <div className="mt-4">{newContentAction}</div> : null}
+          Loading calendar…
         </div>
       ) : (
-        <section className="space-y-3">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-            Studio pieces
-          </h2>
-          {sorted.map((piece) => (
-            <StudioPieceCard key={piece.id} piece={piece} renderLink={renderLink} />
-          ))}
-        </section>
+        <StudioCalendarView
+          pieces={pieces}
+          reschedulingId={reschedulingId}
+          sensors={sensors}
+          onDragStart={setActiveDragId}
+          onDragEnd={handleDragEnd}
+          activeDragId={activeDragId}
+        />
       )}
     </div>
   );

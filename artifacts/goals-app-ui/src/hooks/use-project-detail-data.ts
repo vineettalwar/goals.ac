@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { queryKeys } from "@/lib/queries/keys";
 import type {
   BrandProfileSavePayload,
   ProjectDetailBrandProfile,
@@ -18,6 +20,15 @@ type ContentStyleJson = {
   primaryLanguage?: string | null;
   readingLevel?: string | null;
   humanizationLevel?: string | null;
+};
+
+type ProjectDetailData = {
+  project: ProjectDetailProject | null;
+  brandProfile: ProjectDetailBrandProfile | null;
+  contentStyle: ProjectDetailContentStyle | null;
+  pieces: ProjectDetailPiece[];
+  notFound: boolean;
+  error: string | null;
 };
 
 function mapProject(project: WebsiteProjectDetail): {
@@ -69,56 +80,57 @@ function mapPiece(piece: ContentPiece): ProjectDetailPiece {
   };
 }
 
+async function fetchProjectDetail(projectId: string): Promise<ProjectDetailData> {
+  try {
+    const [projectRow, pieceRows] = await Promise.all([
+      apiFetch<WebsiteProjectDetail>(`/api/website-projects/${projectId}`),
+      apiFetch<ContentPiece[]>(`/api/website-projects/${projectId}/content-pieces`),
+    ]);
+    const mapped = mapProject(projectRow);
+    return {
+      ...mapped,
+      pieces: pieceRows.map(mapPiece),
+      notFound: false,
+      error: null,
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to load project";
+    if (message.toLowerCase().includes("not found")) {
+      return {
+        project: null,
+        brandProfile: null,
+        contentStyle: null,
+        pieces: [],
+        notFound: true,
+        error: null,
+      };
+    }
+    throw err;
+  }
+}
+
 export function useProjectDetailData(projectId: string | undefined) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [project, setProject] = useState<ProjectDetailProject | null>(null);
-  const [brandProfile, setBrandProfile] = useState<ProjectDetailBrandProfile | null>(null);
-  const [contentStyle, setContentStyle] = useState<ProjectDetailContentStyle | null>(null);
-  const [pieces, setPieces] = useState<ProjectDetailPiece[]>([]);
+  const queryClient = useQueryClient();
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const [rescanning, setRescanning] = useState(false);
   const [savingBrand, setSavingBrand] = useState(false);
   const [savingVoice, setSavingVoice] = useState(false);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const load = useCallback(async () => {
-    if (!projectId) return null;
-    try {
-      const [projectRow, pieceRows] = await Promise.all([
-        apiFetch<WebsiteProjectDetail>(`/api/website-projects/${projectId}`),
-        apiFetch<ContentPiece[]>(`/api/website-projects/${projectId}/content-pieces`),
-      ]);
-      const mapped = mapProject(projectRow);
-      setProject(mapped.project);
-      setBrandProfile(mapped.brandProfile);
-      setContentStyle(mapped.contentStyle);
-      setPieces(pieceRows.map(mapPiece));
-      setNotFound(false);
-      setError(null);
-      return mapped.project;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load project";
-      if (message.toLowerCase().includes("not found")) {
-        setNotFound(true);
-      } else {
-        setError(message);
-      }
-      return null;
-    }
-  }, [projectId]);
+  const query = useQuery({
+    queryKey: queryKeys.projectDetail(projectId),
+    queryFn: () => fetchProjectDetail(projectId!),
+    enabled: Boolean(projectId),
+    staleTime: 30_000,
+    placeholderData: (previousData) => previousData,
+  });
+
+  const data = query.data;
+  const project = data?.notFound ? null : (data?.project ?? null);
 
   const reload = useCallback(async () => {
-    setLoading(true);
-    await load();
-    setLoading(false);
-  }, [load]);
-
-  useEffect(() => {
     if (!projectId) return;
-    setLoading(true);
-    void load().finally(() => setLoading(false));
-  }, [projectId, load]);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.projectDetail(projectId) });
+  }, [projectId, queryClient]);
 
   useEffect(() => {
     if (pollRef.current) {
@@ -128,28 +140,35 @@ export function useProjectDetailData(projectId: string | undefined) {
     if (!project || !scrapeIsPending(project.scrapeStatus)) return;
 
     pollRef.current = setInterval(() => {
-      void load();
+      void reload();
     }, 3000);
 
     return () => {
       if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [project?.scrapeStatus, project?.id, load]);
+  }, [project?.scrapeStatus, project?.id, reload]);
 
   const rescan = useCallback(async () => {
     if (!projectId) return;
     setRescanning(true);
-    setProject((prev) => (prev ? { ...prev, scrapeStatus: "pending" } : prev));
+    queryClient.setQueryData<ProjectDetailData>(queryKeys.projectDetail(projectId), (current) =>
+      current && current.project && !current.notFound
+        ? {
+            ...current,
+            project: { ...current.project, scrapeStatus: "pending" },
+          }
+        : current,
+    );
     try {
       await apiFetch(`/api/website-projects/${projectId}/scrape`, { method: "POST" });
-      await load();
+      await reload();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start re-scan");
-      await load();
+      await reload();
+      throw err;
     } finally {
       setRescanning(false);
     }
-  }, [projectId, load]);
+  }, [projectId, queryClient, reload]);
 
   const saveBrand = useCallback(
     async (payload: BrandProfileSavePayload) => {
@@ -162,16 +181,21 @@ export function useProjectDetailData(projectId: string | undefined) {
           body: JSON.stringify(payload),
         });
         const mapped = mapProject(updated);
-        setProject(mapped.project);
-        setBrandProfile(mapped.brandProfile);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to save brand profile");
+        queryClient.setQueryData<ProjectDetailData>(queryKeys.projectDetail(projectId), (current) =>
+          current
+            ? {
+                ...current,
+                project: mapped.project,
+                brandProfile: mapped.brandProfile,
+                error: null,
+              }
+            : current,
+        );
       } finally {
         setSavingBrand(false);
       }
     },
-    [projectId],
+    [projectId, queryClient],
   );
 
   const saveVoice = useCallback(
@@ -185,27 +209,38 @@ export function useProjectDetailData(projectId: string | undefined) {
           body: JSON.stringify({ contentStyle: payload }),
         });
         const mapped = mapProject(updated);
-        setProject(mapped.project);
-        setContentStyle(mapped.contentStyle);
-        setError(null);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to save brand voice");
+        queryClient.setQueryData<ProjectDetailData>(queryKeys.projectDetail(projectId), (current) =>
+          current
+            ? {
+                ...current,
+                project: mapped.project,
+                contentStyle: mapped.contentStyle,
+                error: null,
+              }
+            : current,
+        );
       } finally {
         setSavingVoice(false);
       }
     },
-    [projectId],
+    [projectId, queryClient],
   );
 
   return {
-    loading,
-    error,
-    notFound,
+    loading: query.isPending && !data,
+    error:
+      data?.error ??
+      (query.error instanceof Error
+        ? query.error.message
+        : query.error
+          ? "Failed to load project"
+          : null),
+    notFound: data?.notFound ?? false,
     project,
-    brandProfile,
-    contentStyle,
-    pieces,
-    contentCount: pieces.length,
+    brandProfile: data?.brandProfile ?? null,
+    contentStyle: data?.contentStyle ?? null,
+    pieces: data?.pieces ?? [],
+    contentCount: data?.pieces.length ?? 0,
     rescanning,
     rescan,
     saveBrand,

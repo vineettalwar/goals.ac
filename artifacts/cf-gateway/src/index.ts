@@ -14,6 +14,7 @@ const PUBLIC_PREFIXES = [
   "/api/plans",
   "/api/contact",
   "/api/waitlist",
+  "/api/webhooks/stripe",
   "/api/auth/login",
   "/api/auth/signup",
   "/api/auth/logout",
@@ -26,6 +27,9 @@ const PUBLIC_PREFIXES = [
   "/api/auth/bluesky",
   "/api/auth/mastodon",
   "/api/auth/bing-webmaster",
+  "/api/auth/google-search-console",
+  "/api/auth/google-analytics",
+  "/api/auth/google-sheets",
   "/api/public/",
   "/api/tools/",
 ];
@@ -52,8 +56,15 @@ function isReadPath(path: string, method: string): boolean {
   ) {
     return true;
   }
+  if (
+    method === "POST" &&
+    /^\/api\/website-projects\/\d+\/analytics-properties\/available$/.test(path)
+  ) {
+    return true;
+  }
   if (method === "GET" || method === "HEAD") {
     if (path === "/api/auth/me") return true;
+    if (path === "/api/platform/stock-images/status") return true;
     if (path === "/api/auth/api-key") return true;
     if (path === "/api/auth/openai-credentials") return true;
     if (path === "/api/auth/anthropic-credentials") return true;
@@ -62,7 +73,45 @@ function isReadPath(path: string, method: string): boolean {
     if (path === "/api/auth/deepl-credentials") return true;
     if (path === "/api/auth/stock-credentials") return true;
     if (path === "/api/billing/status") return true;
+    if (path === "/api/billing/credits") return true;
+    if (path === "/api/billing/credits/top-up") return true;
+    if (path === "/api/organizations/security") return true;
+    if (path.startsWith("/api/content-strategies")) return true;
+    if (/^\/api\/roadmaps\/[^/]+$/.test(path)) return true;
+    if (path === "/api/competitor-analysis") return true;
+    if (/^\/api\/competitor-analyses\/\d+$/.test(path)) return true;
+    if (/^\/api\/keyword-analyses\/\d+$/.test(path)) return true;
+    if (path === "/api/internal-links") return true;
+    if (path === "/api/user/cms-summary") return true;
+    if (/^\/api\/website-projects\/\d+\/competitors$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/brand-voice\/skill$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/brand-voice\/sources$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/brand-profile\/platform-voice$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/brand-profile\/platform-voice\/[^/]+$/.test(path)) {
+      return true;
+    }
+    if (path === "/api/platform/stock-images/status") return true;
+    if (/^\/api\/website-projects\/\d+\/content$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/gsc-queries$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/analytics-properties$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/brand-profile\/voice$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/article-performance$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/semrush\/status$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/keyword-alerts$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/keyword-opportunities$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/article-ideas$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/article-idea-sources$/.test(path)) return true;
+    if (path === "/api/tracked-keywords") return true;
+    if (/^\/api\/tracked-keywords\/\d+\/snapshots$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/visibility$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/search-properties\/gsc\/sync-status$/.test(path)) {
+      return true;
+    }
+    if (path === "/api/partner/projects") return true;
+    if (path.startsWith("/api/admin/")) return true;
     if (path.startsWith("/api/jobs/")) return true;
+    if (path.startsWith("/api/auth/mfa/")) return true;
+    if (path === "/api/onboarding/fast-lane") return true;
     return !isPublicPath(path) && !path.startsWith("/api/auth/");
   }
   return false;
@@ -70,6 +119,9 @@ function isReadPath(path: string, method: string): boolean {
 
 function isWritePath(path: string, method: string): boolean {
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return false;
+  if (path.startsWith("/api/admin") && method !== "GET" && method !== "HEAD") {
+    return true;
+  }
   if (WRITE_PREFIXES.some((p) => path === p || path.startsWith(p))) return true;
   if (path === "/api/website-projects" && method === "POST") return true;
   if (path === "/api/organizations/members" && method === "POST") return true;
@@ -80,6 +132,54 @@ function isWritePath(path: string, method: string): boolean {
     return true;
   }
   if (/^\/api\/website-projects\/\d+\/autopilot-settings$/.test(path) && method === "PATCH") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/crawl$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/visibility-settings$/.test(path) && method === "PATCH") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/visibility\/check$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (path === "/api/tracked-keywords" && method === "POST") return true;
+  if (path === "/api/tracked-keywords" && method === "DELETE") return true;
+  if (/^\/api\/tracked-keywords\/\d+$/.test(path) && method === "DELETE") return true;
+  if (path === "/api/keyword-analysis" && method === "POST") return true;
+  if (/^\/api\/keyword-opportunities\/\d+$/.test(path) && (method === "POST" || method === "PATCH")) {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/keyword-opportunities$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/article-ideas$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/article-ideas\/import$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/article-idea-sources$/.test(path) && (method === "POST" || method === "DELETE")) {
+    return true;
+  }
+  if (path === "/api/competitor-analysis" && method === "POST") return true;
+  if (path === "/api/reddit-discovery" && method === "POST") return true;
+  if (path === "/api/topical-map" && method === "POST") return true;
+  if (/^\/api\/keyword-rank-alerts\/\d+$/.test(path) && method === "PATCH") return true;
+  if (/^\/api\/website-projects\/\d+\/brand-voice\/skill$/.test(path) && (method === "PUT" || method === "POST")) {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/brand-voice\/ingest$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/brand-profile\/platform-voice\/[^/]+$/.test(path) && method === "PUT") {
+    return true;
+  }
+  if (path === "/api/onboarding/fast-lane" && method === "POST") return true;
+  if (/^\/api\/content-strategies\/\d+\/items\/\d+$/.test(path) && method === "PATCH") {
+    return true;
+  }
+  if (/^\/api\/content-strategies\/\d+\/items\/\d+\/schedule$/.test(path) && method === "POST") {
     return true;
   }
   if (path === "/api/auth/me" && method === "PATCH") return true;
@@ -102,6 +202,20 @@ function isWritePath(path: string, method: string): boolean {
   if (path === "/api/auth/stock-credentials/test" && method === "POST") return true;
   if (path === "/api/billing/portal" && method === "POST") return true;
   if (path === "/api/billing/checkout" && method === "POST") return true;
+  if (path === "/api/billing/credits/top-up" && method === "POST") return true;
+  if (/^\/api\/invites\/[^/]+$/.test(path) && method === "POST") return true;
+  if (path === "/api/organizations/security" && method === "PATCH") return true;
+  if (path.startsWith("/api/auth/mfa/") && method === "POST") return true;
+  if (path.startsWith("/api/admin/") && method !== "GET" && method !== "HEAD") return true;
+  if (path === "/api/goals" && method === "POST") return true;
+  if (/^\/api\/goals\/\d+$/.test(path) && (method === "PATCH" || method === "DELETE")) return true;
+  if (/^\/api\/goals\/\d+\/compile-briefs$/.test(path) && method === "POST") return true;
+  if (path === "/api/briefs" && method === "POST") return true;
+  if (/^\/api\/briefs\/\d+$/.test(path) && method === "PATCH") return true;
+  if (path.includes("/social/composer") && method === "POST") return true;
+  if (path.includes("/social/queue/") && (method === "PATCH" || method === "DELETE")) return true;
+  if (path.includes("/social/schedule-settings") && method === "PATCH") return true;
+  if (path.includes("/output-mode") && method === "PATCH") return true;
   if (path.includes("/cms-integrations")) {
     if (method === "PATCH" || method === "DELETE") return true;
     if (method === "POST" && /\/cms-integrations\/test$/.test(path)) return true;
@@ -112,10 +226,23 @@ function isWritePath(path: string, method: string): boolean {
   ) {
     return true;
   }
-  if (/^\/api\/content-pieces\/\d+$/.test(path) && method === "PATCH") return true;
+  if (/^\/api\/content-pieces\/\d+$/.test(path) && (method === "PATCH" || method === "DELETE")) {
+    return true;
+  }
+  if (/^\/api\/content-pieces\/\d+\/regenerate$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-pieces\/\d+\/enhance$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-pieces\/\d+\/repurpose$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-pieces\/\d+\/images\/regenerate$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/humanize$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-pieces\/\d+\/approve$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-pieces\/\d+\/reject$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-pieces\/\d+\/submit-review$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-pieces\/\d+\/render-preview$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-items\/\d+$/.test(path) && method === "PATCH") return true;
+  if (/^\/api\/website-projects\/\d+\/crawl$/.test(path) && method === "POST") return true;
   if (path.includes("/publish") && method === "POST") return true;
   if (path.includes("/scrape") && method === "POST") return true;
+  if (path.includes("/crawl") && method === "POST") return true;
   if (path.includes("/sync") && method === "POST") return true;
   if (path.includes("/generate") && method === "POST" && !path.startsWith("/api/public/")) {
     return true;
@@ -151,7 +278,11 @@ export default {
     }
 
     let target: Fetcher;
-    if (isPublicPath(path)) {
+    if (/^\/api\/invites\/[^/]+$/.test(path) && request.method === "GET") {
+      target = env.PUBLIC;
+    } else if (/^\/api\/roadmaps\/[^/]+\/lead-capture$/.test(path) && request.method === "POST") {
+      target = env.PUBLIC;
+    } else if (isPublicPath(path)) {
       target = env.PUBLIC;
     } else if (isWritePath(path, request.method)) {
       target = env.WRITE;

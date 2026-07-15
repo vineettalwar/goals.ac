@@ -129,6 +129,14 @@ export async function handleContentPiecesWrite(
     );
   }
 
+  if (patchMatch && request.method === "DELETE") {
+    return handleContentPieceDelete(
+      request,
+      Number.parseInt(patchMatch[1]!, 10),
+      userId,
+    );
+  }
+
   const match = path.match(/^\/api\/website-projects\/(\d+)\/content-pieces$/);
   if (!match || request.method !== "POST") return null;
 
@@ -226,6 +234,33 @@ async function handleContentPiecePatch(
     .returning();
 
   return withCors(request, Response.json(updated));
+}
+
+async function handleContentPieceDelete(
+  request: Request,
+  contentPieceId: number,
+  userId: number,
+): Promise<Response> {
+  const access = await loadPieceForUser(contentPieceId, userId);
+  if (access.error === "not_found") {
+    return withCors(
+      request,
+      Response.json({ error: "Content piece not found" }, { status: 404 }),
+    );
+  }
+  if (access.error === "forbidden") {
+    return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
+  }
+
+  if (access.piece!.status === "generating") {
+    return withCors(
+      request,
+      Response.json({ error: "Cannot delete content while it is generating" }, { status: 400 }),
+    );
+  }
+
+  await db.delete(contentPiecesTable).where(eq(contentPiecesTable.id, contentPieceId));
+  return withCors(request, Response.json({ ok: true }));
 }
 
 async function handleContentPieceHumanize(

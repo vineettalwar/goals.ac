@@ -15,7 +15,9 @@
     "./session-cookie": "./src/session-cookie.ts",
     "./wire": "./src/wire.ts",
     "./project-access": "./src/project-access.ts",
-    "./search-property-client": "./src/search-property-client.ts"
+    "./edge-not-implemented": "./src/edge-not-implemented.ts",
+    "./search-property-client": "./src/search-property-client.ts",
+    "./analytics-property-client": "./src/analytics-property-client.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

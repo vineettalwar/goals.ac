@@ -8,9 +8,11 @@ import { kvPutJson } from "@workspace/cf-edge/kv-cache";
 import { verifySessionClaims } from "@workspace/cf-edge/jwt";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
 import { z } from "zod";
-import { handleCmsIntegrationsWrite } from "./cms-integrations";
+import { handleAdminWrite } from "./admin-routes";
 import { handleCmsIntegrationsTest } from "./cms-integrations-test";
 import { handleContentPiecesWrite } from "./content-pieces";
+import { handleContentPiecesAiWrite } from "./content-pieces-ai";
+import { handleContentPiecesWorkflowWrite } from "./content-pieces-workflow";
 import { handleAutopilotSettingsWrite } from "./autopilot-settings";
 import { handleWebsiteProjectsWrite } from "./website-projects";
 import { handleAuthMeWrite } from "./auth-me";
@@ -28,6 +30,24 @@ import { handleOrgMembersWrite } from "./org-members";
 import { handleBillingPortalPost } from "./billing-portal";
 import { handleBillingCheckoutPost } from "./billing-checkout";
 import { handleSearchPropertiesWrite } from "./search-properties";
+import { handleCmsIntegrationsWrite } from "./cms-integrations";
+import { handleStudioWrite } from "./studio-routes";
+import { handleKeywordWrite } from "./keyword-routes";
+import { handleSocialWrite } from "./social-routes";
+import { handleBillingCreditsWrite } from "./billing-credits";
+import { handleOrgSecurityWrite, handleMfaRoutes } from "./org-security-routes";
+import { handleInviteAcceptPost } from "./invite-routes";
+import { handleVisibilityWrite } from "./visibility-routes";
+import { handleTrackedKeywordsWrite } from "./tracked-keywords-routes";
+import { handleCompetitorAnalysisWrite } from "./competitor-analysis-routes";
+import { handleContentStrategiesWrite } from "./content-strategies-routes";
+import { handleGeoAuditWrite } from "./geo-audit-routes";
+import { handleOnboardingFastLaneWrite } from "./onboarding-fast-lane-routes";
+import { handleResearchWrite } from "./research-routes";
+import { handleBrandVoiceWrite } from "./brand-voice-routes";
+import { edgeNotImplementedResponse, isUnimplementedGeneratePath } from "@workspace/cf-edge/edge-not-implemented";
+import { persistSitemapCrawl } from "@workspace/content-engine/support/brand/brand-scan-context";
+import { getAccessibleProject } from "./project-access";
 
 export interface Env extends CfEdgeBindings {
   DB_DIALECT: string;
@@ -38,7 +58,7 @@ export interface Env extends CfEdgeBindings {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   BING_WEBMASTER_CLIENT_ID?: string;
-  BING_WEBMASTER_CLIENT_SECRET?: string;
+  APP_URL?: string;
 }
 
 const contentGenerateBody = z
@@ -93,6 +113,9 @@ export default {
     const userId = Number.parseInt(session.id, 10);
 
     try {
+      const adminHandled = await handleAdminWrite(request, path, session.role, session, env.AUTH_SECRET);
+      if (adminHandled) return adminHandled;
+
       const cmsTestHandled = await handleCmsIntegrationsTest(request, path, userId);
       if (cmsTestHandled) return cmsTestHandled;
 
@@ -150,10 +173,82 @@ export default {
       const searchPropertiesHandled = await handleSearchPropertiesWrite(request, path, userId, env);
       if (searchPropertiesHandled) return searchPropertiesHandled;
 
+      const studioHandled = await handleStudioWrite(request, path, userId);
+      if (studioHandled) return studioHandled;
+
+      const keywordHandled = await handleKeywordWrite(request, path, userId);
+      if (keywordHandled) return keywordHandled;
+
+      const socialHandled = await handleSocialWrite(request, path, userId, env);
+      if (socialHandled) return socialHandled;
+
+      const billingCreditsHandled = await handleBillingCreditsWrite(request, path, userId);
+      if (billingCreditsHandled) return billingCreditsHandled;
+
+      const orgSecurityHandled = await handleOrgSecurityWrite(request, path, userId);
+      if (orgSecurityHandled) return orgSecurityHandled;
+
+      const mfaHandled = await handleMfaRoutes(request, path, userId);
+      if (mfaHandled) return mfaHandled;
+
+      const inviteHandled = await handleInviteAcceptPost(request, path, userId);
+      if (inviteHandled) return inviteHandled;
+
       const contentPiecesHandled = await handleContentPiecesWrite(request, path, userId, (jobId, queue, meta) =>
         trackJob(env, jobId, queue, meta),
       );
       if (contentPiecesHandled) return contentPiecesHandled;
+
+      const contentPiecesWorkflowHandled = await handleContentPiecesWorkflowWrite(request, path, userId);
+      if (contentPiecesWorkflowHandled) return contentPiecesWorkflowHandled;
+
+      const contentPiecesAiHandled = await handleContentPiecesAiWrite(request, path, userId);
+      if (contentPiecesAiHandled) return contentPiecesAiHandled;
+
+      const visibilityHandled = await handleVisibilityWrite(request, path, userId);
+      if (visibilityHandled) return visibilityHandled;
+
+      const trackedKeywordsHandled = await handleTrackedKeywordsWrite(
+        request,
+        path,
+        userId,
+        (jobId, queue, meta) => trackJob(env, jobId, queue, meta),
+      );
+      if (trackedKeywordsHandled) return trackedKeywordsHandled;
+
+      const competitorAnalysisHandled = await handleCompetitorAnalysisWrite(request, path, userId);
+      if (competitorAnalysisHandled) return competitorAnalysisHandled;
+
+      const contentStrategiesHandled = await handleContentStrategiesWrite(
+        request,
+        path,
+        userId,
+        (jobId, queue, meta) => trackJob(env, jobId, queue, meta),
+      );
+      if (contentStrategiesHandled) return contentStrategiesHandled;
+
+      const geoAuditHandled = await handleGeoAuditWrite(
+        request,
+        path,
+        userId,
+        env,
+        (jobId, queue, meta) => trackJob(env, jobId, queue, meta),
+      );
+      if (geoAuditHandled) return geoAuditHandled;
+
+      const fastLaneHandled = await handleOnboardingFastLaneWrite(
+        request,
+        path,
+        userId,
+        (jobId, queue, meta) => trackJob(env, jobId, queue, meta),
+      );
+      if (fastLaneHandled) return fastLaneHandled;
+
+      const researchHandled = await handleResearchWrite(request, path, userId);
+      if (researchHandled) return researchHandled;
+
+      const brandVoiceHandled = await handleBrandVoiceWrite(request, path, userId);
+      if (brandVoiceHandled) return brandVoiceHandled;
 
       if (path === "/api/content-pieces/generate" && request.method === "POST") {
         const parsed = contentGenerateBody.safeParse(await request.json().catch(() => null));
@@ -192,6 +287,37 @@ export default {
         return withCors(request, acceptedJobResponse(id, QUEUES.contentPublish));
       }
 
+      const crawlMatch = path.match(/^\/api\/website-projects\/(\d+)\/crawl$/);
+      if (crawlMatch && request.method === "POST") {
+        const projectId = Number.parseInt(crawlMatch[1]!, 10);
+        if (!Number.isFinite(projectId)) {
+          return withCors(request, Response.json({ error: "Invalid project id" }, { status: 400 }));
+        }
+        try {
+          const project = await getAccessibleProject(projectId, userId);
+          if (!project) {
+            return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+          }
+          const result = await persistSitemapCrawl(projectId, project.url);
+          return withCors(
+            request,
+            Response.json({
+              sitemapUrl: result.sitemapUrl,
+              pageCount: result.pageCount,
+              crawlStatus: "done",
+            }),
+          );
+        } catch (err) {
+          return withCors(
+            request,
+            Response.json(
+              { error: err instanceof Error ? err.message : "Sitemap crawl failed" },
+              { status: 502 },
+            ),
+          );
+        }
+      }
+
       const scrapeMatch = path.match(/^\/api\/website-projects\/(\d+)\/scrape$/);
       if (scrapeMatch && request.method === "POST") {
         const projectId = Number.parseInt(scrapeMatch[1]!, 10);
@@ -225,15 +351,8 @@ export default {
         return withCors(request, acceptedJobResponse(id, QUEUES.ga4AnalyticsSync));
       }
 
-      if (path === "/api/geo-audits/generate" && request.method === "POST") {
-        const body = await request.json().catch(() => null) as { projectId?: number } | null;
-        if (!body?.projectId) {
-          return withCors(request, Response.json({ error: "projectId required" }, { status: 400 }));
-        }
-        const jobId = await sendToCfQueue(QUEUES.geoReauditSweep, { projectId: body.projectId });
-        const id = jobId ?? `cf:${QUEUES.geoReauditSweep}:${Date.now()}`;
-        await trackJob(env, id, QUEUES.geoReauditSweep, { userId, projectId: body.projectId });
-        return withCors(request, acceptedJobResponse(id, QUEUES.geoReauditSweep));
+      if (isUnimplementedGeneratePath(path, request.method)) {
+        return withCors(request, edgeNotImplementedResponse(request));
       }
 
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));

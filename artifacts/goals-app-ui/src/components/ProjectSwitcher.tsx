@@ -14,7 +14,7 @@ function hostname(url: string) {
 export function ProjectSwitcher({ className }: { className?: string }) {
   const { projects, projectId, activeProject, loading, setProjectId } = useActiveProject();
 
-  if (loading) {
+  if (loading && projects.length === 0) {
     return (
       <div className={cn("px-3 py-2.5 text-xs text-muted-foreground", className)}>
         Loading projects…

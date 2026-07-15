@@ -27,6 +27,7 @@
     "sync-pg-to-d1:local": "tsx ./src/run-sync-pg-to-d1.ts --local",
     "seed": "tsx ./src/seed.ts",
     "seed-test-user": "tsx ./src/seed-test-user.ts",
+    "hash-password": "tsx ./src/hash-password.ts",
     "push": "drizzle-kit push --config ./drizzle.config.ts",
     "push-force": "drizzle-kit push --force --config ./drizzle.config.ts"
   },

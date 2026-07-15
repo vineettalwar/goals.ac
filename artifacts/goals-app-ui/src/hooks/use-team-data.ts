@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isSiteAdmin, isSuperAdmin, type OrgMemberRow, type TeamRole } from "@workspace/app-shell";
 import { apiFetch } from "@/lib/api";
+import { queryKeys } from "@/lib/queries/keys";
 
 type MeResponse = {
   user?: {
@@ -13,13 +15,43 @@ type MembersResponse = {
   members: OrgMemberRow[];
 };
 
+type TeamData = {
+  orgRole: string | null;
+  userRole: string | null;
+  members: OrgMemberRow[];
+};
+
+async function fetchTeamData(): Promise<TeamData> {
+  const me = await apiFetch<MeResponse>("/api/auth/me");
+  const nextOrgRole = me.orgRole ?? null;
+  const nextUserRole = me.user?.role ?? null;
+
+  if (!isSuperAdmin(nextUserRole) && !isSiteAdmin(nextOrgRole)) {
+    return { orgRole: nextOrgRole, userRole: nextUserRole, members: [] };
+  }
+
+  const data = await apiFetch<MembersResponse>("/api/organizations/members");
+  return {
+    orgRole: nextOrgRole,
+    userRole: nextUserRole,
+    members: data.members ?? [],
+  };
+}
+
 export function useTeamData() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
   const [submitting, setSubmitting] = useState(false);
-  const [orgRole, setOrgRole] = useState<string | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [members, setMembers] = useState<OrgMemberRow[]>([]);
+
+  const query = useQuery({
+    queryKey: queryKeys.team,
+    queryFn: fetchTeamData,
+    staleTime: 30_000,
+    placeholderData: (previousData) => previousData,
+  });
+
+  const data = query.data;
+  const orgRole = data?.orgRole ?? null;
+  const userRole = data?.userRole ?? null;
 
   const canManageTeam = useMemo(
     () => isSuperAdmin(userRole) || isSiteAdmin(orgRole),
@@ -27,29 +59,8 @@ export function useTeamData() {
   );
 
   const reload = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const me = await apiFetch<MeResponse>("/api/auth/me");
-      const nextOrgRole = me.orgRole ?? null;
-      const nextUserRole = me.user?.role ?? null;
-      setOrgRole(nextOrgRole);
-      setUserRole(nextUserRole);
-
-      if (!isSuperAdmin(nextUserRole) && !isSiteAdmin(nextOrgRole)) {
-        setMembers([]);
-        return;
-      }
-
-      const data = await apiFetch<MembersResponse>("/api/organizations/members");
-      setMembers(data.members ?? []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load team");
-      setMembers([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await queryClient.invalidateQueries({ queryKey: queryKeys.team });
+  }, [queryClient]);
 
   const addMember = useCallback(
     async (input: { email: string; role: TeamRole; assignedProjectId: number | null }) => {
@@ -100,18 +111,19 @@ export function useTeamData() {
     [reload],
   );
 
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
   return {
-    loading,
-    error,
+    loading: query.isPending && !data,
+    error:
+      query.error instanceof Error
+        ? query.error.message
+        : query.error
+          ? "Failed to load team"
+          : null,
     submitting,
     orgRole,
     userRole,
     canManageTeam,
-    members,
+    members: data?.members ?? [],
     reload,
     addMember,
     updateMember,

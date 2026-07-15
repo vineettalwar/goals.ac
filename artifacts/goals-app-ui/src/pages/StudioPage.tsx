@@ -12,8 +12,23 @@ import { useStudioData } from "@/hooks/use-studio-data";
 export function StudioPage() {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { projectId, activeProject, loading: projectsLoading } = useActiveProject();
-  const { loading, error, pieces, createPiece } = useStudioData(projectId || null);
+  const { projectId, activeProject, loading: projectsLoading, projects } = useActiveProject();
+  const {
+    loading,
+    error,
+    pieces,
+    brandProfile,
+    brandProfileLoading,
+    aiReady,
+    activeProvider,
+    createPiece,
+    deletePiece,
+    markReady,
+    reschedulePiece,
+    deletingId,
+    markingReadyId,
+    reschedulingId,
+  } = useStudioData(projectId || null);
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
@@ -22,7 +37,7 @@ export function StudioPage() {
     if (!authLoading && !user) navigate("/login", { replace: true });
   }, [authLoading, user, navigate]);
 
-  if (authLoading || projectsLoading) {
+  if (authLoading || (projectsLoading && projects.length === 0)) {
     return <p className="p-8 text-muted-foreground">Loading…</p>;
   }
 
@@ -47,9 +62,19 @@ export function StudioPage() {
         projectName={activeProject?.name ?? null}
         pieces={pieces}
         loading={loading}
+        brandProfile={brandProfile}
+        brandProfileLoading={brandProfileLoading}
+        aiReady={aiReady}
+        activeProvider={activeProvider}
         newContentAction={newContentAction}
-        renderLink={({ href, className, children }) => (
-          <Link to={href} className={className}>
+        onDeletePiece={deletePiece}
+        onMarkReady={markReady}
+        onReschedulePiece={reschedulePiece}
+        deletingId={deletingId}
+        markingReadyId={markingReadyId}
+        reschedulingId={reschedulingId}
+        renderLink={({ href, className, children, title }) => (
+          <Link to={href} className={className} title={title}>
             {children}
           </Link>
         )}

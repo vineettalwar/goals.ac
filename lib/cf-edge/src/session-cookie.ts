@@ -7,6 +7,14 @@ export type SessionTokenPayload = {
   email: string;
   name: string | null;
   role: string;
+  organizationId?: number | null;
+  orgRole?: string | null;
+  impersonatorId?: string;
+  impersonatorRole?: string;
+  impersonatorEmail?: string | null;
+  impersonatorName?: string | null;
+  supportOrganizationId?: number | null;
+  supportOrganizationName?: string | null;
 };
 
 function sessionCookieName(secure: boolean): string {
@@ -26,6 +34,14 @@ export async function buildSessionCookie(
       email: payload.email,
       name: payload.name ?? undefined,
       role: payload.role,
+      organizationId: payload.organizationId ?? undefined,
+      orgRole: payload.orgRole ?? undefined,
+      impersonatorId: payload.impersonatorId,
+      impersonatorRole: payload.impersonatorRole,
+      impersonatorEmail: payload.impersonatorEmail ?? undefined,
+      impersonatorName: payload.impersonatorName ?? undefined,
+      supportOrganizationId: payload.supportOrganizationId ?? undefined,
+      supportOrganizationName: payload.supportOrganizationName ?? undefined,
     },
     secret,
     salt: name,

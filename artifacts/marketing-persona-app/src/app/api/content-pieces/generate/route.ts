@@ -7,6 +7,7 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { generateContentPiece, buildCacheKey, cacheGet } from "@/lib/ai/content-studio-generator";
 import { loadProjectBrand } from "@/lib/content/content-pieces-helpers";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
+import { isCfEdgeHttp } from "@/lib/cf-edge-http";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { z } from "zod";
 
@@ -28,6 +29,17 @@ export async function POST(req: Request) {
     RATE_LIMITS.AI_GENERATION_PER_USER.windowMs
   );
   if (limited) return limited;
+
+  if (isCfEdgeHttp()) {
+    return NextResponse.json(
+      {
+        error:
+          "Inline content generation is unavailable on Cloudflare edge preview. Use the queued generate endpoint.",
+        code: "EDGE_INLINE_DISABLED",
+      },
+      { status: 501 },
+    );
+  }
 
   const body = await req.json().catch(() => null);
   const parsed = GenerateBody.safeParse(body);

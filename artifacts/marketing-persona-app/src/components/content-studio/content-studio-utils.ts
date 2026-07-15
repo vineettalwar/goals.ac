@@ -1,6 +1,5 @@
 import type { ContentFormatType } from "./content-studio-format-data";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
-import type { LegacyItem } from "./content-studio-load-data";
 import type { BriefContentDraft } from "./create-content-modal";
 
 export function draftFromCreateParams(searchParams: URLSearchParams): BriefContentDraft | null {
@@ -39,14 +38,35 @@ export interface StudioPiece extends ContentPieceRow {
   source: "studio";
 }
 
-export type HubItem = StudioPiece | LegacyItem;
 export type SortKey = "newest" | "oldest" | "words_desc" | "words_asc" | "title_asc";
 
-export function isStudioPiece(item: HubItem): item is StudioPiece {
-  return item.source === "studio";
+export function filterPieces(
+  pieces: StudioPiece[],
+  filterStatus: string,
+  filterFormat: string,
+): StudioPiece[] {
+  return pieces.filter((piece) => {
+    if (filterStatus !== "all" && piece.status !== filterStatus) return false;
+    if (filterFormat !== "all" && piece.formatType !== filterFormat) return false;
+    return true;
+  });
 }
 
-export function sortItems(items: HubItem[], sortKey: SortKey): HubItem[] {
+export function pieceStatusCounts(
+  pieces: StudioPiece[],
+): Array<{ label: string; count: number; color: string }> {
+  return [
+    { label: "Drafts", count: pieces.filter((piece) => piece.status === "draft").length, color: "text-amber-600" },
+    { label: "Ready", count: pieces.filter((piece) => piece.status === "ready").length, color: "text-emerald-600" },
+    {
+      label: "Published",
+      count: pieces.filter((piece) => piece.status === "published").length,
+      color: "text-blue-600",
+    },
+  ].filter((row) => row.count > 0);
+}
+
+export function sortItems(items: StudioPiece[], sortKey: SortKey): StudioPiece[] {
   return [...items].sort((a, b) => {
     switch (sortKey) {
       case "newest":

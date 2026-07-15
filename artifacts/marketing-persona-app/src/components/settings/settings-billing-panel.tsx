@@ -243,7 +243,7 @@ export function SettingsBillingPanel() {
 
             {renewal && billing.hasActiveSubscription && (
               <p className="text-sm text-muted-foreground">
-                {currentPlan === "growth" ? "Subscription renews" : "Legacy subscription renews"} on{" "}
+                Subscription renews on{" "}
                 <span className="text-foreground">{renewal}</span>
               </p>
             )}
@@ -277,7 +277,7 @@ export function SettingsBillingPanel() {
                 {portalLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  "Manage legacy subscription"
+                  "Manage billing"
                 )}
               </Button>
             )}

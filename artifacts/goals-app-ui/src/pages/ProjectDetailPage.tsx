@@ -8,6 +8,7 @@ import {
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
+import { useIntegrationsData } from "@/hooks/use-integrations-data";
 import { useProjectDetailData } from "@/hooks/use-project-detail-data";
 
 function parseTab(value: string | null): ProjectDetailTab {
@@ -39,6 +40,10 @@ export function ProjectDetailPage() {
     saveVoice,
     savingVoice,
   } = useProjectDetailData(id);
+  const { integrations } = useIntegrationsData(id ?? null);
+  const connectedPlatforms = Object.entries(integrations)
+    .filter(([, row]) => row?.connected)
+    .map(([key]) => key);
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login", { replace: true });
@@ -59,7 +64,7 @@ export function ProjectDetailPage() {
     );
   }
 
-  if (authLoading || loading) {
+  if ((authLoading && !user) || (loading && !project)) {
     return <p className="p-8 text-muted-foreground">Loading project…</p>;
   }
 
@@ -105,6 +110,7 @@ export function ProjectDetailPage() {
       savingBrand={savingBrand}
       onSaveVoice={saveVoice}
       savingVoice={savingVoice}
+      connectedPlatforms={connectedPlatforms}
       renderLink={({ href, className, children }) => (
         <Link to={href} className={className}>
           {children}

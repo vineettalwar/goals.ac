@@ -1,61 +1,29 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { queryKeys } from "@/lib/queries/keys";
 import type { AutopilotSettings, AutopilotSettingsSavePayload } from "@workspace/app-shell";
 
-type AutopilotLoadState = {
-  loading: boolean;
-  error: string | null;
-  settings: AutopilotSettings | null;
-  saving: boolean;
-};
-
 export function useAutopilotData(projectId: string | null) {
-  const [state, setState] = useState<AutopilotLoadState>({
-    loading: true,
-    error: null,
-    settings: null,
-    saving: false,
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const query = useQuery({
+    queryKey: queryKeys.autopilot(projectId),
+    queryFn: () =>
+      apiFetch<AutopilotSettings>(`/api/website-projects/${projectId}/autopilot-settings`),
+    enabled: Boolean(projectId),
+    staleTime: 30_000,
+    placeholderData: (previousData) => previousData,
   });
-
-  const loadSettings = useCallback(async (id: string, cancelled?: () => boolean) => {
-    setState((prev) => ({ ...prev, loading: true, error: null }));
-    try {
-      const settings = await apiFetch<AutopilotSettings>(
-        `/api/website-projects/${id}/autopilot-settings`,
-      );
-      if (!cancelled?.()) {
-        setState((prev) => ({ ...prev, loading: false, error: null, settings }));
-      }
-    } catch (err) {
-      if (!cancelled?.()) {
-        setState((prev) => ({
-          ...prev,
-          loading: false,
-          error: err instanceof Error ? err.message : "Failed to load autopilot settings",
-          settings: null,
-        }));
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!projectId) {
-      setState({ loading: false, error: null, settings: null, saving: false });
-      return;
-    }
-
-    let cancelled = false;
-    void loadSettings(projectId, () => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId, loadSettings]);
 
   const saveSettings = useCallback(
     async (payload: AutopilotSettingsSavePayload) => {
       if (!projectId) return;
 
-      setState((prev) => ({ ...prev, saving: true, error: null }));
+      setSaving(true);
+      setSaveError(null);
       try {
         const settings = await apiFetch<AutopilotSettings>(
           `/api/website-projects/${projectId}/autopilot-settings`,
@@ -65,18 +33,30 @@ export function useAutopilotData(projectId: string | null) {
             body: JSON.stringify(payload),
           },
         );
-        setState((prev) => ({ ...prev, saving: false, error: null, settings }));
+        queryClient.setQueryData(queryKeys.autopilot(projectId), settings);
       } catch (err) {
-        setState((prev) => ({
-          ...prev,
-          saving: false,
-          error: err instanceof Error ? err.message : "Failed to save autopilot settings",
-        }));
+        const message =
+          err instanceof Error ? err.message : "Failed to save autopilot settings";
+        setSaveError(message);
         throw err;
+      } finally {
+        setSaving(false);
       }
     },
-    [projectId],
+    [projectId, queryClient],
   );
 
-  return { ...state, saveSettings };
+  return {
+    loading: query.isPending && !query.data,
+    error:
+      saveError ??
+      (query.error instanceof Error
+        ? query.error.message
+        : query.error
+          ? "Failed to load autopilot settings"
+          : null),
+    settings: query.data ?? null,
+    saving,
+    saveSettings,
+  };
 }

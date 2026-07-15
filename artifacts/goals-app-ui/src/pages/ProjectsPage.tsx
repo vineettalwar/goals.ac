@@ -34,7 +34,7 @@ export function ProjectsPage() {
     if (!authLoading && !user) navigate("/login", { replace: true });
   }, [authLoading, user, navigate]);
 
-  if (authLoading || loading) {
+  if ((authLoading && !user) || (loading && projects.length === 0)) {
     return <p className="p-8 text-muted-foreground">Loading…</p>;
   }
 
@@ -50,7 +50,7 @@ export function ProjectsPage() {
           <TeamManagementView
             members={members}
             projects={projects}
-            loading={teamLoading}
+            loading={teamLoading && members.length === 0}
             error={teamError}
             submitting={teamSubmitting}
             onAddMember={addMember}

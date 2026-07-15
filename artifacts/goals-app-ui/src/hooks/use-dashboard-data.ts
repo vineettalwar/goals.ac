@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
+import { queryKeys } from "@/lib/queries/keys";
 import type {
   DashboardAutopilotSettings,
   DashboardPiece,
@@ -7,23 +8,11 @@ import type {
 } from "@workspace/app-shell";
 import type { ContentPiece, WebsiteProject } from "@/types/api";
 
-type DashboardLoadState = {
-  loading: boolean;
-  error: string | null;
-  projects: DashboardProject[];
-  activeProject: DashboardProject | null;
-  pieces: DashboardPiece[];
-  autopilotSettings: DashboardAutopilotSettings | null;
-};
-
 function mapProject(project: WebsiteProject): DashboardProject {
   return { id: project.id, name: project.name, url: project.url };
 }
 
-function mapPiece(
-  piece: ContentPiece,
-  projectName?: string,
-): DashboardPiece {
+function mapPiece(piece: ContentPiece, projectName?: string): DashboardPiece {
   return {
     id: piece.id,
     title: piece.title,
@@ -35,72 +24,67 @@ function mapPiece(
   };
 }
 
-export function useDashboardData(activeProjectId: string | null) {
-  const [state, setState] = useState<DashboardLoadState>({
-    loading: true,
-    error: null,
-    projects: [],
-    activeProject: null,
-    pieces: [],
-    autopilotSettings: null,
+type DashboardData = {
+  projects: DashboardProject[];
+  activeProject: DashboardProject | null;
+  pieces: DashboardPiece[];
+  autopilotSettings: DashboardAutopilotSettings | null;
+};
+
+async function fetchDashboardData(
+  activeProjectId: string | null,
+  allProjects: WebsiteProject[],
+): Promise<DashboardData> {
+  const projectRows = allProjects.map(mapProject);
+  const active =
+    projectRows.find((row) => String(row.id) === activeProjectId) ?? projectRows[0] ?? null;
+
+  let pieces: DashboardPiece[] = [];
+  let autopilotSettings: DashboardAutopilotSettings | null = null;
+
+  if (active) {
+    const [pieceRows, autopilot] = await Promise.all([
+      apiFetch<ContentPiece[]>(`/api/website-projects/${active.id}/content-pieces`),
+      apiFetch<DashboardAutopilotSettings>(
+        `/api/website-projects/${active.id}/autopilot-settings`,
+      ).catch(() => null),
+    ]);
+    pieces = pieceRows.map((piece) => mapPiece(piece, active.name));
+    autopilotSettings = autopilot;
+  } else if (allProjects.length > 0) {
+    const allPieces = await apiFetch<ContentPiece[]>("/api/content-pieces").catch(() => []);
+    const nameById = new Map(allProjects.map((project) => [project.id, project.name]));
+    pieces = allPieces.map((piece) => mapPiece(piece, nameById.get(piece.websiteProjectId)));
+  }
+
+  return {
+    projects: projectRows,
+    activeProject: active,
+    pieces,
+    autopilotSettings,
+  };
+}
+
+export function useDashboardData(activeProjectId: string | null, allProjects: WebsiteProject[]) {
+  const query = useQuery({
+    queryKey: queryKeys.dashboard(activeProjectId),
+    queryFn: () => fetchDashboardData(activeProjectId, allProjects),
+    enabled: allProjects.length > 0,
+    staleTime: 30_000,
+    placeholderData: (previousData) => previousData,
   });
 
-  useEffect(() => {
-    let cancelled = false;
-
-    void (async () => {
-      setState((prev) => ({ ...prev, loading: true, error: null }));
-      try {
-        const projects = await apiFetch<WebsiteProject[]>("/api/website-projects");
-        const projectRows = projects.map(mapProject);
-        const active =
-          projectRows.find((row) => String(row.id) === activeProjectId) ?? projectRows[0] ?? null;
-
-        let pieces: DashboardPiece[] = [];
-        let autopilotSettings: DashboardAutopilotSettings | null = null;
-
-        if (active) {
-          const [pieceRows, autopilot] = await Promise.all([
-            apiFetch<ContentPiece[]>(`/api/website-projects/${active.id}/content-pieces`),
-            apiFetch<DashboardAutopilotSettings>(
-              `/api/website-projects/${active.id}/autopilot-settings`,
-            ).catch(() => null),
-          ]);
-          pieces = pieceRows.map((piece) => mapPiece(piece, active.name));
-          autopilotSettings = autopilot;
-        } else if (projects.length > 0) {
-          const allPieces = await apiFetch<ContentPiece[]>("/api/content-pieces").catch(() => []);
-          const nameById = new Map(projects.map((p) => [p.id, p.name]));
-          pieces = allPieces.map((piece) =>
-            mapPiece(piece, nameById.get(piece.websiteProjectId)),
-          );
-        }
-
-        if (!cancelled) {
-          setState({
-            loading: false,
-            error: null,
-            projects: projectRows,
-            activeProject: active,
-            pieces,
-            autopilotSettings,
-          });
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setState((prev) => ({
-            ...prev,
-            loading: false,
-            error: err instanceof Error ? err.message : "Failed to load dashboard",
-          }));
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeProjectId]);
-
-  return state;
+  return {
+    loading: query.isPending && !query.data,
+    error:
+      query.error instanceof Error
+        ? query.error.message
+        : query.error
+          ? "Failed to load dashboard"
+          : null,
+    projects: query.data?.projects ?? [],
+    activeProject: query.data?.activeProject ?? null,
+    pieces: query.data?.pieces ?? [],
+    autopilotSettings: query.data?.autopilotSettings ?? null,
+  };
 }

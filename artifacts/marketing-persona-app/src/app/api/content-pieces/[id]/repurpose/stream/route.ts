@@ -17,6 +17,7 @@ import {
   prepareAiBilling,
 } from "@/lib/billing/ai-billing";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
+import { edgeStreamingBlocked } from "@/lib/cf-edge-http";
 import { z } from "zod";
 
 const RepurposeBody = z.object({
@@ -30,6 +31,9 @@ export async function POST(
 ) {
   const { userId, error } = await requireAuth();
   if (error) return error;
+
+  const blocked = edgeStreamingBlocked();
+  if (blocked) return blocked;
 
   const limited = await rateLimitResponse(
     `ai-gen:user:${userId}`,

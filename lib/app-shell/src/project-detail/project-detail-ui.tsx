@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { CMS_PLATFORMS } from "../integrations/types";
+import { CmsPlatformIcon, IntegrationIconBox } from "../integrations/integration-icons";
 import {
   BarChart3,
   ExternalLink,
@@ -241,24 +243,50 @@ function ContentTabPanel({
 function PublishingTabPanel({
   projectId,
   renderLink,
+  connectedPlatforms,
 }: {
   projectId: number;
   renderLink: (props: ProjectDetailLinkProps) => ReactNode;
+  connectedPlatforms?: string[];
 }) {
+  const connected = new Set(connectedPlatforms ?? []);
   return (
-    <div className="paper-card space-y-4 p-6">
-      <h3 className="font-semibold">Publishing & integrations</h3>
-      <p className="text-sm text-muted-foreground">
-        Connect WordPress, Shopify, Ghost, Webflow, and other CMS platforms to publish content from
-        goals.ac.
-      </p>
-      <DetailLink
-        renderLink={renderLink}
-        href={`/integrations?project=${projectId}`}
-        className="inline-flex rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary"
-      >
-        Manage integrations
-      </DetailLink>
+    <div className="space-y-4">
+      <div className="paper-card space-y-3 p-6">
+        <h3 className="font-semibold">Publishing & integrations</h3>
+        <p className="text-sm text-muted-foreground">
+          Connect WordPress, Shopify, Ghost, Webflow, and other CMS platforms to publish content from
+          goals.ac.
+        </p>
+        <DetailLink
+          renderLink={renderLink}
+          href={`/integrations?project=${projectId}`}
+          className="inline-flex rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary"
+        >
+          Manage integrations
+        </DetailLink>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {CMS_PLATFORMS.filter((p) => p.key !== "webhook").map((platform) => {
+          const isConnected = connected.has(platform.key);
+          return (
+            <DetailLink
+              key={platform.key}
+              renderLink={renderLink}
+              href={`/integrations?project=${projectId}`}
+              className={`paper-card flex items-center gap-3 p-4 transition-colors hover:bg-secondary/20 ${isConnected ? "border-emerald-500/25 bg-emerald-500/3" : ""}`}
+            >
+              <IntegrationIconBox>
+                <CmsPlatformIcon platform={platform} />
+              </IntegrationIconBox>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{platform.label}</p>
+                <p className="text-xs text-muted-foreground">{isConnected ? "Connected" : "Not connected"}</p>
+              </div>
+            </DetailLink>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -277,6 +305,7 @@ export function ProjectDetailView({
   savingBrand,
   onSaveVoice,
   savingVoice,
+  connectedPlatforms,
   renderLink,
   backHref = "/dashboard",
 }: {
@@ -293,6 +322,7 @@ export function ProjectDetailView({
   savingBrand?: boolean;
   onSaveVoice?: (payload: VoiceStyleSavePayload) => void | Promise<void>;
   savingVoice?: boolean;
+  connectedPlatforms?: string[];
   renderLink: (props: ProjectDetailLinkProps) => ReactNode;
   backHref?: string;
 }) {
@@ -424,7 +454,7 @@ export function ProjectDetailView({
         <ContentTabPanel pieces={pieces} projectId={project.id} renderLink={renderLink} />
       ) : null}
       {activeTab === "publishing" ? (
-        <PublishingTabPanel projectId={project.id} renderLink={renderLink} />
+        <PublishingTabPanel projectId={project.id} renderLink={renderLink} connectedPlatforms={connectedPlatforms} />
       ) : null}
 
       <div className="grid grid-cols-2 gap-3 pt-2 sm:grid-cols-4">

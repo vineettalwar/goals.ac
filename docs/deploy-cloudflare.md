@@ -55,6 +55,43 @@ flowchart TB
 
 Legacy apps **not deployed** on Cloudflare: `artifacts/goals-ac` (Vite redirect), `artifacts/api-server`, `artifacts/worker` (pg-boss).
 
+## Hybrid product app (app.goals.ac + api.goals.ac)
+
+Production product UI is **not** the OpenNext monolith. It is a **hybrid**:
+
+| Layer | Artifact | Host |
+|---|---|---|
+| Product UI | [`artifacts/goals-app-ui`](artifacts/goals-app-ui) (Vite SPA) + shared [`lib/app-shell`](lib/app-shell) | `app.goals.ac` (Pages) |
+| API | [`artifacts/cf-gateway`](artifacts/cf-gateway) → public / read / write shards | `api.goals.ac` (Worker) |
+| Jobs | [`artifacts/cf-jobs-worker`](artifacts/cf-jobs-worker) | queue consumer + crons |
+
+[`artifacts/marketing-persona-app`](artifacts/marketing-persona-app) remains the **full-stack dev server** (`pnpm dev` :3001) and **OpenNext preview** (`pnpm run cf:preview` :8787). Next.js API routes use [`src/lib/cf-edge-http.ts`](artifacts/marketing-persona-app/src/lib/cf-edge-http.ts) to block streaming / inline AI when `CF_EDGE_HTTP=1`.
+
+### Worker bundle sizes (Workers Free — must stay under 3 MB gzip)
+
+Validate after major dependency changes:
+
+```sh
+cd artifacts/cf-public-worker && pnpm exec wrangler deploy --dry-run --outdir /tmp/cf-bundle-public 2>&1 | rg "Total Upload"
+# Repeat for cf-read-worker, cf-write-worker, cf-gateway, cf-jobs-worker
+```
+
+Last measured (Jul 2026):
+
+| Worker | gzip |
+|---|---|
+| `goals-ac-public` | ~1.4 MB |
+| `goals-ac-read` | ~424 KB |
+| `goals-ac-write` | ~721 KB |
+| `goals-ac-gateway` | ~2 KB |
+| `goals-ac-jobs` | ~1.1 MB |
+
+### Edge route coverage (production SPA)
+
+Shards implement routes the Vite app calls: auth (login/OAuth/password reset), projects CRUD, settings/BYOK, billing, content studio (queue + job poll), integrations, social, admin reads/writes, org members.
+
+Still **Next-only** (local dev / OpenNext preview): MFA setup, SSE streaming routes, public API v1, cron HTTP endpoints, analytics vitals.
+
 ## Legacy monolith (local preview only — not deployed)
 
 The `goals-ac` OpenNext Worker was **deleted** from Cloudflare. The Next.js app in `artifacts/marketing-persona-app` remains for **local dev** (`pnpm dev` :3001) and **Workers runtime preview** (`pnpm run cf:preview` :8787).
@@ -371,9 +408,10 @@ At scale, migrate brand voice retrieval from D1 JSON cosine to **Vectorize**. St
 | Path | Purpose |
 |---|---|
 | `artifacts/cf-gateway/` | API router (`api.goals.ac`) |
-| `artifacts/cf-public-worker/` | Public tools, contact, waitlist, reference GETs |
-| `artifacts/cf-read-worker/` | Authenticated D1 reads + job status |
-| `artifacts/cf-write-worker/` | Enqueue-only writes (202 + jobId) |
+| `artifacts/cf-public-worker/` | Public auth OAuth, tools, waitlist, reference GETs |
+| `artifacts/cf-read-worker/` | Authenticated reads, billing status, admin reads, job polling |
+| `artifacts/cf-write-worker/` | Writes, BYOK credentials, billing checkout, admin mutations, queue enqueue |
+| `lib/platform-admin/` | Shared admin queries/mutations for edge read/write workers |
 | `artifacts/marketing-pages/` | Static marketing Pages export |
 | `artifacts/goals-app-ui/` | Product SPA on Pages |
 | `lib/cf-edge/` | Shared CORS, JWT, KV cache, queue HTTP helpers |

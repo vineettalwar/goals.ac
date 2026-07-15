@@ -6,7 +6,8 @@ import {
   type CmsIntegrationRow,
   type IntegrationsTab,
 } from "./types";
-import { CmsPlatformIcon, IntegrationIconBox } from "./integration-icons";
+import { CmsPlatformIcon } from "./integration-icons";
+import { IntegrationTile } from "./integration-tiles";
 import {
   IntegrationsSearchPanel,
   searchConnectedCount,
@@ -220,87 +221,64 @@ export function IntegrationsView({
                 <p className="text-sm text-muted-foreground">Loading integrations…</p>
               ) : (
                 <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                  {CMS_PLATFORMS.map((platform) => {
+                  {CMS_PLATFORMS.filter((p) => p.key !== "webhook").map((platform) => {
                     const { key, label, description } = platform;
                     const row = integrations[key];
                     const connected = Boolean(row?.connected);
+                    const summary =
+                      connected && key === "webhook" && typeof row?.url === "string"
+                        ? row.url
+                        : connected
+                          ? "Connected"
+                          : null;
+
                     return (
-                      <div
+                      <IntegrationTile
                         key={key}
-                        className={cn(
-                          "paper-card flex items-start gap-3 p-4 transition-colors",
-                          connected && "border-emerald-500/25 bg-emerald-500/3",
-                        )}
-                      >
-                        <IntegrationIconBox>
-                          <CmsPlatformIcon platform={platform} />
-                        </IntegrationIconBox>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="truncate text-sm font-semibold">{label}</p>
-                            <span
-                              className={cn(
-                                "h-1.5 w-1.5 shrink-0 rounded-full",
-                                connected ? "bg-emerald-500" : "bg-muted-foreground/25",
-                              )}
-                              aria-hidden
-                            />
-                          </div>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {connected ? "Connected" : description}
-                          </p>
-                          {connected && key === "webhook" && typeof row?.url === "string" ? (
-                            <p className="mt-1 truncate text-xs text-muted-foreground">{row.url}</p>
-                          ) : null}
-                        </div>
-                        <div className="flex shrink-0 flex-col items-end gap-2">
-                          <span
-                            className={cn(
-                              "rounded-full px-2 py-1 text-xs font-medium",
-                              connected
-                                ? "bg-emerald-50 text-emerald-800"
-                                : "bg-muted text-muted-foreground",
-                            )}
-                          >
-                            {connected ? "On" : "Off"}
-                          </span>
-                          {connected ? (
-                            <div className="flex flex-col items-end gap-1">
-                              {onTestPlatform ? (
-                                <button
-                                  type="button"
-                                  disabled={saving}
-                                  onClick={() => onTestPlatform(key)}
-                                  className="text-xs font-medium text-primary hover:underline disabled:opacity-50"
-                                >
-                                  Test
-                                </button>
-                              ) : null}
-                              <button
-                                type="button"
-                                disabled={saving}
-                                onClick={() => onDisconnect(key)}
-                                className="text-xs text-red-700 hover:underline disabled:opacity-50"
-                              >
-                                Disconnect
-                              </button>
-                            </div>
-                          ) : key !== "webhook" ? (
-                            <button
-                              type="button"
-                              disabled={saving}
-                              onClick={() => onConnectPlatform(key)}
-                              className="h-8 rounded-lg border border-border px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50"
-                            >
-                              Connect
-                            </button>
-                          ) : null}
-                        </div>
-                      </div>
+                        icon={<CmsPlatformIcon platform={platform} />}
+                        title={label}
+                        description={description}
+                        connected={connected}
+                        summary={summary}
+                        onClick={() => {
+                          if (!connected) {
+                            onConnectPlatform(key);
+                          }
+                        }}
+                      />
                     );
                   })}
                 </div>
               )}
+
+              {!integrationsLoading &&
+              CMS_PLATFORMS.some(({ key }) => integrations[key]?.connected) ? (
+                <div className="flex flex-wrap gap-2">
+                  {CMS_PLATFORMS.filter(({ key }) => integrations[key]?.connected).map(({ key, label }) => (
+                    <div key={key} className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-xs">
+                      <span className="font-medium">{label}</span>
+                      {onTestPlatform ? (
+                        <button
+                          type="button"
+                          disabled={saving}
+                          onClick={() => onTestPlatform(key)}
+                          className="text-primary hover:underline disabled:opacity-50"
+                        >
+                          Test
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => onDisconnect(key)}
+                        className="text-red-700 hover:underline disabled:opacity-50"
+                      >
+                        Disconnect
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
 
               <section className="paper-card max-w-lg space-y-3 p-4">
                 <h2 className="text-sm font-semibold">Connect webhook</h2>

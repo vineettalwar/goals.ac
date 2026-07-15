@@ -1,3 +1,4 @@
+import type { RecordUsageEventInput } from "@workspace/billing";
 import {
   cancelAiBillingSession,
   completeAiBillingSession,
@@ -111,12 +112,7 @@ export async function prepareAiBilling(
 
 export async function completeAiBilling(
   ctx: AiBillingContext,
-  usage: {
-    userId: number;
-    eventType: string;
-    usedByok: boolean;
-    tier: AiTier;
-  },
+  usage: RecordUsageEventInput,
 ): Promise<number> {
   return completeAiBillingSession(ctx, usage);
 }
