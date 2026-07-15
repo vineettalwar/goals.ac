@@ -6,6 +6,7 @@ import {
   getSocialDestinations,
   type SocialDestinationDefinition,
 } from "./publishing-destinations";
+import { IntegrationIconBox, SocialDestinationIcon } from "./integration-icons";
 
 export { countSocialConnections };
 
@@ -235,7 +236,7 @@ export function IntegrationsSocialPanel({
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {destinations.map((destination) => {
           const connected = destination.isConnected(integrations);
           const summary = destination.connectionSummary(integrations);
@@ -249,16 +250,30 @@ export function IntegrationsSocialPanel({
           return (
             <div
               key={destination.id}
-              className="paper-card flex flex-col justify-between gap-3 p-4"
+              className={cn(
+                "paper-card flex flex-col gap-3 p-4 transition-colors",
+                connected && "border-emerald-500/25 bg-emerald-500/3",
+              )}
             >
-              <div className="min-w-0 space-y-1">
-                <p className="text-sm font-semibold">{destination.label}</p>
-                <p className="text-xs text-muted-foreground">{destination.description}</p>
-                {summary ? (
-                  <p className="truncate text-xs text-muted-foreground">
-                    Account: <span className="text-foreground">{summary}</span>
+              <div className="flex items-start gap-3">
+                <IntegrationIconBox>
+                  <SocialDestinationIcon destination={destination} />
+                </IntegrationIconBox>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-semibold">{destination.label}</p>
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 shrink-0 rounded-full",
+                        connected ? "bg-emerald-500" : "bg-muted-foreground/25",
+                      )}
+                      aria-hidden
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {summary ?? destination.description}
                   </p>
-                ) : null}
+                </div>
               </div>
 
               <div className="flex flex-col gap-2">

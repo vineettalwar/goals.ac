@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "../cn";
+import { IntegrationIconBox, SearchProviderIcon } from "./integration-icons";
 
 export type SearchPropertyProvider = "google_search_console" | "bing_webmaster";
 
@@ -217,7 +218,7 @@ export function IntegrationsSearchPanel({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2">
         {data.connections.map((connection) => {
           const meta = PROVIDER_META[connection.provider];
           const oauthReady = isOAuthReady(connection.provider, data.oauthConfigured);
@@ -229,11 +230,30 @@ export function IntegrationsSearchPanel({
           return (
             <div
               key={connection.provider}
-              className="paper-card flex flex-col justify-between gap-3 p-4"
+              className={cn(
+                "paper-card flex flex-col gap-3 p-4 transition-colors",
+                verified && "border-emerald-500/25 bg-emerald-500/3",
+                pending && "border-amber-500/25 bg-amber-500/3",
+              )}
             >
-              <div className="min-w-0 space-y-1">
-                <p className="text-sm font-semibold">{meta.label}</p>
-                <p className="text-xs text-muted-foreground">{meta.description}</p>
+              <div className="flex items-start gap-3">
+                <IntegrationIconBox>
+                  <SearchProviderIcon provider={connection.provider} />
+                </IntegrationIconBox>
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-sm font-semibold">{meta.label}</p>
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 shrink-0 rounded-full",
+                        verified && "bg-emerald-500",
+                        pending && "bg-amber-500",
+                        !connection.connected && "bg-muted-foreground/25",
+                      )}
+                      aria-hidden
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">{meta.description}</p>
                 {verified && connection.propertyUrl ? (
                   <p className="truncate text-xs text-muted-foreground">
                     Property: <span className="text-foreground">{connection.propertyUrl}</span>
@@ -266,6 +286,7 @@ export function IntegrationsSearchPanel({
                     }}
                   />
                 ) : null}
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">

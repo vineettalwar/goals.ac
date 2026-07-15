@@ -6,6 +6,7 @@ import {
   type CmsIntegrationRow,
   type IntegrationsTab,
 } from "./types";
+import { CmsPlatformIcon, IntegrationIconBox } from "./integration-icons";
 import {
   IntegrationsSearchPanel,
   searchConnectedCount,
@@ -218,19 +219,35 @@ export function IntegrationsView({
               {integrationsLoading ? (
                 <p className="text-sm text-muted-foreground">Loading integrations…</p>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {CMS_PLATFORMS.map(({ key, label }) => {
+                <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                  {CMS_PLATFORMS.map((platform) => {
+                    const { key, label, description } = platform;
                     const row = integrations[key];
                     const connected = Boolean(row?.connected);
                     return (
                       <div
                         key={key}
-                        className="paper-card flex items-start justify-between gap-3 p-4"
+                        className={cn(
+                          "paper-card flex items-start gap-3 p-4 transition-colors",
+                          connected && "border-emerald-500/25 bg-emerald-500/3",
+                        )}
                       >
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold">{label}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {connected ? "Connected" : "Not connected"}
+                        <IntegrationIconBox>
+                          <CmsPlatformIcon platform={platform} />
+                        </IntegrationIconBox>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="truncate text-sm font-semibold">{label}</p>
+                            <span
+                              className={cn(
+                                "h-1.5 w-1.5 shrink-0 rounded-full",
+                                connected ? "bg-emerald-500" : "bg-muted-foreground/25",
+                              )}
+                              aria-hidden
+                            />
+                          </div>
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {connected ? "Connected" : description}
                           </p>
                           {connected && key === "webhook" && typeof row?.url === "string" ? (
                             <p className="mt-1 truncate text-xs text-muted-foreground">{row.url}</p>

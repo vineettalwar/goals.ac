@@ -2,6 +2,7 @@ import type { CmsIntegrationRow } from "./types";
 
 export type CmsConnectionSnapshot = Record<string, CmsIntegrationRow | undefined>;
 
+
 export type SocialDestinationDefinition = {
   id: string;
   label: string;
@@ -128,6 +129,8 @@ export type EspDestinationDefinition = {
   label: string;
   integrationKey: EspPlatformId;
   description: string;
+  badgeLetter?: string;
+  badgeClassName?: string;
   connectionMethods: ConnectionMethod[];
   connectionMethodLabel: string;
   /** When true, goals-app-ui shows a link to Integrations instead of a connect dialog. */
@@ -141,6 +144,8 @@ const ESP_DESTINATIONS: EspDestinationDefinition[] = [
     label: "Beehiiv",
     integrationKey: "beehiiv",
     description: "Publish email sequences and newsletters to Beehiiv.",
+    badgeLetter: "B",
+    badgeClassName: "bg-yellow-600",
     connectionMethods: ["api"],
     connectionMethodLabel: "API key",
     isConnected: (connections) => rowConnected(connections, "beehiiv"),
@@ -150,6 +155,8 @@ const ESP_DESTINATIONS: EspDestinationDefinition[] = [
     label: "ConvertKit",
     integrationKey: "convertkit",
     description: "Create email broadcasts in ConvertKit (Kit).",
+    badgeLetter: "K",
+    badgeClassName: "bg-red-500",
     connectionMethods: ["api"],
     connectionMethodLabel: "API secret",
     isConnected: (connections) => rowConnected(connections, "convertkit"),
@@ -159,6 +166,8 @@ const ESP_DESTINATIONS: EspDestinationDefinition[] = [
     label: "Mailchimp",
     integrationKey: "mailchimp",
     description: "Create email campaign drafts in Mailchimp.",
+    badgeLetter: "M",
+    badgeClassName: "bg-yellow-500 text-black",
     connectionMethods: ["api"],
     connectionMethodLabel: "API key",
     isConnected: (connections) => rowConnected(connections, "mailchimp"),

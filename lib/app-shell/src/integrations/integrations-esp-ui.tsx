@@ -5,6 +5,7 @@ import {
   getEspDestinations,
   type EspPlatformId,
 } from "./publishing-destinations";
+import { EspDestinationIcon, IntegrationIconBox } from "./integration-icons";
 
 export { countEspConnections } from "./publishing-destinations";
 
@@ -71,7 +72,7 @@ export function IntegrationsEspPanel({
         </p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
         {destinations.map((destination) => {
           const row = integrations[destination.integrationKey];
           const connected = destination.isConnected(integrations);
@@ -82,17 +83,31 @@ export function IntegrationsEspPanel({
           return (
             <div
               key={destination.id}
-              className="paper-card flex items-start justify-between gap-3 p-4"
+              className={cn(
+                "paper-card flex items-start gap-3 p-4 transition-colors",
+                connected && "border-emerald-500/25 bg-emerald-500/3",
+              )}
             >
-              <div className="min-w-0 space-y-1">
-                <p className="text-sm font-semibold">{destination.label}</p>
-                <p className="text-xs text-muted-foreground">{destination.description}</p>
+              <IntegrationIconBox>
+                <EspDestinationIcon destination={destination} />
+              </IntegrationIconBox>
+              <div className="min-w-0 flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-semibold">{destination.label}</p>
+                  <span
+                    className={cn(
+                      "h-1.5 w-1.5 shrink-0 rounded-full",
+                      connected ? "bg-emerald-500" : "bg-muted-foreground/25",
+                    )}
+                    aria-hidden
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {connected && detail ? detail : destination.description}
+                </p>
                 <p className="text-xs text-muted-foreground">
                   {connected ? "Connected" : "Not connected"} · {destination.connectionMethodLabel}
                 </p>
-                {connected && detail ? (
-                  <p className="truncate text-xs text-muted-foreground">{detail}</p>
-                ) : null}
                 {connected && typeof row?.apiKeyHint === "string" ? (
                   <p className="text-xs text-muted-foreground">Key …{row.apiKeyHint}</p>
                 ) : null}
