@@ -743,7 +743,32 @@ export function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsInt
   return result;
 }
 
-export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record<string, unknown> {
+const LAST_HEALTH_KEYS = [
+  "lastHealthOk",
+  "lastHealthError",
+  "lastHealthCheckedAt",
+] as const;
+
+/** Copy persisted health meta from the raw stored blob onto a masked row. */
+function attachLastHealth(
+  maskedRow: Record<string, unknown>,
+  storedRow: unknown,
+): void {
+  if (!storedRow || typeof storedRow !== "object") return;
+  const raw = storedRow as Record<string, unknown>;
+  for (const key of LAST_HEALTH_KEYS) {
+    if (key in raw) maskedRow[key] = raw[key];
+  }
+}
+
+/**
+ * Public-safe integration snapshot. Pass `stored` so lastHealth* from the
+ * health cron/API reaches integration tiles.
+ */
+export function maskCmsCredentials(
+  decrypted: CmsIntegrationCredentials,
+  stored?: Record<string, unknown> | null,
+): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   if (decrypted.notion) {
     result.notion = {
@@ -975,6 +1000,12 @@ export function maskCmsCredentials(decrypted: CmsIntegrationCredentials): Record
       outputMode: decrypted.typo3.outputMode ?? "body_text",
       siteKeyHint: secretHint(decrypted.typo3.siteKey),
     };
+  }
+  if (stored) {
+    for (const [platform, maskedRow] of Object.entries(result)) {
+      if (!maskedRow || typeof maskedRow !== "object") continue;
+      attachLastHealth(maskedRow as Record<string, unknown>, stored[platform]);
+    }
   }
   return result;
 }

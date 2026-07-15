@@ -201,13 +201,78 @@ async function testPlatform(
         ? { ok: true, siteName: result.health?.version }
         : { ok: false, error: result.error };
     }
+    case "linkedin": {
+      if (!creds.linkedin) return null;
+      const { testLinkedInConnection } = await import("@workspace/connectors/linkedin");
+      const result = await testLinkedInConnection({
+        accessToken: creds.linkedin.accessToken,
+        authorUrn: creds.linkedin.authorUrn,
+      });
+      return result.ok
+        ? { ok: true, siteName: result.displayName }
+        : { ok: false, error: result.error };
+    }
+    case "twitter": {
+      if (!creds.twitter) return null;
+      const { testTwitterConnection } = await import("@workspace/connectors/twitter");
+      const result = await testTwitterConnection({ accessToken: creds.twitter.accessToken });
+      return result.ok
+        ? { ok: true, siteName: result.screenName ? `@${result.screenName}` : undefined }
+        : { ok: false, error: result.error };
+    }
+    case "meta": {
+      if (!creds.meta) return null;
+      const { testMetaConnection } = await import("@workspace/connectors/meta");
+      const result = await testMetaConnection({
+        accessToken: creds.meta.accessToken,
+        pageId: creds.meta.pageId,
+        instagramAccountId: creds.meta.instagramAccountId,
+      });
+      return result.ok
+        ? { ok: true, siteName: result.pageName ?? result.instagramUsername }
+        : { ok: false, error: result.error };
+    }
+    case "bluesky": {
+      if (!creds.bluesky) return null;
+      const { testBlueskyConnection } = await import("@workspace/connectors/bluesky");
+      const result = await testBlueskyConnection(creds.bluesky);
+      return result.ok
+        ? { ok: true, siteName: result.handle ? `@${result.handle}` : undefined }
+        : { ok: false, error: result.error };
+    }
+    case "mastodon": {
+      if (!creds.mastodon) return null;
+      const { testMastodonConnection } = await import("@workspace/connectors/mastodon");
+      const result = await testMastodonConnection(creds.mastodon);
+      return result.ok
+        ? { ok: true, siteName: result.username }
+        : { ok: false, error: result.error };
+    }
+    case "beehiiv": {
+      if (!creds.beehiiv) return null;
+      const { testBeehiivConnection } = await import("@workspace/connectors/beehiiv");
+      const result = await testBeehiivConnection(creds.beehiiv);
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    case "convertkit": {
+      if (!creds.convertkit) return null;
+      const { testConvertKitConnection } = await import("@workspace/connectors/convertkit");
+      const result = await testConvertKitConnection(creds.convertkit);
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
+    case "mailchimp": {
+      if (!creds.mailchimp) return null;
+      const { testMailchimpConnection } = await import("@workspace/connectors/mailchimp");
+      const result = await testMailchimpConnection(creds.mailchimp);
+      return result.ok ? { ok: true } : { ok: false, error: result.error };
+    }
     default:
       return null;
   }
 }
 
 /** CMS platforms with a live connector test or goals-ac-plugin health path. */
-const TESTABLE_PLATFORMS = [
+const CMS_TESTABLE_PLATFORMS = [
   "wordpress",
   "ghost",
   "shopify",
@@ -226,8 +291,37 @@ const TESTABLE_PLATFORMS = [
   "typo3",
 ] as const;
 
+/** Social destinations stored on cmsIntegrations. */
+const SOCIAL_TESTABLE_PLATFORMS = [
+  "linkedin",
+  "twitter",
+  "meta",
+  "bluesky",
+  "mastodon",
+] as const;
+
+/** Email service providers stored on cmsIntegrations. */
+const ESP_TESTABLE_PLATFORMS = ["beehiiv", "convertkit", "mailchimp"] as const;
+
+const TESTABLE_PLATFORMS = [
+  ...CMS_TESTABLE_PLATFORMS,
+  ...SOCIAL_TESTABLE_PLATFORMS,
+  ...ESP_TESTABLE_PLATFORMS,
+] as const;
+
+type TestablePlatform = (typeof TESTABLE_PLATFORMS)[number];
+
+/** Credentials live under the platform key; UI `connected` is derived at mask time. */
+function hasPlatformCredentials(
+  platform: TestablePlatform,
+  decrypted: CmsIntegrationCredentials,
+): boolean {
+  return Boolean(decrypted[platform]);
+}
+
 /**
- * Run live health checks for every connected CMS on the project.
+ * Run live health checks for every CMS, social, and ESP connection with
+ * credentials on the project. Persists lastHealth* on each connection object.
  */
 export async function runProjectIntegrationHealth(
   projectId: number,
@@ -244,10 +338,6 @@ export async function runProjectIntegrationHealth(
   if (!project) throw new Error("Project not found");
 
   const checkedAt = new Date().toISOString();
-  const raw = (project.cmsIntegrations ?? {}) as Record<
-    string,
-    { connected?: boolean } & Record<string, unknown>
-  >;
   const decrypted = decryptCmsCredentials(
     (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials,
   );
@@ -255,8 +345,7 @@ export async function runProjectIntegrationHealth(
   const platforms: PlatformHealthStatus[] = [];
 
   for (const platform of TESTABLE_PLATFORMS) {
-    const row = raw[platform];
-    const connected = Boolean(row?.connected);
+    const connected = hasPlatformCredentials(platform, decrypted);
     if (!connected) {
       platforms.push({
         platform,

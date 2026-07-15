@@ -920,6 +920,10 @@ export function ContentPieceView({
       onEnhance,
   );
   const showRepurpose = Boolean(body && onRepurpose);
+  const showQueueSocial = Boolean(
+    onQueueSocial &&
+      contentPieceCanQueueSocial(piece.formatType, piece.status, piece.bodyMarkdown ?? body),
+  );
   const featuredImage =
     piece.pieceMetadata?.images?.find((image) => image.role === "featured") ?? null;
   const supportsStockImages = contentPieceSupportsStockImages(piece.formatType);
@@ -948,7 +952,8 @@ export function ContentPieceView({
     markingReady ||
     regenerating ||
     enhancing ||
-    regeneratingImages;
+    regeneratingImages ||
+    queueingSocial;
   const wordCount = (editor.editing ? editor.bodyDraft : (piece.bodyMarkdown ?? ""))
     .split(/\s+/)
     .filter(Boolean).length;
@@ -1027,6 +1032,8 @@ export function ContentPieceView({
               onCancel={showEdit ? () => dispatch({ type: "cancel", piece }) : undefined}
               onStartEdit={showEdit ? () => dispatch({ type: "start_edit" }) : undefined}
               onRepurpose={showRepurpose ? onRepurpose : undefined}
+              onQueueSocial={showQueueSocial ? onQueueSocial : undefined}
+              queueingSocial={queueingSocial}
               onCopy={() => void handleCopy()}
               onRegenerate={showRegenerate ? onRegenerate : undefined}
               onEnhance={showEnhance ? onEnhance : undefined}
@@ -1063,6 +1070,8 @@ export function ContentPieceView({
           onPlannedDateChange={(value) => dispatch({ type: "set_planned_date", value })}
           onEnhance={onEnhance}
           onPublish={onPublish}
+          onQueueSocial={showQueueSocial ? onQueueSocial : undefined}
+          queueingSocial={queueingSocial}
         />
       </div>
     </div>

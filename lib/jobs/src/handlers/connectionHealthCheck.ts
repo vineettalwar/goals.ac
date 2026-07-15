@@ -47,9 +47,12 @@ async function sweepAllConnections(): Promise<void> {
     .from(websiteProjectsTable);
 
   const projectsWithCms = projectRows.filter((row) => {
-    const integrations = row.cmsIntegrations as Record<string, { connected?: boolean }> | null;
+    const integrations = row.cmsIntegrations as Record<string, unknown> | null;
     if (!integrations || typeof integrations !== "object") return false;
-    return Object.values(integrations).some((entry) => entry && entry.connected === true);
+    // Credentials are stored under the platform key; UI `connected` is mask-derived.
+    return Object.values(integrations).some(
+      (entry) => entry != null && typeof entry === "object",
+    );
   });
 
   logger.info(

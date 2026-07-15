@@ -1,11 +1,30 @@
 # Session Handoff
 
+## Competitive plan Wave 3.1 — Autopilot activity panel (2026-07-15)
+
+**Status:** Shipped — partner-demo activity card on `/dashboard`.
+
+### Mounted where
+- `DashboardView` → `AutopilotActivityPanel` (sibling under command center) via Next `dashboard-page-client` / `loadDashboardData`
+- Vite `DashboardPage` inherits the same shell path
+
+### Data sources
+- Extended `loadCommandCenterSummary` → `recentPieces` (last 5) + `recentPublishes` (via `listPublishRecordsForProject`, limit 5)
+- GEO / LLM snapshot reused from existing command-center fields
+- Counts still derived from dashboard `pieces` list
+
+### Files
+- `lib/content-engine/src/analytics/command-center-service.ts`
+- `lib/app-shell/src/dashboard/autopilot-activity-panel.tsx` + types / `DashboardView`
+
+---
+
 ## Competitive plan Waves 0–2 — IN PROGRESS (2026-07-15)
 
 **PRD:** [docs/prd/content-studio-competitive-plan.md](docs/prd/content-studio-competitive-plan.md)  
 **Decision:** [docs/DECISIONS.md](docs/DECISIONS.md) — Execute Wave 0→1→2; partner-demo vs BLG/AutoSEO is primary ICP for 90 days.
 
-**Status:** Waves 0–1 shipped · Wave 2 partial (2.1–2.2, 2.4) · Wave 2.3/2.5 + Wave 3 still queued.
+**Status:** Waves 0–1 shipped · Wave 2 partial (2.1–2.4) · Wave 2.5 + Wave 3 still queued.
 
 ### Shipped this session (parallel agents)
 
@@ -18,13 +37,13 @@
 | 1.5 Vite create → generate stream (angle/date fields) | Done — Next wizard unchanged (canonical) |
 | 2.1 Health cron 8→16 CMS | Done |
 | 2.2 Instagram image preflight | Done |
+| 2.3 Connect setup checklists parity | Done — webhook + long-tail CMS + social tiles |
 | 2.4 Publish history | Done — `GET .../publish-records` + `PublishHistoryPanel` on publishing tab |
 
 ### Still queued
 
 | Wave | Focus |
 |------|-------|
-| **2.3** | Connect UX checklists parity on remaining CMS/social tiles |
 | **2.5** | Article → social one-click queue |
 | **3** | Optional autopilot dashboard, coverage % H2s, hosted blog (self-serve only) |
 
