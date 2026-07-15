@@ -1,5 +1,15 @@
 # Session Handoff
 
+## Shopify theme snippet preflight (2026-07-15)
+
+Soft (non-blocking) amber preflight when Shopify `outputMode` is `article_metafields` or `page_sections` (or modes from health `theme_snippet_required_for`):
+
+- **Publish dialog** — `ContentPiecePublishDialog` + optional ack checkbox
+- **Publishing settings** — Shopify output-format card via `ConnectedOutputModeControl`
+- Learn: `/learn/shopify-theme-sections`; health persists `lastHealthThemeSnippetRequiredFor`
+
+---
+
 ## TYPO3 FAL textmedia (2026-07-15)
 
 `ContentPublisher` now prefers FAL for `textmedia` images: resolve existing `/fileadmin/…` paths, otherwise download remote http(s) into `fileadmin/user_upload/goals-ac/` and attach via `sys_file_reference` on `assets`. Falls back to embedding `<img>` in `bodytext` if FAL/storage/download fails (private URLs blocked).
