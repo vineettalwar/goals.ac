@@ -10,6 +10,7 @@ type DataForSeoOrganicItem = {
   rank_absolute?: number;
   url?: string;
   title?: string;
+  items?: Array<{ title?: string; question?: string }>;
 };
 
 type DataForSeoTaskResult = {
@@ -89,15 +90,26 @@ export class DataForSeoProvider implements SerpProvider {
       .map((item) => ({
         position: item.rank_absolute as number,
         url: item.url as string,
+        title: item.title,
       }));
+
+    const peopleAlsoAsk: string[] = [];
+    for (const item of items) {
+      if (item.type !== "people_also_ask") continue;
+      for (const nested of item.items ?? []) {
+        const question = nested.title ?? nested.question;
+        if (question && peopleAlsoAsk.length < 5) peopleAlsoAsk.push(question);
+      }
+    }
 
     const serpFeatures: Record<string, unknown> = {
       organicCount: organic.length,
       featuredSnippet: items.some((item) => item.type === "featured_snippet"),
-      peopleAlsoAsk: items.some((item) => item.type === "people_also_ask"),
+      peopleAlsoAsk,
       topResults: organic.slice(0, 5).map((item) => ({
         position: item.position,
         url: item.url,
+        title: item.title,
       })),
     };
 

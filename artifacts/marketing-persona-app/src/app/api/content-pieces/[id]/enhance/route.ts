@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { contentPiecesTable } from "@workspace/db/schema";
+import {
+  contentPiecesTable,
+  keywordRankSnapshotsTable,
+  trackedKeywordsTable,
+} from "@workspace/db/schema";
 import type { ContentFormatType } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { enhanceContentPiece } from "@workspace/content-engine/content/content-piece-enhance";
+import { scoreDualContentQuality } from "@workspace/content-engine/articles/serp-content-score";
 import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand/brand-voice-generation";
 import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
+import { isSerpConfigured, getSerpProvider } from "@workspace/serp-provider";
 import {
   assertPieceOwner,
   loadProjectBrand,
@@ -66,6 +72,69 @@ export async function POST(
   if (!billingPrep.ok) return billingPrep.response;
 
   try {
+    const meta = (piece!.pieceMetadata ?? {}) as {
+      seoTitle?: string;
+      metaTitle?: string;
+      metaDescription?: string;
+      citations?: { text: string; url: string }[];
+      faqSection?: { question: string; answer: string }[];
+      jsonLdSchema?: object;
+      internalLinkSuggestions?: { anchorText: string; suggestedSlug: string }[];
+    };
+    let serpFeatures: Record<string, unknown> | null = null;
+    const keyword = piece!.targetKeyword?.trim();
+    if (keyword) {
+      const [tracked] = await db
+        .select({ id: trackedKeywordsTable.id })
+        .from(trackedKeywordsTable)
+        .where(
+          and(
+            eq(trackedKeywordsTable.websiteProjectId, piece!.websiteProjectId),
+            eq(trackedKeywordsTable.keyword, keyword.toLowerCase()),
+            eq(trackedKeywordsTable.isActive, true),
+          ),
+        )
+        .limit(1);
+      if (tracked) {
+        const [snapshot] = await db
+          .select({ serpFeatures: keywordRankSnapshotsTable.serpFeatures })
+          .from(keywordRankSnapshotsTable)
+          .where(eq(keywordRankSnapshotsTable.trackedKeywordId, tracked.id))
+          .orderBy(desc(keywordRankSnapshotsTable.checkedAt))
+          .limit(1);
+        serpFeatures = (snapshot?.serpFeatures as Record<string, unknown>) ?? null;
+      }
+      if (!serpFeatures && isSerpConfigured()) {
+        try {
+          serpFeatures = (await getSerpProvider().checkRank({ keyword })).serpFeatures;
+        } catch {
+          // optional
+        }
+      }
+    }
+    const peopleAlsoAsk = Array.isArray(serpFeatures?.peopleAlsoAsk)
+      ? (serpFeatures.peopleAlsoAsk as string[]).filter((q) => typeof q === "string")
+      : [];
+    const competitorTitles = Array.isArray(serpFeatures?.topResults)
+      ? (serpFeatures.topResults as Array<{ title?: string }>)
+          .map((row) => row.title)
+          .filter((title): title is string => Boolean(title))
+      : [];
+    const dual = scoreDualContentQuality({
+      bodyMarkdown: piece!.bodyMarkdown ?? "",
+      wordCount: piece!.wordCount ?? undefined,
+      metaTitle: meta.seoTitle ?? meta.metaTitle ?? piece!.title,
+      metaDescription: meta.metaDescription,
+      targetKeyword: keyword,
+      citations: meta.citations,
+      faqSection: meta.faqSection,
+      jsonLdSchema: meta.jsonLdSchema,
+      internalLinkSuggestions: meta.internalLinkSuggestions,
+      serpFeatures,
+      peopleAlsoAsk,
+      competitorTitles,
+    });
+
     const result = await enhanceContentPiece(
       {
         title: piece!.title,
@@ -74,6 +143,7 @@ export async function POST(
         formatType,
         brand: { ...ctx.brand, projectId: ctx.projectId },
         metaDescription: piece!.pieceMetadata?.metaDescription ?? null,
+        serpGaps: dual.serp.gaps,
       },
       existingPieceTitles.filter((title) => title !== piece!.title),
       userApiKey,

@@ -54,6 +54,8 @@ export interface EnhanceContentInput {
   formatType: ContentFormatType;
   brand: EnhanceBrandContext;
   metaDescription?: string | null;
+  /** SERP / competitor gaps from dual score — prioritized in the upgrade pass. */
+  serpGaps?: string[];
 }
 
 function buildEnhancePrompt(
@@ -62,6 +64,13 @@ function buildEnhancePrompt(
   brandVoiceContext?: string,
 ): string {
   const gaps = describeQualityGaps(input.bodyMarkdown);
+  const serpGapBlock =
+    input.serpGaps && input.serpGaps.length > 0
+      ? `\nSERP / competitor gaps (fix these first):\n${input.serpGaps
+          .slice(0, 8)
+          .map((gap) => `- ${gap}`)
+          .join("\n")}\n`
+      : "";
   const existingArticlesCtx = existingPieceTitles.length
     ? `\nOther content on this site (use for internal links): ${existingPieceTitles.slice(0, 12).join("; ")}`
     : "";
@@ -75,7 +84,7 @@ TARGET KEYWORD: "${input.targetKeyword}"
 TITLE: ${input.title}
 ${voiceBlock}
 TARGET AUDIENCE: ${input.brand.targetAudience || "Business professionals"}${existingArticlesCtx}
-
+${serpGapBlock}
 Quality gaps to fix:
 ${gaps}
 
@@ -90,6 +99,7 @@ ${buildSeoLongformJsonSchema(input.targetKeyword)}
 Rules:
 - Keep title unless the current one is generic; then improve it (55-65 chars, includes keyword)
 - body_markdown must be the full improved article meeting ALL quality targets
+- Prefer covering listed SERP gaps via new H2/H3 sections, FAQ answers, lists, or tables — do not invent competitor brand claims
 - faq_section, citations, internal_link_suggestions, and json_ld_schema must match body_markdown
 - meta_description: 150-160 chars with primary keyword`;
 }
