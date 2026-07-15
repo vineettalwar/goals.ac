@@ -406,13 +406,14 @@ export function useSocialData(projectId: string | null, initialTab: SocialHubTab
           return;
         }
         notify("success", "Stock image attached for Instagram");
+        await reloadQueue();
       } catch (err) {
         notify("error", err instanceof Error ? err.message : "Stock image search failed");
       } finally {
         setAttachingImage(false);
       }
     },
-    [notify],
+    [notify, reloadQueue],
   );
 
   const compose = useCallback(

@@ -14,10 +14,10 @@ import {
   type PublishDestinationId,
 } from "@workspace/app-shell";
 import type { ContentPiece } from "@/types/api";
+import { useJobPoll, type JobStatus } from "@/hooks/use-job-poll";
 
 const JOB_POLL_MS = 2000;
 const PIECE_POLL_MS = 3000;
-const TERMINAL_JOB_STATUSES = new Set(["completed", "failed"]);
 
 type AcceptedGenerateResponse = {
   accepted?: boolean;
@@ -32,15 +32,6 @@ type AcceptedPublishResponse = {
   jobId?: string;
   queue?: string;
   status?: string;
-};
-
-type JobStatusResponse = {
-  jobId: string;
-  status: string;
-  queue?: string;
-  error?: string;
-  message?: string;
-  updatedAt?: string;
 };
 
 type HumanizeResponse = ContentPiece & {
@@ -74,10 +65,6 @@ function mapPiece(piece: ContentPiece): ContentPieceDetail {
     pieceMetadata: (piece.pieceMetadata as ContentPieceMetadata | null | undefined) ?? null,
     briefId: piece.briefId ?? null,
   };
-}
-
-function isTerminalJobStatus(status: string | undefined): boolean {
-  return status != null && TERMINAL_JOB_STATUSES.has(status);
 }
 
 type ContentPieceCache = {
@@ -140,22 +127,9 @@ export function useContentPieceData(pieceId: string | undefined) {
   const [enhanceMessage, setEnhanceMessage] = useState<string | null>(null);
   const [regeneratingImages, setRegeneratingImages] = useState(false);
   const [attachingFeaturedImageUrl, setAttachingFeaturedImageUrl] = useState(false);
-  const generateJobPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const publishJobPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const stopGenerateJobPoll = useCallback(() => {
-    if (generateJobPollRef.current) {
-      clearInterval(generateJobPollRef.current);
-      generateJobPollRef.current = null;
-    }
-  }, []);
-
-  const stopPublishJobPoll = useCallback(() => {
-    if (publishJobPollRef.current) {
-      clearInterval(publishJobPollRef.current);
-      publishJobPollRef.current = null;
-    }
-  }, []);
+  const [generateJobId, setGenerateJobId] = useState<string | null>(null);
+  const [publishJobId, setPublishJobId] = useState<string | null>(null);
+  const publishPlatformRef = useRef<PublishDestinationId | null>(null);
 
   const setCachedPiece = useCallback(
     (next: ContentPieceDetail | null) => {
@@ -178,11 +152,12 @@ export function useContentPieceData(pieceId: string | undefined) {
         setError(null);
         if (mapped.status !== "generating") {
           setGeneratingState(null);
-          stopGenerateJobPoll();
+          setGenerateJobId(null);
         }
         if (mapped.status === "published") {
           setPublishingState(null);
-          stopPublishJobPoll();
+          setPublishJobId(null);
+          publishPlatformRef.current = null;
         }
         return mapped;
       } catch (err) {
@@ -198,7 +173,7 @@ export function useContentPieceData(pieceId: string | undefined) {
         return null;
       }
     },
-    [pieceId, stopGenerateJobPoll, stopPublishJobPoll, setCachedPiece, queryClient],
+    [pieceId, setCachedPiece, queryClient],
   );
 
   const load = useCallback(async () => {
@@ -210,103 +185,65 @@ export function useContentPieceData(pieceId: string | undefined) {
     setError(null);
   }, [pieceId]);
 
-  const pollGenerateJobOnce = useCallback(
-    async (jobId: string) => {
-      try {
-        const status = await apiFetch<JobStatusResponse>(
-          `/api/jobs/${encodeURIComponent(jobId)}`,
-        );
-        const jobStatus = status.status ?? "pending";
-
-        setGeneratingState((prev) => ({
-          message: prev?.message ?? "Generating content…",
-          jobId,
-          jobStatus,
-        }));
-
-        if (isTerminalJobStatus(jobStatus)) {
-          stopGenerateJobPoll();
-          setGenerating(false);
-          const refreshed = await loadPiece({ silent: true });
-          if (jobStatus === "completed") {
-            setGeneratingState(null);
-            setGenerateMessage("Content generation complete.");
-          } else {
-            setGeneratingState(null);
-            setGenerateMessage(
-              status.error ?? status.message ?? "Content generation failed.",
-            );
-          }
-        }
-      } catch {
-        // Ignore transient poll errors; piece polling covers completion.
+  useJobPoll(generateJobId, {
+    intervalMs: JOB_POLL_MS,
+    enabled: Boolean(generateJobId),
+    onStatus: (status: JobStatus) => {
+      setGeneratingState((prev) => ({
+        message: prev?.message ?? "Generating content…",
+        jobId: status.jobId,
+        jobStatus: status.status,
+      }));
+    },
+    onTerminal: async (status: JobStatus) => {
+      setGenerateJobId(null);
+      setGenerating(false);
+      await loadPiece({ silent: true });
+      if (status.status === "completed") {
+        setGeneratingState(null);
+        setGenerateMessage("Content generation complete.");
+      } else {
+        setGeneratingState(null);
+        setGenerateMessage(status.error ?? status.message ?? "Content generation failed.");
       }
     },
-    [loadPiece, stopGenerateJobPoll],
-  );
+  });
 
-  const startGenerateJobPoll = useCallback(
-    (jobId: string) => {
-      stopGenerateJobPoll();
-      void pollGenerateJobOnce(jobId);
-      generateJobPollRef.current = setInterval(() => {
-        void pollGenerateJobOnce(jobId);
-      }, JOB_POLL_MS);
+  useJobPoll(publishJobId, {
+    intervalMs: JOB_POLL_MS,
+    enabled: Boolean(publishJobId),
+    onStatus: (status: JobStatus) => {
+      const platform = publishPlatformRef.current;
+      setPublishingState((prev) => ({
+        message: prev?.message ?? (platform ? `Publishing to ${platform}…` : "Publishing…"),
+        jobId: status.jobId,
+        jobStatus: status.status,
+        platform: platform ?? prev?.platform ?? ("webhook" as PublishDestinationId),
+      }));
     },
-    [pollGenerateJobOnce, stopGenerateJobPoll],
-  );
-
-  const pollPublishJobOnce = useCallback(
-    async (jobId: string, platform: PublishDestinationId) => {
-      try {
-        const status = await apiFetch<JobStatusResponse>(
-          `/api/jobs/${encodeURIComponent(jobId)}`,
-        );
-        const jobStatus = status.status ?? "pending";
-
-        setPublishingState((prev) => ({
-          message: prev?.message ?? `Publishing to ${platform}…`,
-          jobId,
-          jobStatus,
-          platform,
-        }));
-
-        if (isTerminalJobStatus(jobStatus)) {
-          stopPublishJobPoll();
-          const refreshed = await loadPiece({ silent: true });
-          if (jobStatus === "completed" || refreshed?.status === "published") {
-            setPublishMessage(`Published to ${platform}.`);
-            setPublishingState(null);
-          } else {
-            setPublishMessage(status.error ?? status.message ?? "Publish failed.");
-            setPublishingState(null);
-          }
-        }
-      } catch {
-        // Ignore transient poll errors; piece polling covers completion.
+    onTerminal: async (status: JobStatus) => {
+      const platform = publishPlatformRef.current;
+      setPublishJobId(null);
+      const refreshed = await loadPiece({ silent: true });
+      if (status.status === "completed" || refreshed?.status === "published") {
+        setPublishMessage(platform ? `Published to ${platform}.` : "Published.");
+        setPublishingState(null);
+      } else {
+        setPublishMessage(status.error ?? status.message ?? "Publish failed.");
+        setPublishingState(null);
       }
+      publishPlatformRef.current = null;
     },
-    [loadPiece, stopPublishJobPoll],
-  );
+  });
 
-  const startPublishJobPoll = useCallback(
-    (jobId: string, platform: PublishDestinationId) => {
-      stopPublishJobPoll();
-      void pollPublishJobOnce(jobId, platform);
-      publishJobPollRef.current = setInterval(() => {
-        void pollPublishJobOnce(jobId, platform);
-      }, JOB_POLL_MS);
-    },
-    [pollPublishJobOnce, stopPublishJobPoll],
-  );
+  const startGenerateJobPoll = useCallback((jobId: string) => {
+    setGenerateJobId(jobId);
+  }, []);
 
-  useEffect(
-    () => () => {
-      stopGenerateJobPoll();
-      stopPublishJobPoll();
-    },
-    [stopGenerateJobPoll, stopPublishJobPoll],
-  );
+  const startPublishJobPoll = useCallback((jobId: string, platform: PublishDestinationId) => {
+    publishPlatformRef.current = platform;
+    setPublishJobId(jobId);
+  }, []);
 
   useEffect(() => {
     if (!pieceId || piece?.status !== "generating") return;

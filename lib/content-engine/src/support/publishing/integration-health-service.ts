@@ -15,6 +15,8 @@ export type PlatformHealthStatus = {
   siteName?: string;
   /** Shopify plugin: output modes that need merchant theme Liquid. */
   themeSnippetRequiredFor?: string[];
+  /** TYPO3 plugin: supports POST /media for image upload. */
+  mediaUploadCapable?: boolean;
   lastCheckedAt: string;
 };
 
@@ -26,6 +28,7 @@ async function testPlatform(
   error?: string;
   siteName?: string;
   themeSnippetRequiredFor?: string[];
+  mediaUploadCapable?: boolean;
 } | null> {
   switch (key) {
     case "notion": {
@@ -215,9 +218,15 @@ async function testPlatform(
         siteKey: creds.typo3.siteKey,
         platform: "typo3",
       });
-      return result.ok
-        ? { ok: true, siteName: result.health?.version }
-        : { ok: false, error: result.error };
+      if (!result.ok) {
+        return { ok: false, error: result.error };
+      }
+      const mediaUploadCapable = Boolean(result.health?.capabilities?.media_upload);
+      return {
+        ok: true,
+        siteName: result.health?.version,
+        ...(mediaUploadCapable ? { mediaUploadCapable } : {}),
+      };
     }
     case "linkedin": {
       if (!creds.linkedin) return null;
@@ -393,6 +402,7 @@ export async function runProjectIntegrationHealth(
         error: result.error,
         siteName: result.siteName,
         themeSnippetRequiredFor: result.themeSnippetRequiredFor,
+        mediaUploadCapable: result.mediaUploadCapable,
         lastCheckedAt: checkedAt,
       });
     } catch (err) {
@@ -419,6 +429,9 @@ export async function runProjectIntegrationHealth(
       lastHealthCheckedAt: checkedAt,
       ...(status.themeSnippetRequiredFor && status.themeSnippetRequiredFor.length > 0
         ? { lastHealthThemeSnippetRequiredFor: status.themeSnippetRequiredFor }
+        : {}),
+      ...(status.mediaUploadCapable !== undefined
+        ? { lastHealthMediaUploadCapable: status.mediaUploadCapable }
         : {}),
     };
   }

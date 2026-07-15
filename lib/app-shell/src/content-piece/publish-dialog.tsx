@@ -14,6 +14,11 @@ import {
   shopifyOutputModeNeedsThemeSnippet,
   ShopifyThemeSnippetPreflight,
 } from "./shopify-theme-snippet-preflight";
+import {
+  hasRasterDataImage,
+  readTypo3MediaUploadCapable,
+  Typo3MediaPreflight,
+} from "./typo3-media-preflight";
 
 export type RenderPreviewResult = {
   payloadKind?: string;
@@ -31,6 +36,7 @@ export function ContentPiecePublishDialog({
   onRenderPreview,
   pieceTitle,
   pieceBodyMarkdown,
+  pieceFeaturedImageUrl,
   publishing = false,
   integrationsHref,
   shopifyThemeLearnHref,
@@ -43,6 +49,7 @@ export function ContentPiecePublishDialog({
   onRenderPreview?: (platform: PublishDestinationId) => Promise<RenderPreviewResult>;
   pieceTitle?: string | null;
   pieceBodyMarkdown?: string | null;
+  pieceFeaturedImageUrl?: string | null;
   publishing?: boolean;
   /** Link target when no CMS destinations are connected (e.g. /integrations). */
   integrationsHref?: string;
@@ -59,6 +66,7 @@ export function ContentPiecePublishDialog({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [preview, setPreview] = useState<RenderPreviewResult | null>(null);
   const [shopifyThemeSnippetAck, setShopifyThemeSnippetAck] = useState(false);
+  const [typo3MediaUploadAck, setTypo3MediaUploadAck] = useState(false);
 
   useEffect(() => {
     if (!open) {
