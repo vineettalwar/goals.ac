@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AUTOPILOT_REFERRER,
+  saveAutopilotIntent,
+} from "@/lib/projects/autopilot-intent";
 
 function normalizeUrl(raw: string): string | null {
   const trimmed = raw.trim();
@@ -32,7 +36,9 @@ export function AutopilotUrlHero() {
       return;
     }
     setError(null);
-    router.push(`/geo-audit?url=${encodeURIComponent(normalized)}`);
+    saveAutopilotIntent({ websiteUrl: normalized, referrer: AUTOPILOT_REFERRER });
+    // /onboarding is auth-gated → login/signup; company name from hostname until brand scrape.
+    router.push("/onboarding");
   }
 
   return (
@@ -48,13 +54,13 @@ export function AutopilotUrlHero() {
           aria-label="Your website URL"
         />
         <Button type="submit" size="lg" className="h-12 shrink-0 gap-2 hero-cta-primary border-0">
-          Run free GEO audit
+          Get 3 articles free
           <ArrowRight className="h-4 w-4" />
         </Button>
       </div>
       {error && <p className="mt-2 text-sm text-red-400 text-center">{error}</p>}
       <p className="mt-3 text-center text-xs text-white/50">
-        No account required · See how AI reads your site · Then start creating
+        Free account · We scan your site · First 3 articles queued
       </p>
     </form>
   );

@@ -1,10 +1,11 @@
-import { useMemo, useState, type ReactNode } from "react";
-import { AlertCircle, Loader2, PenLine } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AlertCircle, ImageIcon, Loader2, PenLine, RefreshCw } from "lucide-react";
 import { cn } from "../cn";
 import { SocialPostPreview } from "./social-post-preview";
 import {
   INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   SOCIAL_PLATFORM_OPTIONS,
+  isPublicHttpImageUrl,
   isSocialOverCharLimit,
   resolveSocialPieceImageUrl,
   resolveSocialPiecePublicImageUrl,
@@ -14,6 +15,10 @@ import {
   type SocialPlatformId,
 } from "./types";
 import type { SocialHubLinkProps } from "./social-queue-panel";
+
+function isHttpsImageUrl(url: string): boolean {
+  return /^https:\/\//i.test(url.trim()) && isPublicHttpImageUrl(url);
+}
 
 export function SocialComposerPanel({
   parents,
@@ -25,6 +30,9 @@ export function SocialComposerPanel({
   integrationsHref,
   renderLink,
   onCompose,
+  attachingImage = false,
+  onAttachFeaturedImageUrl,
+  onUseStockImage,
 }: {
   parents: SocialComposerParent[];
   parentsLoading: boolean;
@@ -35,12 +43,16 @@ export function SocialComposerPanel({
   integrationsHref: string;
   renderLink: (props: SocialHubLinkProps) => ReactNode;
   onCompose: (parentPieceId: number, platforms: SocialPlatformId[]) => void;
+  attachingImage?: boolean;
+  onAttachFeaturedImageUrl?: (parentPieceId: number, url: string) => void | Promise<void>;
+  onUseStockImage?: (parentPieceId: number) => void | Promise<void>;
 }) {
   const [search, setSearch] = useState("");
   const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<SocialPlatformId>>(
     () => new Set(["linkedin", "twitter"]),
   );
+  const [imageUrlDraft, setImageUrlDraft] = useState("");
 
   const filteredParents = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -53,6 +65,10 @@ export function SocialComposerPanel({
     [parents, selectedParentId],
   );
 
+  useEffect(() => {
+    setImageUrlDraft("");
+  }, [selectedParentId]);
+
   const parentImageUrl = selectedParent ? resolveSocialPieceImageUrl(selectedParent) : undefined;
   const parentPublicImageUrl = selectedParent
     ? resolveSocialPiecePublicImageUrl(selectedParent)
@@ -61,6 +77,10 @@ export function SocialComposerPanel({
   const instagramSelected = selectedPlatforms.has("instagram");
   const parentHasImage = Boolean(parentPublicImageUrl);
   const instagramBlocked = instagramSelected && Boolean(selectedParent) && !parentHasImage;
+  const canAttachImage =
+    Boolean(selectedParent) &&
+    instagramBlocked &&
+    (Boolean(onAttachFeaturedImageUrl) || Boolean(onUseStockImage));
 
   function togglePlatform(id: SocialPlatformId) {
     setSelectedPlatforms((prev) => {
@@ -161,10 +181,72 @@ export function SocialComposerPanel({
             );
           })}
         </div>
+        {instagramSelected && parentHasImage && parentPublicImageUrl ? (
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+            <ImageIcon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span className="truncate">Instagram image: {parentPublicImageUrl}</span>
+          </div>
+        ) : null}
         {instagramBlocked ? (
-          <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-sm text-amber-900 dark:text-amber-100">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-            <span>{INSTAGRAM_IMAGE_REQUIRED_MESSAGE}</span>
+          <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5">
+            <div className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100">
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+              <span>{INSTAGRAM_IMAGE_REQUIRED_MESSAGE}</span>
+            </div>
+            {canAttachImage ? (
+              <div className="space-y-2 pl-6">
+                {onAttachFeaturedImageUrl ? (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <input
+                      type="url"
+                      inputMode="url"
+                      placeholder="Paste HTTPS image URL…"
+                      value={imageUrlDraft}
+                      disabled={attachingImage}
+                      onChange={(event) => setImageUrlDraft(event.target.value)}
+                      onPaste={(event) => {
+                        const pasted = event.clipboardData.getData("text").trim();
+                        if (isHttpsImageUrl(pasted)) {
+                          event.preventDefault();
+                          setImageUrlDraft(pasted);
+                        }
+                      }}
+                      className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-card px-3 text-sm"
+                      aria-label="HTTPS featured image URL for Instagram"
+                    />
+                    <button
+                      type="button"
+                      disabled={attachingImage || !isHttpsImageUrl(imageUrlDraft) || !selectedParentId}
+                      onClick={() => {
+                        if (!selectedParentId || !onAttachFeaturedImageUrl) return;
+                        void onAttachFeaturedImageUrl(selectedParentId, imageUrlDraft.trim());
+                      }}
+                      className="inline-flex h-9 shrink-0 items-center justify-center rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-muted/50 disabled:opacity-50"
+                    >
+                      Attach URL
+                    </button>
+                  </div>
+                ) : null}
+                {onUseStockImage ? (
+                  <button
+                    type="button"
+                    disabled={attachingImage || !selectedParentId}
+                    onClick={() => {
+                      if (!selectedParentId || !onUseStockImage) return;
+                      void onUseStockImage(selectedParentId);
+                    }}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-muted/50 disabled:opacity-50"
+                  >
+                    {attachingImage ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                    ) : (
+                      <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                    )}
+                    Use stock image
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         ) : null}
       </div>

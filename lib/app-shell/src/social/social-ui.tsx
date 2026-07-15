@@ -63,6 +63,9 @@ export function SocialHubView({
   composing,
   composed,
   onCompose,
+  attachingImage,
+  onAttachFeaturedImageUrl,
+  onUseStockImage,
   metrics,
   metricsLoading,
   metricsPlatformFilter,
@@ -113,6 +116,9 @@ export function SocialHubView({
   composing: boolean;
   composed: SocialComposedPiece[] | null;
   onCompose: (parentPieceId: number, platforms: SocialPlatformId[]) => void;
+  attachingImage?: boolean;
+  onAttachFeaturedImageUrl?: (parentPieceId: number, url: string) => void | Promise<void>;
+  onUseStockImage?: (parentPieceId: number) => void | Promise<void>;
   metrics: SocialMetricsResponse | null;
   metricsLoading: boolean;
   metricsPlatformFilter: string;
@@ -205,6 +211,9 @@ export function SocialHubView({
           integrationsHref={integrationsHref}
           renderLink={renderLink}
           onCompose={onCompose}
+          attachingImage={attachingImage}
+          onAttachFeaturedImageUrl={onAttachFeaturedImageUrl}
+          onUseStockImage={onUseStockImage}
         />
       ) : null}
 

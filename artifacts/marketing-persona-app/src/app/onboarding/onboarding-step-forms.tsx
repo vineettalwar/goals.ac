@@ -83,34 +83,16 @@ export function OnboardingFastLaneForm({
   errors: FieldErrors<FormData>;
   loading: boolean;
 }) {
+  // URL-only; name/industry come from defaults (hostname / "Other") until brand scrape.
   return (
     <div className="paper-card p-8 space-y-6">
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-1.5">
-          <Label htmlFor="name">Company name</Label>
-          <Input id="name" placeholder="Acme Inc." {...register("name")} />
-          {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="websiteUrl">Website URL</Label>
-          <Input id="websiteUrl" placeholder="https://acme.com" {...register("websiteUrl")} />
-          {errors.websiteUrl && <p className="text-xs text-destructive">{errors.websiteUrl.message}</p>}
-        </div>
-      </div>
       <div className="space-y-1.5">
-        <Label htmlFor="industry">Industry</Label>
-        <select
-          id="industry"
-          className="flex h-10 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm"
-          {...register("industry")}
-        >
-          {INDUSTRIES.map((ind) => (
-            <option key={ind} value={ind}>
-              {ind}
-            </option>
-          ))}
-        </select>
+        <Label htmlFor="websiteUrl">Website URL</Label>
+        <Input id="websiteUrl" placeholder="https://acme.com" {...register("websiteUrl")} />
+        {errors.websiteUrl && <p className="text-xs text-destructive">{errors.websiteUrl.message}</p>}
       </div>
+      <input type="hidden" {...register("name")} />
+      <input type="hidden" {...register("industry")} />
       <div className="mt-6 flex justify-end">
         <Button type="submit" disabled={loading} size="lg">
           {loading ? "Starting…" : "Get 3 articles + 30-day plan →"}

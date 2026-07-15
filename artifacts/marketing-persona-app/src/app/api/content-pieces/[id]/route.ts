@@ -15,6 +15,14 @@ const PatchBody = z.object({
   plannedDate: z.string().regex(ISO_DATE_RE, "plannedDate must be a valid ISO date (YYYY-MM-DD)").nullable().optional(),
   scheduledAt: z.string().datetime().nullable().optional(),
   approvalStatus: z.enum(["draft", "pending_review", "approved", "rejected"]).optional(),
+  /** Public https URL for Instagram / CMS featured image (no upload inventory). */
+  featuredImageUrl: z
+    .string()
+    .trim()
+    .regex(/^https:\/\//i, "featuredImageUrl must be an HTTPS URL")
+    .url()
+    .nullable()
+    .optional(),
   evergreenConfig: z
     .object({
       enabled: z.boolean(),
@@ -86,6 +94,18 @@ export async function PATCH(
     }
     if (parsed.data.approvalStatus !== undefined) updates.approvalStatus = parsed.data.approvalStatus;
     if (parsed.data.evergreenConfig !== undefined) updates.evergreenConfig = parsed.data.evergreenConfig;
+    if (parsed.data.featuredImageUrl !== undefined) {
+      const prevMeta =
+        piece!.pieceMetadata && typeof piece!.pieceMetadata === "object"
+          ? { ...piece!.pieceMetadata }
+          : {};
+      if (parsed.data.featuredImageUrl === null) {
+        delete (prevMeta as { featuredImageUrl?: string }).featuredImageUrl;
+      } else {
+        (prevMeta as { featuredImageUrl?: string }).featuredImageUrl = parsed.data.featuredImageUrl;
+      }
+      updates.pieceMetadata = prevMeta;
+    }
 
     const [updated] = await db
       .update(contentPiecesTable)
