@@ -1,6 +1,15 @@
 import crypto from "crypto";
 import { marked } from "marked";
+import {
+  downloadAndOptimizeImage,
+  optimizeImageBuffer,
+  type OptimizedImage,
+} from "@workspace/media";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
+import {
+  decodeRasterFeaturedDataUri,
+  isRasterFeaturedDataUri,
+} from "./wordpress-images";
 
 export interface GhostCredentials {
   apiUrl: string;
@@ -9,6 +18,10 @@ export interface GhostCredentials {
 
 export interface GhostPostResult {
   postId: string;
+  url: string;
+}
+
+export interface GhostImageResult {
   url: string;
 }
 
@@ -53,6 +66,74 @@ function apiBase(apiUrl: string): string {
   return apiUrl.replace(/\/$/, "") + "/ghost/api/admin";
 }
 
+/** Multipart upload → Ghost-hosted URL for `feature_image`. */
+export async function uploadGhostImage(
+  credentials: GhostCredentials,
+  params: { buffer: Buffer; filename: string; mimeType: string },
+): Promise<GhostImageResult> {
+  const uploadUrl = `${apiBase(credentials.apiUrl)}/images/upload/`;
+  await assertPublicUrl(uploadUrl);
+
+  const form = new FormData();
+  const blob = new Blob([new Uint8Array(params.buffer)], { type: params.mimeType });
+  form.append("file", blob, params.filename);
+  form.append("purpose", "image");
+
+  const res = await fetch(uploadUrl, {
+    method: "POST",
+    headers: { Authorization: makeAuthHeader(credentials.adminApiKey) },
+    body: form,
+  });
+
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { errors?: { message?: string }[] };
+    if (res.status === 401) throw new Error("Ghost authentication failed. Check your Admin API key.");
+    if (res.status === 403) throw new Error("Ghost user does not have permission to upload images.");
+    throw new Error(data.errors?.[0]?.message ?? `Ghost image upload error: ${res.status}`);
+  }
+
+  const data = (await res.json()) as { images?: { url?: string }[] };
+  const url = data.images?.[0]?.url;
+  if (!url) throw new Error("Ghost API returned no image URL.");
+  return { url };
+}
+
+/**
+ * Resolve featured image to a Ghost-hosted URL.
+ * Accepts https (downloaded) or data:image/png|jpeg base64; SVG and other schemes skipped.
+ */
+export async function resolveGhostFeatureImage(
+  credentials: GhostCredentials,
+  featuredImageUrl?: string | null,
+): Promise<string | undefined> {
+  const raw = featuredImageUrl?.trim();
+  if (!raw) return undefined;
+
+  let optimized: OptimizedImage;
+  if (isRasterFeaturedDataUri(raw)) {
+    const decoded = decodeRasterFeaturedDataUri(raw);
+    if (!decoded) return undefined;
+    optimized = await optimizeImageBuffer(decoded.buffer, "featured", {
+      maxWidth: 1920,
+      quality: 85,
+    });
+  } else if (/^https?:\/\//i.test(raw)) {
+    optimized = await downloadAndOptimizeImage(raw, "featured", {
+      maxWidth: 1920,
+      quality: 85,
+    });
+  } else {
+    return undefined;
+  }
+
+  const uploaded = await uploadGhostImage(credentials, {
+    buffer: optimized.buffer,
+    filename: optimized.filename,
+    mimeType: optimized.mimeType,
+  });
+  return uploaded.url;
+}
+
 export async function publishToGhost(
   credentials: GhostCredentials,
   title: string,
@@ -61,10 +142,13 @@ export async function publishToGhost(
   metaDescription?: string,
   tags?: string[],
   htmlContentOverride?: string,
+  featuredImageUrl?: string | null,
 ): Promise<GhostPostResult> {
   const base = apiBase(credentials.apiUrl);
   const postsUrl = `${base}/posts/?source=html`;
   await assertPublicUrl(postsUrl);
+
+  const featureImage = await resolveGhostFeatureImage(credentials, featuredImageUrl);
 
   const post: Record<string, unknown> = {
     title,
@@ -73,6 +157,7 @@ export async function publishToGhost(
   };
   if (metaDescription) post["custom_excerpt"] = metaDescription.slice(0, 300);
   if (tags?.length) post["tags"] = tags.map((name) => ({ name }));
+  if (featureImage) post["feature_image"] = featureImage;
 
   return postToGhost(credentials, postsUrl, post);
 }
@@ -85,14 +170,18 @@ export async function publishToGhostLexical(
   status: "draft" | "published" = "draft",
   metaDescription?: string,
   tags?: string[],
+  featuredImageUrl?: string | null,
 ): Promise<GhostPostResult> {
   const base = apiBase(credentials.apiUrl);
   const postsUrl = `${base}/posts/`;
   await assertPublicUrl(postsUrl);
 
+  const featureImage = await resolveGhostFeatureImage(credentials, featuredImageUrl);
+
   const post: Record<string, unknown> = { title, lexical, status };
   if (metaDescription) post["custom_excerpt"] = metaDescription.slice(0, 300);
   if (tags?.length) post["tags"] = tags.map((name) => ({ name }));
+  if (featureImage) post["feature_image"] = featureImage;
 
   return postToGhost(credentials, postsUrl, post);
 }

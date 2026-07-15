@@ -17,11 +17,13 @@ export const notionAdapter: CmsAdapter = {
   async render(content: CanonicalContent): Promise<RenderResult> {
     const blocks = markdownToNotionBlocks(content.markdown);
     const warnings = [];
-    const imageCount = (content.markdown.match(/!\[/g) ?? []).length;
-    if (imageCount > 0) {
+    const omittedImages = [...content.markdown.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g)].filter(
+      (m) => !m[1]!.trim().startsWith("https://"),
+    ).length;
+    if (omittedImages > 0) {
       warnings.push({
         code: "notion_images_omitted",
-        message: `${imageCount} image(s) will not appear in Notion — image blocks are not yet supported.`,
+        message: `${omittedImages} image(s) omitted — Notion only supports https:// image URLs.`,
       });
     }
     if (blocks.length > 100) {

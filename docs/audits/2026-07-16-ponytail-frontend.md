@@ -118,19 +118,20 @@ Sources: `HANDOFF.md`, competitive plan Waves 0–3.2, create-wizard diff, TYPO3
 
 ## Recommended next actions (ordered)
 
-1. **Do not** delete `goals-app-ui`.
-2. Delete §D leftovers (~480 LOC) after a quick import grep in CI/local.
-3. Verify then remove unused Next deps (`gsap` / `@gsap/react` / `marked`) if zero imports.
-4. Shell catch-up (optional): project competitor picker → streaming headings → repurpose (only if Pages demo must match Next create).
-5. Unify publish-destination registries under one package export (needs conscious type expansion on shell).
+1. **Do not** delete `goals-app-ui` (**confirmed** — live `app.goals.ac` Pages host).
+2. Delete §D leftovers (~480 LOC) — **import grep verified** (see Appendix A).
+3. Remove unused Next deps (`gsap` / `@gsap/react` / `marked`) — **zero `src/` imports verified**.
+4. ~~Shell create catch-up~~ — **done 2026-07-16** (destination, competitor picker, stream headings, compact repurpose).
+5. Unify publish-destination registries (there are **three** copies — see Appendix A #6).
 6. CMS/ESP dialog consolidation — largest shrink; needs schema-driven PRD and visual parity.
+7. Demo trust surfaces (if partner GTM): video demo placeholder, success-stories coming-soon, Notion image blocks, public media host for non-WP featured.
 
 ---
 
 ## Related
 
 - Skill: `.agents/skills/ponytail-audit/SKILL.md`
-- Prior session: `HANDOFF.md` (destination step + deferred list)
+- Prior session: `HANDOFF.md` (create wizard parity + deferred list)
 - Deploy truth: `docs/deploy-cloudflare.md` (`app.goals.ac` → `goals-app-ui`)
 - Competitive deferred: `docs/prd/content-studio-competitive-plan.md` § Explicitly deferred
 
@@ -138,4 +139,34 @@ Sources: `HANDOFF.md`, competitive plan Waves 0–3.2, create-wizard diff, TYPO3
 
 ## Agent verification appendices
 
-_Appended when parallel verify / unfinished-feature agents complete._
+Cross-checked by parallel explore agents on 2026-07-16 (claim verify, unfinished UI, HANDOFF gaps, TODO/dead scan).
+
+### Appendix A — Claim verification
+
+| Claim | Verdict |
+|---|---|
+| Delete entire `goals-app-ui` | **FALSE** — `app.goals.ac` Pages SPA |
+| Next studio leftovers unused (4 files + keyword chart) | **VERIFIED** |
+| `gsap` / `@gsap/react` / `marked` unused in Next `src/` | **VERIFIED** |
+| `framer-motion` one-file in Next | **PARTIAL** — true for Next; also used in legacy `goals-ac` |
+| Dual publish-destination registries | **VERIFIED (worse)** — **three** registries (app-shell integrations subset, Next full, legacy Vite copy) |
+| `PieceLink` pure pass-through | **VERIFIED** |
+| 8 CMS + 4 ESP near-copy dialogs | **VERIFIED** |
+| `help-articles.ts` 20+ articles | **PARTIAL** — 16 articles / ~493 LOC |
+| Theme context split across 3 files | **VERIFIED** |
+| `CreateContentDialog` destination step | **YES** (shipped this session) |
+
+### Appendix B — Unfinished features (synthesis)
+
+Agents that inventoried gaps still listed shell competitor / stream / repurpose as open — **superseded same day** by shell create catch-up. Remaining truth:
+
+| Tier | What remains |
+|---|---|
+| **Intentional deferred** | Hosted blog, Surfer NLP, TikTok/YouTube/inbox, Shopify theme **app block**, detector APIs, self-serve Growth checkout, backlink exchange, detector APIs |
+| **Demo-visible (product)** | Marketing video placeholder; success-stories coming-soon; Notion adapter drops images; no public media bucket for non-WP `data:` featured; Instagram text-post placeholder image; Semrush needs org key; TYPO3 FAL real-site caveats; Bluesky JWK stability; CF public-worker social still env-only |
+| **Architecture debt** | CMS/ESP dialog mega-file; 3× publish-destinations; Next studio leftovers; unused gsap/marked deps |
+| **Safe deletes** | §D leftovers (~480 LOC) + 3 Next deps |
+
+### Appendix C — Codebase health note
+
+No meaningful `TODO` / `FIXME` / `throw "not implemented"` net in product UI packages. Incompleteness is mostly **deferred strategy** and **dual-host duplication**, not abandoned stubs.

@@ -1,5 +1,22 @@
 # Session Handoff
 
+## Closure — social OAuth, destinations, WP media, create progress (2026-07-16)
+
+Batch closure for admin-backed social OAuth, destination SSOT, WP data-URI featured, shell create progress, and DB-aware social gates. Deferred lists elsewhere in this file are unchanged.
+
+| Area | Done |
+|---|---|
+| CF public-worker social OAuth | LinkedIn / X / Meta / Bluesky handlers call `resolve*OAuthCredentials` (admin DB + env fallback) — same path as Next (`auth-linkedin` / `auth-twitter` / `auth-meta` / `auth-bluesky-oauth`) |
+| Publish destination IDs | UI SSOT: `lib/app-shell/src/integrations/destination-ids.ts`. Next composes full defs from app-shell (`CMS_PLATFORMS` / ESP / `getSocialDestinations`) in `publishing-destinations.ts` + local publish/format overlays |
+| WP featured upload | PNG/JPEG `data:` featured URIs → decode → WebP → plugin `/media` or WP REST via `prepareWordPressImages` (Ghost/Shopify data-URI still skipped) |
+| Shell create SSE | Vite Studio parse of generate SSE → markdown headings → `CreateContentDialog` `generatingHeadings`; timed Analyzing/Drafting/Finishing until first heading |
+| Social feature gates | Connect availability / cms-summary / platform settings use DB-aware `has*Credentials()` (not env-only) |
+| Admin Meta / X / Bluesky | Platform admin → Integrations → Social; encrypted columns + `resolve*` helpers; migrations PG `0065`–`0067`, D1 `0002`–`0004` |
+
+**Deferred unchanged:** hosted blog, Surfer NLP, TikTok, Shopify theme app block (and Ghost/Shopify data-URI featured).
+
+---
+
 ## Shell create repurpose flow (2026-07-16)
 
 Compact Create vs Repurpose path in `CreateContentDialog` when `onRepurpose` is provided:

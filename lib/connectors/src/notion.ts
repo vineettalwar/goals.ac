@@ -21,7 +21,19 @@ export type NotionBlock =
   | { object: "block"; type: "bulleted_list_item"; bulleted_list_item: { rich_text: RichText[] } }
   | { object: "block"; type: "numbered_list_item"; numbered_list_item: { rich_text: RichText[] } }
   | { object: "block"; type: "code"; code: { rich_text: RichText[]; language: string } }
-  | { object: "block"; type: "divider"; divider: Record<string, never> };
+  | { object: "block"; type: "divider"; divider: Record<string, never> }
+  | {
+      object: "block";
+      type: "image";
+      image: {
+        type: "external";
+        external: { url: string };
+        caption?: RichText[];
+      };
+    };
+
+/** Standalone markdown image. Notion external images need https:// (no data:). */
+const IMAGE_RE = /^!\[([^\]]*)\]\(([^)]+)\)$/;
 
 function parseInlineMarkdown(text: string): RichText[] {
   const result: RichText[] = [];
@@ -82,6 +94,25 @@ export function markdownToNotionBlocks(markdown: string): NotionBlock[] {
 
     if (inCodeBlock) {
       codeLines.push(line);
+      continue;
+    }
+
+    const imageMatch = IMAGE_RE.exec(line.trim());
+    if (imageMatch) {
+      const alt = imageMatch[1].trim();
+      const url = imageMatch[2].trim();
+      // ponytail: Notion rejects data: / http:; File Upload API if we need those
+      if (url.startsWith("https://")) {
+        blocks.push({
+          object: "block",
+          type: "image",
+          image: {
+            type: "external",
+            external: { url },
+            ...(alt ? { caption: [{ type: "text", text: { content: alt } }] } : {}),
+          },
+        });
+      }
       continue;
     }
 
