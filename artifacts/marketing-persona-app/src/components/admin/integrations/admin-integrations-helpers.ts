@@ -67,6 +67,12 @@ export function isIntegrationConfigured(
   if (definition.id === "linkedin") {
     return status.linkedin.clientId.configured && status.linkedin.clientSecret.configured;
   }
+  if (definition.id === "twitter") {
+    return status.twitter.clientId.configured && status.twitter.clientSecret.configured;
+  }
+  if (definition.id === "meta") {
+    return status.meta.appId.configured && status.meta.appSecret.configured;
+  }
   return false;
 }
 
@@ -115,6 +121,8 @@ export function getIntegrationLastFour(
   if (definition.id === "unsplash") return status.unsplash.accessKey.lastFour;
   if (definition.id === "pexels") return status.pexels.apiKey.lastFour;
   if (definition.id === "linkedin") return status.linkedin.clientSecret.lastFour;
+  if (definition.id === "twitter") return status.twitter.clientSecret.lastFour;
+  if (definition.id === "meta") return status.meta.appSecret.lastFour;
   return null;
 }
 
@@ -127,5 +135,7 @@ export function isIntegrationManagedByEnv(
   if (definition.id === "unsplash") return status.unsplash.managedByEnv;
   if (definition.id === "pexels") return status.pexels.managedByEnv;
   if (definition.id === "linkedin") return status.linkedin.managedByEnv;
+  if (definition.id === "twitter") return status.twitter.managedByEnv;
+  if (definition.id === "meta") return status.meta.managedByEnv;
   return definition.kind === "env";
 }

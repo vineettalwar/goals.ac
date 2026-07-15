@@ -20,7 +20,9 @@ export type PlatformIntegrationId =
   | "resend"
   | "unsplash"
   | "pexels"
-  | "linkedin";
+  | "linkedin"
+  | "twitter"
+  | "meta";
 
 export type PlatformIntegrationSettingsKey =
   | "stripeBillingEnabled"
@@ -248,6 +250,48 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
         {
           name: "LINKEDIN_CLIENT_SECRET",
           configured: envConfigured("LINKEDIN_CLIENT_SECRET"),
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "twitter",
+      category: "social",
+      kind: "credentials",
+      label: "X",
+      description: "OAuth app for project X (Twitter) connect and publishing.",
+      settingsKey: "socialPublishingEnabled",
+      docsUrl: "https://developer.x.com/",
+      envVars: [
+        {
+          name: "TWITTER_CLIENT_ID",
+          configured: envConfigured("TWITTER_CLIENT_ID"),
+          required: true,
+        },
+        {
+          name: "TWITTER_CLIENT_SECRET",
+          configured: envConfigured("TWITTER_CLIENT_SECRET"),
+          required: true,
+        },
+      ],
+    },
+    {
+      id: "meta",
+      category: "social",
+      kind: "credentials",
+      label: "Meta",
+      description: "OAuth app for Facebook Page and Instagram publishing.",
+      settingsKey: "socialPublishingEnabled",
+      docsUrl: "https://developers.facebook.com/",
+      envVars: [
+        {
+          name: "META_APP_ID",
+          configured: envConfigured("META_APP_ID"),
+          required: true,
+        },
+        {
+          name: "META_APP_SECRET",
+          configured: envConfigured("META_APP_SECRET"),
           required: true,
         },
       ],
