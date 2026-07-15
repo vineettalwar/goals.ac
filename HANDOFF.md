@@ -46,7 +46,21 @@ Next Studio surfaces thin-wrap shell views:
 
 **Migrate:** Postgres `0064_publish_records_output_mode` applied locally. D1 skipped (`.dev.vars` missing).
 
-**Remaining:** Next create wizard still Next-only; unused local Next studio files (e.g. self-fetching `brand-ai-profile-card.tsx`).
+**Remaining:** Next create wizard still richer (competitors, LinkedIn archetype/hook, generating progress). Shell create dialog now multi-step for Vite demo parity. Unused local Next studio files (e.g. self-fetching `brand-ai-profile-card.tsx`).
+
+---
+
+## Shell create wizard multi-step (2026-07-15)
+
+`CreateContentDialog` (app-shell) is now a compact wizard — not a single form:
+
+1. **format** — pick format
+2. **details** — keyword (required) + optional title / angle / planned date
+3. **destination** — optional; only when format has connected/export destinations
+4. **review** — summary → Generate
+
+Same `CreateContentDraftInput` (+ optional `intendedPublishPlatform`). Vite Studio passes `cmsConnections` and generates via existing stream/POST path. Next `CreateContentModal` untouched.
+
 
 ---
 

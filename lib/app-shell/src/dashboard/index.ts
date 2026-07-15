@@ -1,5 +1,6 @@
 export {
   AutopilotActivityPanel,
+  AutopilotSettingsCompact,
   DashboardAutopilotSection,
   DashboardCommandCenterSection,
   DashboardDraftsSection,
@@ -13,6 +14,8 @@ export {
   contentPiecePath,
   countByStatus,
   type DashboardArticleUsage,
+  type DashboardAutopilotCadence,
+  type DashboardAutopilotSavePayload,
   type DashboardAutopilotSettings,
   type DashboardCommandCenter,
   type DashboardCommandCenterRecentPiece,

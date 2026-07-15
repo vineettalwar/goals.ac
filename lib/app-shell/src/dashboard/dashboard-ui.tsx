@@ -16,14 +16,17 @@ import {
   contentPiecePath,
   countByStatus,
   type DashboardArticleUsage,
+  type DashboardAutopilotSavePayload,
   type DashboardAutopilotSettings,
   type DashboardCommandCenter,
   type DashboardLinkProps,
   type DashboardPiece,
   type DashboardProject,
 } from "./types";
+import { AutopilotSettingsCompact } from "./autopilot-settings-compact";
 
 export { AutopilotActivityPanel, formatArticleUsageLabel } from "./autopilot-activity-panel";
+export { AutopilotSettingsCompact } from "./autopilot-settings-compact";
 
 const STATUS_BADGE: Record<string, string> = {
   ready: "bg-emerald-100 text-emerald-800",
@@ -288,6 +291,9 @@ export function DashboardAutopilotSection({
   commandCenter,
   articleUsage,
   renderLink,
+  onSaveAutopilot,
+  savingAutopilot = false,
+  saveAutopilotError = null,
 }: {
   projectId: number;
   settings: DashboardAutopilotSettings | null;
@@ -295,6 +301,9 @@ export function DashboardAutopilotSection({
   commandCenter?: DashboardCommandCenter | null;
   articleUsage?: DashboardArticleUsage | null;
   renderLink: (props: DashboardLinkProps) => ReactNode;
+  onSaveAutopilot?: (payload: DashboardAutopilotSavePayload) => void | Promise<void>;
+  savingAutopilot?: boolean;
+  saveAutopilotError?: string | null;
 }) {
   if (commandCenter) {
     return (
@@ -305,6 +314,9 @@ export function DashboardAutopilotSection({
         pieces={pieces}
         articleUsage={articleUsage}
         renderLink={renderLink}
+        onSaveAutopilot={onSaveAutopilot}
+        savingAutopilot={savingAutopilot}
+        saveAutopilotError={saveAutopilotError}
       />
     );
   }
@@ -324,7 +336,9 @@ export function DashboardAutopilotSection({
           <p className="mt-1 text-sm text-muted-foreground">
             {settings?.enabled
               ? `${settings.cadence === "daily" ? "Daily" : "Weekly"} · ${settings.publishMode ?? "review"} publish mode`
-              : "Autopilot is off — enable on the Autopilot page"}
+              : onSaveAutopilot
+                ? "Autopilot is off — enable below"
+                : "Autopilot is off — enable on Publishing"}
           </p>
           {articleUsage ? (
             <p className="mt-1.5 inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
@@ -350,6 +364,16 @@ export function DashboardAutopilotSection({
           </DashLink>
         </div>
       </div>
+      {onSaveAutopilot ? (
+        <AutopilotSettingsCompact
+          projectId={projectId}
+          settings={settings}
+          saving={savingAutopilot}
+          saveError={saveAutopilotError}
+          onSave={onSaveAutopilot}
+          renderLink={renderLink}
+        />
+      ) : null}
       <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
         <div className="rounded-lg bg-secondary/40 px-3 py-3">
           <p className="text-2xl font-bold">{generating + drafts}</p>
@@ -540,6 +564,9 @@ export function DashboardView({
   commandCenter,
   articleUsage,
   renderLink,
+  onSaveAutopilot,
+  savingAutopilot = false,
+  saveAutopilotError = null,
 }: {
   greeting: string;
   subtitle: string | null;
@@ -552,6 +579,9 @@ export function DashboardView({
   commandCenter: DashboardCommandCenter | null;
   articleUsage?: DashboardArticleUsage | null;
   renderLink: (props: DashboardLinkProps) => ReactNode;
+  onSaveAutopilot?: (payload: DashboardAutopilotSavePayload) => void | Promise<void>;
+  savingAutopilot?: boolean;
+  saveAutopilotError?: string | null;
 }) {
   const drafts = pieces.filter((piece) => piece.status === "draft");
 
@@ -586,6 +616,9 @@ export function DashboardView({
           pieces={pieces}
           articleUsage={articleUsage}
           renderLink={renderLink}
+          onSaveAutopilot={onSaveAutopilot}
+          savingAutopilot={savingAutopilot}
+          saveAutopilotError={saveAutopilotError}
         />
       ) : activeProjectId ? (
         <DashboardAutopilotSection
@@ -594,6 +627,9 @@ export function DashboardView({
           pieces={pieces}
           articleUsage={articleUsage}
           renderLink={renderLink}
+          onSaveAutopilot={onSaveAutopilot}
+          savingAutopilot={savingAutopilot}
+          saveAutopilotError={saveAutopilotError}
         />
       ) : null}
 
