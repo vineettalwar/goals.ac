@@ -21,16 +21,13 @@ function CmsPlatformTiles({
     const row = integrations[key];
     const connected = Boolean(row?.connected);
     const healthOk = row?.lastHealthOk;
-    const summary =
-      connected && key === "webhook" && typeof row?.url === "string"
-        ? row.url
-        : connected
-          ? healthOk === true
-            ? "Connected · Healthy"
-            : healthOk === false
-              ? "Connected · Failing"
-              : "Connected"
-          : null;
+    const summary = connected
+      ? healthOk === true
+        ? "Connected · Healthy"
+        : healthOk === false
+          ? "Connected · Failing"
+          : "Connected"
+      : null;
     tiles.push(
       <IntegrationTile
         key={key}

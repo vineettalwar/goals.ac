@@ -87,6 +87,7 @@ Sources: `HANDOFF.md`, competitive plan Waves 0–3.2, create-wizard diff, TYPO3
 | LinkedIn archetype + hook | Done (chips on keyword step) | Done (separate steps) | UX depth only |
 | Competitor URLs | Paste textarea | Project analyses cards + quick-add | Shell weaker |
 | Destination / `intendedPublishPlatform` | **Done 2026-07-16** | Done | Closed |
+| Project competitor picker | **Done 2026-07-16** (cards + analyses + quick-add) | Done | Closed |
 | Generating progress | Timed labels | Streaming + heading extract | Shell weaker |
 | Repurpose flow | Missing | Done | Shell missing |
 | Brand AI profile card | Shell owns | Thin host passes profile | Leftover Next card file |

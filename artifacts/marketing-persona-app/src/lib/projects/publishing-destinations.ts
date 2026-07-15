@@ -1,3 +1,29 @@
+/**
+ * Next publishing destination registry.
+ *
+ * Composes CMS / ESP / social display metadata from `@workspace/app-shell/integrations`
+ * (UI SSOT: CMS_PLATFORMS, ESP_DESTINATIONS, getSocialDestinations, destination-ids).
+ * Next overlays: format matching, connection-method settings, marketing list colors,
+ * publish API paths (`getPublishEndpoint`), and cookie-auth-safe fetch stays in Next loaders.
+ *
+ * Leftover divergence (unsafe to full-unify here): `lib/app-shell/.../content-piece/publish-destinations.ts`
+ * stays a smaller Vite publish-dialog subset; Next keeps IG/FB as separate publish targets
+ * (shell settings uses one `meta` integration) and `isConnected` via truthy snapshot rows
+ * (not `.connected`). Do not move Next cookie/auth or `/api/content-pieces/.../publish` paths into shell.
+ */
+
+import {
+  CMS_PLATFORMS,
+  ESP_DESTINATIONS,
+  EXPORT_DESTINATION_IDS,
+  getSocialDestinations as getShellSocialDestinations,
+  SOCIAL_PUBLISH_IDS,
+  type CmsPlatformId,
+  type EspPlatformId,
+  type ExportDestinationId,
+  type SocialPublishId,
+} from "@workspace/app-shell/integrations";
+
 export type ContentFormatType =
   | "blog_post"
   | "news_article"
@@ -21,33 +47,10 @@ export type ContentFormatType =
   | "faq_article";
 
 export type PublishDestinationId =
-  | "wordpress"
-  | "notion"
-  | "webflow"
-  | "ghost"
-  | "webhook"
-  | "shopify"
-  | "drupal"
-  | "joomla"
-  | "wix"
-  | "framer"
-  | "squarespace"
-  | "contentful"
-  | "sanity"
-  | "strapi"
-  | "hubspot"
-  | "typo3"
-  | "beehiiv"
-  | "convertkit"
-  | "mailchimp"
-  | "medium"
-  | "substack"
-  | "linkedin"
-  | "twitter"
-  | "instagram"
-  | "facebook"
-  | "bluesky"
-  | "mastodon";
+  | CmsPlatformId
+  | EspPlatformId
+  | ExportDestinationId
+  | SocialPublishId;
 
 export type ConnectionMethod = "api" | "plugin" | "oauth";
 
@@ -78,25 +81,8 @@ export interface PublishDestinationDefinition {
 }
 
 export type CmsSummary = Record<
-  | "notion"
-  | "webflow"
-  | "wordpress"
-  | "ghost"
-  | "webhook"
-  | "shopify"
-  | "drupal"
-  | "joomla"
-  | "wix"
-  | "framer"
-  | "squarespace"
-  | "contentful"
-  | "sanity"
-  | "strapi"
-  | "hubspot"
-  | "typo3"
-  | "beehiiv"
-  | "convertkit"
-  | "mailchimp"
+  | CmsPlatformId
+  | EspPlatformId
   | "linkedin"
   | "twitter"
   | "meta"
@@ -173,393 +159,303 @@ function hasMeta(connections: CmsConnectionSnapshot): boolean {
   return !!connections.meta;
 }
 
-export const PUBLISHING_DESTINATIONS: PublishDestinationDefinition[] = [
+/** Next-only settings overlays; labels/descriptions/badges come from shell CMS_PLATFORMS. */
+const CMS_NEXT_OVERLAY: Record<
+  CmsPlatformId,
   {
-    id: "wordpress",
-    label: "WordPress",
-    category: "cms",
-    integrationKey: "wordpress",
-    description: "Publish via Application Passwords or the goals.ac WordPress plugin.",
-    badgeLetter: "W",
-    badgeClassName: "bg-blue-500",
-    listColorClassName: "bg-blue-400",
+    connectionMethods: ConnectionMethod[];
+    connectionMethodLabels: Partial<Record<ConnectionMethod, string>>;
+    listColorClassName: string;
+  }
+> = {
+  wordpress: {
     connectionMethods: ["api", "plugin"],
     connectionMethodLabels: {
       api: "Application Password (REST API)",
       plugin: "goals.ac plugin (HMAC)",
     },
-    isConnected: (c) => !!c.wordpress,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-blue-400",
   },
-  {
-    id: "notion",
-    label: "Notion",
-    category: "cms",
-    integrationKey: "notion",
-    description: "Publish content directly to a Notion database as a new page.",
-    badgeLetter: "N",
-    badgeClassName: "bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900",
-    listColorClassName: "bg-zinc-400",
+  notion: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Integration token" },
-    isConnected: (c) => !!c.notion,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-zinc-400",
   },
-  {
-    id: "webflow",
-    label: "Webflow",
-    category: "cms",
-    integrationKey: "webflow",
-    description: "Publish content as a CMS item in your Webflow collection (draft or live).",
-    badgeLetter: "W",
-    badgeClassName: "bg-blue-600",
-    listColorClassName: "bg-purple-400",
+  webflow: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Site API token" },
-    isConnected: (c) => !!c.webflow,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-purple-400",
   },
-  {
-    id: "ghost",
-    label: "Ghost",
-    category: "cms",
-    integrationKey: "ghost",
-    description: "Publish content to Ghost via the Admin API.",
-    badgeLetter: "G",
-    badgeClassName: "bg-zinc-800",
-    listColorClassName: "bg-zinc-500",
+  ghost: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Admin API key" },
-    isConnected: (c) => !!c.ghost,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-zinc-500",
   },
-  {
-    id: "shopify",
-    label: "Shopify",
-    category: "cms",
-    integrationKey: "shopify",
-    description: "Publish blog articles via Admin API or the goals.ac Shopify app plugin.",
-    badgeLetter: "S",
-    badgeClassName: "bg-green-700",
-    listColorClassName: "bg-green-500",
+  shopify: {
     connectionMethods: ["api", "plugin"],
     connectionMethodLabels: {
       api: "Shopify Admin API",
       plugin: "goals.ac plugin (HMAC)",
     },
-    isConnected: (c) => !!c.shopify,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-green-500",
   },
-  {
-    id: "drupal",
-    label: "Drupal",
-    category: "cms",
-    integrationKey: "drupal",
-    description: "Publish via JSON:API or the goals.ac Drupal plugin.",
-    badgeLetter: "D",
-    badgeClassName: "bg-sky-700",
-    listColorClassName: "bg-sky-500",
+  drupal: {
     connectionMethods: ["api", "plugin"],
     connectionMethodLabels: {
       api: "Drupal JSON:API",
       plugin: "goals.ac plugin (HMAC)",
     },
-    isConnected: (c) => !!c.drupal,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-sky-500",
   },
-  {
-    id: "joomla",
-    label: "Joomla",
-    category: "cms",
-    integrationKey: "joomla",
-    description: "Publish via Joomla Web Services API or the goals.ac plugin.",
-    badgeLetter: "J",
-    badgeClassName: "bg-orange-600",
-    listColorClassName: "bg-orange-500",
+  joomla: {
     connectionMethods: ["api", "plugin"],
     connectionMethodLabels: {
       api: "Joomla Web Services API",
       plugin: "goals.ac plugin (HMAC)",
     },
-    isConnected: (c) => !!c.joomla,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-orange-500",
   },
-  {
-    id: "webhook",
-    label: "Webhook",
-    category: "cms",
-    integrationKey: "webhook",
-    description: "Send HMAC-signed JSON to Zapier, Make, n8n, or any custom endpoint.",
-    listColorClassName: "bg-amber-400",
+  webhook: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Signed webhook URL" },
-    isConnected: (c) => !!c.webhook,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-amber-400",
   },
-  {
-    id: "wix",
-    label: "Wix",
-    category: "cms",
-    integrationKey: "wix",
-    description: "Publish blog posts to Wix via the Blog API.",
-    badgeLetter: "W",
-    badgeClassName: "bg-yellow-500 text-black",
-    listColorClassName: "bg-yellow-400",
+  wix: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Access token" },
-    isConnected: (c) => !!c.wix,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-yellow-400",
   },
-  {
-    id: "framer",
-    label: "Framer",
-    category: "cms",
-    integrationKey: "framer",
-    description: "Publish CMS collection items to Framer sites.",
-    badgeLetter: "F",
-    badgeClassName: "bg-violet-600",
-    listColorClassName: "bg-violet-400",
+  framer: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Project API token" },
-    isConnected: (c) => !!c.framer,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-violet-400",
   },
-  {
-    id: "squarespace",
-    label: "Squarespace",
-    category: "cms",
-    integrationKey: "squarespace",
-    description: "Publish blog posts to Squarespace via the Content API.",
-    badgeLetter: "S",
-    badgeClassName: "bg-neutral-900 text-white",
-    listColorClassName: "bg-neutral-500",
+  squarespace: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "API key" },
-    isConnected: (c) => !!c.squarespace,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-neutral-500",
   },
-  {
-    id: "contentful",
-    label: "Contentful",
-    category: "cms",
-    integrationKey: "contentful",
-    description: "Create entries in Contentful via the Management API.",
-    badgeLetter: "C",
-    badgeClassName: "bg-blue-500",
-    listColorClassName: "bg-blue-300",
+  contentful: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Personal access token" },
-    isConnected: (c) => !!c.contentful,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-blue-300",
   },
-  {
-    id: "sanity",
-    label: "Sanity",
-    category: "cms",
-    integrationKey: "sanity",
-    description: "Create documents in Sanity datasets via the HTTP API.",
-    badgeLetter: "S",
-    badgeClassName: "bg-red-600",
-    listColorClassName: "bg-red-400",
+  sanity: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Project token" },
-    isConnected: (c) => !!c.sanity,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-red-400",
   },
-  {
-    id: "strapi",
-    label: "Strapi",
-    category: "cms",
-    integrationKey: "strapi",
-    description: "Publish content to Strapi via REST API.",
-    badgeLetter: "S",
-    badgeClassName: "bg-indigo-600",
-    listColorClassName: "bg-indigo-400",
+  strapi: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "API token" },
-    isConnected: (c) => !!c.strapi,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-indigo-400",
   },
-  {
-    id: "hubspot",
-    label: "HubSpot CMS",
-    category: "cms",
-    integrationKey: "hubspot",
-    description: "Publish blog posts to HubSpot CMS.",
-    badgeLetter: "H",
-    badgeClassName: "bg-orange-500",
-    listColorClassName: "bg-orange-400",
+  hubspot: {
     connectionMethods: ["api"],
     connectionMethodLabels: { api: "Private app token" },
-    isConnected: (c) => !!c.hubspot,
-    matchesFormat: matchesLongForm,
+    listColorClassName: "bg-orange-400",
   },
-  {
-    id: "typo3",
-    label: "TYPO3",
-    category: "cms",
-    integrationKey: "typo3",
-    description: "Publish via the goals.ac TYPO3 extension (HMAC plugin).",
-    badgeLetter: "T",
-    badgeClassName: "bg-orange-700",
-    listColorClassName: "bg-orange-500",
+  typo3: {
     connectionMethods: ["plugin"],
     connectionMethodLabels: { plugin: "goals.ac plugin (HMAC)" },
-    isConnected: (c) => !!c.typo3,
+    listColorClassName: "bg-orange-500",
+  },
+};
+
+/** Prefer Next settings card order; append any new shell platforms at the end. */
+const CMS_DISPLAY_ORDER: CmsPlatformId[] = [
+  "wordpress",
+  "notion",
+  "webflow",
+  "ghost",
+  "shopify",
+  "drupal",
+  "joomla",
+  "webhook",
+  "wix",
+  "framer",
+  "squarespace",
+  "contentful",
+  "sanity",
+  "strapi",
+  "hubspot",
+  "typo3",
+];
+
+const ESP_LIST_COLORS: Record<EspPlatformId, string> = {
+  beehiiv: "bg-yellow-500",
+  convertkit: "bg-red-400",
+  mailchimp: "bg-yellow-400",
+};
+
+const SOCIAL_LIST_COLORS: Record<SocialPublishId, string> = {
+  linkedin: "bg-blue-500",
+  twitter: "bg-sky-400",
+  instagram: "bg-fuchsia-500",
+  facebook: "bg-indigo-500",
+  bluesky: "bg-sky-500",
+  mastodon: "bg-violet-500",
+};
+
+const SOCIAL_OAUTH_LABEL: Partial<Record<string, string>> = {
+  linkedin: "OAuth",
+  twitter: "OAuth",
+  bluesky: "AT Protocol OAuth",
+  mastodon: "Instance OAuth",
+  meta: "Meta OAuth",
+};
+
+function buildCmsDestinations(): PublishDestinationDefinition[] {
+  const byKey = new Map(CMS_PLATFORMS.map((platform) => [platform.key, platform]));
+  const ordered: PublishDestinationDefinition[] = [];
+
+  for (const id of CMS_DISPLAY_ORDER) {
+    const platform = byKey.get(id);
+    if (!platform) continue;
+    byKey.delete(id);
+    ordered.push(cmsDefinitionFromShell(platform));
+  }
+  for (const platform of byKey.values()) {
+    ordered.push(cmsDefinitionFromShell(platform));
+  }
+  return ordered;
+}
+
+function cmsDefinitionFromShell(
+  platform: (typeof CMS_PLATFORMS)[number],
+): PublishDestinationDefinition {
+  const overlay = CMS_NEXT_OVERLAY[platform.key] ?? {
+    connectionMethods: ["api"] as ConnectionMethod[],
+    connectionMethodLabels: { api: "API" },
+    listColorClassName: "bg-zinc-400",
+  };
+  return {
+    id: platform.key,
+    label: platform.label,
+    category: "cms",
+    integrationKey: platform.key,
+    description: platform.description,
+    badgeLetter: platform.badgeLetter,
+    badgeClassName: platform.badgeClassName,
+    listColorClassName: overlay.listColorClassName,
+    connectionMethods: overlay.connectionMethods,
+    connectionMethodLabels: overlay.connectionMethodLabels,
+    isConnected: (c) => !!c[platform.key],
     matchesFormat: matchesLongForm,
-  },
-  {
-    id: "beehiiv",
-    label: "Beehiiv",
-    category: "esp",
-    integrationKey: "beehiiv",
-    description: "Publish email sequences and newsletters to Beehiiv.",
-    badgeLetter: "B",
-    badgeClassName: "bg-yellow-600",
-    listColorClassName: "bg-yellow-500",
-    connectionMethods: ["api"],
-    connectionMethodLabels: { api: "API key" },
-    isConnected: (c) => !!c.beehiiv,
+  };
+}
+
+function buildEspDestinations(): PublishDestinationDefinition[] {
+  return ESP_DESTINATIONS.map((esp) => ({
+    id: esp.id,
+    label: esp.label,
+    category: "esp" as const,
+    integrationKey: esp.integrationKey,
+    description: esp.description,
+    badgeLetter: esp.badgeLetter,
+    badgeClassName: esp.badgeClassName,
+    listColorClassName: ESP_LIST_COLORS[esp.id],
+    connectionMethods: [...esp.connectionMethods] as ConnectionMethod[],
+    connectionMethodLabels: { api: esp.connectionMethodLabel },
+    isConnected: (c) => !!c[esp.id],
     matchesFormat: matchesEmail,
-  },
-  {
-    id: "convertkit",
-    label: "ConvertKit",
-    category: "esp",
-    integrationKey: "convertkit",
-    description: "Create email broadcasts in ConvertKit (Kit).",
-    badgeLetter: "K",
-    badgeClassName: "bg-red-500",
-    listColorClassName: "bg-red-400",
-    connectionMethods: ["api"],
-    connectionMethodLabels: { api: "API secret" },
-    isConnected: (c) => !!c.convertkit,
-    matchesFormat: matchesEmail,
-  },
-  {
-    id: "mailchimp",
-    label: "Mailchimp",
-    category: "esp",
-    integrationKey: "mailchimp",
-    description: "Create email campaign drafts in Mailchimp.",
-    badgeLetter: "M",
-    badgeClassName: "bg-yellow-500 text-black",
-    listColorClassName: "bg-yellow-400",
-    connectionMethods: ["api"],
-    connectionMethodLabels: { api: "API key" },
-    isConnected: (c) => !!c.mailchimp,
-    matchesFormat: matchesEmail,
-  },
-  {
-    id: "medium",
-    label: "Medium",
-    category: "export",
-    integrationKey: "medium",
-    description: "Medium's API is deprecated. Export markdown and paste into Medium.",
-    badgeLetter: "M",
-    badgeClassName: "bg-neutral-700",
-    listColorClassName: "bg-neutral-500",
-    connectionMethods: ["api"],
-    connectionMethodLabels: { api: "Export only" },
-    isConnected: () => false,
-    matchesFormat: matchesLongForm,
-    exportOnly: true,
-  },
-  {
-    id: "substack",
-    label: "Substack",
-    category: "export",
-    integrationKey: "substack",
-    description: "No write API available. Export markdown and paste into Substack.",
-    badgeLetter: "S",
-    badgeClassName: "bg-orange-600",
-    listColorClassName: "bg-orange-400",
-    connectionMethods: ["api"],
-    connectionMethodLabels: { api: "Export only" },
-    isConnected: () => false,
-    matchesFormat: (f) => matchesEmail(f) || matchesLongForm(f),
-    exportOnly: true,
-  },
-  {
-    id: "linkedin",
-    label: "LinkedIn",
-    category: "social",
-    integrationKey: "linkedin",
-    description: "Publish LinkedIn posts directly from Content Studio.",
-    listColorClassName: "bg-blue-500",
-    connectionMethods: ["oauth"],
-    connectionMethodLabels: { oauth: "OAuth" },
-    oauthPath: "linkedin",
-    isConnected: (c) => !!c.linkedin,
-    matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === "linkedin",
-  },
-  {
-    id: "twitter",
-    label: "X",
-    category: "social",
-    integrationKey: "twitter",
-    description: "Publish threads directly to X.",
-    listColorClassName: "bg-sky-400",
-    connectionMethods: ["oauth"],
-    connectionMethodLabels: { oauth: "OAuth" },
-    oauthPath: "twitter",
-    isConnected: (c) => !!c.twitter,
-    matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === "twitter",
-  },
-  {
-    id: "instagram",
-    label: "Instagram",
-    category: "social",
-    integrationKey: "meta",
-    description: "Publish Instagram posts via a connected Meta account.",
-    listColorClassName: "bg-fuchsia-500",
-    connectionMethods: ["oauth"],
-    connectionMethodLabels: { oauth: "Meta OAuth" },
-    hideSettingsCard: true,
-    isConnected: hasMeta,
-    matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === "instagram",
-  },
-  {
-    id: "facebook",
-    label: "Facebook",
-    category: "social",
-    integrationKey: "meta",
-    description: "Publish Facebook posts via a connected Meta account.",
-    listColorClassName: "bg-indigo-500",
-    connectionMethods: ["oauth"],
-    connectionMethodLabels: { oauth: "Meta OAuth" },
-    hideSettingsCard: true,
-    isConnected: hasMeta,
-    matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === "facebook",
-  },
-  {
-    id: "bluesky",
-    label: "Bluesky",
-    category: "social",
-    integrationKey: "bluesky",
-    description: "Publish posts to Bluesky via AT Protocol OAuth.",
-    listColorClassName: "bg-sky-500",
-    connectionMethods: ["oauth"],
-    connectionMethodLabels: { oauth: "AT Protocol OAuth" },
-    oauthPath: "bluesky",
-    hideSettingsCard: true,
-    isConnected: (c) => !!c.bluesky,
-    matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === "bluesky",
-  },
-  {
-    id: "mastodon",
-    label: "Mastodon",
-    category: "social",
-    integrationKey: "mastodon",
-    description: "Publish toots to your Mastodon instance.",
-    listColorClassName: "bg-violet-500",
-    connectionMethods: ["oauth"],
-    connectionMethodLabels: { oauth: "Instance OAuth" },
-    oauthPath: "mastodon",
-    hideSettingsCard: true,
-    isConnected: (c) => !!c.mastodon,
-    matchesFormat: (f) => SOCIAL_FORMAT_DESTINATION[f] === "mastodon",
-  },
+  }));
+}
+
+function buildExportDestinations(): PublishDestinationDefinition[] {
+  return EXPORT_DESTINATION_IDS.map((id) => {
+    if (id === "medium") {
+      return {
+        id,
+        label: "Medium",
+        category: "export" as const,
+        integrationKey: "medium",
+        description: "Medium's API is deprecated. Export markdown and paste into Medium.",
+        badgeLetter: "M",
+        badgeClassName: "bg-neutral-700",
+        listColorClassName: "bg-neutral-500",
+        connectionMethods: ["api"] as ConnectionMethod[],
+        connectionMethodLabels: { api: "Export only" },
+        isConnected: () => false,
+        matchesFormat: matchesLongForm,
+        exportOnly: true,
+      };
+    }
+    return {
+      id,
+      label: "Substack",
+      category: "export" as const,
+      integrationKey: "substack",
+      description: "No write API available. Export markdown and paste into Substack.",
+      badgeLetter: "S",
+      badgeClassName: "bg-orange-600",
+      listColorClassName: "bg-orange-400",
+      connectionMethods: ["api"] as ConnectionMethod[],
+      connectionMethodLabels: { api: "Export only" },
+      isConnected: () => false,
+      matchesFormat: (f: ContentFormatType) => matchesEmail(f) || matchesLongForm(f),
+      exportOnly: true,
+    };
+  });
+}
+
+function buildSocialDestinations(): PublishDestinationDefinition[] {
+  const fromShell = getShellSocialDestinations().flatMap((shell) => {
+    if (shell.id === "meta") {
+      return (["instagram", "facebook"] as const).map((id) => ({
+        id,
+        label: id === "instagram" ? "Instagram" : "Facebook",
+        category: "social" as const,
+        integrationKey: "meta",
+        description:
+          id === "instagram"
+            ? "Publish Instagram posts via a connected Meta account."
+            : "Publish Facebook posts via a connected Meta account.",
+        listColorClassName: SOCIAL_LIST_COLORS[id],
+        connectionMethods: ["oauth"] as ConnectionMethod[],
+        connectionMethodLabels: { oauth: SOCIAL_OAUTH_LABEL.meta ?? "Meta OAuth" },
+        hideSettingsCard: true,
+        isConnected: hasMeta,
+        matchesFormat: (f: ContentFormatType) => SOCIAL_FORMAT_DESTINATION[f] === id,
+      }));
+    }
+
+    const id = shell.id as SocialPublishId;
+    return [
+      {
+        id,
+        label: shell.label,
+        category: "social" as const,
+        integrationKey: shell.integrationKey,
+        description: shell.description,
+        listColorClassName: SOCIAL_LIST_COLORS[id],
+        connectionMethods: ["oauth"] as ConnectionMethod[],
+        connectionMethodLabels: {
+          oauth: SOCIAL_OAUTH_LABEL[shell.id] ?? "OAuth",
+        },
+        oauthPath: shell.oauthPath,
+        hideSettingsCard: id === "bluesky" || id === "mastodon" ? true : undefined,
+        isConnected: (c: CmsConnectionSnapshot) => !!c[shell.integrationKey],
+        matchesFormat: (f: ContentFormatType) => SOCIAL_FORMAT_DESTINATION[f] === id,
+      },
+    ];
+  });
+
+  // Guard: shell social list must cover every Next social publish id except IG/FB (from meta).
+  const covered = new Set(fromShell.map((d) => d.id));
+  for (const id of SOCIAL_PUBLISH_IDS) {
+    if (!covered.has(id)) {
+      throw new Error(`Shell social destinations missing publish id: ${id}`);
+    }
+  }
+  return fromShell;
+}
+
+export const PUBLISHING_DESTINATIONS: PublishDestinationDefinition[] = [
+  ...buildCmsDestinations(),
+  ...buildEspDestinations(),
+  ...buildExportDestinations(),
+  ...buildSocialDestinations(),
 ];
 
 export function getDestination(

@@ -1,5 +1,13 @@
 # Session Handoff
 
+## Shell create competitor picker (2026-07-16)
+
+`CreateContentDialog` competitors step now mirrors Next: load project brand URLs + analyses via host props (`projectCompetitors` / `competitorsLoading`), tap-to-focus cards, quick-add URL, optional focus.
+
+`StudioPage` fetches `/api/website-projects/:id/competitors` when the create dialog opens and maps analyses via `flattenCompetitorAnalysisList`.
+
+---
+
 ## Ponytail audit documented (2026-07-16)
 
 Report: [`docs/audits/2026-07-16-ponytail-frontend.md`](docs/audits/2026-07-16-ponytail-frontend.md)
@@ -183,7 +191,7 @@ Next Studio surfaces thin-wrap shell views:
 
 **Migrate:** Postgres `0064_publish_records_output_mode` applied locally. D1 skipped (`.dev.vars` missing).
 
-**Remaining (stale section below — updated):** Shell create destination step shipped 2026-07-16. Still open vs Next richness: project competitor picker (analyses cards), repurpose flow, streaming generate headings. Unused local Next studio leftovers remain deletable.
+**Remaining (stale section below — updated):** Shell create destination + project competitor picker shipped 2026-07-16. Still open vs Next richness: repurpose flow, streaming generate headings. Unused local Next studio leftovers remain deletable.
 
 ---
 

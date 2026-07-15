@@ -1,3 +1,28 @@
+import {
+  type CmsPlatformId,
+  type ExportDestinationId,
+  type SocialPublishId,
+} from "../integrations/destination-ids";
+
+/** Vite publish-dialog subset — IDs constrained to shared destination-ids SSOT. */
+const CONTENT_PIECE_CMS_IDS = [
+  "wordpress",
+  "notion",
+  "webflow",
+  "ghost",
+  "webhook",
+  "shopify",
+  "drupal",
+  "joomla",
+] as const satisfies readonly CmsPlatformId[];
+
+const CONTENT_PIECE_SOCIAL_IDS = [
+  "linkedin",
+  "twitter",
+  "instagram",
+  "facebook",
+] as const satisfies readonly SocialPublishId[];
+
 export type ContentFormatType =
   | "blog_post"
   | "news_article"
@@ -19,20 +44,9 @@ export type ContentFormatType =
   | "faq_article";
 
 export type PublishDestinationId =
-  | "wordpress"
-  | "notion"
-  | "webflow"
-  | "ghost"
-  | "webhook"
-  | "shopify"
-  | "drupal"
-  | "joomla"
-  | "linkedin"
-  | "twitter"
-  | "instagram"
-  | "facebook"
-  | "medium"
-  | "substack";
+  | (typeof CONTENT_PIECE_CMS_IDS)[number]
+  | (typeof CONTENT_PIECE_SOCIAL_IDS)[number]
+  | ExportDestinationId;
 
 export type ConnectionMethod = "api" | "plugin" | "oauth";
 
