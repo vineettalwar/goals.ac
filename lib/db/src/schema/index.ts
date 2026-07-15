@@ -28,6 +28,7 @@ export * from "./companies";
 export * from "./organizations";
 export * from "./organization_members";
 export * from "./platform_settings";
+export * from "./platform_bedrock_org_grants";
 export * from "./plan_quota_config";
 export * from "./org_audit_log";
 export * from "./org_invites";

@@ -36,6 +36,7 @@ export * from "./organization_members";
 export * from "./organizations";
 export * from "./plan_quota_config";
 export * from "./platform_settings";
+export * from "./platform_bedrock_org_grants";
 export * from "./platform_voices";
 export * from "./project_roadmaps";
 export * from "./publish_records";

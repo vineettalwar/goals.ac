@@ -49,6 +49,7 @@ export const organizationMembersTable = active.organizationMembersTable;
 export const organizationsTable = active.organizationsTable;
 export const planQuotaConfigTable = active.planQuotaConfigTable;
 export const platformSettingsTable = active.platformSettingsTable;
+export const platformBedrockOrgGrantsTable = active.platformBedrockOrgGrantsTable;
 export const projectRoadmapsTable = active.projectRoadmapsTable;
 export const publishRecordsTable = active.publishRecordsTable;
 export const roadmapsTable = active.roadmapsTable;

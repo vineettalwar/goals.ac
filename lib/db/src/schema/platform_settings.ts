@@ -36,6 +36,11 @@ export const platformSettingsTable = pgTable("platform_settings", {
   encryptedMetaAppSecret: text("encrypted_meta_app_secret"),
   blueskyClientName: text("bluesky_client_name"),
   encryptedBlueskyOauthPrivateKeyJwk: text("encrypted_bluesky_oauth_private_key_jwk"),
+  encryptedBedrockAccessKeyId: text("encrypted_bedrock_access_key_id"),
+  encryptedBedrockSecretAccessKey: text("encrypted_bedrock_secret_access_key"),
+  encryptedBedrockSessionToken: text("encrypted_bedrock_session_token"),
+  bedrockRegion: text("bedrock_region"),
+  bedrockModel: text("bedrock_model"),
   updatedBy: integer("updated_by").references(() => usersTable.id, { onDelete: "set null" }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
