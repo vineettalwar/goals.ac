@@ -35,4 +35,4 @@ export {
   type ContentFormatType,
   type PublishDestinationDefinition,
   type PublishDestinationId,
-} from "@workspace/app-shell/content-piece";
+} from "@workspace/app-shell/publish-destinations";

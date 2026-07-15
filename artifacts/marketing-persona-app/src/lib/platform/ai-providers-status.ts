@@ -2,7 +2,6 @@ import {
   resolveProviderId,
   resolveOllamaConfig,
   resolveOllamaConfigAsync,
-  isBedrockEnvConfigured,
   type AiProviderId,
   type AiProviderOptions,
 } from "@workspace/ai-providers/config";
@@ -70,7 +69,7 @@ export function buildAiProviderStatus(
       ? "env-key"
       : null;
 
-  const bedrockConfigured = isBedrockEnvConfigured();
+  // Env Bedrock alone is not org-available; grants are applied in finalizeAiProviderStatus.
   const anthropicConfigured = !!env("ANTHROPIC_API_KEY");
   const openaiConfigured = !!env("OPENAI_API_KEY");
 
@@ -78,7 +77,7 @@ export function buildAiProviderStatus(
     activeProvider,
     ready: isActiveProviderReady(activeProvider, {
       geminiConfigured,
-      bedrockConfigured,
+      bedrockConfigured: false,
       anthropicConfigured,
       openaiConfigured,
       ollamaConfigured: activeProvider === "ollama" || !!user?.ollamaBaseUrl || !!env("OLLAMA_BASE_URL"),
@@ -96,10 +95,10 @@ export function buildAiProviderStatus(
     },
     gemini: { configured: geminiConfigured, source: geminiSource },
     bedrock: {
-      configured: bedrockConfigured,
-      region: env("AWS_REGION") ?? env("AWS_DEFAULT_REGION") ?? (bedrockConfigured ? "us-east-1" : null),
+      configured: false,
+      region: env("AWS_REGION") ?? env("AWS_DEFAULT_REGION") ?? null,
       model: env("BEDROCK_MODEL") ?? null,
-      source: (bedrockConfigured ? "env" : null) as "env" | "org-key" | null,
+      source: null as "env" | "org-key" | "platform-grant" | null,
     },
     anthropic: {
       configured: anthropicConfigured,
@@ -129,6 +128,7 @@ export function isActiveProviderReady(
     ollamaReachable?: boolean;
     hasUserGeminiKey?: boolean;
     hasOrgBedrockKey?: boolean;
+    hasPlatformBedrockGrant?: boolean;
     hasOrgAnthropicKey?: boolean;
     hasOrgOpenAIKey?: boolean;
     orgBedrockRegion?: string | null;
@@ -139,7 +139,10 @@ export function isActiveProviderReady(
     case "gemini":
       return options.geminiConfigured || Boolean(options.hasUserGeminiKey);
     case "bedrock":
-      return options.bedrockConfigured || Boolean(options.hasOrgBedrockKey);
+      return (
+        Boolean(options.hasOrgBedrockKey) ||
+        (Boolean(options.hasPlatformBedrockGrant) && options.bedrockConfigured)
+      );
     case "anthropic":
       return options.anthropicConfigured || Boolean(options.hasOrgAnthropicKey);
     case "openai":
@@ -175,23 +178,38 @@ export function finalizeAiProviderStatus(
   options?: {
     hasUserGeminiKey?: boolean;
     hasOrgBedrockKey?: boolean;
+    hasPlatformBedrockGrant?: boolean;
+    platformBedrockConfigured?: boolean;
     hasOrgAnthropicKey?: boolean;
     hasOrgOpenAIKey?: boolean;
     orgBedrockRegion?: string | null;
     orgBedrockModel?: string | null;
+    platformBedrockRegion?: string | null;
+    platformBedrockModel?: string | null;
   },
 ): AiProviderStatusPayload {
-  const bedrockConfigured = status.bedrock.configured || Boolean(options?.hasOrgBedrockKey);
+  const platformBedrockReady =
+    Boolean(options?.hasPlatformBedrockGrant) && Boolean(options?.platformBedrockConfigured);
+  const bedrockConfigured = Boolean(options?.hasOrgBedrockKey) || platformBedrockReady;
   const anthropicConfigured = status.anthropic.configured || Boolean(options?.hasOrgAnthropicKey);
   const openaiConfigured = status.openai.configured || Boolean(options?.hasOrgOpenAIKey);
+  const bedrockSource = options?.hasOrgBedrockKey
+    ? ("org-key" as const)
+    : platformBedrockReady
+      ? ("platform-grant" as const)
+      : null;
   return {
     ...status,
     bedrock: {
       ...status.bedrock,
       configured: bedrockConfigured,
-      region: options?.orgBedrockRegion ?? status.bedrock.region,
-      model: options?.orgBedrockModel ?? status.bedrock.model,
-      source: options?.hasOrgBedrockKey ? "org-key" : status.bedrock.source,
+      region:
+        options?.orgBedrockRegion ??
+        options?.platformBedrockRegion ??
+        status.bedrock.region,
+      model:
+        options?.orgBedrockModel ?? options?.platformBedrockModel ?? status.bedrock.model,
+      source: bedrockSource,
     },
     anthropic: {
       ...status.anthropic,
@@ -205,13 +223,14 @@ export function finalizeAiProviderStatus(
     },
     ready: isActiveProviderReady(status.activeProvider, {
       geminiConfigured: status.gemini.configured,
-      bedrockConfigured,
+      bedrockConfigured: platformBedrockReady || Boolean(options?.hasOrgBedrockKey),
       anthropicConfigured,
       openaiConfigured,
       ollamaConfigured: status.ollama.configured,
       ollamaReachable: status.ollama.reachable,
       hasUserGeminiKey: options?.hasUserGeminiKey,
       hasOrgBedrockKey: options?.hasOrgBedrockKey,
+      hasPlatformBedrockGrant: options?.hasPlatformBedrockGrant,
       hasOrgAnthropicKey: options?.hasOrgAnthropicKey,
       hasOrgOpenAIKey: options?.hasOrgOpenAIKey,
       orgBedrockRegion: options?.orgBedrockRegion,

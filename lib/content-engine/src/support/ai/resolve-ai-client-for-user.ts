@@ -8,6 +8,8 @@ import {
 import { resolveAiClient } from "./resolve-ai-client";
 import { getDecryptedUserGeminiKey } from "./user-api-key";
 import { getUserAiProviderOptions } from "./user-ai-provider";
+import { resolveOrganizationIdForUser } from "./org-ai-settings";
+import { resolvePlatformBedrockCredentialsForOrg } from "./platform-bedrock";
 
 export type AiClientSource = "user-key" | "platform";
 
@@ -54,8 +56,31 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
       const client = await BedrockClient.create(aiProviderOptions.bedrock);
       return { client, providerId, usingUserKey: true, source: "user-key" };
     } catch {
-      // Fall through to platform provider below.
+      // Fall through to platform-grant / error below.
     }
+  }
+
+  if (providerId === "bedrock") {
+    const organizationId = await resolveOrganizationIdForUser(userId);
+    if (organizationId) {
+      const platformCreds = await resolvePlatformBedrockCredentialsForOrg(organizationId);
+      if (platformCreds) {
+        try {
+          const { BedrockClient } = await import("@workspace/ai-providers/bedrock");
+          const client = await BedrockClient.create({
+            ...platformCreds,
+            region: platformCreds.region ?? aiProviderOptions.bedrock?.region,
+            model: platformCreds.model ?? aiProviderOptions.bedrock?.model,
+          });
+          return { client, providerId, usingUserKey: false, source: "platform" };
+        } catch {
+          // Fall through to error below.
+        }
+      }
+    }
+    throw new Error(
+      "AWS Bedrock is not available for this organization. Add org credentials or ask a platform admin for access.",
+    );
   }
 
   if (usingAnthropicKey) {

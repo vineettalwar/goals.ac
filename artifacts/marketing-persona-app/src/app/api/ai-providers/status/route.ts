@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getOrgAiSettingsForUser, hasOrgBedrockCredentials, hasOrgAnthropicCredentials, hasOrgOpenAICredentials } from "@workspace/content-engine/support/ai/org-ai-settings";
-import { buildAiProviderStatus, enrichOllamaStatus, finalizeAiProviderStatus, toAiProviderOptions } from "@/lib/platform/ai-providers-status";
+import {
+  getOrgAiSettingsForUser,
+  hasOrgBedrockCredentials,
+  hasOrgAnthropicCredentials,
+  hasOrgOpenAICredentials,
+} from "@workspace/content-engine/support/ai/org-ai-settings";
+import {
+  isOrgGrantedPlatformBedrock,
+  loadPlatformBedrockCredentials,
+} from "@workspace/content-engine/support/ai/platform-bedrock";
+import {
+  buildAiProviderStatus,
+  enrichOllamaStatus,
+  finalizeAiProviderStatus,
+  toAiProviderOptions,
+} from "@/lib/platform/ai-providers-status";
 
 function toStatusInput(
   settings: Awaited<ReturnType<typeof getOrgAiSettingsForUser>>,
@@ -24,14 +38,24 @@ export async function GET() {
   const payload = buildAiProviderStatus(statusInput);
   await enrichOllamaStatus(payload, toAiProviderOptions(statusInput));
 
+  const organizationId = orgSettings?.organizationId ?? null;
+  const [hasPlatformBedrockGrant, platformBedrock] = await Promise.all([
+    organizationId ? isOrgGrantedPlatformBedrock(organizationId) : Promise.resolve(false),
+    loadPlatformBedrockCredentials(),
+  ]);
+
   return NextResponse.json(
     finalizeAiProviderStatus(payload, {
       hasUserGeminiKey: Boolean(orgSettings?.encryptedGeminiKey),
       hasOrgBedrockKey: hasOrgBedrockCredentials(orgSettings),
+      hasPlatformBedrockGrant,
+      platformBedrockConfigured: Boolean(platformBedrock),
       hasOrgAnthropicKey: hasOrgAnthropicCredentials(orgSettings),
       hasOrgOpenAIKey: hasOrgOpenAICredentials(orgSettings),
       orgBedrockRegion: orgSettings?.bedrockRegion ?? null,
       orgBedrockModel: orgSettings?.bedrockModel ?? null,
+      platformBedrockRegion: platformBedrock?.region ?? null,
+      platformBedrockModel: platformBedrock?.model ?? null,
     }),
   );
 }

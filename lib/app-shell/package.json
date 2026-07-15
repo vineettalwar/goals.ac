@@ -12,6 +12,7 @@
     "./project-detail": "./src/project-detail/index.ts",
     "./studio": "./src/studio/index.ts",
     "./content-piece": "./src/content-piece/index.ts",
+    "./publish-destinations": "./src/content-piece/publish-destinations.ts",
     "./integrations": "./src/integrations/index.ts",
     "./auth": "./src/auth/index.ts",
     "./section": "./src/section/index.ts",
