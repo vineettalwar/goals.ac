@@ -80,3 +80,25 @@ export async function downloadAndOptimizeImage(
   const raw = await downloadImageBuffer(url);
   return optimizeImageBuffer(raw, filenameBase, options);
 }
+
+export type SvgToPngOptions = {
+  /** Output width in px (height scales). Default 960. */
+  width?: number;
+};
+
+/**
+ * Rasterize SVG markup to a PNG data URI (Node + native sharp only).
+ * Cloudflare Workers alias `sharp` to a stub that rejects — callers must catch.
+ */
+export async function svgMarkupToPngDataUri(
+  svg: string,
+  options?: SvgToPngOptions,
+): Promise<string> {
+  const width = options?.width ?? 960;
+  const input = Buffer.from(svg, "utf8");
+  const { data } = await sharp(input)
+    .resize({ width, withoutEnlargement: false })
+    .png()
+    .toBuffer({ resolveWithObject: true });
+  return `data:image/png;base64,${data.toString("base64")}`;
+}

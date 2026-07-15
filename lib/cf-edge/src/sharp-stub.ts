@@ -17,6 +17,10 @@ class SharpStub {
     return this;
   }
 
+  png(_opts?: unknown) {
+    return this;
+  }
+
   toBuffer(): Promise<Buffer> {
     return Promise.reject(
       new Error(
