@@ -62,6 +62,57 @@ function PlatformChrome({ platformId }: { platformId: SocialPlatformId | null })
     );
   }
 
+  if (platformId === "facebook") {
+    return (
+      <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
+        <div
+          className="h-10 w-10 shrink-0 rounded-full bg-[#1877F2]/15 ring-1 ring-[#1877F2]/30"
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <p className="truncate text-sm font-semibold leading-tight text-foreground">Page name</p>
+          <p className="text-xs text-muted-foreground">Just now · Public</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (platformId === "bluesky") {
+    return (
+      <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
+        <div
+          className="h-9 w-9 shrink-0 rounded-full bg-[#0085FF]/15 ring-1 ring-[#0085FF]/25"
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <div className="h-2.5 w-20 rounded-sm bg-foreground/15" aria-hidden />
+            <div className="h-2 w-16 rounded-sm bg-[#0085FF]/25" aria-hidden />
+          </div>
+          <div className="h-2 w-14 rounded-sm bg-muted-foreground/20" aria-hidden />
+        </div>
+      </div>
+    );
+  }
+
+  if (platformId === "mastodon") {
+    return (
+      <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
+        <div
+          className="h-9 w-9 shrink-0 rounded-full bg-[#6364FF]/15 ring-1 ring-[#6364FF]/30"
+          aria-hidden
+        />
+        <div className="min-w-0 flex-1 space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <div className="h-2.5 w-20 rounded-sm bg-foreground/15" aria-hidden />
+            <div className="h-2 w-16 rounded-sm bg-[#6364FF]/20" aria-hidden />
+          </div>
+          <div className="h-2 w-24 rounded-sm bg-muted-foreground/20" aria-hidden />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
       <div className="h-9 w-9 shrink-0 rounded-full bg-secondary" aria-hidden />
