@@ -135,11 +135,23 @@ Change output format inline on a connected integration without disconnecting. Us
     cta: { label: "CMS publishing", href: "/integrations" },
     body: `goals.ac can publish Shopify content as plain blog HTML, or as structured **article + section metafields** / **OS 2.0 page sections**.
 
-HTML mode works with any theme. Structured modes store section JSON in metafields — the Online Store will not render that JSON until you paste the Liquid from \`cms-plugins/shopify/theme-snippets/\` into the theme (Online Store → Themes → Edit code).
+HTML mode works with any theme. Structured modes store section JSON in metafields — the Online Store will not render that JSON until you paste Liquid into the theme (Online Store → Themes → **Edit code**).
 
-**Why this matters:** Publishing succeeds even without the snippet. The storefront may look empty or only show fallback article body HTML — a common demo miss.
+**Why this matters:** Publishing can succeed without the snippet. The storefront may look empty or only show fallback body HTML — a common demo miss.
 
-**What to install:** Use the snippet set documented in the repo at \`docs/cms-plugins/shopify-theme-sections.md\` (\`page.goals-ac.json\` + section Liquid for page mode; article metafield renderer for metafields mode).
+**Article + section metafields**
+1. Connect the goals.ac Shopify app plugin (Admin API alone cannot use metafield modes).
+2. Set output format to **Article + section metafields**.
+3. In the active theme, open **Edit code** and add the article sections Liquid so the template reads \`article.metafields.goals_ac.content_sections\`.
+4. Publish a test article and open the blog post URL — sections should render; without the snippet only the HTML body fallback appears.
+
+**OS 2.0 page sections**
+1. Set output format to **OS 2.0 page sections**.
+2. Add a theme section that renders page metafield \`goals_ac.content_sections\`.
+3. Add template \`page.goals-ac.json\` that mounts that section.
+4. Publish a test page — the plugin sets template suffix \`goals-ac\`, which maps to that JSON template.
+
+Copy-ready Liquid lives in the goals.ac Shopify plugin package under \`theme-snippets/\` (article renderer, \`sections/goals-ac-page-sections.liquid\`, and \`templates/page.goals-ac.json\`).
 
 Connect the goals.ac Shopify app plugin for metafield and page modes. Direct Admin API connections support blog article HTML only.`,
   },

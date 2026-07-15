@@ -1,11 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, FileText } from "lucide-react";
-import {
-  getConnectedDestinationsForFormat,
-  type CmsConnectionSnapshot,
-  type ContentFormatType,
-  type PublishDestinationId,
-} from "../content-piece/publish-destinations";
 import { STUDIO_FORMAT_OPTIONS, formatTypeLabel } from "./types";
 
 export type CreateContentDraftInput = {
@@ -20,52 +14,16 @@ export type CreateContentDraftInput = {
 
 export type CreateContentInitialValues = Partial<CreateContentDraftInput>;
 
-type CreateStepId = "format" | "details" | "destination" | "review";
+/** Compact create flow: format → keyword → review (+ planned date) → submit. */
+type CreateStepId = "format" | "keyword" | "review";
+
+const STEPS: CreateStepId[] = ["format", "keyword", "review"];
 
 const VALID_FORMATS = new Set(STUDIO_FORMAT_OPTIONS.map((option) => option.value));
 
-const CONTENT_FORMAT_SET = new Set<string>([
-  "blog_post",
-  "news_article",
-  "tutorial",
-  "guide",
-  "whitepaper",
-  "pillar_page",
-  "location_page",
-  "infographic_outline",
-  "linkedin_post",
-  "twitter_thread",
-  "instagram_post",
-  "facebook_post",
-  "email_sequence",
-  "ad_copy",
-  "landing_page_copy",
-  "product_description",
-  "press_release",
-  "faq_article",
-]);
-
-function asContentFormat(formatType: string): ContentFormatType | null {
-  return CONTENT_FORMAT_SET.has(formatType) ? (formatType as ContentFormatType) : null;
-}
-
-function buildSteps(
-  formatType: string,
-  cmsConnections: CmsConnectionSnapshot,
-): CreateStepId[] {
-  const steps: CreateStepId[] = ["format", "details"];
-  const format = asContentFormat(formatType);
-  if (format) {
-    const destinations = getConnectedDestinationsForFormat(format, cmsConnections);
-    if (destinations.length > 0) steps.push("destination");
-  }
-  steps.push("review");
-  return steps;
-}
-
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 px-4 py-3 text-sm">
+    <div className="flex items-start justify-between gap-4 px-4 py-2.5 text-sm">
       <span className="shrink-0 text-muted-foreground">{label}</span>
       <span className="min-w-0 text-right font-medium text-foreground break-words">{value}</span>
     </div>
@@ -79,7 +37,6 @@ export function CreateContentDialog({
   submitting = false,
   error = null,
   initialValues = null,
-  cmsConnections = {},
 }: {
   open: boolean;
   onClose: () => void;
@@ -87,8 +44,11 @@ export function CreateContentDialog({
   submitting?: boolean;
   error?: string | null;
   initialValues?: CreateContentInitialValues | null;
-  /** Connected CMS/social snapshot — destination step lists connected + export options. */
-  cmsConnections?: CmsConnectionSnapshot;
+  /**
+   * Accepted for StudioPage callers that pass CMS state; compact wizard has no
+   * destination step — platform still flows through via initialValues / onSubmit.
+   */
+  cmsConnections?: unknown;
 }) {
   const [stepIndex, setStepIndex] = useState(0);
   const [title, setTitle] = useState("");
@@ -96,7 +56,7 @@ export function CreateContentDialog({
   const [formatType, setFormatType] = useState("blog_post");
   const [angleHint, setAngleHint] = useState("");
   const [plannedDate, setPlannedDate] = useState("");
-  const [intendedDestination, setIntendedDestination] = useState<PublishDestinationId | "">("");
+  const [intendedPublishPlatform, setIntendedPublishPlatform] = useState<string | undefined>();
 
   useEffect(() => {
     if (!open) {
@@ -106,7 +66,7 @@ export function CreateContentDialog({
       setFormatType("blog_post");
       setAngleHint("");
       setPlannedDate("");
-      setIntendedDestination("");
+      setIntendedPublishPlatform(undefined);
       return;
     }
 
@@ -120,35 +80,13 @@ export function CreateContentDialog({
     setFormatType(nextFormat);
     setAngleHint(initialValues?.angleHint?.trim() ?? "");
     setPlannedDate(initialValues?.plannedDate?.trim() || "");
-    const platform = initialValues?.intendedPublishPlatform?.trim();
-    setIntendedDestination(platform ? (platform as PublishDestinationId) : "");
+    setIntendedPublishPlatform(initialValues?.intendedPublishPlatform?.trim() || undefined);
   }, [open, initialValues]);
 
-  const steps = useMemo(
-    () => buildSteps(formatType, cmsConnections),
-    [formatType, cmsConnections],
-  );
-  const currentStep = steps[Math.min(stepIndex, steps.length - 1)] ?? "format";
-  const progress = ((stepIndex + 1) / steps.length) * 100;
-
-  const contentFormat = asContentFormat(formatType);
-  const destinations = contentFormat
-    ? getConnectedDestinationsForFormat(contentFormat, cmsConnections)
-    : [];
-  const destinationLabel =
-    intendedDestination &&
-    destinations.find((d) => d.id === intendedDestination)?.label;
-
-  // If format change drops destination from sequence, clamp index and clear selection.
-  useEffect(() => {
-    if (!open) return;
-    if (stepIndex >= steps.length) setStepIndex(steps.length - 1);
-    if (!steps.includes("destination") && intendedDestination) {
-      setIntendedDestination("");
-    }
-  }, [open, steps, stepIndex, intendedDestination]);
-
   if (!open) return null;
+
+  const currentStep = STEPS[Math.min(stepIndex, STEPS.length - 1)] ?? "format";
+  const progress = ((stepIndex + 1) / STEPS.length) * 100;
 
   function goBack() {
     if (submitting || stepIndex <= 0) return;
@@ -158,16 +96,12 @@ export function CreateContentDialog({
   function goNext() {
     if (submitting) return;
     if (currentStep === "format") {
-      setStepIndex((i) => Math.min(i + 1, steps.length - 1));
+      setStepIndex(1);
       return;
     }
-    if (currentStep === "details") {
+    if (currentStep === "keyword") {
       if (!targetKeyword.trim()) return;
-      setStepIndex((i) => Math.min(i + 1, steps.length - 1));
-      return;
-    }
-    if (currentStep === "destination") {
-      setStepIndex((i) => Math.min(i + 1, steps.length - 1));
+      setStepIndex(2);
     }
   }
 
@@ -181,27 +115,23 @@ export function CreateContentDialog({
       formatType,
       angleHint: angleHint.trim() || undefined,
       plannedDate: plannedDate.trim() || null,
-      intendedPublishPlatform: intendedDestination || undefined,
+      intendedPublishPlatform: intendedPublishPlatform || undefined,
     });
   }
 
   const stepTitle =
     currentStep === "format"
       ? "Choose a format"
-      : currentStep === "details"
+      : currentStep === "keyword"
         ? "Keyword & angle"
-        : currentStep === "destination"
-          ? "Where will this be published?"
-          : "Ready to generate?";
+        : "Schedule & review";
 
   const stepSubtitle =
     currentStep === "format"
       ? "Pick the content type — we tailor structure and length to match."
-      : currentStep === "details"
+      : currentStep === "keyword"
         ? "Target keyword is required. Angle and title are optional."
-        : currentStep === "destination"
-          ? "Optional — shapes generation and pre-selects publish destination."
-          : "Review your choices, then we'll write the draft.";
+        : "Optional date for the calendar, then confirm and generate.";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -215,7 +145,7 @@ export function CreateContentDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-content-title"
-        className="paper-card relative z-10 flex max-h-[min(90vh,720px)] w-full max-w-lg flex-col overflow-hidden shadow-lg"
+        className="paper-card relative z-10 flex max-h-[min(85vh,640px)] w-full max-w-lg flex-col overflow-hidden shadow-lg"
       >
         <div className="h-1 w-full shrink-0 bg-muted">
           <div
@@ -239,33 +169,30 @@ export function CreateContentDialog({
             ) : null}
           </div>
           <p className="text-xs tabular-nums text-muted-foreground">
-            Step {stepIndex + 1} of {steps.length}
+            Step {stepIndex + 1} of {STEPS.length}
           </p>
           <div className="min-w-[72px]" />
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           <h2 id="create-content-title" className="text-lg font-semibold">
             {stepTitle}
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">{stepSubtitle}</p>
 
           {currentStep === "format" ? (
-            <div className="mt-5 max-h-[min(50vh,360px)] space-y-2 overflow-y-auto pr-1">
+            <div className="mt-4 max-h-[min(42vh,300px)] space-y-2 overflow-y-auto pr-1">
               {STUDIO_FORMAT_OPTIONS.map((option) => {
                 const selected = formatType === option.value;
                 return (
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => {
-                      setFormatType(option.value);
-                      if (intendedDestination) setIntendedDestination("");
-                    }}
+                    onClick={() => setFormatType(option.value)}
                     className={
                       selected
-                        ? "flex w-full items-center justify-between rounded-xl border border-primary bg-primary/5 px-4 py-3 text-left text-sm"
-                        : "flex w-full items-center justify-between rounded-xl border border-border px-4 py-3 text-left text-sm hover:border-primary/60 hover:bg-secondary/40"
+                        ? "flex w-full items-center justify-between rounded-xl border border-primary bg-primary/5 px-4 py-2.5 text-left text-sm"
+                        : "flex w-full items-center justify-between rounded-xl border border-border px-4 py-2.5 text-left text-sm hover:border-primary/60 hover:bg-secondary/40"
                     }
                   >
                     <span className="font-medium">{option.label}</span>
@@ -278,8 +205,8 @@ export function CreateContentDialog({
             </div>
           ) : null}
 
-          {currentStep === "details" ? (
-            <div className="mt-5 space-y-4">
+          {currentStep === "keyword" ? (
+            <div className="mt-4 space-y-3.5">
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">Target keyword</span>
                 <input
@@ -301,6 +228,20 @@ export function CreateContentDialog({
 
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">
+                  Angle / hint{" "}
+                  <span className="font-normal text-muted-foreground">(optional)</span>
+                </span>
+                <textarea
+                  rows={2}
+                  value={angleHint}
+                  onChange={(event) => setAngleHint(event.target.value)}
+                  placeholder="Tone, audience, or angle for the AI…"
+                  className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm"
+                />
+              </label>
+
+              <label className="block space-y-1.5">
+                <span className="text-sm font-medium">
                   Title <span className="font-normal text-muted-foreground">(optional)</span>
                 </span>
                 <input
@@ -311,21 +252,11 @@ export function CreateContentDialog({
                   className="h-9 w-full rounded-lg border border-input bg-card px-3 text-sm"
                 />
               </label>
+            </div>
+          ) : null}
 
-              <label className="block space-y-1.5">
-                <span className="text-sm font-medium">
-                  Angle / hint{" "}
-                  <span className="font-normal text-muted-foreground">(optional)</span>
-                </span>
-                <textarea
-                  rows={3}
-                  value={angleHint}
-                  onChange={(event) => setAngleHint(event.target.value)}
-                  placeholder="Tone, audience, or angle for the AI…"
-                  className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm"
-                />
-              </label>
-
+          {currentStep === "review" ? (
+            <div className="mt-4 space-y-4">
               <label className="block space-y-1.5">
                 <span className="text-sm font-medium">
                   Planned date{" "}
@@ -333,74 +264,33 @@ export function CreateContentDialog({
                 </span>
                 <input
                   type="date"
+                  autoFocus
                   value={plannedDate}
                   onChange={(event) => setPlannedDate(event.target.value)}
                   className="h-9 w-full max-w-xs rounded-lg border border-input bg-card px-3 text-sm"
                 />
               </label>
-            </div>
-          ) : null}
 
-          {currentStep === "destination" ? (
-            <div className="mt-5 space-y-2">
-              <button
-                type="button"
-                onClick={() => setIntendedDestination("")}
-                className={
-                  !intendedDestination
-                    ? "flex w-full items-center justify-between rounded-xl border border-primary bg-primary/5 px-4 py-3 text-left text-sm"
-                    : "flex w-full items-center justify-between rounded-xl border border-border px-4 py-3 text-left text-sm hover:border-primary/60 hover:bg-secondary/40"
-                }
-              >
-                <span className="font-medium">Decide later</span>
-                {!intendedDestination ? (
-                  <span className="text-xs text-primary">Selected</span>
+              <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-muted/30">
+                <ReviewRow label="Format" value={formatTypeLabel(formatType)} />
+                <ReviewRow label="Keyword" value={targetKeyword.trim() || "—"} />
+                {title.trim() ? <ReviewRow label="Title" value={title.trim()} /> : null}
+                {angleHint.trim() ? (
+                  <ReviewRow label="Angle" value={angleHint.trim()} />
                 ) : null}
-              </button>
-              {destinations.map((dest) => {
-                const selected = intendedDestination === dest.id;
-                return (
-                  <button
-                    key={dest.id}
-                    type="button"
-                    onClick={() => setIntendedDestination(dest.id)}
-                    className={
-                      selected
-                        ? "flex w-full flex-col items-start gap-0.5 rounded-xl border border-primary bg-primary/5 px-4 py-3 text-left text-sm"
-                        : "flex w-full flex-col items-start gap-0.5 rounded-xl border border-border px-4 py-3 text-left text-sm hover:border-primary/60 hover:bg-secondary/40"
-                    }
-                  >
-                    <span className="font-medium">{dest.label}</span>
-                    <span className="text-xs text-muted-foreground">{dest.description}</span>
-                  </button>
-                );
-              })}
+                {plannedDate.trim() ? (
+                  <ReviewRow label="Planned date" value={plannedDate.trim()} />
+                ) : (
+                  <ReviewRow label="Planned date" value="Not scheduled" />
+                )}
+              </div>
             </div>
           ) : null}
 
-          {currentStep === "review" ? (
-            <div className="mt-5 divide-y divide-border overflow-hidden rounded-xl border border-border bg-muted/30">
-              <ReviewRow label="Format" value={formatTypeLabel(formatType)} />
-              <ReviewRow label="Keyword" value={targetKeyword.trim() || "—"} />
-              {title.trim() ? <ReviewRow label="Title" value={title.trim()} /> : null}
-              {destinationLabel ? (
-                <ReviewRow label="Destination" value={destinationLabel} />
-              ) : (
-                <ReviewRow label="Destination" value="Decide later" />
-              )}
-              {angleHint.trim() ? (
-                <ReviewRow label="Angle" value={angleHint.trim()} />
-              ) : null}
-              {plannedDate.trim() ? (
-                <ReviewRow label="Planned date" value={plannedDate.trim()} />
-              ) : null}
-            </div>
-          ) : null}
-
-          {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
+          {error ? <p className="mt-3 text-sm text-red-700">{error}</p> : null}
         </div>
 
-        <footer className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-4">
+        <footer className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-3.5">
           <button
             type="button"
             onClick={onClose}
@@ -424,12 +314,11 @@ export function CreateContentDialog({
               type="button"
               onClick={goNext}
               disabled={
-                submitting ||
-                (currentStep === "details" && !targetKeyword.trim())
+                submitting || (currentStep === "keyword" && !targetKeyword.trim())
               }
               className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
-              Continue
+              Next
             </button>
           )}
         </footer>
