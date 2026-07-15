@@ -5,6 +5,7 @@ import {
   getOrgEncryptedDeeplApiKey,
   loadDeeplCredentialContextForProject,
   maskEncryptedDeeplApiKeyLastFour,
+  resolveDeeplApiKey,
   resolveDeeplCredentialSource,
 } from "@workspace/content-engine/support/integrations/deepl-credentials";
 import { maskStockCredentialLastFour } from "@workspace/content-engine/support/integrations/stock-credentials";
@@ -14,7 +15,6 @@ import {
   listByokStockProviders,
   STOCK_PROVIDER_REGISTRY,
 } from "@workspace/stock-images";
-import { resolveDeeplApiKey } from "@workspace/deepl";
 import { eq } from "drizzle-orm";
 import { getAccessibleProject } from "./project-access";
 
