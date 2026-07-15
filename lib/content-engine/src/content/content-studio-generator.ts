@@ -48,6 +48,11 @@ import {
 import { loadDeeplCredentialContextForProject } from "../support/integrations/deepl-credentials";
 import { resolveDeeplApiKey } from "@workspace/deepl";
 import { cleanAndParse } from "../core/utils";
+import {
+  hostFromUrl,
+  normalizeCompetitorUrl,
+  normalizeCompetitorUrlList,
+} from "../support/competitor/competitor-url";
 
 // LinkedIn Post Enhancement Constants (Phase 2)
 const LINKEDIN_ARCHETYPES = [
@@ -160,6 +165,8 @@ export type ContentGenerationContext = {
   intendedEditorMode?: "classic" | "gutenberg" | "elementor" | "divi";
   competitorPromptBlock?: string;
   competitorFocusUrl?: string;
+  /** Per-piece competitor URLs (max 5); first is primary when focus omitted */
+  competitorUrls?: string[];
 };
 
 export type BrandContext = UnifiedBrandContext;
@@ -429,6 +436,27 @@ const FORMAT_CONFIGS: Record<
   },
 };
 
+/** Primary-first competitor URL hints for the generate prompt. */
+function buildCompetitorUrlsPromptFragment(
+  competitorUrls?: string[],
+  focusUrl?: string,
+): string {
+  const urls = normalizeCompetitorUrlList(competitorUrls ?? []);
+  if (urls.length === 0) return "";
+
+  const primary =
+    (focusUrl?.trim() ? normalizeCompetitorUrl(focusUrl) : null) ?? urls[0]!;
+  const others = urls.filter((u) => hostFromUrl(u) !== hostFromUrl(primary));
+  const lines = [
+    "\nCOMPETITOR URLS FOR THIS PIECE:",
+    `- Primary competitor to differentiate against: ${primary}`,
+  ];
+  if (others.length > 0) {
+    lines.push(`- Additional competitors to account for: ${others.join(", ")}`);
+  }
+  return lines.join("\n");
+}
+
 async function buildPrompt(
   format: ContentFormatType,
   brand: BrandContext,
@@ -451,7 +479,15 @@ async function buildPrompt(
     : config.wordRange;
   const brandVoiceContext = await resolveVoicePromptContext(brand, format, keyword, angleHint);
   const defaultVoice = brand.voiceTone?.trim() || "Professional, clear, and authoritative";
-  const competitorContext = generationContext?.competitorPromptBlock?.trim() ?? "";
+  const competitorContext = [
+    generationContext?.competitorPromptBlock?.trim() ?? "",
+    buildCompetitorUrlsPromptFragment(
+      generationContext?.competitorUrls,
+      generationContext?.competitorFocusUrl,
+    ),
+  ]
+    .filter(Boolean)
+    .join("");
 
   let languageLine = "";
   if (brand.projectId) {
@@ -576,7 +612,9 @@ export function buildCacheKey(
   angleHint?: string,
   intendedPlatform?: string,
   competitorFocusUrl?: string,
+  competitorUrls?: string[],
 ): string {
+  const urlsKey = normalizeCompetitorUrlList(competitorUrls ?? []).join(",");
   const raw = [
     format,
     keyword.toLowerCase().trim(),
@@ -589,6 +627,7 @@ export function buildCacheKey(
     angleHint?.trim() ?? "",
     intendedPlatform?.trim() ?? "",
     competitorFocusUrl?.trim() ?? "",
+    urlsKey,
     brandVoiceCacheFingerprint(brand),
     "seo-v8",
   ].join("::");
@@ -954,6 +993,7 @@ export async function generateContentPiece(
     angleHint,
     context.intendedPublishPlatform,
     context.competitorFocusUrl,
+    context.competitorUrls,
   );
   if (!bypassCache) {
     const cached = await cacheGet(key);

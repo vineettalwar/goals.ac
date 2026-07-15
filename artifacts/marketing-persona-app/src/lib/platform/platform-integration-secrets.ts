@@ -18,6 +18,14 @@ import {
   invalidatePlatformLinkedInCredentialsCache,
   isLinkedInManagedByEnv,
 } from "@workspace/content-engine/support/social/linkedin-platform-credentials";
+import {
+  invalidatePlatformTwitterCredentialsCache,
+  isTwitterManagedByEnv,
+} from "@workspace/content-engine/support/social/twitter-platform-credentials";
+import {
+  invalidatePlatformMetaCredentialsCache,
+  isMetaManagedByEnv,
+} from "@workspace/content-engine/support/social/meta-platform-credentials";
 import { eq } from "drizzle-orm";
 
 function isUnsplashManagedByEnv(): boolean {
@@ -77,6 +85,18 @@ export type PlatformIntegrationStatus = {
     clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
     clientSecret: IntegrationFieldStatus;
   };
+  twitter: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    clientSecret: IntegrationFieldStatus;
+  };
+  meta: {
+    managedByEnv: boolean;
+    envVars: string[];
+    appId: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    appSecret: IntegrationFieldStatus;
+  };
 };
 
 const STRIPE_ENV_VARS = [
@@ -90,6 +110,8 @@ const RESEND_ENV_VARS = ["RESEND_API_KEY", "RESEND_FROM_EMAIL"] as const;
 const UNSPLASH_ENV_VARS = ["UNSPLASH_ACCESS_KEY"] as const;
 const PEXELS_ENV_VARS = ["PEXELS_API_KEY"] as const;
 const LINKEDIN_ENV_VARS = ["LINKEDIN_CLIENT_ID", "LINKEDIN_CLIENT_SECRET"] as const;
+const TWITTER_ENV_VARS = ["TWITTER_CLIENT_ID", "TWITTER_CLIENT_SECRET"] as const;
+const META_ENV_VARS = ["META_APP_ID", "META_APP_SECRET"] as const;
 
 function activeEnvVars(names: readonly string[]): string[] {
   return names.filter((name) => Boolean(process.env[name]?.trim()));
@@ -164,6 +186,10 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       encryptedPexelsApiKey: platformSettingsTable.encryptedPexelsApiKey,
       linkedinClientId: platformSettingsTable.linkedinClientId,
       encryptedLinkedinClientSecret: platformSettingsTable.encryptedLinkedinClientSecret,
+      twitterClientId: platformSettingsTable.twitterClientId,
+      encryptedTwitterClientSecret: platformSettingsTable.encryptedTwitterClientSecret,
+      metaAppId: platformSettingsTable.metaAppId,
+      encryptedMetaAppSecret: platformSettingsTable.encryptedMetaAppSecret,
     })
     .from(platformSettingsTable)
     .where(eq(platformSettingsTable.id, 1))
@@ -213,6 +239,18 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
       clientId: plainFieldStatus(row?.linkedinClientId, "LINKEDIN_CLIENT_ID"),
       clientSecret: fieldStatus(row?.encryptedLinkedinClientSecret, "LINKEDIN_CLIENT_SECRET"),
     },
+    twitter: {
+      managedByEnv: isTwitterManagedByEnv(),
+      envVars: activeEnvVars(TWITTER_ENV_VARS),
+      clientId: plainFieldStatus(row?.twitterClientId, "TWITTER_CLIENT_ID"),
+      clientSecret: fieldStatus(row?.encryptedTwitterClientSecret, "TWITTER_CLIENT_SECRET"),
+    },
+    meta: {
+      managedByEnv: isMetaManagedByEnv(),
+      envVars: activeEnvVars(META_ENV_VARS),
+      appId: plainFieldStatus(row?.metaAppId, "META_APP_ID"),
+      appSecret: fieldStatus(row?.encryptedMetaAppSecret, "META_APP_SECRET"),
+    },
   };
 }
 
@@ -243,6 +281,18 @@ export type SavePexelsCredentialsInput = {
 export type SaveLinkedInCredentialsInput = {
   clientId?: string | null;
   clientSecret?: string;
+  updatedBy: number;
+};
+
+export type SaveTwitterCredentialsInput = {
+  clientId?: string | null;
+  clientSecret?: string;
+  updatedBy: number;
+};
+
+export type SaveMetaCredentialsInput = {
+  appId?: string | null;
+  appSecret?: string;
   updatedBy: number;
 };
 
@@ -461,6 +511,76 @@ export async function clearStoredLinkedInCredentials(updatedBy: number): Promise
     throw new Error("LinkedIn credentials are managed via server environment variables");
   }
   await saveLinkedInCredentials({ clientId: null, clientSecret: "", updatedBy });
+}
+
+export async function saveTwitterCredentials(input: SaveTwitterCredentialsInput): Promise<void> {
+  if (isTwitterManagedByEnv()) {
+    throw new Error("X credentials are managed via server environment variables");
+  }
+  const patch: Partial<typeof platformSettingsTable.$inferInsert> = {
+    updatedBy: input.updatedBy,
+  };
+
+  if (input.clientId !== undefined) {
+    patch.twitterClientId = input.clientId?.trim() || null;
+  }
+  if (input.clientSecret !== undefined) {
+    patch.encryptedTwitterClientSecret = input.clientSecret
+      ? encryptSecret(input.clientSecret.trim())
+      : null;
+  }
+
+  await db
+    .insert(platformSettingsTable)
+    .values({ id: 1, ...patch })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.id,
+      set: patch,
+    });
+
+  invalidatePlatformTwitterCredentialsCache();
+}
+
+export async function clearStoredTwitterCredentials(updatedBy: number): Promise<void> {
+  if (isTwitterManagedByEnv()) {
+    throw new Error("X credentials are managed via server environment variables");
+  }
+  await saveTwitterCredentials({ clientId: null, clientSecret: "", updatedBy });
+}
+
+export async function saveMetaCredentials(input: SaveMetaCredentialsInput): Promise<void> {
+  if (isMetaManagedByEnv()) {
+    throw new Error("Meta credentials are managed via server environment variables");
+  }
+  const patch: Partial<typeof platformSettingsTable.$inferInsert> = {
+    updatedBy: input.updatedBy,
+  };
+
+  if (input.appId !== undefined) {
+    patch.metaAppId = input.appId?.trim() || null;
+  }
+  if (input.appSecret !== undefined) {
+    patch.encryptedMetaAppSecret = input.appSecret
+      ? encryptSecret(input.appSecret.trim())
+      : null;
+  }
+
+  await db
+    .insert(platformSettingsTable)
+    .values({ id: 1, ...patch })
+    .onConflictDoUpdate({
+      target: platformSettingsTable.id,
+      set: patch,
+    });
+
+  invalidatePlatformMetaCredentialsCache();
+}
+
+export async function clearStoredMetaCredentials(updatedBy: number): Promise<void> {
+  if (isMetaManagedByEnv()) {
+    throw new Error("Meta credentials are managed via server environment variables");
+  }
+  await saveMetaCredentials({ appId: null, appSecret: "", updatedBy });
 }
 
 export async function isStripeIntegrationReady(): Promise<boolean> {

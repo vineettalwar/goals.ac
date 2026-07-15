@@ -21,6 +21,7 @@ export type CompetitorGenerationContext = {
 export async function loadCompetitorGenerationContext(
   projectId: number,
   focusUrl?: string,
+  pieceCompetitorUrls?: string[],
 ): Promise<CompetitorGenerationContext> {
   const [brandProfile] = await db
     .select({
@@ -31,7 +32,10 @@ export async function loadCompetitorGenerationContext(
     .where(eq(brandProfilesTable.websiteProjectId, projectId))
     .limit(1);
 
-  const competitorUrls = normalizeCompetitorUrlList(brandProfile?.competitorUrls ?? []);
+  const brandUrls = normalizeCompetitorUrlList(brandProfile?.competitorUrls ?? []);
+  const pieceUrls = normalizeCompetitorUrlList(pieceCompetitorUrls ?? []);
+  const competitorUrls =
+    pieceUrls.length > 0 ? normalizeCompetitorUrlList([...pieceUrls, ...brandUrls]) : brandUrls;
   const competitorPositioning = brandProfile?.brandMemory?.competitorPositioning;
 
   const analysisRows = await db
@@ -60,7 +64,8 @@ export async function loadCompetitorGenerationContext(
     });
   }
 
-  const normalizedFocus = focusUrl?.trim() ? normalizeCompetitorUrl(focusUrl) ?? undefined : undefined;
+  const normalizedFocus =
+    (focusUrl?.trim() ? normalizeCompetitorUrl(focusUrl) : null) ?? pieceUrls[0] ?? undefined;
   const promptBlock = buildCompetitorPromptBlock({
     competitorUrls,
     analyses,
