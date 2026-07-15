@@ -22,6 +22,8 @@ export const publishRecordsTable = pgTable(
     remoteUrl: text("remote_url"),
     status: text("status").notNull().default("pending"),
     errorMessage: text("error_message"),
+    /** Resolved CMS output mode at publish time (e.g. gutenberg, lexical, body_html). */
+    outputMode: text("output_mode"),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

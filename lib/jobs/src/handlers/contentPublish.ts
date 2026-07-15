@@ -82,6 +82,7 @@ async function publishPiece(
     publishedUrl: string;
     publishPlatform: string;
     remotePostId?: string;
+    outputMode?: string | null;
   }> => {
     if (platform && isSocialPlatform(platform)) {
       const result = await publishPieceToSocial(
@@ -101,6 +102,7 @@ async function publishPiece(
         publishedUrl: result.publishedUrl,
         publishPlatform: result.publishPlatform,
         remotePostId: result.remotePostId,
+        outputMode: null,
       };
     }
     if (piece.formatType === "email_sequence") {
@@ -109,20 +111,32 @@ async function publishPiece(
         throw new Error("No email platform connected for email_sequence format.");
       }
       const result = await publishPieceToDestination(espPlatform, publishable, creds);
-      return { publishedUrl: result.publishedUrl, publishPlatform: result.publishPlatform };
+      return {
+        publishedUrl: result.publishedUrl,
+        publishPlatform: result.publishPlatform,
+        outputMode: result.outputMode ?? null,
+      };
     }
     if (platform) {
       const result = await publishPieceToDestination(platform, publishable, creds, {
         status: wpStatus,
         featuredImageUrl: featuredImageFromPiece(piece),
       });
-      return { publishedUrl: result.publishedUrl, publishPlatform: result.publishPlatform };
+      return {
+        publishedUrl: result.publishedUrl,
+        publishPlatform: result.publishPlatform,
+        outputMode: result.outputMode ?? null,
+      };
     }
     const result = await publishBlogPieceToPrimaryDestination(publishable, creds, {
       status: wpStatus,
       featuredImageUrl: featuredImageFromPiece(piece),
     });
-    return { publishedUrl: result.publishedUrl, publishPlatform: result.publishPlatform };
+    return {
+      publishedUrl: result.publishedUrl,
+      publishPlatform: result.publishPlatform,
+      outputMode: result.outputMode ?? null,
+    };
   };
 
   const recordProvider = platform ?? piece.publishPlatform ?? "auto";
@@ -138,6 +152,7 @@ async function publishPiece(
         publishedUrl: result.publishedUrl,
         publishPlatform: result.publishPlatform,
         remotePostId: result.remotePostId,
+        outputMode: result.outputMode,
       };
     },
   );

@@ -116,6 +116,7 @@ export async function POST(
         let publishedUrl: string;
         let publishPlatform = parsed.data.platform ?? "wordpress";
         let remotePostId: string | undefined;
+        let outputMode: string | null = null;
         const publishable = {
           id: piece!.id,
           title: piece!.title,
@@ -174,11 +175,12 @@ export async function POST(
           });
           publishedUrl = result.publishedUrl;
           publishPlatform = result.publishPlatform;
+          outputMode = result.outputMode ?? null;
         } else {
           throw new Error("Platform not connected");
         }
 
-        return { publishedUrl, publishPlatform, remotePostId };
+        return { publishedUrl, publishPlatform, remotePostId, outputMode };
       },
     );
 

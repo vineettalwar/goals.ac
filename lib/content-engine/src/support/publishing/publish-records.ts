@@ -11,13 +11,16 @@ export function buildPublishIdempotencyKey(
   return `piece-${contentPieceId}:${provider}${suffix}`;
 }
 
-export async function startPublishRecord(input: {
+export type StartPublishRecordInput = {
   contentPieceId: number;
   websiteProjectId: number;
   provider: string;
   connectionId?: number | null;
   idempotencyKey?: string;
-}): Promise<string> {
+  outputMode?: string | null;
+};
+
+export async function startPublishRecord(input: StartPublishRecordInput): Promise<string> {
   const idempotencyKey =
     input.idempotencyKey ??
     buildPublishIdempotencyKey(input.contentPieceId, input.provider, input.connectionId);
@@ -32,6 +35,7 @@ export async function startPublishRecord(input: {
       idempotencyKey,
       status: "pending",
       errorMessage: null,
+      outputMode: input.outputMode ?? null,
     })
     .onConflictDoUpdate({
       target: publishRecordsTable.idempotencyKey,
@@ -41,6 +45,7 @@ export async function startPublishRecord(input: {
         remoteId: null,
         remoteUrl: null,
         publishedAt: null,
+        outputMode: input.outputMode ?? null,
         updatedAt: new Date(),
       },
     });
@@ -52,6 +57,7 @@ export async function markPublishRecordSucceeded(input: {
   idempotencyKey: string;
   remoteId?: string | null;
   remoteUrl: string;
+  outputMode?: string | null;
 }): Promise<void> {
   await db
     .update(publishRecordsTable)
@@ -61,6 +67,7 @@ export async function markPublishRecordSucceeded(input: {
       remoteUrl: input.remoteUrl,
       errorMessage: null,
       publishedAt: new Date(),
+      ...(input.outputMode != null ? { outputMode: input.outputMode } : {}),
       updatedAt: new Date(),
     })
     .where(eq(publishRecordsTable.idempotencyKey, input.idempotencyKey));
@@ -84,6 +91,8 @@ export interface PublishAttemptResult {
   publishedUrl: string;
   publishPlatform: string;
   remotePostId?: string;
+  /** Resolved CMS output mode for this attempt (persisted when set). */
+  outputMode?: string | null;
 }
 
 export type PublishRecordListItem = {
@@ -98,7 +107,6 @@ export type PublishRecordListItem = {
   createdAt: Date;
   updatedAt: Date;
   pieceTitle: string | null;
-  /** Not stored on publish_records today; reserved for UI when available. */
   outputMode: string | null;
 };
 
@@ -118,6 +126,7 @@ export async function listPublishRecordsForProject(
       publishedAt: publishRecordsTable.publishedAt,
       createdAt: publishRecordsTable.createdAt,
       updatedAt: publishRecordsTable.updatedAt,
+      outputMode: publishRecordsTable.outputMode,
       pieceTitle: contentPiecesTable.title,
     })
     .from(publishRecordsTable)
@@ -132,17 +141,12 @@ export async function listPublishRecordsForProject(
   return rows.map((row) => ({
     ...row,
     pieceTitle: row.pieceTitle ?? null,
-    outputMode: null,
+    outputMode: row.outputMode ?? null,
   }));
 }
 
 export async function withPublishRecord(
-  input: {
-    contentPieceId: number;
-    websiteProjectId: number;
-    provider: string;
-    connectionId?: number | null;
-  },
+  input: StartPublishRecordInput,
   publish: (idempotencyKey: string) => Promise<PublishAttemptResult>,
 ): Promise<PublishAttemptResult> {
   const idempotencyKey = await startPublishRecord(input);
@@ -152,6 +156,7 @@ export async function withPublishRecord(
       idempotencyKey,
       remoteId: result.remotePostId ?? null,
       remoteUrl: result.publishedUrl,
+      outputMode: result.outputMode ?? input.outputMode ?? null,
     });
     return result;
   } catch (err) {

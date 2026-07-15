@@ -112,6 +112,8 @@ export interface PublishDestinationOptions {
 export interface PublishDestinationResult {
   publishedUrl: string;
   publishPlatform: string;
+  /** Resolved CMS output mode when published via adapter/render path. */
+  outputMode?: string | null;
   warnings?: { code: string; message: string }[];
 }
 
@@ -184,13 +186,18 @@ export async function publishPieceToDestination(
     return {
       publishedUrl: result.url,
       publishPlatform: platform,
+      outputMode: result.outputMode,
       warnings: result.warnings,
     };
   }
 
   if (ESP_PUBLISH_PLATFORMS.includes(platform as EspPublishPlatform)) {
     const result = await publishPieceToEsp(platform as EspPublishPlatform, piece, creds);
-    return { publishedUrl: result.publishedUrl, publishPlatform: result.publishPlatform };
+    return {
+      publishedUrl: result.publishedUrl,
+      publishPlatform: result.publishPlatform,
+      outputMode: null,
+    };
   }
 
   throw new Error(`Platform not connected: ${platform}`);

@@ -80,6 +80,7 @@ export async function POST(
         return {
           publishedUrl: result.url,
           publishPlatform: body.platform!,
+          outputMode: result.outputMode,
         };
       },
     );

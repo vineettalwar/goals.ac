@@ -178,6 +178,7 @@ router.post("/v1/content-pieces/:id/publish", async (req, res) => {
         return {
           publishedUrl: result.url,
           publishPlatform: platform,
+          outputMode: result.outputMode,
         };
       },
     );

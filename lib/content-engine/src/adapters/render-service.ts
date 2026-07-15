@@ -88,7 +88,12 @@ export async function renderContentForPlatform(input: RenderContentInput): Promi
 
 export async function renderAndPublish(
   input: RenderContentInput & { creds: CmsIntegrationCredentials; idempotencyKey?: string },
-): Promise<{ url: string; payload: PlatformPayload; warnings: RenderResult["warnings"] }> {
+): Promise<{
+  url: string;
+  payload: PlatformPayload;
+  warnings: RenderResult["warnings"];
+  outputMode: string;
+}> {
   const adapter = getAdapter(input.platform);
   if (!adapter) {
     throw new Error(`No adapter for platform: ${input.platform}`);
@@ -133,7 +138,12 @@ export async function renderAndPublish(
     idempotencyKey: input.idempotencyKey,
   });
 
-  return { url: remote.url, payload: renderResult.payload, warnings: renderResult.warnings };
+  return {
+    url: remote.url,
+    payload: renderResult.payload,
+    warnings: renderResult.warnings,
+    outputMode,
+  };
 }
 
 export type { CanonicalContent, PublishEntitlements, PlatformPayload, RenderResult };

@@ -22,6 +22,8 @@ export const publishRecordsTable = sqliteTable(
     remoteUrl: text("remote_url"),
     status: text("status").notNull().default("pending"),
     errorMessage: text("error_message"),
+    /** Resolved CMS output mode at publish time (e.g. gutenberg, lexical, body_html). */
+    outputMode: text("output_mode"),
     publishedAt: integer("published_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),
