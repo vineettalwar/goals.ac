@@ -125,26 +125,25 @@ export function ContentPieceClient({
     }
   }, []);
 
-  const loadCmsConnections = useCallback(async (): Promise<CmsConnectionSnapshot> => {
+  const loadCmsConnections = useCallback(async () => {
     const res = await fetch(
       `/api/website-projects/${piece.websiteProjectId}/cms-integrations`,
     );
     if (!res.ok) {
-      return initialCmsConnections;
+      return initialCmsConnections as Record<string, unknown>;
     }
-    return (await res.json()) as CmsConnectionSnapshot;
+    return (await res.json()) as Record<string, unknown>;
   }, [piece.websiteProjectId, initialCmsConnections]);
 
   const renderPreview = useCallback(
     async (platform: PublishDestinationId): Promise<RenderPreviewResult> => {
+      const meta = pieceRecord.pieceMetadata as ContentPieceMetadata | null | undefined;
       const res = await fetch(`/api/content-pieces/${pieceId}/render-preview`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           platform,
-          outputMode:
-            pieceRecord.pieceMetadata?.intendedOutputMode ??
-            pieceRecord.pieceMetadata?.intendedEditorMode,
+          outputMode: meta?.intendedOutputMode ?? meta?.intendedEditorMode,
         }),
       });
       if (!res.ok) {
@@ -204,7 +203,7 @@ export function ContentPieceClient({
               return;
             }
             const updated = await res.json();
-            setPieceRecord(mergePieceJson(updated, pieceRecord));
+            setPieceRecord((prev) => mergePieceJson(updated, prev));
             setSaveMessage("Saved.");
           } finally {
             setSaving(false);
@@ -227,7 +226,7 @@ export function ContentPieceClient({
               return;
             }
             const updated = await res.json();
-            setPieceRecord(mergePieceJson(updated, pieceRecord));
+            setPieceRecord((prev) => mergePieceJson(updated, prev));
             setHumanizeMessage(
               formatHumanizeResultMessage(humanizeAuditFromResponse(updated)),
             );
@@ -253,7 +252,7 @@ export function ContentPieceClient({
               return;
             }
             const updated = await res.json();
-            setPieceRecord(mergePieceJson(updated, pieceRecord));
+            setPieceRecord((prev) => mergePieceJson(updated, prev));
             setRegenerateMessage("Content regenerated.");
           } finally {
             setRegenerating(false);
@@ -276,7 +275,7 @@ export function ContentPieceClient({
               return;
             }
             const updated = await res.json();
-            setPieceRecord(mergePieceJson(updated, pieceRecord));
+            setPieceRecord((prev) => mergePieceJson(updated, prev));
             setEnhanceMessage(formatEnhanceSuccessMessage());
           } finally {
             setEnhancing(false);

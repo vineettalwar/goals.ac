@@ -3,12 +3,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, API_FETCH_AI_TIMEOUT_MS } from "@/lib/api";
 import { fetchStockCredentialsStatus, isStockImagesConfigured } from "@/lib/queries/fetchers";
 import { queryKeys } from "@/lib/queries/keys";
-import type {
-  ContentPieceDetail,
-  ContentPieceGeneratingState,
-  ContentPieceMetadata,
-  ContentPiecePublishingState,
-  PublishDestinationId,
+import {
+  formatEnhanceSuccessMessage,
+  formatHumanizeResultMessage,
+  humanizeAuditFromResponse,
+  type ContentPieceDetail,
+  type ContentPieceGeneratingState,
+  type ContentPieceMetadata,
+  type ContentPiecePublishingState,
+  type PublishDestinationId,
 } from "@workspace/app-shell";
 import type { ContentPiece } from "@/types/api";
 
@@ -481,7 +484,7 @@ export function useContentPieceData(pieceId: string | undefined) {
         timeoutMs: API_FETCH_AI_TIMEOUT_MS,
       });
       setCachedPiece(mapPiece(updated));
-      setEnhanceMessage("Quality enhanced.");
+      setEnhanceMessage(formatEnhanceSuccessMessage());
     } catch (err) {
       setEnhanceMessage(err instanceof Error ? err.message : "Enhancement failed");
     } finally {
@@ -539,24 +542,13 @@ export function useContentPieceData(pieceId: string | undefined) {
         },
       );
       setCachedPiece(mapPiece(updated));
-      const audit = updated.audit ?? updated.pieceMetadata?.humanizationAudit;
-      if (audit?.rejected) {
-        setHumanizeMessage("Humanization skipped — structure preserved.");
-      } else if (updated.humanized) {
-        setHumanizeMessage(
-          audit?.slopScoreBefore != null && audit?.slopScoreAfter != null
-            ? `Humanized — AI tells ${audit.slopScoreBefore} → ${audit.slopScoreAfter}`
-            : "Humanized.",
-        );
-      } else {
-        setHumanizeMessage("No changes needed — draft already reads naturally.");
-      }
+      setHumanizeMessage(formatHumanizeResultMessage(humanizeAuditFromResponse(updated)));
     } catch (err) {
       setHumanizeMessage(err instanceof Error ? err.message : "Humanization failed");
     } finally {
       setHumanizing(false);
     }
-  }, [pieceId, piece]);
+  }, [pieceId, piece, setCachedPiece]);
 
   const publishToDestination = useCallback(
     async (platform: PublishDestinationId) => {

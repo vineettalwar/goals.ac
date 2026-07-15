@@ -10,6 +10,10 @@ import {
   contentPieceCanMarkReady,
   contentPieceCanPublish,
   contentPieceCanQueueSocial,
+  formatQueueSocialSuccessMessage,
+  queueSocialComposerPayload,
+  socialComposerPath,
+  socialHubQueuePath,
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { useContentPieceData } from "@/hooks/use-content-piece-data";
@@ -136,22 +140,18 @@ export function ContentPiecePage() {
     setQueueSocialFlash(null);
     try {
       const data = await apiFetch<{ pieces?: unknown[]; error?: string }>(
-        `/api/website-projects/${piece.websiteProjectId}/social/composer`,
+        socialComposerPath(piece.websiteProjectId),
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            parentPieceId: piece.id,
-            platforms: ["linkedin", "twitter"],
-          }),
+          body: JSON.stringify(queueSocialComposerPayload(piece.id)),
         },
       );
-      const count = data.pieces?.length ?? 0;
       setQueueSocialFlash({
         level: "success",
-        message: `Queued ${count} LinkedIn + X variants`,
+        message: formatQueueSocialSuccessMessage(data.pieces?.length ?? 0),
       });
-      navigate(`/projects/${piece.websiteProjectId}/social?tab=queue`);
+      navigate(socialHubQueuePath(piece.websiteProjectId));
     } catch (err) {
       setQueueSocialFlash({
         level: "error",
