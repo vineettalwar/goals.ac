@@ -393,7 +393,7 @@ Or paste the JWK in \`/admin/integrations\` → **Social** → **Bluesky** (env 
 NEXTAUTH_URL=https://app.goals.ac
 \`\`\`
 
-Without \`BLUESKY_OAUTH_PRIVATE_KEY_JWK\`, a temporary key is generated at startup — OAuth will break after restarts. **Always set a stable key in production.**
+Without a private JWK (env or Admin Integrations → Bluesky), OAuth client init fails — there is no temporary key fallback.
 
 **Redirect URI**
 \`{NEXTAUTH_URL}/api/auth/bluesky/callback\`

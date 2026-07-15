@@ -38,7 +38,7 @@ import {
   setPlatformBedrockOrgGrants,
   type PlatformBedrockStatus,
   type SavePlatformBedrockCredentialsInput,
-} from "@workspace/platform-admin/platform-bedrock";
+} from "@/lib/platform/platform-bedrock-admin";
 
 export {
   clearStoredPlatformBedrockCredentials,

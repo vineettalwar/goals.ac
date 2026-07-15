@@ -823,9 +823,6 @@ importers:
       '@workspace/media':
         specifier: workspace:*
         version: link:../../lib/media
-      '@workspace/platform-admin':
-        specifier: workspace:*
-        version: link:../../lib/platform-admin
       '@workspace/security':
         specifier: workspace:*
         version: link:../../lib/security

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
-import { loadPlatformBedrockCredentials } from "@workspace/platform-admin/platform-bedrock";
+import { loadPlatformBedrockCredentials } from "@/lib/platform/platform-bedrock-admin";
 
 const BedrockTestBody = z.object({
   accessKeyId: z.string().min(16).optional(),

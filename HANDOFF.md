@@ -8,8 +8,9 @@
 | Notion images | HTTPS image blocks + featured image → page cover; non-https skipped with warnings |
 | Instagram queue | HTTPS-only + pre-enrich |
 | WP featured | data-URI featured (existing) |
+| Bluesky durable JWK | `JoseKey.fromImportable` from env/DB only; no ephemeral mint — missing key throws |
 
-**In flight:** Shopify featured image; Bluesky durable JWK.
+**In flight:** Shopify featured image.
 
 ---
 
@@ -21,7 +22,7 @@
 | ~~Consolidate CMS/ESP connect dialogs~~ | **Done.** `SchemaConnectDialog` + configs. 1729 → 734 LOC (−57%). Named exports preserved. |
 | ~~Notion adapter image blocks~~ | **Done.** HTTPS markdown images + featured → page cover; non-https skipped with warnings. |
 
-**Still open elsewhere:** Shopify featured; Bluesky durable JWK; Next studio leftovers (~480 LOC); unused gsap/marked deps.
+**Still open elsewhere:** Shopify featured; Next studio leftovers (~480 LOC); unused gsap/marked deps.
 
 ---
 
@@ -159,7 +160,7 @@ LinkedIn, X, Meta, and Bluesky app credentials can be stored in platform admin (
 - Migrations: PG `0065`–`0067_platform_bluesky_credentials`; D1 `0002`–`0004_platform_bluesky_credentials`
 - **Migrate required:** `pnpm --filter @workspace/db run migrate` (and `pnpm run cf:migrate:d1:local` for D1)
 - Env wins over encrypted DB values; admin UI: `/admin/integrations` → **Social**
-- Bluesky has no pasted client id — client id is the hosted metadata URL; demos need a stable private JWK (ephemeral key at startup breaks after restart)
+- Bluesky has no pasted client id — client id is the hosted metadata URL; private JWK from Admin Integrations or `BLUESKY_OAUTH_PRIVATE_KEY_JWK` (no ephemeral mint)
 - Done when: paste credentials in admin → project Connect works without matching `.env` vars
 - CF public-worker now uses the same `resolve*` helpers (see closure section above)
 
