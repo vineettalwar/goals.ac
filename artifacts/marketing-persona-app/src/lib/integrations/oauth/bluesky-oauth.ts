@@ -8,6 +8,10 @@ import {
 import { JoseKey } from "@atproto/jwk-jose";
 import type { BlueskyCredentials } from "@workspace/connectors/bluesky";
 import { publishToBluesky, testBlueskyConnection } from "@workspace/connectors/bluesky";
+import {
+  invalidatePlatformBlueskyCredentialsCache,
+  resolveBlueskyOAuthCredentials,
+} from "@workspace/content-engine/support/social/bluesky-platform-credentials";
 
 const oauthStateStore = new Map<string, { state: NodeSavedState; expiresAt: number }>();
 const oauthSessionStore = new Map<string, NodeSavedSession>();
@@ -20,6 +24,12 @@ function pruneStateStore(): void {
 }
 
 let oauthClientPromise: Promise<NodeOAuthClient> | null = null;
+
+/** Drop cached AT Proto client after admin credential changes. */
+export function invalidateBlueskyOAuthClient(): void {
+  oauthClientPromise = null;
+  invalidatePlatformBlueskyCredentialsCache();
+}
 
 export function getNextApiOrigin(): string {
   const nextAuth = process.env.NEXTAUTH_URL?.replace(/\/$/, "");
@@ -46,13 +56,15 @@ async function getBlueskyOAuthClient(origin: string): Promise<NodeOAuthClient> {
     oauthClientPromise = (async () => {
       const clientId = getBlueskyClientMetadataUrl(origin);
       const redirectUri = getBlueskyRedirectUri(origin);
-      const clientName = process.env.BLUESKY_CLIENT_NAME ?? "goals.ac";
+      const resolved = await resolveBlueskyOAuthCredentials();
+      const clientName = resolved?.clientName ?? process.env.BLUESKY_CLIENT_NAME ?? "goals.ac";
 
       let keyset: JoseKey[];
-      const jwkRaw = process.env.BLUESKY_OAUTH_PRIVATE_KEY_JWK;
+      const jwkRaw = resolved?.privateKeyJwk;
       if (jwkRaw) {
         keyset = [await JoseKey.fromImportable(JSON.parse(jwkRaw), "goals-ac-key")];
       } else {
+        // Ephemeral — OAuth breaks after restart. Prefer env or admin-stored JWK.
         keyset = [await JoseKey.generate(["RS256"], "goals-ac-key")];
       }
 

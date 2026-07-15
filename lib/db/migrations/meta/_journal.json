@@ -477,6 +477,13 @@
       "when": 1784300000000,
       "tag": "0066_platform_twitter_meta_credentials",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1784400000000,
+      "tag": "0067_platform_bluesky_credentials",
+      "breakpoints": true
     }
   ]
 }
