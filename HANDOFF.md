@@ -1,5 +1,15 @@
 # Session Handoff
 
+## Shell create destination step (2026-07-16)
+
+`CreateContentDialog` now inserts an optional **destination** step when `getConnectedDestinationsForFormat` returns options for the selected format (connected CMS/social + export-only Medium/Substack for longform).
+
+Flow: format → keyword → [competitors?] → [destination?] → review → generate.
+
+`StudioPage` already passed `cmsConnections={integrations}`; the prop is typed as `CmsConnectionSnapshot` and wired. Stale destination cleared when format changes.
+
+---
+
 ## Continuous polish closure (2026-07-16)
 
 Ship-complete demo polish across content, social, CMS, and shell — no open blockers in this batch.
@@ -141,7 +151,7 @@ Next Studio surfaces thin-wrap shell views:
 
 **Migrate:** Postgres `0064_publish_records_output_mode` applied locally. D1 skipped (`.dev.vars` missing).
 
-**Remaining:** Next create wizard still richer (competitors, LinkedIn archetype/hook, generating progress). Shell create dialog now multi-step for Vite demo parity. Unused local Next studio files (e.g. self-fetching `brand-ai-profile-card.tsx`).
+**Remaining (stale section below — updated):** Shell create destination step shipped 2026-07-16. Still open vs Next richness: project competitor picker (analyses cards), repurpose flow, streaming generate headings. Unused local Next studio leftovers remain deletable.
 
 ---
 

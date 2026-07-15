@@ -388,6 +388,8 @@ Generate an RSA key and set:
 \`\`\`
 BLUESKY_OAUTH_PRIVATE_KEY_JWK={"kty":"RSA",...}
 BLUESKY_CLIENT_NAME=goals.ac
+
+Or paste the JWK in \`/admin/integrations\` → **Social** → **Bluesky** (env wins if both are set).
 NEXTAUTH_URL=https://app.goals.ac
 \`\`\`
 
