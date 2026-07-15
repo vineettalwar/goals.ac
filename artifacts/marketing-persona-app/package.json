@@ -36,6 +36,7 @@
     "@opennextjs/cloudflare": "^1.20.1",
     "@tanstack/react-query": "catalog:",
     "@workspace/ai-providers": "workspace:*",
+    "@workspace/app-shell": "workspace:*",
     "@workspace/billing": "workspace:*",
     "@workspace/cf-edge": "workspace:*",
     "@workspace/connectors": "workspace:*",

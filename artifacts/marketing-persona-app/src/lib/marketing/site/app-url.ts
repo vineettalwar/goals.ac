@@ -5,7 +5,7 @@ export type DeployStage = "production" | "staging" | "development";
 const STAGE_APP_ORIGINS: Record<DeployStage, string> = {
   production: "https://app.goals.ac",
   staging: "https://goals-ac-app.pages.dev",
-  development: "http://localhost:5174",
+  development: "http://localhost:3001",
 };
 
 export function resolveDeployStage(): DeployStage {
