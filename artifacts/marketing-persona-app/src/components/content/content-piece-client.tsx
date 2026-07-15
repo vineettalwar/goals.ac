@@ -549,6 +549,7 @@ export function ContentPieceClient({
         integrationsHref={`/projects/${piece.websiteProjectId}/integrations`}
         pieceTitle={piece.title}
         pieceBodyMarkdown={piece.bodyMarkdown}
+        pieceFeaturedImageUrl={pieceMeta?.featuredImageUrl ?? null}
         onRenderPreview={renderPreview}
         onPublish={async (platform) => {
           setPublishing(true);

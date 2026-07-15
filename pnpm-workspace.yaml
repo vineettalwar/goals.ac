@@ -73,6 +73,13 @@ minimumReleaseAgeExclude:
   # this setting guards against does not apply to our own packages.
   - '@replit/*'
   - stripe-replit-sync
+  # Temporary: Cloudflare CLI + ripples for 4.111.0; remove after the 1-day age gate.
+  - wrangler
+  - miniflare
+  - workerd
+  - '@cloudflare/unenv-preset'
+  - '@cloudflare/kv-asset-handler'
+  - '@cloudflare/workers-types'
 
 onlyBuiltDependencies:
   - '@swc/core'

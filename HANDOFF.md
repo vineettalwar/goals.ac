@@ -1,5 +1,27 @@
 # Session Handoff
 
+## Stopped for night — start here tomorrow (2026-07-16 / 17)
+
+Session closed after continuous competitive polish. Do **not** reopen Surfer NLP, hosted blog, TikTok, invent R2 public host, or Drupal File/Media entities unless asked.
+
+### Tomorrow kickoff (ranked)
+
+1. **Dual Studio create (optional)** — Next still mounts fat `CreateContentModal` (`content-studio-client.tsx` + `create-content-*`); shell has `CreateContentDialog`. Ponytail reaudit tags dual wizards as intentional `yagni` for now — only converge if product wants one create path; otherwise leave.
+2. **Content-media R2 ops** — code ready; create public buckets + set `CONTENT_MEDIA_PUBLIC_BASE_URL` (see `docs/prd/content-media-r2.md`).
+3. **Named GSC success stories** — partner Story kit + illustrative card shipped; still no permissioned named case.
+4. **TYPO3 live smoke** — `/media` + textmedia FAL on a real TYPO3 install.
+5. **Wrangler lock leftovers** — uncommitted `pnpm-workspace.yaml` age-gate excludes + lock `wrangler@4.111.0` — review/commit or revert with morning CF work.
+
+### Closed this wrap (final 3)
+
+| Item | Result |
+|---|---|
+| TYPO3 preflight host wiring | Next + Vite pass `pieceFeaturedImageUrl` into `ContentPiecePublishDialog` |
+| Integrations leftover | Already landed earlier (`9c3bd9d` / related) |
+| Dual create converge | **Deferred** — too large for night stop; see kickoff #1 |
+
+---
+
 ## Still shipping (2026-07-16 pulse)
 
 | Done | Notes |
@@ -10,12 +32,14 @@
 | Public GEO | Anonymous (if landed) |
 | Instagram copy | Fixes |
 | Partner Story kit | Shared constants + template; honest (no fake names/metrics) |
-| Instagram queue stock CTA | "Use stock image" button when "Needs image" badge shown; reuses `/images/regenerate` API; queue reloads on success |
+| Instagram queue stock CTA | "Use stock image" button when "Needs image" badge shown; reuses `/images/regenerate` API; queue reloads on success (Next + Vite) |
 | Outline actions | **Copy outline** + optional **Insert into draft** when empty; wired in shell + Next |
 | TYPO3 media upload | `POST /goals-ac/v1/media` — mirrors WordPress `/media`; FAL import shared via new `FalImporter` helper |
-| TYPO3 media preflight | Soft amber warning in publish UI when publishing with raster `data:` featured + plugin lacks `media_upload` capability — non-blocking; inline FAL (base64 in DB) still works |
+| TYPO3 media preflight | Soft amber when raster `data:` featured + plugin lacks `media_upload`; hosts pass `pieceFeaturedImageUrl` |
+| briefId persist | Legacy Express + CF write worker now link generated pieces to their brief (parity with Next); brief marked `done` once real content lands |
+| Shell `?briefId=` | Vite Studio deep-link opens create dialog prefilled + generate payload includes briefId |
 
-**In flight:** none from this list.
+**In flight:** none — stopped for night.
 
 ### TYPO3 media upload
 

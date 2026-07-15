@@ -308,6 +308,7 @@ export function ContentPiecePage() {
         }
         pieceTitle={piece.title}
         pieceBodyMarkdown={piece.bodyMarkdown}
+        pieceFeaturedImageUrl={piece.pieceMetadata?.featuredImageUrl ?? null}
         onRenderPreview={renderPreview}
         onPublish={async (platform) => {
           await publishToDestination(platform);
