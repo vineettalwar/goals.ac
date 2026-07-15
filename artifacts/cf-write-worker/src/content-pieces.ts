@@ -21,7 +21,7 @@ import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "./ai-billi
 import { getAccessibleProject } from "./project-access";
 
 const AI_NOT_CONFIGURED_MESSAGE =
-  "AI is not configured. Add your API key in Settings → AI Providers, or ask your admin to set a platform key.";
+  "AI is not configured. Add your API key in Integrations → AI, or ask your admin to set a platform key.";
 
 async function assertAiGenerationReady(
   userId: number,
@@ -303,6 +303,11 @@ async function handleContentPieceHumanize(
   const brand = await loadBrandContextForProject(piece.websiteProjectId);
   if (!brand) {
     return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const aiReady = await assertAiGenerationReady(userId);
+  if (!aiReady.ok) {
+    return withCors(request, Response.json({ error: aiReady.message }, { status: 503 }));
   }
 
   const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([

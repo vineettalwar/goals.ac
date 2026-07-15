@@ -23,6 +23,8 @@ import {
 import {
   discoverOpportunities,
   queueOpportunityToStrategy,
+  queueOpportunityAndGenerate,
+  buildBriefFromOpportunity,
 } from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { getDecryptedSemrushCredentialsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { buildLanguagePromptLine } from "@workspace/content-engine/support/content/content-language";
@@ -369,7 +371,17 @@ export async function handleKeywordWrite(
     if (!project) {
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
     }
+    const body = z.object({ generate: z.boolean().optional() }).safeParse(
+      await request.json().catch(() => ({})),
+    );
+    if (!body.success) {
+      return withCors(request, Response.json({ error: "Invalid request body" }, { status: 400 }));
+    }
     try {
+      if (body.data.generate) {
+        const result = await queueOpportunityAndGenerate(oppId, userId);
+        return withCors(request, Response.json(result));
+      }
       const result = await queueOpportunityToStrategy(oppId, userId);
       return withCors(request, Response.json(result));
     } catch (err) {
@@ -377,6 +389,35 @@ export async function handleKeywordWrite(
         request,
         Response.json(
           { error: err instanceof Error ? err.message : "Queue failed" },
+          { status: 502 },
+        ),
+      );
+    }
+  }
+
+  const keywordOppBriefMatch = path.match(/^\/api\/keyword-opportunities\/(\d+)\/brief$/);
+  if (keywordOppBriefMatch && request.method === "GET") {
+    const oppId = Number.parseInt(keywordOppBriefMatch[1]!, 10);
+    const [opp] = await db
+      .select()
+      .from(keywordOpportunitiesTable)
+      .where(eq(keywordOpportunitiesTable.id, oppId))
+      .limit(1);
+    if (!opp) {
+      return withCors(request, Response.json({ error: "Opportunity not found" }, { status: 404 }));
+    }
+    const project = await getAccessibleProject(opp.websiteProjectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+    }
+    try {
+      const brief = await buildBriefFromOpportunity(oppId);
+      return withCors(request, Response.json({ brief }));
+    } catch (err) {
+      return withCors(
+        request,
+        Response.json(
+          { error: err instanceof Error ? err.message : "Brief generation failed" },
           { status: 502 },
         ),
       );
@@ -694,6 +735,57 @@ export async function handleKeywordWrite(
       .returning();
 
     return withCors(request, Response.json(updated));
+  }
+
+  const clusterMatch = path.match(/^\/api\/website-projects\/(\d+)\/keyword-clusters$/);
+  if (clusterMatch && request.method === "POST") {
+    const projectId = Number.parseInt(clusterMatch[1]!, 10);
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+    const body = z
+      .object({ seeds: z.array(z.string().min(1).max(200)).min(1).max(10) })
+      .safeParse(await request.json().catch(() => null));
+    if (!body.success) {
+      return withCors(request, Response.json({ error: "Provide 1–10 seed keywords" }, { status: 400 }));
+    }
+
+    const { prepareAiBilling, completeAiBilling, cancelAiBilling } = await import("./ai-billing");
+    const billingPrep = await prepareAiBilling({
+      userId,
+      tier: "planning",
+      quotaKind: "article",
+    });
+    if (!billingPrep.ok) return withCors(request, billingPrep.response);
+
+    try {
+      const { buildKeywordClusters } = await import(
+        "@workspace/content-engine/strategy/keyword-cluster-service"
+      );
+      const result = await buildKeywordClusters({
+        projectId,
+        userId,
+        seeds: body.data.seeds,
+      });
+      await completeAiBilling(billingPrep.ctx, {
+        userId,
+        eventType: "keyword_cluster",
+        usedByok: billingPrep.usedByok,
+        tier: "planning",
+        usage: result.generationUsage,
+      });
+      return withCors(request, Response.json(result));
+    } catch (err) {
+      await cancelAiBilling(billingPrep.ctx, "error");
+      return withCors(
+        request,
+        Response.json(
+          { error: err instanceof Error ? err.message : "Cluster generation failed" },
+          { status: 502 },
+        ),
+      );
+    }
   }
 
   return null;

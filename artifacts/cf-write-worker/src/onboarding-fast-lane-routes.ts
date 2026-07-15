@@ -272,7 +272,7 @@ export async function handleOnboardingFastLaneWrite(
         publishMode: "draft",
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
         preferredRunHour: 9,
-        autoQueueOpportunities: false,
+        autoQueueOpportunities: true,
         opportunityScoreThreshold: 70,
       },
     })

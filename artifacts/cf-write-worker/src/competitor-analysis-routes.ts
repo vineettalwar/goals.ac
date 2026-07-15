@@ -94,7 +94,19 @@ export async function handleCompetitorAnalysisWrite(
       tier: "planning",
     });
 
-    return withCors(request, Response.json(saved));
+    return withCors(
+      request,
+      Response.json({
+        id: saved.id,
+        competitorUrl: saved.competitorUrl,
+        industry: saved.industry,
+        location: saved.location,
+        stage: saved.stage,
+        websiteProjectId: saved.websiteProjectId,
+        createdAt: saved.createdAt,
+        ...analysis,
+      }),
+    );
   } catch (err) {
     await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "analysis_failed");
     return withCors(

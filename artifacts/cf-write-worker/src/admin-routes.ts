@@ -18,7 +18,7 @@ import {
   platformSettingsTable,
   usersTable,
   websiteProjectsTable,
-} from "@workspace/db/schema";
+} from "@workspace/db/schema-sqlite";
 import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import {

@@ -211,6 +211,34 @@ export async function handleCmsIntegrationsTest(
   userId: number,
 ): Promise<Response | null> {
   const testMatch = path.match(/^\/api\/website-projects\/(\d+)\/cms-integrations\/test$/);
+  if (testMatch && request.method === "POST") {
+    // handled below for backward-compat single-platform tests
+  }
+
+  const healthMatch = path.match(/^\/api\/website-projects\/(\d+)\/integrations\/health$/);
+  if (healthMatch && (request.method === "GET" || request.method === "POST")) {
+    const projectId = Number.parseInt(healthMatch[1]!, 10);
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+    try {
+      const { runProjectIntegrationHealth } = await import(
+        "@workspace/content-engine/support/publishing/integration-health-service"
+      );
+      const result = await runProjectIntegrationHealth(projectId);
+      return withCors(request, Response.json(result));
+    } catch (err) {
+      return withCors(
+        request,
+        Response.json(
+          { error: err instanceof Error ? err.message : "Health check failed" },
+          { status: 502 },
+        ),
+      );
+    }
+  }
+
   if (!testMatch || request.method !== "POST") return null;
 
   const configError = requireEncryptionSecret(request);

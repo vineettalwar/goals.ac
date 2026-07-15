@@ -26,19 +26,34 @@ export type PrepareAiBillingResult =
 
 function quotaExhaustedMessage(plan: string, quota: number, kind: QuotaKind): string {
   const noun = kind === "roadmap" ? "roadmap generations" : "article generations";
-  return `You've used all ${quota} ${noun} on the platform key this month. Add your API key in Settings → AI Providers for unlimited generations.`;
+  return `You've used all ${quota} ${noun} on the platform key this month. Add your API key in Integrations → AI for unlimited generations.`;
 }
 
 function insufficientCreditsMessage(balance: number, required: number): string {
-  return `Insufficient credits (${balance} available, ${required} required). Add your API key in Settings → AI Providers.`;
+  return `Insufficient credits (${balance} available, ${required} required). Add your API key in Integrations → AI.`;
 }
+
+const AI_NOT_CONFIGURED_MESSAGE =
+  "AI is not configured. Add your API key in Integrations → AI, or ask your admin to set a platform key.";
 
 export async function prepareAiBilling(
   input: PrepareAiBillingInput,
 ): Promise<PrepareAiBillingResult> {
-  const resolved: boolean =
-    input.usedByok ??
-    (await resolveAiClientForUser(input.userId).then((r) => r.source === "user-key"));
+  let resolved = input.usedByok;
+  if (resolved === undefined) {
+    try {
+      resolved = (await resolveAiClientForUser(input.userId)).source === "user-key";
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : "AI provider is not configured";
+      const message = /not configured|no gemini api key/i.test(detail)
+        ? AI_NOT_CONFIGURED_MESSAGE
+        : detail;
+      return {
+        ok: false,
+        response: Response.json({ error: message }, { status: 503 }),
+      };
+    }
+  }
 
   const result = await prepareAiBillingSession({
     userId: input.userId,
@@ -90,7 +105,7 @@ export async function prepareAiBilling(
           {
             error: "subscription_blocked",
             message:
-              "Your subscription payment is past due. Update billing in Settings or add your API key in Settings → AI Providers.",
+              "Your subscription payment is past due. Update billing in Settings or add your API key in Integrations → AI.",
             plan: err.plan,
             subscriptionStatus: err.subscriptionStatus,
           },

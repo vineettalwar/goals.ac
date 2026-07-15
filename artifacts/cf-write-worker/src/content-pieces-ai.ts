@@ -95,6 +95,11 @@ export async function handleContentPiecesAiWrite(
     return handleEnhance(request, Number.parseInt(enhanceMatch[1]!, 10), userId);
   }
 
+  const serpScoreMatch = path.match(/^\/api\/content-pieces\/(\d+)\/serp-score$/);
+  if (serpScoreMatch && request.method === "GET") {
+    return handleSerpScore(request, Number.parseInt(serpScoreMatch[1]!, 10), userId);
+  }
+
   const repurposeMatch = path.match(/^\/api\/content-pieces\/(\d+)\/repurpose$/);
   if (repurposeMatch && request.method === "POST") {
     return handleRepurpose(request, Number.parseInt(repurposeMatch[1]!, 10), userId);
@@ -118,6 +123,108 @@ export async function handleContentPiecesAiWrite(
   }
 
   return null;
+}
+
+async function handleSerpScore(
+  request: Request,
+  contentPieceId: number,
+  userId: number,
+): Promise<Response> {
+  const loaded = await loadPieceForUser(contentPieceId, userId);
+  if (loaded.error === "not_found") {
+    return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+  }
+  if (loaded.error === "forbidden" || !loaded.piece) {
+    return withCors(request, Response.json({ error: "Forbidden" }, { status: 403 }));
+  }
+
+  const piece = loaded.piece;
+  const meta = (piece.pieceMetadata ?? {}) as {
+    seoTitle?: string;
+    metaTitle?: string;
+    metaDescription?: string;
+    citations?: { text: string; url: string }[];
+    faqSection?: { question: string; answer: string }[];
+    jsonLdSchema?: object;
+    internalLinkSuggestions?: { anchorText: string; suggestedSlug: string }[];
+  };
+
+  let serpFeatures: Record<string, unknown> | null = null;
+  const keyword = piece.targetKeyword?.trim();
+
+  if (keyword) {
+    const { trackedKeywordsTable, keywordRankSnapshotsTable } = await import(
+      "@workspace/db/schema-sqlite"
+    );
+    const { and, desc } = await import("drizzle-orm");
+    const [tracked] = await db
+      .select({ id: trackedKeywordsTable.id })
+      .from(trackedKeywordsTable)
+      .where(
+        and(
+          eq(trackedKeywordsTable.websiteProjectId, piece.websiteProjectId),
+          eq(trackedKeywordsTable.keyword, keyword.toLowerCase()),
+          eq(trackedKeywordsTable.isActive, true),
+        ),
+      )
+      .limit(1);
+
+    if (tracked) {
+      const [snapshot] = await db
+        .select({ serpFeatures: keywordRankSnapshotsTable.serpFeatures })
+        .from(keywordRankSnapshotsTable)
+        .where(eq(keywordRankSnapshotsTable.trackedKeywordId, tracked.id))
+        .orderBy(desc(keywordRankSnapshotsTable.checkedAt))
+        .limit(1);
+      serpFeatures = (snapshot?.serpFeatures as Record<string, unknown>) ?? null;
+    }
+
+    try {
+      const { isSerpConfigured, getSerpProvider } = await import("@workspace/serp-provider");
+      if (!serpFeatures && isSerpConfigured()) {
+        const result = await getSerpProvider().checkRank({ keyword });
+        serpFeatures = result.serpFeatures;
+      }
+    } catch {
+      // optional
+    }
+  }
+
+  const peopleAlsoAsk = Array.isArray(serpFeatures?.peopleAlsoAsk)
+    ? (serpFeatures.peopleAlsoAsk as string[]).filter((q) => typeof q === "string")
+    : [];
+  const competitorTitles = Array.isArray(serpFeatures?.topResults)
+    ? (serpFeatures.topResults as Array<{ title?: string }>)
+        .map((row) => row.title)
+        .filter((title): title is string => Boolean(title))
+    : [];
+
+  const { scoreDualContentQuality } = await import(
+    "@workspace/content-engine/articles/serp-content-score"
+  );
+  const dual = scoreDualContentQuality({
+    bodyMarkdown: piece.bodyMarkdown ?? "",
+    wordCount: piece.wordCount ?? undefined,
+    metaTitle: meta.seoTitle ?? meta.metaTitle ?? piece.title,
+    metaDescription: meta.metaDescription,
+    targetKeyword: keyword,
+    citations: meta.citations,
+    faqSection: meta.faqSection,
+    jsonLdSchema: meta.jsonLdSchema,
+    internalLinkSuggestions: meta.internalLinkSuggestions,
+    serpFeatures,
+    peopleAlsoAsk,
+    competitorTitles,
+  });
+
+  return withCors(
+    request,
+    Response.json({
+      ...dual,
+      serpFeatures,
+      keyword: keyword ?? null,
+    }),
+  );
 }
 
 async function handleRegenerate(
@@ -256,6 +363,17 @@ async function handleEnhance(
   if (!billingPrep.ok) return withCors(request, billingPrep.response);
 
   try {
+    let serpGaps: string[] = [];
+    try {
+      const serpRes = await handleSerpScore(request, contentPieceId, userId);
+      if (serpRes.ok) {
+        const dual = (await serpRes.json()) as { serp?: { gaps?: string[] } };
+        serpGaps = dual.serp?.gaps ?? [];
+      }
+    } catch {
+      // SERP gaps optional for enhance
+    }
+
     const result = await enhanceContentPiece(
       {
         title: piece.title,
@@ -264,6 +382,7 @@ async function handleEnhance(
         formatType,
         brand: { ...brand, projectId: piece.websiteProjectId },
         metaDescription: piece.pieceMetadata?.metaDescription ?? null,
+        serpGaps,
       },
       existingPieceTitles.filter((title) => title !== piece.title),
       userApiKey,
