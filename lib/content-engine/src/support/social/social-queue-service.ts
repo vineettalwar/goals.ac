@@ -17,9 +17,10 @@ import { and, asc, desc, eq, gte, inArray, isNotNull, lte, or, sql } from "drizz
 import { repurposeContentPiece } from "../../content/content-studio-generator";
 import type { UnifiedBrandContext } from "../../brand/brand-voice";
 import type { AiProviderOptions } from "@workspace/ai-providers";
-import { getTopEngagementHour } from "../../social/social-metrics-service";
+import { getEngagementSlotBias } from "../../social/social-metrics-service";
 import { featuredImageFromMetadata } from "../../articles/article-image-enricher";
 import type { ContentPieceMetadata } from "@workspace/db";
+import type { SocialPlatformScheduleConfig } from "@workspace/db/schema";
 
 function localPartsInTimezone(date: Date, timeZone: string): { year: number; month: number; day: number; hour: number; minute: number; dow: number } {
   const fmt = new Intl.DateTimeFormat("en-US", {

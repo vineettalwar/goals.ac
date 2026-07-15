@@ -325,29 +325,217 @@ export async function sweepSocialMetricsSyncProjects(): Promise<void> {
   }
 }
 
-/** Hour with highest average engagement from synced metrics (for analytics slot mode). */
-export async function getTopEngagementHour(projectId: number, platform: SocialPlatformId): Promise<number | null> {
-  const { rows } = await getSocialPerformance(projectId, { platform, days: 30 });
-  if (rows.length === 0) return null;
+/** Minimum published posts with metrics before analytics slot bias is applied. */
+export const MIN_ENGAGEMENT_SLOT_SAMPLES = 3;
 
-  const hourScores = new Map<number, { total: number; count: number }>();
-  for (const row of rows) {
-    if (!row.scheduledAt) continue;
-    const hour = new Date(row.scheduledAt).getUTCHours();
-    const engagement =
-      (row.likes ?? 0) + (row.comments ?? 0) + (row.shares ?? 0) + (row.clicks ?? 0);
-    const current = hourScores.get(hour) ?? { total: 0, count: 0 };
-    hourScores.set(hour, { total: current.total + engagement, count: current.count + 1 });
+export type EngagementPostedSample = {
+  postedAt: Date;
+  likes: number | null;
+  comments: number | null;
+  shares: number | null;
+  clicks: number | null;
+  impressions: number | null;
+};
+
+export type EngagementSlotBias = {
+  /** Local hours (0–23), strongest first. */
+  preferredHours: number[];
+  /** Local weekdays (0=Sun … 6=Sat), strongest first. */
+  preferredDays: number[];
+  sampleSize: number;
+  /** True when sampleSize meets the minimum and at least one hour/day beat the prior. */
+  sufficient: boolean;
+};
+
+/** Engagement weight: comments/shares/clicks count more than likes; impressions are a weak prior signal. */
+export function scoreSocialEngagement(sample: EngagementPostedSample): number {
+  const interactions =
+    (sample.likes ?? 0) +
+    (sample.comments ?? 0) * 2 +
+    (sample.shares ?? 0) * 3 +
+    (sample.clicks ?? 0) * 2;
+  if (interactions > 0) return interactions;
+  // Posts with only impression counts still contribute a weak signal.
+  return (sample.impressions ?? 0) * 0.01;
+}
+
+function localHourAndDow(
+  date: Date,
+  timeZone: string,
+): { hour: number; dow: number } {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    weekday: "short",
+    hour12: false,
+  });
+  const parts = fmt.formatToParts(date);
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? "0";
+  const weekday = get("weekday");
+  const dowMap: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  // Intl may emit "24" for midnight in some locales; normalize to 0.
+  const hourRaw = Number(get("hour"));
+  const hour = hourRaw === 24 ? 0 : hourRaw;
+  return { hour, dow: dowMap[weekday] ?? 0 };
+}
+
+type BucketScore = { total: number; count: number };
+
+function bayesianAvg(bucket: BucketScore, priorMean: number, priorStrength: number): number {
+  return (bucket.total + priorMean * priorStrength) / (bucket.count + priorStrength);
+}
+
+function rankBuckets(
+  buckets: Map<number, BucketScore>,
+  priorMean: number,
+  priorStrength: number,
+  limit: number,
+): number[] {
+  return [...buckets.entries()]
+    .map(([key, bucket]) => ({
+      key,
+      score: bayesianAvg(bucket, priorMean, priorStrength),
+      count: bucket.count,
+    }))
+    .filter((entry) => entry.score > priorMean || entry.count >= 2)
+    .sort((a, b) => b.score - a.score || b.count - a.count)
+    .slice(0, limit)
+    .map((entry) => entry.key);
+}
+
+/**
+ * Pure scorer for analytics best-time mode.
+ * Buckets posts by project-local hour and weekday; shrinks sparse buckets toward the mean.
+ */
+export function buildEngagementSlotBias(
+  samples: EngagementPostedSample[],
+  timeZone: string,
+  options?: { minSamples?: number; topHours?: number; topDays?: number },
+): EngagementSlotBias | null {
+  const minSamples = options?.minSamples ?? MIN_ENGAGEMENT_SLOT_SAMPLES;
+  const topHours = options?.topHours ?? 3;
+  const topDays = options?.topDays ?? 4;
+  const priorStrength = 2;
+
+  const usable = samples.filter((sample) => {
+    if (Number.isNaN(sample.postedAt.getTime())) return false;
+    return (
+      sample.likes != null ||
+      sample.comments != null ||
+      sample.shares != null ||
+      sample.clicks != null ||
+      sample.impressions != null
+    );
+  });
+
+  if (usable.length === 0) return null;
+
+  const hourBuckets = new Map<number, BucketScore>();
+  const dayBuckets = new Map<number, BucketScore>();
+  let totalScore = 0;
+
+  for (const sample of usable) {
+    const score = scoreSocialEngagement(sample);
+    totalScore += score;
+    const { hour, dow } = localHourAndDow(sample.postedAt, timeZone);
+    const hourBucket = hourBuckets.get(hour) ?? { total: 0, count: 0 };
+    hourBuckets.set(hour, { total: hourBucket.total + score, count: hourBucket.count + 1 });
+    const dayBucket = dayBuckets.get(dow) ?? { total: 0, count: 0 };
+    dayBuckets.set(dow, { total: dayBucket.total + score, count: dayBucket.count + 1 });
   }
 
-  let bestHour: number | null = null;
-  let bestAvg = -1;
-  for (const [hour, { total, count }] of hourScores) {
-    const avg = total / count;
-    if (avg > bestAvg) {
-      bestAvg = avg;
-      bestHour = hour;
-    }
-  }
-  return bestHour;
+  const priorMean = totalScore / usable.length;
+  const preferredHours = rankBuckets(hourBuckets, priorMean, priorStrength, topHours);
+  const preferredDays = rankBuckets(dayBuckets, priorMean, priorStrength, topDays);
+  const sufficient =
+    usable.length >= minSamples && (preferredHours.length > 0 || preferredDays.length > 0);
+
+  return {
+    preferredHours,
+    preferredDays,
+    sampleSize: usable.length,
+    sufficient,
+  };
+}
+
+async function loadEngagementSamples(
+  projectId: number,
+  platform: SocialPlatformId,
+  days: number,
+): Promise<EngagementPostedSample[]> {
+  const since = new Date();
+  since.setDate(since.getDate() - days);
+
+  const rows = await db
+    .select({
+      scheduledAt: contentPiecesTable.scheduledAt,
+      updatedAt: contentPiecesTable.updatedAt,
+      impressions: socialPostMetricsTable.impressions,
+      likes: socialPostMetricsTable.likes,
+      comments: socialPostMetricsTable.comments,
+      shares: socialPostMetricsTable.shares,
+      clicks: socialPostMetricsTable.clicks,
+    })
+    .from(contentPiecesTable)
+    .innerJoin(
+      socialPostMetricsTable,
+      and(
+        eq(socialPostMetricsTable.contentPieceId, contentPiecesTable.id),
+        eq(socialPostMetricsTable.platform, platform),
+      ),
+    )
+    .where(
+      and(
+        eq(contentPiecesTable.websiteProjectId, projectId),
+        eq(contentPiecesTable.publishPlatform, platform),
+        eq(contentPiecesTable.status, "published"),
+        inArray(contentPiecesTable.formatType, SOCIAL_FORMAT_LIST),
+        sql`coalesce(${contentPiecesTable.scheduledAt}, ${contentPiecesTable.updatedAt}) >= ${since}`,
+      ),
+    )
+    .orderBy(desc(contentPiecesTable.updatedAt))
+    .limit(200);
+
+  return rows.map((row) => ({
+    postedAt: row.scheduledAt ?? row.updatedAt,
+    impressions: row.impressions,
+    likes: row.likes,
+    comments: row.comments,
+    shares: row.shares,
+    clicks: row.clicks,
+  }));
+}
+
+/**
+ * Project-local hour/day engagement bias for `bestTimeMode: analytics`.
+ * Returns null when no metric rows exist; `sufficient` is false when samples are too sparse.
+ */
+export async function getEngagementSlotBias(
+  projectId: number,
+  platform: SocialPlatformId,
+  timeZone: string,
+  options?: { days?: number; minSamples?: number },
+): Promise<EngagementSlotBias | null> {
+  const samples = await loadEngagementSamples(projectId, platform, options?.days ?? 90);
+  return buildEngagementSlotBias(samples, timeZone || "UTC", {
+    minSamples: options?.minSamples,
+  });
+}
+
+/** Hour with highest average engagement (project TZ = UTC). Prefer `getEngagementSlotBias`. */
+export async function getTopEngagementHour(
+  projectId: number,
+  platform: SocialPlatformId,
+): Promise<number | null> {
+  const bias = await getEngagementSlotBias(projectId, platform, "UTC");
+  if (!bias?.sufficient || bias.preferredHours.length === 0) return null;
+  return bias.preferredHours[0] ?? null;
 }
