@@ -9,6 +9,7 @@ import {
   llmVisibilitySnapshotsTable,
 } from "@workspace/db/schema";
 import { listPublishRecordsForProject } from "../support/publishing/publish-records";
+import { getProjectInternalLinkSummary } from "./internal-links-summary";
 
 export type CommandCenterOpportunityPreview = {
   id: number;
@@ -47,7 +48,10 @@ export type CommandCenterSummary = {
   latestGeoAuditAt: string | null;
   llmCitationRate: number | null;
   topOpportunities: CommandCenterOpportunityPreview[];
+  /** Coverage % from the same rules as `/internal-links`; null when no pages in map. */
   internalLinkCoverage: number | null;
+  /** Published pages with zero inbound links; null when coverage unavailable. */
+  internalLinkOrphanCount: number | null;
   internalLinkSuggestions: number;
   recentPieces: CommandCenterRecentPiece[];
   recentPublishes: CommandCenterRecentPublish[];
@@ -64,6 +68,7 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
     topOpps,
     strategyRows,
     publishRows,
+    linkSummary,
   ] = await Promise.all([
     db
       .select({ count: countAsInt() })
@@ -86,7 +91,6 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
     db
       .select({
         status: contentPiecesTable.status,
-        pieceMetadata: contentPiecesTable.pieceMetadata,
       })
       .from(contentPiecesTable)
       .where(eq(contentPiecesTable.websiteProjectId, projectId)),
@@ -140,6 +144,7 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
       .orderBy(desc(contentStrategiesTable.year), desc(contentStrategiesTable.month))
       .limit(1),
     listPublishRecordsForProject(projectId, 5),
+    getProjectInternalLinkSummary(projectId),
   ]);
 
   let calendarDraftItems = 0;
@@ -156,22 +161,15 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
 
   let draftsNeedingReview = 0;
   let generatingPieces = 0;
-  let internalLinkSuggestions = 0;
-  let pagesWithInbound = 0;
   for (const row of pieceRows) {
     if (row.status === "draft") draftsNeedingReview += 1;
     if (row.status === "generating") generatingPieces += 1;
-    const meta = (row.pieceMetadata ?? {}) as {
-      internalLinkSuggestions?: { suggestedSlug: string }[];
-    };
-    const suggestions = meta.internalLinkSuggestions?.length ?? 0;
-    internalLinkSuggestions += suggestions;
-    if (suggestions > 0 || row.status === "published") pagesWithInbound += 1;
   }
-  const internalLinkCoverage =
-    pieceRows.length === 0
-      ? null
-      : Math.round((pagesWithInbound / pieceRows.length) * 100);
+
+  const hasLinkMap = linkSummary.pageCount > 0;
+  const internalLinkCoverage = hasLinkMap ? linkSummary.coverageScore : null;
+  const internalLinkOrphanCount = hasLinkMap ? linkSummary.orphanCount : null;
+  const internalLinkSuggestions = linkSummary.suggestionCount;
 
   const latestGeo = geoRows[0];
   let llmCitationRate: number | null = null;
@@ -191,6 +189,7 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
     llmCitationRate,
     topOpportunities: topOpps,
     internalLinkCoverage,
+    internalLinkOrphanCount,
     internalLinkSuggestions,
     recentPieces: recentPieceRows.map((row) => ({
       id: row.id,

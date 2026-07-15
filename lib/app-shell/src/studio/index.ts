@@ -16,6 +16,15 @@ export {
 } from "./brand-ai-profile-card";
 export { aiProviderUnavailableMessage } from "./studio-hub-utils";
 export {
+  buildLinkedInAngleHint,
+  LINKEDIN_ARCHETYPES,
+  LINKEDIN_HOOK_TYPES,
+  parseLinkedInArchetypeFromAngleHint,
+  stripLinkedInAngleMeta,
+  type LinkedInArchetypeId,
+  type LinkedInHookId,
+} from "./linkedin-archetypes";
+export {
   filterStudioPieces,
   formatTypeLabel,
   sortStudioPieces,
