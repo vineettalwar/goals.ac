@@ -156,7 +156,9 @@ export async function GET(
   if (!project.cmsIntegrations) return NextResponse.json({});
 
   const decrypted = decryptCmsCredentials(project.cmsIntegrations as CmsIntegrationCredentials);
-  return NextResponse.json(maskCmsCredentials(decrypted));
+  return NextResponse.json(
+    maskCmsCredentials(decrypted, project.cmsIntegrations as Record<string, unknown>),
+  );
 }
 
 export async function PATCH(

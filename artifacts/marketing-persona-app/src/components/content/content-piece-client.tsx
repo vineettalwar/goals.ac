@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { scoreArticleQuality } from "@workspace/content-engine/articles/article-quality-score";
 import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
 import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
+import { contentPieceCanQueueSocial } from "@workspace/app-shell/content-piece";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import {
   type ContentFormatType,
@@ -57,6 +59,7 @@ export function ContentPieceClient({
   const [enhancing, setEnhancing] = useState(false);
   const [humanizing, setHumanizing] = useState(false);
   const [regeneratingImages, setRegeneratingImages] = useState(false);
+  const [queueingSocial, setQueueingSocial] = useState(false);
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const featuredImage = piece.pieceMetadata?.images?.find((img) => img.role === "featured");
@@ -142,6 +145,40 @@ export function ContentPieceClient({
     router,
   });
 
+  const canQueueSocial = contentPieceCanQueueSocial(
+    piece.formatType,
+    piece.status,
+    piece.bodyMarkdown,
+  );
+
+  const handleQueueSocial = useCallback(async () => {
+    if (!piece.websiteProjectId || !canQueueSocial) return;
+    setQueueingSocial(true);
+    try {
+      const res = await fetch(`/api/website-projects/${piece.websiteProjectId}/social/composer`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          parentPieceId: piece.id,
+          platforms: ["linkedin", "twitter"],
+        }),
+      });
+      const data = (await res.json().catch(() => null)) as
+        | { pieces?: unknown[]; error?: string }
+        | null;
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Could not queue social posts");
+      }
+      const count = data?.pieces?.length ?? 0;
+      toast.success(`Queued ${count} LinkedIn + X variants`);
+      router.push(`/projects/${piece.websiteProjectId}/social?tab=queue`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not queue social posts");
+    } finally {
+      setQueueingSocial(false);
+    }
+  }, [piece.websiteProjectId, piece.id, canQueueSocial, router]);
+
   const formatLabel =
     FORMAT_OPTIONS.find((o) => o.value === piece.formatType)?.label ?? piece.formatType;
 
@@ -174,5 +211,7 @@ export function ContentPieceClient({
     handleCopy={handleCopy} setEditingPreview={setEditingPreview}
     setTitleDraft={setTitleDraft} setBodyDraft={setBodyDraft} setStatusDraft={setStatusDraft}
     setPlannedDateDraft={setPlannedDateDraft} router={router}
+    canQueueSocial={canQueueSocial} queueingSocial={queueingSocial}
+    handleQueueSocial={handleQueueSocial}
   />;
 }

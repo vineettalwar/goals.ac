@@ -9,6 +9,7 @@ import {
   contentPieceCanGenerate,
   contentPieceCanMarkReady,
   contentPieceCanPublish,
+  contentPieceCanQueueSocial,
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { useContentPieceData } from "@/hooks/use-content-piece-data";
@@ -23,6 +24,11 @@ export function ContentPiecePage() {
   const autoGenerateRequested = useRef(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [repurposeDialogOpen, setRepurposeDialogOpen] = useState(false);
+  const [queueingSocial, setQueueingSocial] = useState(false);
+  const [queueSocialFlash, setQueueSocialFlash] = useState<{
+    level: "success" | "error";
+    message: string;
+  } | null>(null);
   const {
     loading,
     error,
@@ -124,8 +130,51 @@ export function ContentPiecePage() {
     return <p className="p-8 text-muted-foreground">Loading content…</p>;
   }
 
+  async function queueSocial() {
+    if (!piece?.websiteProjectId) return;
+    setQueueingSocial(true);
+    setQueueSocialFlash(null);
+    try {
+      const data = await apiFetch<{ pieces?: unknown[]; error?: string }>(
+        `/api/website-projects/${piece.websiteProjectId}/social/composer`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            parentPieceId: piece.id,
+            platforms: ["linkedin", "twitter"],
+          }),
+        },
+      );
+      const count = data.pieces?.length ?? 0;
+      setQueueSocialFlash({
+        level: "success",
+        message: `Queued ${count} LinkedIn + X variants`,
+      });
+      navigate(`/projects/${piece.websiteProjectId}/social?tab=queue`);
+    } catch (err) {
+      setQueueSocialFlash({
+        level: "error",
+        message: err instanceof Error ? err.message : "Could not queue social posts",
+      });
+    } finally {
+      setQueueingSocial(false);
+    }
+  }
+
   return (
     <>
+      {queueSocialFlash ? (
+        <div
+          className={`mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8 ${
+            queueSocialFlash.level === "error" ? "text-red-700" : "text-emerald-700"
+          }`}
+        >
+          <p className="rounded-lg border border-border bg-card px-3 py-2 text-sm">
+            {queueSocialFlash.message}
+          </p>
+        </div>
+      ) : null}
       <ContentPieceView
         piece={piece}
         generating={generating}
@@ -168,6 +217,12 @@ export function ContentPiecePage() {
         }
         markingReady={markingReady}
         onRepurpose={() => setRepurposeDialogOpen(true)}
+        onQueueSocial={
+          contentPieceCanQueueSocial(piece.formatType, piece.status, piece.bodyMarkdown)
+            ? () => void queueSocial()
+            : undefined
+        }
+        queueingSocial={queueingSocial}
         stockImagesConfigured={stockImagesConfigured}
         fetchDualScore={async (contentPieceId) => {
           try {

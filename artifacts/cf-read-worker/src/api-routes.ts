@@ -274,6 +274,7 @@ export async function handleAuthenticatedRead(
       Response.json(
         maskCmsCredentials(
           decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials),
+          (project.cmsIntegrations ?? {}) as Record<string, unknown>,
         ),
       ),
     );

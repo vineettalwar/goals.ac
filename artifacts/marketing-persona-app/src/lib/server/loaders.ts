@@ -101,7 +101,10 @@ export const loadCmsConnectionsForProject = cache(async (
   if (!project?.cmsIntegrations) return {};
 
   const decrypted = decryptCmsCredentials(project.cmsIntegrations as CmsIntegrationCredentials);
-  return maskCmsCredentials(decrypted);
+  return maskCmsCredentials(
+    decrypted,
+    project.cmsIntegrations as Record<string, unknown>,
+  );
 });
 
 export const loadWebsiteProjectForUser = cache(async (
