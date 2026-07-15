@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import {
   AutopilotView,
   GeoAuditDetailView,
@@ -8,11 +8,8 @@ import {
   GeoAuditRunPanel,
   GrowthRoadmapView,
   HelpView,
-  KeywordTrackingView,
   isSiteAdmin,
   isSuperAdmin,
-  type KeywordAnalysisResult,
-  type KeywordSourceFilter,
   PartnerWorkspaceView,
   ResearchCompetitorsView,
   ResearchOverviewView,
@@ -43,8 +40,6 @@ import { useAuditDetailData, useAuditListData } from "@/hooks/use-audit-data";
 import { useAutopilotData } from "@/hooks/use-autopilot-data";
 import { useProjectsData } from "@/hooks/use-projects-data";
 import {
-  useArticleIdeasImports,
-  useArticleIdeaSources,
   useArticlePerformance,
   useBrandKeywords,
   useBriefsData,
@@ -52,22 +47,16 @@ import {
   useCompetitorAnalyses,
   useGoalsData,
   useGrowthRoadmap,
-  useGscQueries,
   useGscSyncStatus,
   useHelpChecklist,
-  useKeywordIntelligence,
   useKeywordOpportunities,
-  useKeywordSnapshots,
   usePartnerProjects,
   useRoadmapsCatalog,
-  useSemrushStatus,
-  useTrackedKeywords,
   useVisibilitySettings,
   useVisibilitySummary,
 } from "@/hooks/use-section-queries";
 import { useSocialData } from "@/hooks/use-social-data";
-import { apiFetch, getApiBase, getAppOrigin } from "@/lib/api";
-import { queryKeys } from "@/lib/queries/keys";
+import { apiFetch, getAppOrigin } from "@/lib/api";
 import { projectDetailPath } from "@workspace/app-shell";
 
 const strategyTabs = [
@@ -229,516 +218,8 @@ export function SearchHubPage() {
   );
 }
 
-export function SearchKeywordsPage() {
-  const queryClient = useQueryClient();
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { user, orgRole } = useAuth();
-  const { projectId, activeProject } = useActiveProject();
-  const canImport = isSuperAdmin(user?.role) || isSiteAdmin(orgRole);
-  const { keywords, loading: trackedLoading, refetch: refetchTracked } = useTrackedKeywords(projectId);
-  const {
-    opportunities,
-    alerts,
-    isLoading: intelligenceLoading,
-    refetch: refetchIntelligence,
-  } = useKeywordIntelligence(projectId);
-  const { gscStatus, isFetching: gscFetching } = useGscSyncStatus(projectId);
-  const { status: semrushStatus, isFetching: semrushFetching } = useSemrushStatus(projectId);
-  const { queries: gscQueries } = useGscQueries(projectId, Boolean(gscStatus?.connected));
+export { SearchKeywordsPage } from "./SearchKeywordsPage";
 
-  const [activeTab, setActiveTab] = useState<"ideas" | "import" | "tracking" | "analyzer">("ideas");
-  const [sourceFilter, setSourceFilter] = useState<KeywordSourceFilter>("all");
-  const [trackInput, setTrackInput] = useState("");
-  const [selectedTrackedId, setSelectedTrackedId] = useState<number | null>(null);
-  const [keywordInput, setKeywordInput] = useState("");
-  const [websiteUrl, setWebsiteUrl] = useState(activeProject?.url ?? "");
-  const [analysis, setAnalysis] = useState<KeywordAnalysisResult | null>(null);
-  const [manualKeyword, setManualKeyword] = useState("");
-  const [manualTitle, setManualTitle] = useState("");
-  const [manualAngle, setManualAngle] = useState("");
-  const [discovering, setDiscovering] = useState<string | null>(null);
-  const [syncingGsc, setSyncingGsc] = useState(false);
-  const [tracking, setTracking] = useState(false);
-  const [analyzing, setAnalyzing] = useState(false);
-  const [queueingId, setQueueingId] = useState<number | null>(null);
-  const [dismissingId, setDismissingId] = useState<number | null>(null);
-  const [manualImporting, setManualImporting] = useState(false);
-  const [csvImporting, setCsvImporting] = useState(false);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const [sheetLabel, setSheetLabel] = useState("");
-  const [sheetUrl, setSheetUrl] = useState("");
-  const [sheetName, setSheetName] = useState("");
-  const [creatingSheetSource, setCreatingSheetSource] = useState(false);
-  const [syncingSheetId, setSyncingSheetId] = useState<number | null>(null);
-  const [sheetsStatusMessage, setSheetsStatusMessage] = useState<string | null>(null);
-
-  const { snapshots: trackedSnapshots } = useKeywordSnapshots(selectedTrackedId);
-  const { imports: importHistory, loading: importLoading, refetch: refetchImports } =
-    useArticleIdeasImports(projectId);
-  const {
-    sources: sheetSources,
-    loading: sheetSourcesLoading,
-    refetch: refetchSheetSources,
-  } = useArticleIdeaSources(projectId);
-
-  useEffect(() => {
-    const tab = searchParams.get("tab");
-    if (tab === "import" || tab === "tracking" || tab === "analyzer" || tab === "ideas") {
-      setActiveTab(tab);
-    }
-    const source = searchParams.get("source");
-    if (
-      source === "all" ||
-      source === "semrush" ||
-      source === "gsc_query" ||
-      source === "csv_import" ||
-      source === "google_sheets" ||
-      source === "manual" ||
-      source === "imports" ||
-      source === "ai_analysis" ||
-      source === "competitor_gap" ||
-      source === "rank_drop"
-    ) {
-      setSourceFilter(source);
-    }
-    const keyword = searchParams.get("keyword")?.trim();
-    if (keyword) {
-      setKeywordInput(keyword);
-      setTrackInput(keyword);
-      if (!tab) setActiveTab("analyzer");
-    }
-    const sheets = searchParams.get("sheets");
-    if (sheets === "connected") {
-      setSheetsStatusMessage("Google Sheets connected.");
-      void refetchSheetSources();
-      void refetchImports();
-      void refetchIntelligence();
-    } else if (sheets === "error") {
-      setSheetsStatusMessage("Google Sheets connection failed.");
-    } else if (sheets === "forbidden") {
-      setSheetsStatusMessage("Only site admins can connect Google Sheets for this project.");
-    }
-  }, [searchParams, refetchSheetSources, refetchImports, refetchIntelligence]);
-
-  useEffect(() => {
-    if (activeProject?.url) setWebsiteUrl(activeProject.url);
-    setAnalysis(null);
-    setSelectedTrackedId(null);
-    setKeywordInput("");
-    setTrackInput("");
-  }, [projectId, activeProject?.url]);
-
-  const showInitialLoad =
-    Boolean(projectId) && trackedLoading && intelligenceLoading && keywords.length === 0;
-
-  async function invalidateKeywordQueries() {
-    if (!projectId) return;
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: queryKeys.keywordOpportunities(projectId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.keywordAlerts(projectId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.gscSyncStatus(projectId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.semrushStatus(projectId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.gscQueries(projectId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.articleIdeas(projectId) }),
-      queryClient.invalidateQueries({ queryKey: queryKeys.articleIdeaSources(projectId) }),
-    ]);
-  }
-
-  function sheetsReturnUrl() {
-    return `${getAppOrigin()}/search/keywords?tab=import`;
-  }
-
-  function sheetsConnectUrl(sourceId: number) {
-    const params = new URLSearchParams({
-      projectId: String(projectId),
-      sourceId: String(sourceId),
-      returnUrl: sheetsReturnUrl(),
-    });
-    return `${getApiBase()}/api/auth/google-sheets?${params}`;
-  }
-
-  async function handleGscSync() {
-    if (!projectId) return;
-    setSyncingGsc(true);
-    setActionError(null);
-    try {
-      await apiFetch(`/api/website-projects/${projectId}/search-properties/gsc/sync`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      await invalidateKeywordQueries();
-      await refetchIntelligence();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "GSC sync failed");
-    } finally {
-      setSyncingGsc(false);
-    }
-  }
-
-  async function handleDiscover(source: "semrush" | "gsc" | "ai", refresh = false) {
-    if (!projectId) return;
-    setDiscovering(source);
-    setActionError(null);
-    try {
-      await apiFetch(`/api/website-projects/${projectId}/keyword-opportunities`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ source, refresh }),
-      });
-      await invalidateKeywordQueries();
-      await refetchIntelligence();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Discovery failed");
-    } finally {
-      setDiscovering(null);
-    }
-  }
-
-  async function handleQueueOpportunity(id: number) {
-    setQueueingId(id);
-    setActionError(null);
-    try {
-      await apiFetch(`/api/keyword-opportunities/${id}`, { method: "POST" });
-      await refetchIntelligence();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to queue opportunity");
-    } finally {
-      setQueueingId(null);
-    }
-  }
-
-  async function handleDismissOpportunity(id: number) {
-    setDismissingId(id);
-    setActionError(null);
-    try {
-      await apiFetch(`/api/keyword-opportunities/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "dismissed" }),
-      });
-      await refetchIntelligence();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to dismiss");
-    } finally {
-      setDismissingId(null);
-    }
-  }
-
-  async function handleTrackKeyword() {
-    if (!projectId || !trackInput.trim()) return;
-    setTracking(true);
-    setActionError(null);
-    try {
-      await apiFetch("/api/tracked-keywords", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          websiteProjectId: Number(projectId),
-          keyword: trackInput.trim(),
-          targetUrl: websiteUrl || undefined,
-        }),
-      });
-      setTrackInput("");
-      await refetchTracked();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to track keyword");
-    } finally {
-      setTracking(false);
-    }
-  }
-
-  async function handleDeleteTracked(id: number) {
-    setActionError(null);
-    try {
-      await apiFetch(`/api/tracked-keywords/${id}`, { method: "DELETE" });
-      if (selectedTrackedId === id) setSelectedTrackedId(null);
-      await refetchTracked();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to remove keyword");
-    }
-  }
-
-  async function handleAnalyze() {
-    const keywordsToAnalyze = keywordInput
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-    if (keywordsToAnalyze.length === 0) {
-      setActionError("Enter at least one keyword");
-      return;
-    }
-    setAnalyzing(true);
-    setAnalysis(null);
-    setActionError(null);
-    try {
-      const result = await apiFetch<KeywordAnalysisResult>("/api/keyword-analysis", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          keywords: keywordsToAnalyze,
-          websiteUrl: websiteUrl || undefined,
-          websiteProjectId: projectId ? Number(projectId) : undefined,
-        }),
-      });
-      setAnalysis(result);
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Analysis failed");
-    } finally {
-      setAnalyzing(false);
-    }
-  }
-
-  async function handleManualImport() {
-    if (!projectId || !manualKeyword.trim() || !manualTitle.trim()) return;
-    setManualImporting(true);
-    setActionError(null);
-    try {
-      await apiFetch(`/api/website-projects/${projectId}/article-ideas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          keyword: manualKeyword.trim(),
-          suggestedTitle: manualTitle.trim(),
-          suggestedAngle: manualAngle.trim(),
-        }),
-      });
-      setManualKeyword("");
-      setManualTitle("");
-      setManualAngle("");
-      await refetchImports();
-      await refetchIntelligence();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to add idea");
-    } finally {
-      setManualImporting(false);
-    }
-  }
-
-  async function handleCsvImport(file: File) {
-    if (!projectId) return;
-    setCsvImporting(true);
-    setActionError(null);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch(
-        `${getApiBase()}/api/website-projects/${projectId}/article-ideas/import`,
-        {
-          method: "POST",
-          credentials: "include",
-          body: formData,
-        },
-      );
-      if (!response.ok) {
-        const body = await response.json().catch(() => null);
-        throw new Error(
-          (body && typeof body === "object" && "error" in body && String(body.error)) ||
-            "CSV import failed",
-        );
-      }
-      await refetchImports();
-      await refetchIntelligence();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "CSV import failed");
-    } finally {
-      setCsvImporting(false);
-    }
-  }
-
-  async function handleCreateSheetSource() {
-    if (!projectId || !sheetLabel.trim() || !sheetUrl.trim()) return;
-    setCreatingSheetSource(true);
-    setActionError(null);
-    try {
-      const data = await apiFetch<{ source?: { id: number } }>(
-        `/api/website-projects/${projectId}/article-idea-sources`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            label: sheetLabel.trim(),
-            spreadsheetUrl: sheetUrl.trim(),
-            sheetName: sheetName.trim() || undefined,
-          }),
-        },
-      );
-      setSheetLabel("");
-      setSheetUrl("");
-      setSheetName("");
-      await refetchSheetSources();
-      if (data.source?.id) {
-        window.location.href = sheetsConnectUrl(data.source.id);
-      }
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to create sheet source");
-    } finally {
-      setCreatingSheetSource(false);
-    }
-  }
-
-  async function handleSyncSheetSource(sourceId: number) {
-    if (!projectId) return;
-    setSyncingSheetId(sourceId);
-    setActionError(null);
-    try {
-      const response = await fetch(
-        `${getApiBase()}/api/website-projects/${projectId}/article-idea-sources/sync`,
-        {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json", accept: "application/json" },
-          body: JSON.stringify({ sourceId }),
-        },
-      );
-      const body = await response.json().catch(() => null);
-      if (!response.ok) {
-        if (
-          body &&
-          typeof body === "object" &&
-          "connectUrl" in body &&
-          typeof body.connectUrl === "string"
-        ) {
-          window.location.href = sheetsConnectUrl(sourceId);
-          return;
-        }
-        throw new Error(
-          (body && typeof body === "object" && "error" in body && String(body.error)) ||
-            "Sheet sync failed",
-        );
-      }
-      await refetchSheetSources();
-      await refetchImports();
-      await refetchIntelligence();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Sheet sync failed");
-    } finally {
-      setSyncingSheetId(null);
-    }
-  }
-
-  async function handleDeleteSheetSource(sourceId: number) {
-    if (!projectId) return;
-    setActionError(null);
-    try {
-      await apiFetch(
-        `/api/website-projects/${projectId}/article-idea-sources?sourceId=${sourceId}`,
-        { method: "DELETE" },
-      );
-      await refetchSheetSources();
-    } catch (err) {
-      setActionError(err instanceof Error ? err.message : "Failed to remove sheet source");
-    }
-  }
-
-  function handleConnectSheetSource(sourceId: number) {
-    window.location.href = sheetsConnectUrl(sourceId);
-  }
-
-  function handleTabChange(tab: "ideas" | "import" | "tracking" | "analyzer") {
-    setActiveTab(tab);
-    const next = new URLSearchParams(searchParams);
-    next.set("tab", tab);
-    setSearchParams(next, { replace: true });
-  }
-
-  function handleSourceFilterChange(filter: KeywordSourceFilter) {
-    setSourceFilter(filter);
-    const next = new URLSearchParams(searchParams);
-    if (filter === "all") {
-      next.delete("source");
-    } else {
-      next.set("source", filter);
-    }
-    setSearchParams(next, { replace: true });
-  }
-
-  return (
-    <SectionShell
-      title="Keyword research"
-      description="Article ideas from Search Console, imports, rank tracking, and AI analysis."
-      tabs={searchTabs}
-    >
-      <KeywordTrackingView
-        projectId={projectId}
-        projectName={activeProject?.name ?? null}
-        loading={showInitialLoad}
-        activeTab={activeTab}
-        onTabChange={handleTabChange}
-        opportunities={opportunities}
-        opportunitiesLoading={intelligenceLoading}
-        alerts={alerts}
-        sourceFilter={sourceFilter}
-        onSourceFilterChange={handleSourceFilterChange}
-        gscStatus={gscStatus}
-        semrushStatus={semrushStatus}
-        gscQueries={gscQueries}
-        statusLoading={gscFetching || semrushFetching}
-        discovering={discovering}
-        syncingGsc={syncingGsc}
-        onDiscover={handleDiscover}
-        onGscSync={() => void handleGscSync()}
-        onQueueOpportunity={(id) => void handleQueueOpportunity(id)}
-        onDismissOpportunity={(id) => void handleDismissOpportunity(id)}
-        queueingId={queueingId}
-        dismissingId={dismissingId}
-        tracked={keywords}
-        trackInput={trackInput}
-        onTrackInputChange={setTrackInput}
-        onTrackKeyword={() => void handleTrackKeyword()}
-        tracking={tracking}
-        selectedTrackedId={selectedTrackedId}
-        onSelectTracked={setSelectedTrackedId}
-        onDeleteTracked={(id) => void handleDeleteTracked(id)}
-        snapshots={trackedSnapshots}
-        keywordInput={keywordInput}
-        websiteUrl={websiteUrl}
-        onKeywordInputChange={setKeywordInput}
-        onWebsiteUrlChange={setWebsiteUrl}
-        onAnalyze={() => void handleAnalyze()}
-        analyzing={analyzing}
-        analysis={analysis}
-        importHistory={importHistory}
-        importLoading={importLoading}
-        manualKeyword={manualKeyword}
-        manualTitle={manualTitle}
-        manualAngle={manualAngle}
-        onManualKeywordChange={setManualKeyword}
-        onManualTitleChange={setManualTitle}
-        onManualAngleChange={setManualAngle}
-        onManualImport={() => void handleManualImport()}
-        manualImporting={manualImporting}
-        onCsvImport={(file) => void handleCsvImport(file)}
-        csvImporting={csvImporting}
-        canImport={canImport}
-        sheetsStatusMessage={sheetsStatusMessage}
-        sheetSources={sheetSources}
-        sheetSourcesLoading={sheetSourcesLoading}
-        sheetLabel={sheetLabel}
-        sheetUrl={sheetUrl}
-        sheetName={sheetName}
-        onSheetLabelChange={setSheetLabel}
-        onSheetUrlChange={setSheetUrl}
-        onSheetNameChange={setSheetName}
-        onCreateSheetSource={() => void handleCreateSheetSource()}
-        creatingSheetSource={creatingSheetSource}
-        onSyncSheetSource={(id) => void handleSyncSheetSource(id)}
-        onDeleteSheetSource={(id) => void handleDeleteSheetSource(id)}
-        onConnectSheetSource={handleConnectSheetSource}
-        syncingSheetId={syncingSheetId}
-        settingsHref="/integrations/tools"
-        visibilityHref="/search/visibility"
-        studioHref={(opp) =>
-          projectId
-            ? `/projects/${projectId}/content-studio?create=1&keyword=${encodeURIComponent(opp.keyword)}&title=${encodeURIComponent(opp.suggestedTitle)}`
-            : "/projects"
-        }
-        renderLink={renderLink}
-        error={actionError}
-      />
-    </SectionShell>
-  );
-}
 
 export function SearchVisibilityPage() {
   const { projectId, activeProject } = useActiveProject();
@@ -962,6 +443,18 @@ export function ResearchHubPage() {
 
 export function ResearchCompetitorsPage() {
   const { projectId } = useActiveProject();
+  return (
+    <SectionShell
+      title="Competitor research"
+      description="AI-powered competitive intelligence."
+      tabs={researchTabs}
+    >
+      <ResearchCompetitorsBody key={projectId ?? "none"} projectId={projectId} />
+    </SectionShell>
+  );
+}
+
+function ResearchCompetitorsBody({ projectId }: { projectId: string | null }) {
   const [searchParams] = useSearchParams();
   const industryParam = searchParams.get("industry")?.trim() ?? "";
   const analysisParam = searchParams.get("analysis");
@@ -975,123 +468,97 @@ export function ResearchCompetitorsPage() {
       }),
     [projectId],
   );
+
+  const { data: brandProfile } = useQuery({
+    queryKey: ["brand-profile-industry", projectId],
+    queryFn: () =>
+      apiFetch<{ industry?: string } | null>(`/api/website-projects/${projectId}/brand-profile`),
+    enabled: Boolean(projectId),
+    staleTime: 60_000,
+  });
+
   const [form, setForm] = useState({
     competitorUrl: "",
-    industry: industryParam,
+    industry: "",
     location: "",
     stage: "early",
   });
-  const [formOpen, setFormOpen] = useState(true);
+  const [formOpenOverride, setFormOpenOverride] = useState<boolean | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [result, setResult] = useState<(CompetitorAnalysisResult & { competitorUrl?: string; id?: number }) | null>(
-    null,
-  );
-  const [resultLoading, setResultLoading] = useState(false);
 
-  useEffect(() => {
-    if (industryParam) {
-      setForm((prev) => ({ ...prev, industry: prev.industry || industryParam }));
+  const preferredSelectedId = useMemo(() => {
+    if (analyses.length === 0) return null;
+    if (initialAnalysisId && analyses.some((row) => row.id === initialAnalysisId)) {
+      return initialAnalysisId;
     }
-  }, [industryParam]);
+    return analyses[0]?.id ?? null;
+  }, [analyses, initialAnalysisId]);
 
-  useEffect(() => {
-    if (!projectId) return;
-    let cancelled = false;
-    void apiFetch<{ industry?: string } | null>(`/api/website-projects/${projectId}/brand-profile`)
-      .then((profile) => {
-        if (cancelled || !profile?.industry) return;
-        setForm((prev) => ({ ...prev, industry: prev.industry || profile.industry || "" }));
-      })
-      .catch(() => undefined);
-    return () => {
-      cancelled = true;
-    };
-  }, [projectId]);
+  const activeSelectedId = selectedId ?? preferredSelectedId;
+  const formOpen = formOpenOverride ?? analyses.length === 0;
+  const formWithDefaults = {
+    ...form,
+    industry: form.industry || industryParam || brandProfile?.industry || "",
+  };
 
-  useEffect(() => {
-    setResult(null);
-    setSelectedId(null);
-    setFormOpen(true);
-  }, [projectId]);
-
-  useEffect(() => {
-    if (analyses.length === 0) {
-      setFormOpen(true);
-      return;
-    }
-    setFormOpen(false);
-    if (selectedId != null) return;
-    const preferred =
-      initialAnalysisId && analyses.some((row) => row.id === initialAnalysisId)
-        ? initialAnalysisId
-        : analyses[0]!.id;
-    setSelectedId(preferred);
-  }, [analyses, initialAnalysisId, selectedId]);
-
-  useEffect(() => {
-    if (selectedId == null) return;
-    let cancelled = false;
-    setResultLoading(true);
-    void apiFetch(`/api/competitor-analyses/${selectedId}`)
-      .then((data) => {
-        if (cancelled) return;
-        setResult(flattenCompetitorAnalysis(data));
-      })
-      .catch(() => {
-        if (!cancelled) setResult(null);
-      })
-      .finally(() => {
-        if (!cancelled) setResultLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedId]);
+  const detailQuery = useQuery({
+    queryKey: ["competitor-analysis-detail", activeSelectedId],
+    queryFn: async () => {
+      const data = await apiFetch(`/api/competitor-analyses/${activeSelectedId}`);
+      return flattenCompetitorAnalysis(data) as CompetitorAnalysisResult & {
+        competitorUrl?: string;
+        id?: number;
+      };
+    },
+    enabled: activeSelectedId != null,
+  });
 
   async function analyze() {
-    if (!form.competitorUrl || !form.industry || !form.location) return;
+    if (!formWithDefaults.competitorUrl || !formWithDefaults.industry || !formWithDefaults.location) {
+      return;
+    }
     setAnalyzing(true);
     try {
       const data = await apiFetch("/api/competitor-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, websiteProjectId: projectId ? Number(projectId) : undefined }),
+        body: JSON.stringify({
+          ...formWithDefaults,
+          websiteProjectId: projectId ? Number(projectId) : undefined,
+        }),
       });
-      const flat = flattenCompetitorAnalysis(data);
-      setResult(flat);
+      const flat = flattenCompetitorAnalysis(data) as CompetitorAnalysisResult & {
+        competitorUrl?: string;
+        id?: number;
+      };
       if (flat?.id != null) setSelectedId(flat.id);
-      setFormOpen(false);
+      setFormOpenOverride(false);
       await reload();
+      await detailQuery.refetch();
     } finally {
       setAnalyzing(false);
     }
   }
 
   return (
-    <SectionShell
-      title="Competitor research"
-      description="AI-powered competitive intelligence."
-      tabs={researchTabs}
-    >
-      <ResearchCompetitorsView
-        analyses={analyses}
-        loading={loading}
-        error={error}
-        form={form}
-        onFormChange={setForm}
-        onAnalyze={() => void analyze()}
-        analyzing={analyzing}
-        result={result}
-        resultLoading={resultLoading}
-        selectedId={selectedId}
-        onSelect={setSelectedId}
-        formOpen={formOpen}
-        onFormOpenChange={setFormOpen}
-        paths={paths}
-        renderLink={renderLink}
-      />
-    </SectionShell>
+    <ResearchCompetitorsView
+      analyses={analyses}
+      loading={loading}
+      error={error}
+      form={formWithDefaults}
+      onFormChange={setForm}
+      onAnalyze={() => void analyze()}
+      analyzing={analyzing}
+      result={detailQuery.data ?? null}
+      resultLoading={detailQuery.isFetching}
+      selectedId={activeSelectedId}
+      onSelect={setSelectedId}
+      formOpen={formOpen}
+      onFormOpenChange={(open) => setFormOpenOverride(open)}
+      paths={paths}
+      renderLink={renderLink}
+    />
   );
 }
 

@@ -41,9 +41,10 @@ export function ProjectDetailPage() {
     savingVoice,
   } = useProjectDetailData(id);
   const { integrations } = useIntegrationsData(id ?? null);
-  const connectedPlatforms = Object.entries(integrations)
-    .filter(([, row]) => row?.connected)
-    .map(([key]) => key);
+  const connectedPlatforms: string[] = [];
+  for (const [key, row] of Object.entries(integrations)) {
+    if (row?.connected) connectedPlatforms.push(key);
+  }
 
   useEffect(() => {
     if (!authLoading && !user) navigate("/login", { replace: true });
@@ -82,7 +83,7 @@ export function ProjectDetailPage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl px-8 py-8">
+      <div className="max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
         <p className="mb-4 text-sm text-red-700">{error}</p>
         <Link to="/projects" className="text-sm font-medium text-primary hover:underline">
           ← Back to projects

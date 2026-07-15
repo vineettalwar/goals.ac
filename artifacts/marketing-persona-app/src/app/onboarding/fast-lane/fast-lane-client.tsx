@@ -87,7 +87,7 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
 
     if (!res.ok) {
       setPhase("error");
-      setError(data.message ?? data.error ?? "Setup failed. Check Settings → AI Providers for BYOK.");
+      setError(data.message ?? data.error ?? "Setup failed. Check Integrations → AI for BYOK.");
       return;
     }
 
@@ -169,11 +169,14 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
                 </div>
               )}
               <div className="flex flex-col gap-3 pt-2">
-                <Button size="lg" onClick={() => router.push(`/onboarding/connect?projectId=${projectId}`)}>
-                  Connect WordPress →
+                <Button size="lg" onClick={() => router.push("/dashboard")}>
+                  Open command center
+                </Button>
+                <Button variant="outline" onClick={() => router.push(`/onboarding/connect?projectId=${projectId}`)}>
+                  Connect WordPress
                 </Button>
                 <Button variant="ghost" onClick={() => router.push(postAutopilotCompleteRedirect(Number(projectId)))}>
-                  Skip — open autopilot dashboard
+                  Open content studio
                 </Button>
               </div>
             </>

@@ -13,6 +13,7 @@ import {
 import { getAccessibleProject, requireProjectAccess } from "@workspace/cf-edge/project-access";
 import {
   assertGoogleIntegrationsEnabled,
+  defaultProjectIntegrationsUrl,
   exchangeGoogleCode,
   normalizeReturnUrl,
   redirectResponse,
@@ -24,7 +25,6 @@ import {
 } from "./search-property-oauth-shared";
 
 const PROD_API_ORIGIN = "https://api.goals.ac";
-const DEFAULT_INTEGRATIONS_URL = "https://app.goals.ac/integrations";
 const UNSELECTED_PROPERTY_ID = "";
 
 function resolveGoogleAnalyticsRedirectUri(request: Request): string {
@@ -173,14 +173,15 @@ export async function handleGoogleAnalyticsAuthCallback(
   const oauthError = url.searchParams.get("error");
 
   const secret = requireAuthSecret(env);
-  const fallbackReturn = DEFAULT_INTEGRATIONS_URL;
+  const state = stateParam ? await verifySearchOAuthState(stateParam, secret) : null;
+  const fallbackReturn = defaultProjectIntegrationsUrl(state?.projectId);
+  const returnUrl = state
+    ? normalizeReturnUrl(state.returnUrl, request, state.projectId)
+    : fallbackReturn;
 
   if (!secret) {
     return new Response("Auth is not configured", { status: 503 });
   }
-
-  const state = stateParam ? await verifySearchOAuthState(stateParam, secret) : null;
-  const returnUrl = state ? normalizeReturnUrl(state.returnUrl, request) : fallbackReturn;
 
   if (oauthError || !code || !state) {
     return new Response("Google Analytics authorization failed", { status: 400 });

@@ -1,5 +1,61 @@
 # Session Handoff
 
+## Competitive plan Waves 0–2 — IN PROGRESS (2026-07-15)
+
+**PRD:** [docs/prd/content-studio-competitive-plan.md](docs/prd/content-studio-competitive-plan.md)  
+**Decision:** [docs/DECISIONS.md](docs/DECISIONS.md) — Execute Wave 0→1→2; partner-demo vs BLG/AutoSEO is primary ICP for 90 days.
+
+**Status:** Wave 0 in progress · Wave 1 **not started** · Wave 2 planned after Wave 1.
+
+### Parallel workstreams
+
+| Wave | Focus | Key deliverables |
+|------|-------|------------------|
+| **0** (active) | Humanize reliability + demo | Sanitize fix, secondary keywords in humanizer, DeepL re-humanize, all-social humanize, human-voice score in panel, before/after demo asset |
+| **1** (queued) | Studio writing room | Side panel brief/SERP, live draft score, unify create UX (Next + app-shell) |
+| **2** (planned) | Integration trust + distribution | Health cron expansion (social/ESP), IG image gate, connect UX, publish history UI, article+social one-click |
+
+### Explicitly deferred (all waves)
+
+- Full Surfer NLP editor · hosted blog until self-serve · TikTok/YouTube/inbox · backlink exchange · detector APIs
+
+### Verify
+
+```sh
+pnpm run typecheck
+cd lib/content-engine && npx vitest run src/articles/serp-content-score.test.ts
+cd lib/seo-tools && npx vitest run src/keywordGapAnalyzer.refresh.test.ts
+pnpm --filter @workspace/marketing-persona-app run typecheck
+```
+
+Manual `:3001` + CF: humanize (article + social), serp-score, article-quality panel, integrations/health, content-studio create flow.
+
+---
+
+## Competitive gap packaging — SHIPPED (2026-07-15)
+
+**Status:** Packaging tranche complete for competitive gaps vs Surfer/Clearscope/BLG/AutoSEO. Engine packing > new engines.
+
+### Done (all phases + follow-ups)
+- **0:** Command center, 16 CMS tiles, SERP features in rank UI, fast-lane → dashboard
+- **1:** Score explain, brief, Add & generate, Seed → clusters, GSC-first CTA, content_refresh + Refresh article
+- **2:** Dual SERP/editorial score, competitor topics, Fix gaps enhance (Next + CF + Vite)
+- **3:** Integration health API + cron `project_cms`, connect setup steps (WP/Ghost/Shopify/Webflow/Notion/Drupal/Joomla/full-app), lastHealth on tiles
+- **4:** Fast-lane autopilot + auto-queue on, internal link hub, Growth checkout when Stripe configured
+
+### Explicitly deferred (not this ship)
+- Live Surfer-style NLP editor
+- Hosted `blog.customer.goals.ac` fallback
+- Per-CMS deep wizards beyond connect checklists
+
+### Verify
+- Local `:3001` + CF: command-center, keyword-clusters, serp-score, integrations/health, Add & generate / Refresh article, Fix gaps
+- Vite Keywords: Add & generate + Refresh article + no-Semrush banner
+- **Unit (2026-07-15):** `serp-content-score` + `keywordGapAnalyzer.refresh` + gsc/keyword-ui — 12/12; seo/billing/articles suite — 27/27
+- React Doctor `--scope changed`: 73 (warnings only; no blockers)
+
+---
+
 ## CMS content output modes (2026-07-14)
 
 ### Done

@@ -41,7 +41,7 @@ export const DEFAULT_AUTOPILOT = {
   timezone: "UTC",
   publishMode: "draft" as const,
   preferredRunHour: 9,
-  autoQueueOpportunities: false,
+  autoQueueOpportunities: true,
   opportunityScoreThreshold: 60,
 };
 

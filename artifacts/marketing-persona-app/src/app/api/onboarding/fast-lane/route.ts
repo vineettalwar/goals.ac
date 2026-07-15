@@ -242,8 +242,8 @@ export async function POST(req: Request) {
         publishMode: "draft",
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
         preferredRunHour: 9,
-        autoQueueKeywordOpportunities: false,
-        keywordOpportunityMinScore: 70,
+        autoQueueOpportunities: true,
+        opportunityScoreThreshold: 70,
       },
     })
     .where(eq(websiteProjectsTable.id, projectId));
