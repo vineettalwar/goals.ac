@@ -303,6 +303,7 @@ Generated: 2026-07-15T15:20:06.179Z
 | POST | `/api/website-projects/:id/social/metrics/sync` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/metrics/sync/route.ts` | partial+ | 4-social |
 | GET | `/api/website-projects/:id/social/queue` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/queue/route.ts` | partial+ | 4-social |
 | PATCH | `/api/website-projects/:id/social/queue/:pieceId` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/queue/[pieceId]/route.ts` | partial+ | 4-social |
+| DELETE | `/api/website-projects/:id/social/queue/:pieceId` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/queue/[pieceId]/route.ts` | partial+ | 4-social |
 | GET | `/api/website-projects/:id/social/schedule-settings` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/schedule-settings/route.ts` | partial+ | 4-social |
 | PATCH | `/api/website-projects/:id/social/schedule-settings` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/schedule-settings/route.ts` | partial+ | 4-social |
 | GET | `/api/website-projects/:id/stock-credentials` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/stock-credentials/route.ts` | partial+ | core |
