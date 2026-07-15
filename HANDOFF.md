@@ -19,6 +19,10 @@
 
 **Plan:** `docs/prd/content-studio-competitive-plan.md` § Wave 4 · `docs/DECISIONS.md` 2026-07-16 Wave 4
 
+### Also landed (admin)
+
+Vite `/admin/integrations` now uses the tile + dialog UI (parity with Next). Old form + `[object Object]` fields gone. Surfaces on app.goals.ac after `cf:pages:app` / Pages rebuild.
+
 ### Morning deploy (you)
 
 ```sh
