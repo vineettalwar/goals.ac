@@ -11,6 +11,7 @@ import {
   isSeoLongformFormat,
   seoQualitySignals,
 } from "./content-piece-seo";
+import { applyInfographicToContentPiece } from "./infographic-template";
 import { AI_WRITING_FROM_SCRATCH_PROMPT, AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
 import { loadBrandVoiceGenerationContext } from "../support/brand/brand-voice-generation";
 import type { UnifiedBrandContext } from "../brand/brand-voice";
@@ -162,24 +163,29 @@ export async function enhanceContentPiece(
       const signals = seoQualitySignals(finalized.body_markdown);
       if (signals.words < 800) throw new Error("Enhanced article still too short");
 
+      const withInfographic = (piece: ContentPieceResult) =>
+        applyInfographicToContentPiece(piece, input.formatType, input.brand.companyName);
+
       if (unifiedBrand) {
         const { result: humanizedResult, humanized } = await humanizeContentPiece(finalized, unifiedBrand, {
           userApiKey,
           aiProviderOptions,
         });
         if (humanized) {
-          return finalizeSeoContentPiece(humanizedResult);
+          return withInfographic(finalizeSeoContentPiece(humanizedResult));
         }
-        return finalizeSeoContentPiece({
-          ...humanizedResult,
-          pieceMetadata: {
-            ...humanizedResult.pieceMetadata,
-            humanized: finalized.pieceMetadata?.humanized,
-          },
-        });
+        return withInfographic(
+          finalizeSeoContentPiece({
+            ...humanizedResult,
+            pieceMetadata: {
+              ...humanizedResult.pieceMetadata,
+              humanized: finalized.pieceMetadata?.humanized,
+            },
+          }),
+        );
       }
 
-      return finalized;
+      return withInfographic(finalized);
     } catch (err) {
       lastError = err;
       logger.warn({ err, attempt, pieceTitle: input.title }, "Content enhance attempt failed");

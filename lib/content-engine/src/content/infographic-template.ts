@@ -147,7 +147,7 @@ export function applyInfographicToContentPiece<
     body_markdown: body,
     pieceMetadata: {
       ...result.pieceMetadata,
-      hasInfographicBlock: injected || Boolean(result.pieceMetadata?.hasInfographicBlock),
+      hasInfographicBlock: true,
       visualSummaryMarkdown,
     },
   };

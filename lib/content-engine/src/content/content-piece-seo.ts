@@ -137,25 +137,21 @@ export function buildVisualSummaryMarkdown(input: {
 
   const bullets =
     headings.length > 0
-      ? headings.map((heading) => `- **${heading}** — core takeaway from this section`)
+      ? headings.map((heading) => `- **${heading}**`)
       : [
           input.focusKeyword
             ? `- **Focus keyword:** ${input.focusKeyword}`
             : `- **Topic:** ${input.title}`,
         ];
 
-  const table = `| Metric | Value |
-| --- | --- |
-| Word count | ${words.toLocaleString()} |
-| External citations | ${externalLinks} |
-| Internal links | ${internalLinks} |
-| FAQ answers | ${faqCount} |`;
-
+  // Callout + bullets — works in ContentMarkdown without remark-gfm tables.
   return `## Visual Summary
 
-${table}
-
-${bullets.join("\n")}
+> **${input.title.slice(0, 80)}**
+>
+> ${words.toLocaleString()} words · ${externalLinks} citations · ${internalLinks} internal links · ${faqCount} FAQ answers
+>
+> ${bullets.join("\n> ")}
 `;
 }
 

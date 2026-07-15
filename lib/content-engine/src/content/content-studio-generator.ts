@@ -39,7 +39,7 @@ import {
   enrichContentPieceImages,
   parseImageSettings,
 } from "../articles/article-image-enricher";
-import { injectInfographicMarkdownBlock, shouldInjectInfographic } from "./infographic-template";
+import { applyInfographicToContentPiece } from "./infographic-template";
 import { loadStockCredentialContextForProject } from "../support/integrations/stock-credentials";
 import {
   buildDeeplGenerationLanguageLine,
@@ -729,21 +729,7 @@ async function postProcessGeneratedResult(
     logger.warn({ err, format }, "Stock image enrichment skipped");
   }
 
-  if (shouldInjectInfographic(format)) {
-    const withInfographic = injectInfographicMarkdownBlock(result.body_markdown, {
-      title: result.title,
-      keyword: result.target_keyword,
-      brandName: brand.companyName,
-    });
-    result = {
-      ...result,
-      body_markdown: withInfographic,
-      pieceMetadata: {
-        ...result.pieceMetadata,
-        hasInfographicBlock: true,
-      },
-    };
-  }
+  result = applyInfographicToContentPiece(result, format, brand.companyName);
 
   return result;
 }
