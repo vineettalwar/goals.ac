@@ -1,5 +1,16 @@
 # Session Handoff
 
+## Ponytail audit documented (2026-07-16)
+
+Report: [`docs/audits/2026-07-16-ponytail-frontend.md`](docs/audits/2026-07-16-ponytail-frontend.md)
+
+- Cursor rule + skills installed; complexity audit of Next + `goals-app-ui` + `app-shell`
+- **Do not delete `goals-app-ui`** — it is `app.goals.ac` Pages (`docs/deploy-cloudflare.md`)
+- High-confidence deletes: Next studio leftovers (~480 LOC)
+- Unfinished / deferred / partial features catalogued in that doc
+
+---
+
 ## WordPress featured data URI upload (2026-07-16)
 
 **Supported** (connector, not PHP plugin): when `featuredImageUrl` is `data:image/png` or `data:image/jpeg` base64 and no stock featured image was uploaded, `prepareWordPressImages` decodes, optimizes to WebP, and uploads via plugin `/media` or WP REST.

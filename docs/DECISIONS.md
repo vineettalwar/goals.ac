@@ -1,3 +1,15 @@
+## 2026-07-16 — Ponytail audit is advisory; do not delete goals-app-ui
+
+**Decision:** Treat the 2026-07-16 ponytail frontend audit as a complexity backlog, not a delete mandate. Keep `artifacts/goals-app-ui` — it is the Cloudflare Pages product host for `app.goals.ac`. Prefer high-confidence leftover deletion (Next studio forks) and implement-first parity gaps over package removal.
+
+**Alternatives considered:**
+- Delete `goals-app-ui` because Next + app-shell exist — rejected; Pages deploy pipeline and production hostname depend on it
+- Auto-apply every ponytail “shrink” finding (CMS dialog mega-merge) — deferred until a focused PRD + visual parity
+
+**Reason:** Explore agents mis-ranked a shipping host as dead code; deploy docs contradict that.
+
+**Implications:** Canonical report at `docs/audits/2026-07-16-ponytail-frontend.md`; unfinished features live in that doc § Features not fully implemented.
+
 ## 2026-07-15 — Persist `outputMode` on publish_records
 
 **Decision:** Store the resolved CMS `outputMode` (nullable text) on each `publish_records` row when a publish starts, so publish history can badge the format that was actually sent.
