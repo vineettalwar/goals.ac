@@ -34,11 +34,7 @@ import {
 } from "./create-content-modal-parts";
 import {
   FORMAT_META,
-  LINKEDIN_ARCHETYPES,
-  LINKEDIN_HOOK_TYPES,
   type ContentFormatType,
-  type LinkedInArchetypeId,
-  type LinkedInHookId,
 } from "./content-studio-format-data";
 import type { PublishDestinationId, CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import { getConnectedDestinationsForFormat } from "@/lib/projects/publishing-destinations";
