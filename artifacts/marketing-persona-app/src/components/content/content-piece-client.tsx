@@ -325,6 +325,18 @@ export function ContentPieceClient({
             const updated = await res.json();
             setPieceRecord((prev) => mergePieceJson(updated, prev));
             setSaveMessage("Saved.");
+            
+            // Auto-refresh SERP score after successful save
+            if (piece.id && fetchDualScore) {
+              setRefreshingSerpAfterSave(true);
+              try {
+                await fetchDualScore(piece.id);
+              } catch {
+                // Silent failure — manual refresh still available
+              } finally {
+                setRefreshingSerpAfterSave(false);
+              }
+            }
           } finally {
             setSaving(false);
           }

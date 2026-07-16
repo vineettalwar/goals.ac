@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
+import { scoreCoverageChecklist } from "@workspace/content-engine/coverage-checklist";
 import { ScoreRing } from "../section-panels/shared";
 import type { ContentPieceMetadata } from "./types";
 
@@ -17,6 +18,8 @@ export type DualContentScore = {
   combined: number;
   publishReady: boolean;
   competitorDiff?: Array<{ title: string; covered: boolean; overlap: number }>;
+  /** Raw SERP snapshot — PAA questions live at `serpFeatures.peopleAlsoAsk`. */
+  serpFeatures?: Record<string, unknown> | null;
   scoredAt?: string;
 };
 
@@ -24,6 +27,8 @@ type ArticleQualityPanelProps = {
   bodyMarkdown: string;
   wordCount?: number;
   metadata?: ContentPieceMetadata | null;
+  /** Secondary keywords for the coverage checklist (brief/piece meta). */
+  secondaryKeywords?: string[] | null;
   contentPieceId?: number | null;
   /** Host fetches `/api/content-pieces/:id/serp-score` (JWT or cookie). */
   fetchDualScore?: (contentPieceId: number) => Promise<DualContentScore | null>;
@@ -58,6 +63,7 @@ export function ArticleQualityPanel({
   bodyMarkdown,
   wordCount,
   metadata,
+  secondaryKeywords,
   contentPieceId,
   fetchDualScore,
   dualScore,
@@ -121,6 +127,19 @@ export function ArticleQualityPanel({
     brandVoicePassages,
   };
   const result = scoreArticleQuality(scoreInput);
+
+  const peopleAlsoAsk = Array.isArray(dual?.serpFeatures?.peopleAlsoAsk)
+    ? (dual!.serpFeatures!.peopleAlsoAsk as unknown[]).filter(
+        (q): q is string => typeof q === "string",
+      )
+    : [];
+  const h2Topics = dual?.competitorDiff?.map((row) => row.title) ?? [];
+  const coverage = scoreCoverageChecklist({
+    bodyMarkdown: debouncedBody,
+    secondaryKeywords,
+    peopleAlsoAsk,
+    h2Topics,
+  });
 
   useEffect(() => {
     setFetchedDual(null);
@@ -280,6 +299,36 @@ export function ArticleQualityPanel({
               ))}
             </ul>
           ) : null}
+        </div>
+      ) : null}
+
+      {coverage.totalCount > 0 ? (
+        <div className="space-y-2 border-t border-border pt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Coverage checklist{" "}
+            <span className="font-normal italic tracking-normal text-muted-foreground/70">
+              — not Surfer NLP
+            </span>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {coverage.coveredCount}/{coverage.totalCount} secondary keywords, PAA questions, and
+            rival topics mentioned in the draft ({coverage.percent}%)
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {coverage.items.map((item, index) => (
+              <span
+                key={`${item.type}-${item.term}-${index}`}
+                className={
+                  item.covered
+                    ? "rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    : "rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
+                }
+                title={item.type === "secondary" ? "Secondary keyword" : item.type === "paa" ? "PAA question" : "Rival topic"}
+              >
+                {item.covered ? "✓" : "○"} {item.term}
+              </span>
+            ))}
+          </div>
         </div>
       ) : null}
 

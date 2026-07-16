@@ -344,6 +344,13 @@ export function useContentPieceData(pieceId: string | undefined) {
         });
         setCachedPiece(mapPiece(updated));
         setSaveMessage("Saved.");
+        
+        // Auto-refresh SERP score after successful save
+        try {
+          await apiFetch(`/api/content-pieces/${pieceId}/serp-score`);
+        } catch {
+          // Silent failure — manual refresh still available
+        }
       } catch (err) {
         setSaveMessage(err instanceof Error ? err.message : "Save failed");
       } finally {
