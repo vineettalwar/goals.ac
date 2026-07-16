@@ -20,13 +20,22 @@ No schema or pipeline changes needed; `listPublishRecordsForProject` already ret
 
 | # | Item | Status |
 |---|---|---|
-| 4.0 | Product humanize before/after in Studio | in flight |
-| 4.1 | Human-voice actionable detail | done |
-| 4.2 | Social composer Humanize | queued |
-| 4.3 | Light term checklist (secondary/PAA) | done |
-| 4.4 | SERP refresh honesty | done |
-| 4.5 | Brief outline insert when body present | queued |
-| 4.6 | Social publish_records | done |
+| 4.0 | Product humanize before/after in Studio | **done** (snapshot + toggle + revert; Next + Vite + CF) |
+| 4.1 | Human-voice actionable detail | **done** |
+| 4.2 | Social composer Humanize | **done** |
+| 4.3 | Light term checklist (secondary/PAA) | **done** |
+| 4.4 | SERP refresh honesty | **done** |
+| 4.5 | Brief outline insert when body present | **done** |
+| 4.6 | Social publish_records | **done** (UI shows social history) |
+
+### Wave 4.7+ (continuing — remaining MEDIUM gaps)
+
+| # | Item | Status |
+|---|---|---|
+| 4.7 | Soft media honesty Notion/Webflow (+ IG stock path clarity) | in flight |
+| 4.8 | Coverage checklist actionable (copy/insert missing) | queued |
+| 4.9 | Fix gaps consumes missing terms + SERP gaps | queued |
+| 4.10 | Article scheduled/planned publish honesty in Studio | queued |
 
 **Plan:** `docs/prd/content-studio-competitive-plan.md` § Wave 4 · `docs/DECISIONS.md` 2026-07-16 Wave 4
 
