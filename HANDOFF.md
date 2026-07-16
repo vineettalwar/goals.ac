@@ -1,5 +1,33 @@
 # Session Handoff
 
+## Overnight complete — Wave 4 trust surfaces (2026-07-16 → 17)
+
+**Status:** Wave 4.0–4.16 + warning/ack follow-ups **shipped** on `main` (ahead of origin; **not** CF-deployed — you deploy morning).
+
+**Not done (deferred / ops):** Surfer NLP, hosted blog, TikTok, invent R2 buckets, Drupal File entities, dual create merge, ponytail deletes, named GSC case studies, TYPO3 live smoke.
+
+### Morning for you
+
+```sh
+pnpm run typecheck
+git push
+pnpm run cf:edge:deploy && pnpm run cf:deploy:jobs && pnpm run cf:pages:marketing && pnpm run cf:pages:app
+# optional: wrangler r2 bucket + CONTENT_MEDIA_PUBLIC_BASE_URL (content-media PRD)
+```
+
+### Wave 4 queue (closed)
+
+| # | Item | Status |
+|---|---|---|
+| 4.0–4.6 | Before/after, human-voice, social Humanize, checklist, SERP refresh, brief insert, social history | **done** |
+| 4.7–4.10 | Notion/Webflow media, actionable chips, Fix gaps+terms, plannedDate | **done** |
+| 4.11–4.16 | Async platform fix, Vite plannedDate, SERP after humanize/enhance, schedule honesty, Joomla amber, social Studio link | **done** |
+| 4.17 | Persist `lastPublishWarnings` + gate media acks + composer before/after | **done** (`d345e2e`) |
+
+**Plan:** `docs/prd/content-studio-competitive-plan.md` · Decision: `docs/DECISIONS.md` Wave 4
+
+---
+
 ## Wave 4.11+ reliability (2026-07-16)
 
 | # | Item | Status |
