@@ -32,7 +32,6 @@ import {
 import {
   ConnectSetupSteps,
   getCmsSetupSteps,
-  getEspSetupSteps,
   getSocialSetupSteps,
 } from "@workspace/app-shell/integrations";
 import {
@@ -512,13 +511,11 @@ function CmsConnectionCard({
           </div>
         ) : (
           <div className="space-y-4">
-            <ConnectSetupSteps
-              steps={
-                destination.category === "esp"
-                  ? getEspSetupSteps(destination.id)
-                  : getCmsSetupSteps(destination.id, destination.label)
-              }
-            />
+            {destination.category !== "esp" ? (
+              <ConnectSetupSteps
+                steps={getCmsSetupSteps(destination.id, destination.label)}
+              />
+            ) : null}
             {supportsMultipleConnectionMethods(destination.id) && (
               <div className="space-y-2">
                 <Label>Connection method</Label>

@@ -171,22 +171,19 @@ export function getSocialSetupSteps(destinationId: string): string[] {
   }
 }
 
-/** ESP (email) connect checklists — Beehiiv, ConvertKit, Mailchimp. */
+/** ESP (email) connect checklists — Beehiiv, ConvertKit, Mailchimp (dialogs only). */
 export const ESP_CONNECT_STEPS: Record<string, string[]> = {
   beehiiv: [
-    "Create an API key in Beehiiv (Settings → Integrations / API).",
-    "Paste the API key and Publication ID into the fields below.",
-    "Save, then Run health check on Integrations to confirm publish is ready.",
+    "Create an API key in Beehiiv → Settings → Integrations.",
+    "Paste API key + Publication ID below, then save.",
   ],
   convertkit: [
-    "Copy your ConvertKit (Kit) API secret from Settings → Developer.",
-    "Paste the API secret and optional Form ID into the fields below.",
-    "Save, then Run health check to verify the connection.",
+    "Copy your Kit API secret from Settings → Developer.",
+    "Paste secret (+ optional Form ID) below, then save.",
   ],
   mailchimp: [
-    "Create a Mailchimp API key (Account → Extras → API keys).",
-    "Paste the API key, server prefix (e.g. us1), and Audience list ID.",
-    "Save, then Run health check to confirm the list is reachable.",
+    "Create an API key under Account → Extras → API keys.",
+    "Paste key, server prefix (e.g. us1), and Audience ID below.",
   ],
 };
 
@@ -195,8 +192,7 @@ export function getEspSetupSteps(platformKey: string | undefined): string[] {
     return ESP_CONNECT_STEPS[platformKey];
   }
   return [
-    "Create an API key in your email platform’s developer or account settings.",
-    "Paste the key and publication or audience list ID into the fields below.",
-    "Save, then Run health check on Integrations to confirm publish is ready.",
+    "Create an API key in your email platform settings.",
+    "Paste the key and list/publication ID below, then save.",
   ];
 }

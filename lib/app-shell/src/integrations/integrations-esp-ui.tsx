@@ -6,7 +6,6 @@ import {
   type EspPlatformId,
 } from "./publishing-destinations";
 import { EspDestinationIcon, IntegrationIconBox } from "./integration-icons";
-import { ConnectSetupSteps, getEspSetupSteps } from "./connect-setup-steps";
 
 export { countEspConnections } from "./publishing-destinations";
 
@@ -43,25 +42,6 @@ export function IntegrationsEspPanel({
 
   return (
     <div className="space-y-4">
-      {fullAppIntegrationsUrl ? (
-        <p className="text-xs text-muted-foreground">
-          Publish email sequences from Content Studio. OAuth ESPs can be configured in{" "}
-          <a
-            href={fullAppIntegrationsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="font-medium text-primary hover:underline"
-          >
-            Integrations
-          </a>
-          .
-        </p>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Publish email sequences from Content Studio.
-        </p>
-      )}
-
       {saveMessage ? (
         <p
           className={cn(
@@ -126,9 +106,6 @@ export function IntegrationsEspPanel({
                 ) : null}
                 {connected && typeof row?.apiSecretHint === "string" ? (
                   <p className="text-xs text-muted-foreground">Secret …{row.apiSecretHint}</p>
-                ) : null}
-                {!connected ? (
-                  <ConnectSetupSteps steps={getEspSetupSteps(destination.id)} />
                 ) : null}
               </div>
 
