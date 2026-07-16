@@ -363,6 +363,11 @@ async function handleEnhance(
   ]);
   if (!billingPrep.ok) return withCors(request, billingPrep.response);
 
+  const enhanceBody = (await request.json().catch(() => null)) as { missingTerms?: unknown } | null;
+  const missingTerms = Array.isArray(enhanceBody?.missingTerms)
+    ? enhanceBody.missingTerms.filter((term): term is string => typeof term === "string")
+    : undefined;
+
   try {
     let serpGaps: string[] = [];
     try {
@@ -384,6 +389,7 @@ async function handleEnhance(
         brand: { ...brand, projectId: piece.websiteProjectId },
         metaDescription: piece.pieceMetadata?.metaDescription ?? null,
         serpGaps,
+        missingTerms,
       },
       existingPieceTitles.filter((title) => title !== piece.title),
       userApiKey,

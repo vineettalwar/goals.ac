@@ -57,6 +57,8 @@ export interface EnhanceContentInput {
   metaDescription?: string | null;
   /** SERP / competitor gaps from dual score — prioritized in the upgrade pass. */
   serpGaps?: string[];
+  /** Uncovered secondary keywords / PAA questions / rival topics from the coverage checklist. */
+  missingTerms?: string[];
 }
 
 function buildEnhancePrompt(
@@ -64,7 +66,7 @@ function buildEnhancePrompt(
   existingPieceTitles: string[],
   brandVoiceContext?: string,
 ): string {
-  const gaps = describeQualityGaps(input.bodyMarkdown);
+  const gaps = describeQualityGaps(input.bodyMarkdown, undefined, input.missingTerms);
   const serpGapBlock =
     input.serpGaps && input.serpGaps.length > 0
       ? `\nSERP / competitor gaps (fix these first):\n${input.serpGaps

@@ -437,12 +437,14 @@ export function ContentPieceClient({
         }}
         enhancing={enhancing}
         enhanceMessage={enhanceMessage}
-        onEnhance={async () => {
+        onEnhance={async (missingTerms) => {
           setEnhancing(true);
           setEnhanceMessage(null);
           try {
             const res = await fetch(`/api/content-pieces/${pieceId}/enhance`, {
               method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ missingTerms }),
             });
             if (!res.ok) {
               const data = (await res.json().catch(() => null)) as { error?: string } | null;

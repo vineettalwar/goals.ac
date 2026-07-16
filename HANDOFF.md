@@ -1,5 +1,26 @@
 # Session Handoff
 
+## Wave 4.9 — Fix gaps enhance consumes coverage checklist + SERP gaps (2026-07-16)
+
+**Status:** done. "Fix gaps" (quality panel's enhance trigger) now tells the AI exactly which coverage-checklist terms are missing, on top of the existing SERP gaps.
+
+- `content-quality-panel.tsx` computes `missingTerms` (uncovered secondary keywords / PAA questions / rival topics from the coverage checklist) and passes them to `onEnhance(missingTerms)` when "Fix gaps" is clicked
+- `onEnhance` prop widened to `(missingTerms?: string[]) => void | Promise<void>` through `ContentPieceView` → `ContentPieceAside` → `ArticleQualityPanel` (toolbar's plain "Enhance quality" button still calls with no args)
+- `EnhanceContentInput.missingTerms` (new, optional) flows into `describeQualityGaps(body, wordCount, missingTerms)`, which appends a "Coverage checklist" gap line for the enhance prompt to prioritize
+- Hosts thread the optional `missingTerms` through to the enhance API: Next route (`content-pieces/[id]/enhance`) and cf-write-worker `handleEnhance` both read `missingTerms` from the POST body; Next client and Vite `use-content-piece-data.ts` `enhance()` send it
+
+**Changed files:**
+- `lib/content-engine/src/content/content-piece-seo.ts` — `describeQualityGaps` optional `missingTerms` param
+- `lib/content-engine/src/content/content-piece-enhance.ts` — `EnhanceContentInput.missingTerms`, wired into prompt
+- `lib/app-shell/src/content-piece/content-quality-panel.tsx` — computes + forwards missing terms
+- `lib/app-shell/src/content-piece/content-piece-ui.tsx` — widened `onEnhance` type through the view/aside chain
+- `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/enhance/route.ts` — reads `missingTerms` from body
+- `artifacts/marketing-persona-app/src/components/content/content-piece-client.tsx` — sends `missingTerms`
+- `artifacts/cf-write-worker/src/content-pieces-ai.ts` — reads `missingTerms` from body
+- `artifacts/goals-app-ui/src/hooks/use-content-piece-data.ts` — `enhance(missingTerms?)` sends it
+
+**Verify:** `pnpm run typecheck` (or per-package typecheck for `content-engine`, `app-shell`, `marketing-persona-app`, `goals-ac`, `cf-write-worker`).
+
 ## Wave 4.10 — Article plannedDate / schedule honesty in Studio publish flow (2026-07-16)
 
 **Status:** done. Articles already have `plannedDate` column (Drizzle schema, used by `processScheduledPublishSweep` job). Added UI honesty for the publish flow:
@@ -51,8 +72,8 @@ No schema or pipeline changes needed; `listPublishRecordsForProject` already ret
 |---|---|---|
 | 4.7 | Soft media honesty Notion/Webflow (+ IG stock path clarity) | **done** |
 | 4.8 | Coverage checklist actionable (copy/insert missing) | queued |
-| 4.9 | Fix gaps consumes missing terms + SERP gaps | queued |
-| 4.10 | Article scheduled/planned publish honesty in Studio | queued |
+| 4.9 | Fix gaps consumes missing terms + SERP gaps | **done** |
+| 4.10 | Article scheduled/planned publish honesty in Studio | **done** |
 
 **Plan:** `docs/prd/content-studio-competitive-plan.md` § Wave 4 · `docs/DECISIONS.md` 2026-07-16 Wave 4
 

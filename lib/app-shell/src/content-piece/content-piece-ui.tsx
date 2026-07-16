@@ -415,7 +415,7 @@ function ContentPieceToolbar({
   queueingSocial?: boolean;
   onCopy: () => void;
   onRegenerate?: () => void | Promise<void>;
-  onEnhance?: () => void | Promise<void>;
+  onEnhance?: (missingTerms?: string[]) => void | Promise<void>;
   onHumanize?: () => void;
   onMarkReady?: () => void | Promise<void>;
   onGenerate?: () => void | Promise<void>;
@@ -768,7 +768,7 @@ function ContentPieceAside({
   renderLink: (props: ContentPieceLinkProps) => ReactNode;
   onStatusChange: (value: "draft" | "ready") => void;
   onPlannedDateChange: (value: string) => void;
-  onEnhance?: () => void | Promise<void>;
+  onEnhance?: (missingTerms?: string[]) => void | Promise<void>;
   onPublish?: () => void;
   onQueueSocial?: () => void;
   queueingSocial?: boolean;
@@ -870,8 +870,14 @@ function ContentPieceAside({
           dualScore={dual}
           savedBodyMarkdown={piece.bodyMarkdown ?? ""}
           showScoreDelta={editing}
+          editing={editing}
+          onInsertMissingTerm={
+            onInsertOutline && editing
+              ? (snippet) => onInsertOutline(`${displayBody}\n\n${snippet}`)
+              : undefined
+          }
           canEnhance={canEnhance}
-          onEnhance={onEnhance ? () => void onEnhance() : undefined}
+          onEnhance={onEnhance ? (missingTerms) => void onEnhance(missingTerms) : undefined}
           enhancing={enhancing}
         />
       ) : null}
@@ -1009,7 +1015,8 @@ export function ContentPieceView({
   onRegenerate?: () => void | Promise<void>;
   regenerating?: boolean;
   regenerateMessage?: string | null;
-  onEnhance?: () => void | Promise<void>;
+  /** Called with the coverage checklist's missing terms when triggered from the quality panel's "Fix gaps" button. */
+  onEnhance?: (missingTerms?: string[]) => void | Promise<void>;
   enhancing?: boolean;
   enhanceMessage?: string | null;
   onRepurpose?: () => void;

@@ -60,7 +60,8 @@ type ArticleQualityPanelProps = {
   editing?: boolean;
   /** Host appends the stub markdown/sentence to the draft body. Only used while `editing`. */
   onInsertMissingTerm?: (snippet: string) => void;
-  onEnhance?: () => void;
+  /** Called with the current coverage checklist's missing terms (secondary keywords / PAA / rival topics), if any. */
+  onEnhance?: (missingTerms?: string[]) => void;
   enhancing?: boolean;
   canEnhance?: boolean;
 };
@@ -158,6 +159,7 @@ export function ArticleQualityPanel({
     peopleAlsoAsk,
     h2Topics,
   });
+  const missingTerms = coverage.items.filter((item) => !item.covered).map((item) => item.term);
 
   useEffect(() => {
     setFetchedDual(null);
@@ -350,6 +352,11 @@ export function ArticleQualityPanel({
             {coverage.coveredCount}/{coverage.totalCount} secondary keywords, PAA questions, and
             rival topics mentioned in the draft ({coverage.percent}%)
           </p>
+          {coverage.coveredCount < coverage.totalCount ? (
+            <p className="text-[11px] text-muted-foreground/80">
+              Click a missing term to {canInsertMissingTerm ? "insert it into the draft" : "copy it"}.
+            </p>
+          ) : null}
           <div className="flex flex-wrap gap-1.5">
             {coverage.items.map((item, index) => {
               const key = `${item.type}-${item.term}-${index}`;
@@ -430,7 +437,7 @@ export function ArticleQualityPanel({
           <button
             type="button"
             className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground disabled:opacity-50"
-            onClick={onEnhance}
+            onClick={() => onEnhance(missingTerms.length ? missingTerms : undefined)}
             disabled={enhancing}
           >
             {enhancing

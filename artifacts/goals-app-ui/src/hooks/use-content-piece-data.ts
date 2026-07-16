@@ -418,7 +418,7 @@ export function useContentPieceData(pieceId: string | undefined) {
     }
   }, [pieceId, piece, setCachedPiece]);
 
-  const enhance = useCallback(async () => {
+  const enhance = useCallback(async (missingTerms?: string[]) => {
     if (!pieceId || !piece) return;
     setEnhancing(true);
     setEnhanceMessage(null);
@@ -426,6 +426,7 @@ export function useContentPieceData(pieceId: string | undefined) {
       const updated = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}/enhance`, {
         method: "POST",
         headers: { "content-type": "application/json" },
+        body: JSON.stringify({ missingTerms }),
         timeoutMs: API_FETCH_AI_TIMEOUT_MS,
       });
       setCachedPiece(mapPiece(updated));

@@ -301,7 +301,11 @@ export function buildSeoLongformJsonSchema(keyword: string): string {
 }`;
 }
 
-export function describeQualityGaps(body: string, wordCount?: number): string {
+export function describeQualityGaps(
+  body: string,
+  wordCount?: number,
+  missingTerms?: string[] | null,
+): string {
   const signals = seoQualitySignals(body);
   const words = wordCount ?? signals.words;
   const gaps: string[] = [];
@@ -318,6 +322,11 @@ export function describeQualityGaps(body: string, wordCount?: number): string {
   }
   const h2Count = (body.match(/^## /gm) ?? []).length;
   if (h2Count < 4) gaps.push(`Structure: ${h2Count} H2 sections — need at least 4 named sections`);
+  if (missingTerms?.length) {
+    gaps.push(
+      `Coverage checklist: missing secondary keywords, PAA questions, or rival topics — weave in: ${missingTerms.slice(0, 12).join(", ")}`,
+    );
+  }
 
   if (gaps.length === 0) return "Draft meets SEO quality targets. Polish prose and tighten meta_description if needed.";
   return gaps.map((g) => `- ${g}`).join("\n");

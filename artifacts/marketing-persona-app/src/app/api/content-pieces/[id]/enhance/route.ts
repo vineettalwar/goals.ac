@@ -24,7 +24,7 @@ import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { userId, error } = await requireAuth();
@@ -40,6 +40,11 @@ export async function POST(
   const { id: idStr } = await params;
   const id = Number(idStr);
   if (isNaN(id)) return NextResponse.json({ error: "Invalid id" }, { status: 400 });
+
+  const body = (await req.json().catch(() => null)) as { missingTerms?: unknown } | null;
+  const missingTerms = Array.isArray(body?.missingTerms)
+    ? body.missingTerms.filter((term): term is string => typeof term === "string")
+    : undefined;
 
   const { piece, error: ownerError } = await assertPieceOwner(id, userId!);
   if (ownerError === "not_found") {
@@ -144,6 +149,7 @@ export async function POST(
         brand: { ...ctx.brand, projectId: ctx.projectId },
         metaDescription: piece!.pieceMetadata?.metaDescription ?? null,
         serpGaps: dual.serp.gaps,
+        missingTerms,
       },
       existingPieceTitles.filter((title) => title !== piece!.title),
       userApiKey,
