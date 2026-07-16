@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { PenLine, Sparkles } from "lucide-react";
+import { FileText, PenLine } from "lucide-react";
 import { MarketingSection } from "@/components/marketing/sections/marketing-section";
 import { CONTACT_CTA_LABEL, CONTACT_HREF, PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
@@ -77,7 +77,7 @@ export function BrandVoiceShowcase() {
 
         <div className={`${glassCard} overflow-hidden`}>
           <div className="border-b border-white/10 px-5 py-3 flex items-center gap-2 text-xs text-white/50">
-            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <FileText className="h-3.5 w-3.5 text-primary" />
             Generated excerpt · humanized
           </div>
           <div className="p-5 space-y-4">

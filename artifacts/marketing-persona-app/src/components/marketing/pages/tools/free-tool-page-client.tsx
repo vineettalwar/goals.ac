@@ -45,18 +45,23 @@ function UrlTool({ api }: { api: string }) {
     setLoading(true);
     setError(null);
     setResult(null);
-    const res = await fetch(publicApiUrl(api), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) {
-      setError(data.error ?? "Failed");
-      return;
+    try {
+      const res = await fetch(publicApiUrl(api), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const data = (await res.json().catch(() => null)) as { error?: string } | null;
+      if (!res.ok) {
+        setError(data?.error ?? "Failed");
+        return;
+      }
+      setResult(JSON.stringify(data, null, 2));
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setResult(JSON.stringify(data, null, 2));
   }
 
   return (
@@ -65,7 +70,11 @@ function UrlTool({ api }: { api: string }) {
         <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://yoursite.com" />
         <Button onClick={run} disabled={loading || !url}>{loading ? "…" : "Run"}</Button>
       </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
+      )}
       {result && <pre className="text-xs bg-white/5 rounded-lg p-4 overflow-x-auto max-h-96 text-white/80">{result}</pre>}
     </div>
   );

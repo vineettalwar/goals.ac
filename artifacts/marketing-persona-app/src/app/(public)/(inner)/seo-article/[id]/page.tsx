@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { db } from "@workspace/db";
 import { seoArticlesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
@@ -12,6 +12,10 @@ export function generateStaticParams() {
 export const dynamicParams = false;
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  if (process.env.MARKETING_STATIC === "1") {
+    return { title: "SEO Article", robots: { index: false, follow: false } };
+  }
+
   const { id } = await params;
   const numericId = parseInt(id, 10);
   if (isNaN(numericId)) return {};
@@ -27,6 +31,10 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 }
 
 export default async function PublicSeoArticlePage({ params }: { params: Promise<{ id: string }> }) {
+  if (process.env.MARKETING_STATIC === "1") {
+    permanentRedirect("/article-quality");
+  }
+
   const { id } = await params;
   const numericId = parseInt(id, 10);
   if (isNaN(numericId)) notFound();

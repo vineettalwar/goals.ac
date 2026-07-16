@@ -71,7 +71,13 @@ function combineEditorialSerp(editorialTotal: number, serpTotal: number): number
   return Math.round(editorialTotal * 0.55 + serpTotal * 0.45);
 }
 
-export function ArticleQualityPanel({
+type ArticleQualityPanelBodyProps = ArticleQualityPanelProps & {
+  dual: DualScore | null;
+  refetchSerpScore?: () => void;
+  isRefreshingSerp?: boolean;
+};
+
+function ArticleQualityPanelBody({
   onEnhance,
   enhancing = false,
   canEnhance = false,
@@ -85,8 +91,11 @@ export function ArticleQualityPanel({
   brandVoiceExcerpt,
   brandGlossary: brandGlossaryProp,
   brandVoicePassages: brandVoicePassagesProp,
+  dual,
+  refetchSerpScore,
+  isRefreshingSerp = false,
   ...props
-}: ArticleQualityPanelProps) {
+}: ArticleQualityPanelBodyProps) {
   const [debouncedBody, setDebouncedBody] = useState(bodyMarkdown);
   const [debouncedWordCount, setDebouncedWordCount] = useState(wordCount);
 
@@ -103,19 +112,6 @@ export function ArticleQualityPanel({
     }, EDITORIAL_SCORE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [bodyMarkdown, wordCount, savedBodyMarkdown]);
-
-  // SERP half is DB-bodied on the server — do not refetch on draft keystrokes.
-  // Response also carries brand voice context for local Human voice scoring.
-  const {
-    data: dual = null,
-    refetch: refetchSerpScore,
-    isFetching: isRefreshingSerp,
-  } = useQuery({
-    queryKey: ["content-piece-serp-score", contentPieceId],
-    queryFn: () => fetchDualScore(contentPieceId!),
-    enabled: Boolean(contentPieceId),
-    staleTime: 30_000,
-  });
 
   const draftDiffersFromSaved =
     savedBodyMarkdown != null && bodyMarkdown !== savedBodyMarkdown;
@@ -166,6 +162,9 @@ export function ArticleQualityPanel({
   const scoreDelta =
     showScoreDelta && baselineTotal != null ? displayTotal - baselineTotal : 0;
 
+  const displaySeoTitle = props.seoTitle ?? props.metaTitle;
+  const displayOgTitle = props.ogTitle ?? displaySeoTitle;
+
   return (
     <div className="paper-card rounded-xl p-5 space-y-4">
       <div className="flex items-center gap-4">
@@ -201,7 +200,7 @@ export function ArticleQualityPanel({
               {formatScoreDelta(scoreDelta)}
             </p>
           ) : null}
-          {contentPieceId ? (
+          {contentPieceId && refetchSerpScore ? (
             <Button
               type="button"
               variant="link"
@@ -309,29 +308,77 @@ export function ArticleQualityPanel({
         </div>
       ) : null}
 
-      {(props.seoTitle || props.metaDescription || props.ogTitle || props.ogDescription) && (
+      {(displaySeoTitle || props.metaDescription || displayOgTitle || props.ogDescription) && (
         <div className="pt-2 border-t border-border space-y-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             SEO metadata
           </p>
-          {props.seoTitle && (
+          {displaySeoTitle ? (
             <div>
               <p className="text-[10px] text-muted-foreground mb-1">
-                SEO title ({props.seoTitle.length} chars)
+                SEO title ({displaySeoTitle.length} chars)
               </p>
-              <p className="text-xs leading-relaxed">{props.seoTitle}</p>
+              <p className="text-xs leading-relaxed">{displaySeoTitle}</p>
             </div>
-          )}
-          {props.metaDescription && (
+          ) : null}
+          {props.metaDescription ? (
             <div>
               <p className="text-[10px] text-muted-foreground mb-1">
                 Meta description ({props.metaDescription.length} chars)
               </p>
               <p className="text-xs leading-relaxed">{props.metaDescription}</p>
             </div>
-          )}
+          ) : null}
+          {displayOgTitle && displayOgTitle !== displaySeoTitle ? (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1">
+                Open Graph title ({displayOgTitle.length} chars)
+              </p>
+              <p className="text-xs leading-relaxed">{displayOgTitle}</p>
+            </div>
+          ) : null}
+          {props.ogDescription && props.ogDescription !== props.metaDescription ? (
+            <div>
+              <p className="text-[10px] text-muted-foreground mb-1">
+                Open Graph description ({props.ogDescription.length} chars)
+              </p>
+              <p className="text-xs leading-relaxed">{props.ogDescription}</p>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
   );
+}
+
+function ArticleQualityPanelWithSerp(
+  props: ArticleQualityPanelProps & { contentPieceId: number },
+) {
+  const { contentPieceId, ...rest } = props;
+  const {
+    data: dual = null,
+    refetch: refetchSerpScore,
+    isFetching: isRefreshingSerp,
+  } = useQuery({
+    queryKey: ["content-piece-serp-score", contentPieceId, rest.savedBodyMarkdown ?? ""],
+    queryFn: () => fetchDualScore(contentPieceId),
+    staleTime: 30_000,
+  });
+
+  return (
+    <ArticleQualityPanelBody
+      {...rest}
+      contentPieceId={contentPieceId}
+      dual={dual}
+      refetchSerpScore={() => void refetchSerpScore()}
+      isRefreshingSerp={isRefreshingSerp}
+    />
+  );
+}
+
+export function ArticleQualityPanel(props: ArticleQualityPanelProps) {
+  if (props.contentPieceId) {
+    return <ArticleQualityPanelWithSerp {...props} contentPieceId={props.contentPieceId} />;
+  }
+  return <ArticleQualityPanelBody {...props} dual={null} />;
 }

@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { GeoAuditResultLoader } from "@/components/marketing/pages/tools/geo-audit-result-loader";
+import { MarketingPageSkeleton } from "@/components/skeletons/marketing-page-skeleton";
 
 /** Static marketing export needs a shell path; real ids resolve client-side via public API. */
 export function generateStaticParams() {
   return [{ id: "0" }];
 }
 
+/** Static export needs false — build-marketing-static.mjs patches this before `next build`. */
 export const dynamicParams = true;
 
 export const metadata: Metadata = {
@@ -15,5 +18,9 @@ export const metadata: Metadata = {
 };
 
 export default function GeoAuditResultPage() {
-  return <GeoAuditResultLoader />;
+  return (
+    <Suspense fallback={<MarketingPageSkeleton />}>
+      <GeoAuditResultLoader />
+    </Suspense>
+  );
 }

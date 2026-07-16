@@ -34,6 +34,10 @@ const nextConfig: NextConfig = {
     },
   },
   webpack(config, { isServer }) {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@/app/root-providers": path.join(appDir, "src/app/marketing-providers.tsx"),
+    };
     if (!isServer) {
       config.resolve.alias = {
         ...config.resolve.alias,

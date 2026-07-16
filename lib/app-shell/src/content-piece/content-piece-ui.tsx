@@ -794,7 +794,7 @@ function ContentPieceAside({
     return () => {
       cancelled = true;
     };
-  }, [piece.id, fetchDualScore]);
+  }, [piece.id, piece.bodyMarkdown, fetchDualScore]);
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-6">

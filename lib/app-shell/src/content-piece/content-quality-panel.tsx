@@ -32,6 +32,10 @@ export type DualContentScore = {
   /** Raw SERP snapshot — PAA questions live at `serpFeatures.peopleAlsoAsk`. */
   serpFeatures?: Record<string, unknown> | null;
   scoredAt?: string;
+  /** Brand voice context from project — used for local Human voice scoring when props omit them. */
+  writingSample?: string | null;
+  brandGlossary?: string[] | null;
+  brandVoicePassages?: string[] | null;
 };
 
 type ArticleQualityPanelProps = {
@@ -131,6 +135,10 @@ export function ArticleQualityPanel({
     return () => window.clearTimeout(timer);
   }, [bodyMarkdown, wordCount, savedBodyMarkdown]);
 
+  const voiceWritingSample = writingSample ?? dual?.writingSample ?? null;
+  const voiceBrandGlossary = brandGlossary ?? dual?.brandGlossary ?? undefined;
+  const voiceBrandVoicePassages = brandVoicePassages ?? dual?.brandVoicePassages ?? undefined;
+
   const scoreInput = {
     bodyMarkdown: debouncedBody,
     wordCount: debouncedWordCount,
@@ -140,10 +148,10 @@ export function ArticleQualityPanel({
     faqSection: metadata?.faqSection,
     jsonLdSchema: metadata?.jsonLdSchema,
     internalLinkSuggestions: metadata?.internalLinkSuggestions,
-    writingSample,
+    writingSample: voiceWritingSample,
     brandVoiceExcerpt,
-    brandGlossary,
-    brandVoicePassages,
+    brandGlossary: voiceBrandGlossary?.length ? voiceBrandGlossary : undefined,
+    brandVoicePassages: voiceBrandVoicePassages?.length ? voiceBrandVoicePassages : undefined,
   };
   const result = scoreArticleQuality(scoreInput);
 
@@ -163,7 +171,7 @@ export function ArticleQualityPanel({
 
   useEffect(() => {
     setFetchedDual(null);
-  }, [contentPieceId]);
+  }, [contentPieceId, savedBodyMarkdown]);
 
   useEffect(() => {
     if (dualScore != null || !contentPieceId || !fetchDualScore) {
@@ -180,7 +188,7 @@ export function ArticleQualityPanel({
     return () => {
       cancelled = true;
     };
-  }, [contentPieceId, fetchDualScore, dualScore]);
+  }, [contentPieceId, fetchDualScore, dualScore, savedBodyMarkdown]);
 
   const editorialTotal = result.total;
   const serpTotal = dual?.serp.total;
@@ -207,6 +215,14 @@ export function ArticleQualityPanel({
 
   const scoreDelta =
     showScoreDelta && baselineTotal != null ? displayTotal - baselineTotal : 0;
+
+  const displaySeoTitle = metadata?.seoTitle ?? metadata?.metaTitle;
+  const displayOgTitle = metadata?.ogTitle ?? displaySeoTitle;
+  const showSeoMetadata =
+    Boolean(displaySeoTitle) ||
+    Boolean(metadata?.metaDescription) ||
+    Boolean(displayOgTitle) ||
+    Boolean(metadata?.ogDescription);
 
   const canInsertMissingTerm = editing && Boolean(onInsertMissingTerm);
 
@@ -449,20 +465,20 @@ export function ArticleQualityPanel({
         </div>
       ) : null}
 
-      {(metadata?.seoTitle || metadata?.metaDescription || metadata?.ogTitle) && (
+      {showSeoMetadata ? (
         <div className="space-y-3 border-t border-border pt-2">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             SEO metadata
           </p>
-          {metadata.seoTitle ? (
+          {displaySeoTitle ? (
             <div>
               <p className="mb-1 text-[10px] text-muted-foreground">
-                SEO title ({metadata.seoTitle.length} chars)
+                SEO title ({displaySeoTitle.length} chars)
               </p>
-              <p className="text-xs leading-relaxed">{metadata.seoTitle}</p>
+              <p className="text-xs leading-relaxed">{displaySeoTitle}</p>
             </div>
           ) : null}
-          {metadata.metaDescription ? (
+          {metadata?.metaDescription ? (
             <div>
               <p className="mb-1 text-[10px] text-muted-foreground">
                 Meta description ({metadata.metaDescription.length} chars)
@@ -470,8 +486,24 @@ export function ArticleQualityPanel({
               <p className="text-xs leading-relaxed">{metadata.metaDescription}</p>
             </div>
           ) : null}
+          {displayOgTitle && displayOgTitle !== displaySeoTitle ? (
+            <div>
+              <p className="mb-1 text-[10px] text-muted-foreground">
+                Open Graph title ({displayOgTitle.length} chars)
+              </p>
+              <p className="text-xs leading-relaxed">{displayOgTitle}</p>
+            </div>
+          ) : null}
+          {metadata?.ogDescription && metadata.ogDescription !== metadata.metaDescription ? (
+            <div>
+              <p className="mb-1 text-[10px] text-muted-foreground">
+                Open Graph description ({metadata.ogDescription.length} chars)
+              </p>
+              <p className="text-xs leading-relaxed">{metadata.ogDescription}</p>
+            </div>
+          ) : null}
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

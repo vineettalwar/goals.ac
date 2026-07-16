@@ -371,10 +371,12 @@ export function AuditListPage() {
         },
       );
       const id = data.id ?? data.audit?.id;
-      if (id) {
-        await reload();
-        navigate(`/audit/${id}`);
+      if (!id) {
+        setRunError(data.error ?? "Audit completed but no result id was returned");
+        return;
       }
+      await reload();
+      navigate(`/audit/${id}`);
     } catch (err) {
       setRunError(err instanceof Error ? err.message : "Audit failed");
     } finally {

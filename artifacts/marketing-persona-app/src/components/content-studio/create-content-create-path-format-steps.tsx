@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Loader2,
   CheckCircle2,
-  Sparkles,
   FileText,
   Plus,
   Users,
@@ -53,7 +52,7 @@ export function CreateContentCreatePathFormatSteps({ currentStep, wizard }: { cu
                 >
                   <div className="grid sm:grid-cols-2 gap-4 mt-10">
                     <OptionCard
-                      icon={<Sparkles className="w-6 h-6" />}
+                      icon={<FileText className="w-6 h-6" />}
                       title="Create new content"
                       description="Pick a format and generate from a keyword or brief."
                       onClick={() => selectPath("create")}

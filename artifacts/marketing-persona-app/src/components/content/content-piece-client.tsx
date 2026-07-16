@@ -121,8 +121,6 @@ export function ContentPieceClient({
   const [queueingSocial, setQueueingSocial] = useState(false);
   const [publishDialogOpen, setPublishDialogOpen] = useState(false);
   const [repurposeDialogOpen, setRepurposeDialogOpen] = useState(false);
-  const [refreshingSerpAfterSave, setRefreshingSerpAfterSave] = useState(false);
-
   const pieceMeta = pieceRecord.pieceMetadata as ContentPieceMetadata | null | undefined;
   const visualSummaryMarkdown = pieceMeta?.visualSummaryMarkdown ?? null;
   const visualSummarySvgSrc =
@@ -325,18 +323,6 @@ export function ContentPieceClient({
             const updated = await res.json();
             setPieceRecord((prev) => mergePieceJson(updated, prev));
             setSaveMessage("Saved.");
-            
-            // Auto-refresh SERP score after successful save
-            if (piece.id && fetchDualScore) {
-              setRefreshingSerpAfterSave(true);
-              try {
-                await fetchDualScore(piece.id);
-              } catch {
-                // Silent failure — manual refresh still available
-              } finally {
-                setRefreshingSerpAfterSave(false);
-              }
-            }
           } finally {
             setSaving(false);
           }
@@ -388,7 +374,6 @@ export function ContentPieceClient({
             setHumanizeMessage(
               formatHumanizeResultMessage(humanizeAuditFromResponse(updated)),
             );
-            void fetchDualScore(Number(pieceId));
           } finally {
             setHumanizing(false);
           }
@@ -407,7 +392,6 @@ export function ContentPieceClient({
             const updated = await res.json();
             setPieceRecord((prev) => mergePieceJson(updated, prev));
             toast.success("Reverted to the version before humanize.");
-            void fetchDualScore(Number(pieceId));
           } finally {
             setRevertingHumanize(false);
           }
@@ -458,7 +442,6 @@ export function ContentPieceClient({
             const updated = await res.json();
             setPieceRecord((prev) => mergePieceJson(updated, prev));
             setEnhanceMessage(formatEnhanceSuccessMessage());
-            void fetchDualScore(Number(pieceId));
           } finally {
             setEnhancing(false);
           }

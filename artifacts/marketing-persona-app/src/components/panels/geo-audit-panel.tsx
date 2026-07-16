@@ -54,15 +54,25 @@ export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
         }),
       });
 
-      const data = (await res.json().catch(() => null)) as { id?: number; audit?: { id?: number }; error?: string } | null;
+      const data = (await res.json().catch(() => null)) as {
+        id?: number;
+        audit?: { id?: number };
+        error?: string;
+      } | null;
 
       if (!res.ok) {
         toast.error(data?.error ?? "Audit failed — please check the URL and try again");
         return;
       }
 
+      const auditId = data?.id ?? data?.audit?.id;
+      if (!auditId) {
+        toast.error("Audit completed but no result id was returned.");
+        return;
+      }
+
       void refetch();
-      router.push(`/audit/${data?.id ?? data?.audit?.id}`);
+      router.push(`/audit/${auditId}`);
     } catch {
       toast.error("Audit failed — network error, please try again");
     } finally {

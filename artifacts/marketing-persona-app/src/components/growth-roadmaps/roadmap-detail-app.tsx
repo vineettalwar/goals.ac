@@ -103,9 +103,14 @@ export function RoadmapDetailApp({
         toast.error(err.error ?? "Failed to generate content strategy");
         return;
       }
-      const { strategy } = await res.json();
+      const data = (await res.json()) as { strategy?: { id?: number } };
+      const strategyId = data.strategy?.id;
+      if (!strategyId) {
+        toast.error("Strategy generated but no result id was returned.");
+        return;
+      }
       toast.success("Content strategy generated");
-      router.push(`/content-strategy/${strategy.id}`);
+      router.push(`/content-strategy/${strategyId}`);
     } catch {
       toast.error("Failed to generate content strategy");
     } finally {

@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { db } from "@workspace/db";
 import { geoAuditsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
-import { GeoAuditResultView, type GeoIssue } from "@/components/geo-audit/geo-audit-result-view";
+import { GeoAuditResultView } from "@/components/geo-audit/geo-audit-result-view";
+import { parseGeoIssues } from "@/lib/content/parse-geo-issues";
 
 export default async function AuditResultPage({
   params,
@@ -43,7 +44,7 @@ export default async function AuditResultPage({
 
   if (!audit) notFound();
 
-  const issues = (audit.issues ?? []) as GeoIssue[];
+  const issues = parseGeoIssues(audit.issues);
 
   return (
     <div className="px-8 py-8">

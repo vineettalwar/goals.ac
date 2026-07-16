@@ -199,6 +199,12 @@ async function handleSerpScore(
         .filter((title): title is string => Boolean(title))
     : [];
 
+  const brand = await loadBrandContextForProject(piece.websiteProjectId);
+  const writingSample = brand?.writingSample?.trim() || null;
+  const brandGlossary = brand?.brandGlossary?.filter((t) => t?.trim()) ?? [];
+  const brandVoicePassages =
+    brand?.writingExamples?.map((e) => e?.trim()).filter((e): e is string => Boolean(e)) ?? [];
+
   const { scoreDualContentQuality } = await import(
     "@workspace/content-engine/articles/serp-content-score"
   );
@@ -215,6 +221,9 @@ async function handleSerpScore(
     serpFeatures,
     peopleAlsoAsk,
     competitorTitles,
+    writingSample,
+    brandGlossary: brandGlossary.length > 0 ? brandGlossary : undefined,
+    brandVoicePassages: brandVoicePassages.length > 0 ? brandVoicePassages : undefined,
   });
 
   return withCors(
@@ -224,6 +233,9 @@ async function handleSerpScore(
       serpFeatures,
       keyword: keyword ?? null,
       scoredAt: new Date().toISOString(),
+      writingSample,
+      brandGlossary: brandGlossary.length > 0 ? brandGlossary : null,
+      brandVoicePassages: brandVoicePassages.length > 0 ? brandVoicePassages : null,
     }),
   );
 }

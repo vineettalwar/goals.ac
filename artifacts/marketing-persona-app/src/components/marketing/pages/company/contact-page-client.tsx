@@ -42,18 +42,22 @@ export function ContactPageClient() {
   async function submitMessage(e: React.FormEvent) {
     e.preventDefault();
     setStatus("loading");
-    const res = await fetch(publicApiUrl("/api/contact"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, message: message.trim() || undefined }),
-    });
-    if (!res.ok) {
+    try {
+      const res = await fetch(publicApiUrl("/api/contact"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, message: message.trim() || undefined }),
+      });
+      if (!res.ok) {
+        setStatus("error");
+        return;
+      }
+      setStatus("done");
+      setEmail("");
+      setMessage("");
+    } catch {
       setStatus("error");
-      return;
     }
-    setStatus("done");
-    setEmail("");
-    setMessage("");
   }
 
   return (

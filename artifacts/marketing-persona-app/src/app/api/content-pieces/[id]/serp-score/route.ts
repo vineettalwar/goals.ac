@@ -136,6 +136,7 @@ export async function GET(
     ...dual,
     serpFeatures,
     keyword: keyword ?? null,
+    scoredAt: new Date().toISOString(),
     writingSample,
     brandGlossary: brandGlossary.length > 0 ? brandGlossary : null,
     brandVoicePassages: brandVoicePassages.length > 0 ? brandVoicePassages : null,

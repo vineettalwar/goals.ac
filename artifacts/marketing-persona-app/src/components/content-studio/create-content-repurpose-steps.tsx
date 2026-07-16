@@ -6,7 +6,6 @@ import {
   Shuffle,
   Loader2,
   CheckCircle2,
-  Sparkles,
   FileText,
   Plus,
   Users,

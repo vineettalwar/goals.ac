@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { toast } from "sonner";
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +33,7 @@ export function GeoAuditPageClient() {
   const searchParams = useSearchParams();
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const prefilled = searchParams.get("url");
@@ -45,6 +45,7 @@ export function GeoAuditPageClient() {
     const auditUrl = normalizeHttpUrl(url);
     if (!auditUrl) return;
     setLoading(true);
+    setError(null);
 
     try {
       const res = await fetch(publicApiUrl("/api/public/geo-audits/generate"), {
@@ -62,16 +63,16 @@ export function GeoAuditPageClient() {
 
       if (!res.ok) {
         if (res.status === 429) {
-          toast.error(data?.message ?? "Too many audits from this network. Try again later.");
+          setError(data?.message ?? "Too many audits from this network. Try again later.");
           return;
         }
-        toast.error(data?.error ?? "Audit failed. Check the URL and try again.");
+        setError(data?.error ?? "Audit failed. Check the URL and try again.");
         return;
       }
 
       const auditId = data?.id ?? data?.audit?.id;
       if (!auditId) {
-        toast.error("Audit completed but no result id was returned.");
+        setError("Audit completed but no result id was returned.");
         return;
       }
 
@@ -82,7 +83,7 @@ export function GeoAuditPageClient() {
       }
       router.push(`/geo-audit/${auditId}`);
     } catch {
-      toast.error("Audit failed. Network error, please try again.");
+      setError("Audit failed. Network error, please try again.");
     } finally {
       setLoading(false);
     }
@@ -149,6 +150,11 @@ export function GeoAuditPageClient() {
             <p className="text-xs text-white/50">
               Schema, metadata, headings, and Open Graph — scored in seconds
             </p>
+            {error ? (
+              <p className="text-sm text-red-300" role="alert">
+                {error}
+              </p>
+            ) : null}
           </form>
         </div>
       </HeroOverlapShell>

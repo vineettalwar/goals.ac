@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { db } from "@workspace/db";
 import { contentItemsTable, contentStrategiesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
@@ -16,6 +16,13 @@ export async function generateMetadata({
 }: {
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
+  if (process.env.MARKETING_STATIC === "1") {
+    return {
+      title: "Content Strategy",
+      robots: { index: false, follow: false },
+    };
+  }
+
   const { id } = await params;
   return {
     title: `Content Strategy #${id}`,
@@ -51,6 +58,10 @@ export default async function ContentStrategyPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  if (process.env.MARKETING_STATIC === "1") {
+    permanentRedirect("/content-strategy");
+  }
+
   const { id } = await params;
   const strategyId = Number(id);
   if (Number.isNaN(strategyId)) notFound();

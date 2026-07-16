@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { publicApiUrl } from "@/lib/marketing/site/public-api";
 import { GeoAuditResultClient } from "@/components/marketing/pages/tools/geo-audit-result-client";
 import type { GeoIssue } from "@/components/geo-audit/geo-audit-result-view";
+import { parseGeoIssues } from "@/lib/content/parse-geo-issues";
 
 type PublicGeoAudit = {
   id: number;
@@ -99,7 +100,7 @@ export function GeoAuditResultLoader() {
     <GeoAuditResultClient
       url={audit.url}
       geoScore={audit.geoScore}
-      issues={(audit.issues ?? []) as GeoIssue[]}
+      issues={parseGeoIssues(audit.issues)}
       pageTitle={audit.pageTitle}
       schemaTypes={audit.schemaTypes ?? []}
       projectId={audit.websiteProjectId}

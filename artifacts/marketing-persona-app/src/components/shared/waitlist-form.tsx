@@ -30,18 +30,23 @@ export function WaitlistForm({
     if (!email.trim()) return;
     setLoading(true);
     setError(null);
-    const res = await fetch(publicApiUrl("/api/waitlist"), {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.trim(), featureKey }),
-    });
-    setLoading(false);
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error ?? "Could not join waitlist");
-      return;
+    try {
+      const res = await fetch(publicApiUrl("/api/waitlist"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), featureKey }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error ?? "Could not join waitlist");
+        return;
+      }
+      setDone(true);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    setDone(true);
   }
 
   if (done) {

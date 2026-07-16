@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Loader2,
   CheckCircle2,
-  Sparkles,
   FileText,
   Plus,
   Users,
@@ -147,7 +146,7 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
 
                   <div className="mt-8">
                     <Button size="lg" onClick={handleContinue} disabled={!keyword.trim()} className="gap-2">
-                      <Sparkles className="w-4 h-4" />
+                      <FileText className="w-4 h-4" />
                       Generate {FORMAT_META[selectedFormat].label}
                     </Button>
                   </div>

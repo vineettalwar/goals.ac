@@ -19,6 +19,11 @@ const pagesDist = path.join(repoRoot, "artifacts/marketing-pages/dist");
 const mainConfig = path.join(appDir, "next.config.ts");
 const marketingConfig = path.join(appDir, "next.config.marketing.ts");
 const configBackup = path.join(backupRoot, "next.config.ts.bak");
+const geoAuditPagePath = path.join(
+  appSrc,
+  "(public)/(inner)/geo-audit/[id]/page.tsx",
+);
+const geoAuditPageBackup = path.join(backupRoot, "geo-audit-id-page.tsx.bak");
 
 const HIDE_DIRS = [
   "(app)",
@@ -130,6 +135,21 @@ try {
   }
   fs.copyFileSync(marketingConfig, mainConfig);
 
+  if (fs.existsSync(geoAuditPagePath)) {
+    const geoPage = fs.readFileSync(geoAuditPagePath, "utf8");
+    fs.writeFileSync(geoAuditPageBackup, geoPage);
+    const patchedGeoPage = geoPage.replace(
+      "export const dynamicParams = true;",
+      "export const dynamicParams = false;",
+    );
+    if (patchedGeoPage === geoPage) {
+      throw new Error(
+        "geo-audit/[id]/page.tsx must export dynamicParams = true for dev; static build patch found no match",
+      );
+    }
+    fs.writeFileSync(geoAuditPagePath, patchedGeoPage);
+  }
+
   for (const cacheDir of [
     path.join(appDir, ".next"),
     path.join(appDir, "out"),
@@ -177,6 +197,9 @@ try {
   console.log("→ Restoring app routes…");
   if (fs.existsSync(configBackup)) {
     fs.copyFileSync(configBackup, mainConfig);
+  }
+  if (fs.existsSync(geoAuditPageBackup)) {
+    fs.copyFileSync(geoAuditPageBackup, geoAuditPagePath);
   }
   for (const dir of HIDE_DIRS) {
     const backed = path.join(backupRoot, dir);
