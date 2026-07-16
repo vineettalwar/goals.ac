@@ -23,7 +23,7 @@ No schema or pipeline changes needed; `listPublishRecordsForProject` already ret
 | 4.0 | Product humanize before/after in Studio | in flight |
 | 4.1 | Human-voice actionable detail | done |
 | 4.2 | Social composer Humanize | queued |
-| 4.3 | Light term checklist (secondary/PAA) | queued |
+| 4.3 | Light term checklist (secondary/PAA) | done |
 | 4.4 | SERP refresh honesty | done |
 | 4.5 | Brief outline insert when body present | queued |
 | 4.6 | Social publish_records | done |

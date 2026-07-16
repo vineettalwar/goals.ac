@@ -14,6 +14,8 @@
     "./internal-links-summary": "./src/analytics/internal-links-summary.ts",
     "./articles/serp-content-score": "./src/articles/serp-content-score.ts",
     "./serp-content-score": "./src/articles/serp-content-score.ts",
+    "./articles/coverage-checklist": "./src/articles/coverage-checklist.ts",
+    "./coverage-checklist": "./src/articles/coverage-checklist.ts",
     "./strategy/keyword-cluster-service": "./src/strategy/keyword-cluster-service.ts",
     "./keyword-cluster-service": "./src/strategy/keyword-cluster-service.ts",
     "./support/publishing/integration-health-service": "./src/support/publishing/integration-health-service.ts",
