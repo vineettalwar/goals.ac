@@ -86,7 +86,13 @@ export async function POST(
   if (ownerError === "forbidden") return NextResponse.json({ error: "Access denied" }, { status: 403 });
 
   if (parsed.data.async) {
-    await enqueue(QUEUES.contentPublish, { contentPieceId: id, userId: userId! });
+    // Pass platform so the job publishes to the destination picked in the dialog
+    // (not FORMAT_TO_PLATFORM / primary-connection fallback).
+    await enqueue(QUEUES.contentPublish, {
+      contentPieceId: id,
+      userId: userId!,
+      platform: parsed.data.platform,
+    });
     return NextResponse.json({ queued: true });
   }
 

@@ -388,6 +388,7 @@ export function ContentPieceClient({
             setHumanizeMessage(
               formatHumanizeResultMessage(humanizeAuditFromResponse(updated)),
             );
+            void fetchDualScore(Number(pieceId));
           } finally {
             setHumanizing(false);
           }
@@ -406,6 +407,7 @@ export function ContentPieceClient({
             const updated = await res.json();
             setPieceRecord((prev) => mergePieceJson(updated, prev));
             toast.success("Reverted to the version before humanize.");
+            void fetchDualScore(Number(pieceId));
           } finally {
             setRevertingHumanize(false);
           }
@@ -456,6 +458,7 @@ export function ContentPieceClient({
             const updated = await res.json();
             setPieceRecord((prev) => mergePieceJson(updated, prev));
             setEnhanceMessage(formatEnhanceSuccessMessage());
+            void fetchDualScore(Number(pieceId));
           } finally {
             setEnhancing(false);
           }

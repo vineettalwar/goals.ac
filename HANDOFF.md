@@ -1,5 +1,18 @@
 # Session Handoff
 
+## Wave 4.11+ reliability (2026-07-16)
+
+| # | Item | Status |
+|---|---|---|
+| 4.11 | Async publish passes selected `platform` into job enqueue | done |
+| 4.12 | Vite plannedDate on publish dialog | done |
+| 4.13 | SERP refresh after humanize + enhance | done |
+| 4.14 | Social schedule honesty (Ready / approval / sweep) | done |
+| 4.15 | Joomla data: featured soft amber | done |
+| 4.16 | Social composer links to Studio for before/after revert | done |
+
+---
+
 ## Wave 4.8 — Coverage checklist chips actionable (2026-07-16)
 
 **Status:** done. Missing coverage-checklist chips (secondary keywords / PAA questions / rival topics not yet mentioned in the draft) are now clickable instead of purely decorative. Covered chips stay display-only spans — no click affordance.

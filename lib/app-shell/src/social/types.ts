@@ -7,6 +7,7 @@ export type SocialPieceImageMeta = {
     publishedUrl?: string;
   }>;
   humanized?: boolean;
+  preHumanizeBodyMarkdown?: string | null;
   humanizationAudit?: {
     slopScoreBefore?: number;
     slopScoreAfter?: number;

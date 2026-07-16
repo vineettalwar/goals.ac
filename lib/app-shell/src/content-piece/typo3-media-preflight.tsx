@@ -82,9 +82,11 @@ export function NotionWebflowMediaPreflight({
   platform,
   className,
 }: {
-  platform: "notion" | "webflow";
+  platform: "notion" | "webflow" | "joomla";
   className?: string;
 }) {
+  const label =
+    platform === "notion" ? "Notion" : platform === "webflow" ? "Webflow" : "Joomla";
   return (
     <div
       role="status"
@@ -101,8 +103,8 @@ export function NotionWebflowMediaPreflight({
         <div className="space-y-1.5">
           <p className="font-semibold">Featured image is data: URI</p>
           <p className="text-xs leading-relaxed opacity-90">
-            {platform === "notion" ? "Notion" : "Webflow"} requires HTTPS URLs for images. Publishing
-            continues, but the featured image won't render. Use a stock image or paste an HTTPS URL.
+            {label} needs a public HTTPS image URL. Publishing continues, but the featured image
+            may be skipped. Use a stock image or paste an HTTPS URL.
           </p>
         </div>
       </div>

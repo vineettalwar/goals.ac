@@ -431,6 +431,11 @@ export function useContentPieceData(pieceId: string | undefined) {
       });
       setCachedPiece(mapPiece(updated));
       setEnhanceMessage(formatEnhanceSuccessMessage());
+      try {
+        await apiFetch(`/api/content-pieces/${pieceId}/serp-score`);
+      } catch {
+        // Silent — manual Refresh SERP remains available
+      }
     } catch (err) {
       setEnhanceMessage(err instanceof Error ? err.message : "Enhancement failed");
     } finally {
@@ -512,6 +517,11 @@ export function useContentPieceData(pieceId: string | undefined) {
       );
       setCachedPiece(mapPiece(updated));
       setHumanizeMessage(formatHumanizeResultMessage(humanizeAuditFromResponse(updated)));
+      try {
+        await apiFetch(`/api/content-pieces/${pieceId}/serp-score`);
+      } catch {
+        // Silent — manual Refresh SERP remains available
+      }
     } catch (err) {
       setHumanizeMessage(err instanceof Error ? err.message : "Humanization failed");
     } finally {

@@ -72,6 +72,7 @@ export function ContentPiecePublishDialog({
   const [typo3MediaUploadAck, setTypo3MediaUploadAck] = useState(false);
   const [notionMediaAck, setNotionMediaAck] = useState(false);
   const [webflowMediaAck, setWebflowMediaAck] = useState(false);
+  const [joomlaMediaAck, setJoomlaMediaAck] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -85,6 +86,7 @@ export function ContentPiecePublishDialog({
       setTypo3MediaUploadAck(false);
       setNotionMediaAck(false);
       setWebflowMediaAck(false);
+      setJoomlaMediaAck(false);
       return;
     }
 
@@ -148,6 +150,8 @@ export function ContentPiecePublishDialog({
     platform === "notion" && hasRasterDataImage(pieceFeaturedImageUrl);
   const showWebflowMediaWarning =
     platform === "webflow" && hasRasterDataImage(pieceFeaturedImageUrl);
+  const showJoomlaMediaWarning =
+    platform === "joomla" && hasRasterDataImage(pieceFeaturedImageUrl);
   const hasPublishable =
     availableDestinations.some((d) => !d.exportOnly) || availableDestinations.length > 0;
   const gridCols =
@@ -258,6 +262,7 @@ export function ContentPiecePublishDialog({
                         setTypo3MediaUploadAck(false);
                         setNotionMediaAck(false);
                         setWebflowMediaAck(false);
+                        setJoomlaMediaAck(false);
                       }}
                       disabled={publishing}
                       className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-hidden disabled:opacity-50 ${
@@ -378,6 +383,24 @@ export function ContentPiecePublishDialog({
                     />
                     <span>
                       Understood — publish continues. Use stock image or paste HTTPS URL for featured image.
+                    </span>
+                  </label>
+                </div>
+              ) : null}
+
+              {showJoomlaMediaWarning ? (
+                <div className="space-y-2">
+                  <NotionWebflowMediaPreflight platform="joomla" />
+                  <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-border"
+                      checked={joomlaMediaAck}
+                      onChange={(e) => setJoomlaMediaAck(e.target.checked)}
+                      disabled={publishing}
+                    />
+                    <span>
+                      Understood — publish continues. Joomla skips non-HTTPS featured images.
                     </span>
                   </label>
                 </div>

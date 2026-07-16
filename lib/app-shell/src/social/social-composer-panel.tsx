@@ -361,6 +361,17 @@ export function SocialComposerPanel({
                       {formatHumanizationAuditLine(humanizationAudit)}
                     </p>
                   ) : null}
+                  {piece.pieceMetadata?.preHumanizeBodyMarkdown?.trim() ? (
+                    <p className="text-xs text-muted-foreground">
+                      Before/after snapshot saved.{" "}
+                      {renderLink({
+                        href: pieceHref(piece.id),
+                        className: "font-medium text-foreground underline underline-offset-2",
+                        children: "Open in Studio",
+                      })}{" "}
+                      to compare or revert.
+                    </p>
+                  ) : null}
                   {overLimit ? (
                     <p className="text-xs font-medium text-destructive">
                       Over the platform limit — trim before scheduling.

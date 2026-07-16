@@ -64,6 +64,22 @@ export function SocialQueuePanel({
         </div>
       ) : null}
 
+      <div
+        className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground"
+        role="note"
+      >
+        Scheduling is not an instant Buffer post. Go-live requires status{" "}
+        <strong className="text-foreground">Ready</strong>
+        {requireApproval ? (
+          <>
+            {" "}
+            and <strong className="text-foreground">Approved</strong>
+          </>
+        ) : null}
+        , then the daily publish sweep picks due items. Set a time below; mark Ready from the piece
+        or approve when your project requires it.
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         <select
           aria-label="Filter by platform"
