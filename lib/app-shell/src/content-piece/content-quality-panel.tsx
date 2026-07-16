@@ -1,8 +1,19 @@
 import { useEffect, useState } from "react";
 import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
-import { scoreCoverageChecklist } from "@workspace/content-engine/coverage-checklist";
+import {
+  scoreCoverageChecklist,
+  type CoverageChecklistItem,
+} from "@workspace/content-engine/coverage-checklist";
 import { ScoreRing } from "../section-panels/shared";
 import type { ContentPieceMetadata } from "./types";
+
+/** Missing-term click target: heading-shaped topics get a stub `## …`, keywords get a stub sentence. */
+function buildCoverageInsertSnippet(item: CoverageChecklistItem): string {
+  if (item.type === "secondary") {
+    return `Add a sentence mentioning "${item.term}" here.`;
+  }
+  return `## ${item.term}`;
+}
 
 /** Pause after typing before re-running local editorial score (no server). */
 const EDITORIAL_SCORE_DEBOUNCE_MS = 2000;
@@ -45,6 +56,10 @@ type ArticleQualityPanelProps = {
   baselineScore?: number | null;
   /** When true (edit mode), show “+N vs saved” if live score differs from baseline. */
   showScoreDelta?: boolean;
+  /** When true, clicking a missing coverage chip inserts a stub into the draft instead of copying. */
+  editing?: boolean;
+  /** Host appends the stub markdown/sentence to the draft body. Only used while `editing`. */
+  onInsertMissingTerm?: (snippet: string) => void;
   onEnhance?: () => void;
   enhancing?: boolean;
   canEnhance?: boolean;
@@ -74,6 +89,8 @@ export function ArticleQualityPanel({
   savedBodyMarkdown,
   baselineScore,
   showScoreDelta = false,
+  editing = false,
+  onInsertMissingTerm,
   onEnhance,
   enhancing = false,
   canEnhance = false,
@@ -82,6 +99,7 @@ export function ArticleQualityPanel({
   const [debouncedWordCount, setDebouncedWordCount] = useState(wordCount);
   const [fetchedDual, setFetchedDual] = useState<DualContentScore | null>(null);
   const [refreshingSerp, setRefreshingSerp] = useState(false);
+  const [actionedChipKey, setActionedChipKey] = useState<string | null>(null);
   // Refreshed SERP wins over a parent-provided snapshot.
   const dual = fetchedDual ?? dualScore;
   const draftDiffersFromSaved =
@@ -187,6 +205,24 @@ export function ArticleQualityPanel({
 
   const scoreDelta =
     showScoreDelta && baselineTotal != null ? displayTotal - baselineTotal : 0;
+
+  const canInsertMissingTerm = editing && Boolean(onInsertMissingTerm);
+
+  const handleMissingChipClick = async (item: CoverageChecklistItem, key: string) => {
+    if (canInsertMissingTerm) {
+      onInsertMissingTerm!(buildCoverageInsertSnippet(item));
+    } else {
+      try {
+        await navigator.clipboard.writeText(item.term);
+      } catch {
+        return;
+      }
+    }
+    setActionedChipKey(key);
+    window.setTimeout(() => {
+      setActionedChipKey((current) => (current === key ? null : current));
+    }, 1500);
+  };
 
   const refreshSerpScore = () => {
     if (!contentPieceId || !fetchDualScore || refreshingSerp) return;
@@ -315,19 +351,47 @@ export function ArticleQualityPanel({
             rival topics mentioned in the draft ({coverage.percent}%)
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {coverage.items.map((item, index) => (
-              <span
-                key={`${item.type}-${item.term}-${index}`}
-                className={
-                  item.covered
-                    ? "rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
-                    : "rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
-                }
-                title={item.type === "secondary" ? "Secondary keyword" : item.type === "paa" ? "PAA question" : "Rival topic"}
-              >
-                {item.covered ? "✓" : "○"} {item.term}
-              </span>
-            ))}
+            {coverage.items.map((item, index) => {
+              const key = `${item.type}-${item.term}-${index}`;
+              const typeLabel =
+                item.type === "secondary"
+                  ? "Secondary keyword"
+                  : item.type === "paa"
+                    ? "PAA question"
+                    : "Rival topic";
+              if (item.covered) {
+                return (
+                  <span
+                    key={key}
+                    className="rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    title={typeLabel}
+                  >
+                    ✓ {item.term}
+                  </span>
+                );
+              }
+              const actioned = actionedChipKey === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => void handleMissingChipClick(item, key)}
+                  className={
+                    actioned
+                      ? "rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-800 transition-colors dark:bg-emerald-900/30 dark:text-emerald-300"
+                      : "rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                  }
+                  title={
+                    canInsertMissingTerm
+                      ? `${typeLabel} — click to insert into draft`
+                      : `${typeLabel} — click to copy`
+                  }
+                >
+                  {actioned ? "✓" : "○"} {item.term}
+                  {actioned ? (canInsertMissingTerm ? " · inserted" : " · copied") : ""}
+                </button>
+              );
+            })}
           </div>
         </div>
       ) : null}

@@ -71,3 +71,41 @@ export function Typo3MediaPreflight({
     </div>
   );
 }
+
+/**
+ * Soft amber warning when publishing to Notion or Webflow with a raster data: featured image.
+ * Both platforms require HTTPS URLs for images — data: URIs won't render.
+ *
+ * Does NOT block publish — suggests using stock images or pasting an HTTPS URL.
+ */
+export function NotionWebflowMediaPreflight({
+  platform,
+  className,
+}: {
+  platform: "notion" | "webflow";
+  className?: string;
+}) {
+  return (
+    <div
+      role="status"
+      className={
+        className ??
+        "rounded-lg border-2 border-amber-500/60 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-400/50 dark:bg-amber-950/40 dark:text-amber-50"
+      }
+    >
+      <div className="flex items-start gap-2.5">
+        <AlertTriangle
+          className="mt-0.5 h-4 w-4 shrink-0 text-amber-600 dark:text-amber-300"
+          aria-hidden
+        />
+        <div className="space-y-1.5">
+          <p className="font-semibold">Featured image is data: URI</p>
+          <p className="text-xs leading-relaxed opacity-90">
+            {platform === "notion" ? "Notion" : "Webflow"} requires HTTPS URLs for images. Publishing
+            continues, but the featured image won't render. Use a stock image or paste an HTTPS URL.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

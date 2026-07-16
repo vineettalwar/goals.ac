@@ -584,6 +584,7 @@ export function ContentPieceClient({
         pieceBodyMarkdown={piece.bodyMarkdown}
         pieceFeaturedImageUrl={pieceMeta?.featuredImageUrl ?? null}
         onRenderPreview={renderPreview}
+        plannedDate={piece.plannedDate}
         onPublish={async (platform) => {
           setPublishing(true);
           setPublishMessage(null);

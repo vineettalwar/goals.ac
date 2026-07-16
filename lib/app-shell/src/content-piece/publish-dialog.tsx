@@ -18,6 +18,7 @@ import {
   hasRasterDataImage,
   readTypo3MediaUploadCapable,
   Typo3MediaPreflight,
+  NotionWebflowMediaPreflight,
 } from "./typo3-media-preflight";
 
 export type RenderPreviewResult = {
@@ -40,6 +41,7 @@ export function ContentPiecePublishDialog({
   publishing = false,
   integrationsHref,
   shopifyThemeLearnHref,
+  plannedDate,
 }: {
   open: boolean;
   onClose: () => void;
@@ -55,6 +57,7 @@ export function ContentPiecePublishDialog({
   integrationsHref?: string;
   /** Learn path for Shopify theme snippet install. */
   shopifyThemeLearnHref?: string;
+  plannedDate?: string | null;
 }) {
   const [platform, setPlatform] = useState<PublishDestinationId>("wordpress");
   const [connections, setConnections] = useState<CmsConnectionSnapshot | null>(null);
@@ -67,6 +70,8 @@ export function ContentPiecePublishDialog({
   const [preview, setPreview] = useState<RenderPreviewResult | null>(null);
   const [shopifyThemeSnippetAck, setShopifyThemeSnippetAck] = useState(false);
   const [typo3MediaUploadAck, setTypo3MediaUploadAck] = useState(false);
+  const [notionMediaAck, setNotionMediaAck] = useState(false);
+  const [webflowMediaAck, setWebflowMediaAck] = useState(false);
 
   useEffect(() => {
     if (!open) {
@@ -78,6 +83,8 @@ export function ContentPiecePublishDialog({
       setPreviewError(null);
       setShopifyThemeSnippetAck(false);
       setTypo3MediaUploadAck(false);
+      setNotionMediaAck(false);
+      setWebflowMediaAck(false);
       return;
     }
 
@@ -137,6 +144,10 @@ export function ContentPiecePublishDialog({
     platform === "typo3" &&
     hasRasterDataImage(pieceFeaturedImageUrl) &&
     !readTypo3MediaUploadCapable(typo3Connection);
+  const showNotionMediaWarning =
+    platform === "notion" && hasRasterDataImage(pieceFeaturedImageUrl);
+  const showWebflowMediaWarning =
+    platform === "webflow" && hasRasterDataImage(pieceFeaturedImageUrl);
   const hasPublishable =
     availableDestinations.some((d) => !d.exportOnly) || availableDestinations.length > 0;
   const gridCols =
@@ -245,6 +256,8 @@ export function ContentPiecePublishDialog({
                         setPreviewError(null);
                         setShopifyThemeSnippetAck(false);
                         setTypo3MediaUploadAck(false);
+                        setNotionMediaAck(false);
+                        setWebflowMediaAck(false);
                       }}
                       disabled={publishing}
                       className={`rounded-lg border px-3 py-2.5 text-sm font-medium transition-colors focus:outline-hidden disabled:opacity-50 ${
@@ -261,6 +274,23 @@ export function ContentPiecePublishDialog({
                   ))}
                 </div>
               </div>
+
+              {plannedDate && !isExportOnly ? (
+                <div className="space-y-2 rounded-lg border border-border bg-muted/40 px-4 py-3">
+                  <p className="text-sm font-medium text-foreground">
+                    Publish timing
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    This piece is scheduled for <strong>{plannedDate}</strong>.
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    <strong>Option 1:</strong> Mark Ready in the editor + keep scheduled — the daily sweep publishes it on that date.
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    <strong>Option 2:</strong> Publish now instead — click below to go live immediately (ignores scheduled date).
+                  </p>
+                </div>
+              ) : null}
 
               {selectedDestination && connections && !isExportOnly ? (
                 <div className="space-y-1 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm">
@@ -312,6 +342,42 @@ export function ContentPiecePublishDialog({
                     />
                     <span>
                       Understood — inline FAL works; publish continues. Upgrade extension for proper FAL references.
+                    </span>
+                  </label>
+                </div>
+              ) : null}
+
+              {showNotionMediaWarning ? (
+                <div className="space-y-2">
+                  <NotionWebflowMediaPreflight platform="notion" />
+                  <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-border"
+                      checked={notionMediaAck}
+                      onChange={(e) => setNotionMediaAck(e.target.checked)}
+                      disabled={publishing}
+                    />
+                    <span>
+                      Understood — publish continues. Use stock image or paste HTTPS URL for featured image.
+                    </span>
+                  </label>
+                </div>
+              ) : null}
+
+              {showWebflowMediaWarning ? (
+                <div className="space-y-2">
+                  <NotionWebflowMediaPreflight platform="webflow" />
+                  <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-border"
+                      checked={webflowMediaAck}
+                      onChange={(e) => setWebflowMediaAck(e.target.checked)}
+                      disabled={publishing}
+                    />
+                    <span>
+                      Understood — publish continues. Use stock image or paste HTTPS URL for featured image.
                     </span>
                   </label>
                 </div>

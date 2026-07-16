@@ -1,5 +1,22 @@
 # Session Handoff
 
+## Wave 4.10 — Article plannedDate / schedule honesty in Studio publish flow (2026-07-16)
+
+**Status:** done. Articles already have `plannedDate` column (Drizzle schema, used by `processScheduledPublishSweep` job). Added UI honesty for the publish flow:
+
+- Publish dialog now shows `plannedDate` if set on the piece
+- Soft guidance explains two paths:
+  - **Option 1:** Mark Ready in editor + keep scheduled → daily sweep publishes on plannedDate
+  - **Option 2:** Publish now → immediate (ignores scheduled date)
+- No new job infrastructure; reuses existing `processScheduledPublishSweep` (runs daily, finds `status: ready` + `plannedDate <= today`)
+- UI to set/clear plannedDate already exists in piece editor (date input in editor toolbar)
+
+**Changed files:**
+- `lib/app-shell/src/content-piece/publish-dialog.tsx` — added `plannedDate` prop + guidance section
+- `artifacts/marketing-persona-app/src/components/content/content-piece-client.tsx` — passed `plannedDate` to dialog
+
+**Verify:** `pnpm --filter @workspace/marketing-persona-app run typecheck` (pass). No schema migration needed.
+
 ## Wave 4.6 — Social publish_records (2026-07-16)
 
 **Status:** done. `publishPieceToSocial` call sites (`contentPublish` job handler, Next `content-pieces/[id]/publish` route) already wrapped social publish in `withPublishRecord` from earlier work — the actual gap was UI-side:
@@ -32,7 +49,7 @@ No schema or pipeline changes needed; `listPublishRecordsForProject` already ret
 
 | # | Item | Status |
 |---|---|---|
-| 4.7 | Soft media honesty Notion/Webflow (+ IG stock path clarity) | in flight |
+| 4.7 | Soft media honesty Notion/Webflow (+ IG stock path clarity) | **done** |
 | 4.8 | Coverage checklist actionable (copy/insert missing) | queued |
 | 4.9 | Fix gaps consumes missing terms + SERP gaps | queued |
 | 4.10 | Article scheduled/planned publish honesty in Studio | queued |
