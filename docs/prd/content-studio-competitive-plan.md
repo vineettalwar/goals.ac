@@ -1,6 +1,6 @@
 # PRD: Content Studio Competitive Plan
 
-**Status:** Waves 0–3.2 shipped · **Wave 4 in progress** (trust surfaces: product before/after, social humanize UI, light term checklist, distribution records) · Hosted blog (3.3) still deferred · No ponytail deletes in this tranche  
+**Status:** Waves 0–3.2 shipped · **Wave 4.0–4.16 shipped** (trust surfaces + async platform fix) · Hosted blog (3.3) still deferred · No ponytail deletes in this tranche · CF deploy morning-only  
 **ICP (90 days):** Partner-demo path vs BabyLoveGrowth / AutoSEO — consulting-led, not self-serve checkout  
 **Related:** [babylovegrowth-parity-planner.md](../competitors/babylovegrowth-parity-planner.md), [DECISIONS.md](../DECISIONS.md), [HANDOFF.md](../../HANDOFF.md)
 
