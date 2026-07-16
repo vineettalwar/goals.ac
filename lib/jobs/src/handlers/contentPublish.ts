@@ -83,6 +83,7 @@ async function publishPiece(
     publishPlatform: string;
     remotePostId?: string;
     outputMode?: string | null;
+    warnings?: { code: string; message: string }[];
   }> => {
     if (platform && isSocialPlatform(platform)) {
       const result = await publishPieceToSocial(
@@ -126,6 +127,7 @@ async function publishPiece(
         publishedUrl: result.publishedUrl,
         publishPlatform: result.publishPlatform,
         outputMode: result.outputMode ?? null,
+        warnings: result.warnings,
       };
     }
     const result = await publishBlogPieceToPrimaryDestination(publishable, creds, {
@@ -136,6 +138,7 @@ async function publishPiece(
       publishedUrl: result.publishedUrl,
       publishPlatform: result.publishPlatform,
       outputMode: result.outputMode ?? null,
+      warnings: result.warnings,
     };
   };
 
@@ -153,6 +156,7 @@ async function publishPiece(
         publishPlatform: result.publishPlatform,
         remotePostId: result.remotePostId,
         outputMode: result.outputMode,
+        warnings: result.warnings,
       };
     },
   );
@@ -161,9 +165,23 @@ async function publishPiece(
   publishPlatform = publishOutcome.publishPlatform;
   remotePostId = publishOutcome.remotePostId;
 
+  const warningMessages = publishOutcome.warnings;
+  const nextMeta = {
+    ...(piece.pieceMetadata ?? {}),
+    ...(warningMessages && warningMessages.length > 0
+      ? { lastPublishWarnings: warningMessages }
+      : { lastPublishWarnings: undefined }),
+  };
+
   await db
     .update(contentPiecesTable)
-    .set({ status: "published", publishedUrl, publishPlatform, publishError: null })
+    .set({
+      status: "published",
+      publishedUrl,
+      publishPlatform,
+      publishError: null,
+      pieceMetadata: nextMeta,
+    })
     .where(eq(contentPiecesTable.id, pieceId));
 
   if (remotePostId && publishPlatform && isSocialPlatform(publishPlatform)) {

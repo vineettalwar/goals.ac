@@ -83,6 +83,8 @@ export type ContentPieceMetadata = {
   intendedEditorMode?: "classic" | "gutenberg" | "elementor" | "divi";
   /** Preferred CMS output format when publishing (platform-specific) */
   intendedOutputMode?: string;
+  /** Raster/data featured warnings from last CMS publish (Notion/Webflow omit, etc.) */
+  lastPublishWarnings?: { code: string; message: string }[];
   /** Markdown visual summary block injected post-generation */
   visualSummaryMarkdown?: string;
   /** Raw SVG “At a glance” graphic */

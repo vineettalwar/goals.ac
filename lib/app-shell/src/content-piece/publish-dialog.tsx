@@ -482,7 +482,15 @@ export function ContentPiecePublishDialog({
                   <button
                     type="button"
                     onClick={() => void handlePublish()}
-                    disabled={!selectedDestination || publishing}
+                    disabled={
+                      !selectedDestination ||
+                      publishing ||
+                      (showShopifyThemeSnippetWarning && !shopifyThemeSnippetAck) ||
+                      (showTypo3MediaUploadWarning && !typo3MediaUploadAck) ||
+                      (showNotionMediaWarning && !notionMediaAck) ||
+                      (showWebflowMediaWarning && !webflowMediaAck) ||
+                      (showJoomlaMediaWarning && !joomlaMediaAck)
+                    }
                     className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
                   >
                     {publishing ? (

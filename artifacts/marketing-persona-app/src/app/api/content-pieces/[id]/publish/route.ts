@@ -182,15 +182,34 @@ export async function POST(
           publishedUrl = result.publishedUrl;
           publishPlatform = result.publishPlatform;
           outputMode = result.outputMode ?? null;
+          return {
+            publishedUrl,
+            publishPlatform,
+            remotePostId,
+            outputMode,
+            warnings: result.warnings ?? [],
+          };
         } else {
           throw new Error("Platform not connected");
         }
 
-        return { publishedUrl, publishPlatform, remotePostId, outputMode };
+        return { publishedUrl, publishPlatform, remotePostId, outputMode, warnings: [] as { code: string; message: string }[] };
       },
     );
 
-    const { publishedUrl, publishPlatform, remotePostId } = publishOutcome;
+    const { publishedUrl, publishPlatform, remotePostId, warnings } = publishOutcome as {
+      publishedUrl: string;
+      publishPlatform: string;
+      remotePostId?: string;
+      warnings?: { code: string; message: string }[];
+    };
+
+    const meta = {
+      ...((piece!.pieceMetadata as Record<string, unknown> | null) ?? {}),
+      ...(warnings && warnings.length > 0
+        ? { lastPublishWarnings: warnings }
+        : { lastPublishWarnings: undefined }),
+    };
 
     const [updated] = await db
       .update(contentPiecesTable)
@@ -199,6 +218,7 @@ export async function POST(
         publishedUrl,
         publishPlatform,
         publishError: null,
+        pieceMetadata: meta,
       })
       .where(eq(contentPiecesTable.id, id))
       .returning();
@@ -219,7 +239,10 @@ export async function POST(
       publishedUrl,
     ).catch(() => {});
 
-    return NextResponse.json(updated);
+    return NextResponse.json({
+      ...updated,
+      warnings: warnings ?? [],
+    });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Failed to publish" },

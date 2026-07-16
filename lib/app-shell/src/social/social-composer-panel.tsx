@@ -21,6 +21,56 @@ function isHttpsImageUrl(url: string): boolean {
   return /^https:\/\//i.test(url.trim()) && isPublicHttpImageUrl(url);
 }
 
+function SocialHumanizeSnapshot({
+  before,
+  after,
+  pieceHref,
+  renderLink,
+}: {
+  before: string;
+  after: string;
+  pieceHref: string;
+  renderLink: (props: SocialHubLinkProps) => ReactNode;
+}) {
+  const [view, setView] = useState<"after" | "before">("after");
+  const body = view === "before" ? before : after;
+  return (
+    <div className="space-y-1.5 rounded-lg border border-border bg-muted/30 px-2.5 py-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs font-medium text-foreground">Humanize snapshot</span>
+        <div className="inline-flex rounded-md border border-input bg-card p-0.5 text-xs">
+          <button
+            type="button"
+            className={cn(
+              "rounded px-2 py-0.5",
+              view === "after" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+            )}
+            onClick={() => setView("after")}
+          >
+            After
+          </button>
+          <button
+            type="button"
+            className={cn(
+              "rounded px-2 py-0.5",
+              view === "before" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+            )}
+            onClick={() => setView("before")}
+          >
+            Before
+          </button>
+        </div>
+        {renderLink({
+          href: pieceHref,
+          className: "text-xs font-medium text-foreground underline underline-offset-2",
+          children: "Revert in Studio",
+        })}
+      </div>
+      <p className="max-h-24 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">{body}</p>
+    </div>
+  );
+}
+
 export function SocialComposerPanel({
   parents,
   parentsLoading,
@@ -362,15 +412,12 @@ export function SocialComposerPanel({
                     </p>
                   ) : null}
                   {piece.pieceMetadata?.preHumanizeBodyMarkdown?.trim() ? (
-                    <p className="text-xs text-muted-foreground">
-                      Before/after snapshot saved.{" "}
-                      {renderLink({
-                        href: pieceHref(piece.id),
-                        className: "font-medium text-foreground underline underline-offset-2",
-                        children: "Open in Studio",
-                      })}{" "}
-                      to compare or revert.
-                    </p>
+                    <SocialHumanizeSnapshot
+                      before={piece.pieceMetadata.preHumanizeBodyMarkdown}
+                      after={piece.bodyMarkdown}
+                      pieceHref={pieceHref(piece.id)}
+                      renderLink={renderLink}
+                    />
                   ) : null}
                   {overLimit ? (
                     <p className="text-xs font-medium text-destructive">

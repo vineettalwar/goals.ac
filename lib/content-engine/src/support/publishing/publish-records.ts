@@ -93,6 +93,8 @@ export interface PublishAttemptResult {
   remotePostId?: string;
   /** Resolved CMS output mode for this attempt (persisted when set). */
   outputMode?: string | null;
+  /** Soft adapter warnings (e.g. Notion image omitted) — does not fail the publish. */
+  warnings?: { code: string; message: string }[];
 }
 
 export type PublishRecordListItem = {
