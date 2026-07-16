@@ -1,5 +1,16 @@
 # Session Handoff
 
+## Wave 4.6 — Social publish_records (2026-07-16)
+
+**Status:** done. `publishPieceToSocial` call sites (`contentPublish` job handler, Next `content-pieces/[id]/publish` route) already wrapped social publish in `withPublishRecord` from earlier work — the actual gap was UI-side:
+
+- `ProjectPublishingTab` gated the `ProjectPublishHistoryPanel` to `categoryFilter === "all" || "cms"`, so the Social tab on Project → Integrations never rendered publish history at all. Now also renders for `categoryFilter === "social"`.
+- `PublishHistoryPanel` copy said "Recent CMS publishes for this project." — now "Publishes" / "Recent CMS and social publishes for this project."
+
+No schema or pipeline changes needed; `listPublishRecordsForProject` already returns all providers unfiltered.
+
+**Verify:** `pnpm run typecheck:libs` (content-engine + app-shell clean).
+
 ## Overnight mode (2026-07-16 → 17) — Wave 4
 
 **Running:** Wave 4 competitive trust surfaces (commits ~every 5 files).  
@@ -13,11 +24,22 @@
 | 4.1 | Human-voice actionable detail | done |
 | 4.2 | Social composer Humanize | queued |
 | 4.3 | Light term checklist (secondary/PAA) | queued |
-| 4.4 | SERP refresh honesty | queued |
+| 4.4 | SERP refresh honesty | done |
 | 4.5 | Brief outline insert when body present | queued |
-| 4.6 | Social publish_records | queued |
+| 4.6 | Social publish_records | done |
 
 **Plan:** `docs/prd/content-studio-competitive-plan.md` § Wave 4 · `docs/DECISIONS.md` 2026-07-16 Wave 4
+
+### 4.4 SERP refresh honesty
+
+After successful Save of body, auto-refresh SERP score so "last scored" timestamp stays current.
+
+- SERP score endpoint now returns `scoredAt: ISO timestamp`
+- Quality panel shows "Scored [timestamp]" and highlights stale scores in amber when draft differs from saved
+- Next.js client (`content-piece-client.tsx`) auto-refreshes SERP after save success
+- Vite hook (`use-content-piece-data.ts`) auto-refreshes SERP after save success
+- Manual "Refresh SERP score" button remains available
+- Files: `cf-write-worker/content-pieces-ai.ts` (adds timestamp), `app-shell/content-quality-panel.tsx` (displays timestamp + staleness), `marketing-persona-app/content-piece-client.tsx`, `goals-app-ui/use-content-piece-data.ts`
 
 ### Also landed (admin)
 

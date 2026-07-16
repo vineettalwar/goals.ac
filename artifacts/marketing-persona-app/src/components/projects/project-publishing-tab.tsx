@@ -310,7 +310,7 @@ export function ProjectPublishingTab({
       />
       </div>
 
-      {categoryFilter === "all" || categoryFilter === "cms" ? (
+      {categoryFilter === "all" || categoryFilter === "cms" || categoryFilter === "social" ? (
         <ProjectPublishHistoryPanel projectId={projectId} />
       ) : null}
     </div>
