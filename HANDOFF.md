@@ -1,5 +1,22 @@
 # Session Handoff
 
+## Wave 4.8 — Coverage checklist chips actionable (2026-07-16)
+
+**Status:** done. Missing coverage-checklist chips (secondary keywords / PAA questions / rival topics not yet mentioned in the draft) are now clickable instead of purely decorative. Covered chips stay display-only spans — no click affordance.
+
+- Missing chips render as `<button>`s. Click behavior depends on edit mode:
+  - **Editing + host insert callback wired:** inserts a stub into the draft body — `## {term}` for PAA/rival-topic chips (heading-shaped), or a stub sentence (`Add a sentence mentioning "{term}" here.`) for secondary-keyword chips
+  - **Not editing (or no insert callback):** copies the raw term to the clipboard
+- Brief 1.5s inline feedback (chip flips to emerald "✓ … · inserted" / "✓ … · copied") confirms the click landed; a hint line above the chips names the current click behavior
+- Label stays honest: "Coverage checklist — not Surfer NLP" copy is unchanged (still a plain mention check, no density/frequency scoring)
+- Insert reuses the same append-to-draft plumbing as the Wave 4.5 brief-outline insert (`onInsertOutline` threaded through `ContentPieceView` → `ContentPieceAside`) — no new host wiring needed, so Next and Vite both pick it up for free through the shared `ContentPieceView`
+
+**Changed files:**
+- `lib/app-shell/src/content-piece/content-quality-panel.tsx` — `buildCoverageInsertSnippet`, `editing`/`onInsertMissingTerm` props, missing-chip click handler + feedback state, chip markup (span → button for misses)
+- `lib/app-shell/src/content-piece/content-piece-ui.tsx` — wires `editing` + `onInsertMissingTerm` (append via existing `onInsertOutline`) into `ArticleQualityPanel`
+
+**Verify:** `pnpm run typecheck:libs`, `pnpm --filter @workspace/marketing-persona-app run typecheck`, `pnpm --filter @workspace/goals-ac run typecheck` (all clean; unrelated pre-existing `@workspace/api-server` `pool` export error is untouched by this change).
+
 ## Wave 4.9 — Fix gaps enhance consumes coverage checklist + SERP gaps (2026-07-16)
 
 **Status:** done. "Fix gaps" (quality panel's enhance trigger) now tells the AI exactly which coverage-checklist terms are missing, on top of the existing SERP gaps.
@@ -71,7 +88,7 @@ No schema or pipeline changes needed; `listPublishRecordsForProject` already ret
 | # | Item | Status |
 |---|---|---|
 | 4.7 | Soft media honesty Notion/Webflow (+ IG stock path clarity) | **done** |
-| 4.8 | Coverage checklist actionable (copy/insert missing) | queued |
+| 4.8 | Coverage checklist actionable (copy/insert missing) | **done** |
 | 4.9 | Fix gaps consumes missing terms + SERP gaps | **done** |
 | 4.10 | Article scheduled/planned publish honesty in Studio | **done** |
 
