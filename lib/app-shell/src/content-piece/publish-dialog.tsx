@@ -8,7 +8,6 @@ import {
   type ContentFormatType,
   type PublishDestinationId,
 } from "./publish-destinations";
-import { getAdapterCapabilities } from "@workspace/content-engine/adapters/registry";
 import { sanitizePreviewHtml } from "./sanitize-preview-html";
 import {
   readShopifyThemeSnippetRequiredFor,
@@ -171,7 +170,9 @@ export function ContentPiecePublishDialog({
     formatType === "instagram_post" && !isPublicHttpsImage(pieceFeaturedImageUrl);
   const showJoomlaMediaWarning =
     platform === "joomla" && hasRasterDataImage(pieceFeaturedImageUrl);
-  const nativeCmsScheduling = getAdapterCapabilities(platform)?.scheduling === true;
+  // ponytail: only WordPress advertises native scheduling today (wordpress-adapter).
+  // If another CMS gains scheduling: true, update here or import a browser-safe capabilities map.
+  const nativeCmsScheduling = platform === "wordpress";
   const hasPublishable =
     availableDestinations.some((d) => !d.exportOnly) || availableDestinations.length > 0;
   const gridCols =
