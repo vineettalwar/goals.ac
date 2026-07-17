@@ -40,6 +40,8 @@ export type ContentPieceMetadata = {
     /** Optional skip reason when rejected (e.g. "length guard") */
     reason?: string;
   };
+  /** Generate skipped humanize (e.g. no brand voice sample). */
+  humanizeSkippedReason?: string | null;
   /** Body markdown as it was immediately before the most recent humanize pass. */
   preHumanizeBodyMarkdown?: string | null;
   intendedOutputMode?: string | null;
@@ -136,7 +138,7 @@ export function contentPieceCanEnhance(formatType: string): boolean {
     "news_article",
     "location_page",
   ]);
-  return longform.has(formatType);
+  return longform.has(formatType) || isHumanizableSocialFormat(formatType);
 }
 
 export function contentPieceSupportsStockImages(formatType: string): boolean {
@@ -165,4 +167,89 @@ export function contentPieceCanQueueSocial(
   const body = bodyMarkdown?.trim() ?? "";
   if (!body) return false;
   return status === "ready" || status === "published" || body.length > 50;
+}
+
+export type PublishReadyItem = {
+  id: "humanize" | "score" | "destination" | "media";
+  label: string;
+  ok: boolean;
+  hint: string;
+};
+
+const DEFAULT_SCORE_FLOOR = 55;
+
+/** Soft publish-ready checklist chips (Wave 5.B.3). */
+export function buildPublishReadyChecklist(input: {
+  humanized?: boolean | null;
+  humanizeSkippedReason?: string | null;
+  humanizationRejected?: boolean | null;
+  editorialScore?: number | null;
+  scoreFloor?: number;
+  destinationHealthOk?: boolean | null;
+  needsFeaturedImage?: boolean;
+  hasFeaturedImage?: boolean;
+}): PublishReadyItem[] {
+  const scoreFloor = input.scoreFloor ?? DEFAULT_SCORE_FLOOR;
+  const humanizePassed =
+    Boolean(input.humanized) ||
+    Boolean(input.humanizeSkippedReason?.trim());
+
+  const scoreOk =
+    input.editorialScore == null ? true : input.editorialScore >= scoreFloor;
+
+  const destinationOk =
+    input.destinationHealthOk == null ? true : input.destinationHealthOk === true;
+
+  const mediaOk = !input.needsFeaturedImage || Boolean(input.hasFeaturedImage);
+
+  return [
+    {
+      id: "humanize",
+      label: "Humanize",
+      ok: humanizePassed,
+      hint: input.humanized
+        ? "Humanize pass applied"
+        : input.humanizeSkippedReason
+          ? `Skipped: ${input.humanizeSkippedReason}`
+          : input.humanizationRejected
+            ? "Last humanize was rejected — retry"
+            : "Run Humanize before publish",
+    },
+    {
+      id: "score",
+      label: "Score",
+      ok: scoreOk,
+      hint:
+        input.editorialScore == null
+          ? "Score pending"
+          : scoreOk
+            ? `Editorial ${input.editorialScore}`
+            : `Editorial ${input.editorialScore} (need ≥${scoreFloor})`,
+    },
+    {
+      id: "destination",
+      label: "Destination",
+      ok: destinationOk,
+      hint:
+        input.destinationHealthOk == null
+          ? "Health not checked yet"
+          : destinationOk
+            ? "Destination health OK"
+            : "Fix integration health before publish",
+    },
+    {
+      id: "media",
+      label: "Media",
+      ok: mediaOk,
+      hint: mediaOk
+        ? input.needsFeaturedImage
+          ? "Featured image present"
+          : "No featured image required"
+        : "Add a public HTTPS featured image",
+    },
+  ];
+}
+
+export function publishReadyChecklistBlocks(items: PublishReadyItem[]): boolean {
+  return items.some((item) => !item.ok);
 }

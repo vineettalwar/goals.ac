@@ -182,6 +182,13 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+/**
+ * Compact create/repurpose wizard shared by Vite Studio.
+ *
+ * Wave 5.B.1: Next.js `CreateContentModal` is the rich SSOT for the canonical
+ * product. This dialog stays format-list-aligned with `STUDIO_FORMAT_OPTIONS`
+ * (includes Bluesky/Mastodon) so Vite parity does not diverge on formats.
+ */
 export function CreateContentDialog({
   open,
   onClose,

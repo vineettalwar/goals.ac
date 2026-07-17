@@ -38,6 +38,8 @@ import {
   contentStudioBackHref,
   formatContentFormatType,
   formatHumanizationAuditLine,
+  buildPublishReadyChecklist,
+  publishReadyChecklistBlocks,
   type ContentPieceDetail,
   type ContentPieceGeneratingState,
   type ContentPiecePublishingState,
@@ -752,6 +754,7 @@ function ContentPieceAside({
   queueingSocial = false,
   onInsertOutline,
   asideExtra,
+  destinationHealthOk = null,
 }: {
   editing: boolean;
   statusDraft: "draft" | "ready";
@@ -774,6 +777,8 @@ function ContentPieceAside({
   queueingSocial?: boolean;
   onInsertOutline?: (markdown: string) => void;
   asideExtra?: ReactNode;
+  /** null = unknown / not loaded; false soft-blocks publish. */
+  destinationHealthOk?: boolean | null;
 }) {
   const body = displayBody.trim();
   const [dual, setDual] = useState<DualContentScore | null>(null);
@@ -795,6 +800,22 @@ function ContentPieceAside({
       cancelled = true;
     };
   }, [piece.id, piece.bodyMarkdown, fetchDualScore]);
+
+  const featuredUrl = piece.pieceMetadata?.featuredImageUrl?.trim() ?? "";
+  const hasFeatured =
+    Boolean(featuredUrl) ||
+    Boolean(piece.pieceMetadata?.images?.some((img) => img.role === "featured"));
+  const needsFeaturedImage = ["instagram_post"].includes(piece.formatType);
+  const checklist = buildPublishReadyChecklist({
+    humanized: piece.pieceMetadata?.humanized,
+    humanizeSkippedReason: piece.pieceMetadata?.humanizeSkippedReason,
+    humanizationRejected: piece.pieceMetadata?.humanizationAudit?.rejected,
+    editorialScore: dual?.editorial?.total ?? null,
+    destinationHealthOk,
+    needsFeaturedImage,
+    hasFeaturedImage: hasFeatured,
+  });
+  const checklistBlocks = publishReadyChecklistBlocks(checklist);
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-6">
@@ -885,12 +906,36 @@ function ContentPieceAside({
       {canPublish ? (
         <div className="paper-card space-y-3 rounded-xl p-4">
           <p className="text-sm font-medium">Ready to publish</p>
-          <p className="text-xs text-muted-foreground">
-            Content is marked ready. Choose a destination when you publish.
-          </p>
+          <ul className="flex flex-wrap gap-1.5" aria-label="Publish readiness checklist">
+            {checklist.map((item) => (
+              <li key={item.id}>
+                <span
+                  title={item.hint}
+                  className={cn(
+                    "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium",
+                    item.ok
+                      ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
+                      : "bg-amber-500/15 text-amber-900 dark:text-amber-200",
+                  )}
+                >
+                  {item.ok ? "✓" : "!"} {item.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {checklistBlocks ? (
+            <p className="text-xs text-amber-800 dark:text-amber-200">
+              Soft block: fix amber checklist items before publishing (destination health, humanize,
+              score, or media).
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              Content is marked ready. Choose a destination when you publish.
+            </p>
+          )}
           <button
             type="button"
-            disabled={busy || editing}
+            disabled={busy || editing || checklistBlocks}
             className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
             onClick={onPublish}
           >
@@ -984,6 +1029,7 @@ export function ContentPieceView({
   fetchBrief,
   headerExtra,
   asideExtra,
+  destinationHealthOk = null,
 }: {
   piece: ContentPieceDetail;
   renderLink: (props: ContentPieceLinkProps) => ReactNode;
@@ -1033,6 +1079,8 @@ export function ContentPieceView({
   headerExtra?: ReactNode;
   /** Host-specific aside extras (e.g. visual summary card). */
   asideExtra?: ReactNode;
+  /** Primary CMS destination lastHealthOk; null = unknown (does not soft-block). */
+  destinationHealthOk?: boolean | null;
 }) {
   const [editor, dispatch] = useReducer(editorReducer, piece, createEditorState);
   const nextDraftKey = pieceDraftKey(piece);
@@ -1266,6 +1314,7 @@ export function ContentPieceView({
               : undefined
           }
           asideExtra={asideExtra}
+          destinationHealthOk={destinationHealthOk}
         />
       </div>
     </div>

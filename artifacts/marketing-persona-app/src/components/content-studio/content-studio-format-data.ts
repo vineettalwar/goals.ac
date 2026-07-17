@@ -17,6 +17,8 @@ import {
   Package,
   Radio,
   HelpCircle,
+  Cloud,
+  AtSign,
 } from "lucide-react";
 
 export type ContentFormatType =
@@ -32,6 +34,8 @@ export type ContentFormatType =
   | "twitter_thread"
   | "instagram_post"
   | "facebook_post"
+  | "bluesky_post"
+  | "mastodon_post"
   | "email_sequence"
   | "ad_copy"
   | "landing_page_copy"
@@ -133,6 +137,20 @@ export const FORMAT_META: Record<
     description: "Community-friendly posts for your Facebook Page.",
     wordRange: "150–400 words",
   },
+  bluesky_post: {
+    label: "Bluesky Post",
+    icon: Cloud,
+    color: "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400",
+    description: "Short AT Proto posts — clear, conversational, under 300 characters.",
+    wordRange: "≤300 characters",
+  },
+  mastodon_post: {
+    label: "Mastodon Toot",
+    icon: AtSign,
+    color: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
+    description: "Instance-friendly toots with a clear point and light hashtags.",
+    wordRange: "≤500 characters",
+  },
   email_sequence: {
     label: "Email Sequence",
     icon: Mail,
@@ -193,7 +211,14 @@ export const FORMAT_CATEGORIES: { label: string; formats: ContentFormatType[] }[
   },
   {
     label: "Social Media",
-    formats: ["linkedin_post", "twitter_thread", "instagram_post", "facebook_post"],
+    formats: [
+      "linkedin_post",
+      "twitter_thread",
+      "instagram_post",
+      "facebook_post",
+      "bluesky_post",
+      "mastodon_post",
+    ],
   },
   {
     label: "Email & Ads",

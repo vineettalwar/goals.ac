@@ -8,6 +8,7 @@ import {
   type ContentFormatType,
   type PublishDestinationId,
 } from "./publish-destinations";
+import { getAdapterCapabilities } from "@workspace/content-engine/adapters/registry";
 import { sanitizePreviewHtml } from "./sanitize-preview-html";
 import {
   readShopifyThemeSnippetRequiredFor,
@@ -20,6 +21,16 @@ import {
   Typo3MediaPreflight,
   NotionWebflowMediaPreflight,
 } from "./typo3-media-preflight";
+
+function isPublicHttpsImage(url: string | null | undefined): boolean {
+  if (!url?.trim()) return false;
+  try {
+    const parsed = new URL(url.trim());
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 export type RenderPreviewResult = {
   payloadKind?: string;
@@ -72,6 +83,8 @@ export function ContentPiecePublishDialog({
   const [typo3MediaUploadAck, setTypo3MediaUploadAck] = useState(false);
   const [notionMediaAck, setNotionMediaAck] = useState(false);
   const [webflowMediaAck, setWebflowMediaAck] = useState(false);
+  const [ghostMediaAck, setGhostMediaAck] = useState(false);
+  const [instagramMediaAck, setInstagramMediaAck] = useState(false);
   const [joomlaMediaAck, setJoomlaMediaAck] = useState(false);
 
   useEffect(() => {
@@ -150,8 +163,15 @@ export function ContentPiecePublishDialog({
     platform === "notion" && hasRasterDataImage(pieceFeaturedImageUrl);
   const showWebflowMediaWarning =
     platform === "webflow" && hasRasterDataImage(pieceFeaturedImageUrl);
+  const showGhostMediaWarning =
+    platform === "ghost" &&
+    Boolean(pieceFeaturedImageUrl) &&
+    !isPublicHttpsImage(pieceFeaturedImageUrl);
+  const showInstagramMediaWarning =
+    formatType === "instagram_post" && !isPublicHttpsImage(pieceFeaturedImageUrl);
   const showJoomlaMediaWarning =
     platform === "joomla" && hasRasterDataImage(pieceFeaturedImageUrl);
+  const nativeCmsScheduling = getAdapterCapabilities(platform)?.scheduling === true;
   const hasPublishable =
     availableDestinations.some((d) => !d.exportOnly) || availableDestinations.length > 0;
   const gridCols =
@@ -288,12 +308,30 @@ export function ContentPiecePublishDialog({
                   <p className="text-sm text-muted-foreground">
                     This piece is scheduled for <strong>{plannedDate}</strong>.
                   </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    <strong>Option 1:</strong> Mark Ready in the editor + keep scheduled — the daily sweep publishes it on that date.
-                  </p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    <strong>Option 2:</strong> Publish now instead — click below to go live immediately (ignores scheduled date).
-                  </p>
+                  {nativeCmsScheduling ? (
+                    <>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        <strong>Option 1:</strong> Mark Ready + keep scheduled — WordPress can honor
+                        native scheduling when supported by the connection.
+                      </p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        <strong>Option 2:</strong> Publish now — go live immediately (ignores scheduled
+                        date).
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        <strong>Option 1:</strong> Mark Ready in the editor + keep scheduled — the
+                        goals.ac daily sweep publishes on that date (this CMS has no native schedule
+                        API).
+                      </p>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        <strong>Option 2:</strong> Publish now — go live immediately (ignores scheduled
+                        date).
+                      </p>
+                    </>
+                  )}
                 </div>
               ) : null}
 
@@ -384,6 +422,46 @@ export function ContentPiecePublishDialog({
                     <span>
                       Understood — publish continues. Use stock image or paste HTTPS URL for featured image.
                     </span>
+                  </label>
+                </div>
+              ) : null}
+
+              {showGhostMediaWarning ? (
+                <div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+                  <p className="font-medium">Ghost featured image</p>
+                  <p>
+                    Ghost needs a public HTTPS image URL (data URIs are skipped). Publish continues
+                    without feature_image unless you attach HTTPS media.
+                  </p>
+                  <label className="flex items-start gap-2 text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-border"
+                      checked={ghostMediaAck}
+                      onChange={(e) => setGhostMediaAck(e.target.checked)}
+                      disabled={publishing}
+                    />
+                    <span>Understood — continue without a usable Ghost feature image.</span>
+                  </label>
+                </div>
+              ) : null}
+
+              {showInstagramMediaWarning ? (
+                <div className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-950 dark:text-amber-100">
+                  <p className="font-medium">Instagram image required</p>
+                  <p>
+                    Instagram publish needs a public HTTPS featured image. Attach one before publishing
+                    or acknowledge that publish may fail.
+                  </p>
+                  <label className="flex items-start gap-2 text-muted-foreground">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 rounded border-border"
+                      checked={instagramMediaAck}
+                      onChange={(e) => setInstagramMediaAck(e.target.checked)}
+                      disabled={publishing}
+                    />
+                    <span>Understood — I will add an image or accept a publish error.</span>
                   </label>
                 </div>
               ) : null}
@@ -489,6 +567,8 @@ export function ContentPiecePublishDialog({
                       (showTypo3MediaUploadWarning && !typo3MediaUploadAck) ||
                       (showNotionMediaWarning && !notionMediaAck) ||
                       (showWebflowMediaWarning && !webflowMediaAck) ||
+                      (showGhostMediaWarning && !ghostMediaAck) ||
+                      (showInstagramMediaWarning && !instagramMediaAck) ||
                       (showJoomlaMediaWarning && !joomlaMediaAck)
                     }
                     className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
