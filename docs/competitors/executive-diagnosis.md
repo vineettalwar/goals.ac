@@ -53,7 +53,9 @@ Documented as **Competitive gap packaging — SHIPPED** in `HANDOFF.md`.
 
 ### Next packaging waves
 
-See [content-studio-competitive-plan.md](../prd/content-studio-competitive-plan.md): Wave 0 humanize trust → Wave 1 Studio side panel + live draft score → Wave 2 health / publish history / article→social one-click.
+Waves 0–4 packaging/trust **shipped**. **Wave 5** (2026-07-17): humanize durability + Studio/integration reliability — see [content-studio-competitive-plan.md](../prd/content-studio-competitive-plan.md).
+
+Still deferred: Surfer NLP, hosted blog, self-serve pricing.
 
 **ICP (90 days):** Partner-demo path vs BabyLoveGrowth / AutoSEO — consulting-led, not self-serve checkout.
 

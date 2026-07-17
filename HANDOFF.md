@@ -1,16 +1,46 @@
 # Session Handoff
 
+## Wave 5 — Humanize durability + Studio/integration reliability (2026-07-17)
+
+**Status:** Wave 5.A–5.C **shipped on `main`** (commits `cc33d7e`…`0744512`) + Bedrock BYOK model picker. CF deploy in progress this session.
+
+### Shipped in this tranche
+
+- Humanize: structure guards (FAQ/citation/H2), reject-below-threshold + audit `reason`, voice-gated generate skip, platform-voice social presets + char limits
+- Studio: Bluesky/Mastodon in Next format picker, Ready-to-publish checklist soft-block, social tighten enhance
+- Integrations: Ghost/Webflow create-or-update, health-gated CMS publish, schedule honesty, Ghost/IG media acks, Mastodon admin info tile, Basic publish badges
+- Bedrock: bearer API-key auth, explicit model picker (org + admin), clearer auth errors
+
+### Still deferred
+
+Surfer NLP, hosted blog, TikTok/YouTube, detector APIs, self-serve pricing, Content-media R2 invent.
+
+### Verify
+
+```sh
+npx vitest run lib/content-engine/src/content/humanizer-guards.test.ts lib/app-shell/src/content-piece/publish-ready-checklist.test.ts lib/ai-providers/src/bedrock-auth.test.ts
+pnpm --filter @workspace/marketing-persona-app run typecheck
+pnpm --filter @workspace/goals-app-ui run typecheck
+```
+
+### Deploy
+
+```sh
+pnpm run cf:edge:deploy && pnpm run cf:deploy:jobs && pnpm run cf:pages:marketing && pnpm run cf:pages:app
+git push
+```
+
+---
+
 ## Overnight complete — Wave 4 trust surfaces (2026-07-16 → 17)
 
-**Status:** Wave 4.0–4.16 + warning/ack follow-ups **shipped** on `main` (ahead of origin; **not** CF-deployed — you deploy morning).
+**Status:** Wave 4.0–4.16 + warning/ack follow-ups **shipped** on `main` (includes marketing static-export fixes for geo-audit `dynamicParams` + article-quality QueryClient).
 
 **Not done (deferred / ops):** Surfer NLP, hosted blog, TikTok, invent R2 buckets, Drupal File entities, dual create merge, ponytail deletes, named GSC case studies, TYPO3 live smoke.
 
-### Morning for you
+### Deploy (canonical)
 
 ```sh
-pnpm run typecheck
-git push
 pnpm run cf:edge:deploy && pnpm run cf:deploy:jobs && pnpm run cf:pages:marketing && pnpm run cf:pages:app
 # optional: wrangler r2 bucket + CONTENT_MEDIA_PUBLIC_BASE_URL (content-media PRD)
 ```

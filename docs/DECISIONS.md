@@ -1,3 +1,16 @@
+## 2026-07-17 — Wave 5 humanize durability + integration reliability
+
+**Decision:** After Wave 4 trust surfaces, execute **Wave 5** to deepen humanize quality gates (reject-below-threshold, FAQ/citation guards, voice-gated generate, platform-voice social), Studio coherence (format parity, Ready checklist, social tighten), and integration reliability (Ghost/Webflow updates, health-gated publish, schedule honesty, Mastodon admin info, Basic publish badges). Keep Surfer NLP, hosted blog, and self-serve pricing deferred.
+
+**Alternatives considered:**
+- Full Surfer NLP term editor — still deferred (high cost; coverage checklist + Fix gaps remain the answer)
+- Hosted blog / public pricing — deferred until self-serve GTM track
+- New CMS platforms before Ghost/Webflow depth — rejected; deepen demo stacks first
+
+**Reason:** Post–Wave 4 losses are durability (BLG “needs editing”) and publish reliability outside WP happy path — not missing engines.
+
+**Implications:** PRD Wave 5 in `docs/prd/content-studio-competitive-plan.md`; partner demo path still primary ICP.
+
 ## 2026-07-16 — Wave 4 trust surfaces (no Surfer NLP, no ponytail deletes)
 
 **Decision:** After Waves 0–3.2, execute **Wave 4** focused on demo-inspectable trust: product humanize before/after, social composer Humanize, light secondary/PAA term checklist (explicitly labeled non-Surfer), SERP refresh honesty, brief outline insert on non-empty drafts, and social rows in `publish_records`. Do **not** run ponytail delete sweeps. Do **not** provision Content-media R2 or CF production deploy overnight — ops morning.

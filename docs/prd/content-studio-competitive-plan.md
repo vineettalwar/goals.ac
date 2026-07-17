@@ -1,8 +1,22 @@
 # PRD: Content Studio Competitive Plan
 
-**Status:** Waves 0–3.2 shipped · **Wave 4.0–4.16 shipped** (trust surfaces + async platform fix) · Hosted blog (3.3) still deferred · No ponytail deletes in this tranche · CF deploy morning-only  
+**Status:** Waves 0–5 shipped · Hosted blog (3.3) still deferred · Surfer NLP still deferred  
 **ICP (90 days):** Partner-demo path vs BabyLoveGrowth / AutoSEO — consulting-led, not self-serve checkout  
 **Related:** [babylovegrowth-parity-planner.md](../competitors/babylovegrowth-parity-planner.md), [DECISIONS.md](../DECISIONS.md), [HANDOFF.md](../../HANDOFF.md)
+
+---
+
+## Post–Wave 4 audit (2026-07-17) — why Wave 5
+
+Trust surfaces shipped; remaining losses are **humanize durability** (BLG “needs editing”), **Studio create coherence**, and **integration depth** beyond WP/Ghost demo stacks.
+
+| # | Weakness | Competitor who wins that moment | Wave 5 response |
+|---|---|---|---|
+| 1 | One-pass / optional humanize; reject path weak | BLG quality criticism | **5.A** Reject-below-threshold, structure guards, voice-gated generate, platform-voice social |
+| 2 | Dual create paths; Bluesky/Mastodon missing from Next picker | Surfer / Buffer polish | **5.B** Format parity, Ready checklist, social tighten enhance |
+| 3 | Thin CMS marketed equal to plugins; media/schedule honesty gaps | Buffer / AutoSEO WP wizard | **5.C** Ghost/Webflow updates, health gate, Basic publish badges, Mastodon admin honesty |
+
+**Still deferred:** full Surfer NLP editor, hosted blog, TikTok/YouTube inbox, backlink exchange, detector APIs, self-serve public pricing.
 
 ---
 
@@ -166,6 +180,30 @@ flowchart LR
 **Out of Wave 4:** Full Surfer NLP highlighting, Content-media R2 bucket provisioning (ops), named GSC case studies, TYPO3 live-site smoke, dual create wizard merge, ponytail deletes.
 
 **Execution discipline (overnight):** Fable-5 step loop; commit roughly every ≤5 files; **no Cloudflare deploy** (morning operator); **no ponytail deletes**.
+
+---
+
+### Wave 5 — Humanize durability + Studio/integration reliability (executed 2026-07-17)
+
+**Goal:** Make quality + publish reliability the durable edge vs BLG/AutoSEO/Buffer — without Surfer NLP or hosted blog.
+
+| # | Deliverable | Status |
+|---|---|---|
+| **5.A.1** | Generate humanize gated on brand voice sample (skip + warn when missing; light/strong when present) | done |
+| **5.A.2** | Reject-below-threshold (no slop improvement / human-voice floor) with audit `reason` | done |
+| **5.A.3** | Platform-voice presets + char limits on social Humanize | done |
+| **5.A.4** | FAQ / citation / H2 structure hard guards | done |
+| **5.B.1–2** | Next format picker + Bluesky/Mastodon; shell create notes Next as SSOT | done |
+| **5.B.3** | Ready-to-publish checklist soft-block | done |
+| **5.B.4** | Light social “tighten for platform” enhance | done |
+| **5.C.1** | Ghost/Instagram media honesty in publish dialog | done |
+| **5.C.2** | Ghost + Webflow create-or-update via prior `remoteId` | done |
+| **5.C.3** | Health-gated CMS publish (skip when `lastHealthOk === false`) | done |
+| **5.C.4** | CMS schedule honesty (native WP vs goals.ac sweep) | done |
+| **5.C.5** | Mastodon admin catalog (instance-only info) | done |
+| **5.C.6** | “Basic publish” badges on thin CMS tiles | done |
+
+**Out of Wave 5:** Surfer NLP, hosted blog, TikTok/YouTube, detector APIs, self-serve checkout.
 
 ---
 
