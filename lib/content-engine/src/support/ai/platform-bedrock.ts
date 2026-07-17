@@ -38,6 +38,15 @@ export async function isOrgGrantedPlatformBedrock(organizationId: number): Promi
 
 /** Platform Bedrock material (env overrides DB). Does not check org grants. */
 export async function loadPlatformBedrockCredentials(): Promise<BedrockCredentialOptions | null> {
+  const envBearer = envTrim("AWS_BEARER_TOKEN_BEDROCK");
+  if (envBearer) {
+    return {
+      apiKey: envBearer,
+      region: envTrim("AWS_REGION") ?? envTrim("AWS_DEFAULT_REGION") ?? undefined,
+      model: envTrim("BEDROCK_MODEL") ?? undefined,
+    };
+  }
+
   const envAccessKeyId = envTrim("AWS_ACCESS_KEY_ID");
   const envSecretAccessKey = envTrim("AWS_SECRET_ACCESS_KEY");
   if (envAccessKeyId && envSecretAccessKey) {
@@ -65,14 +74,21 @@ export async function loadPlatformBedrockCredentials(): Promise<BedrockCredentia
 
     const accessKeyId = safeDecrypt(row?.encryptedBedrockAccessKeyId);
     const secretAccessKey = safeDecrypt(row?.encryptedBedrockSecretAccessKey);
-    if (!accessKeyId || !secretAccessKey) return null;
+    if (!secretAccessKey) return null;
+
+    const region = row?.bedrockRegion ?? undefined;
+    const model = row?.bedrockModel ?? undefined;
+
+    if (!accessKeyId) {
+      return { apiKey: secretAccessKey, region, model };
+    }
 
     return {
       accessKeyId,
       secretAccessKey,
       sessionToken: safeDecrypt(row?.encryptedBedrockSessionToken) ?? undefined,
-      region: row?.bedrockRegion ?? undefined,
-      model: row?.bedrockModel ?? undefined,
+      region,
+      model,
     };
   } catch (err) {
     logger.warn({ err }, "Failed to load platform Bedrock credentials");

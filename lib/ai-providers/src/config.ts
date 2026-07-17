@@ -1,6 +1,8 @@
 export type AiProviderId = "gemini" | "bedrock" | "ollama" | "anthropic" | "openai";
 
 export interface BedrockCredentialOptions {
+  /** Bedrock API key (bearer token). Prefer this over IAM access keys. */
+  apiKey?: string | null;
   accessKeyId?: string | null;
   secretAccessKey?: string | null;
   sessionToken?: string | null;
@@ -52,6 +54,7 @@ function normalizeProviderId(value: string | null | undefined): AiProviderId | n
 export function isBedrockEnvConfigured(): boolean {
   if (env("AI_PROVIDER") === "bedrock") return true;
   return !!(
+    env("AWS_BEARER_TOKEN_BEDROCK") ||
     (env("AWS_ACCESS_KEY_ID") && env("AWS_SECRET_ACCESS_KEY")) ||
     env("AWS_PROFILE") ||
     env("AWS_ROLE_ARN") ||

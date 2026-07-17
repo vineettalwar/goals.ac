@@ -9,14 +9,16 @@ import { and, eq, inArray } from "drizzle-orm";
 import { lastFour } from "@workspace/billing";
 
 export type PlatformBedrockCredentials = {
-  accessKeyId: string;
-  secretAccessKey: string;
+  apiKey?: string;
+  accessKeyId?: string;
+  secretAccessKey?: string;
   sessionToken?: string;
   region?: string;
   model?: string;
 };
 
 const BEDROCK_ENV_VARS = [
+  "AWS_BEARER_TOKEN_BEDROCK",
   "AWS_ACCESS_KEY_ID",
   "AWS_SECRET_ACCESS_KEY",
   "AWS_SESSION_TOKEN",
@@ -44,7 +46,10 @@ function safeDecrypt(stored: string | null | undefined): string | null {
 }
 
 export function isBedrockManagedByEnv(): boolean {
-  return Boolean(envTrim("AWS_ACCESS_KEY_ID") && envTrim("AWS_SECRET_ACCESS_KEY"));
+  return Boolean(
+    envTrim("AWS_BEARER_TOKEN_BEDROCK") ||
+      (envTrim("AWS_ACCESS_KEY_ID") && envTrim("AWS_SECRET_ACCESS_KEY")),
+  );
 }
 
 export type PlatformBedrockStatus = {
@@ -119,6 +124,15 @@ export async function isOrgGrantedPlatformBedrock(organizationId: number): Promi
 
 /** Platform Bedrock material (env overrides DB). Does not check org grants. */
 export async function loadPlatformBedrockCredentials(): Promise<PlatformBedrockCredentials | null> {
+  const envBearer = envTrim("AWS_BEARER_TOKEN_BEDROCK");
+  if (envBearer) {
+    return {
+      apiKey: envBearer,
+      region: envTrim("AWS_REGION") ?? envTrim("AWS_DEFAULT_REGION") ?? undefined,
+      model: envTrim("BEDROCK_MODEL") ?? undefined,
+    };
+  }
+
   const envAccessKeyId = envTrim("AWS_ACCESS_KEY_ID");
   const envSecretAccessKey = envTrim("AWS_SECRET_ACCESS_KEY");
   if (envAccessKeyId && envSecretAccessKey) {
@@ -145,15 +159,21 @@ export async function loadPlatformBedrockCredentials(): Promise<PlatformBedrockC
 
   const accessKeyId = safeDecrypt(row?.encryptedBedrockAccessKeyId);
   const secretAccessKey = safeDecrypt(row?.encryptedBedrockSecretAccessKey);
-  if (!accessKeyId || !secretAccessKey) return null;
+  if (!secretAccessKey) return null;
 
-  const sessionToken = safeDecrypt(row?.encryptedBedrockSessionToken) ?? undefined;
+  const region = row?.bedrockRegion ?? undefined;
+  const model = row?.bedrockModel ?? undefined;
+
+  if (!accessKeyId) {
+    return { apiKey: secretAccessKey, region, model };
+  }
+
   return {
     accessKeyId,
     secretAccessKey,
-    sessionToken,
-    region: row?.bedrockRegion ?? undefined,
-    model: row?.bedrockModel ?? undefined,
+    sessionToken: safeDecrypt(row?.encryptedBedrockSessionToken) ?? undefined,
+    region,
+    model,
   };
 }
 
@@ -181,16 +201,13 @@ export async function getPlatformBedrockStatus(): Promise<PlatformBedrockStatus>
     .where(eq(platformSettingsTable.id, 1))
     .limit(1);
 
+  const envBearer = envTrim("AWS_BEARER_TOKEN_BEDROCK");
   const accessKeyId = secretFieldStatus(row?.encryptedBedrockAccessKeyId, "AWS_ACCESS_KEY_ID");
-  const secretAccessKey = secretFieldStatus(
-    row?.encryptedBedrockSecretAccessKey,
-    "AWS_SECRET_ACCESS_KEY",
-  );
+  const secretAccessKey = envBearer
+    ? { configured: true as const, source: "env" as const, lastFour: lastFour(envBearer) }
+    : secretFieldStatus(row?.encryptedBedrockSecretAccessKey, "AWS_SECRET_ACCESS_KEY");
   const region = plainFieldStatus(row?.bedrockRegion, ["AWS_REGION", "AWS_DEFAULT_REGION"]);
   const model = plainFieldStatus(row?.bedrockModel, ["BEDROCK_MODEL"]);
-  const hasSessionToken = Boolean(
-    envTrim("AWS_SESSION_TOKEN") || safeDecrypt(row?.encryptedBedrockSessionToken),
-  );
   const grantedOrganizations = await listPlatformBedrockGrantedOrganizations();
 
   return {
@@ -198,15 +215,18 @@ export async function getPlatformBedrockStatus(): Promise<PlatformBedrockStatus>
     envVars: activeEnvVars(BEDROCK_ENV_VARS),
     accessKeyId,
     secretAccessKey,
-    hasSessionToken,
+    hasSessionToken: Boolean(
+      envTrim("AWS_SESSION_TOKEN") || safeDecrypt(row?.encryptedBedrockSessionToken),
+    ),
     region,
     model,
-    configured: accessKeyId.configured && secretAccessKey.configured,
+    configured: Boolean(envBearer) || secretAccessKey.configured,
     grantedOrganizations,
   };
 }
 
 export type SavePlatformBedrockCredentialsInput = {
+  apiKey?: string;
   accessKeyId?: string;
   secretAccessKey?: string;
   sessionToken?: string | null;
@@ -226,20 +246,28 @@ export async function savePlatformBedrockCredentials(
     updatedBy: input.updatedBy,
   };
 
-  if (input.accessKeyId !== undefined) {
-    patch.encryptedBedrockAccessKeyId = input.accessKeyId
-      ? encryptSecret(input.accessKeyId.trim())
-      : null;
+  if (input.apiKey !== undefined) {
+    const trimmed = input.apiKey.trim();
+    patch.encryptedBedrockSecretAccessKey = trimmed ? encryptSecret(trimmed) : null;
+    patch.encryptedBedrockAccessKeyId = null;
+    patch.encryptedBedrockSessionToken = null;
+  } else {
+    if (input.accessKeyId !== undefined) {
+      patch.encryptedBedrockAccessKeyId = input.accessKeyId
+        ? encryptSecret(input.accessKeyId.trim())
+        : null;
+    }
+    if (input.secretAccessKey !== undefined) {
+      patch.encryptedBedrockSecretAccessKey = input.secretAccessKey
+        ? encryptSecret(input.secretAccessKey.trim())
+        : null;
+    }
+    if (input.sessionToken !== undefined) {
+      const trimmed = input.sessionToken?.trim();
+      patch.encryptedBedrockSessionToken = trimmed ? encryptSecret(trimmed) : null;
+    }
   }
-  if (input.secretAccessKey !== undefined) {
-    patch.encryptedBedrockSecretAccessKey = input.secretAccessKey
-      ? encryptSecret(input.secretAccessKey.trim())
-      : null;
-  }
-  if (input.sessionToken !== undefined) {
-    const trimmed = input.sessionToken?.trim();
-    patch.encryptedBedrockSessionToken = trimmed ? encryptSecret(trimmed) : null;
-  }
+
   if (input.region !== undefined) {
     patch.bedrockRegion = input.region?.trim() || null;
   }
@@ -261,9 +289,7 @@ export async function clearStoredPlatformBedrockCredentials(updatedBy: number): 
     throw new Error("Bedrock credentials are managed via server environment variables");
   }
   await savePlatformBedrockCredentials({
-    accessKeyId: "",
-    secretAccessKey: "",
-    sessionToken: null,
+    apiKey: "",
     region: null,
     model: null,
     updatedBy,

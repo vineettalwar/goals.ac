@@ -468,6 +468,7 @@ const patchIntegrationSchema = z.discriminatedUnion("integration", [
   }),
   z.object({
     integration: z.literal("bedrock"),
+    apiKey: z.string().min(16).optional(),
     accessKeyId: z.string().min(16).optional(),
     secretAccessKey: z.string().min(16).optional(),
     sessionToken: z.string().trim().optional().nullable(),
@@ -792,6 +793,7 @@ export async function handleAdminWrite(
         });
       } else {
         const hasCredFields =
+          data.apiKey !== undefined ||
           data.accessKeyId !== undefined ||
           data.secretAccessKey !== undefined ||
           data.sessionToken !== undefined ||
@@ -812,6 +814,7 @@ export async function handleAdminWrite(
             );
           }
           await savePlatformBedrockCredentials({
+            apiKey: data.apiKey,
             accessKeyId: data.accessKeyId,
             secretAccessKey: data.secretAccessKey,
             sessionToken: data.sessionToken,

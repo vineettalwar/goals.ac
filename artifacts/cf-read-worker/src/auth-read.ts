@@ -128,7 +128,9 @@ export async function handleAuthRead(
 
     let accessKeyLastFour = "••••";
     try {
-      if (orgSettings?.encryptedBedrockAccessKeyId) {
+      if (orgSettings?.encryptedBedrockSecretAccessKey) {
+        accessKeyLastFour = decryptSecret(orgSettings.encryptedBedrockSecretAccessKey).slice(-4);
+      } else if (orgSettings?.encryptedBedrockAccessKeyId) {
         accessKeyLastFour = decryptSecret(orgSettings.encryptedBedrockAccessKeyId).slice(-4);
       }
     } catch {

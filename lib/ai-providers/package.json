@@ -11,6 +11,7 @@
     "./config": "./src/config.ts",
     "./resolve-client": "./src/resolve-client.ts",
     "./bedrock": "./src/bedrock.ts",
+    "./bedrock-models": "./src/bedrock-models.ts",
     "./ollama": "./src/ollama.ts",
     "./anthropic": "./src/anthropic.ts",
     "./openai": "./src/openai.ts",

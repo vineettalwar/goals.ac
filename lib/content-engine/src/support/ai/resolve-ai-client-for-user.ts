@@ -31,8 +31,9 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
   const usingGeminiKey = Boolean(userApiKey && providerId === "gemini");
   const usingBedrockKey = Boolean(
     providerId === "bedrock" &&
-      aiProviderOptions.bedrock?.accessKeyId &&
-      aiProviderOptions.bedrock?.secretAccessKey,
+      (aiProviderOptions.bedrock?.apiKey ||
+        (aiProviderOptions.bedrock?.accessKeyId && aiProviderOptions.bedrock?.secretAccessKey) ||
+        aiProviderOptions.bedrock?.secretAccessKey),
   );
   const usingAnthropicKey = Boolean(
     providerId === "anthropic" && aiProviderOptions.anthropic?.apiKey?.trim(),

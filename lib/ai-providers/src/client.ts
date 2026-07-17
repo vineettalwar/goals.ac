@@ -166,8 +166,8 @@ export async function getAiProviderClient(options?: AiProviderOptions): Promise<
   const cacheKey =
     id === "ollama" && resolvedOllama
       ? `ollama:${resolvedOllama.baseUrl}:${resolvedOllama.model}`
-      : id === "bedrock" && options?.bedrock?.accessKeyId
-        ? `bedrock:${options.bedrock.accessKeyId}:${options.bedrock.region ?? ""}:${options.bedrock.model ?? ""}`
+      : id === "bedrock" && (options?.bedrock?.apiKey || options?.bedrock?.accessKeyId || options?.bedrock?.secretAccessKey)
+        ? `bedrock:${options.bedrock.apiKey?.slice(-8) ?? options.bedrock.accessKeyId ?? options.bedrock.secretAccessKey?.slice(-8) ?? ""}:${options.bedrock.region ?? ""}:${options.bedrock.model ?? ""}`
         : id === "openai" && options?.openai?.apiKey
           ? `openai:${options.openai.apiKey.slice(-8)}`
           : id === "anthropic" && options?.anthropic?.apiKey

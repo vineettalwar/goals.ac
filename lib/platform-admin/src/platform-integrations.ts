@@ -113,6 +113,7 @@ export type PlatformIntegrationId =
   | "twitter"
   | "meta"
   | "bluesky"
+  | "mastodon"
   | "bedrock";
 
 export type PlatformIntegrationSettingsKey =
@@ -120,7 +121,7 @@ export type PlatformIntegrationSettingsKey =
   | "emailEnabled"
   | "socialPublishingEnabled";
 
-export type PlatformIntegrationKind = "credentials" | "env";
+export type PlatformIntegrationKind = "credentials" | "env" | "info";
 
 export type PlatformIntegrationEnvVar = {
   name: string;
@@ -324,22 +325,38 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
       ],
     },
     {
+      id: "mastodon",
+      category: "social",
+      kind: "info",
+      label: "Mastodon",
+      description:
+        "Instance OAuth only — each project registers with its own Mastodon instance. No platform-wide app credentials.",
+      settingsKey: "socialPublishingEnabled",
+      docsUrl: "https://docs.joinmastodon.org/client/token/",
+      envVars: [],
+    },
+    {
       id: "bedrock",
       category: "ai",
       kind: "credentials",
       label: "AWS Bedrock",
       description: "Platform Bedrock credentials granted to selected organizations.",
-      docsUrl: "https://docs.aws.amazon.com/bedrock/",
+      docsUrl: "https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html",
       envVars: [
+        {
+          name: "AWS_BEARER_TOKEN_BEDROCK",
+          configured: envConfigured("AWS_BEARER_TOKEN_BEDROCK"),
+          required: false,
+        },
         {
           name: "AWS_ACCESS_KEY_ID",
           configured: envConfigured("AWS_ACCESS_KEY_ID"),
-          required: true,
+          required: false,
         },
         {
           name: "AWS_SECRET_ACCESS_KEY",
           configured: envConfigured("AWS_SECRET_ACCESS_KEY"),
-          required: true,
+          required: false,
         },
         {
           name: "AWS_REGION",
@@ -357,6 +374,7 @@ export function getPlatformIntegrationDefinitions(): PlatformIntegrationDefiniti
 }
 
 export function integrationEnvReady(definition: PlatformIntegrationDefinition): boolean {
+  if (definition.kind === "info") return true;
   const required = definition.envVars.filter((v) => v.required);
   if (required.length === 0) {
     return definition.envVars.some((v) => v.configured);

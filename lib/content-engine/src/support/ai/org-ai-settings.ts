@@ -48,7 +48,8 @@ export function hasOrgAnthropicCredentials(
 export function hasOrgBedrockCredentials(
   settings: Pick<OrgAiSettings, "encryptedBedrockAccessKeyId" | "encryptedBedrockSecretAccessKey"> | null | undefined,
 ): boolean {
-  return Boolean(settings?.encryptedBedrockAccessKeyId && settings?.encryptedBedrockSecretAccessKey);
+  // API key mode stores the bearer token in secretAccessKey only
+  return Boolean(settings?.encryptedBedrockSecretAccessKey);
 }
 
 export function hasOrgSemrushCredentials(
@@ -121,11 +122,21 @@ export async function getDecryptedOrgBedrockCredentials(
     const settings = await getOrgAiSettings(organizationId);
     if (!hasOrgBedrockCredentials(settings)) return null;
 
-    const accessKeyId = decryptSecret(settings!.encryptedBedrockAccessKeyId!);
     const secretAccessKey = decryptSecret(settings!.encryptedBedrockSecretAccessKey!);
+    const accessKeyId = settings!.encryptedBedrockAccessKeyId
+      ? decryptSecret(settings!.encryptedBedrockAccessKeyId)
+      : null;
     const sessionToken = settings!.encryptedBedrockSessionToken
       ? decryptSecret(settings!.encryptedBedrockSessionToken)
       : undefined;
+
+    if (!accessKeyId) {
+      return {
+        apiKey: secretAccessKey,
+        region: settings!.bedrockRegion,
+        model: settings!.bedrockModel,
+      };
+    }
 
     return {
       accessKeyId,

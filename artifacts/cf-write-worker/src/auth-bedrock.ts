@@ -11,11 +11,8 @@ import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/or
 import { encryptSecret } from "@workspace/security/encryption";
 
 const bedrockCredentialsBody = z.object({
-  accessKeyId: z.string().min(16, "Access key ID is too short"),
-  secretAccessKey: z.string().min(16, "Secret access key is too short"),
-  sessionToken: z.string().trim().optional().nullable(),
-  region: z.string().trim().min(1, "Region is required"),
-  model: z.string().trim().min(1, "Model is required"),
+  apiKey: z.string().min(16, "API key is too short"),
+  model: z.string().trim().min(1, "Choose a Bedrock model"),
 });
 
 function isSuperAdmin(userRole: string | null | undefined): boolean {
@@ -67,25 +64,19 @@ export async function handleAuthBedrockWrite(
       );
     }
 
-    const { accessKeyId, secretAccessKey, sessionToken, region, model } = parsed.data;
-
     try {
-      const { BedrockClient } = await import("@workspace/ai-providers/bedrock");
-      const client = await BedrockClient.create({
-        accessKeyId,
-        secretAccessKey,
-        sessionToken: sessionToken?.trim() || undefined,
-        region,
-        model,
-      });
-      await client.generate({
-        prompt: "Reply with the single word: ok",
-        maxOutputTokens: 16,
+      const { testBedrockCredentials } = await import("@workspace/ai-providers/bedrock");
+      await testBedrockCredentials({
+        apiKey: parsed.data.apiKey.trim(),
+        model: parsed.data.model.trim(),
       });
       return withCors(request, Response.json({ ok: true }));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      return withCors(request, Response.json({ ok: false, error: msg }));
+      const { formatBedrockAuthError } = await import("@workspace/ai-providers/bedrock");
+      return withCors(
+        request,
+        Response.json({ ok: false, error: formatBedrockAuthError(err) }),
+      );
     }
   }
 
@@ -106,18 +97,16 @@ export async function handleAuthBedrockWrite(
       );
     }
 
-    const { accessKeyId, secretAccessKey, sessionToken, region, model } = parsed.data;
-    const sessionTokenTrimmed = sessionToken?.trim();
+    const apiKey = parsed.data.apiKey.trim();
+    const model = parsed.data.model.trim();
 
     await db
       .update(organizationsTable)
       .set({
-        encryptedBedrockAccessKeyId: encryptSecret(accessKeyId),
-        encryptedBedrockSecretAccessKey: encryptSecret(secretAccessKey),
-        encryptedBedrockSessionToken: sessionTokenTrimmed
-          ? encryptSecret(sessionTokenTrimmed)
-          : null,
-        bedrockRegion: region,
+        encryptedBedrockAccessKeyId: null,
+        encryptedBedrockSecretAccessKey: encryptSecret(apiKey),
+        encryptedBedrockSessionToken: null,
+        bedrockRegion: null,
         bedrockModel: model,
       })
       .where(eq(organizationsTable.id, orgSettings.organizationId));
@@ -127,10 +116,10 @@ export async function handleAuthBedrockWrite(
       Response.json({
         ok: true,
         hasCredentials: true,
-        accessKeyLastFour: accessKeyId.slice(-4),
-        region,
+        accessKeyLastFour: apiKey.slice(-4),
+        region: null,
         model,
-        hasSessionToken: Boolean(sessionTokenTrimmed),
+        hasSessionToken: false,
       }),
     );
   }
