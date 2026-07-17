@@ -2,7 +2,7 @@
 
 ## Wave 5 — Humanize durability + Studio/integration reliability (2026-07-17)
 
-**Status:** Wave 5.A–5.C **shipped on `main`** (commits `cc33d7e`…`0744512`) + Bedrock BYOK model picker. CF deploy in progress this session.
+**Status:** Wave 5.A–5.C **shipped on `main`** + Bedrock BYOK model picker. **CF deployed** (2026-07-17 evening).
 
 ### Shipped in this tranche
 
@@ -10,10 +10,11 @@
 - Studio: Bluesky/Mastodon in Next format picker, Ready-to-publish checklist soft-block, social tighten enhance
 - Integrations: Ghost/Webflow create-or-update, health-gated CMS publish, schedule honesty, Ghost/IG media acks, Mastodon admin info tile, Basic publish badges
 - Bedrock: bearer API-key auth, explicit model picker (org + admin), clearer auth errors
+- App Pages: publish dialog no longer imports adapter registry (avoids Node media/S3 in Vite)
 
 ### Still deferred
 
-Surfer NLP, hosted blog, TikTok/YouTube, detector APIs, self-serve pricing, Content-media R2 invent.
+Surfer NLP, hosted blog, TikTok/YouTube, detector APIs, self-serve pricing, Content-media R2 invent (bucket already wired on jobs worker).
 
 ### Verify
 
@@ -23,10 +24,16 @@ pnpm --filter @workspace/marketing-persona-app run typecheck
 pnpm --filter @workspace/goals-app-ui run typecheck
 ```
 
-### Deploy
+### Deployed (this session)
+
+| Target | Preview |
+|--------|---------|
+| Edge (public/read/write/gateway) | workers.dev |
+| Jobs | goals-ac-jobs |
+| Marketing Pages | goals-ac-marketing (built green) |
+| App Pages | https://ced69338.goals-ac-app.pages.dev |
 
 ```sh
-pnpm run cf:edge:deploy && pnpm run cf:deploy:jobs && pnpm run cf:pages:marketing && pnpm run cf:pages:app
 git push
 ```
 
