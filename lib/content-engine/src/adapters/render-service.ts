@@ -6,6 +6,7 @@ import { resolvePublishEntitlements, type PublishEntitlements } from "../support
 import { getAdapter, getAdapterCapabilities } from "./registry";
 import type { PlatformPayload, RenderOptions, RenderResult } from "./types";
 import { prepareWordPressPayload } from "./wordpress-adapter";
+import { getLatestPublishedRemoteId } from "../support/publishing/publish-records";
 
 export interface RenderPreviewResult {
   platform: string;
@@ -90,6 +91,7 @@ export async function renderAndPublish(
   input: RenderContentInput & { creds: CmsIntegrationCredentials; idempotencyKey?: string },
 ): Promise<{
   url: string;
+  remoteId?: string | number;
   payload: PlatformPayload;
   warnings: RenderResult["warnings"];
   outputMode: string;
@@ -131,15 +133,22 @@ export async function renderAndPublish(
   const wpStatus =
     input.status === "draft" ? "draft" : input.status === "published" ? "published" : "publish";
 
+  const existingRemoteId =
+    input.piece.id && adapter.capabilities.updates
+      ? ((await getLatestPublishedRemoteId(input.piece.id, input.platform)) ?? undefined)
+      : undefined;
+
   const remote = await adapter.publish(input.creds, renderResult.payload, {
     status: wpStatus,
     featuredImageId,
     featuredMediaId,
     idempotencyKey: input.idempotencyKey,
+    existingRemoteId,
   });
 
   return {
     url: remote.url,
+    remoteId: remote.remoteId,
     payload: renderResult.payload,
     warnings: renderResult.warnings,
     outputMode,

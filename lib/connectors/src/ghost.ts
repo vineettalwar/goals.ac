@@ -143,6 +143,7 @@ export async function publishToGhost(
   tags?: string[],
   htmlContentOverride?: string,
   featuredImageUrl?: string | null,
+  existingPostId?: string,
 ): Promise<GhostPostResult> {
   const base = apiBase(credentials.apiUrl);
   const postsUrl = `${base}/posts/?source=html`;
@@ -159,7 +160,7 @@ export async function publishToGhost(
   if (tags?.length) post["tags"] = tags.map((name) => ({ name }));
   if (featureImage) post["feature_image"] = featureImage;
 
-  return postToGhost(credentials, postsUrl, post);
+  return postToGhost(credentials, postsUrl, post, existingPostId);
 }
 
 /** Publish a post using native Ghost 5 Lexical JSON (Admin API default format). */
@@ -171,6 +172,7 @@ export async function publishToGhostLexical(
   metaDescription?: string,
   tags?: string[],
   featuredImageUrl?: string | null,
+  existingPostId?: string,
 ): Promise<GhostPostResult> {
   const base = apiBase(credentials.apiUrl);
   const postsUrl = `${base}/posts/`;
@@ -183,14 +185,53 @@ export async function publishToGhostLexical(
   if (tags?.length) post["tags"] = tags.map((name) => ({ name }));
   if (featureImage) post["feature_image"] = featureImage;
 
-  return postToGhost(credentials, postsUrl, post);
+  return postToGhost(credentials, postsUrl, post, existingPostId);
 }
 
 async function postToGhost(
   credentials: GhostCredentials,
   postsUrl: string,
   post: Record<string, unknown>,
+  existingPostId?: string,
 ): Promise<GhostPostResult> {
+  if (existingPostId) {
+    const base = apiBase(credentials.apiUrl);
+    const getUrl = `${base}/posts/${existingPostId}/`;
+    await assertPublicUrl(getUrl);
+    const existingRes = await fetch(getUrl, {
+      headers: {
+        Authorization: makeAuthHeader(credentials.adminApiKey),
+        Accept: "application/json",
+      },
+    });
+    if (existingRes.ok) {
+      const existingData = (await existingRes.json()) as {
+        posts?: { id: string; updated_at?: string; url?: string }[];
+      };
+      const existing = existingData.posts?.[0];
+      if (existing?.updated_at) {
+        const putUrl = `${base}/posts/${existingPostId}/?source=html`;
+        const putRes = await fetch(putUrl, {
+          method: "PUT",
+          headers: {
+            Authorization: makeAuthHeader(credentials.adminApiKey),
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify({
+            posts: [{ ...post, updated_at: existing.updated_at }],
+          }),
+        });
+        if (putRes.ok) {
+          const data = (await putRes.json()) as { posts?: { id: string; url: string }[] };
+          const updated = data.posts?.[0];
+          if (updated) return { postId: updated.id, url: updated.url };
+        }
+      }
+    }
+    // Fall through to create if update is unavailable.
+  }
+
   const res = await fetch(postsUrl, {
     method: "POST",
     headers: {

@@ -64,6 +64,22 @@ async function publishPiece(
   const wpStatus = wordpressPublishStatus(autopilot);
   const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
   const platform = platformOverride ?? piece.publishPlatform ?? FORMAT_TO_PLATFORM[piece.formatType];
+
+  // Wave 5.C.3: skip destinations with known-failed health (do not burn publish attempts).
+  if (platform && !isSocialPlatform(platform) && platform !== "beehiiv") {
+    const rawIntegrations = (project.cmsIntegrations ?? {}) as Record<string, { lastHealthOk?: boolean }>;
+    const raw = rawIntegrations[platform];
+    if (raw && raw.lastHealthOk === false) {
+      const message = `Skipped publish: ${platform} integration health is failing. Reconnect or fix credentials.`;
+      await db
+        .update(contentPiecesTable)
+        .set({ publishError: message })
+        .where(eq(contentPiecesTable.id, pieceId));
+      logger.warn({ pieceId, platform }, message);
+      return;
+    }
+  }
+
   const publishable = {
     id: piece.id,
     title: piece.title,
@@ -128,6 +144,7 @@ async function publishPiece(
         publishPlatform: result.publishPlatform,
         outputMode: result.outputMode ?? null,
         warnings: result.warnings,
+        remotePostId: result.remotePostId,
       };
     }
     const result = await publishBlogPieceToPrimaryDestination(publishable, creds, {
@@ -139,6 +156,7 @@ async function publishPiece(
       publishPlatform: result.publishPlatform,
       outputMode: result.outputMode ?? null,
       warnings: result.warnings,
+      remotePostId: result.remotePostId,
     };
   };
 

@@ -14,7 +14,7 @@ export const webflowAdapter: CmsAdapter = {
   capabilities: {
     drafts: true,
     scheduling: false,
-    updates: false,
+    updates: true,
     categories: false,
     featuredImage: true,
     schemaInjection: false,
@@ -51,7 +51,7 @@ export const webflowAdapter: CmsAdapter = {
     if (opts?.status === "publish" || opts?.status === "published") publishStatus = "live";
     if (opts?.status === "draft") publishStatus = "draft";
 
-    const url = await publishToWebflow(
+    const result = await publishToWebflow(
       creds.webflow.apiToken,
       creds.webflow.collectionId,
       creds.webflow.bodyFieldSlug,
@@ -61,8 +61,9 @@ export const webflowAdapter: CmsAdapter = {
         publishStatus,
         htmlContent: payload.html,
         featuredImageUrl: payload.featuredImageUrl,
+        existingItemId: opts?.existingRemoteId,
       },
     );
-    return { url };
+    return { url: result.url, remoteId: result.itemId };
   },
 };

@@ -147,6 +147,8 @@ export interface PublishOpts {
   featuredImageId?: number;
   featuredMediaId?: number;
   idempotencyKey?: string;
+  /** Prior CMS remote id for create-or-update platforms (Ghost, Webflow, …). */
+  existingRemoteId?: string;
 }
 
 export interface RemoteRef {

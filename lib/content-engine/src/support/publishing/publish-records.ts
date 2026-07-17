@@ -1,6 +1,6 @@
 import { db } from "@workspace/db";
 import { contentPiecesTable, publishRecordsTable } from "@workspace/db/schema";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 
 export function buildPublishIdempotencyKey(
   contentPieceId: number,
@@ -85,6 +85,26 @@ export async function markPublishRecordFailed(input: {
       updatedAt: new Date(),
     })
     .where(eq(publishRecordsTable.idempotencyKey, input.idempotencyKey));
+}
+
+/** Last successful remote id for piece+provider (create-or-update). */
+export async function getLatestPublishedRemoteId(
+  contentPieceId: number,
+  provider: string,
+): Promise<string | null> {
+  const [row] = await db
+    .select({ remoteId: publishRecordsTable.remoteId })
+    .from(publishRecordsTable)
+    .where(
+      and(
+        eq(publishRecordsTable.contentPieceId, contentPieceId),
+        eq(publishRecordsTable.provider, provider),
+        eq(publishRecordsTable.status, "published"),
+      ),
+    )
+    .orderBy(desc(publishRecordsTable.publishedAt))
+    .limit(1);
+  return row?.remoteId ?? null;
 }
 
 export interface PublishAttemptResult {

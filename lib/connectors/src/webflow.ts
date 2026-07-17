@@ -52,8 +52,10 @@ export async function publishToWebflow(
     htmlContent?: string;
     /** https:// only — set on first Image field when the collection has one */
     featuredImageUrl?: string | null;
+    /** When set, PATCH this item instead of creating a duplicate. */
+    existingItemId?: string;
   },
-): Promise<string> {
+): Promise<{ url: string; itemId: string }> {
   await assertPublicUrl(WEBFLOW_API);
 
   const publishStatus = options?.publishStatus ?? "draft";
@@ -74,36 +76,63 @@ export async function publishToWebflow(
     }
   }
 
-  const createRes = await fetch(
-    `${WEBFLOW_API}/collections/${collectionId}/items?skipInvalidFiles=true`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        "Content-Type": "application/json",
-        accept: "application/json",
-      },
-      body: JSON.stringify({
-        fieldData,
-        isDraft: publishStatus === "draft",
-      }),
-    },
-  );
+  let itemId = options?.existingItemId?.trim() || "";
 
-  if (!createRes.ok) {
-    const body = await createRes.json().catch(() => ({})) as { message?: string; code?: string };
-    if (createRes.status === 401 || createRes.status === 403) {
-      throw new Error("Webflow authentication failed. Check your API token.");
+  if (itemId) {
+    const patchRes = await fetch(
+      `${WEBFLOW_API}/collections/${collectionId}/items/${itemId}?skipInvalidFiles=true`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          fieldData,
+          isDraft: publishStatus === "draft",
+        }),
+      },
+    );
+    if (!patchRes.ok) {
+      // Create instead when the prior item is gone.
+      itemId = "";
     }
-    if (createRes.status === 404) {
-      throw new Error("Webflow collection not found. Check the collection ID.");
-    }
-    throw new Error(body.message ?? `Webflow API error: ${createRes.status}`);
   }
 
-  const item = await createRes.json() as { id: string; fieldData?: { slug?: string } };
+  if (!itemId) {
+    const createRes = await fetch(
+      `${WEBFLOW_API}/collections/${collectionId}/items?skipInvalidFiles=true`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+          accept: "application/json",
+        },
+        body: JSON.stringify({
+          fieldData,
+          isDraft: publishStatus === "draft",
+        }),
+      },
+    );
 
-  if (publishStatus === "live" && item.id) {
+    if (!createRes.ok) {
+      const body = await createRes.json().catch(() => ({})) as { message?: string; code?: string };
+      if (createRes.status === 401 || createRes.status === 403) {
+        throw new Error("Webflow authentication failed. Check your API token.");
+      }
+      if (createRes.status === 404) {
+        throw new Error("Webflow collection not found. Check the collection ID.");
+      }
+      throw new Error(body.message ?? `Webflow API error: ${createRes.status}`);
+    }
+
+    const item = await createRes.json() as { id: string };
+    itemId = item.id;
+  }
+
+  if (publishStatus === "live" && itemId) {
     const publishRes = await fetch(`${WEBFLOW_API}/collections/${collectionId}/items/publish`, {
       method: "POST",
       headers: {
@@ -111,7 +140,7 @@ export async function publishToWebflow(
         "Content-Type": "application/json",
         accept: "application/json",
       },
-      body: JSON.stringify({ itemIds: [item.id] }),
+      body: JSON.stringify({ itemIds: [itemId] }),
     });
     if (!publishRes.ok) {
       const body = await publishRes.json().catch(() => ({})) as { message?: string };
@@ -119,7 +148,10 @@ export async function publishToWebflow(
     }
   }
 
-  return `https://webflow.com/dashboard/collections/${collectionId}/items/${item.id}`;
+  return {
+    url: `https://webflow.com/dashboard/collections/${collectionId}/items/${itemId}`,
+    itemId,
+  };
 }
 
 export async function testWebflowConnection(

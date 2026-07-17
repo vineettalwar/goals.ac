@@ -115,6 +115,7 @@ export interface PublishDestinationResult {
   /** Resolved CMS output mode when published via adapter/render path. */
   outputMode?: string | null;
   warnings?: { code: string; message: string }[];
+  remotePostId?: string;
 }
 
 function mapCmsStatus(
@@ -188,6 +189,7 @@ export async function publishPieceToDestination(
       publishPlatform: platform,
       outputMode: result.outputMode,
       warnings: result.warnings,
+      remotePostId: result.remoteId != null ? String(result.remoteId) : undefined,
     };
   }
 

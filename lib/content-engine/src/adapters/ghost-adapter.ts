@@ -12,7 +12,7 @@ export const ghostAdapter: CmsAdapter = {
   capabilities: {
     drafts: true,
     scheduling: false,
-    updates: false,
+    updates: true,
     categories: false,
     featuredImage: true,
     schemaInjection: false,
@@ -40,6 +40,18 @@ export const ghostAdapter: CmsAdapter = {
     const title = seoTitle(content, seo);
     const meta = seo.metaDescription ? { description: seo.metaDescription } : undefined;
     const featuredImageUrl = content.pieceMetadata?.featuredImageUrl?.trim() || undefined;
+    if (featuredImageUrl && featuredImageUrl.startsWith("data:")) {
+      warnings.push({
+        code: "ghost_featured_skipped",
+        message:
+          "Ghost needs a public HTTPS featured image (or uploadable URL). Data URIs are skipped.",
+      });
+    } else if (!featuredImageUrl) {
+      warnings.push({
+        code: "ghost_featured_missing",
+        message: "No featured image set — Ghost will publish without a feature_image.",
+      });
+    }
 
     if (outputMode === "lexical") {
       const lexicalDoc = markdownToGhostLexical(content.markdown);
@@ -90,8 +102,9 @@ export const ghostAdapter: CmsAdapter = {
         payload.meta?.description,
         tags,
         payload.featuredImageUrl,
+        opts?.existingRemoteId,
       );
-      return { url: result.url };
+      return { url: result.url, remoteId: result.postId };
     }
 
     if (!payload.html) throw new Error("Ghost HTML payload is missing content.");
@@ -104,7 +117,8 @@ export const ghostAdapter: CmsAdapter = {
       tags,
       payload.html,
       payload.featuredImageUrl,
+      opts?.existingRemoteId,
     );
-    return { url: result.url };
+    return { url: result.url, remoteId: result.postId };
   },
 };
