@@ -1,9 +1,9 @@
 export {
   AppSidebarShell,
-  APP_SHELL_MAIN_OFFSET,
   type AppShellLinkProps,
   type AppSidebarShellProps,
 } from "./AppSidebarShell";
+export { APP_SHELL_MAIN_OFFSET } from "./shell-constants";
 export { cn } from "./cn";
 export { buildNavModel, FOOTER_ITEMS, NAV_SECTIONS, type NavItemDef } from "./nav-config";
 export { isNavItemActive, projectIdFromPathname, resolveNavHref } from "./nav-routing";

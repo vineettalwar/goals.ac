@@ -15,6 +15,8 @@ export type CmsPlatform = {
   description: string;
   badgeLetter?: string;
   badgeClassName?: string;
+  /** Honest depth label — thin create wrappers vs plugin-grade CMS. */
+  tierBadge?: "Basic publish";
 };
 
 export const CMS_PLATFORMS: CmsPlatform[] = [
@@ -78,6 +80,7 @@ export const CMS_PLATFORMS: CmsPlatform[] = [
     description: "Publish entries to a Contentful space via the Content Management API.",
     badgeLetter: "C",
     badgeClassName: "bg-sky-600",
+    tierBadge: "Basic publish",
   },
   {
     key: "sanity",
@@ -85,6 +88,7 @@ export const CMS_PLATFORMS: CmsPlatform[] = [
     description: "Create documents in a Sanity dataset via the API.",
     badgeLetter: "S",
     badgeClassName: "bg-red-600",
+    tierBadge: "Basic publish",
   },
   {
     key: "strapi",
@@ -92,6 +96,7 @@ export const CMS_PLATFORMS: CmsPlatform[] = [
     description: "Publish articles to Strapi via REST API.",
     badgeLetter: "S",
     badgeClassName: "bg-indigo-600",
+    tierBadge: "Basic publish",
   },
   {
     key: "typo3",
@@ -106,6 +111,7 @@ export const CMS_PLATFORMS: CmsPlatform[] = [
     description: "Publish blog posts to Wix via the Blog API.",
     badgeLetter: "W",
     badgeClassName: "bg-yellow-600",
+    tierBadge: "Basic publish",
   },
   {
     key: "framer",
@@ -113,6 +119,7 @@ export const CMS_PLATFORMS: CmsPlatform[] = [
     description: "Publish CMS items to a Framer project collection.",
     badgeLetter: "F",
     badgeClassName: "bg-zinc-700",
+    tierBadge: "Basic publish",
   },
   {
     key: "squarespace",
@@ -120,6 +127,7 @@ export const CMS_PLATFORMS: CmsPlatform[] = [
     description: "Publish blog posts via the Squarespace Commerce API.",
     badgeLetter: "S",
     badgeClassName: "bg-zinc-900",
+    tierBadge: "Basic publish",
   },
   {
     key: "hubspot",
@@ -127,5 +135,6 @@ export const CMS_PLATFORMS: CmsPlatform[] = [
     description: "Create or update HubSpot CMS blog posts.",
     badgeLetter: "H",
     badgeClassName: "bg-orange-500",
+    tierBadge: "Basic publish",
   },
 ];

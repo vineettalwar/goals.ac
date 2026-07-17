@@ -1,16 +1,6 @@
 "use client";
 
-import {
-  CheckCircle2,
-  Facebook,
-  Globe,
-  Instagram,
-  Linkedin,
-  Loader2,
-  RefreshCw,
-  Twitter,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { PublishBrandIcon } from "@workspace/app-shell/integrations";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   IntegrationCategorySection,
@@ -65,189 +55,186 @@ export function PublishingSettingsGridLayout({
   const metaIntegration = cmsIntegrations.meta as Record<string, unknown> | undefined;
   const blueskyIntegration = cmsIntegrations.bluesky as Record<string, unknown> | undefined;
   const mastodonIntegration = cmsIntegrations.mastodon as Record<string, unknown> | undefined;
-    const showCms = categoryFilter === "all" || categoryFilter === "cms";
-    const showEsp = categoryFilter === "all" || categoryFilter === "esp";
-    const showSocial = categoryFilter === "all" || categoryFilter === "social";
-    const singleCategory = categoryFilter !== "all";
+  const showCms = categoryFilter === "all" || categoryFilter === "cms";
+  const showEsp = categoryFilter === "all" || categoryFilter === "esp";
+  const showSocial = categoryFilter === "all" || categoryFilter === "social";
+  const singleCategory = categoryFilter !== "all";
 
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-4">
-          <p className="text-sm text-muted-foreground">
-            Click an integration to connect or manage settings.
-          </p>
-          {testConnectionsButton}
-        </div>
-
-        {statusAlerts}
-
-        {showCms ? (
-          <IntegrationCategorySection
-            title="CMS & publishing"
-            description="Publish long-form articles to websites and content platforms."
-            connectedCount={countCmsConnections(cmsIntegrations)}
-            totalCount={cmsDestinations.length}
-            compact={singleCategory}
-          >
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {cmsDestinations.map((destination) => (
-                <IntegrationTile
-                  key={destination.id}
-                  icon={
-                    <IntegrationIconBox className="p-0 border-0 bg-transparent">
-                      <DestinationBadge destination={destination} />
-                    </IntegrationIconBox>
-                  }
-                  title={destination.label}
-                  description={destination.description}
-                  connected={destination.isConnected(cmsIntegrations)}
-                  summary={getConnectionSummary(destination.id, cmsIntegrations)}
-                  onClick={() => onActiveDialogChange(destination.id)}
-                />
-              ))}
-            </div>
-          </IntegrationCategorySection>
-        ) : null}
-
-        {showEsp ? (
-          <IntegrationCategorySection
-            title="Email & newsletters"
-            description="Publish email sequences to ESP platforms."
-            connectedCount={countEspConnections(cmsIntegrations)}
-            totalCount={espDestinations.length}
-            compact={singleCategory}
-          >
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {espDestinations.map((destination) => (
-                <IntegrationTile
-                  key={destination.id}
-                  icon={
-                    <IntegrationIconBox className="p-0 border-0 bg-transparent">
-                      <DestinationBadge destination={destination} />
-                    </IntegrationIconBox>
-                  }
-                  title={destination.label}
-                  description={destination.description}
-                  connected={destination.isConnected(cmsIntegrations)}
-                  summary={getConnectionSummary(destination.id, cmsIntegrations)}
-                  onClick={() => onActiveDialogChange(destination.id)}
-                />
-              ))}
-              {categoryFilter === "all"
-                ? exportDestinations.map((destination) => (
-                    <IntegrationTile
-                      key={destination.id}
-                      icon={
-                        <IntegrationIconBox className="p-0 border-0 bg-transparent">
-                          <DestinationBadge destination={destination} />
-                        </IntegrationIconBox>
-                      }
-                  title={destination.label}
-                  description={destination.description}
-                  connected={false}
-                  summary="Export only"
-                  onClick={() => onActiveDialogChange(destination.id)}
-                    />
-                  ))
-                : null}
-            </div>
-          </IntegrationCategorySection>
-        ) : null}
-
-        {showSocial ? (
-          <IntegrationCategorySection
-            title="Social accounts"
-            description="Publish posts and threads to social profiles."
-            connectedCount={countSocialConnections(cmsIntegrations)}
-            totalCount={SOCIAL_SETTINGS_COUNT}
-            compact={singleCategory}
-          >
-            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {socialDestinations.map((destination) => (
-                <IntegrationTile
-                  key={destination.id}
-                  icon={
-                    <IntegrationIconBox>
-                      <SocialIcon id={destination.id} />
-                    </IntegrationIconBox>
-                  }
-                  title={destination.label}
-                  description={destination.description}
-                  connected={destination.isConnected(cmsIntegrations)}
-                  summary={getConnectionSummary(destination.id, cmsIntegrations)}
-                  onClick={() => onActiveDialogChange(destination.id)}
-                />
-              ))}
-              <IntegrationTile
-                icon={
-                  <IntegrationIconBox>
-                    <span className="inline-flex items-center gap-0.5">
-                      <Facebook className="w-3.5 h-3.5 text-blue-700" />
-                      <Instagram className="w-3.5 h-3.5 text-fuchsia-600" />
-                    </span>
-                  </IntegrationIconBox>
-                }
-                title="Facebook & Instagram"
-                description="Publish via a Facebook Page and linked Instagram account."
-                connected={!!metaIntegration}
-                summary={
-                  metaIntegration
-                    ? String(metaIntegration.pageName ?? metaIntegration.pageId)
-                    : null
-                }
-                onClick={() => onActiveDialogChange("meta")}
-              />
-              <IntegrationTile
-                icon={
-                  <IntegrationIconBox>
-                    <Globe className="w-4 h-4 text-sky-500" />
-                  </IntegrationIconBox>
-                }
-                title="Bluesky"
-                description="Publish skeets via AT Protocol OAuth."
-                connected={!!blueskyIntegration}
-                summary={
-                  blueskyIntegration
-                    ? `@${String(blueskyIntegration.handle ?? blueskyIntegration.did ?? "connected")}`
-                    : null
-                }
-                onClick={() => onActiveDialogChange("bluesky")}
-              />
-              <IntegrationTile
-                icon={
-                  <IntegrationIconBox>
-                    <Globe className="w-4 h-4 text-violet-500" />
-                  </IntegrationIconBox>
-                }
-                title="Mastodon"
-                description="Publish toots to your Mastodon instance."
-                connected={!!mastodonIntegration}
-                summary={
-                  mastodonIntegration
-                    ? `@${String(mastodonIntegration.username ?? "connected")}`
-                    : null
-                }
-                onClick={() => onActiveDialogChange("mastodon")}
-              />
-            </div>
-          </IntegrationCategorySection>
-        ) : null}
-
-        <Dialog open={activeDialog != null} onOpenChange={(open) => !open && onActiveDialogChange(null)}>
-          <DialogContent className="max-w-xl gap-0 overflow-y-auto p-0 sm:max-w-2xl max-h-[88vh]">
-            {activeDialog ? (
-              <DialogTitle className="sr-only">
-                {getIntegrationDialogTitle(activeDialog, [
-                  ...cmsDestinations,
-                  ...espDestinations,
-                  ...exportDestinations,
-                  ...socialDestinations,
-                ])}
-              </DialogTitle>
-            ) : null}
-            <div className="p-6">{renderDialogBody()}</div>
-          </DialogContent>
-        </Dialog>
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-4">
+        <p className="text-sm text-muted-foreground">
+          Click an integration to connect or manage settings.
+        </p>
+        {testConnectionsButton}
       </div>
-    );
+
+      {statusAlerts}
+
+      {showCms ? (
+        <IntegrationCategorySection
+          title="CMS & publishing"
+          description="Publish long-form articles to websites and content platforms."
+          connectedCount={countCmsConnections(cmsIntegrations)}
+          totalCount={cmsDestinations.length}
+          compact={singleCategory}
+        >
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {cmsDestinations.map((destination) => (
+              <IntegrationTile
+                key={destination.id}
+                icon={
+                  <IntegrationIconBox className="p-0 border-0 bg-transparent">
+                    <DestinationBadge destination={destination} />
+                  </IntegrationIconBox>
+                }
+                title={destination.label}
+                description={destination.description}
+                connected={destination.isConnected(cmsIntegrations)}
+                summary={getConnectionSummary(destination.id, cmsIntegrations)}
+                onClick={() => onActiveDialogChange(destination.id)}
+              />
+            ))}
+          </div>
+        </IntegrationCategorySection>
+      ) : null}
+
+      {showEsp ? (
+        <IntegrationCategorySection
+          title="Email & newsletters"
+          description="Publish email sequences to ESP platforms."
+          connectedCount={countEspConnections(cmsIntegrations)}
+          totalCount={espDestinations.length}
+          compact={singleCategory}
+        >
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {espDestinations.map((destination) => (
+              <IntegrationTile
+                key={destination.id}
+                icon={
+                  <IntegrationIconBox className="p-0 border-0 bg-transparent">
+                    <DestinationBadge destination={destination} />
+                  </IntegrationIconBox>
+                }
+                title={destination.label}
+                description={destination.description}
+                connected={destination.isConnected(cmsIntegrations)}
+                summary={getConnectionSummary(destination.id, cmsIntegrations)}
+                onClick={() => onActiveDialogChange(destination.id)}
+              />
+            ))}
+            {categoryFilter === "all"
+              ? exportDestinations.map((destination) => (
+                  <IntegrationTile
+                    key={destination.id}
+                    icon={
+                      <IntegrationIconBox className="p-0 border-0 bg-transparent">
+                        <DestinationBadge destination={destination} />
+                      </IntegrationIconBox>
+                    }
+                    title={destination.label}
+                    description={destination.description}
+                    connected={false}
+                    summary="Export only"
+                    onClick={() => onActiveDialogChange(destination.id)}
+                  />
+                ))
+              : null}
+          </div>
+        </IntegrationCategorySection>
+      ) : null}
+
+      {showSocial ? (
+        <IntegrationCategorySection
+          title="Social accounts"
+          description="Publish posts and threads to social profiles."
+          connectedCount={countSocialConnections(cmsIntegrations)}
+          totalCount={SOCIAL_SETTINGS_COUNT}
+          compact={singleCategory}
+        >
+          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {socialDestinations.map((destination) => (
+              <IntegrationTile
+                key={destination.id}
+                icon={
+                  <IntegrationIconBox className="p-0 border-0 bg-transparent">
+                    <SocialIcon id={destination.id} />
+                  </IntegrationIconBox>
+                }
+                title={destination.label}
+                description={destination.description}
+                connected={destination.isConnected(cmsIntegrations)}
+                summary={getConnectionSummary(destination.id, cmsIntegrations)}
+                onClick={() => onActiveDialogChange(destination.id)}
+              />
+            ))}
+            <IntegrationTile
+              icon={
+                <IntegrationIconBox className="p-0 border-0 bg-transparent">
+                  <PublishBrandIcon id="meta" />
+                </IntegrationIconBox>
+              }
+              title="Facebook & Instagram"
+              description="Publish via a Facebook Page and linked Instagram account."
+              connected={!!metaIntegration}
+              summary={
+                metaIntegration
+                  ? String(metaIntegration.pageName ?? metaIntegration.pageId)
+                  : null
+              }
+              onClick={() => onActiveDialogChange("meta")}
+            />
+            <IntegrationTile
+              icon={
+                <IntegrationIconBox className="p-0 border-0 bg-transparent">
+                  <PublishBrandIcon id="bluesky" />
+                </IntegrationIconBox>
+              }
+              title="Bluesky"
+              description="Publish skeets via AT Protocol OAuth."
+              connected={!!blueskyIntegration}
+              summary={
+                blueskyIntegration
+                  ? `@${String(blueskyIntegration.handle ?? blueskyIntegration.did ?? "connected")}`
+                  : null
+              }
+              onClick={() => onActiveDialogChange("bluesky")}
+            />
+            <IntegrationTile
+              icon={
+                <IntegrationIconBox className="p-0 border-0 bg-transparent">
+                  <PublishBrandIcon id="mastodon" />
+                </IntegrationIconBox>
+              }
+              title="Mastodon"
+              description="Publish toots to your Mastodon instance."
+              connected={!!mastodonIntegration}
+              summary={
+                mastodonIntegration
+                  ? `@${String(mastodonIntegration.username ?? "connected")}`
+                  : null
+              }
+              onClick={() => onActiveDialogChange("mastodon")}
+            />
+          </div>
+        </IntegrationCategorySection>
+      ) : null}
+
+      <Dialog open={activeDialog != null} onOpenChange={(open) => !open && onActiveDialogChange(null)}>
+        <DialogContent className="max-w-xl gap-0 overflow-y-auto p-0 sm:max-w-2xl max-h-[88vh]">
+          {activeDialog ? (
+            <DialogTitle className="sr-only">
+              {getIntegrationDialogTitle(activeDialog, [
+                ...cmsDestinations,
+                ...espDestinations,
+                ...exportDestinations,
+                ...socialDestinations,
+              ])}
+            </DialogTitle>
+          ) : null}
+          <div className="p-6">{renderDialogBody()}</div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 }

@@ -5,13 +5,14 @@ import { toast } from "sonner";
 import {
   AlertCircle,
   CheckCircle2,
-  Globe,
   Link2,
-  Linkedin,
   Loader2,
-  Twitter,
   Unlink,
 } from "lucide-react";
+import {
+  PublishBrandIcon,
+  type PublishBrandIconId,
+} from "@workspace/app-shell/integrations";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -106,22 +107,11 @@ function DestinationBadge({
 }: {
   destination: PublishDestinationDefinition;
 }) {
-  if (destination.badgeLetter) {
-    return (
-      <span
-        className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold text-white ${destination.badgeClassName ?? "bg-muted"}`}
-      >
-        {destination.badgeLetter}
-      </span>
-    );
-  }
-  return <Globe className="w-4 h-4" />;
+  return <PublishBrandIcon id={destination.id as PublishBrandIconId} className="h-8 w-8" />;
 }
 
 function SocialIcon({ id }: { id: PublishDestinationId }) {
-  if (id === "linkedin") return <Linkedin className="w-4 h-4 text-blue-600" />;
-  if (id === "twitter") return <Twitter className="w-4 h-4 text-sky-500" />;
-  return null;
+  return <PublishBrandIcon id={id as PublishBrandIconId} className="h-8 w-8" />;
 }
 
 function ConnectionField({

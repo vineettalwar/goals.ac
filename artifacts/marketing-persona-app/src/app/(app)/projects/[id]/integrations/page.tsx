@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { projectIntegrationsPath } from "@workspace/app-shell";
+import { projectIntegrationsPath } from "@workspace/app-shell/project-paths";
 
 const PROJECT_TABS = new Set(["cms", "social", "esp", "search"]);
 const SOCIAL_STATUS_KEYS = ["linkedin", "twitter", "meta", "bluesky", "mastodon"] as const;

@@ -91,6 +91,10 @@ export {
   type ProjectIntegrationsTab,
 } from "./types";
 export { IntegrationTile } from "./integration-tiles";
-export { IntegrationIconBox } from "./integration-icons";
+export {
+  IntegrationIconBox,
+  PublishBrandIcon,
+  type PublishBrandIconId,
+} from "./integration-icons";
 export { IntegrationTabBadge } from "./integrations-view-helpers";
 export { SimpleDialog, inputClassName } from "./cms-connect-dialogs";

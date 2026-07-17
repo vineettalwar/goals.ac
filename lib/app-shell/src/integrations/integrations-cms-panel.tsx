@@ -17,7 +17,7 @@ function CmsPlatformTiles({
   const tiles = [];
   for (const platform of CMS_PLATFORMS) {
     if (platform.key === "webhook") continue;
-    const { key, label, description } = platform;
+    const { key, label, description, tierBadge } = platform;
     const row = integrations[key];
     const connected = Boolean(row?.connected);
     const healthOk = row?.lastHealthOk;
@@ -36,6 +36,7 @@ function CmsPlatformTiles({
         description={description}
         connected={connected}
         summary={summary}
+        tierBadge={tierBadge}
         onClick={() => {
           if (!connected) onConnectPlatform(key);
         }}

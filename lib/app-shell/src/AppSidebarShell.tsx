@@ -4,8 +4,7 @@ import { cn } from "./cn";
 import { buildNavModel, type NavItemDef } from "./nav-config";
 import { isNavItemActive, resolveNavHref } from "./nav-routing";
 
-/** Apply to the main content column so fixed mobile header does not cover content. */
-export const APP_SHELL_MAIN_OFFSET = "pt-14 lg:pt-0";
+export { APP_SHELL_MAIN_OFFSET } from "./shell-constants";
 
 export type AppShellLinkProps = {
   href: string;

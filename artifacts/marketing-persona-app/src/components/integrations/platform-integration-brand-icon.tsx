@@ -95,6 +95,18 @@ function BlueskyLogo({ className }: { className?: string }) {
   );
 }
 
+function MastodonLogo({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <rect width="24" height="24" rx="5" fill="#6364FF" />
+      <path
+        fill="#fff"
+        d="M17.2 8.6c0-2.2-1.4-2.9-1.4-2.9-1.4-.6-4.8-.6-4.8-.6h0s-3.4 0-4.8.6c0 0-1.4.7-1.4 2.9 0 .5 0 1.1 0 1.1 0 3.4.6 6.7 3.5 7.5 1.3.4 2.4.4 3.3.4.7 0 1.4-.1 2-.2v-1.5c-.6.1-1.3.2-2.1.2-1.5 0-1.9-.7-1.9-1.6v-3.4h3.8V8.6h-3.8V7.1h5.6v1.5Z"
+      />
+    </svg>
+  );
+}
+
 function BedrockLogo({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className} aria-hidden>
@@ -116,6 +128,7 @@ const LOGOS: Record<PlatformIntegrationId, ComponentType<{ className?: string }>
   twitter: XLogo,
   meta: MetaLogo,
   bluesky: BlueskyLogo,
+  mastodon: MastodonLogo,
   bedrock: BedrockLogo,
 };
 

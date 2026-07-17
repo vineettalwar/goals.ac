@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { projectIntegrationsPath } from "@workspace/app-shell";
+import { projectIntegrationsPath } from "@workspace/app-shell/project-paths";
 import { ProjectIntegrationsPageClient } from "../project-integrations-page-client";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 

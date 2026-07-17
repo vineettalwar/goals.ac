@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { Facebook, Globe, Instagram, Linkedin, Search, Twitter, Webhook } from "lucide-react";
+import { Search } from "lucide-react";
 import { cn } from "../cn";
 import type { AiProviderChoice } from "../settings/types";
 import type { CmsPlatform } from "./types";
 import type { EspDestinationDefinition, SocialDestinationDefinition } from "./publishing-destinations";
+import { PublishBrandIcon, type PublishBrandIconId } from "./brand-logos";
 
 export function IntegrationIconBox({
   children,
@@ -24,7 +25,7 @@ export function IntegrationIconBox({
   );
 }
 
-/** Colored letter mark — same visual language as CMS DestinationBadge tiles. */
+/** Colored letter mark — fallback for tools without a brand SVG. */
 export function BrandBadge({
   letter,
   className,
@@ -48,16 +49,21 @@ export function BrandBadge({
 }
 
 export function DestinationBadge({
+  id,
   badgeLetter,
   badgeClassName,
 }: {
+  id?: PublishBrandIconId;
   badgeLetter?: string;
   badgeClassName?: string;
 }) {
+  if (id) {
+    return <PublishBrandIcon id={id} className="h-8 w-8" />;
+  }
   if (badgeLetter) {
     return <BrandBadge letter={badgeLetter} className={badgeClassName} size="sm" />;
   }
-  return <Globe className="h-4 w-4 text-muted-foreground" />;
+  return <PublishBrandIcon id="webhook" className="h-8 w-8" />;
 }
 
 const AI_PROVIDER_BADGES: Record<AiProviderChoice, { letter: string; className: string }> = {
@@ -87,46 +93,15 @@ export function OrgToolIcon({ tool }: { tool: "semrush" | "deepl" | "unsplash" |
 }
 
 export function CmsPlatformIcon({ platform }: { platform: CmsPlatform }) {
-  if (platform.key === "webhook") {
-    return <Webhook className="h-4 w-4 text-amber-600" />;
-  }
-  return (
-    <DestinationBadge
-      badgeLetter={platform.badgeLetter}
-      badgeClassName={platform.badgeClassName}
-    />
-  );
+  return <PublishBrandIcon id={platform.key} className="h-8 w-8" />;
 }
 
 export function EspDestinationIcon({ destination }: { destination: EspDestinationDefinition }) {
-  return (
-    <DestinationBadge
-      badgeLetter={destination.badgeLetter}
-      badgeClassName={destination.badgeClassName}
-    />
-  );
+  return <PublishBrandIcon id={destination.id} className="h-8 w-8" />;
 }
 
 export function SocialDestinationIcon({ destination }: { destination: SocialDestinationDefinition }) {
-  switch (destination.id) {
-    case "linkedin":
-      return <Linkedin className="h-4 w-4 text-blue-600" />;
-    case "twitter":
-      return <Twitter className="h-4 w-4 text-sky-500" />;
-    case "meta":
-      return (
-        <span className="inline-flex items-center gap-0.5">
-          <Facebook className="h-3.5 w-3.5 text-blue-700" />
-          <Instagram className="h-3.5 w-3.5 text-fuchsia-600" />
-        </span>
-      );
-    case "bluesky":
-      return <Globe className="h-4 w-4 text-sky-500" />;
-    case "mastodon":
-      return <Globe className="h-4 w-4 text-violet-500" />;
-    default:
-      return <Globe className="h-4 w-4 text-muted-foreground" />;
-  }
+  return <PublishBrandIcon id={destination.id} className="h-8 w-8" />;
 }
 
 export function SearchProviderIcon({ provider }: { provider: "google_search_console" | "bing_webmaster" }) {
@@ -135,3 +110,5 @@ export function SearchProviderIcon({ provider }: { provider: "google_search_cons
   }
   return <Search className="h-4 w-4 text-teal-600" />;
 }
+
+export { PublishBrandIcon, type PublishBrandIconId } from "./brand-logos";

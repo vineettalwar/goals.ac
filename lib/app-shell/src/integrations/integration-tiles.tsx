@@ -12,6 +12,7 @@ export function IntegrationTile({
   onClick,
   pending,
   compact = false,
+  tierBadge,
 }: {
   icon: ReactNode;
   title: string;
@@ -21,6 +22,7 @@ export function IntegrationTile({
   onClick: () => void;
   pending?: boolean;
   compact?: boolean;
+  tierBadge?: string | null;
 }) {
   const status = connected ? (pending ? "pending" : "connected") : "idle";
 
@@ -41,6 +43,11 @@ export function IntegrationTile({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className="truncate text-sm font-medium">{title}</span>
+          {tierBadge ? (
+            <span className="shrink-0 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              {tierBadge}
+            </span>
+          ) : null}
           <span
             className={cn(
               "h-1.5 w-1.5 shrink-0 rounded-full",
