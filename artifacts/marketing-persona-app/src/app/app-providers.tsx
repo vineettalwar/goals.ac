@@ -29,7 +29,12 @@ export function AppProviders({ children, session = null }: AppProvidersProps) {
   );
 
   return (
-    <SessionProvider session={session}>
+    <SessionProvider
+      session={session}
+      // Server already hydrates session; focus refetch hits /api/auth/session and
+      // surfaces ClientFetchError in the overlay when the dev server is wedged.
+      refetchOnWindowFocus={false}
+    >
       <ThemeProvider>
         <QueryClientProvider client={queryClient}>
           {children}

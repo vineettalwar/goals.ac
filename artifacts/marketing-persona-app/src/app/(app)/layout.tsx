@@ -5,7 +5,7 @@ import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { ActiveProjectProvider } from "@/context/active-project";
 import { ImpersonationBanner } from "@/components/admin/layout/impersonation-banner";
 import { MfaComplianceGate } from "@/components/mfa/mfa-compliance-gate";
-import { APP_SHELL_MAIN_OFFSET } from "@workspace/app-shell";
+import { APP_SHELL_MAIN_OFFSET } from "@workspace/app-shell/shell-constants";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },

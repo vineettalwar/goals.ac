@@ -1,16 +1,16 @@
 "use client";
 
 import { Suspense, useState, type FormEvent } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { AuthView } from "@workspace/app-shell";
+import { AuthView } from "@workspace/app-shell/auth";
 import {
   CONTACT_CTA_LABEL,
   CONTACT_EMAIL,
   CONTACT_HREF,
 } from "@/lib/marketing/site/marketing-contact";
+import { signInWithCredentials } from "@/lib/auth/sign-in-credentials";
 
 type LoginPageClientProps = {
   postLoginRedirect: string;
@@ -35,19 +35,18 @@ function LoginPageContent({ postLoginRedirect }: LoginPageClientProps) {
     event.preventDefault();
     setError(null);
     setSubmitting(true);
-    const result = await signIn("credentials", {
-      email: email.trim(),
-      password,
-      redirect: false,
-    });
-    setSubmitting(false);
-    if (result?.error) {
-      setError("Invalid email or password");
-      toast.error("Invalid email or password");
-    } else {
+    try {
+      const result = await signInWithCredentials(email.trim(), password);
+      if (!result.ok) {
+        setError("Invalid email or password");
+        toast.error("Invalid email or password");
+        return;
+      }
       router.prefetch(postLoginRedirect);
       router.push(postLoginRedirect);
       router.refresh();
+    } finally {
+      setSubmitting(false);
     }
   }
 

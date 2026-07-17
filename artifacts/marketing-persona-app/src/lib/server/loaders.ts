@@ -225,7 +225,13 @@ export const loadSettingsInitialData = cache(async (userId: number): Promise<Set
 
   const hasBedrockCredentials = hasOrgBedrockCredentials(orgSettings);
   let bedrockAccessKeyLastFour: string | null = null;
-  if (orgSettings?.encryptedBedrockAccessKeyId) {
+  if (orgSettings?.encryptedBedrockSecretAccessKey) {
+    try {
+      bedrockAccessKeyLastFour = decryptSecret(orgSettings.encryptedBedrockSecretAccessKey).slice(-4);
+    } catch {
+      bedrockAccessKeyLastFour = "••••";
+    }
+  } else if (orgSettings?.encryptedBedrockAccessKeyId) {
     try {
       bedrockAccessKeyLastFour = decryptSecret(orgSettings.encryptedBedrockAccessKeyId).slice(-4);
     } catch {

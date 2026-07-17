@@ -37,9 +37,9 @@ const COLLAGE = [
   },
   {
     src: HERO_IMAGES.roadmaps.hero,
-    alt: "Content engine planning",
-    label: "Content engine",
-    href: "/content-engine",
+    alt: "Content strategy planning",
+    label: "Content strategy",
+    href: "/content-strategy",
     className: "",
     sizes: "(max-width: 640px) 100vw, 33vw",
   },
@@ -65,7 +65,7 @@ export function VideoDemoSection() {
           <div className="grid sm:grid-cols-3 sm:grid-rows-2 sm:aspect-16/10 gap-px bg-white/10">
             {COLLAGE.map((tile) => (
               <Link
-                key={tile.href}
+                key={tile.label}
                 href={tile.href}
                 className={`group relative aspect-4/3 sm:aspect-auto overflow-hidden bg-white/5 ${tile.className}`}
               >

@@ -1,14 +1,14 @@
 "use client";
 
 import { Suspense, useState, type FormEvent } from "react";
-import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
-import { AuthView } from "@workspace/app-shell";
+import { AuthView } from "@workspace/app-shell/auth";
 import { Button } from "@/components/ui/button";
 import { buildAuthRedirectParams } from "@/lib/projects/roadmap-intent";
 import { useRoadmapIntent } from "@/hooks/use-roadmap-intent";
+import { signInWithCredentials } from "@/lib/auth/sign-in-credentials";
 import {
   CONTACT_CTA_LABEL,
   CONTACT_EMAIL,
@@ -105,14 +105,10 @@ function SignupPageContent({ signupsEnabled, callbackUrl }: SignupPageClientProp
 
     const signupBody = (await res.json()) as { organizationId?: number | null };
 
-    const result = await signIn("credentials", {
-      email: email.trim(),
-      password,
-      redirect: false,
-    });
+    const result = await signInWithCredentials(email.trim(), password);
     setSubmitting(false);
 
-    if (result?.error) {
+    if (!result.ok) {
       toast.error("Account created but sign-in failed. Please log in.");
       router.push(loginHref);
     } else if (callbackUrl) {
