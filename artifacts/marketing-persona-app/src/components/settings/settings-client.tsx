@@ -111,14 +111,9 @@ function normalizeProviderChoice(value: string | null | undefined): AiProviderCh
 }
 
 interface BedrockCredentialsForm {
-  accessKeyId: string;
-  secretAccessKey: string;
-  sessionToken: string;
-  region: string;
+  apiKey: string;
   model: string;
 }
-
-const DEFAULT_BEDROCK_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0";
 
 interface SettingsClientProps {
   initialData?: import("@/lib/server/loaders").SettingsInitialData;
@@ -174,20 +169,8 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
   const [bedrockAccessKeyLastFour, setBedrockAccessKeyLastFour] = useState<string | null>(
     initialData?.bedrockCredentials.accessKeyLastFour ?? null,
   );
-  const [bedrockRegion, setBedrockRegion] = useState(
-    initialData?.bedrockCredentials.region ?? "us-east-1",
-  );
-  const [bedrockModel, setBedrockModel] = useState(
-    initialData?.bedrockCredentials.model ?? DEFAULT_BEDROCK_MODEL,
-  );
   const [bedrockDialogOpen, setBedrockDialogOpen] = useState(false);
-  const [bedrockForm, setBedrockForm] = useState<BedrockCredentialsForm>({
-    accessKeyId: "",
-    secretAccessKey: "",
-    sessionToken: "",
-    region: "us-east-1",
-    model: DEFAULT_BEDROCK_MODEL,
-  });
+  const [bedrockForm, setBedrockForm] = useState<BedrockCredentialsForm>({ apiKey: "", model: "" });
   const [bedrockTesting, setBedrockTesting] = useState(false);
   const [bedrockTestResult, setBedrockTestResult] = useState<{ ok: boolean; error?: string } | null>(null);
   const [bedrockSaving, setBedrockSaving] = useState(false);
@@ -283,8 +266,6 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
       if (bedrockData?.hasCredentials) {
         setHasBedrockCredentials(true);
         setBedrockAccessKeyLastFour(bedrockData.accessKeyLastFour ?? null);
-        setBedrockRegion(bedrockData.region ?? "us-east-1");
-        setBedrockModel(bedrockData.model ?? DEFAULT_BEDROCK_MODEL);
       }
       if (semrushData?.hasCredentials) {
         setHasSemrushCredentials(true);
@@ -474,30 +455,18 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
   }
 
   function openBedrockDialog() {
-    setBedrockForm({
-      accessKeyId: "",
-      secretAccessKey: "",
-      sessionToken: "",
-      region: bedrockRegion || "us-east-1",
-      model: bedrockModel || DEFAULT_BEDROCK_MODEL,
-    });
+    setBedrockForm({ apiKey: "", model: "" });
     setBedrockTestResult(null);
     setBedrockDialogOpen(true);
   }
 
   function bedrockPayloadFromForm() {
-    return {
-      accessKeyId: bedrockForm.accessKeyId.trim(),
-      secretAccessKey: bedrockForm.secretAccessKey.trim(),
-      sessionToken: bedrockForm.sessionToken.trim() || null,
-      region: bedrockForm.region.trim(),
-      model: bedrockForm.model.trim(),
-    };
+    return { apiKey: bedrockForm.apiKey.trim(), model: bedrockForm.model.trim() };
   }
 
   async function testBedrockCredentials() {
     const payload = bedrockPayloadFromForm();
-    if (!payload.accessKeyId || !payload.secretAccessKey || !payload.region || !payload.model) return;
+    if (!payload.apiKey) return;
     setBedrockTesting(true);
     setBedrockTestResult(null);
     const res = await fetch("/api/auth/bedrock-credentials/test", {
@@ -511,7 +480,7 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
 
   async function saveBedrockCredentials() {
     const payload = bedrockPayloadFromForm();
-    if (!payload.accessKeyId || !payload.secretAccessKey || !payload.region || !payload.model) return;
+    if (!payload.apiKey) return;
     setBedrockSaving(true);
     const res = await fetch("/api/auth/bedrock-credentials", {
       method: "PATCH",
@@ -521,16 +490,14 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
     setBedrockSaving(false);
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      toast.error((err as { error?: string }).error ?? "Failed to save Bedrock credentials");
+      toast.error((err as { error?: string }).error ?? "Failed to save Bedrock API key");
       return;
     }
     const data = await res.json();
     setHasBedrockCredentials(true);
-    setBedrockAccessKeyLastFour(data.accessKeyLastFour ?? payload.accessKeyId.slice(-4));
-    setBedrockRegion(data.region ?? payload.region);
-    setBedrockModel(data.model ?? payload.model);
+    setBedrockAccessKeyLastFour(data.accessKeyLastFour ?? payload.apiKey.slice(-4));
     setBedrockDialogOpen(false);
-    toast.success("AWS Bedrock credentials saved");
+    toast.success("Bedrock API key saved");
     const statusRes = await fetch("/api/ai-providers/status");
     if (statusRes.ok) setAiStatus(await statusRes.json());
   }
@@ -916,7 +883,7 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
               AWS Bedrock (BYOK)
             </h2>
             <p className="text-sm text-muted-foreground">
-              Bring your own AWS IAM credentials to run Claude and other Bedrock models through your AWS account.
+              Bring your own Bedrock API key to run Claude and other Bedrock models through your AWS account.
               {!canManageAiSettings && " Only site admins can manage Bedrock credentials."}
             </p>
             {hasBedrockCredentials ? (
@@ -924,31 +891,29 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                   <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium">Organization Bedrock credentials connected</p>
+                    <p className="text-sm font-medium">Organization Bedrock API key connected</p>
                     <p className="text-xs text-muted-foreground">
-                      Access key ending in ••••{bedrockAccessKeyLastFour ?? "••••"}
-                      {bedrockRegion ? ` · ${bedrockRegion}` : ""}
-                      {bedrockModel ? ` · ${bedrockModel}` : ""}
+                      Key ending in ••••{bedrockAccessKeyLastFour ?? "••••"}
                     </p>
                   </div>
                 </div>
                 {canManageAiSettings && (
                   <div className="flex gap-2">
                     <Button variant="outline" size="sm" onClick={openBedrockDialog}>
-                      Replace credentials
+                      Replace key
                     </Button>
                     <Button variant="outline" size="sm" onClick={removeBedrockCredentials} disabled={deletingBedrock}>
-                      {deletingBedrock ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove credentials"}
+                      {deletingBedrock ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove key"}
                     </Button>
                   </div>
                 )}
               </div>
             ) : canManageAiSettings ? (
               <Button variant="outline" size="sm" onClick={openBedrockDialog}>
-                <KeyRound className="mr-2 h-3.5 w-3.5" />Add Bedrock credentials
+                <KeyRound className="mr-2 h-3.5 w-3.5" />Add Bedrock API key
               </Button>
             ) : (
-              <p className="text-sm text-muted-foreground">No organization Bedrock credentials configured.</p>
+              <p className="text-sm text-muted-foreground">No organization Bedrock API key configured.</p>
             )}
           </div>
 

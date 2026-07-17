@@ -13,11 +13,8 @@ import { resetAiProviderClient } from "@workspace/ai-providers";
 import { z } from "zod";
 
 const BedrockCredentialsBody = z.object({
-  accessKeyId: z.string().min(16, "Access key ID is too short"),
-  secretAccessKey: z.string().min(16, "Secret access key is too short"),
-  sessionToken: z.string().trim().optional().nullable(),
-  region: z.string().trim().min(1, "Region is required"),
-  model: z.string().trim().min(1, "Model is required"),
+  apiKey: z.string().min(16, "API key is too short"),
+  model: z.string().trim().min(1, "Choose a Bedrock model"),
 });
 
 export async function GET() {
@@ -31,7 +28,9 @@ export async function GET() {
 
   let accessKeyLastFour = "••••";
   try {
-    if (orgSettings?.encryptedBedrockAccessKeyId) {
+    if (orgSettings?.encryptedBedrockSecretAccessKey) {
+      accessKeyLastFour = decryptSecret(orgSettings.encryptedBedrockSecretAccessKey).slice(-4);
+    } else if (orgSettings?.encryptedBedrockAccessKeyId) {
       accessKeyLastFour = decryptSecret(orgSettings.encryptedBedrockAccessKeyId).slice(-4);
     }
   } catch {
@@ -65,18 +64,16 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const { accessKeyId, secretAccessKey, sessionToken, region, model } = parsed.data;
-  const sessionTokenTrimmed = sessionToken?.trim();
+  const apiKey = parsed.data.apiKey.trim();
+  const model = parsed.data.model.trim();
 
   await db
     .update(organizationsTable)
     .set({
-      encryptedBedrockAccessKeyId: encryptSecret(accessKeyId),
-      encryptedBedrockSecretAccessKey: encryptSecret(secretAccessKey),
-      encryptedBedrockSessionToken: sessionTokenTrimmed
-        ? encryptSecret(sessionTokenTrimmed)
-        : null,
-      bedrockRegion: region,
+      encryptedBedrockAccessKeyId: null,
+      encryptedBedrockSecretAccessKey: encryptSecret(apiKey),
+      encryptedBedrockSessionToken: null,
+      bedrockRegion: null,
       bedrockModel: model,
     })
     .where(eq(organizationsTable.id, orgSettings.organizationId));
@@ -86,10 +83,10 @@ export async function PATCH(req: Request) {
   return NextResponse.json({
     ok: true,
     hasCredentials: true,
-    accessKeyLastFour: accessKeyId.slice(-4),
-    region,
+    accessKeyLastFour: apiKey.slice(-4),
+    region: null,
     model,
-    hasSessionToken: Boolean(sessionTokenTrimmed),
+    hasSessionToken: false,
   });
 }
 

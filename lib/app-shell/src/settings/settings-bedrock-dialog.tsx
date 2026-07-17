@@ -1,33 +1,24 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, KeyRound, Loader2, X, XCircle } from "lucide-react";
+import {
+  BEDROCK_MODEL_CHOICES,
+  BEDROCK_MODEL_CUSTOM,
+} from "@workspace/ai-providers/bedrock-models";
 
-export const DEFAULT_BEDROCK_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0";
+/** @deprecated No hardcoded Bedrock model — choose a model in the dialog. */
+export const DEFAULT_BEDROCK_MODEL = "";
 
 export type BedrockCredentialsForm = {
-  accessKeyId: string;
-  secretAccessKey: string;
-  sessionToken: string;
-  region: string;
+  apiKey: string;
   model: string;
 };
 
-export function emptyBedrockForm(region = "us-east-1", model = DEFAULT_BEDROCK_MODEL): BedrockCredentialsForm {
-  return {
-    accessKeyId: "",
-    secretAccessKey: "",
-    sessionToken: "",
-    region,
-    model,
-  };
+export function emptyBedrockForm(model = ""): BedrockCredentialsForm {
+  return { apiKey: "", model };
 }
 
 function isFormComplete(form: BedrockCredentialsForm): boolean {
-  return Boolean(
-    form.accessKeyId.trim() &&
-      form.secretAccessKey.trim() &&
-      form.region.trim() &&
-      form.model.trim(),
-  );
+  return Boolean(form.apiKey.trim() && form.model.trim());
 }
 
 export function SettingsBedrockDialog({
@@ -35,8 +26,7 @@ export function SettingsBedrockDialog({
   onOpenChange,
   hasCredentials,
   accessKeyLastFour,
-  region,
-  model,
+  model: savedModel,
   onSave,
   onDelete,
   onTest,
@@ -48,8 +38,8 @@ export function SettingsBedrockDialog({
   onOpenChange: (open: boolean) => void;
   hasCredentials: boolean;
   accessKeyLastFour: string | null;
-  region: string | null;
-  model: string | null;
+  region?: string | null;
+  model?: string | null;
   onSave: (form: BedrockCredentialsForm) => Promise<void>;
   onDelete: () => Promise<void>;
   onTest: (form: BedrockCredentialsForm) => Promise<{ ok: boolean; error?: string }>;
@@ -57,20 +47,30 @@ export function SettingsBedrockDialog({
   saving?: boolean;
   deleting?: boolean;
 }) {
-  const [form, setForm] = useState<BedrockCredentialsForm>(() =>
-    emptyBedrockForm(region ?? "us-east-1", model ?? DEFAULT_BEDROCK_MODEL),
-  );
+  const [form, setForm] = useState<BedrockCredentialsForm>(() => emptyBedrockForm(savedModel ?? ""));
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
 
+  const [forceCustomModel, setForceCustomModel] = useState(false);
+
+  const knownIds = useMemo(() => new Set<string>(BEDROCK_MODEL_CHOICES.map((c) => c.id)), []);
+  const showCustom =
+    forceCustomModel ||
+    Boolean(form.model && !knownIds.has(form.model));
+  const selectValue = showCustom ? BEDROCK_MODEL_CUSTOM : form.model;
+
   useEffect(() => {
     if (!open) {
-      setForm(emptyBedrockForm(region ?? "us-east-1", model ?? DEFAULT_BEDROCK_MODEL));
+      setForm(emptyBedrockForm());
       setTestResult(null);
       setTestError(null);
+      setForceCustomModel(false);
+      return;
     }
-  }, [open, region, model]);
+    setForm(emptyBedrockForm(savedModel ?? ""));
+    setForceCustomModel(Boolean(savedModel && !knownIds.has(savedModel)));
+  }, [open, savedModel, knownIds]);
 
   if (!open) return null;
 
@@ -81,8 +81,8 @@ export function SettingsBedrockDialog({
     onOpenChange(false);
   }
 
-  function updateField<K extends keyof BedrockCredentialsForm>(key: K, value: BedrockCredentialsForm[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+  function updateForm(patch: Partial<BedrockCredentialsForm>) {
+    setForm((prev) => ({ ...prev, ...patch }));
     setTestResult(null);
     setTestError(null);
   }
@@ -115,7 +115,7 @@ export function SettingsBedrockDialog({
   }
 
   async function handleDelete() {
-    if (!window.confirm("Remove the organization AWS Bedrock credentials?")) return;
+    if (!window.confirm("Remove the organization AWS Bedrock API key?")) return;
     await onDelete();
     onOpenChange(false);
   }
@@ -137,7 +137,7 @@ export function SettingsBedrockDialog({
         <div className="mb-5 flex items-center justify-between">
           <h2 id="bedrock-credentials-dialog-title" className="flex items-center gap-2 text-lg font-semibold">
             <KeyRound className="h-4 w-4 text-primary" aria-hidden />
-            {hasCredentials ? "Replace AWS Bedrock credentials" : "Add AWS Bedrock credentials"}
+            {hasCredentials ? "Replace Bedrock API key" : "Add Bedrock API key"}
           </h2>
           <button
             type="button"
@@ -158,91 +158,74 @@ export function SettingsBedrockDialog({
           <div className="space-y-4">
             {hasCredentials ? (
               <p className="text-sm text-muted-foreground">
-                Current access key ending in ••••{accessKeyLastFour ?? "••••"} will be replaced.
+                Current key ending in ••••{accessKeyLastFour ?? "••••"} will be replaced.
               </p>
             ) : null}
 
             <p className="text-xs text-muted-foreground">
-              Credentials are encrypted with AES-256 before storage. Use an IAM user with Bedrock invoke
-              permissions.
+              Paste a long-term Bedrock API key and choose the model to use for generation.
             </p>
 
             <div className="space-y-1.5">
-              <label htmlFor="bedrock-access-key-id" className="text-sm font-medium">
-                Access key ID
+              <label htmlFor="bedrock-api-key" className="text-sm font-medium">
+                Bedrock API key
               </label>
               <input
-                id="bedrock-access-key-id"
+                id="bedrock-api-key"
                 type="password"
-                value={form.accessKeyId}
-                onChange={(event) => updateField("accessKeyId", event.target.value)}
-                placeholder="AKIA..."
+                value={form.apiKey}
+                onChange={(event) => updateForm({ apiKey: event.target.value })}
+                placeholder="Paste Bedrock API key"
                 autoComplete="off"
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             <div className="space-y-1.5">
-              <label htmlFor="bedrock-secret-access-key" className="text-sm font-medium">
-                Secret access key
+              <label htmlFor="bedrock-model" className="text-sm font-medium">
+                Model
               </label>
-              <input
-                id="bedrock-secret-access-key"
-                type="password"
-                value={form.secretAccessKey}
-                onChange={(event) => updateField("secretAccessKey", event.target.value)}
-                placeholder="Secret key"
-                autoComplete="off"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label htmlFor="bedrock-session-token" className="text-sm font-medium">
-                Session token (optional)
-              </label>
-              <input
-                id="bedrock-session-token"
-                type="password"
-                value={form.sessionToken}
-                onChange={(event) => updateField("sessionToken", event.target.value)}
-                placeholder="For temporary credentials"
-                autoComplete="off"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <label htmlFor="bedrock-region" className="text-sm font-medium">
-                  Region
-                </label>
+              <select
+                id="bedrock-model"
+                value={selectValue}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  if (value === BEDROCK_MODEL_CUSTOM) {
+                    setForceCustomModel(true);
+                    if (knownIds.has(form.model)) {
+                      updateForm({ model: "" });
+                    }
+                    return;
+                  }
+                  setForceCustomModel(false);
+                  updateForm({ model: value });
+                }}
+                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+              >
+                <option value="">Choose a Bedrock model</option>
+                {BEDROCK_MODEL_CHOICES.map((choice) => (
+                  <option key={choice.id} value={choice.id}>
+                    {choice.label}
+                  </option>
+                ))}
+                <option value={BEDROCK_MODEL_CUSTOM}>Custom model id…</option>
+              </select>
+              {showCustom ? (
                 <input
-                  id="bedrock-region"
-                  value={form.region}
-                  onChange={(event) => updateField("region", event.target.value)}
-                  placeholder="us-east-1"
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label htmlFor="bedrock-model" className="text-sm font-medium">
-                  Model ID
-                </label>
-                <input
-                  id="bedrock-model"
+                  id="bedrock-model-custom"
                   value={form.model}
-                  onChange={(event) => updateField("model", event.target.value)}
-                  placeholder={DEFAULT_BEDROCK_MODEL}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                  onChange={(event) => updateForm({ model: event.target.value })}
+                  placeholder="e.g. us.anthropic.claude-sonnet-4-20250514-v1:0"
+                  autoComplete="off"
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 />
-              </div>
+              ) : null}
             </div>
 
             {testResult === "ok" ? (
               <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-2.5 text-sm text-emerald-700">
                 <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
-                Credentials are valid and working
+                API key is valid and working
               </div>
             ) : null}
             {testResult === "error" ? (
@@ -265,7 +248,7 @@ export function SettingsBedrockDialog({
                     Testing…
                   </>
                 ) : (
-                  "Test credentials"
+                  "Test key"
                 )}
               </button>
               <button
@@ -280,7 +263,7 @@ export function SettingsBedrockDialog({
                     Saving…
                   </>
                 ) : (
-                  "Save credentials"
+                  "Save key"
                 )}
               </button>
               {hasCredentials ? (
@@ -290,7 +273,7 @@ export function SettingsBedrockDialog({
                   disabled={busy}
                   className="rounded-lg border border-red-200 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50"
                 >
-                  {deleting ? "Removing…" : "Remove credentials"}
+                  {deleting ? "Removing…" : "Remove key"}
                 </button>
               ) : null}
             </div>

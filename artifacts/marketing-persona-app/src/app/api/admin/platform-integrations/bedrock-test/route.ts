@@ -4,6 +4,7 @@ import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
 import { loadPlatformBedrockCredentials } from "@/lib/platform/platform-bedrock-admin";
 
 const BedrockTestBody = z.object({
+  apiKey: z.string().min(16).optional(),
   accessKeyId: z.string().min(16).optional(),
   secretAccessKey: z.string().min(16).optional(),
   sessionToken: z.string().trim().optional().nullable(),
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
   }
 
   const stored = await loadPlatformBedrockCredentials();
+  const apiKey = parsed.data.apiKey?.trim() || stored?.apiKey;
   const accessKeyId = parsed.data.accessKeyId?.trim() || stored?.accessKeyId;
   const secretAccessKey = parsed.data.secretAccessKey?.trim() || stored?.secretAccessKey;
   const sessionToken =
@@ -29,29 +31,23 @@ export async function POST(req: Request) {
   const region = parsed.data.region?.trim() || stored?.region;
   const model = parsed.data.model?.trim() || stored?.model;
 
-  if (!accessKeyId || !secretAccessKey || !region || !model) {
+  if (!apiKey && !(accessKeyId && secretAccessKey)) {
     return NextResponse.json(
-      { ok: false, error: "Access key, secret, region, and model are required to test" },
+      { ok: false, error: "Paste a Bedrock API key (or save one first) to test" },
       { status: 400 },
     );
   }
 
   try {
-    const { BedrockClient } = await import("@workspace/ai-providers/bedrock");
-    const client = await BedrockClient.create({
-      accessKeyId,
-      secretAccessKey,
-      sessionToken,
-      region,
-      model,
-    });
-    await client.generate({
-      prompt: "Reply with the single word: ok",
-      maxOutputTokens: 16,
-    });
+    const { testBedrockCredentials } = await import("@workspace/ai-providers/bedrock");
+    await testBedrockCredentials(
+      apiKey
+        ? { apiKey, region, model }
+        : { accessKeyId, secretAccessKey, sessionToken, region, model },
+    );
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ ok: false, error: msg });
+    const { formatBedrockAuthError } = await import("@workspace/ai-providers/bedrock");
+    return NextResponse.json({ ok: false, error: formatBedrockAuthError(err) });
   }
 }

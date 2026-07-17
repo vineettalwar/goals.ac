@@ -75,6 +75,7 @@ const blueskyBodySchema = z.object({
 
 const bedrockBodySchema = z.object({
   integration: z.literal("bedrock"),
+  apiKey: z.string().min(16).optional(),
   accessKeyId: z.string().min(16).optional(),
   secretAccessKey: z.string().min(16).optional(),
   sessionToken: z.string().trim().optional().nullable(),
@@ -218,6 +219,7 @@ export async function PATCH(req: Request) {
       });
     } else {
       const hasCredFields =
+        data.apiKey !== undefined ||
         data.accessKeyId !== undefined ||
         data.secretAccessKey !== undefined ||
         data.sessionToken !== undefined ||
@@ -230,6 +232,7 @@ export async function PATCH(req: Request) {
 
       if (hasCredFields) {
         await savePlatformBedrockCredentials({
+          apiKey: data.apiKey,
           accessKeyId: data.accessKeyId,
           secretAccessKey: data.secretAccessKey,
           sessionToken: data.sessionToken,

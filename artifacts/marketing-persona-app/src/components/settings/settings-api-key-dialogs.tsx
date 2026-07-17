@@ -15,13 +15,16 @@ import {
 } from "@/components/ui/select";
 import { SEMRUSH_DATABASES as SEMRUSH_DATABASE_CODES } from "@workspace/keyword-research-provider";
 import { semrushDatabaseLabel } from "@workspace/content-engine/support/content/content-language";
-
-const DEFAULT_BEDROCK_MODEL = "anthropic.claude-3-5-haiku-20241022-v1:0";
+import {
+  BEDROCK_MODEL_CHOICES,
+  BEDROCK_MODEL_CUSTOM,
+} from "@workspace/ai-providers/bedrock-models";
 
 const SEMRUSH_DATABASES = SEMRUSH_DATABASE_CODES.map((value) => ({
   value,
   label: semrushDatabaseLabel(value).replace(/ \([a-z]+\)$/i, ""),
 }));
+const BEDROCK_KNOWN_IDS = new Set<string>(BEDROCK_MODEL_CHOICES.map((c) => c.id));
 
 export function SettingsApiKeyDialogs({
   geminiDialogOpen, setGeminiDialogOpen, geminiKeyInput, setGeminiKeyInput, geminiTestResult,
@@ -66,8 +69,8 @@ export function SettingsApiKeyDialogs({
   saveAnthropicKey: () => void;
   bedrockDialogOpen: boolean;
   setBedrockDialogOpen: (open: boolean) => void;
-  bedrockForm: { accessKeyId: string; secretAccessKey: string; sessionToken: string; region: string; model: string };
-  setBedrockForm: React.Dispatch<React.SetStateAction<{ accessKeyId: string; secretAccessKey: string; sessionToken: string; region: string; model: string }>>;
+  bedrockForm: { apiKey: string; model: string };
+  setBedrockForm: React.Dispatch<React.SetStateAction<{ apiKey: string; model: string }>>;
   bedrockTestResult: { ok: boolean; error?: string } | null;
   bedrockTesting: boolean;
   bedrockSaving: boolean;
@@ -188,93 +191,85 @@ export function SettingsApiKeyDialogs({
       <Dialog open={bedrockDialogOpen} onOpenChange={setBedrockDialogOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>AWS Bedrock credentials</DialogTitle>
+            <DialogTitle>Bedrock API key</DialogTitle>
             <DialogDescription>
-              Credentials are encrypted and stored securely. Use an IAM user with Bedrock invoke permissions.
+              Paste a long-term Bedrock API key and choose the model to use for generation.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="bedrock-access-key-id">Access key ID</Label>
+              <Label htmlFor="bedrock-api-key">Bedrock API key</Label>
               <Input
-                id="bedrock-access-key-id"
+                id="bedrock-api-key"
                 type="password"
-                placeholder="AKIA..."
-                value={bedrockForm.accessKeyId}
-                onChange={(e) => setBedrockForm((prev) => ({ ...prev, accessKeyId: e.target.value }))}
+                placeholder="Paste Bedrock API key"
+                value={bedrockForm.apiKey}
+                onChange={(e) => setBedrockForm({ ...bedrockForm, apiKey: e.target.value })}
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="bedrock-secret-access-key">Secret access key</Label>
-              <Input
-                id="bedrock-secret-access-key"
-                type="password"
-                placeholder="Secret key"
-                value={bedrockForm.secretAccessKey}
-                onChange={(e) => setBedrockForm((prev) => ({ ...prev, secretAccessKey: e.target.value }))}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="bedrock-session-token">Session token (optional)</Label>
-              <Input
-                id="bedrock-session-token"
-                type="password"
-                placeholder="For temporary credentials"
-                value={bedrockForm.sessionToken}
-                onChange={(e) => setBedrockForm((prev) => ({ ...prev, sessionToken: e.target.value }))}
-              />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="bedrock-region">Region</Label>
+              <Label htmlFor="bedrock-model">Model</Label>
+              <Select
+                value={
+                  !bedrockForm.model
+                    ? undefined
+                    : BEDROCK_KNOWN_IDS.has(bedrockForm.model)
+                      ? bedrockForm.model
+                      : BEDROCK_MODEL_CUSTOM
+                }
+                onValueChange={(value) => {
+                  if (value === BEDROCK_MODEL_CUSTOM) {
+                    setBedrockForm({
+                      ...bedrockForm,
+                      model: BEDROCK_KNOWN_IDS.has(bedrockForm.model) ? "" : bedrockForm.model,
+                    });
+                    return;
+                  }
+                  setBedrockForm({ ...bedrockForm, model: value });
+                }}
+              >
+                <SelectTrigger id="bedrock-model">
+                  <SelectValue placeholder="Choose a Bedrock model" />
+                </SelectTrigger>
+                <SelectContent>
+                  {BEDROCK_MODEL_CHOICES.map((choice) => (
+                    <SelectItem key={choice.id} value={choice.id}>
+                      {choice.label}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value={BEDROCK_MODEL_CUSTOM}>Custom model id…</SelectItem>
+                </SelectContent>
+              </Select>
+              {!bedrockForm.model || !BEDROCK_KNOWN_IDS.has(bedrockForm.model) ? (
                 <Input
-                  id="bedrock-region"
-                  placeholder="us-east-1"
-                  value={bedrockForm.region}
-                  onChange={(e) => setBedrockForm((prev) => ({ ...prev, region: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="bedrock-model">Model ID</Label>
-                <Input
-                  id="bedrock-model"
-                  placeholder={DEFAULT_BEDROCK_MODEL}
+                  id="bedrock-model-custom"
                   value={bedrockForm.model}
-                  onChange={(e) => setBedrockForm((prev) => ({ ...prev, model: e.target.value }))}
+                  onChange={(e) => setBedrockForm({ ...bedrockForm, model: e.target.value })}
+                  placeholder="e.g. us.anthropic.claude-sonnet-4-20250514-v1:0"
+                  className="font-mono text-sm"
+                  autoComplete="off"
                 />
-              </div>
+              ) : null}
             </div>
             {bedrockTestResult && (
               <div className={`flex items-center gap-2 text-sm ${bedrockTestResult.ok ? "text-emerald-600" : "text-destructive"}`}>
                 {bedrockTestResult.ok ? <CheckCircle2 className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                {bedrockTestResult.ok ? "Credentials are valid" : bedrockTestResult.error ?? "Credential test failed"}
+                {bedrockTestResult.ok ? "API key is valid" : bedrockTestResult.error ?? "Credential test failed"}
               </div>
             )}
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
                 onClick={testBedrockCredentials}
-                disabled={
-                  bedrockTesting ||
-                  !bedrockForm.accessKeyId.trim() ||
-                  !bedrockForm.secretAccessKey.trim() ||
-                  !bedrockForm.region.trim() ||
-                  !bedrockForm.model.trim()
-                }
+                disabled={bedrockTesting || !bedrockForm.apiKey.trim() || !bedrockForm.model.trim()}
               >
-                {bedrockTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test credentials"}
+                {bedrockTesting ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test key"}
               </Button>
               <Button
                 onClick={saveBedrockCredentials}
-                disabled={
-                  bedrockSaving ||
-                  !bedrockForm.accessKeyId.trim() ||
-                  !bedrockForm.secretAccessKey.trim() ||
-                  !bedrockForm.region.trim() ||
-                  !bedrockForm.model.trim()
-                }
+                disabled={bedrockSaving || !bedrockForm.apiKey.trim() || !bedrockForm.model.trim()}
               >
-                {bedrockSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save credentials"}
+                {bedrockSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Save key"}
               </Button>
             </div>
           </div>

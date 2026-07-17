@@ -34,6 +34,20 @@ export function AdminIntegrationsDialogs({
         {activeDialog === "twitter" ? <AdminTwitterDialog controller={controller} /> : null}
         {activeDialog === "meta" ? <AdminMetaDialog controller={controller} /> : null}
         {activeDialog === "bluesky" ? <AdminBlueskyDialog controller={controller} /> : null}
+        {activeDialog === "mastodon" ? (
+          <div className="space-y-3 p-1">
+            <h2 className="text-lg font-semibold">Mastodon</h2>
+            <p className="text-sm text-muted-foreground">
+              Mastodon uses per-instance OAuth. Projects connect with their own Mastodon instance URL —
+              there is no platform-wide app client to configure here (unlike Bluesky, LinkedIn, X, or
+              Meta).
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Enable social publishing in platform settings, then connect Mastodon from each project&apos;s
+              Integrations → Social tab.
+            </p>
+          </div>
+        ) : null}
         {activeDialog === "bedrock" ? <AdminBedrockDialog controller={controller} /> : null}
         <AdminEnvIntegrationDialog controller={controller} />
       </DialogContent>

@@ -3,11 +3,8 @@ import { requireAuth } from "@/lib/auth/require-auth";
 import { z } from "zod";
 
 const BedrockTestBody = z.object({
-  accessKeyId: z.string().min(16, "Access key ID is too short"),
-  secretAccessKey: z.string().min(16, "Secret access key is too short"),
-  sessionToken: z.string().trim().optional().nullable(),
-  region: z.string().trim().min(1, "Region is required"),
-  model: z.string().trim().min(1, "Model is required"),
+  apiKey: z.string().min(16, "API key is too short"),
+  model: z.string().trim().min(1, "Choose a Bedrock model"),
 });
 
 export async function POST(req: Request) {
@@ -23,24 +20,15 @@ export async function POST(req: Request) {
     );
   }
 
-  const { accessKeyId, secretAccessKey, sessionToken, region, model } = parsed.data;
-
   try {
-    const { BedrockClient } = await import("@workspace/ai-providers/bedrock");
-    const client = await BedrockClient.create({
-      accessKeyId,
-      secretAccessKey,
-      sessionToken: sessionToken?.trim() || undefined,
-      region,
-      model,
-    });
-    await client.generate({
-      prompt: "Reply with the single word: ok",
-      maxOutputTokens: 16,
+    const { testBedrockCredentials } = await import("@workspace/ai-providers/bedrock");
+    await testBedrockCredentials({
+      apiKey: parsed.data.apiKey.trim(),
+      model: parsed.data.model.trim(),
     });
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ ok: false, error: msg });
+    const { formatBedrockAuthError } = await import("@workspace/ai-providers/bedrock");
+    return NextResponse.json({ ok: false, error: formatBedrockAuthError(err) });
   }
 }

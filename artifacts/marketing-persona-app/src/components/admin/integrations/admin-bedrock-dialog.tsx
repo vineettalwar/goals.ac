@@ -1,11 +1,23 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
+import {
+  BEDROCK_MODEL_CHOICES,
+  BEDROCK_MODEL_CUSTOM,
+} from "@workspace/ai-providers/bedrock-models";
 import { PlatformIntegrationBrandIcon } from "@/components/integrations/platform-integration-brand-icon";
 import { Button } from "@/components/ui/button";
 import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { IntegrationIconBox } from "@/components/integrations/integration-tile";
 import type { AdminIntegrationsController } from "./use-admin-integrations-controller";
 import { EnvManagedBanner, SourceNote } from "./admin-integrations-shared";
@@ -19,14 +31,8 @@ export function AdminBedrockDialog({ controller }: { controller: AdminIntegratio
     testBedrock,
     savingBedrock,
     testingBedrock,
-    bedrockAccessKeyId,
-    setBedrockAccessKeyId,
-    bedrockSecretAccessKey,
-    setBedrockSecretAccessKey,
-    bedrockSessionToken,
-    setBedrockSessionToken,
-    bedrockRegion,
-    setBedrockRegion,
+    bedrockApiKey,
+    setBedrockApiKey,
     bedrockModel,
     setBedrockModel,
     bedrockOrgSearch,
@@ -35,10 +41,21 @@ export function AdminBedrockDialog({ controller }: { controller: AdminIntegratio
     bedrockGrantedOrgIds,
     toggleBedrockGrantedOrg,
   } = controller;
+
+  const [forceCustomModel, setForceCustomModel] = useState(false);
+
+  const knownIds = useMemo(() => new Set<string>(BEDROCK_MODEL_CHOICES.map((c) => c.id)), []);
+  const showCustom =
+    forceCustomModel ||
+    Boolean(bedrockModel && !knownIds.has(bedrockModel));
+  const selectValue = showCustom
+    ? BEDROCK_MODEL_CUSTOM
+    : bedrockModel || undefined;
+
   if (!status) return null;
 
   const storedInDb =
-    status.bedrock.accessKeyId.source === "db" || status.bedrock.secretAccessKey.source === "db";
+    status.bedrock.secretAccessKey.source === "db" || status.bedrock.accessKeyId.source === "db";
   const filteredOrgs = bedrockOrgOptions.filter((org) => {
     const q = bedrockOrgSearch.trim().toLowerCase();
     if (!q) return true;
@@ -55,8 +72,8 @@ export function AdminBedrockDialog({ controller }: { controller: AdminIntegratio
           <div>
             <DialogTitle>AWS Bedrock</DialogTitle>
             <DialogDescription className="mt-1">
-              Store platform Bedrock credentials and grant selected organizations access when they
-              lack their own BYOK keys.
+              Store a platform Bedrock API key, choose a model, and grant selected organizations
+              access when they lack their own BYOK keys.
             </DialogDescription>
           </div>
         </div>
@@ -67,75 +84,75 @@ export function AdminBedrockDialog({ controller }: { controller: AdminIntegratio
         ) : (
           <SourceNote
             configured={status.bedrock.configured}
-            source={status.bedrock.accessKeyId.source ?? status.bedrock.secretAccessKey.source}
-            lastFour={status.bedrock.accessKeyId.lastFour}
+            source={status.bedrock.secretAccessKey.source ?? status.bedrock.accessKeyId.source}
+            lastFour={
+              status.bedrock.secretAccessKey.lastFour ?? status.bedrock.accessKeyId.lastFour
+            }
           />
         )}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="bedrock-access-key">Access key ID</Label>
-            <Input
-              id="bedrock-access-key"
-              value={bedrockAccessKeyId}
-              onChange={(e) => setBedrockAccessKeyId(e.target.value)}
-              placeholder={
-                status.bedrock.accessKeyId.configured
-                  ? "Leave blank to keep current key"
-                  : "AKIA..."
+        <div className="space-y-2">
+          <Label htmlFor="bedrock-api-key">Bedrock API key</Label>
+          <Input
+            id="bedrock-api-key"
+            type="password"
+            value={bedrockApiKey}
+            onChange={(e) => setBedrockApiKey(e.target.value)}
+            placeholder={
+              status.bedrock.configured ? "Leave blank to keep current key" : "Paste Bedrock API key"
+            }
+            disabled={status.bedrock.managedByEnv}
+            autoComplete="new-password"
+          />
+          <p className="text-xs text-muted-foreground">
+            Use a <strong>long-term</strong> Bedrock API key from the AWS console (not a short-term
+            key — those expire with your console session, within 12 hours).
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="bedrock-model">Model</Label>
+          <Select
+            value={selectValue}
+            onValueChange={(value) => {
+              if (value === BEDROCK_MODEL_CUSTOM) {
+                setForceCustomModel(true);
+                if (knownIds.has(bedrockModel)) {
+                  setBedrockModel("");
+                }
+                return;
               }
-              disabled={status.bedrock.managedByEnv}
-              autoComplete="off"
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="bedrock-secret-key">Secret access key</Label>
+              setForceCustomModel(false);
+              setBedrockModel(value);
+            }}
+            disabled={status.bedrock.managedByEnv}
+          >
+            <SelectTrigger id="bedrock-model">
+              <SelectValue placeholder="Choose a Bedrock model" />
+            </SelectTrigger>
+            <SelectContent>
+              {BEDROCK_MODEL_CHOICES.map((choice) => (
+                <SelectItem key={choice.id} value={choice.id}>
+                  {choice.label}
+                </SelectItem>
+              ))}
+              <SelectItem value={BEDROCK_MODEL_CUSTOM}>Custom model id…</SelectItem>
+            </SelectContent>
+          </Select>
+          {showCustom ? (
             <Input
-              id="bedrock-secret-key"
-              type="password"
-              value={bedrockSecretAccessKey}
-              onChange={(e) => setBedrockSecretAccessKey(e.target.value)}
-              placeholder={
-                status.bedrock.secretAccessKey.configured
-                  ? "Leave blank to keep current secret"
-                  : "Secret access key"
-              }
-              disabled={status.bedrock.managedByEnv}
-              autoComplete="new-password"
-            />
-          </div>
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="bedrock-session-token">Session token (optional)</Label>
-            <Input
-              id="bedrock-session-token"
-              value={bedrockSessionToken}
-              onChange={(e) => setBedrockSessionToken(e.target.value)}
-              placeholder="Temporary session token"
-              disabled={status.bedrock.managedByEnv}
-              autoComplete="off"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bedrock-region">Region</Label>
-            <Input
-              id="bedrock-region"
-              value={bedrockRegion}
-              onChange={(e) => setBedrockRegion(e.target.value)}
-              placeholder="us-east-1"
-              disabled={status.bedrock.managedByEnv}
-              autoComplete="off"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bedrock-model">Model</Label>
-            <Input
-              id="bedrock-model"
+              id="bedrock-model-custom"
               value={bedrockModel}
               onChange={(e) => setBedrockModel(e.target.value)}
-              placeholder="anthropic.claude-3-5-sonnet-20240620-v1:0"
+              placeholder="e.g. us.anthropic.claude-sonnet-4-20250514-v1:0"
               disabled={status.bedrock.managedByEnv}
               autoComplete="off"
+              className="font-mono text-sm"
             />
-          </div>
+          ) : null}
+          <p className="text-xs text-muted-foreground">
+            Required for Test and generation. Use an inference profile id enabled in your AWS
+            account/region.
+          </p>
         </div>
 
         <div className="space-y-2 border-t border-border/60 pt-3">
@@ -183,12 +200,12 @@ export function AdminBedrockDialog({ controller }: { controller: AdminIntegratio
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-3">
           <a
-            href="https://docs.aws.amazon.com/bedrock/"
+            href="https://docs.aws.amazon.com/bedrock/latest/userguide/api-keys.html"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
           >
-            Bedrock docs
+            Bedrock API key docs
             <ExternalLink className="h-3 w-3" />
           </a>
         </div>
@@ -209,7 +226,7 @@ export function AdminBedrockDialog({ controller }: { controller: AdminIntegratio
             type="button"
             variant="outline"
             onClick={() => void testBedrock()}
-            disabled={savingBedrock || testingBedrock}
+            disabled={savingBedrock || testingBedrock || !bedrockModel.trim()}
           >
             {testingBedrock ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
           </Button>

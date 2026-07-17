@@ -62,10 +62,7 @@ export function useAdminIntegrationsController() {
   const [metaAppSecret, setMetaAppSecret] = useState("");
   const [blueskyClientName, setBlueskyClientName] = useState("");
   const [blueskyPrivateKeyJwk, setBlueskyPrivateKeyJwk] = useState("");
-  const [bedrockAccessKeyId, setBedrockAccessKeyId] = useState("");
-  const [bedrockSecretAccessKey, setBedrockSecretAccessKey] = useState("");
-  const [bedrockSessionToken, setBedrockSessionToken] = useState("");
-  const [bedrockRegion, setBedrockRegion] = useState("");
+  const [bedrockApiKey, setBedrockApiKey] = useState("");
   const [bedrockModel, setBedrockModel] = useState("");
   const [bedrockOrgSearch, setBedrockOrgSearch] = useState("");
   const [bedrockOrgOptions, setBedrockOrgOptions] = useState<Array<{ id: number; name: string }>>(
@@ -99,9 +96,8 @@ export function useAdminIntegrationsController() {
     } else if (dialog === "bluesky") {
       setBlueskyPrivateKeyJwk("");
     } else if (dialog === "bedrock") {
-      setBedrockAccessKeyId("");
-      setBedrockSecretAccessKey("");
-      setBedrockSessionToken("");
+      setBedrockApiKey("");
+      setBedrockModel("");
     }
   }, []);
 
@@ -136,11 +132,10 @@ export function useAdminIntegrationsController() {
       setTwitterClientId(statusData.twitter.clientId.value ?? "");
       setMetaAppId(statusData.meta.appId.value ?? "");
       setBlueskyClientName(statusData.bluesky.clientName.value ?? "");
-      setBedrockRegion(statusData.bedrock.region.value ?? "");
-      setBedrockModel(statusData.bedrock.model.value ?? "");
       setBedrockGrantedOrgIds(
         new Set(statusData.bedrock.grantedOrganizations.map((org) => org.id)),
       );
+      setBedrockModel(statusData.bedrock.model.value ?? "");
       if (orgsRes.ok) {
         const orgsData = (await orgsRes.json()) as {
           organizations: Array<{ id: number; name: string }>;
@@ -511,22 +506,21 @@ export function useAdminIntegrationsController() {
       integration: "bedrock",
       organizationIds: [...bedrockGrantedOrgIds],
     };
-    if (bedrockAccessKeyId.trim()) payload.accessKeyId = bedrockAccessKeyId.trim();
-    if (bedrockSecretAccessKey.trim()) payload.secretAccessKey = bedrockSecretAccessKey.trim();
-    if (bedrockSessionToken.trim()) payload.sessionToken = bedrockSessionToken.trim();
-    if (bedrockRegion.trim()) payload.region = bedrockRegion.trim();
+    if (bedrockApiKey.trim()) payload.apiKey = bedrockApiKey.trim();
     if (bedrockModel.trim()) payload.model = bedrockModel.trim();
 
     const alreadyConfigured = Boolean(status?.bedrock.configured);
-    const addingCreds = Boolean(payload.accessKeyId || payload.secretAccessKey);
-    if (!alreadyConfigured && addingCreds) {
-      if (!payload.accessKeyId || !payload.secretAccessKey || !payload.region || !payload.model) {
-        toast.error("Access key, secret, region, and model are required for the first save");
+    const addingCreds = Boolean(payload.apiKey);
+    if (!alreadyConfigured && !addingCreds) {
+      if (bedrockGrantedOrgIds.size > 0) {
+        toast.error("Save a Bedrock API key before granting organizations");
         return;
       }
+      toast.error("Paste a Bedrock API key to save");
+      return;
     }
-    if (!alreadyConfigured && !addingCreds && bedrockGrantedOrgIds.size > 0) {
-      toast.error("Save Bedrock credentials before granting organizations");
+    if (!bedrockModel.trim() && !status?.bedrock.model.value) {
+      toast.error("Choose a Bedrock model");
       return;
     }
 
@@ -543,10 +537,7 @@ export function useAdminIntegrationsController() {
       }
       const data = (await res.json()) as { status: PlatformIntegrationStatus };
       setStatus(data.status);
-      setBedrockAccessKeyId("");
-      setBedrockSecretAccessKey("");
-      setBedrockSessionToken("");
-      setBedrockRegion(data.status.bedrock.region.value ?? "");
+      setBedrockApiKey("");
       setBedrockModel(data.status.bedrock.model.value ?? "");
       setBedrockGrantedOrgIds(
         new Set(data.status.bedrock.grantedOrganizations.map((org) => org.id)),
@@ -560,17 +551,19 @@ export function useAdminIntegrationsController() {
   }
 
   async function testBedrock() {
+    const model = bedrockModel.trim() || status?.bedrock.model.value?.trim() || "";
+    if (!model) {
+      toast.error("Choose a Bedrock model to test");
+      return;
+    }
     setTestingBedrock(true);
     try {
       const res = await fetch("/api/admin/platform-integrations/bedrock-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          accessKeyId: bedrockAccessKeyId.trim() || undefined,
-          secretAccessKey: bedrockSecretAccessKey.trim() || undefined,
-          sessionToken: bedrockSessionToken.trim() || undefined,
-          region: bedrockRegion.trim() || undefined,
-          model: bedrockModel.trim() || undefined,
+          apiKey: bedrockApiKey.trim() || undefined,
+          model,
         }),
       });
       const body = (await res.json().catch(() => null)) as {
@@ -647,11 +640,7 @@ export function useAdminIntegrationsController() {
         setBlueskyClientName("");
         setBlueskyPrivateKeyJwk("");
       } else if (integration === "bedrock") {
-        setBedrockAccessKeyId("");
-        setBedrockSecretAccessKey("");
-        setBedrockSessionToken("");
-        setBedrockRegion("");
-        setBedrockModel("");
+        setBedrockApiKey("");
       }
       toast.success("Stored credentials removed");
     } catch (err) {
@@ -763,14 +752,8 @@ export function useAdminIntegrationsController() {
     setBlueskyClientName,
     blueskyPrivateKeyJwk,
     setBlueskyPrivateKeyJwk,
-    bedrockAccessKeyId,
-    setBedrockAccessKeyId,
-    bedrockSecretAccessKey,
-    setBedrockSecretAccessKey,
-    bedrockSessionToken,
-    setBedrockSessionToken,
-    bedrockRegion,
-    setBedrockRegion,
+    bedrockApiKey,
+    setBedrockApiKey,
     bedrockModel,
     setBedrockModel,
     bedrockOrgSearch,

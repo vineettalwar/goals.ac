@@ -54,6 +54,9 @@ export function isIntegrationConfigured(
   if (definition.kind === "env") {
     return integrationEnvReady(definition);
   }
+  if (definition.kind === "info") {
+    return true;
+  }
   if (definition.id === "stripe") {
     return (
       isStripeApiConfigured(env, status) &&
@@ -131,7 +134,9 @@ export function getIntegrationLastFour(
   if (definition.id === "twitter") return status.twitter.clientSecret.lastFour;
   if (definition.id === "meta") return status.meta.appSecret.lastFour;
   if (definition.id === "bluesky") return status.bluesky.privateKeyJwk.lastFour;
-  if (definition.id === "bedrock") return status.bedrock.accessKeyId.lastFour;
+  if (definition.id === "bedrock") {
+    return status.bedrock.secretAccessKey.lastFour ?? status.bedrock.accessKeyId.lastFour;
+  }
   return null;
 }
 
