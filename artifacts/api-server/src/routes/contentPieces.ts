@@ -2140,7 +2140,7 @@ router.post(
         return;
       }
 
-      const webflowItemUrl = await publishToWebflow(
+      const webflowResult = await publishToWebflow(
         creds.webflow.apiToken,
         creds.webflow.collectionId,
         creds.webflow.bodyFieldSlug,
@@ -2151,7 +2151,7 @@ router.post(
 
       const [updated] = await db
         .update(contentPiecesTable)
-        .set({ status: "published", publishedUrl: webflowItemUrl })
+        .set({ status: "published", publishedUrl: webflowResult.url })
         .where(eq(contentPiecesTable.id, id))
         .returning();
 

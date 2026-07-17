@@ -24,6 +24,8 @@ import {
 import {
   brandVoiceCacheFingerprint,
   buildBrandVoicePromptContext,
+  resolveHumanizationLevel,
+  resolveWritingSample,
   type UnifiedBrandContext,
 } from "../brand/brand-voice";
 import { loadBrandVoiceGenerationContext } from "../support/brand/brand-voice-generation";
@@ -631,19 +633,46 @@ async function postProcessGeneratedResult(
   let result: ContentPieceResult = parsed;
 
   if (isHumanizableFormat(format)) {
-    const { result: humanizedResult, humanized } = await humanizeContentPiece(parsed, brand, {
-      aiClient: ai,
-    });
-    humanizePasses += 1;
-    result = isSeoLongformFormat(format)
-      ? processGeneratedResult(humanizedResult, format, humanized)
-      : {
-          ...humanizedResult,
-          pieceMetadata: {
-            ...humanizedResult.pieceMetadata,
-            humanized: humanized || humanizedResult.pieceMetadata?.humanized,
-          },
-        };
+    const sample = resolveWritingSample(brand);
+    const level = resolveHumanizationLevel(brand);
+
+    if (!sample) {
+      // Wave 5.A.1: skip AI humanize without a voice sample (saves credits; warn in metadata).
+      result = {
+        ...parsed,
+        pieceMetadata: {
+          ...parsed.pieceMetadata,
+          humanizeSkippedReason: "no brand voice sample",
+        },
+      };
+    } else if (level !== "off") {
+      // Prefer light for durable autopilot quality; honor strong when configured.
+      const passLevel = level === "strong" ? "strong" : "light";
+      const { result: humanizedResult, humanized } = await humanizeContentPiece(parsed, brand, {
+        aiClient: ai,
+        level: passLevel,
+        formatType: format,
+      });
+      humanizePasses += 1;
+      result = {
+        ...humanizedResult,
+        pieceMetadata: {
+          ...humanizedResult.pieceMetadata,
+          humanized: humanized || humanizedResult.pieceMetadata?.humanized,
+          humanizeSkippedReason: undefined,
+        },
+      };
+    }
+
+    if (isSeoLongformFormat(format)) {
+      result = processGeneratedResult(
+        result,
+        format,
+        Boolean(result.pieceMetadata?.humanized),
+      );
+    }
+  } else if (isSeoLongformFormat(format)) {
+    result = processGeneratedResult(parsed, format, false);
   }
 
   if (isSeoLongformFormat(format)) {
@@ -651,7 +680,9 @@ async function postProcessGeneratedResult(
     result = await maybeRefineWithDeepl(result, brand, format);
     const primaryLanguage = brand.contentStyle?.primaryLanguage ?? "en";
     const deeplChangedBody = result.body_markdown !== beforeDeeplBody;
+    const sample = resolveWritingSample(brand);
     const needsPostDeeplHumanize =
+      Boolean(sample) &&
       humanizePasses < MAX_HUMANIZE_PASSES &&
       (deeplChangedBody || primaryLanguage !== "en");
 
@@ -659,6 +690,7 @@ async function postProcessGeneratedResult(
       const { result: humanizedResult, humanized } = await humanizeContentPiece(result, brand, {
         aiClient: ai,
         level: "light",
+        formatType: format,
       });
       humanizePasses += 1;
       result = processGeneratedResult(humanizedResult, format, humanized);

@@ -42,6 +42,8 @@ export type HumanizationAudit = {
   slopScoreAfter: number;
   humanizationLevel: "off" | "light" | "strong";
   rejected?: boolean;
+  /** Why the rewrite was discarded (e.g. "no slop improvement", "FAQ guard"). */
+  reason?: string;
   tellsFixed?: number;
 };
 
@@ -60,6 +62,8 @@ export type ContentPieceMetadata = {
   jsonLdSchema?: object;
   humanized?: boolean;
   humanizationAudit?: HumanizationAudit;
+  /** Set when generate skipped humanize (e.g. no brand voice sample). */
+  humanizeSkippedReason?: string;
   /** Body markdown as it was immediately before the most recent humanize pass. */
   preHumanizeBodyMarkdown?: string;
   hasInfographicBlock?: boolean;

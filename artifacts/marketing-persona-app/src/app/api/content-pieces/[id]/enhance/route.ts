@@ -12,6 +12,7 @@ import { enhanceContentPiece } from "@workspace/content-engine/content/content-p
 import { scoreDualContentQuality } from "@workspace/content-engine/articles/serp-content-score";
 import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand/brand-voice-generation";
 import { isSeoLongformFormat } from "@workspace/content-engine/content/content-piece-seo";
+import { isHumanizableSocialFormat } from "@workspace/content-engine/content/humanize-eligibility";
 import { isSerpConfigured, getSerpProvider } from "@workspace/serp-provider";
 import {
   assertPieceOwner,
@@ -55,9 +56,9 @@ export async function POST(
   }
 
   const formatType = piece!.formatType as ContentFormatType;
-  if (!isSeoLongformFormat(formatType)) {
+  if (!isSeoLongformFormat(formatType) && !isHumanizableSocialFormat(formatType)) {
     return NextResponse.json(
-      { error: "Enhance quality is available for blog posts, guides, and other long-form SEO formats" },
+      { error: "Enhance is available for long-form SEO content and social posts" },
       { status: 400 },
     );
   }

@@ -16,6 +16,12 @@ import { AI_WRITING_FROM_SCRATCH_PROMPT, AI_WRITING_RULES_PROMPT } from "./ai-wr
 import { loadBrandVoiceGenerationContext } from "../support/brand/brand-voice-generation";
 import type { UnifiedBrandContext } from "../brand/brand-voice";
 import { humanizeContentPiece } from "./humanizer";
+import { isHumanizableSocialFormat } from "./humanize-eligibility";
+import {
+  PLATFORM_CHAR_LIMITS,
+  PLATFORM_LABELS,
+  platformForFormat,
+} from "../platform-voice";
 
 export type EnhanceBrandContext = {
   companyName: string;
@@ -116,6 +122,74 @@ function validateEnhanceResult(result: unknown): asserts result is ContentPieceR
   }
 }
 
+function validateSocialTightenResult(result: unknown): asserts result is ContentPieceResult {
+  if (typeof result !== "object" || result === null) throw new Error("Invalid enhance response");
+  const r = result as Record<string, unknown>;
+  if (typeof r.title !== "string" || !r.title.trim()) throw new Error("Missing title");
+  if (typeof r.body_markdown !== "string" || r.body_markdown.trim().length < 20) {
+    throw new Error("Tightened body too short");
+  }
+}
+
+async function tightenSocialContentPiece(
+  input: EnhanceContentInput,
+  userApiKey?: string | null,
+  aiProviderOptions?: AiProviderOptions,
+): Promise<ContentPieceResult> {
+  const platform = platformForFormat(input.formatType);
+  if (!platform) throw new Error("Unknown social format");
+  const limit = PLATFORM_CHAR_LIMITS[platform];
+  const label = PLATFORM_LABELS[platform];
+  const ai = await resolveAiClient(userApiKey, aiProviderOptions);
+
+  const prompt = `Tighten this ${label} draft for ${input.brand.companyName}.
+
+PLATFORM: ${label} (hard max ~${limit} characters)
+TARGET KEYWORD / TOPIC: "${input.targetKeyword}"
+VOICE: ${input.brand.voiceTone || "Clear and human"}
+
+Goals:
+- Stronger first-line hook
+- One clear CTA or next step
+- Cut fluff; stay under ${limit} characters
+- Light hashtags only if natural for ${label} (0–3)
+- Do NOT invent facts or links
+
+CURRENT DRAFT:
+---
+${input.bodyMarkdown.trim()}
+---
+
+Return ONLY JSON:
+{
+  "title": "string",
+  "target_keyword": "${input.targetKeyword}",
+  "body_markdown": "string — full tightened post",
+  "meta_description": "string — optional short summary"
+}`;
+
+  const response = await ai.generate({
+    prompt,
+    systemInstruction:
+      "You are a social editor. Tighten posts for the named platform. Respond ONLY with valid JSON.",
+    responseMimeType: "application/json",
+    maxOutputTokens: 4096,
+    thinkingBudget: 0,
+  });
+  const raw = response.text ?? "";
+  const parsed = cleanAndParse(raw);
+  validateSocialTightenResult(parsed);
+  const body = String((parsed as ContentPieceResult).body_markdown);
+  if (body.length > limit) {
+    throw new Error(`Tightened post exceeds ${label} limit (${limit} chars)`);
+  }
+  return {
+    ...(parsed as ContentPieceResult),
+    target_keyword: input.targetKeyword,
+    body_markdown: body,
+  };
+}
+
 export async function enhanceContentPiece(
   input: EnhanceContentInput,
   existingPieceTitles: string[] = [],
@@ -123,8 +197,12 @@ export async function enhanceContentPiece(
   aiProviderOptions?: AiProviderOptions,
   unifiedBrand?: UnifiedBrandContext,
 ): Promise<ContentPieceResult> {
+  if (isHumanizableSocialFormat(input.formatType)) {
+    return tightenSocialContentPiece(input, userApiKey, aiProviderOptions);
+  }
+
   if (!isSeoLongformFormat(input.formatType)) {
-    throw new Error("Enhance quality is only available for long-form SEO content");
+    throw new Error("Enhance quality is only available for long-form SEO content and social posts");
   }
 
   const prompt = await (async () => {

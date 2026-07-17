@@ -86,7 +86,7 @@ export async function POST(
         pieceMetadata: piece!.pieceMetadata ?? undefined,
       },
       ctx.brand,
-      { userApiKey, aiProviderOptions },
+      { userApiKey, aiProviderOptions, formatType: formatType },
     );
 
     const [updated] = await db

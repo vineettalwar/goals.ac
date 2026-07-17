@@ -362,7 +362,7 @@ async function handleContentPieceHumanize(
         pieceMetadata: piece.pieceMetadata ?? undefined,
       },
       brand,
-      { userApiKey, aiProviderOptions },
+      { userApiKey, aiProviderOptions, formatType: piece.formatType as ContentFormatType },
     );
 
     const [updated] = await db

@@ -1,4 +1,6 @@
 import { getAiProviderClient, type AiProviderClient, type AiProviderOptions } from "@workspace/ai-providers";
+import type { ContentFormatType } from "@workspace/db";
+import type { PlatformVoices } from "@workspace/db/schema";
 import { cleanAndParse } from "../core/utils";
 import type { GeneratedArticle } from "../articles/article-generator";
 import { resolveAiClient } from "../support/ai/resolve-ai-client";
@@ -18,6 +20,14 @@ import {
   formatAiTellDiagnosisSummary,
   sanitizeAiProse,
 } from "./ai-writing-rules";
+import { scoreArticleQuality } from "../articles/article-quality-score";
+import {
+  buildPlatformVoicePromptContext,
+  PLATFORM_CHAR_LIMITS,
+  PLATFORM_LABELS,
+  platformForFormat,
+  type SocialPlatformId,
+} from "../platform-voice";
 
 export interface HumanizableContentPiece {
   title: string;
@@ -49,6 +59,48 @@ export interface HumanizeOptions {
   aiClient?: AiProviderClient;
   userApiKey?: string | null;
   aiProviderOptions?: AiProviderOptions;
+  /** When set, inject platform-voice presets + char limits for social formats. */
+  formatType?: ContentFormatType;
+  platformVoices?: PlatformVoices | null;
+}
+
+/** Default tone hints when no trained platform voice exists. */
+const PLATFORM_HUMANIZE_PRESETS: Record<SocialPlatformId, string> = {
+  linkedin:
+    "LinkedIn: professional but direct; short paragraphs; one clear insight; soft CTA; no hashtag spam.",
+  twitter:
+    "X/Twitter: punchy; one idea per tweet; thread-friendly line breaks; stay under the char limit.",
+  instagram:
+    "Instagram: caption-first; hook in line 1; line breaks for scanability; light emoji only if natural; CTA in last line.",
+  facebook:
+    "Facebook: conversational; community tone; one ask or share prompt; avoid hard-sell openers.",
+  bluesky:
+    "Bluesky: concise AT Proto post; plain language; under 300 graphemes; no thread padding.",
+  mastodon:
+    "Mastodon: instance-friendly toot; clear CW-safe language; under 500 chars; no engagement bait.",
+};
+
+function buildSocialPlatformPromptBlock(
+  formatType: ContentFormatType | undefined,
+  voices: PlatformVoices | null | undefined,
+): string {
+  if (!formatType) return "";
+  const platform = platformForFormat(formatType);
+  if (!platform) return "";
+
+  const label = PLATFORM_LABELS[platform];
+  const limit = PLATFORM_CHAR_LIMITS[platform];
+  const trained = buildPlatformVoicePromptContext(voices, platform).trim();
+  const preset = PLATFORM_HUMANIZE_PRESETS[platform];
+
+  return [
+    `Social platform: ${label} (hard max ~${limit} characters for the full post body).`,
+    preset,
+    trained || null,
+    `Stay within ${limit} characters after rewrite. Prefer cutting fluff over truncating mid-sentence.`,
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 interface HumanizedOutput {
@@ -101,19 +153,125 @@ async function resolveHumanizerClient(opts: HumanizeOptions): Promise<AiProvider
   return getAiProviderClient();
 }
 
+/** Minimum human-voice score (0–15 scale) after a successful rewrite. */
+export const HUMANIZE_HUMAN_VOICE_FLOOR = 4;
+
 function buildAudit(
   level: HumanizationLevel,
   slopScoreBefore: number,
   slopScoreAfter: number,
   rejected = false,
+  reason?: string,
 ): HumanizationAudit {
   return {
     slopScoreBefore,
     slopScoreAfter,
     humanizationLevel: level,
     rejected,
+    ...(reason ? { reason } : {}),
     tellsFixed: Math.max(0, slopScoreBefore - slopScoreAfter),
   };
+}
+
+function countFaqItemsInBody(markdown: string): number {
+  const faqSection = markdown.match(/##\s*(?:FAQ|Frequently Asked Questions)[\s\S]*/i)?.[0] ?? "";
+  const target = faqSection || markdown;
+  const h3 = (target.match(/^###\s+.+\?/gm) ?? []).length;
+  const bold = (target.match(/^\*\*.+\?\*\*/gm) ?? []).length;
+  return Math.max(h3, bold);
+}
+
+function hasFaqHeading(markdown: string): boolean {
+  return /^##\s*(?:FAQ|Frequently Asked Questions)\b/im.test(markdown);
+}
+
+function countH2(markdown: string): number {
+  return (markdown.match(/^##\s+/gm) ?? []).length;
+}
+
+/**
+ * Structure guards: headings, body links, FAQ block, citation URLs, H2 floor.
+ * Pure — unit-tested without calling the model.
+ */
+export function passesHumanizeStructureGuards(
+  original: string,
+  rewritten: string,
+  citationUrls: string[] = [],
+): { ok: true } | { ok: false; reason: string } {
+  if (hasFaqHeading(original)) {
+    if (!hasFaqHeading(rewritten)) {
+      return { ok: false, reason: "FAQ guard" };
+    }
+    const beforeFaq = countFaqItemsInBody(original);
+    if (beforeFaq > 0 && countFaqItemsInBody(rewritten) < beforeFaq) {
+      return { ok: false, reason: "FAQ guard" };
+    }
+  }
+
+  const originalHeadings = extractHeadings(original);
+  const rewrittenHeadings = extractHeadings(rewritten);
+  if (rewrittenHeadings.length < originalHeadings.length) {
+    return { ok: false, reason: "heading guard" };
+  }
+
+  const originalH2 = countH2(original);
+  if (originalH2 > 0 && countH2(rewritten) < originalH2) {
+    return { ok: false, reason: "H2 floor" };
+  }
+
+  const originalUrls = extractLinkUrls(original);
+  const rewrittenUrls = new Set(extractLinkUrls(rewritten));
+  if (!originalUrls.every((url) => rewrittenUrls.has(url))) {
+    return { ok: false, reason: "link guard" };
+  }
+
+  for (const url of citationUrls) {
+    const trimmed = url?.trim();
+    if (!trimmed) continue;
+    if (!rewrittenUrls.has(trimmed) && !rewritten.includes(trimmed)) {
+      return { ok: false, reason: "citation guard" };
+    }
+  }
+
+  return { ok: true };
+}
+
+/**
+ * Quality gate: slop must improve when tells existed; human-voice must clear floor.
+ * Pure — unit-tested without calling the model.
+ */
+export function passesHumanizeQualityGate(
+  bodyBefore: string,
+  bodyAfter: string,
+  slopBefore: number,
+  slopAfter: number,
+  opts: { skipHumanVoiceFloor?: boolean } = {},
+): { ok: true } | { ok: false; reason: string } {
+  if (slopBefore > 0 && slopAfter >= slopBefore) {
+    return { ok: false, reason: "no slop improvement" };
+  }
+
+  if (opts.skipHumanVoiceFloor) {
+    return { ok: true };
+  }
+
+  const voiceAfter =
+    scoreArticleQuality({ bodyMarkdown: bodyAfter }).breakdown.find(
+      (row) => row.label === "Human voice",
+    )?.score ?? 0;
+
+  if (voiceAfter < HUMANIZE_HUMAN_VOICE_FLOOR) {
+    const voiceBefore =
+      scoreArticleQuality({ bodyMarkdown: bodyBefore }).breakdown.find(
+        (row) => row.label === "Human voice",
+      )?.score ?? 0;
+    // Reject when we fall under the floor from above, or when voice got worse while under it.
+    if (voiceBefore >= HUMANIZE_HUMAN_VOICE_FLOOR || voiceAfter < voiceBefore) {
+      return { ok: false, reason: "human-voice floor" };
+    }
+  }
+
+  return { ok: true };
 }
 
 export async function humanizeArticle(
@@ -159,11 +317,17 @@ ${sample.slice(0, 4000)}
       ? `\nFix these detected AI tells in the draft:\n${diagnosisSummary}\n`
       : "";
 
+    const socialCtx = buildSocialPlatformPromptBlock(
+      opts.formatType,
+      opts.platformVoices ?? opts.brandVoice?.platformVoices,
+    );
+
     const prompt = `Rewrite the following article draft to read human.
 
 ${intensityCtx}
 ${tellCtx}
 ${voiceCtx}
+${socialCtx}
 
 Primary keyword (must remain present): "${article.primaryKeyword}"
 Secondary keywords (must remain present): ${article.secondaryKeywords.join(", ")}
@@ -194,45 +358,87 @@ Return a JSON object with these EXACT fields:
     if (!parsed.bodyMarkdown || typeof parsed.bodyMarkdown !== "string") {
       return {
         article,
-        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true),
+        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true, "parse failed"),
         changed: false,
       };
     }
 
-    const originalHeadings = extractHeadings(article.bodyMarkdown);
-    const rewrittenHeadings = extractHeadings(parsed.bodyMarkdown);
-    if (rewrittenHeadings.length < originalHeadings.length) {
+    const socialPlatform = opts.formatType ? platformForFormat(opts.formatType) : null;
+    const citationUrls = (article.citations ?? []).map((c) => c.url).filter(Boolean);
+    const structure = passesHumanizeStructureGuards(
+      article.bodyMarkdown,
+      parsed.bodyMarkdown,
+      citationUrls,
+    );
+    if (!structure.ok) {
       return {
         article,
-        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true),
-        changed: false,
-      };
-    }
-
-    const originalUrls = extractLinkUrls(article.bodyMarkdown);
-    const rewrittenUrls = new Set(extractLinkUrls(parsed.bodyMarkdown));
-    if (!originalUrls.every((url) => rewrittenUrls.has(url))) {
-      return {
-        article,
-        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true),
+        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true, structure.reason),
         changed: false,
       };
     }
 
     const rewrittenWordCount = countWords(parsed.bodyMarkdown);
+    // Long-form: stay near original length. Social: char limit is the contract.
     if (
+      !socialPlatform &&
       article.wordCount > 0 &&
       (rewrittenWordCount < article.wordCount * 0.8 || rewrittenWordCount > article.wordCount * 1.25)
     ) {
       return {
         article,
-        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true),
+        audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true, "length guard"),
         changed: false,
       };
     }
 
     const sanitizedBody = sanitizeAiProse(parsed.bodyMarkdown);
+    if (socialPlatform) {
+      const limit = PLATFORM_CHAR_LIMITS[socialPlatform];
+      if (sanitizedBody.length > limit) {
+        return {
+          article,
+          audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true, "platform length"),
+          changed: false,
+        };
+      }
+    }
+
+    const structureAfterSanitize = passesHumanizeStructureGuards(
+      article.bodyMarkdown,
+      sanitizedBody,
+      citationUrls,
+    );
+    if (!structureAfterSanitize.ok) {
+      return {
+        article,
+        audit: buildAudit(
+          opts.level,
+          slopScoreBefore,
+          slopScoreBefore,
+          true,
+          structureAfterSanitize.reason,
+        ),
+        changed: false,
+      };
+    }
+
     const slopScoreAfter = countAiSlopSignals(sanitizedBody);
+    const quality = passesHumanizeQualityGate(
+      article.bodyMarkdown,
+      sanitizedBody,
+      slopScoreBefore,
+      slopScoreAfter,
+      { skipHumanVoiceFloor: Boolean(socialPlatform) },
+    );
+    if (!quality.ok) {
+      return {
+        article,
+        audit: buildAudit(opts.level, slopScoreBefore, slopScoreAfter, true, quality.reason),
+        changed: false,
+      };
+    }
+
     const rewritten: GeneratedArticle = {
       ...article,
       bodyMarkdown: sanitizedBody,
@@ -251,7 +457,7 @@ Return a JSON object with these EXACT fields:
   } catch {
     return {
       article,
-      audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true),
+      audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true, "humanize error"),
       changed: false,
     };
   }
@@ -402,6 +608,7 @@ export async function humanizeContentPiece<T extends HumanizableContentPiece>(
   brand: UnifiedBrandContext,
   opts: Omit<HumanizeOptions, "level" | "writingSample" | "brandVoice"> & {
     level?: HumanizationLevel;
+    formatType?: ContentFormatType;
   } = {},
 ): Promise<{ result: T; humanized: boolean; audit?: HumanizationAudit }> {
   const level = opts.level ?? resolveHumanizationLevel(brand);
@@ -414,6 +621,8 @@ export async function humanizeContentPiece<T extends HumanizableContentPiece>(
     level,
     writingSample: resolveWritingSample(brand),
     brandVoice: brand,
+    formatType: opts.formatType,
+    platformVoices: opts.platformVoices ?? brand.platformVoices,
   });
 
   if (!changed || rewritten.bodyMarkdown === before) {
