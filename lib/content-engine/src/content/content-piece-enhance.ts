@@ -1,5 +1,6 @@
 import type { ContentFormatType } from "@workspace/db";
 import type { AiProviderOptions } from "@workspace/ai-providers";
+import { isTwitterThreadOverLimit } from "@workspace/connectors/twitter-thread";
 import { resolveAiClient } from "../support/ai/resolve-ai-client";
 import { cleanAndParse } from "../core/utils";
 import { logger } from "../core/logger";
@@ -141,8 +142,35 @@ async function tightenSocialContentPiece(
   const limit = PLATFORM_CHAR_LIMITS[platform];
   const label = PLATFORM_LABELS[platform];
   const ai = await resolveAiClient(userApiKey, aiProviderOptions);
+  const isThread = input.formatType === "twitter_thread";
 
-  const prompt = `Tighten this ${label} draft for ${input.brand.companyName}.
+  const prompt = isThread
+    ? `Tighten this ${label} thread for ${input.brand.companyName}.
+
+PLATFORM: ${label} — EACH tweet ≤ ${limit} characters (not the whole thread)
+TARGET KEYWORD / TOPIC: "${input.targetKeyword}"
+VOICE: ${input.brand.voiceTone || "Clear and human"}
+
+Goals:
+- Keep numbered format: 1/ … 2/ … (multi-line tweets OK until the next number)
+- Stronger hook on tweet 1; end it with Thread 🧵 if missing
+- One insight per tweet; punchy close with CTA
+- Do NOT invent facts or links
+- Do NOT collapse into a single post
+
+CURRENT DRAFT:
+---
+${input.bodyMarkdown.trim()}
+---
+
+Return ONLY JSON:
+{
+  "title": "string",
+  "target_keyword": "${input.targetKeyword}",
+  "body_markdown": "string — full tightened thread with 1/ 2/ numbering",
+  "meta_description": "string — optional short summary"
+}`
+    : `Tighten this ${label} draft for ${input.brand.companyName}.
 
 PLATFORM: ${label} (hard max ~${limit} characters)
 TARGET KEYWORD / TOPIC: "${input.targetKeyword}"
@@ -170,8 +198,9 @@ Return ONLY JSON:
 
   const response = await ai.generate({
     prompt,
-    systemInstruction:
-      "You are a social editor. Tighten posts for the named platform. Respond ONLY with valid JSON.",
+    systemInstruction: isThread
+      ? "You are a social editor for X threads. Keep 1/ 2/ numbering. Each tweet ≤ platform limit. Respond ONLY with valid JSON."
+      : "You are a social editor. Tighten posts for the named platform. Respond ONLY with valid JSON.",
     responseMimeType: "application/json",
     maxOutputTokens: 4096,
     thinkingBudget: 0,
@@ -180,7 +209,11 @@ Return ONLY JSON:
   const parsed = cleanAndParse(raw);
   validateSocialTightenResult(parsed);
   const body = String((parsed as ContentPieceResult).body_markdown);
-  if (body.length > limit) {
+  if (isThread) {
+    if (isTwitterThreadOverLimit(body, limit)) {
+      throw new Error(`Tightened thread has a tweet over the ${limit}-character limit`);
+    }
+  } else if (body.length > limit) {
     throw new Error(`Tightened post exceeds ${label} limit (${limit} chars)`);
   }
   return {

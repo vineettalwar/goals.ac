@@ -56,4 +56,10 @@ export type CreateContentWizardProps = {
   loadingSourcePiece: boolean;
   goNextStable: () => void;
   runGeneration: () => void;
+  showBedrockModelPicker: boolean;
+  bedrockModel: string;
+  setBedrockModel: (v: string) => void;
+  saveBedrockModel: boolean;
+  setSaveBedrockModel: (v: boolean) => void;
+  canManageBedrockModel: boolean;
 };

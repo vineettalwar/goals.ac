@@ -16,6 +16,8 @@ import {
   insertGeneratedContentPiece,
   loadBriefForProject,
   loadGenerationContext,
+  withBedrockModelOverride,
+  persistOrgBedrockModel,
 } from "@/lib/content/content-pieces-helpers";
 import {
   billingDeniedResponse,
@@ -65,10 +67,37 @@ export async function POST(
     });
   }
 
-  const { formatType, targetKeyword, angleHint, plannedDate, briefId, intendedPublishPlatform, intendedOutputMode, intendedEditorMode, competitorFocusUrl, competitorUrls } = parsed.data;
+  const {
+    formatType,
+    targetKeyword,
+    angleHint,
+    plannedDate,
+    briefId,
+    intendedPublishPlatform,
+    intendedOutputMode,
+    intendedEditorMode,
+    competitorFocusUrl,
+    competitorUrls,
+    bedrockModel,
+    saveBedrockModel,
+  } = parsed.data;
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) {
     return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
+  }
+
+  if (saveBedrockModel && bedrockModel) {
+    const { requireSiteAdmin } = await import("@/lib/auth/require-site-admin");
+    const { getOrgAiSettingsForUser } = await import(
+      "@workspace/content-engine/support/ai/org-ai-settings"
+    );
+    const admin = await requireSiteAdmin();
+    if (!admin.error && admin.userId === userId) {
+      const orgSettings = await getOrgAiSettingsForUser(userId!);
+      if (orgSettings) {
+        await persistOrgBedrockModel(orgSettings.organizationId, bedrockModel);
+      }
+    }
   }
 
   if (briefId) {
@@ -165,7 +194,7 @@ export async function POST(
     }
   }
 
-  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+  const [{ userApiKey, aiProviderOptions: baseAiOptions }, billingPrep] = await Promise.all([
     loadUserAiSettings(userId!),
     prepareAiBilling({
     userId: userId!,
@@ -173,6 +202,7 @@ export async function POST(
     quotaKind: "article",
   }),  ]);
   if (!billingPrep.ok) return billingDeniedResponse(billingPrep);
+  const aiProviderOptions = withBedrockModelOverride(baseAiOptions, bedrockModel);
 
   return new Response(
     new ReadableStream({

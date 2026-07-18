@@ -12,7 +12,6 @@ import {
 } from "@/lib/org/org-access";
 import { getSupportOrganizationId } from "@/lib/org/project-scope";
 import { loadProjectVisibilitySummary } from "@/lib/projects/project-visibility-summary";
-import { getProjectInternalLinkSummary } from "@/lib/projects/internal-links-summary";
 import {
   PartnerWorkspaceClient,
   type PartnerProjectRow,
@@ -91,10 +90,7 @@ export default async function PartnerPage() {
 
   const rows: PartnerProjectRow[] = await Promise.all(
     projects.map(async (project) => {
-      const [visibility, links] = await Promise.all([
-        loadProjectVisibilitySummary(project.id),
-        getProjectInternalLinkSummary(project.id),
-      ]);
+      const visibility = await loadProjectVisibilitySummary(project.id);
       const counts = countByProject.get(project.id) ?? { published: 0, draft: 0 };
 
       return {
@@ -106,7 +102,6 @@ export default async function PartnerPage() {
         visibilityDelta: visibility.visibilityDelta,
         geoScore: visibility.latestGeoScore,
         geoScoreDelta: visibility.geoScoreDelta,
-        linkCoverage: links.coverageScore,
         publishedCount: counts.published,
         draftCount: counts.draft,
       };

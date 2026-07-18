@@ -1,5 +1,6 @@
 "use client";
 
+import type { AiProviderId } from "@workspace/ai-providers/config";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRow } from "./content-studio-utils";
 import { CreateContentModalShell } from "./create-content-modal-shell";
@@ -16,6 +17,8 @@ interface Props {
   initialDraft?: BriefContentDraft | null;
   cmsConnections?: CmsConnectionSnapshot;
   primaryBlogDestination?: string | null;
+  activeProvider?: AiProviderId;
+  orgBedrockModel?: string | null;
 }
 
 export function CreateContentModal(props: Props) {

@@ -7,6 +7,7 @@ export type StudioLoadResult = {
   projectName: string;
   aiReady: boolean | null;
   activeProvider: AiProviderId;
+  orgBedrockModel: string | null;
   pieces: Array<ContentPieceRow & { source: "studio" }>;
   cmsConnections: CmsConnectionSnapshot;
   primaryBlogDestination: string | null;
@@ -31,10 +32,12 @@ export async function loadContentStudioData(projectId: string): Promise<StudioLo
 
   let aiReady: boolean | null = null;
   let activeProvider: AiProviderId = "gemini";
+  let orgBedrockModel: string | null = null;
   if (aiStatusRes.ok) {
     const status = await aiStatusRes.json();
     activeProvider = status.activeProvider ?? "gemini";
     aiReady = Boolean(status.ready);
+    orgBedrockModel = status.bedrock?.model ?? null;
   }
 
   let pieces: StudioLoadResult["pieces"] = [];
@@ -63,6 +66,7 @@ export async function loadContentStudioData(projectId: string): Promise<StudioLo
     projectName,
     aiReady,
     activeProvider,
+    orgBedrockModel,
     pieces,
     cmsConnections,
     primaryBlogDestination,

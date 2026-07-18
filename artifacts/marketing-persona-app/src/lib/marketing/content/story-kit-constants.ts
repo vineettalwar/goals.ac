@@ -3,49 +3,6 @@
  * No named customers, no composite ranges, no invented lift.
  */
 
-export const STORY_SLOT_LABELS = [
-  {
-    label: "Impressions",
-    source: "Google Search Console",
-    hint: "Paste a GSC Performance screenshot with date range visible. Leave blank until you have one.",
-  },
-  {
-    label: "AI citations",
-    source: "GEO / AI visibility audit",
-    hint: "Link a live GEO audit URL. No percentage claims without that source.",
-  },
-  {
-    label: "Authority",
-    source: "Third-party DR (cite tool + date)",
-    hint: "Screenshot the tool export. Name the tool and date — never invent a delta.",
-  },
-] as const;
-
-export const PARTNER_SWAP_STEPS = [
-  "Fill Results only with exact GSC Performance numbers (date range visible in the shot).",
-  "Link a live GEO audit for AI citation % — do not invent a band.",
-  "Name the authority tool, metric, and date next to any DR delta.",
-  "Keep Verify CTAs pointed at live tooling so reviewers can check sources.",
-] as const;
-
-export const VERIFY_CTAS = [
-  {
-    label: "Verify with GSC",
-    href: "/search-analytics",
-    desc: "Point reviewers to Search Console (or a screenshot) for impressions and clicks.",
-  },
-  {
-    label: "Verify with GEO audit",
-    href: "/geo-audit",
-    desc: "Link a live AI-visibility scan instead of a static claim.",
-  },
-  {
-    label: "Compare AI SEO tools",
-    href: "/compare/ai-seo-tools",
-    desc: "Name the DR tool and date when you cite authority; no invented lift.",
-  },
-] as const;
-
 /**
  * Markdown template with placeholders only — no fake company names or invented metrics.
  */

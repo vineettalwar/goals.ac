@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Scan shared product UI — without this, app-shell utilities (e.g. piece editor 2-col grid) never emit. */
+@source "../../../../lib/app-shell/src";
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
 

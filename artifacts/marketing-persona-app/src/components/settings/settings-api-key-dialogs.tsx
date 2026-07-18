@@ -15,16 +15,13 @@ import {
 } from "@/components/ui/select";
 import { SEMRUSH_DATABASES as SEMRUSH_DATABASE_CODES } from "@workspace/keyword-research-provider";
 import { semrushDatabaseLabel } from "@workspace/content-engine/support/content/content-language";
-import {
-  BEDROCK_MODEL_CHOICES,
-  BEDROCK_MODEL_CUSTOM,
-} from "@workspace/ai-providers/bedrock-models";
+import { BEDROCK_MODEL_CUSTOM } from "@workspace/ai-providers/bedrock-models";
+import { useBedrockAccountModels } from "@/hooks/use-bedrock-account-models";
 
 const SEMRUSH_DATABASES = SEMRUSH_DATABASE_CODES.map((value) => ({
   value,
   label: semrushDatabaseLabel(value).replace(/ \([a-z]+\)$/i, ""),
 }));
-const BEDROCK_KNOWN_IDS = new Set<string>(BEDROCK_MODEL_CHOICES.map((c) => c.id));
 
 export function SettingsApiKeyDialogs({
   geminiDialogOpen, setGeminiDialogOpen, geminiKeyInput, setGeminiKeyInput, geminiTestResult,
@@ -93,6 +90,13 @@ export function SettingsApiKeyDialogs({
   contentLanguageLabel: (code?: string | null) => string;
   semrushDatabaseLabel: (db: string) => string;
 }) {
+  const {
+    models: bedrockModels,
+    loading: bedrockModelsLoading,
+    error: bedrockModelsError,
+  } = useBedrockAccountModels(bedrockForm.apiKey, bedrockDialogOpen);
+  const bedrockKnownIds = new Set(bedrockModels.map((m) => m.id));
+
   return (
     <>
       <Dialog open={geminiDialogOpen} onOpenChange={setGeminiDialogOpen}>
@@ -213,7 +217,7 @@ export function SettingsApiKeyDialogs({
                 value={
                   !bedrockForm.model
                     ? undefined
-                    : BEDROCK_KNOWN_IDS.has(bedrockForm.model)
+                    : bedrockKnownIds.has(bedrockForm.model)
                       ? bedrockForm.model
                       : BEDROCK_MODEL_CUSTOM
                 }
@@ -221,18 +225,27 @@ export function SettingsApiKeyDialogs({
                   if (value === BEDROCK_MODEL_CUSTOM) {
                     setBedrockForm({
                       ...bedrockForm,
-                      model: BEDROCK_KNOWN_IDS.has(bedrockForm.model) ? "" : bedrockForm.model,
+                      model: bedrockKnownIds.has(bedrockForm.model) ? "" : bedrockForm.model,
                     });
                     return;
                   }
                   setBedrockForm({ ...bedrockForm, model: value });
                 }}
+                disabled={bedrockModelsLoading}
               >
                 <SelectTrigger id="bedrock-model">
-                  <SelectValue placeholder="Choose a Bedrock model" />
+                  <SelectValue
+                    placeholder={
+                      bedrockModelsLoading
+                        ? "Loading models for this account…"
+                        : bedrockModels.length === 0
+                          ? "Paste API key (or wait for account models)"
+                          : "Choose a Bedrock model"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {BEDROCK_MODEL_CHOICES.map((choice) => (
+                  {bedrockModels.map((choice) => (
                     <SelectItem key={choice.id} value={choice.id}>
                       {choice.label}
                     </SelectItem>
@@ -240,12 +253,15 @@ export function SettingsApiKeyDialogs({
                   <SelectItem value={BEDROCK_MODEL_CUSTOM}>Custom model id…</SelectItem>
                 </SelectContent>
               </Select>
-              {!bedrockForm.model || !BEDROCK_KNOWN_IDS.has(bedrockForm.model) ? (
+              {bedrockModelsError ? (
+                <p className="text-xs text-muted-foreground">{bedrockModelsError}</p>
+              ) : null}
+              {!bedrockForm.model || !bedrockKnownIds.has(bedrockForm.model) ? (
                 <Input
                   id="bedrock-model-custom"
                   value={bedrockForm.model}
                   onChange={(e) => setBedrockForm({ ...bedrockForm, model: e.target.value })}
-                  placeholder="e.g. us.anthropic.claude-sonnet-4-20250514-v1:0"
+                  placeholder="e.g. amazon.nova-lite-v1:0"
                   className="font-mono text-sm"
                   autoComplete="off"
                 />

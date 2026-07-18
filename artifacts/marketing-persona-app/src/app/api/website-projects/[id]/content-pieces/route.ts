@@ -16,6 +16,8 @@ import {
   loadBriefForProject,
   loadExistingPieceTitles,
   loadGenerationContext,
+  withBedrockModelOverride,
+  persistOrgBedrockModel,
 } from "@/lib/content/content-pieces-helpers";
 import { logger } from "@/lib/utils/logger";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
@@ -81,9 +83,36 @@ export async function POST(
     return NextResponse.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 });
   }
 
-  const { formatType, targetKeyword, angleHint, plannedDate, briefId, intendedPublishPlatform, intendedOutputMode, intendedEditorMode, competitorFocusUrl, competitorUrls } = parsed.data;
+  const {
+    formatType,
+    targetKeyword,
+    angleHint,
+    plannedDate,
+    briefId,
+    intendedPublishPlatform,
+    intendedOutputMode,
+    intendedEditorMode,
+    competitorFocusUrl,
+    competitorUrls,
+    bedrockModel,
+    saveBedrockModel,
+  } = parsed.data;
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+
+  if (saveBedrockModel && bedrockModel) {
+    const { requireSiteAdmin } = await import("@/lib/auth/require-site-admin");
+    const { getOrgAiSettingsForUser } = await import(
+      "@workspace/content-engine/support/ai/org-ai-settings"
+    );
+    const admin = await requireSiteAdmin();
+    if (!admin.error && admin.userId === userId) {
+      const orgSettings = await getOrgAiSettingsForUser(userId!);
+      if (orgSettings) {
+        await persistOrgBedrockModel(orgSettings.organizationId, bedrockModel);
+      }
+    }
+  }
 
   if (briefId) {
     const brief = await loadBriefForProject(briefId, projectId, userId!);
@@ -139,7 +168,7 @@ export async function POST(
     }
   }
 
-  const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
+  const [{ userApiKey, aiProviderOptions: baseAiOptions }, billingPrep] = await Promise.all([
     loadUserAiSettings(userId!),
     prepareAiBilling({
     userId: userId!,
@@ -147,6 +176,7 @@ export async function POST(
     quotaKind: "article",
   }),  ]);
   if (!billingPrep.ok) return billingPrep.response;
+  const aiProviderOptions = withBedrockModelOverride(baseAiOptions, bedrockModel);
 
   try {
     const result = await generateContentPiece(

@@ -4,6 +4,14 @@ import type { ContentPieceMetadata } from "./content-piece-seo";
 const INFOGRAPHIC_START = "<!-- goals-ac-infographic -->";
 const INFOGRAPHIC_END = "<!-- /goals-ac-infographic -->";
 
+/** Remove infographic fence comments for aside/metadata display. */
+export function stripInfographicMarkers(md: string): string {
+  return md
+    .replace(/<!--\s*\/?goals-ac-infographic\s*-->/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 /** goals.ac paper / forest tokens (DESIGN.md) */
 const PAPER_BG = "#FAFAF8";
 const FOREST = "#2D3B2D";
@@ -196,10 +204,12 @@ function buildVisualSummaryAssets(
     ...options,
     svgDataUri: dataUri,
   });
-  const visualSummaryMarkdown = buildInfographicMarkdownBlock(body, {
-    ...options,
-    svgDataUri: null,
-  });
+  const visualSummaryMarkdown = stripInfographicMarkers(
+    buildInfographicMarkdownBlock(body, {
+      ...options,
+      svgDataUri: null,
+    }) ?? "",
+  );
   if (!block || !visualSummaryMarkdown) return null;
   return {
     block,

@@ -1,6 +1,7 @@
 import { getAiProviderClient, type AiProviderClient, type AiProviderOptions } from "@workspace/ai-providers";
 import type { ContentFormatType } from "@workspace/db";
 import type { PlatformVoices } from "@workspace/db/schema";
+import { isTwitterThreadOverLimit } from "@workspace/connectors/twitter-thread";
 import { cleanAndParse } from "../core/utils";
 import type { GeneratedArticle } from "../articles/article-generator";
 import { resolveAiClient } from "../support/ai/resolve-ai-client";
@@ -395,7 +396,11 @@ Return a JSON object with these EXACT fields:
     const sanitizedBody = sanitizeAiProse(parsed.bodyMarkdown);
     if (socialPlatform) {
       const limit = PLATFORM_CHAR_LIMITS[socialPlatform];
-      if (sanitizedBody.length > limit) {
+      const overLimit =
+        socialPlatform === "twitter"
+          ? isTwitterThreadOverLimit(sanitizedBody, limit)
+          : sanitizedBody.length > limit;
+      if (overLimit) {
         return {
           article,
           audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true, "platform length"),

@@ -52,6 +52,8 @@ import {
 } from "@/components/ui/select";
 import { SettingsBillingPanel } from "@/components/settings/settings-billing-panel";
 import { SettingsApiKeyDialogs } from "@/components/settings/settings-api-key-dialogs";
+import { useBedrockAccountModels } from "@/hooks/use-bedrock-account-models";
+import { BEDROCK_MODEL_CUSTOM } from "@workspace/ai-providers/bedrock-models";
 
 const profileSchema = z.object({
   name: z.string().min(1),
@@ -169,6 +171,13 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
   const [bedrockAccessKeyLastFour, setBedrockAccessKeyLastFour] = useState<string | null>(
     initialData?.bedrockCredentials.accessKeyLastFour ?? null,
   );
+  const [bedrockOrgModel, setBedrockOrgModel] = useState<string>(
+    initialData?.bedrockCredentials.model ?? "",
+  );
+  const [bedrockModelDraft, setBedrockModelDraft] = useState(
+    initialData?.bedrockCredentials.model ?? "",
+  );
+  const [bedrockModelSaving, setBedrockModelSaving] = useState(false);
   const [bedrockDialogOpen, setBedrockDialogOpen] = useState(false);
   const [bedrockForm, setBedrockForm] = useState<BedrockCredentialsForm>({ apiKey: "", model: "" });
   const [bedrockTesting, setBedrockTesting] = useState(false);
@@ -215,6 +224,13 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
       session?.user?.orgRole === "owner" ||
       session?.user?.role === "super_admin" ||
       session?.user?.role === "admin");
+
+  const {
+    models: bedrockOrgModels,
+    loading: bedrockOrgModelsLoading,
+    error: bedrockOrgModelsError,
+  } = useBedrockAccountModels("", hasBedrockCredentials && Boolean(canManageAiSettings));
+  const bedrockOrgKnownIds = new Set(bedrockOrgModels.map((m) => m.id));
 
   useEffect(() => {
     const tab = searchParams.get("tab");
@@ -266,6 +282,13 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
       if (bedrockData?.hasCredentials) {
         setHasBedrockCredentials(true);
         setBedrockAccessKeyLastFour(bedrockData.accessKeyLastFour ?? null);
+      }
+      if (bedrockData?.model) {
+        setBedrockOrgModel(bedrockData.model);
+        setBedrockModelDraft(bedrockData.model);
+      } else if (aiData?.bedrock?.model) {
+        setBedrockOrgModel(aiData.bedrock.model);
+        setBedrockModelDraft(aiData.bedrock.model);
       }
       if (semrushData?.hasCredentials) {
         setHasSemrushCredentials(true);
@@ -455,7 +478,7 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
   }
 
   function openBedrockDialog() {
-    setBedrockForm({ apiKey: "", model: "" });
+    setBedrockForm({ apiKey: "", model: bedrockOrgModel });
     setBedrockTestResult(null);
     setBedrockDialogOpen(true);
   }
@@ -496,8 +519,36 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
     const data = await res.json();
     setHasBedrockCredentials(true);
     setBedrockAccessKeyLastFour(data.accessKeyLastFour ?? payload.apiKey.slice(-4));
+    if (payload.model) {
+      setBedrockOrgModel(payload.model);
+      setBedrockModelDraft(payload.model);
+    }
     setBedrockDialogOpen(false);
     toast.success("Bedrock API key saved");
+    const statusRes = await fetch("/api/ai-providers/status");
+    if (statusRes.ok) setAiStatus(await statusRes.json());
+  }
+
+  async function saveBedrockOrgModel() {
+    const model = bedrockModelDraft.trim();
+    if (!model) {
+      toast.error("Choose a Bedrock model");
+      return;
+    }
+    setBedrockModelSaving(true);
+    const res = await fetch("/api/auth/bedrock-credentials", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model }),
+    });
+    setBedrockModelSaving(false);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast.error((err as { error?: string }).error ?? "Failed to save Bedrock model");
+      return;
+    }
+    setBedrockOrgModel(model);
+    toast.success("Bedrock model updated");
     const statusRes = await fetch("/api/ai-providers/status");
     if (statusRes.ok) setAiStatus(await statusRes.json());
   }
@@ -509,6 +560,8 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
     if (!res.ok) { toast.error("Failed to remove Bedrock credentials"); return; }
     setHasBedrockCredentials(false);
     setBedrockAccessKeyLastFour(null);
+    setBedrockOrgModel("");
+    setBedrockModelDraft("");
     toast.success("Bedrock credentials removed");
     const statusRes = await fetch("/api/ai-providers/status");
     if (statusRes.ok) setAiStatus(await statusRes.json());
@@ -894,17 +947,53 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                     <p className="text-sm font-medium">Organization Bedrock API key connected</p>
                     <p className="text-xs text-muted-foreground">
                       Key ending in ••••{bedrockAccessKeyLastFour ?? "••••"}
+                      {bedrockOrgModel ? ` · model: ${bedrockOrgModel}` : ""}
                     </p>
                   </div>
                 </div>
                 {canManageAiSettings && (
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={openBedrockDialog}>
-                      Replace key
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={removeBedrockCredentials} disabled={deletingBedrock}>
-                      {deletingBedrock ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove key"}
-                    </Button>
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="bedrock-org-model">Organization model</Label>
+                      <div className="flex flex-wrap gap-2">
+                        <Input
+                          id="bedrock-org-model"
+                          value={bedrockModelDraft}
+                          onChange={(e) => setBedrockModelDraft(e.target.value)}
+                          placeholder="amazon.nova-lite-v1:0"
+                          className="font-mono text-sm max-w-md"
+                          autoComplete="off"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void saveBedrockOrgModel()}
+                          disabled={
+                            bedrockModelSaving ||
+                            !bedrockModelDraft.trim() ||
+                            bedrockModelDraft.trim() === bedrockOrgModel
+                          }
+                        >
+                          {bedrockModelSaving ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            "Save model"
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Change the model without re-entering the API key. Open Replace key to pick
+                        from models enabled on this AWS account.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button variant="outline" size="sm" onClick={openBedrockDialog}>
+                        Replace key
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={removeBedrockCredentials} disabled={deletingBedrock}>
+                        {deletingBedrock ? <Loader2 className="h-3 w-3 animate-spin" /> : "Remove key"}
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>

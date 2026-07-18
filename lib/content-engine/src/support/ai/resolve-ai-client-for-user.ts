@@ -70,8 +70,8 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
           const { BedrockClient } = await import("@workspace/ai-providers/bedrock");
           const client = await BedrockClient.create({
             ...platformCreds,
-            region: platformCreds.region ?? aiProviderOptions.bedrock?.region,
-            model: platformCreds.model ?? aiProviderOptions.bedrock?.model,
+            region: aiProviderOptions.bedrock?.region ?? platformCreds.region,
+            model: aiProviderOptions.bedrock?.model ?? platformCreds.model,
           });
           return { client, providerId, usingUserKey: false, source: "platform" };
         } catch {

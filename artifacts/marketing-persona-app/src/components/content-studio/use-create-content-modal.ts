@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from "react";
 import { toast } from "sonner";
+import { useSession } from "next-auth/react";
 import { useCompetitorContext } from "@/lib/queries";
+import type { AiProviderId } from "@workspace/ai-providers/config";
 import type { ContentFormatType } from "./content-studio-format-data";
 import type { LinkedInArchetypeId, LinkedInHookId } from "@workspace/app-shell/studio";
 import {
@@ -49,6 +51,8 @@ export function useCreateContentModal({
   initialDraft,
   cmsConnections = EMPTY_CMS_CONNECTIONS,
   primaryBlogDestination = null,
+  activeProvider = "gemini",
+  orgBedrockModel = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -58,7 +62,18 @@ export function useCreateContentModal({
   initialDraft?: BriefContentDraft | null;
   cmsConnections?: CmsConnectionSnapshot;
   primaryBlogDestination?: string | null;
+  activeProvider?: AiProviderId;
+  orgBedrockModel?: string | null;
 }) {
+const { data: session } = useSession();
+const canManageBedrockModel =
+  session?.user?.orgRole === "site_admin" ||
+  session?.user?.orgRole === "owner" ||
+  session?.user?.role === "super_admin" ||
+  session?.user?.role === "admin";
+const showBedrockModelPicker = activeProvider === "bedrock";
+const [bedrockModel, setBedrockModel] = useState(orgBedrockModel ?? "");
+const [saveBedrockModel, setSaveBedrockModel] = useState(false);
 const [flow, setFlow] = useState<Flow>("create");
 const [stepIndex, setStepIndex] = useState(0);
 const [selectedFormat, setSelectedFormat] = useState<ContentFormatType | null>(null);
@@ -201,6 +216,14 @@ useEffect(() => {
   setIntendedDestination(suggested ?? "");
 }, [selectedFormat, cmsConnections, primaryBlogDestination]);
 
+useEffect(() => {
+  if (!open) {
+    setSaveBedrockModel(false);
+    return;
+  }
+  setBedrockModel(orgBedrockModel ?? "");
+}, [open, orgBedrockModel]);
+
 const [appliedDraftKey, setAppliedDraftKey] = useState<string | null>(null);
 const draftKey =
   open && initialDraft
@@ -270,6 +293,12 @@ const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> =>
       briefId: briefId ?? undefined,
       ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
       ...competitorGenerateFields(),
+      ...(showBedrockModelPicker && bedrockModel.trim()
+        ? {
+            bedrockModel: bedrockModel.trim(),
+            ...(canManageBedrockModel && saveBedrockModel ? { saveBedrockModel: true } : {}),
+          }
+        : {}),
     }),
   });
 
@@ -289,6 +318,10 @@ const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> =>
   projectId,
   selectedFormat,
   buildAngleHint,
+  showBedrockModelPicker,
+  bedrockModel,
+  canManageBedrockModel,
+  saveBedrockModel,
 ]);
 
 const runGeneration = useCallback(async () => {
@@ -307,6 +340,12 @@ const runGeneration = useCallback(async () => {
     briefId: briefId ?? undefined,
     ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
     ...competitorGenerateFields(),
+    ...(showBedrockModelPicker && bedrockModel.trim()
+      ? {
+          bedrockModel: bedrockModel.trim(),
+          ...(canManageBedrockModel && saveBedrockModel ? { saveBedrockModel: true } : {}),
+        }
+      : {}),
   };
 
   try {
@@ -426,6 +465,10 @@ const runGeneration = useCallback(async () => {
   handleGenerateFallback,
   competitorGenerateFields,
   buildAngleHint,
+  showBedrockModelPicker,
+  bedrockModel,
+  canManageBedrockModel,
+  saveBedrockModel,
 ]);
 
 const runRepurpose = useCallback(async () => {
@@ -664,6 +707,12 @@ const wizardProps = {
   runGeneration,
   initialDraft,
   goNext: goNextStable,
+  showBedrockModelPicker,
+  bedrockModel,
+  setBedrockModel,
+  saveBedrockModel,
+  setSaveBedrockModel,
+  canManageBedrockModel,
 };
 
   return {

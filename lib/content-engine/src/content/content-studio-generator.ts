@@ -232,13 +232,18 @@ const FORMAT_CONFIGS: Record<
   twitter_thread: {
     label: "Twitter / X Thread",
     wordRange: "300-500",
-    structure: `- Tweet 1 (hook): A bold claim or surprising stat that makes people stop scrolling. End with "Thread 🧵"
-- Tweet 2: Context: why this matters for founders right now
-- Tweets 3-6: One insight per tweet. Start each with a number (2/, 3/, etc.). Short, punchy sentences.
-- Tweet 7: The counterintuitive point most people miss
-- Tweet 8: Practical 3-step framework or checklist
-- Tweet 9 (close): Restate the core insight. Tell them to bookmark / retweet if useful.
-- Each tweet ≤ 280 characters. Use line breaks for readability. Format as "1/ [text]\\n\\n2/ [text]" etc.`,
+    structure: `- Output 6–9 tweets as numbered blocks: "1/ …", "2/ …", etc.
+- Tweet 1: scroll-stopping hook (stat, bold claim, or sharp question). End with "Thread 🧵"
+- Tweets 2–N-1: one insight each; short sentences; blank line between tweets is OK inside a block
+- Final tweet: practical takeaway + soft CTA (bookmark / retweet)
+- EVERY tweet must be ≤ 280 characters (count the text after "N/", not the whole thread)
+- Do NOT write an article. Do NOT use ## headings, FAQ, schema, or meta description.
+- Format example:
+1/ Hook line here. Thread 🧵
+
+2/ Insight two…
+
+3/ Close with CTA.`,
   },
   instagram_post: {
     label: "Instagram Post",

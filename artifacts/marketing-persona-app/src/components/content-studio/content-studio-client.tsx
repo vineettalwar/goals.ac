@@ -41,6 +41,7 @@ type StudioLoadState = {
   projectName: string;
   aiReady: boolean | null;
   activeProvider: AiProviderId;
+  orgBedrockModel: string | null;
   pieces: StudioPiece[];
   cmsConnections: CmsConnectionSnapshot;
   primaryBlogDestination: string | null;
@@ -51,6 +52,7 @@ const initialStudioLoadState: StudioLoadState = {
   projectName: "",
   aiReady: null,
   activeProvider: "gemini",
+  orgBedrockModel: null,
   pieces: [],
   cmsConnections: {},
   primaryBlogDestination: null,
@@ -91,6 +93,7 @@ export function ContentStudioClient({
     projectName,
     aiReady,
     activeProvider,
+    orgBedrockModel,
     pieces,
     cmsConnections,
     primaryBlogDestination,
@@ -111,6 +114,7 @@ export function ContentStudioClient({
         projectName: data.projectName,
         aiReady: data.aiReady,
         activeProvider: data.activeProvider,
+        orgBedrockModel: data.orgBedrockModel,
         pieces: data.pieces,
         cmsConnections: data.cmsConnections,
         primaryBlogDestination: data.primaryBlogDestination,
@@ -238,6 +242,8 @@ export function ContentStudioClient({
         initialDraft={briefDraft}
         cmsConnections={cmsConnections}
         primaryBlogDestination={primaryBlogDestination}
+        activeProvider={activeProvider}
+        orgBedrockModel={orgBedrockModel}
         onCreated={(piece) => {
           dispatchStudioData({
             type: "setPieces",

@@ -18,13 +18,24 @@ import { getUserAiProviderOptions } from "../support/ai/user-ai-provider";
 import { parseVisibilitySettings } from "../support/settings/visibility-settings";
 import { logger } from "../core/logger";
 
-export async function seedPromptsForProject(projectId: number): Promise<number> {
+export async function seedPromptsForProject(
+  projectId: number,
+  options?: { replace?: boolean },
+): Promise<number> {
   const [project] = await db
     .select({ url: websiteProjectsTable.url, name: websiteProjectsTable.name })
     .from(websiteProjectsTable)
     .where(eq(websiteProjectsTable.id, projectId))
     .limit(1);
   if (!project) return 0;
+
+  const existing = await db
+    .select({ id: llmVisibilityPromptsTable.id })
+    .from(llmVisibilityPromptsTable)
+    .where(eq(llmVisibilityPromptsTable.websiteProjectId, projectId))
+    .limit(1);
+
+  if (existing.length > 0 && !options?.replace) return 0;
 
   const [brand] = await db
     .select()
@@ -40,7 +51,14 @@ export async function seedPromptsForProject(projectId: number): Promise<number> 
     competitorUrls: brand?.competitorUrls ?? [],
   });
 
+  // Build first — never delete existing prompts when the brand profile yields zero defaults.
   if (defaults.length === 0) return 0;
+
+  if (options?.replace && existing.length > 0) {
+    await db
+      .delete(llmVisibilityPromptsTable)
+      .where(eq(llmVisibilityPromptsTable.websiteProjectId, projectId));
+  }
 
   await db.insert(llmVisibilityPromptsTable).values(
     defaults.map((p) => ({

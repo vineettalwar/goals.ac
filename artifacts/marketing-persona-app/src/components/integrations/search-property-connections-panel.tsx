@@ -360,10 +360,13 @@ export function SearchPropertyConnectionsPanel({
   projectId,
   embedded = false,
   layout = "grid",
+  hideCategoryHeader = false,
 }: {
   projectId: string;
   embedded?: boolean;
   layout?: "grid" | "cards";
+  /** Skip the section title when the parent already labels the block. */
+  hideCategoryHeader?: boolean;
 }) {
   const searchParams = useSearchParams();
   const [data, setData] = useState<SearchPropertyConnectionsResponse | null>(null);
@@ -501,42 +504,50 @@ export function SearchPropertyConnectionsPanel({
     );
   }
 
+  const tiles = (
+    <div className="grid gap-2 sm:grid-cols-2">
+      {data.connections.map((connection) => {
+        const meta = PROVIDER_META[connection.provider];
+        const connected = connection.connected && connection.propertyVerified;
+        const pending = connection.connected && !connection.propertyVerified;
+
+        return (
+          <IntegrationTile
+            key={connection.provider}
+            icon={<IntegrationIconBox>{meta.icon}</IntegrationIconBox>}
+            title={meta.label}
+            description={meta.description}
+            connected={connected || pending}
+            pending={pending}
+            summary={
+              connected
+                ? connection.propertyUrl ?? connection.accountEmail
+                : pending
+                  ? "Pick a verified property"
+                  : null
+            }
+            onClick={() => setActiveProvider(connection.provider)}
+          />
+        );
+      })}
+    </div>
+  );
+
   return (
     <section className="space-y-3">
-      <IntegrationCategorySection
-        title="Search & AI citation"
-        description="Track AI Overview and Copilot citations from search consoles."
-        connectedCount={connectedCount}
-        totalCount={SEARCH_INTEGRATIONS_COUNT}
-        compact={embedded}
-      >
-        <div className="grid gap-2 sm:grid-cols-2">
-          {data.connections.map((connection) => {
-            const meta = PROVIDER_META[connection.provider];
-            const connected = connection.connected && connection.propertyVerified;
-            const pending = connection.connected && !connection.propertyVerified;
-
-            return (
-              <IntegrationTile
-                key={connection.provider}
-                icon={<IntegrationIconBox>{meta.icon}</IntegrationIconBox>}
-                title={meta.label}
-                description={meta.description}
-                connected={connected || pending}
-                pending={pending}
-                summary={
-                  connected
-                    ? connection.propertyUrl ?? connection.accountEmail
-                    : pending
-                      ? "Pick a verified property"
-                      : null
-                }
-                onClick={() => setActiveProvider(connection.provider)}
-              />
-            );
-          })}
-        </div>
-      </IntegrationCategorySection>
+      {hideCategoryHeader ? (
+        tiles
+      ) : (
+        <IntegrationCategorySection
+          title="Search & AI citation"
+          description="Track AI Overview and Copilot citations from search consoles."
+          connectedCount={connectedCount}
+          totalCount={SEARCH_INTEGRATIONS_COUNT}
+          compact={embedded}
+        >
+          {tiles}
+        </IntegrationCategorySection>
+      )}
 
       <Dialog
         open={activeProvider != null}

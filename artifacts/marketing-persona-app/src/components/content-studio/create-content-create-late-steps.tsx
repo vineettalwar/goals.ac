@@ -47,6 +47,8 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
     cmsConnections, linkedinArchetype, setLinkedinArchetype, linkedinHook, setLinkedinHook,
     angleHint, setAngleHint, plannedDate, setPlannedDate, generating, detectedSections,
     handleContinue, bypassCache, setBypassCache, competitorFocusUrl, setCompetitorFocusUrl,
+    showBedrockModelPicker, bedrockModel, setBedrockModel, saveBedrockModel, setSaveBedrockModel,
+    canManageBedrockModel,
   } = wizard;
 
   return (
@@ -132,7 +134,43 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
                     ) : null}
                     {angleHint.trim() ? <ReviewRow label="Instructions" value={angleHint.trim()} /> : null}
                     {plannedDate ? <ReviewRow label="Planned date" value={plannedDate} /> : null}
+                    {showBedrockModelPicker && bedrockModel.trim() ? (
+                      <ReviewRow label="Bedrock model" value={bedrockModel.trim()} />
+                    ) : null}
                   </div>
+
+                  {showBedrockModelPicker ? (
+                    <div className="mt-6 space-y-3">
+                      <label className="block text-sm font-medium" htmlFor="create-bedrock-model">
+                        Bedrock model
+                      </label>
+                      <Input
+                        id="create-bedrock-model"
+                        value={bedrockModel}
+                        onChange={(e) => setBedrockModel(e.target.value)}
+                        placeholder="amazon.nova-lite-v1:0"
+                        className="font-mono text-sm max-w-lg"
+                        autoComplete="off"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Overrides the org default for this generation.
+                        {canManageBedrockModel
+                          ? " Check the box below to also save it as the org default."
+                          : ""}
+                      </p>
+                      {canManageBedrockModel ? (
+                        <label className="flex items-center gap-3 text-sm text-muted-foreground cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={saveBedrockModel}
+                            onChange={(e) => setSaveBedrockModel(e.target.checked)}
+                            className="rounded"
+                          />
+                          Save as organization Bedrock model
+                        </label>
+                      ) : null}
+                    </div>
+                  ) : null}
 
                   <label className="flex items-center gap-3 mt-6 text-sm text-muted-foreground cursor-pointer">
                     <input
