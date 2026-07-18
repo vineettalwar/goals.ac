@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ExternalLink, Loader2 } from "lucide-react";
 import {
-  BEDROCK_MODEL_CHOICES,
   BEDROCK_MODEL_CUSTOM,
+  type BedrockModelChoice,
 } from "@workspace/ai-providers/bedrock-models";
 import { PlatformIntegrationBrandIcon } from "@/components/integrations/platform-integration-brand-icon";
 import { Button } from "@/components/ui/button";
@@ -43,14 +43,60 @@ export function AdminBedrockDialog({ controller }: { controller: AdminIntegratio
   } = controller;
 
   const [forceCustomModel, setForceCustomModel] = useState(false);
+  const [accountModels, setAccountModels] = useState<BedrockModelChoice[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
 
-  const knownIds = useMemo(() => new Set<string>(BEDROCK_MODEL_CHOICES.map((c) => c.id)), []);
+  const knownIds = useMemo(() => new Set(accountModels.map((m) => m.id)), [accountModels]);
   const showCustom =
-    forceCustomModel ||
-    Boolean(bedrockModel && !knownIds.has(bedrockModel));
-  const selectValue = showCustom
-    ? BEDROCK_MODEL_CUSTOM
-    : bedrockModel || undefined;
+    forceCustomModel || Boolean(bedrockModel && !knownIds.has(bedrockModel));
+  const selectValue = showCustom ? BEDROCK_MODEL_CUSTOM : bedrockModel || undefined;
+
+  useEffect(() => {
+    if (!status || status.bedrock.managedByEnv) return;
+    const trimmed = bedrockApiKey.trim();
+    if (trimmed.length > 0 && trimmed.length < 16) {
+      setAccountModels([]);
+      setModelsError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setModelsLoading(true);
+      setModelsError(null);
+      try {
+        const res = await fetch("/api/admin/platform-integrations/bedrock-models", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(trimmed.length >= 16 ? { apiKey: trimmed } : {}),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          models?: BedrockModelChoice[];
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!res.ok) {
+          setAccountModels([]);
+          setModelsError(data.error ?? "Could not load models for this account");
+          return;
+        }
+        setAccountModels(data.models ?? []);
+      } catch {
+        if (!cancelled) {
+          setAccountModels([]);
+          setModelsError("Could not load models for this account");
+        }
+      } finally {
+        if (!cancelled) setModelsLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [status, bedrockApiKey]);
 
   if (!status) return null;
 
@@ -124,13 +170,21 @@ export function AdminBedrockDialog({ controller }: { controller: AdminIntegratio
               setForceCustomModel(false);
               setBedrockModel(value);
             }}
-            disabled={status.bedrock.managedByEnv}
+            disabled={status.bedrock.managedByEnv || modelsLoading}
           >
             <SelectTrigger id="bedrock-model">
-              <SelectValue placeholder="Choose a Bedrock model" />
+              <SelectValue
+                placeholder={
+                  modelsLoading
+                    ? "Loading models for this account…"
+                    : accountModels.length === 0
+                      ? "Paste API key to load models"
+                      : "Choose a Bedrock model"
+                }
+              />
             </SelectTrigger>
             <SelectContent>
-              {BEDROCK_MODEL_CHOICES.map((choice) => (
+              {accountModels.map((choice) => (
                 <SelectItem key={choice.id} value={choice.id}>
                   {choice.label}
                 </SelectItem>
@@ -138,20 +192,22 @@ export function AdminBedrockDialog({ controller }: { controller: AdminIntegratio
               <SelectItem value={BEDROCK_MODEL_CUSTOM}>Custom model id…</SelectItem>
             </SelectContent>
           </Select>
+          {modelsError ? (
+            <p className="text-xs text-muted-foreground">{modelsError}</p>
+          ) : null}
           {showCustom ? (
             <Input
               id="bedrock-model-custom"
               value={bedrockModel}
               onChange={(e) => setBedrockModel(e.target.value)}
-              placeholder="e.g. us.anthropic.claude-sonnet-4-20250514-v1:0"
+              placeholder="e.g. amazon.nova-lite-v1:0"
               disabled={status.bedrock.managedByEnv}
               autoComplete="off"
               className="font-mono text-sm"
             />
           ) : null}
           <p className="text-xs text-muted-foreground">
-            Required for Test and generation. Use an inference profile id enabled in your AWS
-            account/region.
+            Only models enabled for this AWS account are listed.
           </p>
         </div>
 

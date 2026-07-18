@@ -12,8 +12,12 @@ import {
 import { resetAiProviderClient } from "@workspace/ai-providers";
 import { z } from "zod";
 
-const BedrockCredentialsBody = z.object({
+const BedrockFullBody = z.object({
   apiKey: z.string().min(16, "API key is too short"),
+  model: z.string().trim().min(1, "Choose a Bedrock model"),
+});
+
+const BedrockModelOnlyBody = z.object({
   model: z.string().trim().min(1, "Choose a Bedrock model"),
 });
 
@@ -23,7 +27,10 @@ export async function GET() {
 
   const orgSettings = await getOrgAiSettingsForUser(userId!);
   if (!hasOrgBedrockCredentials(orgSettings)) {
-    return NextResponse.json({ hasCredentials: false });
+    return NextResponse.json({
+      hasCredentials: false,
+      model: orgSettings?.bedrockModel ?? null,
+    });
   }
 
   let accessKeyLastFour = "••••";
@@ -56,16 +63,43 @@ export async function PATCH(req: Request) {
   }
 
   const body = await req.json().catch(() => null);
-  const parsed = BedrockCredentialsBody.safeParse(body);
-  if (!parsed.success) {
+  const hasApiKey =
+    body &&
+    typeof body === "object" &&
+    typeof (body as { apiKey?: unknown }).apiKey === "string" &&
+    String((body as { apiKey: string }).apiKey).trim().length > 0;
+
+  if (!hasApiKey) {
+    const modelOnly = BedrockModelOnlyBody.safeParse(body);
+    if (!modelOnly.success) {
+      return NextResponse.json(
+        { error: modelOnly.error.errors[0]?.message ?? "Invalid request" },
+        { status: 400 },
+      );
+    }
+    const model = modelOnly.data.model.trim();
+    await db
+      .update(organizationsTable)
+      .set({ bedrockModel: model })
+      .where(eq(organizationsTable.id, orgSettings.organizationId));
+    resetAiProviderClient();
+    return NextResponse.json({
+      ok: true,
+      hasCredentials: hasOrgBedrockCredentials(orgSettings),
+      model,
+    });
+  }
+
+  const full = BedrockFullBody.safeParse(body);
+  if (!full.success) {
     return NextResponse.json(
-      { error: parsed.error.errors[0]?.message ?? "Invalid request" },
+      { error: full.error.errors[0]?.message ?? "Invalid request" },
       { status: 400 },
     );
   }
 
-  const apiKey = parsed.data.apiKey.trim();
-  const model = parsed.data.model.trim();
+  const apiKey = full.data.apiKey.trim();
+  const model = full.data.model.trim();
 
   await db
     .update(organizationsTable)

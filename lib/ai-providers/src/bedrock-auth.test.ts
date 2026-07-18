@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   resolveBedrockAuth,
   resolveModel,
+  resolveBedrockModelId,
   formatBedrockAuthError,
   DEFAULT_BEDROCK_REGION,
 } from "./bedrock";
@@ -57,6 +58,37 @@ describe("resolveModel", () => {
   });
 });
 
+describe("resolveBedrockModelId", () => {
+  it("returns configured model without listing", async () => {
+    await expect(
+      resolveBedrockModelId({ apiKey: "k", model: "amazon.nova-lite-v1:0" }),
+    ).resolves.toBe("amazon.nova-lite-v1:0");
+  });
+
+  it("rejects missing model instead of auto-picking", async () => {
+    await expect(resolveBedrockModelId({ apiKey: "k" })).rejects.toThrow(/No Bedrock model configured/);
+  });
+});
+
+describe("toBedrockModelChoices", () => {
+  it("filters specialty models and prefers Nova", async () => {
+    const { toBedrockModelChoices } = await import("./bedrock-models");
+    const choices = toBedrockModelChoices([
+      "amazon.titan-embed-text-v2:0",
+      "nvidia.nemotron-nano-12b-v2",
+      "meta.llama3-70b-instruct-v1:0",
+      "amazon.nova-lite-v1:0",
+      "amazon.nova-2-sonic-v1:0",
+    ]);
+    expect(choices.map((c) => c.id)).toEqual([
+      "amazon.nova-lite-v1:0",
+      "meta.llama3-70b-instruct-v1:0",
+      "nvidia.nemotron-nano-12b-v2",
+    ]);
+    expect(choices[0]?.label).toBe("Amazon Nova Lite");
+  });
+});
+
 describe("formatBedrockAuthError", () => {
   it("rewrites session expiry and retired-model errors", () => {
     expect(
@@ -68,6 +100,13 @@ describe("formatBedrockAuthError", () => {
     expect(
       formatBedrockAuthError(new Error("This model version has reached the end of its life.")),
     ).toMatch(/retired/);
+    expect(
+      formatBedrockAuthError(
+        new Error(
+          "Access denied. This Model is marked by provider as Legacy and you have not been actively using the model in the last 30 days.",
+        ),
+      ),
+    ).toMatch(/Legacy/);
     expect(formatBedrockAuthError(new Error("UnknownOperationException"))).toMatch(
       /unsupported operation/,
     );

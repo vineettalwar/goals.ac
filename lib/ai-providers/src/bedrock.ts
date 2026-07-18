@@ -1,5 +1,6 @@
 import type { AiProviderClient, GenerateParams, GenerateResult } from "./client";
 import type { BedrockCredentialOptions } from "./config";
+import { toBedrockModelChoices, type BedrockModelChoice } from "./bedrock-models";
 
 export const DEFAULT_BEDROCK_REGION = "us-east-1";
 
@@ -59,6 +60,12 @@ export function formatBedrockAuthError(err: unknown): string {
   if (lower.includes("end of its life") || lower.includes("end of life")) {
     return (
       "Configured Bedrock model is retired. Set BEDROCK_MODEL (or platform/org model) to a current model id from the Bedrock console."
+    );
+  }
+  if (lower.includes("marked by provider as legacy") || lower.includes("legacy and you have not been actively using")) {
+    return (
+      "Configured Bedrock model is marked Legacy for this account. " +
+      "Pick a current model in Settings (Amazon Nova Lite/Pro work well for content generation)."
     );
   }
   if (lower.includes("unknownoperation") || lower.includes("unknown operation")) {
@@ -140,15 +147,6 @@ function awsErrorMessage(body: string, status: number): string {
   }
 }
 
-function isTextInferenceModelId(id: string): boolean {
-  const lower = id.toLowerCase();
-  if (!id) return false;
-  if (lower.includes("embed") || lower.includes("image") || lower.includes("titan-embed")) {
-    return false;
-  }
-  return true;
-}
-
 async function fetchJson(
   url: string,
   headers: Record<string, string>,
@@ -217,6 +215,14 @@ export async function listBedrockModelIds(
   throw new Error("Set BEDROCK_MODEL (or platform/org model) when using IAM access keys.");
 }
 
+/** Chat/text models available to these credentials, labeled for Settings pickers. */
+export async function listBedrockChatModels(
+  credentials?: BedrockCredentialOptions | null,
+): Promise<BedrockModelChoice[]> {
+  const ids = await listBedrockModelIds(credentials);
+  return toBedrockModelChoices(ids);
+}
+
 /**
  * Validate credentials without forcing a hardcoded model id.
  * Prefers a configured model + Converse; otherwise lists models via Bedrock control plane.
@@ -250,14 +256,12 @@ export async function resolveBedrockModelId(
   const configured = override?.trim() || resolveModel(credentials?.model);
   if (configured) return configured;
 
-  const ids = await listBedrockModelIds(credentials);
-  const pick = ids.find(isTextInferenceModelId) ?? ids[0];
-  if (!pick) {
-    throw new Error(
-      "No Bedrock model configured. Set BEDROCK_MODEL (or platform/org model), or pass model in the request.",
-    );
-  }
-  return pick;
+  // Never auto-pick from ListFoundationModels — first hits are often tiny
+  // (e.g. nvidia.nemotron-nano) that truncate JSON and break content studio.
+  throw new Error(
+    "No Bedrock model configured. Choose a model in Settings → API keys " +
+      "(Amazon Nova Lite or Pro recommended for content generation).",
+  );
 }
 
 function buildMessages(params: GenerateParams) {

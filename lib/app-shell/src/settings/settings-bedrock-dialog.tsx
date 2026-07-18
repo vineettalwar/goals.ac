@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, KeyRound, Loader2, X, XCircle } from "lucide-react";
 import {
-  BEDROCK_MODEL_CHOICES,
   BEDROCK_MODEL_CUSTOM,
+  type BedrockModelChoice,
 } from "@workspace/ai-providers/bedrock-models";
 
 /** @deprecated No hardcoded Bedrock model — choose a model in the dialog. */
@@ -17,7 +17,13 @@ export function emptyBedrockForm(model = ""): BedrockCredentialsForm {
   return { apiKey: "", model };
 }
 
-function isFormComplete(form: BedrockCredentialsForm): boolean {
+function canSave(form: BedrockCredentialsForm, hasCredentials: boolean): boolean {
+  if (!form.model.trim()) return false;
+  // Model-only save when org already has a key (API accepts { model } without apiKey).
+  return Boolean(form.apiKey.trim()) || hasCredentials;
+}
+
+function canTest(form: BedrockCredentialsForm): boolean {
   return Boolean(form.apiKey.trim() && form.model.trim());
 }
 
@@ -51,10 +57,12 @@ export function SettingsBedrockDialog({
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
-
   const [forceCustomModel, setForceCustomModel] = useState(false);
+  const [accountModels, setAccountModels] = useState<BedrockModelChoice[]>([]);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [modelsError, setModelsError] = useState<string | null>(null);
 
-  const knownIds = useMemo(() => new Set<string>(BEDROCK_MODEL_CHOICES.map((c) => c.id)), []);
+  const knownIds = useMemo(() => new Set(accountModels.map((m) => m.id)), [accountModels]);
   const showCustom =
     forceCustomModel ||
     Boolean(form.model && !knownIds.has(form.model));
@@ -66,11 +74,59 @@ export function SettingsBedrockDialog({
       setTestResult(null);
       setTestError(null);
       setForceCustomModel(false);
+      setAccountModels([]);
+      setModelsError(null);
       return;
     }
     setForm(emptyBedrockForm(savedModel ?? ""));
-    setForceCustomModel(Boolean(savedModel && !knownIds.has(savedModel)));
-  }, [open, savedModel, knownIds]);
+  }, [open, savedModel]);
+
+  useEffect(() => {
+    if (!open || !canManage) return;
+    const trimmed = form.apiKey.trim();
+    if (trimmed.length > 0 && trimmed.length < 16) {
+      setAccountModels([]);
+      setModelsError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setModelsLoading(true);
+      setModelsError(null);
+      try {
+        const res = await fetch("/api/auth/bedrock-credentials/models", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(trimmed.length >= 16 ? { apiKey: trimmed } : {}),
+        });
+        const data = (await res.json().catch(() => ({}))) as {
+          models?: BedrockModelChoice[];
+          error?: string;
+        };
+        if (cancelled) return;
+        if (!res.ok) {
+          setAccountModels([]);
+          setModelsError(data.error ?? "Could not load models for this account");
+          return;
+        }
+        const models = data.models ?? [];
+        setAccountModels(models);
+      } catch {
+        if (!cancelled) {
+          setAccountModels([]);
+          setModelsError("Could not load models for this account");
+        }
+      } finally {
+        if (!cancelled) setModelsLoading(false);
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open, canManage, form.apiKey]);
 
   if (!open) return null;
 
@@ -88,7 +144,7 @@ export function SettingsBedrockDialog({
   }
 
   async function handleTest() {
-    if (!isFormComplete(form)) return;
+    if (!canTest(form)) return;
     setTesting(true);
     setTestResult(null);
     setTestError(null);
@@ -109,7 +165,7 @@ export function SettingsBedrockDialog({
   }
 
   async function handleSave() {
-    if (!isFormComplete(form)) return;
+    if (!canSave(form, hasCredentials)) return;
     await onSave(form);
     onOpenChange(false);
   }
@@ -163,7 +219,8 @@ export function SettingsBedrockDialog({
             ) : null}
 
             <p className="text-xs text-muted-foreground">
-              Paste a long-term Bedrock API key and choose the model to use for generation.
+              Paste a long-term Bedrock API key. The model list is loaded from models enabled for
+              that AWS account.
             </p>
 
             <div className="space-y-1.5">
@@ -200,22 +257,32 @@ export function SettingsBedrockDialog({
                   setForceCustomModel(false);
                   updateForm({ model: value });
                 }}
+                disabled={modelsLoading}
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
               >
-                <option value="">Choose a Bedrock model</option>
-                {BEDROCK_MODEL_CHOICES.map((choice) => (
+                <option value="">
+                  {modelsLoading
+                    ? "Loading models…"
+                    : accountModels.length === 0
+                      ? "Paste API key to load models"
+                      : "Choose a Bedrock model"}
+                </option>
+                {accountModels.map((choice) => (
                   <option key={choice.id} value={choice.id}>
                     {choice.label}
                   </option>
                 ))}
                 <option value={BEDROCK_MODEL_CUSTOM}>Custom model id…</option>
               </select>
+              {modelsError ? (
+                <p className="text-xs text-muted-foreground">{modelsError}</p>
+              ) : null}
               {showCustom ? (
                 <input
                   id="bedrock-model-custom"
                   value={form.model}
                   onChange={(event) => updateForm({ model: event.target.value })}
-                  placeholder="e.g. us.anthropic.claude-sonnet-4-20250514-v1:0"
+                  placeholder="e.g. amazon.nova-lite-v1:0"
                   autoComplete="off"
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 font-mono text-sm outline-none focus:ring-2 focus:ring-primary/20"
                 />
@@ -239,7 +306,7 @@ export function SettingsBedrockDialog({
               <button
                 type="button"
                 onClick={() => void handleTest()}
-                disabled={!isFormComplete(form) || busy}
+                disabled={!canTest(form) || busy}
                 className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50"
               >
                 {testing ? (
@@ -254,7 +321,7 @@ export function SettingsBedrockDialog({
               <button
                 type="button"
                 onClick={() => void handleSave()}
-                disabled={!isFormComplete(form) || busy}
+                disabled={!canSave(form, hasCredentials) || busy}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
               >
                 {saving ? (
@@ -262,8 +329,10 @@ export function SettingsBedrockDialog({
                     <Loader2 className="mr-2 inline h-4 w-4 animate-spin" aria-hidden />
                     Saving…
                   </>
-                ) : (
+                ) : form.apiKey.trim() ? (
                   "Save key"
+                ) : (
+                  "Save model"
                 )}
               </button>
               {hasCredentials ? (
