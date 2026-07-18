@@ -364,8 +364,8 @@ export function SocialComposerPanel({
                     title={piece.title}
                     bodyMarkdown={piece.bodyMarkdown}
                     imageUrl={imageUrl}
-                    lineClamp={8}
-                    className={overLimit ? "ring-1 ring-destructive/40" : undefined}
+                    lineClamp={6}
+                    className={overLimit ? "border-destructive/40" : undefined}
                   />
                   <div className="flex flex-wrap items-center gap-2 px-0.5">
                     {piece.scheduledAt ? (

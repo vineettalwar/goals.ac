@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { SocialHubView, parseSocialHubTab } from "@workspace/app-shell";
+import { SocialHubView, parseSocialHubTab } from "@workspace/app-shell/social";
 import { useSocialHubClient } from "./use-social-hub-client";
 
 export function SocialHubClient({ projectId }: { projectId: string }) {
@@ -10,12 +10,10 @@ export function SocialHubClient({ projectId }: { projectId: string }) {
   const hub = useSocialHubClient(projectId, parseSocialHubTab(searchParams.get("tab")));
 
   return (
-    <div className="max-w-6xl space-y-6 px-8 py-8">
+    <div className="max-w-6xl space-y-5 px-8 py-8">
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Social Hub</h1>
-        <p className="text-sm text-muted-foreground">
-          Train platform voice, queue posts, and schedule publishing across social channels.
-        </p>
+        <p className="text-sm text-muted-foreground">Queue, schedule, and publish across channels.</p>
       </div>
 
       <SocialHubView

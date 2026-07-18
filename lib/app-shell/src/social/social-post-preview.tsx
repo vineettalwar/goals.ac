@@ -5,6 +5,7 @@ import {
   socialPostCharCount,
   type SocialPlatformId,
 } from "./types";
+import { isTwitterThreadOverLimit, splitTwitterThread } from "./twitter-thread-parse";
 
 const SOCIAL_PLATFORM_LABEL: Record<string, string> = {
   linkedin: "LinkedIn",
@@ -18,7 +19,7 @@ const SOCIAL_PLATFORM_LABEL: Record<string, string> = {
 function PlatformChrome({ platformId }: { platformId: SocialPlatformId | null }) {
   if (platformId === "twitter") {
     return (
-      <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
+      <div className="flex items-center gap-2.5 pb-1">
         <div className="h-9 w-9 shrink-0 rounded-full bg-secondary" aria-hidden />
         <div className="min-w-0 flex-1 space-y-1.5">
           <div className="flex items-center gap-1.5">
@@ -33,7 +34,7 @@ function PlatformChrome({ platformId }: { platformId: SocialPlatformId | null })
 
   if (platformId === "linkedin") {
     return (
-      <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
+      <div className="flex items-center gap-2.5 pb-1">
         <div
           className="h-10 w-10 shrink-0 rounded-full bg-primary/15 ring-1 ring-primary/20"
           aria-hidden
@@ -49,7 +50,7 @@ function PlatformChrome({ platformId }: { platformId: SocialPlatformId | null })
 
   if (platformId === "instagram") {
     return (
-      <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
+      <div className="flex items-center gap-2.5 pb-1">
         <div
           className="h-8 w-8 shrink-0 rounded-full bg-gradient-to-br from-primary/30 via-secondary to-primary/10 ring-1 ring-border"
           aria-hidden
@@ -64,7 +65,7 @@ function PlatformChrome({ platformId }: { platformId: SocialPlatformId | null })
 
   if (platformId === "facebook") {
     return (
-      <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
+      <div className="flex items-center gap-2.5 pb-1">
         <div
           className="h-10 w-10 shrink-0 rounded-full bg-[#1877F2]/15 ring-1 ring-[#1877F2]/30"
           aria-hidden
@@ -79,7 +80,7 @@ function PlatformChrome({ platformId }: { platformId: SocialPlatformId | null })
 
   if (platformId === "bluesky") {
     return (
-      <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
+      <div className="flex items-center gap-2.5 pb-1">
         <div
           className="h-9 w-9 shrink-0 rounded-full bg-[#0085FF]/15 ring-1 ring-[#0085FF]/25"
           aria-hidden
@@ -97,7 +98,7 @@ function PlatformChrome({ platformId }: { platformId: SocialPlatformId | null })
 
   if (platformId === "mastodon") {
     return (
-      <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
+      <div className="flex items-center gap-2.5 pb-1">
         <div
           className="h-9 w-9 shrink-0 rounded-full bg-[#6364FF]/15 ring-1 ring-[#6364FF]/30"
           aria-hidden
@@ -114,7 +115,7 @@ function PlatformChrome({ platformId }: { platformId: SocialPlatformId | null })
   }
 
   return (
-    <div className="flex items-center gap-2.5 border-b border-border/70 pb-2.5">
+    <div className="flex items-center gap-2.5 pb-1">
       <div className="h-9 w-9 shrink-0 rounded-full bg-secondary" aria-hidden />
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="h-2.5 w-24 rounded-sm bg-foreground/15" aria-hidden />
@@ -132,6 +133,7 @@ export function SocialPostPreview({
   bodyMarkdown,
   imageUrl,
   lineClamp = 8,
+  variant = "card",
   className,
 }: {
   platform?: string | null;
@@ -140,13 +142,24 @@ export function SocialPostPreview({
   title?: string | null;
   bodyMarkdown?: string | null;
   imageUrl?: string | null;
-  lineClamp?: 2 | 4 | 6 | 8;
+  lineClamp?: 2 | 3 | 4 | 6 | 8;
+  /** `plain` = no nested border/shadow (use inside an outer card). */
+  variant?: "card" | "plain";
   className?: string;
 }) {
   const platformId = resolveSocialPlatformId({ platform, publishPlatform, formatType });
   const limit = getSocialPlatformLimit(platformId);
-  const len = socialPostCharCount(bodyMarkdown);
-  const overLimit = len > limit;
+  const tweets =
+    platformId === "twitter" ? splitTwitterThread(bodyMarkdown ?? "", Number.MAX_SAFE_INTEGER) : null;
+  const len =
+    tweets && tweets.length > 0
+      ? Math.max(...tweets.map((t) => t.length))
+      : socialPostCharCount(bodyMarkdown);
+  const overLimit =
+    platformId === "twitter"
+      ? isTwitterThreadOverLimit(bodyMarkdown ?? "", limit)
+      : len > limit;
+  const nearLimit = !overLimit && len >= Math.floor(limit * 0.9);
   const label =
     SOCIAL_PLATFORM_LABEL[platformId ?? ""] ??
     publishPlatform ??
@@ -157,22 +170,28 @@ export function SocialPostPreview({
   const clampClass =
     lineClamp === 2
       ? "line-clamp-2"
-      : lineClamp === 4
-        ? "line-clamp-4"
-        : lineClamp === 6
-          ? "line-clamp-6"
-          : "line-clamp-8";
+      : lineClamp === 3
+        ? "line-clamp-3"
+        : lineClamp === 4
+          ? "line-clamp-4"
+          : lineClamp === 6
+            ? "line-clamp-6"
+            : "line-clamp-8";
 
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-border bg-card shadow-sm",
-        platformId === "linkedin" && "rounded-lg",
-        platformId === "twitter" && "rounded-2xl",
+        "overflow-hidden",
+        variant === "card" &&
+          cn(
+            "rounded-xl border border-border bg-card",
+            platformId === "linkedin" && "rounded-lg",
+            platformId === "twitter" && "rounded-2xl",
+          ),
         className,
       )}
     >
-      <div className="space-y-3 p-3.5">
+      <div className={cn("space-y-3", variant === "card" ? "p-4 sm:p-5" : "px-0 py-1")}>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="rounded-md bg-secondary px-2 py-0.5 text-[11px] font-medium capitalize text-foreground/80">
             {label}
@@ -180,19 +199,24 @@ export function SocialPostPreview({
           <span
             className={cn(
               "tabular-nums text-xs",
-              overLimit ? "font-medium text-destructive" : "text-muted-foreground",
+              overLimit
+                ? "font-medium text-destructive"
+                : nearLimit
+                  ? "font-medium text-amber-700 dark:text-amber-300"
+                  : "text-muted-foreground",
             )}
             aria-live="polite"
           >
             {len}/{limit}
-            {overLimit ? " — over limit" : ""}
+            {tweets && tweets.length > 1 ? ` · ${tweets.length} tweets` : ""}
+            {overLimit ? " — over limit" : nearLimit ? " — near limit" : ""}
           </span>
         </div>
 
         <PlatformChrome platformId={platformId} />
 
         {platformId === "instagram" && imageUrl ? (
-          <div className="overflow-hidden rounded-md border border-border bg-secondary/40">
+          <div className="overflow-hidden rounded-md bg-secondary/40">
             <img
               src={imageUrl}
               alt=""
@@ -201,12 +225,15 @@ export function SocialPostPreview({
           </div>
         ) : null}
 
-        {title ? <p className="text-sm font-medium leading-snug text-foreground">{title}</p> : null}
+        {title ? (
+          <p className="pr-1 text-sm font-medium leading-snug text-foreground">{title}</p>
+        ) : null}
 
         {bodyMarkdown ? (
           <p
             className={cn(
-              "whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground",
+              // Avoid whitespace-pre-wrap with line-clamp — it breaks truncation and dumps full articles.
+              "overflow-hidden text-sm leading-relaxed text-muted-foreground",
               clampClass,
               platformId === "twitter" && "text-[15px] text-foreground/90",
             )}
@@ -218,7 +245,7 @@ export function SocialPostPreview({
         )}
 
         {platformId !== "instagram" && imageUrl ? (
-          <div className="overflow-hidden rounded-lg border border-border bg-secondary/30">
+          <div className="overflow-hidden rounded-lg bg-secondary/30">
             <img src={imageUrl} alt="" className="max-h-40 w-full object-cover" />
           </div>
         ) : null}

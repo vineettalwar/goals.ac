@@ -17,6 +17,7 @@
     "./goals-ac-plugin": "./src/goals-ac-plugin.ts",
     "./linkedin": "./src/linkedin.ts",
     "./twitter": "./src/twitter.ts",
+    "./twitter-thread": "./src/twitter-thread.ts",
     "./meta": "./src/meta.ts",
     "./bluesky": "./src/bluesky.ts",
     "./mastodon": "./src/mastodon.ts",

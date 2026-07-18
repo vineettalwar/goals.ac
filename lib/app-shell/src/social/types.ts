@@ -1,3 +1,5 @@
+import { isTwitterThreadOverLimit } from "./twitter-thread-parse";
+
 export type SocialPieceImageMeta = {
   featuredImageUrl?: string | null;
   ogImageUrl?: string | null;
@@ -108,6 +110,10 @@ export function isSocialOverCharLimit(
   body: string | null | undefined,
   platformId: string | null | undefined,
 ): boolean {
+  if (!body) return false;
+  if (platformId === "twitter") {
+    return isTwitterThreadOverLimit(body, getSocialPlatformLimit("twitter"));
+  }
   return socialPostCharCount(body) > getSocialPlatformLimit(platformId);
 }
 
