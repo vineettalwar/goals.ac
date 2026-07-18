@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ImageIcon, RefreshCw } from "lucide-react";
+import { ImageIcon, RefreshCw, Search } from "lucide-react";
 import { cn } from "../cn";
 import type { ContentPieceImageRef } from "./types";
 
@@ -16,6 +16,7 @@ export function ContentPieceFeaturedImage({
   attachingUrl = false,
   onRegenerateImages,
   onAttachFeaturedImageUrl,
+  onBrowseStockImages,
 }: {
   featuredImage: ContentPieceImageRef | null;
   /** HTTPS URL on pieceMetadata when no stock image ref exists yet. */
@@ -26,6 +27,7 @@ export function ContentPieceFeaturedImage({
   attachingUrl?: boolean;
   onRegenerateImages?: () => void | Promise<void>;
   onAttachFeaturedImageUrl?: (url: string) => void | Promise<void>;
+  onBrowseStockImages?: () => void;
 }) {
   const [urlDraft, setUrlDraft] = useState("");
   const busy = regenerating || attachingUrl;
@@ -33,6 +35,32 @@ export function ContentPieceFeaturedImage({
     featuredImageUrl && isHttpsImageUrl(featuredImageUrl) ? featuredImageUrl.trim() : null;
 
   if (!supportsStockImages && !featuredImage && !fallbackUrl) return null;
+
+  const browseButton =
+    stockImagesConfigured && onBrowseStockImages ? (
+      <button
+        type="button"
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50"
+        disabled={busy}
+        onClick={onBrowseStockImages}
+      >
+        <Search className="h-3.5 w-3.5" aria-hidden />
+        Browse stock
+      </button>
+    ) : null;
+
+  const regenerateButton =
+    onRegenerateImages && stockImagesConfigured ? (
+      <button
+        type="button"
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50"
+        disabled={busy}
+        onClick={() => void onRegenerateImages()}
+      >
+        <RefreshCw className={cn("h-3.5 w-3.5", regenerating && "animate-spin")} aria-hidden />
+        {regenerating ? "Finding image…" : featuredImage || fallbackUrl ? "Pick another" : "Use stock image"}
+      </button>
+    ) : null;
 
   if (featuredImage) {
     const imageUrl = featuredImage.publishedUrl ?? featuredImage.remoteUrl;
@@ -51,19 +79,12 @@ export function ContentPieceFeaturedImage({
             {featuredImage.provider} · score {featuredImage.rankScore.toFixed(2)}
             {featuredImage.publishedUrl
               ? " · hosted on your site"
-              : " · uploaded as compressed WebP to your site on publish"}
+              : " · source CDN URL — compressed WebP uploaded to your site on publish"}
           </p>
-          {onRegenerateImages ? (
-            <button
-              type="button"
-              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50"
-              disabled={busy}
-              onClick={() => void onRegenerateImages()}
-            >
-              <RefreshCw className={cn("h-3.5 w-3.5", regenerating && "animate-spin")} aria-hidden />
-              {regenerating ? "Finding image…" : "Pick another image"}
-            </button>
-          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {browseButton}
+            {regenerateButton}
+          </div>
         </div>
       </div>
     );
@@ -81,20 +102,8 @@ export function ContentPieceFeaturedImage({
           <p className="text-sm font-medium">Featured image</p>
           <p className="truncate text-xs text-muted-foreground">{fallbackUrl}</p>
           <div className="flex flex-wrap gap-2">
-            {onRegenerateImages && stockImagesConfigured ? (
-              <button
-                type="button"
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50"
-                disabled={busy}
-                onClick={() => void onRegenerateImages()}
-              >
-                <RefreshCw
-                  className={cn("h-3.5 w-3.5", regenerating && "animate-spin")}
-                  aria-hidden
-                />
-                {regenerating ? "Finding image…" : "Use stock image"}
-              </button>
-            ) : null}
+            {browseButton}
+            {regenerateButton}
           </div>
         </div>
       </div>
@@ -111,10 +120,14 @@ export function ContentPieceFeaturedImage({
           <p className="text-sm font-medium">Featured image</p>
           <p className="text-xs text-muted-foreground">
             {stockImagesConfigured
-              ? "Search Unsplash or Pexels, or paste a public HTTPS image URL (required for Instagram)."
+              ? "Browse Unsplash or Pexels, or paste a public HTTPS image URL (required for Instagram)."
               : "Paste a public HTTPS image URL for Instagram, or configure stock API keys for search."}
           </p>
         </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {browseButton}
+        {regenerateButton}
       </div>
       {onAttachFeaturedImageUrl ? (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -137,17 +150,6 @@ export function ContentPieceFeaturedImage({
             Attach URL
           </button>
         </div>
-      ) : null}
-      {stockImagesConfigured && onRegenerateImages ? (
-        <button
-          type="button"
-          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-input bg-card px-3 text-xs font-medium hover:bg-secondary disabled:opacity-50"
-          disabled={busy}
-          onClick={() => void onRegenerateImages()}
-        >
-          <RefreshCw className={cn("h-3.5 w-3.5", regenerating && "animate-spin")} aria-hidden />
-          {regenerating ? "Finding image…" : "Use stock image"}
-        </button>
       ) : null}
     </div>
   );

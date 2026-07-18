@@ -1,3 +1,4 @@
+import { assertAllowedStockCdnUrl } from "./allowed-hosts";
 import {
   buildSearchCacheKey,
   getCachedSearch,
@@ -124,10 +125,7 @@ export async function pickBestStockPhoto(
     });
     const best = pickBestFromRanked(ranked);
     if (best) {
-      if (best.provider === "unsplash") {
-        const accessKey = resolveStockApiKey("unsplash", credentials);
-        await trackUnsplashDownload(best.id, accessKey);
-      }
+      await acknowledgeStockPhotoSelection(best, credentials);
       return best;
     }
   }
@@ -135,9 +133,22 @@ export async function pickBestStockPhoto(
   return null;
 }
 
+/** Validate CDN URL + Unsplash download tracking when the user picks a photo. */
+export async function acknowledgeStockPhotoSelection(
+  photo: Pick<StockPhoto, "provider" | "id" | "url">,
+  credentials?: DecryptedStockCredentialContext,
+): Promise<void> {
+  assertAllowedStockCdnUrl(photo.url);
+  if (photo.provider === "unsplash") {
+    const accessKey = resolveStockApiKey("unsplash", credentials);
+    await trackUnsplashDownload(photo.id, accessKey);
+  }
+}
+
 export { rankStockPhotos, pickBestFromRanked } from "./rank";
 export type * from "./types";
 export { assertAllowedStockCdnUrl, isAllowedStockCdnHost } from "./allowed-hosts";
+export { trackUnsplashDownload } from "./unsplash";
 export {
   getPlatformStockImageStatus,
   isPlatformStockConfigured,

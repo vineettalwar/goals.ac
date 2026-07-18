@@ -1,6 +1,12 @@
 import type { ContentPieceImageRef, ContentFormatType } from "@workspace/db";
 import { DEFAULT_IMAGE_SETTINGS, type ProjectImageSettings } from "@workspace/db/schema/website_projects";
-import { isStockSearchAvailable, pickBestStockPhoto, type DecryptedStockCredentialContext } from "@workspace/stock-images";
+import {
+  assertAllowedStockCdnUrl,
+  isStockSearchAvailable,
+  pickBestStockPhoto,
+  type DecryptedStockCredentialContext,
+  type StockPhoto,
+} from "@workspace/stock-images";
 import type { AiProviderClient } from "../support/ai/resolve-ai-client";
 import { isSeoLongformFormat } from "../content/content-piece-seo";
 import { isHumanizableSocialFormat } from "../content/humanize-eligibility";
@@ -314,4 +320,101 @@ export function featuredImageRefFromPiece(piece: {
   pieceMetadata?: { images?: ContentPieceImageRef[] } | null;
 }): ContentPieceImageRef | undefined {
   return piece.pieceMetadata?.images?.find((img) => img.role === "featured");
+}
+
+export type StockPhotoAttachInput = Pick<
+  StockPhoto,
+  "provider" | "id" | "url" | "photographer" | "photographerUrl"
+> & {
+  description?: string;
+  rankScore?: number;
+};
+
+/**
+ * Attach a stock CDN photo (Unsplash/Pexels URL only — no platform host).
+ * Featured/og store the source URL; CMS publish downloads + compresses on the fly.
+ */
+export function applyStockPhotoToPiece<T extends ImageEnrichablePiece>(
+  piece: T,
+  photo: StockPhotoAttachInput,
+  options: {
+    role: "featured" | "inline";
+    searchQuery?: string;
+    sectionHeading?: string;
+    alt?: string;
+    title?: string;
+  },
+): T {
+  assertAllowedStockCdnUrl(photo.url);
+
+  const keyword = piece.target_keyword?.trim() || piece.title;
+  const searchQuery = options.searchQuery?.trim() || keyword;
+  const alt =
+    options.alt?.trim() ||
+    (photo.description?.trim() ? photo.description.trim().slice(0, 125) : `${keyword} illustration`.slice(0, 125));
+  const title = options.title?.trim() || piece.title.slice(0, 100);
+
+  const ref: ContentPieceImageRef = {
+    role: options.role,
+    provider: photo.provider,
+    remoteId: photo.id,
+    remoteUrl: photo.url,
+    alt,
+    title,
+    searchQuery,
+    rankScore: photo.rankScore ?? 0,
+    photographer: photo.photographer,
+    photographerUrl: photo.photographerUrl,
+    ...(options.role === "inline" && options.sectionHeading
+      ? { sectionHeading: options.sectionHeading }
+      : {}),
+  };
+
+  const prevImages = piece.pieceMetadata?.images ?? [];
+  let body = piece.body_markdown;
+  let nextImages: ContentPieceImageRef[];
+
+  if (options.role === "featured") {
+    const prevFeatured = prevImages.find((img) => img.role === "featured");
+    nextImages = [...prevImages.filter((img) => img.role !== "featured"), ref];
+    if (prevFeatured?.remoteUrl && body.includes(prevFeatured.remoteUrl)) {
+      body = body.split(prevFeatured.remoteUrl).join(photo.url);
+      if (prevFeatured.alt && prevFeatured.alt !== alt) {
+        body = body.replace(`![${prevFeatured.alt}](${photo.url})`, `![${alt}](${photo.url})`);
+      }
+    } else if (
+      !body.includes(photo.url) &&
+      piece.formatType &&
+      isSeoLongformFormat(piece.formatType)
+    ) {
+      body = injectHeroAfterIntro(body, alt, photo.url);
+    }
+  } else {
+    nextImages = [...prevImages, ref];
+    if (!body.includes(photo.url)) {
+      const heading = options.sectionHeading?.trim();
+      if (heading) {
+        const injected = injectImageAfterHeading(body, heading, alt, photo.url);
+        body = injected === body ? `${body.trimEnd()}\n\n![${alt}](${photo.url})\n` : injected;
+      } else {
+        body = `${body.trimEnd()}\n\n![${alt}](${photo.url})\n`;
+      }
+    }
+  }
+
+  const nextMeta: NonNullable<T["pieceMetadata"]> = {
+    ...piece.pieceMetadata,
+    images: nextImages,
+  };
+
+  if (options.role === "featured") {
+    nextMeta.featuredImageUrl = photo.url;
+    nextMeta.ogImageUrl = photo.url;
+  }
+
+  return {
+    ...piece,
+    body_markdown: body,
+    pieceMetadata: nextMeta,
+  };
 }
