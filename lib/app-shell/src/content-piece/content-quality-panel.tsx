@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
+import { scoreTwitterThreadQuality } from "@workspace/content-engine/social-thread-quality";
 import {
   scoreCoverageChecklist,
   type CoverageChecklistItem,
 } from "@workspace/content-engine/coverage-checklist";
 import { ScoreRing } from "../section-panels/shared";
 import type { ContentPieceMetadata } from "./types";
+import { SOCIAL_FORMAT_TYPES } from "../social/types";
 
 /** Missing-term click target: heading-shaped topics get a stub `## …`, keywords get a stub sentence. */
 function buildCoverageInsertSnippet(item: CoverageChecklistItem): string {
@@ -45,6 +47,8 @@ type ArticleQualityPanelProps = {
   /** Secondary keywords for the coverage checklist (brief/piece meta). */
   secondaryKeywords?: string[] | null;
   contentPieceId?: number | null;
+  /** When set, social formats use thread/post scoring instead of article SEO. */
+  formatType?: string | null;
   /** Host fetches `/api/content-pieces/:id/serp-score` (JWT or cookie). */
   fetchDualScore?: (contentPieceId: number) => Promise<DualContentScore | null>;
   /** When parent already loaded dual score (e.g. brief panel), skip internal fetch. */
@@ -85,6 +89,7 @@ export function ArticleQualityPanel({
   metadata,
   secondaryKeywords,
   contentPieceId,
+  formatType,
   fetchDualScore,
   dualScore,
   writingSample,
@@ -100,6 +105,159 @@ export function ArticleQualityPanel({
   enhancing = false,
   canEnhance = false,
 }: ArticleQualityPanelProps) {
+  const isTwitterThread = formatType === "twitter_thread";
+  const isSocial = Boolean(formatType && SOCIAL_FORMAT_TYPES.has(formatType));
+
+  if (isTwitterThread) {
+    const thread = scoreTwitterThreadQuality(bodyMarkdown);
+    return (
+      <div className="paper-card space-y-4 rounded-xl p-5">
+        <div className="flex items-center gap-4">
+          <ScoreRing score={thread.total} size="md" />
+          <div>
+            <h3 className="text-sm font-semibold">Thread quality</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {thread.total >= 80
+                ? "Ready to post"
+                : thread.total >= 60
+                  ? "Needs polish"
+                  : "Tighten before posting"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {thread.tweetCount} tweet{thread.tweetCount === 1 ? "" : "s"}
+              {thread.overLimitCount > 0
+                ? ` · ${thread.overLimitCount} over 280 chars`
+                : " · scored for X, not SEO articles"}
+            </p>
+          </div>
+        </div>
+        <ul className="space-y-2">
+          {thread.breakdown.map((item) => (
+            <li key={item.label} className="space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">{item.label}</span>
+                <span className={item.score === 0 ? "font-medium text-red-600" : "font-medium"}>
+                  {item.score}/{item.max}
+                </span>
+              </div>
+              {item.detail ? (
+                <p className="text-[11px] leading-relaxed text-muted-foreground/80">{item.detail}</p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+        {canEnhance && onEnhance ? (
+          <button
+            type="button"
+            className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground disabled:opacity-50"
+            onClick={() => onEnhance(undefined)}
+            disabled={enhancing}
+          >
+            {enhancing ? "Tightening…" : "Tighten thread"}
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  // Other social formats: keep a compact editorial-only view (no SERP/schema/FAQ theatre).
+  if (isSocial) {
+    const result = scoreArticleQuality({
+      bodyMarkdown,
+      wordCount,
+      writingSample,
+      brandVoiceExcerpt,
+      brandGlossary,
+      brandVoicePassages,
+    });
+    const human = result.breakdown.find((row) => row.label === "Human voice");
+    const word = result.breakdown.find((row) => row.label === "Word count");
+    const rows = [human, word].filter(Boolean) as typeof result.breakdown;
+    const total = Math.round(
+      (rows.reduce((s, r) => s + r.score, 0) / Math.max(1, rows.reduce((s, r) => s + r.max, 0))) *
+        100,
+    );
+    return (
+      <div className="paper-card space-y-4 rounded-xl p-5">
+        <div className="flex items-center gap-4">
+          <ScoreRing score={total} size="md" />
+          <div>
+            <h3 className="text-sm font-semibold">Post quality</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Social post scoring — SEO checklist hidden for this format.
+            </p>
+          </div>
+        </div>
+        <ul className="space-y-2">
+          {rows.map((item) => (
+            <li key={item.label} className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">{item.label}</span>
+              <span className="font-medium">
+                {item.score}/{item.max}
+              </span>
+            </li>
+          ))}
+        </ul>
+        {canEnhance && onEnhance ? (
+          <button
+            type="button"
+            className="inline-flex h-8 w-full items-center justify-center rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground disabled:opacity-50"
+            onClick={() => onEnhance(undefined)}
+            disabled={enhancing}
+          >
+            {enhancing ? "Tightening…" : "Tighten post"}
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  return (
+    <ArticleQualityPanelSeo
+      bodyMarkdown={bodyMarkdown}
+      wordCount={wordCount}
+      metadata={metadata}
+      secondaryKeywords={secondaryKeywords}
+      contentPieceId={contentPieceId}
+      fetchDualScore={fetchDualScore}
+      dualScore={dualScore}
+      writingSample={writingSample}
+      brandVoiceExcerpt={brandVoiceExcerpt}
+      brandGlossary={brandGlossary}
+      brandVoicePassages={brandVoicePassages}
+      savedBodyMarkdown={savedBodyMarkdown}
+      baselineScore={baselineScore}
+      showScoreDelta={showScoreDelta}
+      editing={editing}
+      onInsertMissingTerm={onInsertMissingTerm}
+      onEnhance={onEnhance}
+      enhancing={enhancing}
+      canEnhance={canEnhance}
+    />
+  );
+}
+
+function ArticleQualityPanelSeo({
+  bodyMarkdown,
+  wordCount,
+  metadata,
+  secondaryKeywords,
+  contentPieceId,
+  fetchDualScore,
+  dualScore,
+  writingSample,
+  brandVoiceExcerpt,
+  brandGlossary,
+  brandVoicePassages,
+  savedBodyMarkdown,
+  baselineScore,
+  showScoreDelta = false,
+  editing = false,
+  onInsertMissingTerm,
+  onEnhance,
+  enhancing = false,
+  canEnhance = false,
+}: Omit<ArticleQualityPanelProps, "formatType">) {
   const [debouncedBody, setDebouncedBody] = useState(bodyMarkdown);
   const [debouncedWordCount, setDebouncedWordCount] = useState(wordCount);
   const [fetchedDual, setFetchedDual] = useState<DualContentScore | null>(null);

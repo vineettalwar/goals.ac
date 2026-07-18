@@ -71,6 +71,9 @@ export function ContentPiecePage() {
     regenerateImages,
     attachingFeaturedImageUrl,
     attachFeaturedImageUrl,
+    attachingStockPhoto,
+    searchStockImages,
+    attachStockPhoto,
     stockImagesConfigured,
     publishing,
     publishingState,
@@ -251,6 +254,9 @@ export function ContentPiecePage() {
             /* error already set on hook */
           }
         }}
+        attachingStockPhoto={attachingStockPhoto}
+        onSearchStockImages={stockImagesConfigured ? searchStockImages : undefined}
+        onAttachStockPhoto={stockImagesConfigured ? attachStockPhoto : undefined}
         publishing={publishing || Boolean(publishingState)}
         publishingState={publishingState}
         publishMessage={publishMessage}

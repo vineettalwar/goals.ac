@@ -4,6 +4,7 @@ import {
   briefsTable,
   goalsTable,
   websiteProjectsTable,
+  organizationsTable,
   CONTENT_FORMAT_TYPES,
   type ContentFormatType,
 } from "@workspace/db/schema";
@@ -41,6 +42,10 @@ export const GenerateBody = z
     intendedPublishPlatform: z.string().min(1).optional(),
     intendedOutputMode: z.string().min(1).optional(),
     intendedEditorMode: z.enum(["classic", "gutenberg", "elementor", "divi"]).optional(),
+    /** Optional Bedrock model override for this generation */
+    bedrockModel: z.string().trim().min(1).optional(),
+    /** When true and caller can manage AI settings, also save bedrockModel as org default */
+    saveBedrockModel: z.boolean().optional(),
     /** Primary competitor URL to differentiate against for this piece */
     competitorFocusUrl: z
       .string()
@@ -125,6 +130,34 @@ export async function loadUserAiSettings(userId: number): Promise<{
     getUserAiProviderOptions(userId),
   ]);
   return { userApiKey, aiProviderOptions };
+}
+
+/** Apply optional Bedrock model override for this generation. */
+export function withBedrockModelOverride(
+  options: AiProviderOptions,
+  bedrockModel?: string | null,
+): AiProviderOptions {
+  const model = bedrockModel?.trim();
+  if (!model) return options;
+  return {
+    ...options,
+    bedrock: {
+      ...(options.bedrock ?? {}),
+      model,
+    },
+  };
+}
+
+export async function persistOrgBedrockModel(
+  organizationId: number,
+  model: string,
+): Promise<void> {
+  const { resetAiProviderClient } = await import("@workspace/ai-providers");
+  await db
+    .update(organizationsTable)
+    .set({ bedrockModel: model.trim() })
+    .where(eq(organizationsTable.id, organizationId));
+  resetAiProviderClient();
 }
 
 export { buildCacheKey };

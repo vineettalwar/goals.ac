@@ -27,6 +27,11 @@ export { ContentExportPanel, type ContentExportPlatform } from "./content-export
 export { ContentPieceRepurposeDialog } from "./repurpose-dialog";
 export { ContentPieceFeaturedImage } from "./content-featured-image";
 export {
+  StockImagePickerDialog,
+  type StockImagePickerRole,
+  type StockPickerPhoto,
+} from "./stock-image-picker";
+export {
   countCmsConnections,
   countPublishingConnections,
   getCmsDestinations,
@@ -95,3 +100,4 @@ export {
   type PublishReadyItem,
 } from "./types";
 export { sanitizePreviewHtml } from "./sanitize-preview-html";
+export { ContentMarkdown } from "./content-markdown";

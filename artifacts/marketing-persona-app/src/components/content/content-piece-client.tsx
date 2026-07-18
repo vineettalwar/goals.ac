@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { LayoutTemplate } from "lucide-react";
 import { toast } from "sonner";
 import {
+  ContentMarkdown,
   ContentPiecePublishDialog,
   ContentPieceView,
   contentPieceCanDelete,
@@ -45,7 +46,6 @@ import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinatio
 import type { ContentPieceRecord } from "@/lib/server/loaders";
 import { ArticlePerformanceBadge } from "@/components/content-studio/article-performance-badge";
 import { BrandTailoringPanel } from "@/components/brand/brand-tailoring-panel";
-import { ContentMarkdown } from "@/components/content/content-markdown";
 import { ContentPieceRepurposeDialog } from "@/components/content/content-piece-repurpose-dialog";
 
 export type BrandTailoringSummary = {
@@ -114,6 +114,7 @@ export function ContentPieceClient({
   const [enhanceMessage, setEnhanceMessage] = useState<string | null>(null);
   const [regeneratingImages, setRegeneratingImages] = useState(false);
   const [attachingFeaturedImageUrl, setAttachingFeaturedImageUrl] = useState(false);
+  const [attachingStockPhoto, setAttachingStockPhoto] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [markingReady, setMarkingReady] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -289,11 +290,10 @@ export function ContentPieceClient({
                     alt="At a glance"
                     className="w-full rounded-lg border border-border/60 bg-[#FAFAF8]"
                   />
-                ) : null}
-                {visualSummaryMarkdown ? (
-                  <div className="prose prose-sm dark:prose-invert max-w-none text-sm">
-                    <ContentMarkdown>{visualSummaryMarkdown}</ContentMarkdown>
-                  </div>
+                ) : visualSummaryMarkdown ? (
+                  <ContentMarkdown>
+                    {visualSummaryMarkdown.replace(/<!--[\s\S]*?-->/g, "").trim()}
+                  </ContentMarkdown>
                 ) : null}
               </div>
             ) : null}
@@ -492,6 +492,76 @@ export function ContentPieceClient({
             setAttachingFeaturedImageUrl(false);
           }
         }}
+        attachingStockPhoto={attachingStockPhoto}
+        onSearchStockImages={
+          stockImagesConfigured
+            ? async (query) => {
+                const res = await fetch(
+                  `/api/content-pieces/${pieceId}/images/search?q=${encodeURIComponent(query)}`,
+                );
+                const data = (await res.json().catch(() => null)) as {
+                  photos?: Array<{
+                    provider: "unsplash" | "pexels";
+                    id: string;
+                    url: string;
+                    previewUrl: string;
+                    width: number;
+                    height: number;
+                    photographer: string;
+                    photographerUrl: string;
+                    description?: string;
+                    rankScore: number;
+                  }>;
+                  error?: string;
+                } | null;
+                if (!res.ok) {
+                  throw new Error(data?.error ?? "Stock search failed");
+                }
+                return data?.photos ?? [];
+              }
+            : undefined
+        }
+        onAttachStockPhoto={
+          stockImagesConfigured
+            ? async ({ role, photo, sectionHeading, searchQuery }) => {
+                setAttachingStockPhoto(true);
+                try {
+                  const res = await fetch(`/api/content-pieces/${pieceId}/images/attach`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      role,
+                      searchQuery,
+                      sectionHeading,
+                      photo: {
+                        provider: photo.provider,
+                        id: photo.id,
+                        url: photo.url,
+                        photographer: photo.photographer,
+                        photographerUrl: photo.photographerUrl,
+                        description: photo.description,
+                        rankScore: photo.rankScore,
+                      },
+                    }),
+                  });
+                  const data = (await res.json().catch(() => null)) as {
+                    piece?: ContentPieceRecord;
+                    error?: string;
+                  } | null;
+                  if (!res.ok || !data?.piece) {
+                    throw new Error(data?.error ?? "Could not attach stock image");
+                  }
+                  setPieceRecord(data.piece);
+                  toast.success(
+                    role === "featured" ? "Featured image attached" : "Inline image inserted",
+                  );
+                  return toDetail(data.piece);
+                } finally {
+                  setAttachingStockPhoto(false);
+                }
+              }
+            : undefined
+        }
         publishing={publishing}
         publishMessage={publishMessage}
         onPublish={

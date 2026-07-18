@@ -6,6 +6,7 @@ import {
   Copy,
   Eye,
   FileCode2,
+  ImageIcon,
   Loader2,
   Pencil,
   PenLine,
@@ -20,11 +21,17 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "../cn";
+import { SOCIAL_FORMAT_TYPES } from "../social/types";
 import { ContentBriefPanel, type ContentBriefSummary } from "./content-brief-panel";
 import { ContentPieceFeaturedImage } from "./content-featured-image";
 import { ArticleQualityPanel, type DualContentScore } from "./content-quality-panel";
 import { ContentMarkdown } from "./content-markdown";
 import { MarkdownToolbar } from "./markdown-toolbar";
+import { TwitterThreadPreview } from "./twitter-thread-preview";
+import {
+  StockImagePickerDialog,
+  type StockPickerPhoto,
+} from "./stock-image-picker";
 import {
   contentPieceCanDelete,
   contentPieceCanEdit,
@@ -95,6 +102,8 @@ type EditorState = {
 
 type EditorAction =
   | { type: "sync"; piece: ContentPieceDetail }
+  /** Apply server piece into drafts even while editing (stock image attach). */
+  | { type: "apply_remote"; piece: ContentPieceDetail }
   | { type: "start_edit" }
   | { type: "toggle_preview" }
   | { type: "set_title"; value: string }
@@ -133,6 +142,15 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
         draftKey: nextKey,
       };
     }
+    case "apply_remote":
+      return {
+        ...state,
+        titleDraft: action.piece.title,
+        bodyDraft: action.piece.bodyMarkdown ?? "",
+        statusDraft: editableStatusDraft(action.piece.status),
+        plannedDateDraft: action.piece.plannedDate ?? "",
+        draftKey: pieceDraftKey(action.piece),
+      };
     case "start_edit":
       return { ...state, editing: true, previewMode: false };
     case "toggle_preview":
@@ -393,6 +411,7 @@ function ContentPieceToolbar({
   onMarkReady,
   onGenerate,
   onDelete,
+  onInsertInlineImage,
 }: {
   pieceTitle: string;
   editing: boolean;
@@ -422,6 +441,7 @@ function ContentPieceToolbar({
   onMarkReady?: () => void | Promise<void>;
   onGenerate?: () => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
+  onInsertInlineImage?: () => void;
 }) {
   const canEdit = Boolean(onStartEdit && onSave && onCancel && onTogglePreview);
   return (
@@ -458,6 +478,18 @@ function ContentPieceToolbar({
               Edit
             </button>
           )
+        ) : null}
+        {onInsertInlineImage ? (
+          <button
+            type="button"
+            onClick={onInsertInlineImage}
+            disabled={busy}
+            className={TOOLBAR_BTN}
+            title="Insert stock image into body"
+          >
+            <ImageIcon className="h-3.5 w-3.5" aria-hidden />
+            Insert image
+          </button>
         ) : null}
         {onRepurpose ? (
           <button
@@ -611,6 +643,7 @@ function ContentPieceBodyEditor({
   bodyDraft,
   displayBody,
   body,
+  formatType,
   onBodyChange,
   previewOverrideBody,
 }: {
@@ -620,11 +653,20 @@ function ContentPieceBodyEditor({
   bodyDraft: string;
   displayBody: string;
   body: string;
+  formatType?: string;
   onBodyChange: (value: string) => void;
   /** When set (Before/After snapshot toggle), shown instead of displayBody. Read-only. */
   previewOverrideBody?: string;
 }) {
   const bodyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const isTwitterThread = formatType === "twitter_thread";
+
+  function renderBody(markdown: string) {
+    if (isTwitterThread) {
+      return <TwitterThreadPreview bodyMarkdown={markdown} />;
+    }
+    return <ContentMarkdown>{markdown}</ContentMarkdown>;
+  }
 
   if (canEdit && editing) {
     return (
@@ -632,7 +674,11 @@ function ContentPieceBodyEditor({
         {!previewMode ? (
           <div className="p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-xs text-muted-foreground">Markdown source</p>
+              <p className="text-xs text-muted-foreground">
+                {isTwitterThread
+                  ? "Markdown source · one tweet per 1/ 2/ 3/ block (multi-line OK)"
+                  : "Markdown source"}
+              </p>
               <MarkdownToolbar
                 textareaRef={bodyTextareaRef}
                 value={bodyDraft}
@@ -649,9 +695,7 @@ function ContentPieceBodyEditor({
             />
           </div>
         ) : (
-          <div className="px-6 py-8 lg:px-10 lg:py-10">
-            <ContentMarkdown>{bodyDraft || "_Nothing to preview yet._"}</ContentMarkdown>
-          </div>
+          <div className="px-5 py-6 sm:px-6 lg:px-8 lg:py-8">{renderBody(bodyDraft || "")}</div>
         )}
       </div>
     );
@@ -661,9 +705,9 @@ function ContentPieceBodyEditor({
   const shownBodyTrimmed = previewOverrideBody ? previewOverrideBody.trim() : body;
 
   return (
-    <div className="px-6 py-8 lg:px-10 lg:py-10">
+    <div className="px-5 py-6 sm:px-6 lg:px-8 lg:py-8">
       {shownBodyTrimmed ? (
-        <ContentMarkdown>{shownBody}</ContentMarkdown>
+        renderBody(shownBody)
       ) : (
         <p className="text-sm text-muted-foreground">
           No content yet. Generate or edit to add copy.
@@ -788,6 +832,11 @@ function ContentPieceAside({
       setDual(null);
       return;
     }
+    // Social formats don't use SERP dual score.
+    if (SOCIAL_FORMAT_TYPES.has(piece.formatType)) {
+      setDual(null);
+      return;
+    }
     let cancelled = false;
     void fetchDualScore(piece.id)
       .then((data) => {
@@ -799,7 +848,7 @@ function ContentPieceAside({
     return () => {
       cancelled = true;
     };
-  }, [piece.id, piece.bodyMarkdown, fetchDualScore]);
+  }, [piece.id, piece.bodyMarkdown, piece.formatType, fetchDualScore]);
 
   const featuredUrl = piece.pieceMetadata?.featuredImageUrl?.trim() ?? "";
   const hasFeatured =
@@ -887,6 +936,7 @@ function ContentPieceAside({
           metadata={piece.pieceMetadata}
           secondaryKeywords={piece.pieceMetadata?.secondaryKeywords}
           contentPieceId={piece.id}
+          formatType={piece.formatType}
           fetchDualScore={fetchDualScore}
           dualScore={dual}
           savedBodyMarkdown={piece.bodyMarkdown ?? ""}
@@ -1023,6 +1073,9 @@ export function ContentPieceView({
   regeneratingImages = false,
   onAttachFeaturedImageUrl,
   attachingFeaturedImageUrl = false,
+  onSearchStockImages,
+  onAttachStockPhoto,
+  attachingStockPhoto = false,
   staleGenerating = false,
   onResetGeneration,
   fetchDualScore,
@@ -1073,6 +1126,14 @@ export function ContentPieceView({
   regeneratingImages?: boolean;
   onAttachFeaturedImageUrl?: (url: string) => void | Promise<void>;
   attachingFeaturedImageUrl?: boolean;
+  onSearchStockImages?: (query: string) => Promise<StockPickerPhoto[]>;
+  onAttachStockPhoto?: (payload: {
+    role: "featured" | "inline";
+    photo: StockPickerPhoto;
+    sectionHeading?: string;
+    searchQuery?: string;
+  }) => void | Promise<ContentPieceDetail | void>;
+  attachingStockPhoto?: boolean;
   staleGenerating?: boolean;
   onResetGeneration?: () => void | Promise<void>;
   /** Host-specific header extras (e.g. performance badge). */
@@ -1083,6 +1144,11 @@ export function ContentPieceView({
   destinationHealthOk?: boolean | null;
 }) {
   const [editor, dispatch] = useReducer(editorReducer, piece, createEditorState);
+  const [stockPickerRole, setStockPickerRole] = useState<"featured" | "inline" | null>(null);
+  const [stockPhotos, setStockPhotos] = useState<StockPickerPhoto[]>([]);
+  const [stockSearchQuery, setStockSearchQuery] = useState("");
+  const [stockSearching, setStockSearching] = useState(false);
+  const [stockPickerError, setStockPickerError] = useState<string | null>(null);
   const nextDraftKey = pieceDraftKey(piece);
   if (!editor.editing && editor.draftKey !== nextDraftKey) {
     dispatch({ type: "sync", piece });
@@ -1158,10 +1224,44 @@ export function ContentPieceView({
     enhancing ||
     regeneratingImages ||
     attachingFeaturedImageUrl ||
+    attachingStockPhoto ||
     queueingSocial;
   const wordCount = (editor.editing ? editor.bodyDraft : (piece.bodyMarkdown ?? ""))
     .split(/\s+/)
     .filter(Boolean).length;
+  const sectionHeadings = (editor.editing ? editor.bodyDraft : (piece.bodyMarkdown ?? ""))
+    .match(/^## (.+)$/gm)
+    ?.map((line) => line.replace(/^## /, "").trim())
+    .filter(Boolean) ?? [];
+  const defaultStockQuery =
+    piece.targetKeyword?.trim() || piece.title?.trim() || stockSearchQuery || "blog";
+  const canBrowseStock =
+    Boolean(stockImagesConfigured && onSearchStockImages && onAttachStockPhoto) &&
+    supportsStockImages;
+
+  async function handleStockSearch(query: string) {
+    if (!onSearchStockImages) return;
+    setStockSearching(true);
+    setStockPickerError(null);
+    setStockSearchQuery(query);
+    try {
+      const photos = await onSearchStockImages(query);
+      setStockPhotos(photos);
+    } catch (err) {
+      setStockPhotos([]);
+      setStockPickerError(err instanceof Error ? err.message : "Stock search failed");
+    } finally {
+      setStockSearching(false);
+    }
+  }
+
+  async function openStockPicker(role: "featured" | "inline") {
+    setStockPickerRole(role);
+    setStockPickerError(null);
+    if (stockPhotos.length === 0) {
+      await handleStockSearch(defaultStockQuery);
+    }
+  }
 
   async function handleSave() {
     if (!onSave) return;
@@ -1218,9 +1318,12 @@ export function ContentPieceView({
             supportsStockImages={supportsStockImages}
             stockImagesConfigured={stockImagesConfigured}
             regenerating={regeneratingImages}
-            attachingUrl={attachingFeaturedImageUrl}
+            attachingUrl={attachingFeaturedImageUrl || attachingStockPhoto}
             onRegenerateImages={onRegenerateImages}
             onAttachFeaturedImageUrl={onAttachFeaturedImageUrl}
+            onBrowseStockImages={
+              canBrowseStock ? () => void openStockPicker("featured") : undefined
+            }
           />
           <div className="paper-card overflow-hidden rounded-xl">
             <ContentPieceToolbar
@@ -1252,6 +1355,11 @@ export function ContentPieceView({
               onMarkReady={showMarkReady ? onMarkReady : undefined}
               onGenerate={showGenerate ? onGenerate : undefined}
               onDelete={showDelete ? onDelete : undefined}
+              onInsertInlineImage={
+                canBrowseStock && Boolean(body)
+                  ? () => void openStockPicker("inline")
+                  : undefined
+              }
             />
             {hasHumanizeSnapshot && !editor.editing ? (
               <HumanizeSnapshotBar
@@ -1278,6 +1386,7 @@ export function ContentPieceView({
               bodyDraft={editor.bodyDraft}
               displayBody={displayBody}
               body={body}
+              formatType={piece.formatType}
               onBodyChange={(value) => dispatch({ type: "set_body", value })}
               previewOverrideBody={
                 snapshotView === "before" && hasHumanizeSnapshot
@@ -1317,6 +1426,43 @@ export function ContentPieceView({
           destinationHealthOk={destinationHealthOk}
         />
       </div>
+
+      {stockPickerRole && canBrowseStock ? (
+        <StockImagePickerDialog
+          open
+          role={stockPickerRole}
+          initialQuery={stockSearchQuery || defaultStockQuery}
+          sectionHeadings={sectionHeadings}
+          searching={stockSearching}
+          attaching={attachingStockPhoto}
+          photos={stockPhotos}
+          error={stockPickerError}
+          onClose={() => {
+            if (attachingStockPhoto) return;
+            setStockPickerRole(null);
+            setStockPickerError(null);
+          }}
+          onSearch={handleStockSearch}
+          onSelect={async (photo, sectionHeading) => {
+            if (!onAttachStockPhoto || !stockPickerRole) return;
+            setStockPickerError(null);
+            try {
+              const updated = await onAttachStockPhoto({
+                role: stockPickerRole,
+                photo,
+                sectionHeading,
+                searchQuery: stockSearchQuery || defaultStockQuery,
+              });
+              if (updated) {
+                dispatch({ type: "apply_remote", piece: updated });
+              }
+              setStockPickerRole(null);
+            } catch (err) {
+              setStockPickerError(err instanceof Error ? err.message : "Could not attach image");
+            }
+          }}
+        />
+      ) : null}
     </div>
   );
 }

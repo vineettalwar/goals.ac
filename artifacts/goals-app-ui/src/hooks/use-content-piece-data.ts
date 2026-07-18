@@ -490,6 +490,74 @@ export function useContentPieceData(pieceId: string | undefined) {
     [pieceId, piece, setCachedPiece],
   );
 
+  const [attachingStockPhoto, setAttachingStockPhoto] = useState(false);
+
+  const searchStockImages = useCallback(
+    async (query: string) => {
+      if (!pieceId) return [];
+      const data = await apiFetch<{
+        photos: Array<{
+          provider: "unsplash" | "pexels";
+          id: string;
+          url: string;
+          previewUrl: string;
+          width: number;
+          height: number;
+          photographer: string;
+          photographerUrl: string;
+          description?: string;
+          rankScore: number;
+        }>;
+      }>(`/api/content-pieces/${pieceId}/images/search?q=${encodeURIComponent(query)}`);
+      return data.photos ?? [];
+    },
+    [pieceId],
+  );
+
+  const attachStockPhoto = useCallback(
+    async (payload: {
+      role: "featured" | "inline";
+      photo: {
+        provider: "unsplash" | "pexels";
+        id: string;
+        url: string;
+        photographer: string;
+        photographerUrl: string;
+        description?: string;
+        rankScore: number;
+      };
+      sectionHeading?: string;
+      searchQuery?: string;
+    }) => {
+      if (!pieceId || !piece) return;
+      setAttachingStockPhoto(true);
+      try {
+        const response = await apiFetch<{ piece: ContentPiece }>(
+          `/api/content-pieces/${pieceId}/images/attach`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              role: payload.role,
+              searchQuery: payload.searchQuery,
+              sectionHeading: payload.sectionHeading,
+              photo: payload.photo,
+            }),
+          },
+        );
+        const mapped = mapPiece(response.piece);
+        setCachedPiece(mapped);
+        return mapped;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not attach stock image");
+        throw err;
+      } finally {
+        setAttachingStockPhoto(false);
+      }
+    },
+    [pieceId, piece, setCachedPiece],
+  );
+
   const humanize = useCallback(async () => {
     if (!pieceId || !piece) return;
     setHumanizing(true);
@@ -648,6 +716,9 @@ export function useContentPieceData(pieceId: string | undefined) {
     regenerateImages,
     attachingFeaturedImageUrl,
     attachFeaturedImageUrl,
+    attachingStockPhoto,
+    searchStockImages,
+    attachStockPhoto,
     stockImagesConfigured: isStockImagesConfigured(stockQuery.data),
     publishing,
     publishingState,

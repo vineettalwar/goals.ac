@@ -55,7 +55,9 @@ function stripBlockquotePrefix(line: string): string {
 }
 
 export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
-  const lines = children.replace(/\r\n/g, "\n").split("\n");
+  // Strip HTML comment markers (infographic fences) before parse — never show raw `<!-- … -->`.
+  const source = children.replace(/<!--[\s\S]*?-->/g, "").replace(/\r\n/g, "\n");
+  const lines = source.split("\n");
   const blocks: ReactNode[] = [];
   let listItems: ReactNode[] = [];
   let key = 0;
@@ -77,8 +79,8 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
       continue;
     }
 
-    // Skip HTML comment markers used by infographic injection
-    if (trimmed.startsWith("<!--") && trimmed.endsWith("-->")) {
+    // Skip leftover HTML comment fragments (also stripped up-front)
+    if (trimmed.startsWith("<!--") || trimmed.endsWith("-->")) {
       continue;
     }
 
@@ -182,13 +184,14 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
       continue;
     }
 
-    const imageMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
+    // Allow data: URIs (SVG may encode chars); take everything between first ( and last ).
+    const imageMatch = trimmed.match(/^!\[([^\]]*)\]\((.+)\)$/);
     if (imageMatch) {
       flushList();
       const alt = imageMatch[1] ?? "";
       const src = imageMatch[2] ?? "";
       const safeSrc =
-        src.startsWith("data:image/svg+xml") ||
+        src.startsWith("data:image/") ||
         src.startsWith("https://") ||
         src.startsWith("http://")
           ? src
@@ -199,7 +202,7 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
             key={key++}
             src={safeSrc}
             alt={alt}
-            className="my-4 w-full max-w-lg rounded-lg border border-border/60 bg-[#FAFAF8]"
+            className="my-4 w-full max-w-full rounded-lg border border-border/60 bg-[#FAFAF8]"
           />,
         );
         continue;
@@ -208,7 +211,7 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
 
     flushList();
     blocks.push(
-      <p key={key++} className="my-3 leading-relaxed text-foreground/90">
+      <p key={key++} className="my-3 break-words leading-relaxed text-foreground/90">
         {renderInline(trimmed)}
       </p>,
     );
@@ -217,7 +220,7 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
   flushList();
 
   return (
-    <article className={cn("max-w-none text-sm", className)}>
+    <article className={cn("max-w-none overflow-x-hidden text-sm", className)}>
       {blocks.length > 0 ? blocks : <p className="text-muted-foreground">Empty preview.</p>}
     </article>
   );

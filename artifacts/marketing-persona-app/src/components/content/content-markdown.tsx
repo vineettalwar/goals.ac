@@ -23,12 +23,13 @@ type ContentMarkdownProps = {
 };
 
 export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
+  const source = children.replace(/<!--[\s\S]*?-->/g, "").trim();
   return (
     <article
       className={cn(
-        "prose prose-neutral max-w-none",
+        "prose prose-neutral max-w-none overflow-x-hidden",
         "prose-headings:font-semibold prose-headings:tracking-tight prose-headings:text-foreground",
-        "prose-p:text-foreground/90 prose-p:leading-relaxed",
+        "prose-p:break-words prose-p:text-foreground/90 prose-p:leading-relaxed",
         "prose-li:text-foreground/90 prose-strong:text-foreground",
         "prose-a:text-primary prose-a:font-medium prose-a:no-underline hover:prose-a:underline",
         "prose-h2:mt-10 prose-h2:mb-4 prose-h3:mt-6 prose-h3:mb-3",
@@ -39,7 +40,7 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
         className,
       )}
     >
-      <ReactMarkdown>{children}</ReactMarkdown>
+      <ReactMarkdown>{source}</ReactMarkdown>
     </article>
   );
 }
