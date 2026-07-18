@@ -145,10 +145,15 @@ function editorReducer(state: EditorState, action: EditorAction): EditorState {
     case "apply_remote":
       return {
         ...state,
-        titleDraft: action.piece.title,
+        // Stock attach updates body/metadata; keep other drafts while editing.
+        titleDraft: state.editing ? state.titleDraft : action.piece.title,
         bodyDraft: action.piece.bodyMarkdown ?? "",
-        statusDraft: editableStatusDraft(action.piece.status),
-        plannedDateDraft: action.piece.plannedDate ?? "",
+        statusDraft: state.editing
+          ? state.statusDraft
+          : editableStatusDraft(action.piece.status),
+        plannedDateDraft: state.editing
+          ? state.plannedDateDraft
+          : (action.piece.plannedDate ?? ""),
         draftKey: pieceDraftKey(action.piece),
       };
     case "start_edit":
@@ -1132,6 +1137,8 @@ export function ContentPieceView({
     photo: StockPickerPhoto;
     sectionHeading?: string;
     searchQuery?: string;
+    /** Current editor body when editing — attach into draft, not stale saved body. */
+    bodyMarkdown?: string;
   }) => void | Promise<ContentPieceDetail | void>;
   attachingStockPhoto?: boolean;
   staleGenerating?: boolean;
@@ -1452,6 +1459,7 @@ export function ContentPieceView({
                 photo,
                 sectionHeading,
                 searchQuery: stockSearchQuery || defaultStockQuery,
+                bodyMarkdown: editor.editing ? editor.bodyDraft : undefined,
               });
               if (updated) {
                 dispatch({ type: "apply_remote", piece: updated });

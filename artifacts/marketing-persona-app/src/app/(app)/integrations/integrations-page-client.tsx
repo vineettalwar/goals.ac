@@ -7,12 +7,13 @@ import {
   OrgAiProvidersPanel,
   OrgIntegrationsView,
   OrgToolsPanel,
-  isSiteAdmin,
-  isSuperAdmin,
+  type OrgIntegrationsTab,
+} from "@workspace/app-shell/integrations";
+import { isSiteAdmin, isSuperAdmin } from "@workspace/app-shell/nav-roles";
+import {
   orgIntegrationsPath,
   projectIntegrationsPath,
-  type OrgIntegrationsTab,
-} from "@workspace/app-shell";
+} from "@workspace/app-shell/project-detail";
 import { useActiveProject } from "@/context/use-active-project";
 import { PublicApiKeysPanel } from "@/components/settings/public-api-keys-panel";
 import { useSettingsData } from "@/hooks/use-settings-data";

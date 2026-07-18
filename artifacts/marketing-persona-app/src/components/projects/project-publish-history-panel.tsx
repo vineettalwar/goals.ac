@@ -4,9 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   PublishHistoryPanel,
-  contentPiecePath,
   type PublishHistoryRecord,
-} from "@workspace/app-shell";
+} from "@workspace/app-shell/integrations";
+import { contentPiecePath } from "@workspace/app-shell/project-paths";
 
 export function ProjectPublishHistoryPanel({ projectId }: { projectId: string }) {
   const [records, setRecords] = useState<PublishHistoryRecord[]>([]);

@@ -5,10 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  ProjectsView,
-  type ProjectListItem,
-} from "@workspace/app-shell";
+import { ProjectsView, type ProjectListItem } from "@workspace/app-shell/projects";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

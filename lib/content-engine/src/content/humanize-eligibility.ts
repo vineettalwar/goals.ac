@@ -1,5 +1,5 @@
 import type { ContentFormatType } from "@workspace/db";
-import { isSeoLongformFormat } from "./content-piece-seo";
+import { isSeoLongformFormat } from "./seo-longform-formats";
 
 /** Social studio formats eligible for the humanize pass (alongside SEO longform). */
 export const HUMANIZABLE_SOCIAL_FORMATS = [

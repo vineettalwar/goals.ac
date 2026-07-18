@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { lazy, Suspense, useState, type ReactNode } from "react";
 import {
   BarChart3,
   Calendar,
@@ -8,12 +8,7 @@ import {
   Settings2,
 } from "lucide-react";
 import { SectionTabs } from "../section-panels/shared";
-import { SocialAnalyticsPanel } from "./social-analytics-panel";
-import { SocialCalendarPanel } from "./social-calendar-panel";
-import { SocialComposerPanel } from "./social-composer-panel";
-import { SocialQueuePanel, type SocialHubLinkProps } from "./social-queue-panel";
-import { SocialSettingsPanel } from "./social-settings-panel";
-import { SocialVoicePanel } from "./social-voice-panel";
+import type { SocialHubLinkProps } from "./social-queue-panel";
 import type {
   HistorySyncPlatformStatus,
   PlatformVoiceProfile,
@@ -27,6 +22,29 @@ import type {
 } from "./types";
 
 export type { SocialHubLinkProps };
+
+const SocialQueuePanel = lazy(() =>
+  import("./social-queue-panel").then((m) => ({ default: m.SocialQueuePanel })),
+);
+const SocialCalendarPanel = lazy(() =>
+  import("./social-calendar-panel").then((m) => ({ default: m.SocialCalendarPanel })),
+);
+const SocialComposerPanel = lazy(() =>
+  import("./social-composer-panel").then((m) => ({ default: m.SocialComposerPanel })),
+);
+const SocialAnalyticsPanel = lazy(() =>
+  import("./social-analytics-panel").then((m) => ({ default: m.SocialAnalyticsPanel })),
+);
+const SocialVoicePanel = lazy(() =>
+  import("./social-voice-panel").then((m) => ({ default: m.SocialVoicePanel })),
+);
+const SocialSettingsPanel = lazy(() =>
+  import("./social-settings-panel").then((m) => ({ default: m.SocialSettingsPanel })),
+);
+
+function TabFallback() {
+  return <div className="h-40 animate-pulse rounded-xl bg-secondary/60" aria-hidden />;
+}
 
 const TABS = [
   { id: "queue", label: "Queue", icon: <Clock className="h-3.5 w-3.5" /> },
@@ -166,108 +184,110 @@ export function SocialHubView({
           : null}
       </div>
 
-      {tab === "queue" ? (
-        <SocialQueuePanel
-          platformFilter={platformFilter}
-          onPlatformFilterChange={onPlatformFilterChange}
-          loadingQueue={queueLoading}
-          queue={queue}
-          queueError={queueError}
-          pieceHref={pieceHref}
-          renderLink={renderLink}
-          onRefresh={onRefreshQueue}
-          onSubmitReview={onSubmitReview}
-          onApprove={onApprove}
-          onReject={onReject}
-          onSchedule={onSchedule}
-          requireApproval={Object.values(settings?.platforms ?? {}).some(
-            (platform) => platform?.requireApproval === true,
-          )}
-          attachingImage={attachingImage}
-          onUseStockImage={onUseStockImage}
-        />
-      ) : null}
+      <Suspense fallback={<TabFallback />}>
+        {tab === "queue" ? (
+          <SocialQueuePanel
+            platformFilter={platformFilter}
+            onPlatformFilterChange={onPlatformFilterChange}
+            loadingQueue={queueLoading}
+            queue={queue}
+            queueError={queueError}
+            pieceHref={pieceHref}
+            renderLink={renderLink}
+            onRefresh={onRefreshQueue}
+            onSubmitReview={onSubmitReview}
+            onApprove={onApprove}
+            onReject={onReject}
+            onSchedule={onSchedule}
+            requireApproval={Object.values(settings?.platforms ?? {}).some(
+              (platform) => platform?.requireApproval === true,
+            )}
+            attachingImage={attachingImage}
+            onUseStockImage={onUseStockImage}
+          />
+        ) : null}
 
-      {tab === "calendar" ? (
-        <SocialCalendarPanel
-          items={(queue ?? []).map((item) => ({
-            id: item.id,
-            title: item.title,
-            platform: item.platform,
-            scheduledAt: item.scheduledAt,
-            bodyMarkdown: item.bodyMarkdown,
-            formatType: item.formatType,
-          }))}
-          loading={queueLoading}
-          reschedulingId={reschedulingId}
-          pieceHref={pieceHref}
-          renderLink={renderLink}
-          onReschedule={onReschedule}
-        />
-      ) : null}
+        {tab === "calendar" ? (
+          <SocialCalendarPanel
+            items={(queue ?? []).map((item) => ({
+              id: item.id,
+              title: item.title,
+              platform: item.platform,
+              scheduledAt: item.scheduledAt,
+              bodyMarkdown: item.bodyMarkdown,
+              formatType: item.formatType,
+            }))}
+            loading={queueLoading}
+            reschedulingId={reschedulingId}
+            pieceHref={pieceHref}
+            renderLink={renderLink}
+            onReschedule={onReschedule}
+          />
+        ) : null}
 
-      {tab === "compose" ? (
-        <SocialComposerPanel
-          parents={composerParents}
-          parentsLoading={composerParentsLoading}
-          connected={composerConnected}
-          composing={composing}
-          composed={composed}
-          pieceHref={pieceHref}
-          integrationsHref={integrationsHref}
-          renderLink={renderLink}
-          onCompose={onCompose}
-          attachingImage={attachingImage}
-          onAttachFeaturedImageUrl={onAttachFeaturedImageUrl}
-          onUseStockImage={onUseStockImage}
-          onHumanize={onHumanize}
-          humanizingPieceId={humanizingPieceId}
-        />
-      ) : null}
+        {tab === "compose" ? (
+          <SocialComposerPanel
+            parents={composerParents}
+            parentsLoading={composerParentsLoading}
+            connected={composerConnected}
+            composing={composing}
+            composed={composed}
+            pieceHref={pieceHref}
+            integrationsHref={integrationsHref}
+            renderLink={renderLink}
+            onCompose={onCompose}
+            attachingImage={attachingImage}
+            onAttachFeaturedImageUrl={onAttachFeaturedImageUrl}
+            onUseStockImage={onUseStockImage}
+            onHumanize={onHumanize}
+            humanizingPieceId={humanizingPieceId}
+          />
+        ) : null}
 
-      {tab === "analytics" ? (
-        <SocialAnalyticsPanel
-          metrics={metrics}
-          metricsLoading={metricsLoading}
-          metricsPlatformFilter={metricsPlatformFilter}
-          onMetricsPlatformFilterChange={onMetricsPlatformFilterChange}
-          syncing={metricsSyncing}
-          lastSyncedAt={metricsLastSyncedAt}
-          pieceHref={pieceHref}
-          integrationsHref={integrationsHref}
-          settingsHref={integrationsHref}
-          renderLink={renderLink}
-          onSync={onSyncMetrics}
-          onSyncMetrics={onSyncMetrics}
-        />
-      ) : null}
+        {tab === "analytics" ? (
+          <SocialAnalyticsPanel
+            metrics={metrics}
+            metricsLoading={metricsLoading}
+            metricsPlatformFilter={metricsPlatformFilter}
+            onMetricsPlatformFilterChange={onMetricsPlatformFilterChange}
+            syncing={metricsSyncing}
+            lastSyncedAt={metricsLastSyncedAt}
+            pieceHref={pieceHref}
+            integrationsHref={integrationsHref}
+            settingsHref={integrationsHref}
+            renderLink={renderLink}
+            onSync={onSyncMetrics}
+            onSyncMetrics={onSyncMetrics}
+          />
+        ) : null}
 
-      {tab === "voice" ? (
-        <SocialVoicePanel
-          voicePlatform={voicePlatform}
-          voiceChannel={voiceChannel}
-          importText={importText}
-          voiceLoading={voiceLoading}
-          historySync={historySync}
-          syncingVoice={syncingVoice}
-          channelData={channelData}
-          onVoicePlatformChange={onVoicePlatformChange}
-          onVoiceChannelChange={onVoiceChannelChange}
-          onImportTextChange={onImportTextChange}
-          onSyncVoiceFromOAuth={onSyncVoiceFromOAuth}
-          onImportVoice={onImportVoice}
-          onAnalyzeVoice={onAnalyzeVoice}
-        />
-      ) : null}
+        {tab === "voice" ? (
+          <SocialVoicePanel
+            voicePlatform={voicePlatform}
+            voiceChannel={voiceChannel}
+            importText={importText}
+            voiceLoading={voiceLoading}
+            historySync={historySync}
+            syncingVoice={syncingVoice}
+            channelData={channelData}
+            onVoicePlatformChange={onVoicePlatformChange}
+            onVoiceChannelChange={onVoiceChannelChange}
+            onImportTextChange={onImportTextChange}
+            onSyncVoiceFromOAuth={onSyncVoiceFromOAuth}
+            onImportVoice={onImportVoice}
+            onAnalyzeVoice={onAnalyzeVoice}
+          />
+        ) : null}
 
-      {tab === "settings" ? (
-        <SocialSettingsPanel
-          settings={settings}
-          settingsLoading={settingsLoading}
-          onSettingsChange={onSettingsChange}
-          onSaveSettings={onSaveSettings}
-        />
-      ) : null}
+        {tab === "settings" ? (
+          <SocialSettingsPanel
+            settings={settings}
+            settingsLoading={settingsLoading}
+            onSettingsChange={onSettingsChange}
+            onSaveSettings={onSaveSettings}
+          />
+        ) : null}
+      </Suspense>
     </div>
   );
 }

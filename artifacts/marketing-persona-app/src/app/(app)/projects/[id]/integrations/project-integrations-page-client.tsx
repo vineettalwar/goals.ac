@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { ProjectIntegrationsTab } from "@workspace/app-shell/integrations";
 import {
   orgIntegrationsPath,
   projectIntegrationsPath,
-  type ProjectIntegrationsTab,
-} from "@workspace/app-shell";
+} from "@workspace/app-shell/project-detail";
 import { useActiveProject } from "@/context/use-active-project";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import { ProjectPublishingTab } from "@/components/projects/project-publishing-tab";

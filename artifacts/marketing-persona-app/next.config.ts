@@ -50,6 +50,8 @@ const nextConfig: NextConfig = {
       "recharts",
       "framer-motion",
       "@radix-ui/react-icons",
+      "@workspace/app-shell",
+      "@workspace/content-engine",
     ],
   },
   turbopack: {
@@ -64,6 +66,7 @@ const nextConfig: NextConfig = {
     },
   },
   transpilePackages: [
+    "@workspace/app-shell",
     "@workspace/cf-edge",
     "@workspace/db",
     "@workspace/billing",

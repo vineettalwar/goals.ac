@@ -147,6 +147,7 @@ const attachStockBody = z.object({
   sectionHeading: z.string().trim().max(200).optional(),
   alt: z.string().trim().max(200).optional(),
   title: z.string().trim().max(200).optional(),
+  bodyMarkdown: z.string().max(500_000).optional(),
   photo: z.object({
     provider: z.enum(["unsplash", "pexels"]),
     id: z.string().trim().min(1).max(120),
@@ -254,7 +255,7 @@ async function handleImagesAttach(
       {
         title: piece.title,
         target_keyword: piece.targetKeyword ?? piece.title,
-        body_markdown: piece.bodyMarkdown ?? "",
+        body_markdown: parsed.data.bodyMarkdown ?? piece.bodyMarkdown ?? "",
         formatType: piece.formatType,
         pieceMetadata: piece.pieceMetadata ?? undefined,
       },

@@ -161,7 +161,9 @@ export function useOrgByokControllers(reload: (showLoading?: boolean) => Promise
   }
 
   function bedrockPayloadFromForm(form: BedrockCredentialsForm) {
-    return { apiKey: form.apiKey.trim(), model: form.model.trim() };
+    const apiKey = form.apiKey.trim();
+    const model = form.model.trim();
+    return apiKey ? { apiKey, model } : { model };
   }
 
   async function testBedrockCredentials(form: BedrockCredentialsForm) {

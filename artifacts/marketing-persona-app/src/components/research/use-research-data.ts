@@ -11,7 +11,7 @@ import {
   type CompetitorAnalysisRow,
   type CompetitorFormState,
   type RedditThread,
-} from "@workspace/app-shell";
+} from "@workspace/app-shell/research";
 import { useActiveProject } from "@/context/use-active-project";
 import { useBrandProfile } from "@/lib/queries";
 

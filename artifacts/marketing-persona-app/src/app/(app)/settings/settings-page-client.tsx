@@ -4,12 +4,8 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import {
-  SettingsView,
-  isSiteAdmin,
-  isSuperAdmin,
-  type SettingsTab,
-} from "@workspace/app-shell";
+import { isSiteAdmin, isSuperAdmin } from "@workspace/app-shell/nav-roles";
+import { SettingsView, type SettingsTab } from "@workspace/app-shell/settings";
 import { MfaSettingsPanel } from "@/components/mfa/mfa-settings-panel";
 import { OrgSecurityPanel } from "@/components/org/org-security-panel";
 import { SettingsBillingPanel } from "@/components/settings/settings-billing-panel";

@@ -10,7 +10,7 @@ import {
   type DashboardCommandCenter,
   type DashboardPiece,
   type DashboardProject,
-} from "@workspace/app-shell";
+} from "@workspace/app-shell/dashboard";
 
 export type DashboardPageClientProps = {
   greeting: string;

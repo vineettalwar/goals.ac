@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { toast } from "sonner";
-import { ResearchSignalsView } from "@workspace/app-shell";
+import { ResearchSignalsView } from "@workspace/app-shell/research";
 import { useResearchSignalsController } from "./use-research-data";
 
 export function ResearchSignalsClient() {

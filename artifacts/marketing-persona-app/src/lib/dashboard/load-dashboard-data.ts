@@ -7,7 +7,7 @@ import type {
   DashboardCommandCenter,
   DashboardPiece,
   DashboardProject,
-} from "@workspace/app-shell";
+} from "@workspace/app-shell/dashboard";
 import { parseAutopilotSettings } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import { loadCommandCenterSummary } from "@workspace/content-engine/analytics/command-center-service";
 import { getUsageSummaryForUser } from "@/lib/billing/usage";

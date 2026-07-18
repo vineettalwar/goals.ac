@@ -1,6 +1,7 @@
+import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
 import { getSession } from "@/auth";
-import { ContentPieceClient } from "@/components/content/content-piece-client";
+import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import {
   loadCmsConnectionsForProject,
   loadContentPieceForUser,
@@ -8,6 +9,11 @@ import {
 } from "@/lib/server/loaders";
 import { loadStockCredentialContextForProject } from "@workspace/content-engine/support/integrations/stock-credentials";
 import { isStockSearchAvailable } from "@workspace/stock-images";
+
+const ContentPieceClient = dynamic(
+  () => import("@/components/content/content-piece-client").then((m) => m.ContentPieceClient),
+  { loading: () => <PageSkeleton /> },
+);
 
 export default async function ProjectContentPiecePage({
   params,

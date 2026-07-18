@@ -955,15 +955,59 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                   <div className="space-y-3">
                     <div className="space-y-1.5">
                       <Label htmlFor="bedrock-org-model">Organization model</Label>
-                      <div className="flex flex-wrap gap-2">
-                        <Input
-                          id="bedrock-org-model"
-                          value={bedrockModelDraft}
-                          onChange={(e) => setBedrockModelDraft(e.target.value)}
-                          placeholder="amazon.nova-lite-v1:0"
-                          className="font-mono text-sm max-w-md"
-                          autoComplete="off"
-                        />
+                      <div className="flex flex-wrap items-start gap-2">
+                        <div className="min-w-0 max-w-md flex-1 space-y-1.5">
+                          <Select
+                            value={
+                              !bedrockModelDraft
+                                ? undefined
+                                : bedrockOrgKnownIds.has(bedrockModelDraft)
+                                  ? bedrockModelDraft
+                                  : BEDROCK_MODEL_CUSTOM
+                            }
+                            onValueChange={(value) => {
+                              if (value === BEDROCK_MODEL_CUSTOM) {
+                                setBedrockModelDraft(
+                                  bedrockOrgKnownIds.has(bedrockModelDraft)
+                                    ? ""
+                                    : bedrockModelDraft,
+                                );
+                                return;
+                              }
+                              setBedrockModelDraft(value);
+                            }}
+                            disabled={bedrockOrgModelsLoading || bedrockModelSaving}
+                          >
+                            <SelectTrigger id="bedrock-org-model">
+                              <SelectValue
+                                placeholder={
+                                  bedrockOrgModelsLoading ? "Loading models…" : "Choose a Bedrock model"
+                                }
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {bedrockOrgModels.map((choice) => (
+                                <SelectItem key={choice.id} value={choice.id}>
+                                  {choice.label}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value={BEDROCK_MODEL_CUSTOM}>Custom model id…</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {!bedrockModelDraft || !bedrockOrgKnownIds.has(bedrockModelDraft) ? (
+                            <Input
+                              id="bedrock-org-model-custom"
+                              value={bedrockModelDraft}
+                              onChange={(e) => setBedrockModelDraft(e.target.value)}
+                              placeholder="e.g. amazon.nova-lite-v1:0"
+                              className="font-mono text-sm"
+                              autoComplete="off"
+                            />
+                          ) : null}
+                          {bedrockOrgModelsError ? (
+                            <p className="text-xs text-muted-foreground">{bedrockOrgModelsError}</p>
+                          ) : null}
+                        </div>
                         <Button
                           variant="outline"
                           size="sm"
@@ -982,8 +1026,7 @@ export function SettingsClient({ initialData }: SettingsClientProps) {
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        Change the model without re-entering the API key. Open Replace key to pick
-                        from models enabled on this AWS account.
+                        Models come from this AWS account. Change without re-entering the API key.
                       </p>
                     </div>
                     <div className="flex gap-2">

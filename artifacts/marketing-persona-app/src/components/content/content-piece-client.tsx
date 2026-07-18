@@ -523,7 +523,7 @@ export function ContentPieceClient({
         }
         onAttachStockPhoto={
           stockImagesConfigured
-            ? async ({ role, photo, sectionHeading, searchQuery }) => {
+            ? async ({ role, photo, sectionHeading, searchQuery, bodyMarkdown }) => {
                 setAttachingStockPhoto(true);
                 try {
                   const res = await fetch(`/api/content-pieces/${pieceId}/images/attach`, {
@@ -533,6 +533,7 @@ export function ContentPieceClient({
                       role,
                       searchQuery,
                       sectionHeading,
+                      bodyMarkdown,
                       photo: {
                         provider: photo.provider,
                         id: photo.id,

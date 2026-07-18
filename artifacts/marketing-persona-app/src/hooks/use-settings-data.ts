@@ -6,7 +6,7 @@ import type {
   SettingsBillingSummary,
   SettingsIntegrationsSummary,
   UsageSummary,
-} from "@workspace/app-shell";
+} from "@workspace/app-shell/settings";
 import type { SettingsInitialData } from "@/lib/server/loaders";
 
 type MeResponse = {

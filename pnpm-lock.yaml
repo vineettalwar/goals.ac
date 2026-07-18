@@ -1176,6 +1176,9 @@ importers:
       '@workspace/ai-providers':
         specifier: workspace:*
         version: link:../ai-providers
+      '@workspace/connectors':
+        specifier: workspace:*
+        version: link:../connectors
       '@workspace/content-engine':
         specifier: workspace:*
         version: link:../content-engine

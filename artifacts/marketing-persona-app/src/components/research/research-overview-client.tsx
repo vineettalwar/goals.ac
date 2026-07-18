@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ResearchOverviewView } from "@workspace/app-shell";
+import { ResearchOverviewView } from "@workspace/app-shell/research";
 import { useActiveProject } from "@/context/use-active-project";
 import { useCompetitorAnalyses, useResearchActionPaths } from "./use-research-data";
 

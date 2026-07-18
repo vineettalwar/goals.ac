@@ -528,6 +528,7 @@ export function useContentPieceData(pieceId: string | undefined) {
       };
       sectionHeading?: string;
       searchQuery?: string;
+      bodyMarkdown?: string;
     }) => {
       if (!pieceId || !piece) return;
       setAttachingStockPhoto(true);
@@ -541,6 +542,7 @@ export function useContentPieceData(pieceId: string | undefined) {
               role: payload.role,
               searchQuery: payload.searchQuery,
               sectionHeading: payload.sectionHeading,
+              bodyMarkdown: payload.bodyMarkdown,
               photo: payload.photo,
             }),
           },

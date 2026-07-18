@@ -1,24 +1,10 @@
-import type { ContentFormatType } from "@workspace/db";
 import {
   AI_WRITING_FROM_SCRATCH_PROMPT,
   AI_WRITING_RULES_PROMPT,
   sanitizeAiProse,
 } from "./ai-writing-rules";
 
-export const SEO_LONGFORM_FORMATS: ContentFormatType[] = [
-  "blog_post",
-  "guide",
-  "tutorial",
-  "pillar_page",
-  "whitepaper",
-  "faq_article",
-  "news_article",
-  "location_page",
-];
-
-export function isSeoLongformFormat(format: ContentFormatType): boolean {
-  return SEO_LONGFORM_FORMATS.includes(format);
-}
+export { SEO_LONGFORM_FORMATS, isSeoLongformFormat } from "./seo-longform-formats";
 
 export type ContentPieceFaqItem = {
   question: string;

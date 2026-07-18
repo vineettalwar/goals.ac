@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { AiProviderChoice, BedrockCredentialsForm } from "@workspace/app-shell";
+import type { AiProviderChoice, BedrockCredentialsForm } from "@workspace/app-shell/settings";
 
 function credentialTestResult(data: { ok?: boolean; error?: string }) {
   return { ok: Boolean(data.ok), error: data.error };
@@ -163,7 +163,10 @@ export function useOrgByokControllers(reload: (showLoading?: boolean) => Promise
   }
 
   function bedrockPayloadFromForm(form: BedrockCredentialsForm) {
-    return { apiKey: form.apiKey.trim(), model: form.model.trim() };
+    const apiKey = form.apiKey.trim();
+    const model = form.model.trim();
+    // Omit empty apiKey so PATCH takes the model-only path when replacing model only.
+    return apiKey ? { apiKey, model } : { model };
   }
 
   async function testBedrockCredentials(form: BedrockCredentialsForm) {

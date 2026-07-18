@@ -4,6 +4,7 @@ import {
   getPlatformSettings,
   clearStoredPlatformBedrockCredentials,
   isBedrockManagedByEnv,
+  loadPlatformBedrockCredentials,
   savePlatformBedrockCredentials,
   setPlatformBedrockOrgGrants,
 } from "@workspace/platform-admin";
@@ -1161,6 +1162,85 @@ export async function handleAdminWrite(
         "Set-Cookie": cookie,
       },
     });
+  }
+
+  // ── POST /api/admin/platform-integrations/bedrock-models ───────────────────
+  if (path === "/api/admin/platform-integrations/bedrock-models" && method === "POST") {
+    const body = z
+      .object({ apiKey: z.string().min(16).optional() })
+      .safeParse(await request.json().catch(() => ({})));
+    if (!body.success) {
+      return badRequest(request, body.error.errors[0]?.message ?? "Invalid request");
+    }
+
+    const stored = await loadPlatformBedrockCredentials();
+    const apiKey = body.data.apiKey?.trim() || stored?.apiKey;
+    const credentials = apiKey
+      ? { apiKey, region: stored?.region, model: stored?.model }
+      : stored;
+
+    if (!credentials) {
+      return badRequest(
+        request,
+        "Paste a Bedrock API key (or save platform credentials) to load models.",
+      );
+    }
+
+    try {
+      const { listBedrockChatModels } = await import("@workspace/ai-providers/bedrock");
+      const models = await listBedrockChatModels(credentials);
+      return withCors(request, Response.json({ models }));
+    } catch (err) {
+      const { formatBedrockAuthError } = await import("@workspace/ai-providers/bedrock");
+      return withCors(
+        request,
+        Response.json({ error: formatBedrockAuthError(err) }, { status: 502 }),
+      );
+    }
+  }
+
+  // ── POST /api/admin/platform-integrations/bedrock-test ─────────────────────
+  if (path === "/api/admin/platform-integrations/bedrock-test" && method === "POST") {
+    const parsed = z
+      .object({
+        apiKey: z.string().min(16).optional(),
+        accessKeyId: z.string().min(16).optional(),
+        secretAccessKey: z.string().min(16).optional(),
+        sessionToken: z.string().trim().optional().nullable(),
+        region: z.string().trim().min(1).optional(),
+        model: z.string().trim().min(1).optional(),
+      })
+      .safeParse(await request.json().catch(() => ({})));
+    if (!parsed.success) return badRequest(request, "Invalid request");
+
+    const stored = await loadPlatformBedrockCredentials();
+    const apiKey = parsed.data.apiKey?.trim() || stored?.apiKey;
+    const accessKeyId = parsed.data.accessKeyId?.trim() || stored?.accessKeyId;
+    const secretAccessKey = parsed.data.secretAccessKey?.trim() || stored?.secretAccessKey;
+    const sessionToken =
+      parsed.data.sessionToken?.trim() || stored?.sessionToken || undefined;
+    const region = parsed.data.region?.trim() || stored?.region;
+    const model = parsed.data.model?.trim() || stored?.model;
+
+    if (!apiKey && !(accessKeyId && secretAccessKey)) {
+      return badRequest(request, "Paste a Bedrock API key (or save one first) to test");
+    }
+
+    try {
+      const { testBedrockCredentials } = await import("@workspace/ai-providers/bedrock");
+      await testBedrockCredentials(
+        apiKey
+          ? { apiKey, region, model }
+          : { accessKeyId, secretAccessKey, sessionToken, region, model },
+      );
+      return withCors(request, Response.json({ ok: true }));
+    } catch (err) {
+      const { formatBedrockAuthError } = await import("@workspace/ai-providers/bedrock");
+      return withCors(
+        request,
+        Response.json({ ok: false, error: formatBedrockAuthError(err) }),
+      );
+    }
   }
 
   return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));

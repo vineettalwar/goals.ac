@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense } from "react";
-import { ResearchCompetitorsView } from "@workspace/app-shell";
+import { ResearchCompetitorsView } from "@workspace/app-shell/research";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import { useResearchCompetitorsController } from "./use-research-data";
 

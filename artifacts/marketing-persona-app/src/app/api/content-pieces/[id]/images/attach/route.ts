@@ -15,6 +15,8 @@ const AttachBody = z.object({
   sectionHeading: z.string().trim().max(200).optional(),
   alt: z.string().trim().max(200).optional(),
   title: z.string().trim().max(200).optional(),
+  /** Editor draft body — prefer over saved body when the user is mid-edit. */
+  bodyMarkdown: z.string().max(500_000).optional(),
   photo: z.object({
     provider: z.enum(["unsplash", "pexels"]),
     id: z.string().trim().min(1).max(120),
@@ -58,7 +60,7 @@ export async function POST(
       {
         title: piece!.title,
         target_keyword: piece!.targetKeyword ?? piece!.title,
-        body_markdown: piece!.bodyMarkdown ?? "",
+        body_markdown: parsed.data.bodyMarkdown ?? piece!.bodyMarkdown ?? "",
         formatType: piece!.formatType,
         pieceMetadata: piece!.pieceMetadata ?? undefined,
       },

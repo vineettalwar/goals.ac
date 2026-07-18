@@ -10,7 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 
-import { KeywordRankChart, SerpFeaturesPanel, parseSerpFeatures } from "@workspace/app-shell";
+import {
+  KeywordRankChart,
+  SerpFeaturesPanel,
+  parseSerpFeatures,
+} from "@workspace/app-shell/section-panels";
 
 const DIFFICULTY_COLORS = {
   low: "success" as const,

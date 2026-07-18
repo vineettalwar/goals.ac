@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import {
   formatHumanizeResultMessage,
   humanizeAuditFromResponse,
+} from "@workspace/app-shell/content-piece-actions";
+import {
   INSTAGRAM_IMAGE_REQUIRED_MESSAGE,
   SOCIAL_FORMAT_TYPES,
   resolveSocialPiecePublicImageUrl,
@@ -18,7 +20,7 @@ import {
   type SocialMetricsResponse,
   type SocialPlatformId,
   type SocialQueueItem,
-} from "@workspace/app-shell";
+} from "@workspace/app-shell/social";
 
 export function useSocialHubClient(projectId: string, initialTab: SocialHubTab = "queue") {
   const [tab, setTab] = useState<SocialHubTab>(initialTab);
