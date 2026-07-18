@@ -136,6 +136,10 @@ function isWritePath(path: string, method: string): boolean {
   ) {
     return true;
   }
+  // Stock search hits external APIs — keep on write worker (same as regenerate).
+  if (/^\/api\/content-pieces\/\d+\/images\/search$/.test(path) && method === "GET") {
+    return true;
+  }
   if (method === "GET" || method === "HEAD" || method === "OPTIONS") return false;
   if (path.startsWith("/api/admin") && method !== "GET" && method !== "HEAD") {
     return true;
@@ -158,7 +162,13 @@ function isWritePath(path: string, method: string): boolean {
   if (/^\/api\/website-projects\/\d+\/visibility-settings$/.test(path) && method === "PATCH") {
     return true;
   }
-  if (/^\/api\/website-projects\/\d+\/visibility\/check$/.test(path) && method === "POST") {
+  if (
+    /^\/api\/website-projects\/\d+\/visibility(?:\/check)?$/.test(path) &&
+    method === "POST"
+  ) {
+    return true;
+  }
+  if (path === "/api/auth/bedrock-credentials/models" && method === "POST") {
     return true;
   }
   if (path === "/api/tracked-keywords" && method === "POST") return true;
@@ -289,6 +299,7 @@ function isWritePath(path: string, method: string): boolean {
   if (/^\/api\/content-pieces\/\d+\/serp-score$/.test(path) && method === "GET") return true;
   if (/^\/api\/content-pieces\/\d+\/repurpose$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/images\/regenerate$/.test(path) && method === "POST") return true;
+  if (/^\/api\/content-pieces\/\d+\/images\/attach$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/humanize$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/approve$/.test(path) && method === "POST") return true;
   if (/^\/api\/content-pieces\/\d+\/reject$/.test(path) && method === "POST") return true;
