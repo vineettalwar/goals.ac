@@ -67,19 +67,29 @@ export async function handleVisibilityWrite(
     return withCors(request, Response.json(updated));
   }
 
-  const visibilityCheckMatch = path.match(/^\/api\/website-projects\/(\d+)\/visibility\/check$/);
-  if (visibilityCheckMatch && request.method === "POST") {
-    const projectId = Number.parseInt(visibilityCheckMatch[1]!, 10);
+  // Next uses POST /visibility; Vite/legacy uses POST /visibility/check.
+  const visibilityActionMatch = path.match(
+    /^\/api\/website-projects\/(\d+)\/visibility(?:\/check)?$/,
+  );
+  if (visibilityActionMatch && request.method === "POST") {
+    const projectId = Number.parseInt(visibilityActionMatch[1]!, 10);
     const project = await getAccessibleProject(projectId, userId);
     if (!project) {
       return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
     }
 
     const body = await request.json().catch(() => ({}));
-    const action = (body as { action?: string }).action ?? "check";
+    // /visibility/check with no body defaults to check; /visibility requires an action.
+    const isCheckAlias = path.endsWith("/check");
+    const action = (body as { action?: string }).action ?? (isCheckAlias ? "check" : undefined);
 
     if (action === "seed") {
       const count = await seedPromptsForProject(projectId);
+      return withCors(request, Response.json({ seeded: count }));
+    }
+
+    if (action === "reseed") {
+      const count = await seedPromptsForProject(projectId, { replace: true });
       return withCors(request, Response.json({ seeded: count }));
     }
 

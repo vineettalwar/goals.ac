@@ -136,6 +136,11 @@ export async function POST(
     return NextResponse.json({ seeded: count });
   }
 
+  if (action === "reseed") {
+    const count = await seedPromptsForProject(projectId, { replace: true });
+    return NextResponse.json({ seeded: count });
+  }
+
   if (action === "check") {
     const result = await runVisibilityCheckForProject(projectId);
     return NextResponse.json(result);

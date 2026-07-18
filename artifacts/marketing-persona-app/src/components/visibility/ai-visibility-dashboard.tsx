@@ -1,18 +1,17 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   RefreshCw,
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
   ExternalLink,
-  Eye,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
@@ -21,15 +20,16 @@ import { useActiveProject } from "@/context/use-active-project";
 import { useVisibilityData } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
 import { SearchPropertyConnectionsPanel } from "@/components/integrations/search-property-connections-panel";
+import { cn } from "@/lib/utils";
 
 const VisibilityTrendChart = dynamic(
   () => import("@/components/visibility/ai-visibility-charts").then((m) => m.VisibilityTrendChart),
-  { loading: () => <div className="paper-card p-6 h-80 animate-pulse rounded-xl bg-secondary/40" /> },
+  { loading: () => <div className="h-64 animate-pulse rounded-lg bg-secondary/40" /> },
 );
 
 const CompetitorMentionsChart = dynamic(
   () => import("@/components/visibility/ai-visibility-charts").then((m) => m.CompetitorMentionsChart),
-  { loading: () => <div className="paper-card p-6 h-72 animate-pulse rounded-xl bg-secondary/40" /> },
+  { loading: () => <div className="h-56 animate-pulse rounded-lg bg-secondary/40" /> },
 );
 
 interface VisibilitySettings {
@@ -39,10 +39,18 @@ interface VisibilitySettings {
   lastGeoReauditAt?: string;
 }
 
+interface VisibilityPrompt {
+  id: number;
+  prompt: string;
+  category: string;
+  isActive: boolean;
+}
+
 interface VisibilitySummary {
   settings: VisibilitySettings;
   visibilityScore: number;
   promptCount: number;
+  prompts: VisibilityPrompt[];
   trend: Array<{ date: string; score: number; cited?: number; total?: number }>;
   byEngine: Array<{ engine: string; cited: number; total: number; score: number }>;
   competitorMentions: Array<{ name: string; count: number }>;
@@ -58,6 +66,22 @@ interface VisibilitySummary {
   }>;
 }
 
+const CATEGORY_ORDER = ["brand", "keyword", "competitor", "custom"] as const;
+
+const CATEGORY_LABELS: Record<string, string> = {
+  brand: "From industry & brand",
+  keyword: "From keywords",
+  competitor: "From competitors",
+  custom: "Custom",
+};
+
+const CATEGORY_SOURCE: Record<string, string> = {
+  brand: "Brand profile → Industry / company name",
+  keyword: "Brand profile → Primary keywords",
+  competitor: "Brand profile → Competitor URLs",
+  custom: "Added manually",
+};
+
 const ENGINE_LABELS: Record<string, string> = {
   chatgpt: "ChatGPT",
   perplexity: "Perplexity",
@@ -66,9 +90,50 @@ const ENGINE_LABELS: Record<string, string> = {
 };
 
 function visibilityTone(score: number) {
-  if (score >= 60) return "text-emerald-600 dark:text-emerald-400";
-  if (score >= 30) return "text-amber-600 dark:text-amber-400";
+  if (score >= 60) return "text-emerald-700 dark:text-emerald-400";
+  if (score >= 30) return "text-amber-700 dark:text-amber-400";
   return "text-foreground";
+}
+
+function dedupePrompts(prompts: VisibilityPrompt[]): VisibilityPrompt[] {
+  const seen = new Set<string>();
+  const unique: VisibilityPrompt[] = [];
+  for (const p of prompts) {
+    if (!p.isActive) continue;
+    const key = p.prompt.trim().toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(p);
+  }
+  return unique;
+}
+
+/** Old seeds dumped full ICP text into questions — detect so we can rebuild. */
+function isPollutedPrompt(prompt: string): boolean {
+  return (
+    prompt.length > 180 ||
+    /ideal customer profile|includes SMEs|typically founders|facing technical gaps/i.test(prompt)
+  );
+}
+
+const ENGINE_CHIPS = ["ChatGPT", "Perplexity", "Claude", "Gemini"] as const;
+
+function groupPrompts(prompts: VisibilityPrompt[]) {
+  const groups = new Map<string, VisibilityPrompt[]>();
+  for (const p of prompts) {
+    const key = CATEGORY_ORDER.includes(p.category as (typeof CATEGORY_ORDER)[number])
+      ? p.category
+      : "custom";
+    const list = groups.get(key) ?? [];
+    list.push(p);
+    groups.set(key, list);
+  }
+  return CATEGORY_ORDER.filter((key) => (groups.get(key)?.length ?? 0) > 0).map((key) => ({
+    key,
+    label: CATEGORY_LABELS[key] ?? key,
+    source: CATEGORY_SOURCE[key] ?? CATEGORY_SOURCE.custom,
+    items: groups.get(key) ?? [],
+  }));
 }
 
 function TrackingSettings({
@@ -81,12 +146,12 @@ function TrackingSettings({
   onChange: (next: VisibilitySettings) => void;
 }) {
   return (
-    <div className="rounded-xl border border-border/80 p-4 space-y-3">
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <Label className="text-sm">Weekly citation checks</Label>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            ChatGPT, Perplexity, Claude, and Gemini
+    <div className="divide-y divide-border/70 rounded-xl border border-border/80 bg-card">
+      <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+        <div className="min-w-0">
+          <Label className="text-sm font-medium">Weekly citation checks</Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            ChatGPT, Perplexity, Claude, Gemini
           </p>
         </div>
         <Switch
@@ -95,10 +160,10 @@ function TrackingSettings({
           onCheckedChange={(checked) => onChange({ ...settings, llmTrackingEnabled: checked })}
         />
       </div>
-      <div className="flex items-center justify-between gap-4 border-t border-border/60 pt-3">
-        <div>
-          <Label className="text-sm">Weekly GEO re-audit</Label>
-          <p className="text-xs text-muted-foreground mt-0.5">Homepage scan every Sunday</p>
+      <div className="flex items-center justify-between gap-4 px-4 py-3.5">
+        <div className="min-w-0">
+          <Label className="text-sm font-medium">Weekly GEO re-audit</Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">Homepage scan every Sunday</p>
         </div>
         <Switch
           checked={settings.geoReauditEnabled}
@@ -107,10 +172,69 @@ function TrackingSettings({
         />
       </div>
       {settings.lastVisibilityCheckAt ? (
-        <p className="text-xs text-muted-foreground border-t border-border/60 pt-3">
-          Last check {new Date(settings.lastVisibilityCheckAt).toLocaleString("en-US", { timeZone: "UTC" })}
+        <p className="px-4 py-2.5 text-xs text-muted-foreground">
+          Last check{" "}
+          {new Date(settings.lastVisibilityCheckAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC
         </p>
       ) : null}
+    </div>
+  );
+}
+
+function SourcesDisclosure({ projectId }: { projectId: string }) {
+  const [mounted, setMounted] = useState(false);
+
+  return (
+    <details
+      className="group rounded-xl border border-border/80 bg-card"
+      onToggle={(event) => {
+        if ((event.currentTarget as HTMLDetailsElement).open) setMounted(true);
+      }}
+    >
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+        <span className="font-medium text-foreground">Search console sources</span>
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          Optional · GSC & Bing
+          <ChevronDown className="h-3.5 w-3.5 transition-transform duration-150 group-open:rotate-180" />
+        </span>
+      </summary>
+      {mounted ? (
+        <div className="border-t border-border/70 px-4 pb-4 pt-3">
+          <p className="mb-3 text-xs text-muted-foreground">
+            Separate from the probe questions below. Connect verified properties for AI Overview and
+            Copilot citation reports.
+          </p>
+          <SearchPropertyConnectionsPanel projectId={projectId} embedded hideCategoryHeader />
+        </div>
+      ) : null}
+    </details>
+  );
+}
+
+function CheckStatusBanner({
+  status,
+  promptCount,
+}: {
+  status: "idle" | "queuing" | "running";
+  promptCount: number;
+}) {
+  if (status === "idle") return null;
+
+  return (
+    <div className="rounded-xl border border-primary/20 bg-primary/4 px-5 py-4">
+      <div className="flex items-start gap-3">
+        <Spinner size="sm" className="mt-1" />
+        <div className="min-w-0 space-y-1.5">
+          <p className="text-[15px] font-medium tracking-normal text-foreground">
+            {status === "queuing" ? "Starting citation check" : "Citation check running"}
+          </p>
+          <p className="max-w-prose text-sm leading-6 tracking-normal text-muted-foreground text-pretty">
+            Sending {promptCount} probe questions to ChatGPT, Perplexity, Claude, and Gemini. This is
+            not live search traffic. Answers usually arrive in 2–5 minutes. This page refreshes
+            automatically when results land.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -127,68 +251,258 @@ function SetupEmptyState({
   onSettingsChange: (next: VisibilitySettings) => void;
 }) {
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-dashed p-8 sm:p-10 text-center">
-        <h2 className="text-lg font-semibold">Start tracking AI citations</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-          Add competitors and target keywords in your brand profile. We&apos;ll generate prompts and
-          check whether each engine cites your brand.
-        </p>
-        <ol className="mx-auto mt-6 max-w-sm space-y-2 text-left text-sm text-muted-foreground">
-          <li className="flex gap-2">
-            <span className="font-medium text-foreground">1.</span>
-            Add competitors and keywords in brand profile
-          </li>
-          <li className="flex gap-2">
-            <span className="font-medium text-foreground">2.</span>
-            Turn on weekly citation checks below
-          </li>
-          <li className="flex gap-2">
-            <span className="font-medium text-foreground">3.</span>
-            Run your first check from the button above
-          </li>
-        </ol>
-        <Button asChild className="mt-6">
-          <Link href={`/projects/${projectId}?tab=brand`}>Set up brand profile</Link>
+    <div className="space-y-8">
+      <div className="max-w-xl space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Start tracking AI citations</h2>
+          <p className="mt-1.5 text-sm text-muted-foreground text-pretty">
+            Add industry, keywords, and competitors in your brand profile. We turn those fields into
+            probe questions, then ask AI engines whether they cite your brand.
+          </p>
+        </div>
+        <Button asChild>
+          <Link href={`/projects/${projectId}?tab=brand`}>Open brand profile</Link>
         </Button>
       </div>
-      <TrackingSettings settings={settings} saving={saving} onChange={onSettingsChange} />
+
+      <section className="space-y-3">
+        <h3 className="text-sm font-medium text-foreground">Tracking</h3>
+        <TrackingSettings settings={settings} saving={saving} onChange={onSettingsChange} />
+      </section>
     </div>
   );
 }
 
 function PendingCheckState({
-  promptCount,
+  projectId,
+  prompts,
   settings,
   saving,
+  regenerating,
   onSettingsChange,
+  onRegenerate,
 }: {
-  promptCount: number;
+  projectId: string;
+  prompts: VisibilityPrompt[];
   settings: VisibilitySettings;
   saving: boolean;
+  regenerating: boolean;
   onSettingsChange: (next: VisibilitySettings) => void;
+  onRegenerate: () => void;
 }) {
+  const unique = dedupePrompts(prompts);
+  const groups = groupPrompts(unique);
+  const duplicateCount = prompts.filter((p) => p.isActive).length - unique.length;
+  const polluted = unique.some((p) => isPollutedPrompt(p.prompt));
+
   return (
-    <div className="space-y-6">
-      <div className="rounded-xl border border-violet-200 bg-violet-50/60 p-6 dark:border-violet-500/20 dark:bg-violet-500/5">
-        <p className="text-sm font-medium text-violet-900 dark:text-violet-200">Ready to measure</p>
-        <p className="mt-1 text-2xl font-bold">{promptCount} prompts queued</p>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Run a check now to see citation rates across engines. Results usually appear within a few
-          minutes.
-        </p>
-      </div>
-      <TrackingSettings settings={settings} saving={saving} onChange={onSettingsChange} />
+    <div className="space-y-10">
+      <header className="max-w-2xl space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-md border border-border bg-secondary/60 px-2.5 py-1 text-xs font-medium tracking-wide text-foreground">
+            Synthetic probes
+          </span>
+          <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium tracking-wide text-muted-foreground">
+            Not search logs
+          </span>
+          <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium tracking-wide text-muted-foreground">
+            Sourced from brand profile
+          </span>
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-semibold tracking-normal">Ready to measure citations</h2>
+          <p className="max-w-prose text-[15px] leading-7 tracking-normal text-muted-foreground text-pretty">
+            We write short probe questions from your brand profile, then ask four AI engines each
+            one. A citation score is the share of answers that mention your brand. These are not
+            questions real buyers typed into Google or ChatGPT.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2 pt-1">
+          {ENGINE_CHIPS.map((engine) => (
+            <span
+              key={engine}
+              className="rounded-full bg-secondary px-3 py-1 text-xs font-medium tracking-wide text-foreground"
+            >
+              {engine}
+            </span>
+          ))}
+        </div>
+      </header>
+
+      {polluted || duplicateCount > 0 ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-5 py-4 dark:border-amber-500/30 dark:bg-amber-500/10">
+          <p className="text-[15px] font-medium leading-6 tracking-normal text-foreground">
+            This probe set needs a rebuild
+          </p>
+          <p className="mt-1.5 max-w-prose text-sm leading-6 tracking-normal text-muted-foreground">
+            {polluted
+              ? "An older generator pasted your full audience profile into a question."
+              : null}
+            {duplicateCount > 0
+              ? ` ${duplicateCount} duplicate rows are still stored from repeated seeding.`
+              : null}{" "}
+            Regenerate once to replace them with clean questions from the current brand profile.
+          </p>
+          <Button
+            type="button"
+            className="mt-4 gap-1.5"
+            disabled={regenerating}
+            onClick={onRegenerate}
+          >
+            {regenerating ? <Spinner size="sm" /> : <RefreshCw className="h-3.5 w-3.5" />}
+            {regenerating ? "Rebuilding…" : "Rebuild probe questions"}
+          </Button>
+        </div>
+      ) : null}
+
+      <section className="space-y-5">
+        <div className="space-y-1.5">
+          <h3 className="text-sm font-semibold tracking-wide text-foreground">Where this data comes from</h3>
+          <p className="max-w-prose text-sm leading-6 tracking-normal text-muted-foreground">
+            Every question maps to a field you control. Nothing is scraped from live chat logs.
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-xl border border-border/80 bg-card px-4 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Source
+            </p>
+            <p className="mt-2 text-[15px] font-medium leading-6 tracking-normal">
+              <Link
+                href={`/projects/${projectId}?tab=brand`}
+                className="underline-offset-4 hover:underline"
+              >
+                Brand profile
+              </Link>
+            </p>
+            <p className="mt-1 text-sm leading-6 tracking-normal text-muted-foreground">
+              Industry, keywords, competitor URLs
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/80 bg-card px-4 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Method
+            </p>
+            <p className="mt-2 text-[15px] font-medium leading-6 tracking-normal">
+              Probe &amp; score
+            </p>
+            <p className="mt-1 text-sm leading-6 tracking-normal text-muted-foreground">
+              Ask four engines, then score brand mentions in the answers
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/80 bg-card px-4 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+              Probe set
+            </p>
+            <p className="mt-2 text-[15px] font-medium leading-6 tracking-normal tabular-nums">
+              {unique.length} questions
+            </p>
+            <p className="mt-1 text-sm leading-6 tracking-normal text-muted-foreground">
+              {duplicateCount > 0 ? `${duplicateCount} duplicates still stored` : "No duplicates"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/projects/${projectId}?tab=brand`}>Edit brand profile</Link>
+          </Button>
+          {!polluted && duplicateCount === 0 ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={regenerating}
+              onClick={onRegenerate}
+              className="gap-1.5"
+            >
+              {regenerating ? <Spinner size="sm" /> : <RefreshCw className="h-3.5 w-3.5" />}
+              {regenerating ? "Rebuilding…" : "Rebuild from brand profile"}
+            </Button>
+          ) : null}
+        </div>
+      </section>
+
+      <section className="space-y-5">
+        <div className="space-y-1.5">
+          <h3 className="text-sm font-semibold tracking-wide">Questions we will send</h3>
+          <p className="text-sm leading-6 tracking-normal text-muted-foreground">
+            Grouped by the brand-profile field that produced them.
+          </p>
+        </div>
+
+        <div className="space-y-5">
+          {groups.map((group) => (
+            <div key={group.key} className="space-y-3">
+              <div className="flex items-end justify-between gap-4">
+                <div className="space-y-0.5">
+                  <p className="text-sm font-medium tracking-normal">{group.label}</p>
+                  <p className="text-xs leading-5 tracking-wide text-muted-foreground">
+                    {group.source}
+                  </p>
+                </div>
+                <span className="text-xs tabular-nums tracking-wide text-muted-foreground">
+                  {group.items.length}
+                </span>
+              </div>
+              <ol className="space-y-2">
+                {group.items.map((p, index) => (
+                  <li
+                    key={p.id}
+                    className={cn(
+                      "rounded-xl border px-4 py-3.5 text-[15px] leading-7 tracking-normal",
+                      isPollutedPrompt(p.prompt)
+                        ? "border-amber-200 bg-amber-50/50 text-foreground/80 dark:border-amber-500/20 dark:bg-amber-500/5"
+                        : "border-border/80 bg-card text-foreground",
+                    )}
+                  >
+                    <span className="mr-2 text-xs font-medium tabular-nums text-muted-foreground">
+                      {index + 1}.
+                    </span>
+                    {p.prompt}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <h3 className="text-sm font-semibold tracking-wide text-foreground">Tracking schedule</h3>
+        <TrackingSettings settings={settings} saving={saving} onChange={onSettingsChange} />
+      </section>
     </div>
   );
 }
 
+function parsePrompts(raw: unknown): VisibilityPrompt[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => {
+      if (!item || typeof item !== "object") return null;
+      const row = item as Record<string, unknown>;
+      const prompt = typeof row.prompt === "string" ? row.prompt : "";
+      if (!prompt) return null;
+      return {
+        id: typeof row.id === "number" ? row.id : 0,
+        prompt,
+        category: typeof row.category === "string" ? row.category : "custom",
+        isActive: row.isActive !== false,
+      };
+    })
+    .filter((p): p is VisibilityPrompt => p != null);
+}
+
 function parseSummary(data: Record<string, unknown> | undefined, settings: VisibilitySettings): VisibilitySummary | null {
   if (!data) return null;
+  const prompts = parsePrompts(data.prompts);
   return {
     settings: (data.settings as VisibilitySettings) ?? settings,
     visibilityScore: (data.visibilityScore as number) ?? (data.score as { overall?: number })?.overall ?? 0,
-    promptCount: (data.promptCount as number) ?? (data.prompts as unknown[])?.length ?? 0,
+    promptCount: (data.promptCount as number) ?? prompts.filter((p) => p.isActive).length,
+    prompts,
     trend: (data.trend as VisibilitySummary["trend"]) ?? [],
     byEngine: (data.byEngine as VisibilitySummary["byEngine"]) ?? [],
     competitorMentions: (data.competitorMentions as VisibilitySummary["competitorMentions"]) ?? [],
@@ -208,7 +522,8 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
   const { settings: settingsQuery, summary: summaryQuery } = useVisibilityData(projectId);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
-  const [checkQueued, setCheckQueued] = useState(false);
+  const [checkStatus, setCheckStatus] = useState<"idle" | "queuing" | "running">("idle");
+  const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const settings = useMemo(
@@ -232,6 +547,32 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
     settingsQuery.isLoading &&
     summaryQuery.isLoading &&
     !summary;
+
+  const hasSnapshots = (summary?.recentSnapshots.length ?? 0) > 0;
+  const hasPrompts = (summary?.promptCount ?? 0) > 0;
+  const uniquePromptCount = summary ? dedupePrompts(summary.prompts).length : 0;
+  const enginesWithData = summary?.byEngine.filter((e) => e.total > 0) ?? [];
+
+  useEffect(() => {
+    if (checkStatus !== "running" || !projectId) return;
+    if (hasSnapshots) {
+      setCheckStatus("idle");
+      return;
+    }
+
+    const started = Date.now();
+    const timer = window.setInterval(() => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.visibilitySummary(projectId) });
+      if (Date.now() - started > 5 * 60 * 1000) {
+        setCheckStatus("idle");
+        setError(
+          "Still waiting on results after 5 minutes. Confirm the background worker is running, then try Run check again.",
+        );
+      }
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [checkStatus, projectId, hasSnapshots, queryClient]);
 
   async function invalidateVisibility() {
     if (!projectId) return;
@@ -270,10 +611,31 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
     }
   }
 
+  async function regeneratePrompts() {
+    if (!projectId) return;
+    setRegenerating(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/website-projects/${projectId}/visibility`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reseed" }),
+      });
+      if (!res.ok) {
+        setError("Failed to regenerate questions from brand profile");
+        return;
+      }
+      await invalidateVisibility();
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
   async function runCheckNow() {
     if (!projectId) return;
     setChecking(true);
     setError(null);
+    setCheckStatus("queuing");
     try {
       const res = await fetch(`/api/website-projects/${projectId}/visibility`, {
         method: "POST",
@@ -281,69 +643,65 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
         body: JSON.stringify({ action: "enqueue" }),
       });
       if (!res.ok) {
-        setError("Failed to queue visibility check");
+        setCheckStatus("idle");
+        setError("Failed to start citation check. Try again in a moment.");
         return;
       }
-      setCheckQueued(true);
-      setTimeout(() => {
-        void invalidateVisibility();
-        setCheckQueued(false);
-      }, 3000);
+      setCheckStatus("running");
     } finally {
       setChecking(false);
     }
   }
 
-  const hasSnapshots = (summary?.recentSnapshots.length ?? 0) > 0;
-  const hasPrompts = (summary?.promptCount ?? 0) > 0;
-
   return (
-    <div className={embedded ? "space-y-6" : "px-8 py-8 max-w-5xl space-y-6"}>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {!embedded ? (
-          <div>
-            <h1 className="text-2xl font-bold">Visibility</h1>
-            <p className="text-muted-foreground mt-1 text-sm max-w-xl">
-              See whether AI engines cite your brand for niche questions.
-              {activeProject ? (
-                <span className="block mt-1 text-foreground/80">{activeProject.name}</span>
-              ) : null}
+    <div className={embedded ? "space-y-8" : "max-w-5xl space-y-8 px-8 py-8"}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          {!embedded ? (
+            <>
+              <h1 className="text-2xl font-semibold tracking-tight">Visibility</h1>
+              <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+                Probe AI engines with brand-derived questions and score citations
+                {activeProject ? ` · ${activeProject.name}` : ""}
+              </p>
+            </>
+          ) : (
+            <p className="text-sm leading-6 tracking-normal text-muted-foreground">
+              Brand citation probes across four AI engines
+              {activeProject ? ` · ${activeProject.name}` : ""}
             </p>
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Citation rates across ChatGPT, Perplexity, Claude, and Gemini
-            {activeProject ? ` · ${activeProject.name}` : ""}
-          </p>
-        )}
+          )}
+        </div>
         {projectId ? (
-          <div className="flex flex-col items-stretch gap-2 sm:items-end">
-            <Button onClick={runCheckNow} disabled={checking || loading || !hasPrompts} variant="outline" className="shrink-0">
-              {checking ? <Spinner size="sm" /> : <RefreshCw className="w-4 h-4" />}
-              {checking ? "Queuing…" : "Run check"}
-            </Button>
-            {checkQueued ? (
-              <p className="text-xs text-emerald-600 dark:text-emerald-400">Check queued — results refresh shortly</p>
-            ) : null}
-          </div>
+          <Button
+            onClick={runCheckNow}
+            disabled={checking || loading || !hasPrompts || checkStatus === "running"}
+            size="sm"
+            className="shrink-0 gap-1.5"
+          >
+            {checking || checkStatus === "running" ? (
+              <Spinner size="sm" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5" />
+            )}
+            {checking ? "Starting…" : checkStatus === "running" ? "Checking…" : "Run check"}
+          </Button>
         ) : null}
       </div>
 
       {!projectId && projectsLoading && <PageSkeleton />}
 
       {!projectId && !projectsLoading && (
-        <div className="paper-card p-8 text-center text-muted-foreground text-sm">
-          Choose a project in the sidebar to track visibility.
-        </div>
+        <p className="text-sm text-muted-foreground">Choose a project in the sidebar to track visibility.</p>
       )}
 
       {projectId && (
         <>
-          <SearchPropertyConnectionsPanel projectId={projectId} embedded />
+          <CheckStatusBanner status={checkStatus} promptCount={uniquePromptCount || summary?.promptCount || 0} />
 
           {error && (
-            <div className="flex items-center gap-2 text-sm text-destructive bg-destructive/10 rounded-md px-4 py-3">
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
               {error}
             </div>
           )}
@@ -360,101 +718,130 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
               />
             ) : !hasSnapshots ? (
               <PendingCheckState
-                promptCount={summary.promptCount}
+                projectId={projectId}
+                prompts={summary.prompts}
                 settings={settings}
                 saving={saving}
+                regenerating={regenerating}
                 onSettingsChange={saveSettings}
+                onRegenerate={regeneratePrompts}
               />
             ) : (
-              <div className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="rounded-xl border border-violet-200 bg-violet-50/50 p-5 dark:border-violet-500/20 dark:bg-violet-500/5">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-violet-800 dark:text-violet-300">
-                      <Eye className="h-4 w-4" />
+              <div className="space-y-8">
+                <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
                       Citation rate
-                    </div>
-                    <p className={`mt-1 text-3xl font-bold ${visibilityTone(summary.visibilityScore)}`}>
+                    </p>
+                    <p
+                      className={cn(
+                        "mt-1 text-4xl font-semibold tracking-tight tabular-nums",
+                        visibilityTone(summary.visibilityScore),
+                      )}
+                    >
                       {summary.visibilityScore}%
                     </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {summary.promptCount} prompts · latest batch
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Share of probe answers that cited your brand · latest batch
                     </p>
                   </div>
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-5 dark:border-emerald-500/20 dark:bg-emerald-500/5">
-                    <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">GEO score</p>
-                    <p className="mt-1 text-3xl font-bold">
+
+                  <div className="sm:text-right">
+                    <p className="text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
+                      GEO score
+                    </p>
+                    <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">
                       {summary.latestGeoScore ?? "—"}
                       {summary.latestGeoScore != null ? (
-                        <span className="text-base font-normal text-muted-foreground">/100</span>
+                        <span className="text-sm font-normal text-muted-foreground"> /100</span>
                       ) : null}
                     </p>
                     <Link
                       href="/audit"
-                      className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                      className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
                     >
-                      Run technical audit <ExternalLink className="w-3 h-3" />
+                      Technical audit <ExternalLink className="h-3 w-3" />
                     </Link>
                   </div>
                 </div>
 
-                {summary.byEngine.some((e) => e.total > 0) ? (
-                  <div className="flex flex-wrap gap-2">
-                    {summary.byEngine.flatMap((e) =>
-                      e.total > 0
-                        ? [
-                            (
-                              <div
-                                key={e.engine}
-                                className="rounded-lg border border-border/80 px-3 py-2 text-sm"
-                              >
-                                <span className="text-muted-foreground">{ENGINE_LABELS[e.engine] ?? e.engine}</span>
-                                <span className="ml-2 font-medium">{e.score}% cited</span>
-                              </div>
-                            ),
-                          ]
-                        : [],
-                    )}
-                  </div>
-                ) : null}
-
-                {summary.trend.length > 1 ? <VisibilityTrendChart data={summary.trend} /> : null}
-
-                {summary.competitorMentions.length > 0 ? (
-                  <CompetitorMentionsChart data={summary.competitorMentions} />
-                ) : null}
-
-                {summary.recentSnapshots.length > 0 ? (
-                  <div className="space-y-3">
-                    <h2 className="font-semibold text-sm">Recent checks</h2>
-                    {summary.recentSnapshots.map((snap) => (
-                      <div key={snap.id} className="rounded-lg border px-4 py-3 text-sm space-y-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="font-medium line-clamp-2">{snap.prompt}</p>
-                          {snap.cited ? (
-                            <Badge className="shrink-0 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
-                              <CheckCircle2 className="w-3 h-3 mr-1" /> Cited
-                            </Badge>
-                          ) : (
-                            <Badge variant="muted" className="shrink-0">
-                              Not cited
-                            </Badge>
-                          )}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {ENGINE_LABELS[snap.engine] ?? snap.engine} ·{" "}
-                          {new Date(snap.checkedAt).toLocaleString("en-US", { timeZone: "UTC" })}
-                          {snap.competitorsMentioned?.length > 0 &&
-                            ` · Competitors: ${snap.competitorsMentioned.join(", ")}`}
-                        </p>
+                {enginesWithData.length > 0 ? (
+                  <div className="flex flex-wrap gap-x-5 gap-y-2 border-y border-border/70 py-3 text-sm">
+                    {enginesWithData.map((e) => (
+                      <div key={e.engine} className="flex items-baseline gap-2">
+                        <span className="text-muted-foreground">
+                          {ENGINE_LABELS[e.engine] ?? e.engine}
+                        </span>
+                        <span className="font-medium tabular-nums">{e.score}%</span>
                       </div>
                     ))}
                   </div>
                 ) : null}
 
-                <TrackingSettings settings={settings} saving={saving} onChange={saveSettings} />
+                {summary.trend.length > 1 ? (
+                  <section className="space-y-3">
+                    <h2 className="text-sm font-medium">Trend</h2>
+                    <VisibilityTrendChart data={summary.trend} />
+                  </section>
+                ) : null}
+
+                {summary.competitorMentions.length > 0 ? (
+                  <section className="space-y-3">
+                    <h2 className="text-sm font-medium">Competitor mentions</h2>
+                    <CompetitorMentionsChart data={summary.competitorMentions} />
+                  </section>
+                ) : null}
+
+                {summary.recentSnapshots.length > 0 ? (
+                  <section className="space-y-3">
+                    <h2 className="text-sm font-medium">Recent engine answers</h2>
+                    <ul className="divide-y divide-border/70 rounded-xl border border-border/80 bg-card">
+                      {summary.recentSnapshots.map((snap) => (
+                        <li key={snap.id} className="px-4 py-3">
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="min-w-0 text-sm font-medium leading-snug line-clamp-2">
+                              {snap.prompt}
+                            </p>
+                            <span
+                              className={cn(
+                                "inline-flex shrink-0 items-center gap-1 text-xs font-medium",
+                                snap.cited
+                                  ? "text-emerald-700 dark:text-emerald-400"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {snap.cited ? (
+                                <>
+                                  <CheckCircle2 className="h-3.5 w-3.5" />
+                                  Cited
+                                </>
+                              ) : (
+                                "Not cited"
+                              )}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {ENGINE_LABELS[snap.engine] ?? snap.engine} ·{" "}
+                            {new Date(snap.checkedAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC
+                            {snap.competitorsMentioned?.length > 0
+                              ? ` · Also mentioned: ${snap.competitorsMentioned.join(", ")}`
+                              : null}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+
+                <section className="space-y-3">
+                  <h2 className="text-sm font-medium">Tracking schedule</h2>
+                  <TrackingSettings settings={settings} saving={saving} onChange={saveSettings} />
+                </section>
               </div>
             )
           ) : null}
+
+          {summary ? <SourcesDisclosure projectId={projectId} /> : null}
         </>
       )}
     </div>

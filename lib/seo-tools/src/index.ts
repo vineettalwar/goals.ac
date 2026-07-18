@@ -13,6 +13,8 @@ export {
 } from "./keywordAnalyzer";
 export {
   buildDefaultPrompts,
+  shortAudienceLabel,
+  shortIndustryLabel,
   checkPromptVisibility,
   computeVisibilityScore,
   aggregateSnapshotsByDate,

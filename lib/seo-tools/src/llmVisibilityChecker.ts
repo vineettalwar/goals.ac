@@ -67,6 +67,29 @@ function extractCitationUrl(text: string, brandUrl: string): string | null {
   return brandLink ?? null;
 }
 
+/** Keep audience short enough for a probe question — never dump a full ICP paragraph. */
+export function shortAudienceLabel(raw: string, fallback = "B2B teams"): string {
+  const cleaned = raw.trim().replace(/\s+/g, " ");
+  if (!cleaned) return fallback;
+  // Long ICP blobs / multi-sentence profiles don't belong inside a question.
+  if (cleaned.length > 48 || /[.!?]/.test(cleaned) || /includes|typically|require/i.test(cleaned)) {
+    return fallback;
+  }
+  return cleaned;
+}
+
+/** Trim long industry labels so questions stay scannable. */
+export function shortIndustryLabel(raw: string, fallback = "this market"): string {
+  const cleaned = raw.trim().replace(/\s+/g, " ");
+  if (!cleaned) return fallback;
+  // Drop parenthetical expansions like "(SaaS/Digital Transformation)".
+  const withoutParens = cleaned.replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+/g, " ").trim();
+  if (withoutParens.length <= 56) return withoutParens;
+  const cut = withoutParens.slice(0, 56);
+  const boundary = cut.lastIndexOf(" ");
+  return (boundary > 24 ? cut.slice(0, boundary) : cut).trim();
+}
+
 export function buildDefaultPrompts(params: {
   brandName: string;
   industry: string;
@@ -74,13 +97,15 @@ export function buildDefaultPrompts(params: {
   primaryKeywords: string[];
   competitorUrls: string[];
 }): Array<{ prompt: string; category: "brand" | "keyword" | "competitor" }> {
-  const { brandName, industry, targetAudience, primaryKeywords, competitorUrls } = params;
+  const { brandName, primaryKeywords, competitorUrls } = params;
+  const industry = shortIndustryLabel(params.industry);
+  const audience = shortAudienceLabel(params.targetAudience);
   const prompts: Array<{ prompt: string; category: "brand" | "keyword" | "competitor" }> = [];
 
-  if (industry) {
+  if (params.industry.trim()) {
     prompts.push({
       category: "brand",
-      prompt: `What are the best ${industry} tools and platforms for ${targetAudience || "B2B teams"}?`,
+      prompt: `What are the best ${industry} tools and platforms for ${audience}?`,
     });
     prompts.push({
       category: "brand",
