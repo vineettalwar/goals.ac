@@ -15,11 +15,19 @@ defined( 'ABSPATH' ) || exit;
 class Site_Graph {
 
 	/**
+	 * Memo for one export() pass — posts + internal links share the same query.
+	 *
+	 * @var array<int, \WP_Post>|null
+	 */
+	private $published_posts_cache = null;
+
+	/**
 	 * Export the site graph as JSON.
 	 *
 	 * @return array{posts: array, categories: array, tags: array, internal_links: array}
 	 */
 	public function export(): array {
+		$this->published_posts_cache = null;
 		return array(
 			'posts'          => $this->get_posts(),
 			'categories'     => $this->get_terms( 'category' ),
@@ -34,16 +42,6 @@ class Site_Graph {
 	 * @return array<int, array<string, mixed>>
 	 */
 	private function get_posts(): array {
-		$posts = \get_posts(
-			array(
-				'post_type'      => 'post',
-				'post_status'    => 'publish',
-				'posts_per_page' => 500,
-				'orderby'        => 'ID',
-				'order'          => 'ASC',
-			)
-		);
-
 		return \array_map(
 			function ( $post ) {
 				$categories = \wp_get_post_categories( $post->ID, array( 'fields' => 'ids' ) );
@@ -63,8 +61,42 @@ class Site_Graph {
 					'updated_at'      => \gmdate( 'c', \strtotime( $post->post_modified ) ),
 				);
 			},
-			$posts
+			$this->query_published_posts()
 		);
+	}
+
+	/**
+	 * Fetch all published posts in pages of 100 (phpcs PostsPerPage ceiling).
+	 *
+	 * @return array<int, \WP_Post>
+	 */
+	private function query_published_posts(): array {
+		if ( null !== $this->published_posts_cache ) {
+			return $this->published_posts_cache;
+		}
+
+		$per_page = 100;
+		$page     = 1;
+		$all      = array();
+
+		do {
+			$batch       = \get_posts(
+				array(
+					'post_type'      => 'post',
+					'post_status'    => 'publish',
+					'posts_per_page' => $per_page,
+					'paged'          => $page,
+					'orderby'        => 'ID',
+					'order'          => 'ASC',
+				)
+			);
+			$batch_count = \count( $batch );
+			$all         = \array_merge( $all, $batch );
+			++$page;
+		} while ( $batch_count === $per_page );
+
+		$this->published_posts_cache = $all;
+		return $all;
 	}
 
 	/**
@@ -106,17 +138,9 @@ class Site_Graph {
 	 */
 	private function get_internal_links(): array {
 		$site_url = \untrailingslashit( \get_site_url() );
-		$posts    = \get_posts(
-			array(
-				'post_type'      => 'post',
-				'post_status'    => 'publish',
-				'posts_per_page' => -1,
-			)
-		);
+		$links    = array();
 
-		$links = array();
-
-		foreach ( $posts as $post ) {
+		foreach ( $this->query_published_posts() as $post ) {
 			$content = $post->post_content;
 			if ( empty( $content ) ) {
 				continue;

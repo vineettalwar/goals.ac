@@ -219,10 +219,10 @@ class Rest_API {
 				\GoalsAC\Shared\Contract::healthResponse(
 					\get_bloginfo( 'version' ),
 					array(
-						'version'                  => GOALS_AC_VERSION,
-						'capabilities'             => $capabilities,
-						'detected_builders'        => $detected_builders,
-						'recommended_editor_mode'  => $recommended,
+						'version'                 => GOALS_AC_VERSION,
+						'capabilities'            => $capabilities,
+						'detected_builders'       => $detected_builders,
+						'recommended_editor_mode' => $recommended,
 					)
 				)
 			),
