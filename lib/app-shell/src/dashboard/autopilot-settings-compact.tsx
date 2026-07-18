@@ -9,7 +9,7 @@ import type {
 } from "./types";
 
 const selectClassName =
-  "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20";
+  "h-8 rounded-lg border border-border bg-background px-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20";
 
 function draftFromSettings(settings: DashboardAutopilotSettings | null): DashboardAutopilotSavePayload {
   return {
@@ -79,77 +79,53 @@ export function AutopilotSettingsCompact({
   }, [settings]);
 
   return (
-    <div className="mb-4 rounded-lg border border-border bg-secondary/20 px-4 py-3">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Autopilot settings
-        </p>
-        {renderLink({
-          href: `/projects/${projectId}?tab=publishing`,
-          className: "text-xs font-medium text-primary hover:underline",
-          children: "More settings",
-        })}
-      </div>
-
-      <div className="space-y-3">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0">
-            <p className="text-sm font-medium">Enable autopilot</p>
-            <p className="text-xs text-muted-foreground">
-              Generate the next due topic on your cadence
-            </p>
-          </div>
+    <div className="mb-5 space-y-2 border-b border-border pb-5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+        <label className="flex items-center gap-2.5">
           <Switch
             checked={draft.enabled}
             disabled={saving}
             label="Enable autopilot"
             onChange={(enabled) => setDraft((prev) => ({ ...prev, enabled }))}
           />
-        </div>
+          <span className="text-sm font-medium">Enabled</span>
+        </label>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <label htmlFor="dash-autopilot-cadence" className="text-sm font-medium">
-              Cadence
-            </label>
-            <select
-              id="dash-autopilot-cadence"
-              className={selectClassName}
-              value={draft.cadence}
-              disabled={saving}
-              onChange={(event) =>
-                setDraft((prev) => ({
-                  ...prev,
-                  cadence: event.target.value as DashboardAutopilotCadence,
-                }))
-              }
-            >
-              <option value="daily">Daily</option>
-              <option value="weekly">Weekly</option>
-            </select>
-          </div>
+        <select
+          id="dash-autopilot-cadence"
+          aria-label="Cadence"
+          className={selectClassName}
+          value={draft.cadence}
+          disabled={saving || !draft.enabled}
+          onChange={(event) =>
+            setDraft((prev) => ({
+              ...prev,
+              cadence: event.target.value as DashboardAutopilotCadence,
+            }))
+          }
+        >
+          <option value="daily">Daily</option>
+          <option value="weekly">Weekly</option>
+        </select>
 
-          <div className="flex items-end">
-            <div className="flex w-full items-center justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2">
-              <div className="min-w-0">
-                <p className="text-sm font-medium">Auto-queue</p>
-                <p className="text-xs text-muted-foreground">High-score keyword gaps</p>
-              </div>
-              <Switch
-                checked={draft.autoQueueOpportunities}
-                disabled={saving}
-                label="Auto-queue keyword opportunities"
-                onChange={(autoQueueOpportunities) =>
-                  setDraft((prev) => ({ ...prev, autoQueueOpportunities }))
-                }
-              />
-            </div>
-          </div>
-        </div>
+        <label className="flex items-center gap-2">
+          <Switch
+            checked={draft.autoQueueOpportunities}
+            disabled={saving || !draft.enabled}
+            label="Auto-queue keyword opportunities"
+            onChange={(autoQueueOpportunities) =>
+              setDraft((prev) => ({ ...prev, autoQueueOpportunities }))
+            }
+          />
+          <span className="text-sm text-muted-foreground">Auto-queue</span>
+        </label>
 
-        {saveError ? <p className="text-xs text-red-700">{saveError}</p> : null}
-
-        <div className="flex justify-end">
+        <div className="ml-auto flex items-center gap-3">
+          {renderLink({
+            href: `/projects/${projectId}?tab=publishing`,
+            className: "text-xs text-muted-foreground hover:text-foreground",
+            children: "More settings",
+          })}
           <button
             type="button"
             onClick={() => void onSave(draft)}
@@ -161,6 +137,7 @@ export function AutopilotSettingsCompact({
           </button>
         </div>
       </div>
+      {saveError ? <p className="text-xs text-red-700">{saveError}</p> : null}
     </div>
   );
 }

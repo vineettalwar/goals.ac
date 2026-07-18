@@ -330,41 +330,40 @@ export function DashboardAutopilotSection({
   const drafts = byStatus.draft ?? 0;
   const published = (byStatus.published ?? 0) + (byStatus.ready ?? 0);
 
+  const metaParts: string[] = [];
+  if (settings?.enabled) {
+    metaParts.push(
+      `${settings.cadence === "daily" ? "Daily" : "Weekly"} · ${settings.publishMode ?? "review"}`,
+    );
+  }
+  if (articleUsage) metaParts.push(formatArticleUsageLabel(articleUsage));
+
   return (
     <div className="paper-card mb-8 p-6">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm font-semibold">
-            <Zap className="h-4 w-4 text-primary" /> Autopilot activity
+            <Zap className="h-4 w-4 text-primary" /> Autopilot
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {settings?.enabled
-              ? `${settings.cadence === "daily" ? "Daily" : "Weekly"} · ${settings.publishMode ?? "review"} publish mode`
-              : onSaveAutopilot
-                ? "Autopilot is off — enable below"
-                : "Autopilot is off — enable on Publishing"}
-          </p>
-          {articleUsage ? (
-            <p className="mt-1.5 inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
-              <FileText className="mr-1.5 h-3 w-3 shrink-0" />
-              {formatArticleUsageLabel(articleUsage)}
-            </p>
+          {metaParts.length > 0 ? (
+            <p className="mt-1 text-sm text-muted-foreground">{metaParts.join(" · ")}</p>
           ) : null}
         </div>
-        <div className="flex shrink-0 gap-2">
+        <div className="flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
           <DashLink
             renderLink={renderLink}
             href="/search/visibility"
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-card px-3 text-xs font-medium"
+            className="hover:text-foreground"
           >
             Visibility
           </DashLink>
+          <span aria-hidden>·</span>
           <DashLink
             renderLink={renderLink}
             href={`/projects/${projectId}?tab=publishing`}
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-card px-3 text-xs font-medium"
+            className="hover:text-foreground"
           >
-            Manage
+            Publishing
           </DashLink>
         </div>
       </div>
@@ -378,20 +377,13 @@ export function DashboardAutopilotSection({
           renderLink={renderLink}
         />
       ) : null}
-      <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-3">
-        <div className="rounded-lg bg-secondary/40 px-3 py-3">
-          <p className="text-2xl font-bold">{generating + drafts}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Drafts / generating</p>
-        </div>
-        <div className="rounded-lg bg-secondary/40 px-3 py-3">
-          <p className="text-2xl font-bold">{published}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Published</p>
-        </div>
-        <div className="rounded-lg bg-secondary/40 px-3 py-3">
-          <p className="text-2xl font-bold">{pieces.length}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Total pieces</p>
-        </div>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        {generating + drafts} drafts
+        <span className="mx-1.5 text-border">·</span>
+        {published} published
+        <span className="mx-1.5 text-border">·</span>
+        {pieces.length} total
+      </p>
     </div>
   );
 }

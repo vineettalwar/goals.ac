@@ -4,8 +4,6 @@ import {
   CheckCircle2,
   ExternalLink,
   FileText,
-  Link2,
-  ScanSearch,
   XCircle,
   Zap,
 } from "lucide-react";
@@ -139,60 +137,46 @@ export function AutopilotActivityPanel({
     suggestionCount: commandCenter.internalLinkSuggestions ?? 0,
   });
 
+  const metaParts: string[] = [];
+  if (settings?.enabled) {
+    metaParts.push(
+      `${settings.cadence === "daily" ? "Daily" : "Weekly"} · ${settings.publishMode ?? "review"}`,
+    );
+  }
+  if (articleUsage) metaParts.push(formatArticleUsageLabel(articleUsage));
+  if (linkChipLabel) metaParts.push(linkChipLabel);
+
+  const snapshotParts = [
+    `${generating + drafts} drafts`,
+    `${published} published`,
+    commandCenter.latestGeoScore != null ? `GEO ${commandCenter.latestGeoScore}` : null,
+    commandCenter.llmCitationRate != null ? `${commandCenter.llmCitationRate}% cited` : null,
+  ].filter(Boolean);
+
   return (
     <div className="paper-card mb-8 p-6">
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-        <div>
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <div className="min-w-0">
           <div className="flex items-center gap-2 text-sm font-semibold">
-            <Zap className="h-4 w-4 text-primary" /> Autopilot activity
+            <Zap className="h-4 w-4 text-primary" /> Autopilot
           </div>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {settings?.enabled
-              ? `${settings.cadence === "daily" ? "Daily" : "Weekly"} · ${settings.publishMode ?? "review"} publish mode`
-              : onSaveAutopilot
-                ? "Autopilot is off — enable below"
-                : "Autopilot is off — enable on Publishing"}
-          </p>
-          <div className="mt-1.5 flex flex-wrap items-center gap-2">
-            {articleUsage ? (
-              <p className="inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
-                <FileText className="mr-1.5 h-3 w-3 shrink-0" />
-                {formatArticleUsageLabel(articleUsage)}
-              </p>
-            ) : null}
-            {linkChipLabel ? (
-              <DashLink
-                renderLink={renderLink}
-                href="/internal-links"
-                className="inline-flex items-center rounded-md border border-border bg-secondary/40 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
-              >
-                <Link2 className="mr-1.5 h-3 w-3 shrink-0" />
-                {linkChipLabel}
-              </DashLink>
-            ) : (
-              <DashLink
-                renderLink={renderLink}
-                href="/internal-links"
-                className="inline-flex items-center rounded-md border border-dashed border-border px-2 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <Link2 className="mr-1.5 h-3 w-3 shrink-0" />
-                No link map yet
-              </DashLink>
-            )}
-          </div>
+          {metaParts.length > 0 ? (
+            <p className="mt-1 text-sm text-muted-foreground">{metaParts.join(" · ")}</p>
+          ) : null}
         </div>
-        <div className="flex shrink-0 flex-wrap gap-2">
+        <div className="flex shrink-0 items-center gap-3 text-xs text-muted-foreground">
           <DashLink
             renderLink={renderLink}
             href="/search/visibility"
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-card px-3 text-xs font-medium"
+            className="hover:text-foreground"
           >
             Visibility
           </DashLink>
+          <span aria-hidden>·</span>
           <DashLink
             renderLink={renderLink}
             href={`/projects/${projectId}?tab=publishing`}
-            className="inline-flex h-8 items-center justify-center rounded-lg border border-border bg-card px-3 text-xs font-medium"
+            className="hover:text-foreground"
           >
             Publishing
           </DashLink>
@@ -210,38 +194,34 @@ export function AutopilotActivityPanel({
         />
       ) : null}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-lg bg-secondary/40 px-3 py-3 text-center">
-          <p className="text-2xl font-bold">{generating + drafts}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Drafts / generating</p>
-        </div>
-        <div className="rounded-lg bg-secondary/40 px-3 py-3 text-center">
-          <p className="text-2xl font-bold">{published}</p>
-          <p className="mt-1 text-xs text-muted-foreground">Published pieces</p>
-        </div>
-        <DashLink
-          renderLink={renderLink}
-          href="/audit"
-          className="rounded-lg bg-secondary/40 px-3 py-3 text-center transition-colors hover:bg-secondary/60"
-        >
-          <p className="text-2xl font-bold tabular-nums">
-            {commandCenter.latestGeoScore != null ? commandCenter.latestGeoScore : "—"}
-          </p>
-          <p className="mt-1 flex items-center justify-center gap-1 text-xs text-muted-foreground">
-            <ScanSearch className="h-3 w-3" /> GEO score
-          </p>
-        </DashLink>
-        <DashLink
-          renderLink={renderLink}
-          href="/search/visibility"
-          className="rounded-lg bg-secondary/40 px-3 py-3 text-center transition-colors hover:bg-secondary/60"
-        >
-          <p className="text-2xl font-bold tabular-nums">
-            {commandCenter.llmCitationRate != null ? `${commandCenter.llmCitationRate}%` : "—"}
-          </p>
-          <p className="mt-1 text-xs text-muted-foreground">LLM citation</p>
-        </DashLink>
-      </div>
+      {snapshotParts.length > 0 ? (
+        <p className="mb-4 text-sm text-muted-foreground">
+          {snapshotParts.map((part, i) => (
+            <span key={part}>
+              {i > 0 ? <span className="mx-1.5 text-border">·</span> : null}
+              {part?.startsWith("GEO ") ? (
+                <DashLink
+                  renderLink={renderLink}
+                  href="/audit"
+                  className="hover:text-foreground"
+                >
+                  {part}
+                </DashLink>
+              ) : part?.includes("% cited") ? (
+                <DashLink
+                  renderLink={renderLink}
+                  href="/search/visibility"
+                  className="hover:text-foreground"
+                >
+                  {part}
+                </DashLink>
+              ) : (
+                part
+              )}
+            </span>
+          ))}
+        </p>
+      ) : null}
 
       <div className="grid gap-6 md:grid-cols-2">
         <div>
@@ -258,17 +238,15 @@ export function AutopilotActivityPanel({
             </DashLink>
           </div>
           {recentPieces.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-              No content pieces yet
-            </p>
+            <p className="py-4 text-sm text-muted-foreground">No content pieces yet</p>
           ) : (
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               {recentPieces.map((piece) => (
                 <li key={piece.id}>
                   <DashLink
                     renderLink={renderLink}
                     href={contentPiecePath(projectId, piece.id)}
-                    className="group flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-secondary/50"
+                    className="group flex items-center gap-2 rounded-lg px-1 py-1.5 transition-colors hover:bg-secondary/50"
                   >
                     <FileText className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
                     <span className="min-w-0 flex-1 truncate text-sm font-medium">
@@ -303,11 +281,9 @@ export function AutopilotActivityPanel({
             </DashLink>
           </div>
           {recentPublishes.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
-              No CMS publishes yet
-            </p>
+            <p className="py-4 text-sm text-muted-foreground">No CMS publishes yet</p>
           ) : (
-            <ul className="space-y-1">
+            <ul className="space-y-0.5">
               {recentPublishes.map((record) => {
                 const title =
                   record.pieceTitle?.trim() || `Piece #${record.contentPieceId}`;
@@ -317,7 +293,7 @@ export function AutopilotActivityPanel({
                 return (
                   <li
                     key={record.id}
-                    className="flex items-start gap-2 rounded-lg px-2 py-1.5"
+                    className="flex items-start gap-2 rounded-lg px-1 py-1.5"
                   >
                     {failed ? (
                       <XCircle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-600" />
