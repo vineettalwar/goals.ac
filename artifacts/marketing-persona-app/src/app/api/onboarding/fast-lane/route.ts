@@ -9,7 +9,7 @@ import {
   websiteProjectsTable,
 } from "@workspace/db/schema";
 import type { ContentStyle } from "@workspace/db/schema";
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
 import { generateContentStrategy } from "@/lib/ai/content-strategy-generator";
@@ -17,6 +17,7 @@ import { generateRoadmap, generateSlug } from "@/lib/ai/roadmap-generator";
 import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { enqueue, QUEUES } from "@workspace/jobs";
+import { kickOffFastLaneVisibility } from "@workspace/content-engine/strategy/fast-lane-visibility";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 import { loadProjectVisibilitySummary } from "@/lib/projects/project-visibility-summary";
 import { z } from "zod";
@@ -248,11 +249,20 @@ export async function POST(req: Request) {
     })
     .where(eq(websiteProjectsTable.id, projectId));
 
+  const visibilityKickoff = await kickOffFastLaneVisibility({
+    projectId,
+    projectUrl: project.url,
+    queueVisibilityCheck: async () => {
+      await enqueue(QUEUES.llmVisibilityCheck, { projectId });
+    },
+  });
+
   return NextResponse.json({
     strategyId,
     queuedItemIds: queued,
     articleCount: queued.length,
     crawlStatus: project.crawlStatus,
+    visibilityKickoff,
   });
 }
 
@@ -282,8 +292,21 @@ export async function GET(req: Request) {
   const byStatus = Object.fromEntries(pieceStats.map((r) => [r.status, r.value]));
   const visibility = await loadProjectVisibilitySummary(projectId);
 
+  const [firstPiece] = await db
+    .select({ id: contentPiecesTable.id })
+    .from(contentPiecesTable)
+    .where(
+      and(
+        eq(contentPiecesTable.websiteProjectId, projectId),
+        inArray(contentPiecesTable.status, ["draft", "ready", "published"]),
+      ),
+    )
+    .orderBy(asc(contentPiecesTable.id))
+    .limit(1);
+
   return NextResponse.json({
     crawlStatus: project.crawlStatus,
+    scrapeStatus: project.scrapeStatus ?? null,
     projectId: project.id,
     url: project.url,
     articleProgress: {
@@ -293,9 +316,12 @@ export async function GET(req: Request) {
       published: byStatus.published ?? 0,
       failed: byStatus.failed ?? 0,
     },
+    firstPieceId: firstPiece?.id ?? null,
     visibility: {
       visibilityScore: visibility.visibilityScore,
+      visibilityDelta: visibility.visibilityDelta,
       latestGeoScore: visibility.latestGeoScore,
+      geoScoreDelta: visibility.geoScoreDelta,
     },
   });
 }

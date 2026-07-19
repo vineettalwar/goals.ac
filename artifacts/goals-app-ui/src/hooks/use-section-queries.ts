@@ -572,6 +572,9 @@ export function usePartnerProjects() {
           linkCoverage: number;
           publishedCount: number;
           draftCount: number;
+          llmCitationRate?: number | null;
+          recentPublishOk?: number;
+          recentPublishFail?: number;
         }>;
       }>("/api/partner/projects");
       return data.projects ?? [];

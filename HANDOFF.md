@@ -1,5 +1,37 @@
 # Session Handoff
 
+## World-class gaps tranche (2026-07-20) — SHIPPED (local)
+
+**Status:** Five-item sequence implemented on working tree (not committed). Parallel agents + merge.
+
+| # | Item | Where to verify |
+|---|---|---|
+| 1 | Success stories + verify CTAs (format-preview only; no fake named wins) | `/success-stories`, `/success-stories/format-preview-saas` |
+| 2 | Outcomes panel on dashboard | `/dashboard` with active project — Outcomes row above autopilot |
+| 3 | Fast-lane partner demo checklist | `/onboarding/fast-lane` done state (Next + Vite) |
+| 4 | Public GEO lead capture | `/geo-audit` → result → WaitlistForm `geo-audit-lead` |
+| 5 | Partner print outcomes | `/partner` — Print / Save as PDF + publish health columns |
+
+**Docs:** `docs/prd/world-class-gaps-tranche.md` · `docs/DECISIONS.md` 2026-07-20
+
+**Verify:**
+```sh
+npx vitest run lib/app-shell/src/dashboard/outcomes-panel.test.ts artifacts/marketing-persona-app/src/lib/marketing/content/success-stories.test.ts
+pnpm --filter @workspace/marketing-persona-app run typecheck
+pnpm --filter @workspace/goals-app-ui run typecheck
+```
+
+**Still deferred:** Surfer NLP, hosted blog, backlink exchange, public self-serve pricing. Named customer stories stay empty until a real launch (`PUBLISHED_STORIES`).
+
+### Follow-up (2026-07-20 evening)
+
+- Fast-lane POST kicks off visibility: seed prompts + queue `llmVisibilityCheck` + homepage GEO audit (`kickOffFastLaneVisibility`)
+- Outcomes + fast-lane GET surface citation/GEO deltas
+- Case studies: intentionally not pursued — never launched; format-preview fake stories deleted
+- Vite `/partner` now shows publish health + print (was ignoring API fields)
+
+---
+
 ## Wave 5 — Humanize durability + Studio/integration reliability (2026-07-17)
 
 **Status:** Wave 5.A–5.C **shipped on `main`** + Bedrock BYOK model picker. **CF deployed** (2026-07-17 evening).

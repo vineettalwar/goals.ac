@@ -11,6 +11,7 @@ import {
   listAccessibleProjects,
 } from "@/lib/org/org-access";
 import { getSupportOrganizationId } from "@/lib/org/project-scope";
+import { loadPartnerOutcomesByProjectId } from "@/lib/org/partner-report";
 import { loadProjectVisibilitySummary } from "@/lib/projects/project-visibility-summary";
 import {
   PartnerWorkspaceClient,
@@ -50,11 +51,12 @@ export default async function PartnerPage() {
     organizationName = org?.name ?? null;
   }
 
-  const projectIds = projects.map((p) => p.id);
-  const pieceCounts =
+  const cappedProjects = projects.slice(0, 20);
+  const projectIds = cappedProjects.map((p) => p.id);
+  const [pieceCounts, brands, outcomesById] = await Promise.all([
     projectIds.length === 0
-      ? []
-      : await db
+      ? Promise.resolve([])
+      : db
           .select({
             projectId: contentPiecesTable.websiteProjectId,
             publishedCount: sql<number>`count(*) filter (where ${contentPiecesTable.status} = 'published')`.mapWith(
@@ -66,7 +68,18 @@ export default async function PartnerPage() {
           })
           .from(contentPiecesTable)
           .where(inArray(contentPiecesTable.websiteProjectId, projectIds))
-          .groupBy(contentPiecesTable.websiteProjectId);
+          .groupBy(contentPiecesTable.websiteProjectId),
+    projectIds.length === 0
+      ? Promise.resolve([])
+      : db
+          .select({
+            projectId: brandProfilesTable.websiteProjectId,
+            industry: brandProfilesTable.industry,
+          })
+          .from(brandProfilesTable)
+          .where(inArray(brandProfilesTable.websiteProjectId, projectIds)),
+    loadPartnerOutcomesByProjectId(projectIds),
+  ]);
 
   const countByProject = new Map(
     pieceCounts.map((row) => [
@@ -75,23 +88,13 @@ export default async function PartnerPage() {
     ]),
   );
 
-  const brands =
-    projectIds.length === 0
-      ? []
-      : await db
-          .select({
-            projectId: brandProfilesTable.websiteProjectId,
-            industry: brandProfilesTable.industry,
-          })
-          .from(brandProfilesTable)
-          .where(inArray(brandProfilesTable.websiteProjectId, projectIds));
-
   const industryByProject = new Map(brands.map((b) => [b.projectId, b.industry]));
 
   const rows: PartnerProjectRow[] = await Promise.all(
-    projects.map(async (project) => {
+    cappedProjects.map(async (project) => {
       const visibility = await loadProjectVisibilitySummary(project.id);
       const counts = countByProject.get(project.id) ?? { published: 0, draft: 0 };
+      const outcomes = outcomesById.get(project.id);
 
       return {
         id: project.id,
@@ -100,13 +103,25 @@ export default async function PartnerPage() {
         industry: industryByProject.get(project.id) ?? null,
         visibilityScore: visibility.visibilityScore,
         visibilityDelta: visibility.visibilityDelta,
-        geoScore: visibility.latestGeoScore,
+        geoScore: outcomes?.latestGeoScore ?? visibility.latestGeoScore,
         geoScoreDelta: visibility.geoScoreDelta,
         publishedCount: counts.published,
         draftCount: counts.draft,
+        draftsNeedingReview: outcomes?.draftsNeedingReview ?? 0,
+        generatingPieces: outcomes?.generatingPieces ?? 0,
+        llmCitationRate: outcomes?.llmCitationRate ?? null,
+        recentPublishOk: outcomes?.recentPublishOk ?? 0,
+        recentPublishFail: outcomes?.recentPublishFail ?? 0,
+        internalLinkCoverage: outcomes?.internalLinkCoverage ?? null,
       };
     }),
   );
 
-  return <PartnerWorkspaceClient projects={rows} organizationName={organizationName} />;
+  return (
+    <PartnerWorkspaceClient
+      projects={rows}
+      organizationName={organizationName}
+      generatedAt={new Date().toISOString()}
+    />
+  );
 }

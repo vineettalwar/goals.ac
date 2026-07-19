@@ -4,11 +4,13 @@ import { CheckCircle2, Eye, Leaf, Loader2 } from "lucide-react";
 import { useAuth } from "@/context/auth";
 import { apiFetch } from "@/lib/api";
 import { StepIndicator } from "@/components/onboarding/StepIndicator";
+import { PartnerDemoChecklist } from "@/components/onboarding/PartnerDemoChecklist";
 
 type Phase = "scan" | "plan" | "generate" | "done" | "error";
 
 type FastLaneStatus = {
-  crawlStatus?: string;
+  crawlStatus?: string | null;
+  scrapeStatus?: string | null;
   articleProgress?: {
     generating: number;
     draft: number;
@@ -16,16 +18,36 @@ type FastLaneStatus = {
     published: number;
     failed: number;
   };
+  firstPieceId?: number | null;
   visibility?: {
     visibilityScore: number;
+    visibilityDelta?: number | null;
     latestGeoScore: number | null;
+    geoScoreDelta?: number | null;
   };
 };
+
+function brandScanSettled(data: FastLaneStatus): boolean {
+  const scrape = data.scrapeStatus;
+  if (scrape === "done" || scrape === "failed") return true;
+  if (!scrape) {
+    return data.crawlStatus === "done" || data.crawlStatus === "failed";
+  }
+  return false;
+}
 
 const AUTOPILOT_INTENT_KEY = "autopilot_intent";
 
 function clearAutopilotIntent() {
   sessionStorage.removeItem(AUTOPILOT_INTENT_KEY);
+}
+
+function stepIndex(phase: Phase): number {
+  if (phase === "scan") return 0;
+  if (phase === "plan") return 1;
+  if (phase === "generate") return 2;
+  if (phase === "done") return 3;
+  return 1;
 }
 
 export function FastLanePage() {
@@ -39,7 +61,17 @@ export function FastLanePage() {
   const [error, setError] = useState<string | null>(null);
   const [queuedCount, setQueuedCount] = useState(0);
   const [readyCount, setReadyCount] = useState(0);
+  const [firstPieceId, setFirstPieceId] = useState<number | null>(null);
   const [visibilitySnapshot, setVisibilitySnapshot] = useState<FastLaneStatus["visibility"] | null>(null);
+
+  const applyStatus = useCallback((data: FastLaneStatus) => {
+    const progress = data.articleProgress;
+    const ready = (progress?.draft ?? 0) + (progress?.ready ?? 0) + (progress?.published ?? 0);
+    setReadyCount(ready);
+    if (data.visibility) setVisibilitySnapshot(data.visibility);
+    if (data.firstPieceId != null) setFirstPieceId(data.firstPieceId);
+    return { ready, progress };
+  }, []);
 
   const pollProgress = useCallback(
     async (expected: number) => {
@@ -49,10 +81,7 @@ export function FastLanePage() {
           const data = await apiFetch<FastLaneStatus>(
             `/api/onboarding/fast-lane?projectId=${encodeURIComponent(projectId)}`,
           );
-          const progress = data.articleProgress;
-          const ready = (progress?.draft ?? 0) + (progress?.ready ?? 0) + (progress?.published ?? 0);
-          setReadyCount(ready);
-          if (data.visibility) setVisibilitySnapshot(data.visibility);
+          const { ready, progress } = applyStatus(data);
           if (ready >= expected || (progress?.failed ?? 0) > 0) {
             return true;
           }
@@ -63,7 +92,7 @@ export function FastLanePage() {
       }
       return false;
     },
-    [projectId],
+    [projectId, applyStatus],
   );
 
   const runFastLane = useCallback(async () => {
@@ -76,9 +105,7 @@ export function FastLanePage() {
         const data = await apiFetch<FastLaneStatus>(
           `/api/onboarding/fast-lane?projectId=${encodeURIComponent(projectId)}`,
         );
-        if (data.crawlStatus === "done" || data.crawlStatus === "failed") {
-          break;
-        }
+        if (brandScanSettled(data)) break;
       } catch {
         // crawl status unavailable — continue polling
       }
@@ -110,9 +137,9 @@ export function FastLanePage() {
         const status = await apiFetch<FastLaneStatus>(
           `/api/onboarding/fast-lane?projectId=${encodeURIComponent(projectId)}`,
         );
-        if (status.visibility) setVisibilitySnapshot(status.visibility);
+        applyStatus(status);
       } catch {
-        // optional visibility snapshot
+        // optional visibility / piece snapshot
       }
 
       setPhase("done");
@@ -121,7 +148,7 @@ export function FastLanePage() {
       setPhase("error");
       setError(err instanceof Error ? err.message : "Setup failed. Check Integrations → AI for BYOK.");
     }
-  }, [projectId, pollProgress]);
+  }, [projectId, pollProgress, applyStatus]);
 
   useEffect(() => {
     if (!projectId || authLoading || !user) return;
@@ -156,8 +183,8 @@ export function FastLanePage() {
             <span className="text-lg font-semibold">goals.ac</span>
           </div>
           <StepIndicator
-            steps={["Website", "Content plan", "Articles", "Connect CMS"]}
-            current={phase === "done" ? 2 : phase === "generate" ? 2 : 1}
+            steps={["Website", "Content plan", "Articles", "Demo ready"]}
+            current={stepIndex(phase)}
           />
           <h1 className="mt-8 text-3xl font-bold">Setting up Content Autopilot</h1>
           <p className="mt-2 text-muted-foreground">{message}</p>
@@ -186,44 +213,57 @@ export function FastLanePage() {
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Your 30-day calendar is ready. Connect WordPress to publish drafts automatically, or review
-                articles in the dashboard.
+                Your 30-day calendar is ready. Walk the partner checklist below — review, humanize, CMS,
+                visibility, then command center.
               </p>
-              {visibilitySnapshot ? (
-                <div className="grid grid-cols-1 gap-3 rounded-lg border border-border bg-secondary/30 p-4 text-center sm:grid-cols-2">
-                  <div>
-                    <p className="text-xl font-bold">{visibilitySnapshot.visibilityScore}%</p>
-                    <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
-                      <Eye className="h-3 w-3" /> AI visibility
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xl font-bold">
-                      {visibilitySnapshot.latestGeoScore ?? "—"}
-                      {visibilitySnapshot.latestGeoScore != null ? (
-                        <span className="text-sm font-normal text-muted-foreground">/100</span>
-                      ) : null}
-                    </p>
-                    <p className="text-xs text-muted-foreground">GEO score</p>
-                  </div>
+              <div className="rounded-lg border border-border bg-secondary/30 p-4">
+                <div className="mb-3 flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                    Visibility snapshot
+                  </p>
+                  <Link to="/search/visibility" className="text-xs font-medium text-primary hover:underline">
+                    Open full view
+                  </Link>
                 </div>
-              ) : null}
-              <div className="flex flex-col gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => navigate(`/projects/${projectId}/integrations`)}
-                  className="rounded-lg bg-primary px-4 py-3 text-sm font-medium text-primary-foreground"
-                >
-                  Connect WordPress →
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate("/dashboard")}
-                  className="rounded-lg px-4 py-2 text-sm text-muted-foreground hover:bg-secondary"
-                >
-                  Skip — open autopilot dashboard
-                </button>
+                {visibilitySnapshot ? (
+                  <div className="grid grid-cols-1 gap-3 text-center sm:grid-cols-2">
+                    <div>
+                      <p className="text-xl font-bold">{visibilitySnapshot.visibilityScore}%</p>
+                      <p className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
+                        <Eye className="h-3 w-3" /> AI visibility
+                      </p>
+                      {visibilitySnapshot.visibilityDelta != null &&
+                      visibilitySnapshot.visibilityDelta !== 0 ? (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          {visibilitySnapshot.visibilityDelta > 0 ? "+" : ""}
+                          {visibilitySnapshot.visibilityDelta}pp
+                        </p>
+                      ) : null}
+                    </div>
+                    <div>
+                      <p className="text-xl font-bold">
+                        {visibilitySnapshot.latestGeoScore ?? "—"}
+                        {visibilitySnapshot.latestGeoScore != null ? (
+                          <span className="text-sm font-normal text-muted-foreground">/100</span>
+                        ) : null}
+                      </p>
+                      <p className="text-xs text-muted-foreground">GEO score</p>
+                      {visibilitySnapshot.geoScoreDelta != null &&
+                      visibilitySnapshot.geoScoreDelta !== 0 ? (
+                        <p className="mt-0.5 text-[11px] text-muted-foreground">
+                          {visibilitySnapshot.geoScoreDelta > 0 ? "+" : ""}
+                          {visibilitySnapshot.geoScoreDelta} vs prior
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-center text-xs text-muted-foreground">
+                    Scores will appear as crawl and GEO data land.
+                  </p>
+                )}
               </div>
+              <PartnerDemoChecklist projectId={projectId} firstPieceId={firstPieceId} />
             </>
           ) : (
             <div className="flex flex-col items-center gap-3 py-6">

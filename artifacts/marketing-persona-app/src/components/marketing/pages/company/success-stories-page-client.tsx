@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Clock, TrendingUp } from "lucide-react";
+import { ArrowRight, Clock, ExternalLink, TrendingUp } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
 import { PageHero } from "@/components/marketing/heroes/page-hero";
 import { MarketingSection } from "@/components/marketing/sections/marketing-section";
@@ -9,9 +9,11 @@ import { WaitlistForm } from "@/components/shared/waitlist-form";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
 import { CONTACT_CTA_LABEL, CONTACT_HREF, PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
 import { ARTICLE_QUALITY_DEMO_SCORE } from "@/lib/marketing/content/article-quality-demo";
+import { DEFAULT_VERIFY_LINKS, type SuccessStory } from "@/lib/marketing/content/success-stories";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
 const glassCard = cardSurfaceClass("glass");
+const glassCardStatic = cardSurfaceClass("glass", false);
 
 export type PublicArticleExample = {
   id: number;
@@ -22,17 +24,24 @@ export type PublicArticleExample = {
 
 type Props = {
   articles: PublicArticleExample[];
+  publishedStories: SuccessStory[];
 };
 
-export function SuccessStoriesPageClient({ articles }: Props) {
+export function SuccessStoriesPageClient({ articles, publishedStories }: Props) {
+  const hasPublished = publishedStories.length > 0;
+
   return (
     <MarketingPageShell
       hero={
         <PageHero
-          badge="Coming soon"
-          titleLine1="Customer stories"
-          titleLine2="not published yet"
-          description="We have not launched client case studies. No named wins, no metrics. Try the demos below or book a walkthrough while early access continues."
+          badge={hasPublished ? "Customer stories" : "Coming soon"}
+          titleLine1={hasPublished ? "Customer" : "Customer stories"}
+          titleLine2={hasPublished ? "stories" : "not published yet"}
+          description={
+            hasPublished
+              ? "Permissioned results with primary-source verify links — Search Console, Ahrefs, ChatGPT."
+              : "No named customer case studies yet. Below is how we will report results when a story is cleared to publish."
+          }
           backgroundImage={HERO_IMAGES.roadmaps.hero}
           ctas={[
             { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "primary" },
@@ -41,18 +50,61 @@ export function SuccessStoriesPageClient({ articles }: Props) {
         />
       }
     >
-      <MarketingSection bordered className="py-16" titleLine1="What you can" titleLine2="try today">
-        <div className={`${glassCard} p-6 mb-10 max-w-2xl flex gap-4 items-start`}>
-          <Clock className="h-5 w-5 text-(--accent-warm) shrink-0 mt-0.5" aria-hidden />
-          <div>
-            <p className="font-medium text-white mb-1">No success stories published</p>
-            <p className="text-sm text-white/65 leading-relaxed">
-              goals.ac has not shipped named customer case studies. When real, permissioned stories exist, they will
-              appear here with primary-source proof — until then this page stays empty of claims.
-            </p>
+      {hasPublished ? (
+        <MarketingSection bordered className="py-16" titleLine1="Published" titleLine2="results">
+          <div className="grid md:grid-cols-2 gap-6">
+            {publishedStories.map((story) => (
+              <Link
+                key={story.slug}
+                href={`/success-stories/${story.slug}`}
+                className={`${glassCard} p-6 block hover:bg-white/[0.07] transition-colors`}
+              >
+                <p className="text-[11px] text-white/55 mb-2">
+                  {story.vertical} · {story.companyLabel}
+                </p>
+                <h3 className="font-bold text-lg mb-2 text-white">{story.title}</h3>
+                <p className="text-sm text-white/65 line-clamp-3">{story.summary}</p>
+              </Link>
+            ))}
           </div>
-        </div>
+        </MarketingSection>
+      ) : (
+        <MarketingSection bordered className="py-16" titleLine1="How we" titleLine2="report results">
+          <div className={`${glassCardStatic} p-6 mb-10 max-w-2xl flex gap-4 items-start`}>
+            <Clock className="h-5 w-5 text-(--accent-warm) shrink-0 mt-0.5" aria-hidden />
+            <div>
+              <p className="font-medium text-white mb-1">No success stories published</p>
+              <p className="text-sm text-white/65 leading-relaxed">
+                When a client grants permission, stories land here with before/after metrics and verify
+                links — not invented lift.
+              </p>
+            </div>
+          </div>
 
+          <div className={`${glassCardStatic} p-6 md:p-8 max-w-2xl`}>
+            <h3 className="font-bold text-lg mb-2 text-white">Verify the method</h3>
+            <p className="text-sm text-white/55 mb-5">
+              Same tools we cite for organic and AI visibility. Open them yourself.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {DEFAULT_VERIFY_LINKS.map((link) => (
+                <a
+                  key={link.href + link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/5 px-4 py-2 text-sm font-medium text-white hover:bg-white/10 transition-colors"
+                >
+                  {link.label}
+                  <ExternalLink className="h-3.5 w-3.5 opacity-70" aria-hidden />
+                </a>
+              ))}
+            </div>
+          </div>
+        </MarketingSection>
+      )}
+
+      <MarketingSection bordered className="py-16" titleLine1="What you can" titleLine2="try today">
         <div className="grid md:grid-cols-2 gap-6 mb-12">
           <div className={`${glassCard} p-6`}>
             <h3 className="font-bold text-lg mb-2 text-white">Content Studio</h3>
@@ -74,7 +126,6 @@ export function SuccessStoriesPageClient({ articles }: Props) {
             >
               <TrendingUp className="h-5 w-5" aria-hidden /> {ARTICLE_QUALITY_DEMO_SCORE}/100
             </Link>
-            <p className="text-xs text-white/50 mt-2">Tap to see the full breakdown →</p>
             {articles.length > 0 ? (
               <ul className="mt-4 space-y-2">
                 {articles.slice(0, 3).map((a) => (
@@ -82,7 +133,6 @@ export function SuccessStoriesPageClient({ articles }: Props) {
                     <Link href={`/seo-article/${a.id}`} className="text-sm text-primary hover:underline line-clamp-1">
                       {a.title}
                     </Link>
-                    <span className="text-xs text-white/50 ml-1">· {a.wordCount} words</span>
                   </li>
                 ))}
               </ul>

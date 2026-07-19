@@ -10,7 +10,10 @@ import {
   listAccessibleProjects,
   requireSiteAdminAccess,
 } from "@workspace/cf-edge/project-access";
+import { loadCommandCenterSummary } from "@workspace/content-engine/analytics/command-center-service";
 import { loadProjectVisibilitySummary } from "./visibility-routes";
+
+const PARTNER_PROJECT_CAP = 20;
 
 type ProjectInternalLinkSummary = {
   coverageScore: number;
@@ -107,7 +110,8 @@ export async function handlePartnerRead(
     return withCors(request, Response.json({ error: access.error }, { status: access.status }));
   }
 
-  const projects = await listPartnerProjects(session, userId);
+  const allProjects = await listPartnerProjects(session, userId);
+  const projects = allProjects.slice(0, PARTNER_PROJECT_CAP);
   const projectIds = projects.map((p) => p.id);
 
   const pieceCounts =
@@ -138,9 +142,10 @@ export async function handlePartnerRead(
 
   const rows = await Promise.all(
     projects.map(async (project) => {
-      const [visibility, links] = await Promise.all([
+      const [visibility, links, summary] = await Promise.all([
         loadProjectVisibilitySummary(project.id),
         getProjectInternalLinkSummary(project.id),
+        loadCommandCenterSummary(project.id),
       ]);
       const counts = countByProject.get(project.id) ?? { published: 0, draft: 0 };
 
@@ -150,13 +155,25 @@ export async function handlePartnerRead(
         url: project.url,
         visibilityScore: visibility.visibilityScore,
         visibilityDelta: visibility.visibilityDelta,
-        geoScore: visibility.latestGeoScore,
+        geoScore: summary.latestGeoScore ?? visibility.latestGeoScore,
         linkCoverage: links.coverageScore,
         publishedCount: counts.published,
         draftCount: counts.draft,
+        draftsNeedingReview: summary.draftsNeedingReview,
+        generatingPieces: summary.generatingPieces,
+        llmCitationRate: summary.llmCitationRate,
+        recentPublishOk: summary.publishHealth?.ok ?? 0,
+        recentPublishFail: summary.publishHealth?.failed ?? 0,
+        internalLinkCoverage: summary.internalLinkCoverage ?? links.coverageScore,
       };
     }),
   );
 
-  return withCors(request, Response.json({ projects: rows }));
+  return withCors(
+    request,
+    Response.json({
+      generatedAt: new Date().toISOString(),
+      projects: rows,
+    }),
+  );
 }

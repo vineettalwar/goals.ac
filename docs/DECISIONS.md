@@ -1,3 +1,15 @@
+## 2026-07-20 — World-class gaps tranche (proof → agency), not new engines
+
+**Decision:** Execute the five-item world-class sequence from the competitive gap analysis: (1) success-stories infrastructure with verify CTAs and no fake named wins, (2) dashboard Outcomes panel over command-center data, (3) fast-lane partner demo checklist, (4) harden public GEO audit lead magnet, (5) org partner multi-client report (print-to-PDF). Do **not** build Surfer NLP, hosted blog, backlink exchange, or flip GTM to public self-serve pricing in this tranche.
+
+**Alternatives considered:**
+- Feature-parity clone of BLG/AutoSEO (backlinks, hosted blog, public pricing) — rejected for current consulting-led ICP
+- Another packaging wave of Studio/CMS polish only — deferred; Waves 0–5 already closed that class of gap
+
+**Reason:** Engine-rich / experience-thin diagnosis still holds for *proof and partner workflow*, not missing backends.
+
+**Implications:** PRD `docs/prd/world-class-gaps-tranche.md`; ICP remains partner-demo for 90 days.
+
 ## 2026-07-17 — Wave 5 humanize durability + integration reliability
 
 **Decision:** After Wave 4 trust surfaces, execute **Wave 5** to deepen humanize quality gates (reject-below-threshold, FAQ/citation guards, voice-gated generate, platform-voice social), Studio coherence (format parity, Ready checklist, social tighten), and integration reliability (Ghost/Webflow updates, health-gated publish, schedule honesty, Mastodon admin info, Basic publish badges). Keep Surfer NLP, hosted blog, and self-serve pricing deferred.

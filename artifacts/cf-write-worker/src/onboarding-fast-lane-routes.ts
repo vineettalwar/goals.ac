@@ -16,6 +16,7 @@ import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/u
 import { rateLimitResponse, RATE_LIMITS } from "@workspace/content-engine/core/rate-limit";
 import { sendToCfQueue } from "@workspace/jobs/cf-queues";
 import { QUEUES } from "@workspace/jobs/queues";
+import { kickOffFastLaneVisibility } from "@workspace/content-engine/strategy/fast-lane-visibility";
 import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "./ai-billing";
@@ -278,6 +279,16 @@ export async function handleOnboardingFastLaneWrite(
     })
     .where(eq(websiteProjectsTable.id, projectId));
 
+  const visibilityKickoff = await kickOffFastLaneVisibility({
+    projectId,
+    projectUrl: project.url,
+    queueVisibilityCheck: async () => {
+      const jobId = await sendToCfQueue(QUEUES.llmVisibilityCheck, { projectId });
+      const id = jobId ?? `cf:${QUEUES.llmVisibilityCheck}:${projectId}:${Date.now()}`;
+      await trackJob(id, QUEUES.llmVisibilityCheck, { userId, projectId });
+    },
+  });
+
   return withCors(
     request,
     Response.json({
@@ -285,6 +296,7 @@ export async function handleOnboardingFastLaneWrite(
       queuedItemIds: queued,
       articleCount: queued.length,
       crawlStatus: project.crawlStatus,
+      visibilityKickoff,
     }),
   );
 }

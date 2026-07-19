@@ -1,11 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { CheckCircle, XCircle, AlertTriangle } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
 import { PageHero } from "@/components/marketing/heroes/page-hero";
 import { DarkCTABand } from "@/components/marketing/sections/dark-cta-band";
+import { WaitlistForm } from "@/components/shared/waitlist-form";
+import { Button } from "@/components/ui/button";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
-import { CONTACT_CTA_LABEL, CONTACT_HREF, PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
+import {
+  CONTACT_CTA_LABEL,
+  CONTACT_HREF,
+  PRODUCT_CTA_HREF,
+  PRODUCT_CTA_PRIMARY,
+} from "@/lib/marketing/site/marketing-contact";
 import { GeoAuditWriteNext } from "@/components/geo-audit/geo-audit-write-next";
 import { geoAuditContentRecommendations } from "@/lib/content/geo-audit-content-recommendations";
 import type { GeoIssue } from "@/components/geo-audit/geo-audit-result-view";
@@ -93,6 +101,30 @@ export function GeoAuditResultClient({
 
         <GeoAuditWriteNext recommendations={recommendations} projectId={projectId} />
 
+        <div className={`${glassCard} p-6 space-y-4`}>
+          <div>
+            <p className="text-sm font-semibold text-white">Get the full fix plan</p>
+            <p className="mt-1 text-xs text-white/60">
+              Optional — results stay visible either way. Join the waitlist or start free and book a
+              demo.
+            </p>
+          </div>
+          <WaitlistForm
+            featureKey="geo-audit-lead"
+            variant="dark"
+            buttonLabel="Email me tips"
+            placeholder="you@company.com"
+          />
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button asChild size="sm" className="hero-cta-primary border-0">
+              <Link href={PRODUCT_CTA_HREF}>{PRODUCT_CTA_PRIMARY}</Link>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="border-white/20 bg-white/5 text-white hover:bg-white/10">
+              <Link href={CONTACT_HREF}>{CONTACT_CTA_LABEL}</Link>
+            </Button>
+          </div>
+        </div>
+
         <div className="space-y-3">
           {issues.map((issue) => (
             <div key={issue.check} className={`${glassCard} p-5 space-y-2`}>
@@ -117,6 +149,7 @@ export function GeoAuditResultClient({
         titleLine2="issues automatically?"
         description="Sign up free and fix these issues with research-driven drafts, schema, and cross-platform publishing."
         primaryCta={{ label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF }}
+        secondaryCta={{ label: CONTACT_CTA_LABEL, href: CONTACT_HREF }}
       />
     </MarketingPageShell>
   );

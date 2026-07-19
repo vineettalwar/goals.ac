@@ -8,8 +8,12 @@ export {
   DashboardRecentSection,
   DashboardStatsSection,
   DashboardView,
+  OutcomesPanel,
   formatArticleUsageLabel,
+  formatCitationDelta,
+  formatGeoTrend,
   formatInternalLinksChipLabel,
+  formatPublishHealth,
 } from "./dashboard-ui";
 export {
   contentPiecePath,
@@ -19,6 +23,7 @@ export {
   type DashboardAutopilotSavePayload,
   type DashboardAutopilotSettings,
   type DashboardCommandCenter,
+  type DashboardCommandCenterPublishHealth,
   type DashboardCommandCenterRecentPiece,
   type DashboardCommandCenterRecentPublish,
   type DashboardData,

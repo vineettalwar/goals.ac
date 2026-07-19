@@ -38,15 +38,29 @@ export type CommandCenterRecentPublish = {
   createdAt: string;
 };
 
+export type CommandCenterPublishHealth = {
+  ok: number;
+  failed: number;
+  lastAt: string | null;
+};
+
 export type CommandCenterSummary = {
   openOpportunities: number;
   queuedOpportunities: number;
   calendarDraftItems: number;
   draftsNeedingReview: number;
   generatingPieces: number;
+  /** Pieces with status `published` or `ready`. */
+  publishedCount: number;
+  draftCount: number;
+  publishHealth: CommandCenterPublishHealth;
   latestGeoScore: number | null;
+  /** Second-latest GEO audit score; null when fewer than 2 audits. */
+  previousGeoScore: number | null;
   latestGeoAuditAt: string | null;
   llmCitationRate: number | null;
+  /** Citation-rate change vs prior 14-day window (percentage points); null when either window empty. */
+  llmCitationDelta: number | null;
   topOpportunities: CommandCenterOpportunityPreview[];
   /** Coverage % from the same rules as `/internal-links`; null when no pages in map. */
   internalLinkCoverage: number | null;
@@ -113,13 +127,16 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
       .from(geoAuditsTable)
       .where(eq(geoAuditsTable.websiteProjectId, projectId))
       .orderBy(desc(geoAuditsTable.createdAt))
-      .limit(1),
+      .limit(2),
     db
-      .select({ cited: llmVisibilitySnapshotsTable.cited })
+      .select({
+        cited: llmVisibilitySnapshotsTable.cited,
+        checkedAt: llmVisibilitySnapshotsTable.checkedAt,
+      })
       .from(llmVisibilitySnapshotsTable)
       .where(eq(llmVisibilitySnapshotsTable.websiteProjectId, projectId))
       .orderBy(desc(llmVisibilitySnapshotsTable.checkedAt))
-      .limit(40),
+      .limit(80),
     db
       .select({
         id: keywordOpportunitiesTable.id,
@@ -161,9 +178,30 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
 
   let draftsNeedingReview = 0;
   let generatingPieces = 0;
+  let publishedCount = 0;
+  let draftCount = 0;
   for (const row of pieceRows) {
-    if (row.status === "draft") draftsNeedingReview += 1;
+    if (row.status === "draft") {
+      draftsNeedingReview += 1;
+      draftCount += 1;
+    }
     if (row.status === "generating") generatingPieces += 1;
+    if (row.status === "published" || row.status === "ready") publishedCount += 1;
+  }
+
+  let publishOk = 0;
+  let publishFailed = 0;
+  let publishLastAt: string | null = null;
+  for (const row of publishRows) {
+    if (row.status === "published") publishOk += 1;
+    if (row.status === "failed") publishFailed += 1;
+    if (!publishLastAt) {
+      publishLastAt = row.publishedAt
+        ? String(row.publishedAt)
+        : row.createdAt
+          ? String(row.createdAt)
+          : null;
+    }
   }
 
   const hasLinkMap = linkSummary.pageCount > 0;
@@ -172,10 +210,29 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
   const internalLinkSuggestions = linkSummary.suggestionCount;
 
   const latestGeo = geoRows[0];
+  const previousGeo = geoRows[1];
   let llmCitationRate: number | null = null;
+  let llmCitationDelta: number | null = null;
   if (llmRows.length > 0) {
     const cited = llmRows.filter((row) => row.cited).length;
     llmCitationRate = Math.round((cited / llmRows.length) * 100);
+
+    const recentCutoff = new Date();
+    recentCutoff.setDate(recentCutoff.getDate() - 14);
+    const priorCutoff = new Date();
+    priorCutoff.setDate(priorCutoff.getDate() - 28);
+    const rate = (rows: { cited: boolean }[]) =>
+      rows.length === 0 ? null : Math.round((rows.filter((r) => r.cited).length / rows.length) * 100);
+    const recent = llmRows.filter((row) => new Date(row.checkedAt) >= recentCutoff);
+    const prior = llmRows.filter((row) => {
+      const at = new Date(row.checkedAt);
+      return at >= priorCutoff && at < recentCutoff;
+    });
+    const recentRate = rate(recent);
+    const priorRate = rate(prior);
+    if (recentRate != null && priorRate != null) {
+      llmCitationDelta = recentRate - priorRate;
+    }
   }
 
   return {
@@ -184,9 +241,14 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
     calendarDraftItems,
     draftsNeedingReview,
     generatingPieces,
+    publishedCount,
+    draftCount,
+    publishHealth: { ok: publishOk, failed: publishFailed, lastAt: publishLastAt },
     latestGeoScore: latestGeo?.geoScore ?? null,
+    previousGeoScore: previousGeo?.geoScore ?? null,
     latestGeoAuditAt: latestGeo?.createdAt ? String(latestGeo.createdAt) : null,
     llmCitationRate,
+    llmCitationDelta,
     topOpportunities: topOpps,
     internalLinkCoverage,
     internalLinkOrphanCount,

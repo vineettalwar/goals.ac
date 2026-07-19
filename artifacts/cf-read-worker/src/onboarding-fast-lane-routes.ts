@@ -1,7 +1,7 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { db } from "@workspace/db";
 import { contentPiecesTable } from "@workspace/db/schema-sqlite";
-import { count, eq } from "drizzle-orm";
+import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { getAccessibleProject } from "./project-access";
 import { loadProjectVisibilitySummary } from "./visibility-routes";
 
@@ -36,10 +36,23 @@ export async function handleOnboardingFastLaneRead(
   const byStatus = Object.fromEntries(pieceStats.map((r) => [r.status, r.value]));
   const visibility = await loadProjectVisibilitySummary(projectId);
 
+  const [firstPiece] = await db
+    .select({ id: contentPiecesTable.id })
+    .from(contentPiecesTable)
+    .where(
+      and(
+        eq(contentPiecesTable.websiteProjectId, projectId),
+        inArray(contentPiecesTable.status, ["draft", "ready", "published"]),
+      ),
+    )
+    .orderBy(asc(contentPiecesTable.id))
+    .limit(1);
+
   return withCors(
     request,
     Response.json({
       crawlStatus: project.crawlStatus,
+      scrapeStatus: project.scrapeStatus ?? null,
       projectId: project.id,
       url: project.url,
       articleProgress: {
@@ -49,9 +62,12 @@ export async function handleOnboardingFastLaneRead(
         published: byStatus.published ?? 0,
         failed: byStatus.failed ?? 0,
       },
+      firstPieceId: firstPiece?.id ?? null,
       visibility: {
         visibilityScore: visibility.visibilityScore,
+        visibilityDelta: visibility.visibilityDelta,
         latestGeoScore: visibility.latestGeoScore,
+        geoScoreDelta: visibility.geoScoreDelta,
       },
     }),
   );

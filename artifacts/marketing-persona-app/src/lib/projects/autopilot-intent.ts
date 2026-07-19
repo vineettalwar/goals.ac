@@ -46,6 +46,6 @@ export function postAutopilotOnboardingRedirect(projectId: number): string {
   return `/onboarding/fast-lane?projectId=${projectId}`;
 }
 
-export function postAutopilotCompleteRedirect(_projectId: number): string {
-  return "/dashboard";
+export function postAutopilotCompleteRedirect(projectId: number): string {
+  return `/projects/${projectId}/content-studio`;
 }

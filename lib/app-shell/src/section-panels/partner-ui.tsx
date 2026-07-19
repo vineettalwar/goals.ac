@@ -13,6 +13,10 @@ export type PartnerProjectRow = {
   linkCoverage: number;
   publishedCount: number;
   draftCount: number;
+  /** Optional command-center outcomes (when API provides them). */
+  llmCitationRate?: number | null;
+  recentPublishOk?: number;
+  recentPublishFail?: number;
 };
 
 function SectionLink({
@@ -26,6 +30,15 @@ function deltaLabel(delta: number | null): string | null {
   if (delta == null || delta === 0) return null;
   const sign = delta > 0 ? "+" : "";
   return `${sign}${delta}pp`;
+}
+
+function formatPublishHealth(ok: number | undefined, failed: number | undefined): string | null {
+  if (ok == null && failed == null) return null;
+  const o = ok ?? 0;
+  const f = failed ?? 0;
+  if (o === 0 && f === 0) return "No publishes";
+  if (f === 0) return `${o} ok`;
+  return `${o} ok · ${f} failed`;
 }
 
 export function PartnerWorkspaceView({
@@ -47,7 +60,20 @@ export function PartnerWorkspaceView({
   );
 
   return (
-    <div className="space-y-6">
+    <div className="partner-print-root space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 print:hidden">
+        <p className="text-xs text-muted-foreground">
+          {organizationName ? `Organization: ${organizationName}` : "Client outcomes"}
+        </p>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-secondary/50"
+        >
+          Print / Save as PDF
+        </button>
+      </div>
+
       <div className="grid gap-3 sm:grid-cols-3">
         <StatCard label="Client projects" value={projects.length} icon={<Globe className="h-5 w-5" />} />
         <StatCard
@@ -77,50 +103,61 @@ export function PartnerWorkspaceView({
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {projects.map((project) => (
-            <SectionLink
-              key={project.id}
-              renderLink={renderLink}
-              href={`/projects/${project.id}`}
-              className="paper-card block p-5 transition-colors hover:bg-secondary/20"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="font-semibold">{project.name}</p>
-                  <p className="mt-0.5 truncate text-xs text-muted-foreground">{project.url ?? "No URL"}</p>
+          {projects.map((project) => {
+            const publishHealth = formatPublishHealth(
+              project.recentPublishOk,
+              project.recentPublishFail,
+            );
+            return (
+              <SectionLink
+                key={project.id}
+                renderLink={renderLink}
+                href={`/projects/${project.id}`}
+                className="paper-card block p-5 transition-colors hover:bg-secondary/20"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="font-semibold">{project.name}</p>
+                    <p className="mt-0.5 truncate text-xs text-muted-foreground">{project.url ?? "No URL"}</p>
+                  </div>
+                  <StatusPill label={`${project.visibilityScore}% visibility`} tone="primary" />
                 </div>
-                <StatusPill label={`${project.visibilityScore}% visibility`} tone="primary" />
-              </div>
-              <div className="mt-4 grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
-                <div>
-                  <p className="text-muted-foreground">GEO</p>
-                  <p className="font-semibold tabular-nums">
-                    {project.geoScore ?? "—"}
-                    {deltaLabel(project.visibilityDelta) ? (
-                      <span className="ml-1 text-emerald-600">{deltaLabel(project.visibilityDelta)}</span>
-                    ) : null}
-                  </p>
+                <div className="mt-4 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+                  <div>
+                    <p className="text-muted-foreground">GEO</p>
+                    <p className="font-semibold tabular-nums">{project.geoScore ?? "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Cited</p>
+                    <p className="font-semibold tabular-nums">
+                      {project.llmCitationRate != null ? `${project.llmCitationRate}%` : "—"}
+                      {deltaLabel(project.visibilityDelta) ? (
+                        <span className="ml-1 text-emerald-600">{deltaLabel(project.visibilityDelta)}</span>
+                      ) : null}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Published</p>
+                    <p className="font-semibold tabular-nums">{project.publishedCount}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Publish health</p>
+                    <p className="flex items-center gap-1 font-semibold tabular-nums">
+                      {publishHealth ?? (
+                        <>
+                          <Link2 className="h-3 w-3" />
+                          {project.linkCoverage}%
+                        </>
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Published</p>
-                  <p className="font-semibold tabular-nums">{project.publishedCount}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Link coverage</p>
-                  <p className="flex items-center gap-1 font-semibold tabular-nums">
-                    <Link2 className="h-3 w-3" />
-                    {project.linkCoverage}%
-                  </p>
-                </div>
-              </div>
-            </SectionLink>
-          ))}
+              </SectionLink>
+            );
+          })}
         </div>
       )}
-
-      {organizationName ? (
-        <p className="text-xs text-muted-foreground">Organization: {organizationName}</p>
-      ) : null}
     </div>
   );
 }
+

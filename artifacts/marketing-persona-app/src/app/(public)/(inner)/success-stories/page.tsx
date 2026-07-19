@@ -3,11 +3,12 @@ import { db } from "@workspace/db";
 import { seoArticlesTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
 import { SuccessStoriesPageClient, type PublicArticleExample } from "@/components/marketing/pages/company/success-stories-page-client";
+import { getPublishedStories } from "@/lib/marketing/content/success-stories";
 
 export const metadata: Metadata = {
   title: "Customer Stories | goals.ac",
   description:
-    "No customer case studies published yet — we have not launched named stories. Explore GEO audits, article demos, and Content Studio meanwhile.",
+    "Verified-results template with Search Console, Ahrefs, and ChatGPT verify CTAs. Named customer stories publish only with permission — no empty claims.",
 };
 
 export default async function Page() {
@@ -31,8 +32,10 @@ export default async function Page() {
       wordCount: row.wordCount ?? 0,
     }));
   } catch {
-    // Build-time or offline — page shows "coming soon" without sample articles.
+    // Build-time or offline — page shows demos without sample articles.
   }
 
-  return <SuccessStoriesPageClient articles={articles} />;
+  return (
+    <SuccessStoriesPageClient articles={articles} publishedStories={getPublishedStories()} />
+  );
 }

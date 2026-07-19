@@ -106,6 +106,8 @@
     "./strategy/goal-brief-compiler": "./src/strategy/goal-brief-compiler.ts",
     "./strategy/keyword-opportunity-service": "./src/strategy/keyword-opportunity-service.ts",
     "./strategy/llm-visibility-service": "./src/strategy/llm-visibility-service.ts",
+    "./strategy/fast-lane-visibility": "./src/strategy/fast-lane-visibility.ts",
+    "./fast-lane-visibility": "./src/strategy/fast-lane-visibility.ts",
     "./strategy/persona-generator": "./src/strategy/persona-generator.ts",
     "./strategy/roadmap-generator": "./src/strategy/roadmap-generator.ts",
     "./strategy/topical-map-generator": "./src/strategy/topical-map-generator.ts",

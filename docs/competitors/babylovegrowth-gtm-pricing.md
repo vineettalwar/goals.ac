@@ -128,9 +128,9 @@ From pricing page "Want to offer SEO to your clients":
 
 BLG repeats "Do ChatGPT, Claude, Perplexity & Gemini recommend your website?" with "Run free audit" CTA on homepage (twice) and success stories footer.
 
-**goals.ac:** `/geo-audit` marketing page exists; Next.js generate route requires auth. Legacy Express route allows optional auth.
+**goals.ac:** `/geo-audit` marketing page + anonymous `POST /api/public/geo-audits/generate` (rate-limited: 5/IP/hour) and public GET by id. Also on CF public worker. Soft waitlist/signup capture on results.
 
-**Parity action:** Anonymous rate-limited GEO audit for lead gen (Phase 2 in parity planner).
+**Parity action:** Done — anonymous rate-limited GEO audit lead magnet.
 
 ---
 

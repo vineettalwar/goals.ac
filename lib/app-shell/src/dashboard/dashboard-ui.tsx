@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { cn } from "../cn";
 import { AutopilotActivityPanel, formatArticleUsageLabel } from "./autopilot-activity-panel";
+import { OutcomesPanel } from "./outcomes-panel";
 import {
   contentPiecePath,
   countByStatus,
@@ -31,6 +32,7 @@ export {
   formatInternalLinksChipLabel,
 } from "./autopilot-activity-panel";
 export { AutopilotSettingsCompact } from "./autopilot-settings-compact";
+export { OutcomesPanel, formatCitationDelta, formatGeoTrend, formatPublishHealth } from "./outcomes-panel";
 
 const STATUS_BADGE: Record<string, string> = {
   ready: "bg-emerald-100 text-emerald-800",
@@ -594,6 +596,14 @@ export function DashboardView({
         pieces={pieces}
         renderLink={renderLink}
       />
+
+      {activeProjectId && commandCenter ? (
+        <OutcomesPanel
+          projectId={activeProjectId}
+          commandCenter={commandCenter}
+          renderLink={renderLink}
+        />
+      ) : null}
 
       {activeProjectId && commandCenter ? (
         <DashboardCommandCenterSection

@@ -65,15 +65,29 @@ export type DashboardCommandCenterRecentPublish = {
   createdAt: string;
 };
 
+export type DashboardCommandCenterPublishHealth = {
+  ok: number;
+  failed: number;
+  lastAt: string | null;
+};
+
 export type DashboardCommandCenter = {
   openOpportunities: number;
   queuedOpportunities: number;
   calendarDraftItems: number;
   draftsNeedingReview: number;
   generatingPieces: number;
+  /** Pieces with status `published` or `ready`. */
+  publishedCount?: number;
+  draftCount?: number;
+  publishHealth?: DashboardCommandCenterPublishHealth;
   latestGeoScore: number | null;
+  /** Second-latest GEO audit score; null when fewer than 2 audits. */
+  previousGeoScore?: number | null;
   latestGeoAuditAt: string | null;
   llmCitationRate: number | null;
+  /** Citation-rate Δ vs prior 14-day window (pp); null when either window empty. */
+  llmCitationDelta?: number | null;
   topOpportunities: Array<{
     id: number;
     keyword: string;
