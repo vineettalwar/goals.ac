@@ -196,7 +196,7 @@ export function PartnerWorkspaceClient({ projects, organizationName, generatedAt
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-border bg-card">
-              <table className="w-full min-w-[640px] text-sm">
+              <table className="w-full min-w-160 text-sm">
                 <thead>
                   <tr className="border-b border-border bg-secondary/40 text-left text-xs text-muted-foreground">
                     <th className="px-4 py-3 font-medium">Client</th>
@@ -222,7 +222,7 @@ export function PartnerWorkspaceClient({ projects, organizationName, generatedAt
                         >
                           {project.name}
                         </Link>
-                        <p className="mt-0.5 max-w-[220px] truncate text-xs text-muted-foreground">
+                        <p className="mt-0.5 max-w-55 truncate text-xs text-muted-foreground">
                           {project.industry ?? project.url ?? "—"}
                         </p>
                       </td>
@@ -294,7 +294,7 @@ export function PartnerWorkspaceClient({ projects, organizationName, generatedAt
             </div>
           ) : (
             <div className="overflow-x-auto rounded-xl border border-border bg-card">
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-180 text-sm">
                 <thead>
                   <tr className="border-b border-border bg-secondary/40 text-left text-xs text-muted-foreground">
                     <th className="px-4 py-3 font-medium">Client</th>
@@ -311,7 +311,7 @@ export function PartnerWorkspaceClient({ projects, organizationName, generatedAt
                     <tr key={`outcomes-${project.id}`} className="border-b border-border last:border-0">
                       <td className="px-4 py-3.5">
                         <p className="font-medium">{project.name}</p>
-                        <p className="mt-0.5 max-w-[220px] truncate text-xs text-muted-foreground">
+                        <p className="mt-0.5 max-w-55 truncate text-xs text-muted-foreground">
                           {project.url ?? "—"}
                         </p>
                       </td>

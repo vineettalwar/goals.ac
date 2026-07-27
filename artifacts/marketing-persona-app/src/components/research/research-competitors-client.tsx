@@ -24,6 +24,7 @@ function ResearchCompetitorsInner() {
       onSelect={ctrl.setSelectedId}
       formOpen={ctrl.formOpen}
       onFormOpenChange={ctrl.setFormOpen}
+      semrushConfigured={ctrl.semrushConfigured}
       paths={ctrl.paths}
       renderLink={({ href, className, children }) => (
         <Link href={href} className={className}>

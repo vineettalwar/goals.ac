@@ -13,6 +13,7 @@ import {
   searchRedditThreads,
   type RedditSearchHit,
 } from "@workspace/content-engine/social/reddit-public-search";
+import { persistRedditOpportunities } from "@workspace/content-engine/strategy/keyword-opportunity-service";
 
 const Body = z.object({ projectId: z.number().int().positive() });
 
@@ -182,7 +183,23 @@ One reply per thread index. Be conversational and value-first.`;
       tier: "rapid",
     });
 
-    return NextResponse.json({ threads, keywords, source: "reddit" });
+    let opportunitiesInserted = 0;
+    try {
+      opportunitiesInserted = await persistRedditOpportunities(
+        parsed.data.projectId,
+        threads,
+        keywords,
+      );
+    } catch {
+      // discovery still succeeds even if opportunity persist fails
+    }
+
+    return NextResponse.json({
+      threads,
+      keywords,
+      source: "reddit",
+      opportunitiesInserted,
+    });
   } catch (err) {
     await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "generation_failed");
     return NextResponse.json({ error: "Reddit discovery failed" }, { status: 500 });

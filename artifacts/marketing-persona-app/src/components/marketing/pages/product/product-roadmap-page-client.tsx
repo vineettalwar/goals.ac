@@ -16,7 +16,7 @@ const SHIPPED = [
   { name: "Social Hub (6 platforms)", href: "/social-distribution" },
   { name: "Search analytics (GSC + GA4)", href: "/search-analytics" },
   { name: "Brand voice RAG", href: "/brand-voice" },
-  { name: "20+ publish destinations", href: "/platform-integrations" },
+  { name: "CMS + social publish (deep + Basic)", href: "/platform-integrations" },
   { name: "Public API keys (gac_)", href: "/features" },
   { name: "CmsAdapter render preview", href: "/cms-publishing" },
 ];

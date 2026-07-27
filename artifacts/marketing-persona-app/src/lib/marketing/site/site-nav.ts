@@ -37,7 +37,7 @@ export const PRODUCT_NAV: NavLink[] = [
   { label: "Content Engine", href: "/content-engine", description: "Draft and review workflow" },
   { label: "Content Autopilot", href: "/content-autopilot", description: "Automated publishing queue" },
   { label: "AI Visibility", href: "/llm-visibility", description: "Track AI brand citations" },
-  { label: "CMS Publishing", href: "/cms-publishing", description: "20+ CMS and ESP destinations" },
+  { label: "CMS Publishing", href: "/cms-publishing", description: "WordPress, Ghost, Shopify + Basic publish" },
   { label: "All features", href: "/features", description: "Full platform overview" },
 ];
 
@@ -69,7 +69,7 @@ export const SOLUTIONS_NAV: SolutionNavItem[] = [
   {
     label: "Integrations",
     href: "/platform-integrations",
-    description: "20+ CMS, ESP, and social destinations",
+    description: "CMS, ESP, and social — deep stacks + Basic publish",
     group: "authority",
   },
   landerSolution("linkBuilding", "authority"),

@@ -11,7 +11,8 @@ export type KeywordOpportunitySource =
   | "gsc_query"
   | "csv_import"
   | "google_sheets"
-  | "semrush";
+  | "semrush"
+  | "reddit";
 export type KeywordOpportunityStatus = "open" | "queued" | "dismissed";
 export type KeywordDifficultyLevel = "low" | "medium" | "high";
 

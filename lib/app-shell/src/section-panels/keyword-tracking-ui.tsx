@@ -29,6 +29,7 @@ export type KeywordSourceFilter =
   | "imports"
   | "ai_analysis"
   | "competitor_gap"
+  | "reddit"
   | "rank_drop"
   | "content_refresh";
 
@@ -109,6 +110,7 @@ const SOURCE_LABELS: Record<string, string> = {
   competitor_gap: "Competitor gap",
   rank_drop: "Rank drop",
   content_refresh: "Needs refresh",
+  reddit: "Reddit",
 };
 
 const FILTER_CHIPS: Array<{ id: KeywordSourceFilter; label: string }> = [
@@ -120,6 +122,7 @@ const FILTER_CHIPS: Array<{ id: KeywordSourceFilter; label: string }> = [
   { id: "manual", label: "Manual" },
   { id: "ai_analysis", label: "AI" },
   { id: "competitor_gap", label: "Competitor" },
+  { id: "reddit", label: "Reddit" },
   { id: "rank_drop", label: "Rank drop" },
   { id: "content_refresh", label: "Needs refresh" },
 ];

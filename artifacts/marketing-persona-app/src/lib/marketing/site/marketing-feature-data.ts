@@ -225,12 +225,13 @@ export const LANDER_CONFIG = {
     badge: "CMS Publishing",
     titleLine1: "Publish where",
     titleLine2: "you already work",
-    description: "Native integrations for 20+ destinations: WordPress, Shopify, headless CMS, ESPs, social, and webhooks.",
+    description:
+      "Publish to WordPress, Ghost, Shopify, and other CMS/social destinations. Deep plugin and Admin API paths for primary stacks; Basic publish for headless and site builders.",
     heroImage: HERO_IMAGES.contentEngine.hero,
     primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     secondaryCta: { label: "Content Engine", href: "/content-engine" },
     features: [
-      { icon: Globe, title: "20+ destinations", description: "CMS, ESP, social OAuth, and webhook. More than most AI SEO tools ship." },
+      { icon: Globe, title: "Deep + Basic publish", description: "WordPress, Ghost, Shopify depth; Basic publish on headless and site builders." },
       { icon: Link2, title: "Site graph sync", description: "Plugins export internal links for smarter suggestions." },
       { icon: Search, title: "Schema injection", description: "JSON-LD and llms.txt pushed via HMAC-secured plugins." },
       { icon: Zap, title: "Autopilot publish", description: "Schedule drafts to go live automatically." },
@@ -339,14 +340,14 @@ export const LANDER_CONFIG = {
     titleLine1: "Distribute content",
     titleLine2: "across social channels",
     description:
-      "Compose, queue, and publish to LinkedIn, X, Facebook, Instagram, Bluesky, and Mastodon. Per-platform voice and analytics included.",
+      "Compose, queue, and publish to LinkedIn, X, Facebook, Instagram, Bluesky, and Mastodon. Per-platform voice presets and character limits in the composer.",
     heroImage: HERO_IMAGES.roadmaps.hero,
     primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
     secondaryCta: { label: "Content Engine", href: "/content-engine" },
     features: [
       { icon: Share2, title: "6 platforms", description: "OAuth connections per project for LinkedIn, X, Meta, Bluesky, and Mastodon." },
       { icon: PenLine, title: "Composer + calendar", description: "Draft posts, schedule queues, and recycle evergreen content." },
-      { icon: BarChart3, title: "Post analytics", description: "Track engagement and sync history into brand voice." },
+      { icon: BarChart3, title: "Publish history", description: "Track recent social and CMS publishes per project." },
       { icon: Zap, title: "Repurpose from articles", description: "Turn long-form drafts into social variants in one click." },
     ],
     faq: [

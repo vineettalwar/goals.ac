@@ -19,11 +19,11 @@ const ROWS = [
   { feature: "Inspectable article quality scores", goals: true, autopilot: "partial" as const },
   { feature: "AI visibility (ChatGPT, Perplexity…)", goals: true, autopilot: true },
   { feature: "GEO technical audit + weekly re-audit", goals: true, autopilot: "partial" as const },
-  { feature: "CMS auto-publish (16+ destinations)", goals: true, autopilot: true },
+  { feature: "CMS publish (WordPress, Ghost, Shopify + Basic publish)", goals: true, autopilot: true },
   { feature: "30-day content calendar", goals: true, autopilot: true },
   { feature: "Managed GEO/AEO program", goals: true, autopilot: false },
   { feature: "Consulting-led GEO program", goals: true, autopilot: false },
-  { feature: "Self-serve Growth plan ($49/mo)", goals: true, autopilot: true },
+  { feature: "Self-serve Growth plan ($49/mo, in-app)", goals: true, autopilot: true },
   { feature: "Backlink exchange network", goals: false, autopilot: true },
   { feature: "Internal link hub (white-hat)", goals: true, autopilot: false },
   { feature: "Humanization pipeline", goals: true, autopilot: false },
@@ -94,7 +94,7 @@ export function ComparePageClient() {
             — raw draft vs rewritten pass with human-voice and quality scores.
           </li>
           <li>Live draft score in Studio — editorial + SERP delta updates as you edit.</li>
-          <li>16 CMS destinations plus social/ESP health checks on every connection tile.</li>
+          <li>WordPress, Ghost, Shopify (deep), plus Basic publish for headless/site builders — with health checks on connection tiles.</li>
           <li>Queue social — one click from an approved article into the social composer queue.</li>
         </ul>
       </MarketingSection>
@@ -114,7 +114,7 @@ export function ComparePageClient() {
           {
             question: "How is goals.ac priced?",
             answer:
-              "Start free on Starter. Upgrade to Growth ($49/mo) in Settings → Billing for more sites and 500 included AI credits per month. Optional hands-on GEO/AEO programs are scoped on /pricing — book a call for custom work.",
+              "Start free on Starter. Upgrade to Growth ($49/mo) in Settings → Billing after signup for more sites and included AI credits. Hands-on GEO/AEO programs are scoped on /pricing — book a call for custom work.",
           },
           {
             question: "How do you compare on AI visibility?",

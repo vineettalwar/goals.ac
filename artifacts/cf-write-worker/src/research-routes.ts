@@ -15,6 +15,7 @@ import {
   searchRedditThreads,
   type RedditSearchHit,
 } from "@workspace/content-engine/social/reddit-public-search";
+import { persistRedditOpportunities } from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { generateTopicalMap } from "@workspace/content-engine/strategy/topical-map-generator";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -210,7 +211,17 @@ One reply per thread index. Be conversational and value-first.`;
       tier: "rapid",
     });
 
-    return withCors(request, Response.json({ threads, keywords, source: "reddit" }));
+    let opportunitiesInserted = 0;
+    try {
+      opportunitiesInserted = await persistRedditOpportunities(projectId, threads, keywords);
+    } catch {
+      // discovery still succeeds even if opportunity persist fails
+    }
+
+    return withCors(
+      request,
+      Response.json({ threads, keywords, source: "reddit", opportunitiesInserted }),
+    );
   } catch (err) {
     await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "generation_failed");
     return withCors(request, Response.json({ error: "Reddit discovery failed" }, { status: 500 }));

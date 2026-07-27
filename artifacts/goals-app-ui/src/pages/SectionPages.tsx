@@ -15,7 +15,10 @@ import {
   ResearchOverviewView,
   ResearchSignalsView,
   buildResearchActionPaths,
+  countKeywordSignals,
   flattenCompetitorAnalysis,
+  loadSessionSignalThreads,
+  saveSessionSignalThreads,
   SearchHubGrid,
   SearchPerformanceView,
   SearchSiteHealthView,
@@ -50,9 +53,11 @@ import {
   useGrowthRoadmap,
   useGscSyncStatus,
   useHelpChecklist,
+  useKeywordIntelligence,
   useKeywordOpportunities,
   usePartnerProjects,
   useRoadmapsCatalog,
+  useSemrushStatus,
   useVisibilitySettings,
   useVisibilitySummary,
 } from "@/hooks/use-section-queries";
@@ -418,6 +423,34 @@ export function AuditDetailPage({ auditId }: { auditId: string }) {
 export function ResearchHubPage() {
   const { projectId } = useActiveProject();
   const { analyses, loading, error } = useCompetitorAnalyses(projectId);
+  const { opportunities, refetch } = useKeywordIntelligence(projectId);
+  const { status: semrushStatus } = useSemrushStatus(projectId);
+  const brandQuery = useQuery({
+    queryKey: ["research-brand-fit", projectId],
+    queryFn: () =>
+      apiFetch<{
+        primaryKeywords?: string[];
+        industry?: string;
+        companyName?: string;
+        targetAudience?: string;
+      }>(`/api/website-projects/${projectId}/brand-profile`),
+    enabled: Boolean(projectId),
+    staleTime: 60_000,
+  });
+  const [signalThreads, setSignalThreads] = useState<RedditThread[]>([]);
+  const [discoveringIdeas, setDiscoveringIdeas] = useState(false);
+  const [discoverError, setDiscoverError] = useState<string | null>(null);
+  const keywordSignals = useMemo(() => countKeywordSignals(opportunities), [opportunities]);
+  const brandFit = useMemo(() => {
+    const b = brandQuery.data;
+    if (!b) return null;
+    return {
+      primaryKeywords: b.primaryKeywords ?? [],
+      industry: b.industry ?? null,
+      companyName: b.companyName ?? null,
+      targetAudience: b.targetAudience ?? null,
+    };
+  }, [brandQuery.data]);
   const paths = useMemo(
     () =>
       buildResearchActionPaths({
@@ -426,6 +459,28 @@ export function ResearchHubPage() {
       }),
     [projectId],
   );
+
+  useEffect(() => {
+    setSignalThreads(loadSessionSignalThreads(projectId));
+  }, [projectId]);
+
+  async function discoverIdeas() {
+    if (!projectId || discoveringIdeas) return;
+    setDiscoveringIdeas(true);
+    setDiscoverError(null);
+    try {
+      await apiFetch(`/api/website-projects/${projectId}/keyword-opportunities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: "all" }),
+      });
+      await refetch();
+    } catch (err) {
+      setDiscoverError(err instanceof Error ? err.message : "Discovery failed");
+    } finally {
+      setDiscoveringIdeas(false);
+    }
+  }
 
   return (
     <SectionShell
@@ -436,7 +491,16 @@ export function ResearchHubPage() {
       <ResearchOverviewView
         analyses={analyses}
         loading={loading}
-        error={error}
+        error={error ?? discoverError}
+        signalThreads={signalThreads}
+        keywordSignals={keywordSignals}
+        opportunities={opportunities}
+        brandFit={brandFit}
+        discoveringIdeas={discoveringIdeas}
+        onDiscoverIdeas={projectId ? discoverIdeas : undefined}
+        semrushConfigured={
+          projectId && semrushStatus != null ? Boolean(semrushStatus.configured) : null
+        }
         paths={paths}
         renderLink={renderLink}
       />
@@ -463,6 +527,7 @@ function ResearchCompetitorsBody({ projectId }: { projectId: string | null }) {
   const analysisParam = searchParams.get("analysis");
   const initialAnalysisId = analysisParam ? Number(analysisParam) : null;
   const { analyses, loading, error, reload } = useCompetitorAnalyses(projectId);
+  const { status: semrushStatus } = useSemrushStatus(projectId);
   const paths = useMemo(
     () =>
       buildResearchActionPaths({
@@ -559,6 +624,9 @@ function ResearchCompetitorsBody({ projectId }: { projectId: string | null }) {
       onSelect={setSelectedId}
       formOpen={formOpen}
       onFormOpenChange={(open) => setFormOpenOverride(open)}
+      semrushConfigured={
+        projectId && semrushStatus != null ? Boolean(semrushStatus.configured) : null
+      }
       paths={paths}
       renderLink={renderLink}
     />
@@ -580,7 +648,7 @@ export function ResearchRedditPage() {
   );
 
   useEffect(() => {
-    setThreads([]);
+    setThreads(loadSessionSignalThreads(projectId));
     setError(null);
   }, [projectId]);
 
@@ -597,7 +665,9 @@ export function ResearchRedditPage() {
           body: JSON.stringify({ projectId: Number(projectId) }),
         },
       );
-      setThreads(data.threads ?? []);
+      const next = data.threads ?? [];
+      setThreads(next);
+      saveSessionSignalThreads(projectId, next);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Discovery failed");
       setThreads([]);

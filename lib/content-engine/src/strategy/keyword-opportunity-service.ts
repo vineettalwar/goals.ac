@@ -13,6 +13,8 @@ import {
 import {
   opportunitiesFromKeywordAnalysis,
   opportunitiesFromCompetitorGaps,
+  opportunitiesFromRedditThreads,
+  applySemrushMetricsToGaps,
   rankDropToOpportunity,
   type GapOpportunity,
 } from "@workspace/seo-tools/keywordGapAnalyzer";
@@ -37,6 +39,7 @@ import {
 import {
   getKeywordResearchProvider,
   extractDomain,
+  formatVolume,
   type DomainKeywordGap,
 } from "@workspace/keyword-research-provider";
 import { semrushGapsToOpportunities } from "@workspace/seo-tools/semrushGapAnalyzer";
@@ -389,6 +392,69 @@ async function insertOpportunities(
   return inserted;
 }
 
+async function loadOpenQueuedKeywords(projectId: number): Promise<Set<string>> {
+  const existing = await db
+    .select({ keyword: keywordOpportunitiesTable.keyword })
+    .from(keywordOpportunitiesTable)
+    .where(
+      and(
+        eq(keywordOpportunitiesTable.websiteProjectId, projectId),
+        inArray(keywordOpportunitiesTable.status, ["open", "queued"]),
+      ),
+    );
+  return new Set(existing.map((r) => r.keyword.toLowerCase()));
+}
+
+/** Persist Reddit discovery threads as open keyword opportunities (deduped). */
+export async function persistRedditOpportunities(
+  projectId: number,
+  threads: Array<{
+    title: string;
+    url: string;
+    subreddit: string;
+    intentScore: number;
+  }>,
+  brandKeywords: string[],
+): Promise<number> {
+  if (threads.length === 0) return 0;
+  const collected = opportunitiesFromRedditThreads({ threads, brandKeywords });
+  const existingKeywords = await loadOpenQueuedKeywords(projectId);
+  const inserted = await insertOpportunities(projectId, collected, existingKeywords);
+  if (inserted > 0) {
+    logger.info({ projectId, inserted }, "Reddit threads persisted as keyword opportunities");
+  }
+  return inserted;
+}
+
+async function enrichCompetitorGapsWithSemrush(
+  gapOpps: GapOpportunity[],
+  credentials: { apiKey: string; database: string },
+): Promise<GapOpportunity[]> {
+  const keywords = [
+    ...new Set(gapOpps.map((o) => o.keyword.trim()).filter(Boolean)),
+  ].slice(0, 10);
+  if (keywords.length === 0) return gapOpps;
+
+  try {
+    const provider = getKeywordResearchProvider();
+    const metrics = await provider.getKeywordMetrics({
+      keywords,
+      database: credentials.database,
+      apiKey: credentials.apiKey,
+    });
+    const metricsByKeyword = new Map(
+      metrics.map((m) => [
+        m.keyword.toLowerCase(),
+        { searchVolume: m.searchVolume, difficulty: m.difficulty },
+      ]),
+    );
+    return applySemrushMetricsToGaps(gapOpps, metricsByKeyword, formatVolume);
+  } catch (err) {
+    logger.warn({ err }, "Semrush metrics overlay for competitor gaps failed");
+    return gapOpps;
+  }
+}
+
 async function discoverAiGaps(params: {
   brandName: string;
   industry: string;
@@ -512,6 +578,7 @@ export async function discoverOpportunities(
 
   const existingKeywords = new Set(existing.map((r) => r.keyword.toLowerCase()));
   const collected: GapOpportunity[] = [];
+  const semrushCreds = await getDecryptedSemrushCredentialsForUser(userId);
 
   if (sourceMode === "all" || sourceMode === "gsc") {
     try {
@@ -523,7 +590,6 @@ export async function discoverOpportunities(
   }
 
   if (sourceMode === "all" || sourceMode === "semrush") {
-    const semrushCreds = await getDecryptedSemrushCredentialsForUser(userId);
     if (sourceMode === "semrush" && !semrushCreds) {
       throw new Error("Semrush is not configured. Add your organization's API key in Integrations → Tools.");
     }
@@ -546,8 +612,9 @@ export async function discoverOpportunities(
       collected.push(...opportunitiesFromKeywordAnalysis(latestKeywordAnalysis.result.keywords));
     }
 
+    let gapOpps: GapOpportunity[] = [];
     for (const comp of competitorRows) {
-      collected.push(
+      gapOpps.push(
         ...opportunitiesFromCompetitorGaps({
           contentGaps: comp.result.contentGaps ?? [],
           competitorUrl: comp.competitorUrl,
@@ -556,6 +623,10 @@ export async function discoverOpportunities(
         }),
       );
     }
+    if (semrushCreds && gapOpps.length > 0) {
+      gapOpps = await enrichCompetitorGapsWithSemrush(gapOpps, semrushCreds);
+    }
+    collected.push(...gapOpps);
 
     const [userApiKey, aiProviderOptions] = await Promise.all([
       getDecryptedUserGeminiKey(userId),

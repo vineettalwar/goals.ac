@@ -1,9 +1,12 @@
 export type {
+  ArticleIdeaPeek,
   AttackItem,
   AttackItemKind,
+  BrandFitSignals,
   CompetitorAnalysisResult,
   CompetitorAnalysisRow,
   CompetitorFormState,
+  KeywordSignalCounts,
   RedditThread,
   ResearchActionPaths,
   ResearchLinkProps,
@@ -16,11 +19,19 @@ export {
   flattenCompetitorAnalysisRow,
 } from "./flatten";
 export {
+  articleIdeaSourceLabel,
+  brandFitBoost,
+  brandFitTerms,
   buildAttackItems,
   buildResearchActionPaths,
+  countKeywordSignals,
   displayCompetitorName,
   formatAnalyzedAt,
   keywordFromInsight,
+  loadSessionSignalThreads,
+  pickTopArticleIdeas,
+  researchSignalsStorageKey,
+  saveSessionSignalThreads,
   sortWatchlist,
 } from "./helpers";
 export { ResearchOverviewView } from "./research-overview";

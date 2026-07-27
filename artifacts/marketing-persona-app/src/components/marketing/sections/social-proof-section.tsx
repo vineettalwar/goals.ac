@@ -7,8 +7,6 @@ import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 import {
   CONTACT_CTA_LABEL,
   CONTACT_HREF,
-  PRODUCT_CTA_HREF,
-  PRODUCT_CTA_PRIMARY,
 } from "@/lib/marketing/site/marketing-contact";
 
 const glassCard = cardSurfaceClass("glass");
@@ -37,9 +35,9 @@ export function SocialProofSection() {
       <div className="max-w-5xl mx-auto px-6">
         <div className="mb-14 text-center">
           <EditorialHeading
-            line1="Customer stories"
-            line2="coming soon"
-            description="We're in early access. No client case studies published yet. Try the demos below, or book a walkthrough."
+            line1="See the product"
+            line2="in action"
+            description="Try a live GEO audit or the article quality demo — same tooling used in the studio."
             theme="dark"
           />
         </div>
@@ -47,7 +45,11 @@ export function SocialProofSection() {
         <div className={`${glassCard} p-6 mb-10 max-w-xl mx-auto flex gap-3 items-start`}>
           <Clock className="h-5 w-5 text-(--accent-warm) shrink-0 mt-0.5" aria-hidden />
           <p className="text-sm text-white/65 leading-relaxed">
-            Published stories go here after our first engagements wrap. For now, the links below are real output from the product.
+            Customer stories live on{" "}
+            <Link href="/success-stories" className="text-white/80 hover:text-white underline-offset-2 hover:underline">
+              /success-stories
+            </Link>{" "}
+            when we have results cleared to publish. The links below are live product demos.
           </p>
         </div>
 

@@ -5,7 +5,6 @@ import { ArrowRight, Clock, ExternalLink, TrendingUp } from "lucide-react";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
 import { PageHero } from "@/components/marketing/heroes/page-hero";
 import { MarketingSection } from "@/components/marketing/sections/marketing-section";
-import { WaitlistForm } from "@/components/shared/waitlist-form";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
 import { CONTACT_CTA_LABEL, CONTACT_HREF, PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
 import { ARTICLE_QUALITY_DEMO_SCORE } from "@/lib/marketing/content/article-quality-demo";
@@ -34,13 +33,13 @@ export function SuccessStoriesPageClient({ articles, publishedStories }: Props) 
     <MarketingPageShell
       hero={
         <PageHero
-          badge={hasPublished ? "Customer stories" : "Coming soon"}
-          titleLine1={hasPublished ? "Customer" : "Customer stories"}
-          titleLine2={hasPublished ? "stories" : "not published yet"}
+          badge={hasPublished ? "Customer stories" : "Results"}
+          titleLine1={hasPublished ? "Customer" : "Customer"}
+          titleLine2={hasPublished ? "stories" : "stories"}
           description={
             hasPublished
               ? "Permissioned results with primary-source verify links — Search Console, Ahrefs, ChatGPT."
-              : "No named customer case studies yet. Below is how we will report results when a story is cleared to publish."
+              : "Named customer stories will appear here when we have permission to publish them. Until then, try the product demos below."
           }
           backgroundImage={HERO_IMAGES.roadmaps.hero}
           ctas={[
@@ -69,22 +68,22 @@ export function SuccessStoriesPageClient({ articles, publishedStories }: Props) 
           </div>
         </MarketingSection>
       ) : (
-        <MarketingSection bordered className="py-16" titleLine1="How we" titleLine2="report results">
+        <MarketingSection bordered className="py-16" titleLine1="How we will" titleLine2="report results">
           <div className={`${glassCardStatic} p-6 mb-10 max-w-2xl flex gap-4 items-start`}>
             <Clock className="h-5 w-5 text-(--accent-warm) shrink-0 mt-0.5" aria-hidden />
             <div>
-              <p className="font-medium text-white mb-1">No success stories published</p>
+              <p className="font-medium text-white mb-1">No published stories yet</p>
               <p className="text-sm text-white/65 leading-relaxed">
-                When a client grants permission, stories land here with before/after metrics and verify
-                links — not invented lift.
+                We only list results we can verify and that a client has cleared for publish. Use the
+                demos below to see the product in the meantime.
               </p>
             </div>
           </div>
 
           <div className={`${glassCardStatic} p-6 md:p-8 max-w-2xl`}>
-            <h3 className="font-bold text-lg mb-2 text-white">Verify the method</h3>
+            <h3 className="font-bold text-lg mb-2 text-white">Tools we will cite</h3>
             <p className="text-sm text-white/55 mb-5">
-              Same tools we cite for organic and AI visibility. Open them yourself.
+              Same primary sources for organic and AI visibility. Open them yourself.
             </p>
             <div className="flex flex-wrap gap-3">
               {DEFAULT_VERIFY_LINKS.map((link) => (
@@ -158,15 +157,17 @@ export function SuccessStoriesPageClient({ articles, publishedStories }: Props) 
         </div>
       </MarketingSection>
 
-      <MarketingSection bordered className="py-16" titleLine1="Early access" titleLine2="waitlist">
+      <MarketingSection bordered className="py-16" titleLine1="See the" titleLine2="product">
         <p className="text-white/65 mb-6 max-w-xl">
-          Join the waitlist for early access, or book a demo and we&apos;ll walk through the workflow live.
+          Sign up free for a walkthrough of the studio, or book a call if you want a partner demo.
         </p>
-        <WaitlistForm featureKey="success-story" buttonLabel="Join early access waitlist" />
-        <Link href={PRODUCT_CTA_HREF} className="inline-flex items-center gap-1 text-sm text-primary mt-8 hover:underline">
+        <Link
+          href={PRODUCT_CTA_HREF}
+          className="inline-flex items-center gap-1 rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
           {PRODUCT_CTA_PRIMARY} <ArrowRight className="h-4 w-4" aria-hidden />
         </Link>
-        <Link href={CONTACT_HREF} className="inline-flex items-center gap-1 text-sm text-white/65 mt-4 hover:underline">
+        <Link href={CONTACT_HREF} className="inline-flex items-center gap-1 text-sm text-white/65 mt-4 ml-0 sm:ml-4 hover:underline">
           Or {CONTACT_CTA_LABEL.toLowerCase()}
         </Link>
       </MarketingSection>

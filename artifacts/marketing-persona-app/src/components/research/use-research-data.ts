@@ -7,13 +7,15 @@ import {
   buildResearchActionPaths,
   flattenCompetitorAnalysis,
   flattenCompetitorAnalysisList,
+  loadSessionSignalThreads,
+  saveSessionSignalThreads,
   type CompetitorAnalysisResult,
   type CompetitorAnalysisRow,
   type CompetitorFormState,
   type RedditThread,
 } from "@workspace/app-shell/research";
 import { useActiveProject } from "@/context/use-active-project";
-import { useBrandProfile } from "@/lib/queries";
+import { useBrandProfile, useSemrushStatus } from "@/lib/queries";
 
 export function useResearchActionPaths(projectId: string | number | null | undefined) {
   return useMemo(
@@ -75,6 +77,7 @@ export function useResearchCompetitorsController() {
   const { data: brandProfile } = useBrandProfile(projectId != null ? String(projectId) : "");
   const { analyses, loading, error, reload, setAnalyses } = useCompetitorAnalyses(projectId);
   const paths = useResearchActionPaths(projectId);
+  const { data: semrushStatus } = useSemrushStatus(projectId != null ? String(projectId) : "");
 
   const [form, setForm] = useState<CompetitorFormState>({
     competitorUrl: "",
@@ -226,7 +229,19 @@ export function useResearchCompetitorsController() {
     selectedId,
     setSelectedId,
     paths,
+    semrushConfigured:
+      projectId != null && semrushStatus != null ? Boolean(semrushStatus.configured) : null,
   };
+}
+
+export function useSessionSignalThreads(projectId: string | number | null | undefined) {
+  const [threads, setThreads] = useState<RedditThread[]>([]);
+
+  useEffect(() => {
+    setThreads(loadSessionSignalThreads(projectId));
+  }, [projectId]);
+
+  return threads;
 }
 
 export function useResearchSignalsController() {
@@ -238,7 +253,7 @@ export function useResearchSignalsController() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    setThreads([]);
+    setThreads(loadSessionSignalThreads(projectId));
     setError(null);
   }, [projectId]);
 
@@ -254,7 +269,17 @@ export function useResearchSignalsController() {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error ?? "Discovery failed");
-      setThreads(data.threads ?? []);
+      const next = (data.threads ?? []) as RedditThread[];
+      setThreads(next);
+      saveSessionSignalThreads(projectId, next);
+      const inserted = typeof data.opportunitiesInserted === "number" ? data.opportunitiesInserted : 0;
+      if (inserted > 0) {
+        toast.success(`Found ${next.length} threads · ${inserted} saved as article ideas`);
+      } else if (next.length > 0) {
+        toast.success(`Found ${next.length} threads`);
+      } else {
+        toast.message("No matching Reddit threads");
+      }
     } catch (err) {
       setThreads([]);
       setError(err instanceof Error ? err.message : "Discovery failed");

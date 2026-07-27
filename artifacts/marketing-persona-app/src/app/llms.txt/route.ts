@@ -15,7 +15,7 @@ export function GET() {
     "## Product",
     `- [Home](${base}/): Overview of goals.ac`,
     `- [Content Studio](${base}/content-engine): Research, draft, and publish workflow`,
-    `- [Plans & pricing](${base}/pricing): Starter (free), Growth ($49/mo), and optional hands-on programs`,
+    `- [Plans & pricing](${base}/pricing): Hands-on GEO/AEO programs. Self-serve Starter (free) and Growth ($49/mo) are in-app after signup (Settings → Billing)`,
     `- [Features](${base}/features): Content studio, autopilot, integrations`,
     `- [Generative Engine Optimization](${base}/generative-engine-optimization): GEO tooling`,
     `- [LLM Visibility](${base}/llm-visibility): Track AI search citations`,

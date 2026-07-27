@@ -38,7 +38,6 @@ function groupDestinations() {
 }
 
 export function IntegrationsDirectoryPageClient() {
-  const total = PUBLISHING_DESTINATIONS.length;
   const groups = groupDestinations();
 
   return (
@@ -47,8 +46,8 @@ export function IntegrationsDirectoryPageClient() {
         <PageHero
           badge="Integrations"
           titleLine1="Publish to"
-          titleLine2={`${total}+ destinations`}
-          description="Connect the CMS, ESP, and social platforms you already use. goals.ac renders content for each destination: Gutenberg, Elementor, headless fields, and more."
+          titleLine2="your stack"
+          description="Connect the CMS, ESP, and social platforms you already use. Deep plugin and Admin API paths for WordPress, Ghost, and Shopify; Basic publish for headless and site builders."
           backgroundImage={HERO_IMAGES.contentEngine.hero}
           ctas={[
             { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "primary" },
@@ -85,6 +84,7 @@ export function IntegrationsDirectoryPageClient() {
           ))}
         </div>
         <p className="text-sm text-white/65 mt-10">
+          Basic publish destinations create content without full plugin depth (featured image, scheduling, and updates vary).{" "}
           Need a custom webhook or headless workflow?{" "}
           <Link href={CONTACT_HREF} className="text-primary hover:underline">
             Talk to us about your stack
@@ -95,7 +95,7 @@ export function IntegrationsDirectoryPageClient() {
 
       <DarkCTABand
         title="Connect your stack in the studio"
-        description="Sign up, add OAuth or API credentials, and publish to every destination from one workspace."
+        description="Sign up, add OAuth or API credentials, and publish from one workspace. Demo depth on WordPress, Ghost, or Shopify."
         primaryCta={{ label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF }}
       />
     </MarketingPageShell>

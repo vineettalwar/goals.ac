@@ -65,6 +65,31 @@ export type ResearchLinkProps = {
   children: ReactNode;
 };
 
+export type KeywordSignalCounts = {
+  gsc: number;
+  semrush: number;
+  competitorGap: number;
+  total: number;
+};
+
+/** Top open opportunities for Research overview peek. */
+export type ArticleIdeaPeek = {
+  id: number;
+  keyword: string;
+  suggestedTitle: string;
+  suggestedAngle: string;
+  source: string;
+  opportunityScore: number;
+};
+
+/** Brand fields used to boost Research article-idea ranking. */
+export type BrandFitSignals = {
+  primaryKeywords?: string[] | null;
+  industry?: string | null;
+  companyName?: string | null;
+  targetAudience?: string | null;
+};
+
 export type ResearchActionPaths = {
   studioCreateHref: (input: { title: string; keyword?: string; angle?: string }) => string;
   keywordsHref: (keyword?: string, source?: string) => string;
@@ -72,6 +97,7 @@ export type ResearchActionPaths = {
   auditHref: (url?: string) => string;
   competitorsHref: (analysisId?: number) => string;
   signalsHref: () => string;
+  settingsHref: () => string;
 };
 
 export const COMPETITOR_STAGES = ["early", "growth", "scale"] as const;

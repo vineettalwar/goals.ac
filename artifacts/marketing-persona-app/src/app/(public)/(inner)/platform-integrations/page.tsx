@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import { IntegrationsDirectoryPageClient } from "@/components/marketing/pages/product/integrations-directory-page-client";
 
 export const metadata: Metadata = {
-  title: "Integrations | 20+ CMS, ESP & Social Destinations",
-  description: "Publish SEO content to WordPress, Shopify, headless CMS, email platforms, and social channels from goals.ac.",
+  title: "Integrations | CMS, ESP & Social Publishing",
+  description:
+    "Publish SEO content to WordPress, Ghost, Shopify, and other CMS/social destinations. Deep paths for primary stacks; Basic publish for headless and site builders.",
 };
 
 export default function Page() {

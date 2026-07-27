@@ -1,6 +1,6 @@
 # PRD: Content Studio Competitive Plan
 
-**Status:** Waves 0–5 shipped · Hosted blog (3.3) still deferred · Surfer NLP still deferred  
+**Status:** Waves 0–5 shipped · **Wave 6 drafted** (honesty + proof + media) · Hosted blog (3.3) still deferred · Surfer NLP still deferred  
 **ICP (90 days):** Partner-demo path vs BabyLoveGrowth / AutoSEO — consulting-led, not self-serve checkout  
 **Related:** [babylovegrowth-parity-planner.md](../competitors/babylovegrowth-parity-planner.md), [DECISIONS.md](../DECISIONS.md), [HANDOFF.md](../../HANDOFF.md)
 
@@ -204,6 +204,20 @@ flowchart LR
 | **5.C.6** | “Basic publish” badges on thin CMS tiles | done |
 
 **Out of Wave 5:** Surfer NLP, hosted blog, TikTok/YouTube, detector APIs, self-serve checkout.
+
+### Wave 6 — Honesty, proof, media (drafted 2026-07-23)
+
+**Goal:** Close remaining demo losses from oversell, empty proof, and HTTPS media gaps — not new engines.
+
+| # | Deliverable | Status |
+|---|---|---|
+| **6.A** | Marketing honesty punch list (16+/analytics/`llms.txt`/compare/pricing alignment) | **done** |
+| **6.B** | Proof: empty-state polish **or** one permissioned story (no fakes) | **6.B2 done** (empty/method); 6.B1 pending rights |
+| **6.C** | Content-media R2 happy path verified for IG/HTTPS gates | planned |
+
+**PRD:** [wave-6-honesty-proof-media.md](./wave-6-honesty-proof-media.md)
+
+**Out of Wave 6:** Surfer NLP, hosted blog, TikTok/YouTube, Basic-CMS deepen, dual create merge, invented case studies.
 
 ---
 

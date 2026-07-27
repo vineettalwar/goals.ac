@@ -28,6 +28,8 @@ export {
   parseVolumeEstimate,
   opportunitiesFromKeywordAnalysis,
   opportunitiesFromCompetitorGaps,
+  opportunitiesFromRedditThreads,
+  applySemrushMetricsToGaps,
   buildRankDropAlert,
   rankDropToOpportunity,
   explainOpportunityScore,

@@ -23,14 +23,14 @@ export type SuccessStory = {
   permissionNote?: string;
 };
 
-/** Primary-source verify CTAs for when permissioned stories ship. */
+/** Primary-source tools we use to verify organic and AI visibility — not fake case-study props. */
 export const DEFAULT_VERIFY_LINKS: SuccessStoryVerifyLink[] = [
   { label: "Google Search Console", href: "https://search.google.com/search-console" },
   { label: "Ahrefs", href: "https://ahrefs.com/" },
   { label: "Verify with ChatGPT", href: "https://chatgpt.com/" },
 ];
 
-/** Real permissioned customer stories only. Empty until a launch with publish rights. */
+/** Customer stories with publish rights only. Empty until there is a real story to list. */
 export const PUBLISHED_STORIES: SuccessStory[] = [];
 
 export function getPublishedStories(): SuccessStory[] {

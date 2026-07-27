@@ -32,6 +32,9 @@ export async function GET(
   return NextResponse.json({
     scrapeStatus: project.scrapeStatus,
     pageCount: project.pageCount ?? 0,
+    companyName: brand?.companyName ?? "",
+    industry: brand?.industry ?? "",
+    targetAudience: brand?.targetAudience ?? "",
     brandMemory: brand?.brandMemory ?? null,
     voiceTone: brand?.voiceTone ?? "",
     primaryKeywords: brand?.primaryKeywords ?? [],

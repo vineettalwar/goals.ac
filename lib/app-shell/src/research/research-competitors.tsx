@@ -44,6 +44,7 @@ export function ResearchCompetitorsView({
   onSelect,
   formOpen,
   onFormOpenChange,
+  semrushConfigured,
   paths,
   renderLink,
 }: {
@@ -60,6 +61,8 @@ export function ResearchCompetitorsView({
   onSelect?: (id: number) => void;
   formOpen?: boolean;
   onFormOpenChange?: (open: boolean) => void;
+  /** When false, show Settings CTA for Semrush BYOK. Omit when unknown. */
+  semrushConfigured?: boolean | null;
   paths: ResearchActionPaths;
   renderLink: (props: ResearchLinkProps) => ReactNode;
 }) {
@@ -69,6 +72,18 @@ export function ResearchCompetitorsView({
   return (
     <div className="space-y-6">
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
+
+      {semrushConfigured === false ? (
+        <p className="rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+          Semrush is not configured — competitor analysis is scrape + AI only.{" "}
+          {renderLink({
+            href: paths.settingsHref(),
+            className: "font-medium text-primary underline-offset-2 hover:underline",
+            children: "Add a Semrush API key",
+          })}{" "}
+          to unlock keyword gap discovery in the Keywords hub.
+        </p>
+      ) : null}
 
       <section className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">

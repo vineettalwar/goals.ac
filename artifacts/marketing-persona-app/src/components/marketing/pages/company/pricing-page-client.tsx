@@ -165,7 +165,7 @@ export function PricingPageClient() {
                   ["Research-backed SEO briefs", "Built in", "Custom SOW, weeks to start"],
                   ["Editorial review before publish", "Always", "Varies"],
                   ["AI visibility (GEO/AEO) tracking", "Included", "Often separate vendor"],
-                  ["CMS + social destinations (16+)", "Included", "Manual or limited"],
+                  ["CMS + social (deep stacks + Basic publish)", "Included", "Manual or limited"],
                   ["Dedicated strategist", "On retainer programs", "Rotating account manager"],
                 ].map(([cap, us, them]) => (
                   <tr key={cap} className="even:bg-white/5">
@@ -195,7 +195,7 @@ export function PricingPageClient() {
           {
             question: "Can I use the studio without a program?",
             answer:
-              "Yes. Sign up free, connect your destinations, and create content on your own. Add a hands-on program when you want our team involved in research, production, and publishing.",
+              "Yes. Sign up free, connect WordPress/Ghost/Shopify or another destination, and create content on your own. Self-serve Growth is in Settings → Billing. Add a hands-on program when you want our team involved in research, production, and publishing.",
           },
           {
             question: "What can I try before signing up?",
@@ -220,7 +220,7 @@ export function PricingPageClient() {
           {
             question: "Which platforms can you publish to?",
             answer:
-              "WordPress, Shopify, Drupal, Joomla, Notion, Webflow, Ghost, webhooks, plus LinkedIn, X, Facebook, Instagram, Bluesky, and Mastodon.",
+              "Deep paths for WordPress, Ghost, and Shopify, plus Drupal, Joomla, Notion, Webflow, webhooks, and social (LinkedIn, X, Meta, Bluesky, Mastodon). Headless and site builders support Basic publish — create wrappers, not full plugin depth.",
             helpHref: "/help/publish-social-content",
           },
         ]}

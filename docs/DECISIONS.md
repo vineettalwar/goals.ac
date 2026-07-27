@@ -1,3 +1,16 @@
+## 2026-07-23 — Wave 6 honesty + proof + media (not new engines)
+
+**Decision:** After Waves 0–5 and the world-class gaps tranche, execute **Wave 6** focused on (A) marketing claim honesty vs Basic-publish reality and pricing/llms.txt alignment, (B) proof without fake case studies (empty-state polish or one permissioned story), (C) content-media R2 happy path so HTTPS-only social gates work in demos. Do **not** build Surfer NLP, hosted blog, TikTok/YouTube, or deepen Basic-publish CMS unless a named partner deal requires it.
+
+**Alternatives considered:**
+- Punch-list-only marketing edits with no PRD — rejected; need a named wave so scope does not creep into engines
+- Invent named success stories for social proof — rejected; keep `PUBLISHED_STORIES` empty until publish rights
+- Flip public `/pricing` to self-serve SKU page — rejected for 90-day consulting ICP; keep programs on `/pricing`, self-serve in-app
+
+**Reason:** Thinness that still loses the room is oversell, empty proof, and IG/media hard-fails — not missing autopilot or Studio score engines.
+
+**Implications:** PRD `docs/prd/wave-6-honesty-proof-media.md`; competitive plan pointer; start with 6.A marketing punch list.
+
 ## 2026-07-20 — World-class gaps tranche (proof → agency), not new engines
 
 **Decision:** Execute the five-item world-class sequence from the competitive gap analysis: (1) success-stories infrastructure with verify CTAs and no fake named wins, (2) dashboard Outcomes panel over command-center data, (3) fast-lane partner demo checklist, (4) harden public GEO audit lead magnet, (5) org partner multi-client report (print-to-PDF). Do **not** build Surfer NLP, hosted blog, backlink exchange, or flip GTM to public self-serve pricing in this tranche.

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   BookOpen,
   CheckCircle2,
@@ -150,6 +151,14 @@ export function ContentEngineMarketing() {
                 ),
               )}
             </div>
+            <p className="mt-4 text-xs text-white/55 leading-relaxed">
+              Deep plugin / Admin API paths for WordPress, Ghost, and Shopify. Other CMS tiles include Basic publish
+              (create wrappers). See{" "}
+              <Link href="/platform-integrations" className="text-white/80 hover:text-white underline-offset-2 hover:underline">
+                integrations
+              </Link>
+              .
+            </p>
           </div>
           <div className={`${glassCard} p-6`}>
             <div className="flex items-center gap-2 mb-5">

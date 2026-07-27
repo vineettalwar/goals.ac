@@ -1,5 +1,30 @@
 # Session Handoff
 
+## Wave 6 — Honesty, proof, media (2026-07-23)
+
+**Status:** **6.A + 6.B2 done** on working tree. **6.C** still needs prod R2/`media.goals.ac` verify.
+
+**PRD:** `docs/prd/wave-6-honesty-proof-media.md` · Decision: `docs/DECISIONS.md` 2026-07-23
+
+### Done
+
+1. **6.A** Marketing honesty — `llms.txt`, compare, pricing, feature-data, nav, integrations directory, content-engine note, roadmap
+2. **6.B2** Success-stories + homepage: empty catalog, demos + verify tools (no invented wins; no “never launched” on-site)
+
+### Next
+
+3. **6.C** Confirm `CONTENT_MEDIA_PUBLIC_BASE_URL` + R2 binding on jobs; IG smoke with `data:` featured
+4. **6.B1** One real story only with publish rights
+
+### Verify 6.A
+
+```sh
+rg -n '16\+|20\+ destinations|16 CMS|analytics included' artifacts/marketing-persona-app/src/components/marketing artifacts/marketing-persona-app/src/lib/marketing artifacts/marketing-persona-app/src/app/llms.txt
+pnpm --filter @workspace/marketing-persona-app run typecheck
+```
+
+---
+
 ## World-class gaps tranche (2026-07-20) — SHIPPED (local)
 
 **Status:** Five-item sequence implemented on working tree (not committed). Parallel agents + merge.

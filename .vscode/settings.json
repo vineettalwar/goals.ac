@@ -1,12 +1,22 @@
 {
   "typescript.tsdk": "node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
+  "typescript.tsserver.maxTsServerMemory": 8192,
+  "typescript.disableAutomaticTypeAcquisition": true,
   "files.watcherExclude": {
-    "**/.next/**": true
+    "**/.next/**": true,
+    "**/dist/**": true,
+    "**/build/**": true,
+    "**/.turbo/**": true,
+    "**/coverage/**": true,
+    "**/test-results/**": true,
+    "**/node_modules/**": true
   },
   "search.exclude": {
     "**/.next": true,
-    "**/node_modules": true
+    "**/node_modules": true,
+    "**/dist": true,
+    "**/.turbo": true
   },
   "files.exclude": {
     "**/.next": true
@@ -117,6 +127,7 @@
   ],
   "cSpell.words": [
     "ABSPATH",
+    "Ahrefs",
     "goalsac",
     "aioseo",
     "bedrock",
@@ -129,6 +140,7 @@
     "llms",
     "mastodon",
     "metadesc",
+    "permissioned",
     "pexels",
     "rankmath",
     "resend",

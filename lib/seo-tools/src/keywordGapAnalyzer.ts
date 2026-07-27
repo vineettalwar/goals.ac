@@ -9,7 +9,8 @@ export type GapOpportunity = {
     | "csv_import"
     | "google_sheets"
     | "manual"
-    | "semrush";
+    | "semrush"
+    | "reddit";
   competitorUrl?: string;
   estimatedVolume?: string;
   difficulty: KeywordDifficulty;
@@ -87,6 +88,7 @@ export function explainOpportunityScore(params: {
     csv_import: "Imported keyword list.",
     google_sheets: "Synced from Google Sheets.",
     manual: "Manually added.",
+    reddit: "From live Reddit threads matching your brand keywords.",
   };
 
   return [
@@ -171,6 +173,61 @@ export function opportunitiesFromCompetitorGaps(params: {
       intent: "informational",
       suggestedTitle: `${keyword}: What ${industry} teams need to know`,
       suggestedAngle: `Competitor ${competitorName} ranks for this topic — create a stronger, more specific piece.`,
+    };
+  });
+}
+
+/** Overlay real Semrush volume/KD onto competitor_gap rows (placeholders stay when no match). */
+export function applySemrushMetricsToGaps(
+  opps: GapOpportunity[],
+  metricsByKeyword: Map<string, { searchVolume: number; difficulty: KeywordDifficulty }>,
+  formatVolumeFn: (n: number) => string,
+): GapOpportunity[] {
+  return opps.map((opp) => {
+    const m = metricsByKeyword.get(opp.keyword.toLowerCase().trim());
+    if (!m) return opp;
+    return {
+      ...opp,
+      estimatedVolume: formatVolumeFn(m.searchVolume),
+      difficulty: m.difficulty,
+      opportunityScore: computeOpportunityScore({
+        estimatedVolume: m.searchVolume,
+        difficulty: m.difficulty,
+        intent: opp.intent,
+      }),
+    };
+  });
+}
+
+export function opportunitiesFromRedditThreads(params: {
+  threads: Array<{
+    title: string;
+    url: string;
+    subreddit: string;
+    intentScore: number;
+  }>;
+  brandKeywords: string[];
+}): GapOpportunity[] {
+  const { threads, brandKeywords } = params;
+  return threads.map((thread) => {
+    const titleLower = thread.title.toLowerCase();
+    const matched = brandKeywords.find((k) => titleLower.includes(k.toLowerCase().trim()));
+    const fromTitle = thread.title
+      .replace(/[^\w\s'-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 120);
+    const keyword = (matched?.trim() || fromTitle || thread.title).slice(0, 120);
+    const sub = thread.subreddit.startsWith("r/") ? thread.subreddit : `r/${thread.subreddit}`;
+    return {
+      keyword,
+      source: "reddit" as const,
+      competitorUrl: thread.url,
+      difficulty: "medium" as const,
+      opportunityScore: Math.max(0, Math.min(100, Math.round(thread.intentScore))),
+      intent: "informational",
+      suggestedTitle: thread.title.slice(0, 160),
+      suggestedAngle: `Community demand on ${sub} — answer in-thread, then own the topic with a deeper article.`,
     };
   });
 }
