@@ -5,7 +5,7 @@ import type { ContentFormatType } from "@workspace/db/schema";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { generateContentPiece, buildCacheKey, cacheGet } from "@/lib/ai/content-studio-generator";
-import { loadProjectBrand } from "@/lib/content/content-pieces-helpers";
+import { loadProjectBrand, loadProjectVoiceGate, voiceRequiredJsonBody } from "@/lib/content/content-pieces-helpers";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { isCfEdgeHttp } from "@/lib/cf-edge-http";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
@@ -52,6 +52,11 @@ export async function POST(req: Request) {
   try {
     const ctx = await loadProjectBrand(websiteProjectId, userId!);
     if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+
+    const { evaluation } = await loadProjectVoiceGate(websiteProjectId);
+    if (!evaluation.ready) {
+      return NextResponse.json(voiceRequiredJsonBody(evaluation), { status: 409 });
+    }
 
     const brand = ctx.brand;
     const cacheKeyStr = buildCacheKey(formatType, targetKeyword, brand, angleHint);

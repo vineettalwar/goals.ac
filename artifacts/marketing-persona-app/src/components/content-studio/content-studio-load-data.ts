@@ -2,6 +2,10 @@ import type { AiProviderId } from "@workspace/ai-providers/config";
 import type { BrandProfileSummary } from "@workspace/app-shell/studio";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRow } from "./content-studio-utils";
+import {
+  parseVoiceGateFromBrandProfile,
+  type VoiceGateStatus,
+} from "./voice-required-banner";
 
 export type StudioLoadResult = {
   projectName: string;
@@ -12,6 +16,7 @@ export type StudioLoadResult = {
   cmsConnections: CmsConnectionSnapshot;
   primaryBlogDestination: string | null;
   brandProfile: BrandProfileSummary | null;
+  voiceGate: VoiceGateStatus;
 };
 
 export async function loadContentStudioData(projectId: string): Promise<StudioLoadResult> {
@@ -58,8 +63,11 @@ export async function loadContentStudioData(projectId: string): Promise<StudioLo
   }
 
   let brandProfile: BrandProfileSummary | null = null;
+  let voiceGate = parseVoiceGateFromBrandProfile(null);
   if (brandRes.ok) {
-    brandProfile = (await brandRes.json()) as BrandProfileSummary;
+    const brandJson = (await brandRes.json()) as BrandProfileSummary & Record<string, unknown>;
+    brandProfile = brandJson;
+    voiceGate = parseVoiceGateFromBrandProfile(brandJson);
   }
 
   return {
@@ -71,5 +79,6 @@ export async function loadContentStudioData(projectId: string): Promise<StudioLo
     cmsConnections,
     primaryBlogDestination,
     brandProfile,
+    voiceGate,
   };
 }

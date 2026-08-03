@@ -19,6 +19,7 @@ interface Props {
   primaryBlogDestination?: string | null;
   activeProvider?: AiProviderId;
   orgBedrockModel?: string | null;
+  onVoiceRequired?: () => void;
 }
 
 export function CreateContentModal(props: Props) {

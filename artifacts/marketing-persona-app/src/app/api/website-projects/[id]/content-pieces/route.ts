@@ -10,6 +10,8 @@ import {
 import {
   GenerateBody,
   loadProjectBrand,
+  loadProjectVoiceGate,
+  voiceRequiredJsonBody,
   loadUserAiSettings,
   buildCacheKey,
   insertGeneratedContentPiece,
@@ -99,6 +101,11 @@ export async function POST(
   } = parsed.data;
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) return NextResponse.json({ error: "Project not found" }, { status: 404 });
+
+  const { evaluation } = await loadProjectVoiceGate(projectId);
+  if (!evaluation.ready) {
+    return NextResponse.json(voiceRequiredJsonBody(evaluation), { status: 409 });
+  }
 
   if (saveBedrockModel && bedrockModel) {
     const { requireSiteAdmin } = await import("@/lib/auth/require-site-admin");

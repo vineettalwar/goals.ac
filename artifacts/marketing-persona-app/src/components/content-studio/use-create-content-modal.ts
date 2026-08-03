@@ -53,6 +53,7 @@ export function useCreateContentModal({
   primaryBlogDestination = null,
   activeProvider = "gemini",
   orgBedrockModel = null,
+  onVoiceRequired,
 }: {
   open: boolean;
   onClose: () => void;
@@ -64,6 +65,7 @@ export function useCreateContentModal({
   primaryBlogDestination?: string | null;
   activeProvider?: AiProviderId;
   orgBedrockModel?: string | null;
+  onVoiceRequired?: () => void;
 }) {
 const { data: session } = useSession();
 const canManageBedrockModel =
@@ -304,6 +306,10 @@ const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> =>
 
   if (!res.ok) {
     const data = await res.json().catch(() => null);
+    if (res.status === 409 && data?.code === "voice_required") {
+      onVoiceRequired?.();
+      throw new Error(data?.error ?? "Brand voice required");
+    }
     throw new Error(data?.error ?? "Generation failed");
   }
 
@@ -322,6 +328,7 @@ const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> =>
   bedrockModel,
   canManageBedrockModel,
   saveBedrockModel,
+  onVoiceRequired,
 ]);
 
 const runGeneration = useCallback(async () => {
@@ -365,6 +372,13 @@ const runGeneration = useCallback(async () => {
     }
 
     if (!res.ok || !res.body) {
+      if (res.status === 409) {
+        const data = await res.json().catch(() => null);
+        if (data?.code === "voice_required") {
+          onVoiceRequired?.();
+          throw new Error(data?.error ?? "Brand voice required");
+        }
+      }
       const piece = await handleGenerateFallback();
       onCreated(piece);
       toast.success("Content generated");
@@ -469,6 +483,7 @@ const runGeneration = useCallback(async () => {
   bedrockModel,
   canManageBedrockModel,
   saveBedrockModel,
+  onVoiceRequired,
 ]);
 
 const runRepurpose = useCallback(async () => {

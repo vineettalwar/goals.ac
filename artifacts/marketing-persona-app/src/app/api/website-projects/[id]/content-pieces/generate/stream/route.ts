@@ -11,6 +11,8 @@ import {
 import {
   GenerateBody,
   loadProjectBrand,
+  loadProjectVoiceGate,
+  voiceRequiredJsonBody,
   loadUserAiSettings,
   buildCacheKey,
   insertGeneratedContentPiece,
@@ -84,6 +86,14 @@ export async function POST(
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) {
     return new Response(JSON.stringify({ error: "Project not found" }), { status: 404 });
+  }
+
+  const { evaluation } = await loadProjectVoiceGate(projectId);
+  if (!evaluation.ready) {
+    return new Response(JSON.stringify(voiceRequiredJsonBody(evaluation)), {
+      status: 409,
+      headers: { "Content-Type": "application/json" },
+    });
   }
 
   if (saveBedrockModel && bedrockModel) {

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { brandProfilesTable, websiteProjectsTable } from "@workspace/db/schema";
+import { brandProfilesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getAccessibleProject } from "@/lib/org/org-access";
+import { evaluateProjectVoiceReady } from "@workspace/content-engine/brand/project-voice-ready";
 
 export async function GET(
   _req: Request,
@@ -29,6 +30,14 @@ export async function GET(
     .where(eq(brandProfilesTable.websiteProjectId, projectId))
     .limit(1);
 
+  const voice = evaluateProjectVoiceReady({
+    scrapeStatus: project.scrapeStatus,
+    voiceTone: brand?.voiceTone,
+    writingExamples: brand?.writingExamples,
+    brandVoiceSkill: brand?.brandVoiceSkill,
+    platformVoices: brand?.platformVoices,
+  });
+
   return NextResponse.json({
     scrapeStatus: project.scrapeStatus,
     pageCount: project.pageCount ?? 0,
@@ -48,5 +57,10 @@ export async function GET(
     brandVoiceSkill: brand?.brandVoiceSkill ?? "",
     skillLocked: brand?.skillLocked ?? false,
     lastIndexedAt: brand?.brandMemory?.lastIndexedAt ?? null,
+    platformVoices: brand?.platformVoices ?? null,
+    voiceReady: voice.ready,
+    voiceBuilding: voice.building,
+    hasBrandVoice: voice.hasBrandVoice,
+    hasPlatformVoice: voice.hasPlatformVoice,
   });
 }

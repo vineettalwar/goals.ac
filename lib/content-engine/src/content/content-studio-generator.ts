@@ -410,7 +410,10 @@ async function buildPrompt(
     ? `~${brand.contentStyle.defaultWordCount}`
     : config.wordRange;
   const brandVoiceContext = await resolveVoicePromptContext(brand, format, keyword, angleHint);
-  const defaultVoice = brand.voiceTone?.trim() || "Professional, clear, and authoritative";
+  // Generic fallback removed — callers must gate with isProjectVoiceReady / voice_required.
+  const defaultVoice = brand.voiceTone?.trim() ?? "";
+  const voiceLine =
+    brandVoiceContext || (defaultVoice ? `BRAND VOICE: ${defaultVoice}` : "");
   const competitorContext = [
     generationContext?.competitorPromptBlock?.trim() ?? "",
     buildCompetitorUrlsPromptFragment(
@@ -470,7 +473,7 @@ STRENGTH SCORE: ${hook.strengthScore}/10`;
 TARGET KEYWORD: "${keyword}"
 TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
 RELATED KEYWORDS TO WEAVE IN: ${kwList}
-${brandVoiceContext || `BRAND VOICE: ${defaultVoice}`}
+${voiceLine}
 ${archetypeInfo}
 ${hookInfo}
 
@@ -499,7 +502,7 @@ Requirements:
 TARGET KEYWORD: "${keyword}"
 TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
 RELATED KEYWORDS TO WEAVE IN: ${kwList}
-${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${brandVoiceContext || `\nBRAND VOICE: ${defaultVoice}`}${languageLine}${existingArticlesCtx}
+${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${voiceLine ? `\n${voiceLine}` : ""}${languageLine}${existingArticlesCtx}
 
 Write a complete, publish-ready ${wordRange}-word article. Use this outline as internal guidance only: do NOT copy these bullet labels, word counts, or placeholder headings into the output:
 ${config.structure}
@@ -515,7 +518,7 @@ ${buildSeoLongformRequirements(brand.companyName, keyword, wordRange)}${competit
 TARGET KEYWORD: "${keyword}"
 TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
 RELATED KEYWORDS TO WEAVE IN: ${kwList}
-${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${brandVoiceContext || `\nBRAND VOICE: ${defaultVoice}`}
+${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${voiceLine ? `\n${voiceLine}` : ""}
 
 Write a complete, publish-ready ${wordRange}-word piece. Use this outline as internal guidance only: do NOT copy outline labels into the output:
 ${config.structure}
@@ -1003,8 +1006,10 @@ async function buildRepurposePrompt(
     targetFormat,
     existingKeyword,
   );
-  const defaultVoice = brand.voiceTone?.trim() || "Professional, clear, and authoritative";
+  // Generic fallback removed — callers must gate with isProjectVoiceReady / voice_required.
+  const defaultVoice = brand.voiceTone?.trim() ?? "";
   const competitorContext = competitorPromptBlock?.trim() ?? "";
+  const voiceLine = brandVoiceContext || (defaultVoice ? `\nBRAND VOICE: ${defaultVoice}` : "");
   return `Repurpose the following existing content into a ${config.label} for ${brand.companyName} (${brand.websiteUrl}).
 
 EXISTING CONTENT:
@@ -1012,7 +1017,7 @@ ${existingContent.slice(0, 4000)}
 
 TARGET FORMAT: ${config.label} (${config.wordRange} words)
 TARGET KEYWORD: "${existingKeyword}"
-TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}${brandVoiceContext || `\nBRAND VOICE: ${defaultVoice}`}${competitorContext}
+TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}${voiceLine}${competitorContext}
 
 Rewrite the content following this structure:
 ${config.structure}

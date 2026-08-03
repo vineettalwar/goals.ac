@@ -8,11 +8,12 @@
  *
  * Kept Next-specific: CreateContentModal (rich create wizard), CMS/publishing
  * context for that modal, cookie-auth loaders, sonner toasts, brief deep-link draft,
- * ArticlePerformanceBadge via `renderPieceExtras`.
+ * ArticlePerformanceBadge via `renderPieceExtras`, voice-required gate.
  */
 
-import { useCallback, useEffect, useReducer, useState } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import Link from "next/link";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   StudioNewContentButton,
@@ -27,6 +28,7 @@ import { ArticlePerformanceBadge } from "./article-performance-badge";
 import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
 import { loadContentStudioData } from "./content-studio-load-data";
 import type { ContentPieceRow, StudioPiece } from "./content-studio-utils";
+import { VoiceRequiredBanner, type VoiceGateStatus } from "./voice-required-banner";
 
 export { FORMAT_OPTIONS };
 export type { ContentPieceRow };
@@ -46,6 +48,15 @@ type StudioLoadState = {
   cmsConnections: CmsConnectionSnapshot;
   primaryBlogDestination: string | null;
   brandProfile: BrandProfileSummary | null;
+  voiceGate: VoiceGateStatus;
+};
+
+const emptyVoiceGate: VoiceGateStatus = {
+  voiceReady: false,
+  voiceBuilding: false,
+  hasBrandVoice: false,
+  hasPlatformVoice: false,
+  scrapeStatus: null,
 };
 
 const initialStudioLoadState: StudioLoadState = {
@@ -57,15 +68,18 @@ const initialStudioLoadState: StudioLoadState = {
   cmsConnections: {},
   primaryBlogDestination: null,
   brandProfile: null,
+  voiceGate: emptyVoiceGate,
 };
 
 function studioLoadReducer(
   state: StudioLoadState,
   action:
     | { type: "load"; payload: StudioLoadState }
-    | { type: "setPieces"; updater: (pieces: StudioPiece[]) => StudioPiece[] },
+    | { type: "setPieces"; updater: (pieces: StudioPiece[]) => StudioPiece[] }
+    | { type: "setVoiceGate"; voiceGate: VoiceGateStatus },
 ): StudioLoadState {
   if (action.type === "load") return action.payload;
+  if (action.type === "setVoiceGate") return { ...state, voiceGate: action.voiceGate };
   return { ...state, pieces: action.updater(state.pieces) };
 }
 
@@ -98,6 +112,7 @@ export function ContentStudioClient({
     cmsConnections,
     primaryBlogDestination,
     brandProfile,
+    voiceGate,
   } = studioData;
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(initialCreateOpen);
@@ -105,6 +120,8 @@ export function ContentStudioClient({
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [markingReadyId, setMarkingReadyId] = useState<number | null>(null);
   const [reschedulingId, setReschedulingId] = useState<number | null>(null);
+  const [rescanning, setRescanning] = useState(false);
+  const prevScrapeRef = useRef(voiceGate.scrapeStatus);
 
   const loadData = useCallback(async () => {
     const data = await loadContentStudioData(projectId);
@@ -119,6 +136,7 @@ export function ContentStudioClient({
         cmsConnections: data.cmsConnections,
         primaryBlogDestination: data.primaryBlogDestination,
         brandProfile: data.brandProfile,
+        voiceGate: data.voiceGate,
       },
     });
   }, [projectId]);
@@ -126,6 +144,63 @@ export function ContentStudioClient({
   useEffect(() => {
     loadData().finally(() => setLoading(false));
   }, [loadData]);
+
+  const scrapePending = voiceGate.voiceBuilding || voiceGate.scrapeStatus === "pending";
+  const { data: polledBrand } = useQuery({
+    queryKey: ["content-studio-voice-poll", projectId],
+    queryFn: async () => {
+      const res = await fetch(`/api/website-projects/${projectId}/brand-profile`);
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: scrapePending,
+    refetchInterval: scrapePending ? 3000 : false,
+  });
+
+  useEffect(() => {
+    if (!polledBrand) return;
+    const nextStatus =
+      typeof polledBrand.scrapeStatus === "string" ? polledBrand.scrapeStatus : null;
+    const prev = prevScrapeRef.current;
+    prevScrapeRef.current = nextStatus;
+    dispatchStudioData({
+      type: "setVoiceGate",
+      voiceGate: {
+        voiceReady: Boolean(polledBrand.voiceReady),
+        voiceBuilding: Boolean(polledBrand.voiceBuilding),
+        hasBrandVoice: Boolean(polledBrand.hasBrandVoice),
+        hasPlatformVoice: Boolean(polledBrand.hasPlatformVoice),
+        scrapeStatus: nextStatus,
+      },
+    });
+    if (prev === "pending" && nextStatus === "done" && polledBrand.voiceReady) {
+      toast.success("Brand voice ready");
+      void loadData();
+    }
+  }, [polledBrand, loadData]);
+
+  async function handleRescan() {
+    setRescanning(true);
+    try {
+      const res = await fetch(`/api/website-projects/${projectId}/scrape`, { method: "POST" });
+      if (!res.ok) {
+        toast.error("Failed to start website rescan");
+        return;
+      }
+      dispatchStudioData({
+        type: "setVoiceGate",
+        voiceGate: {
+          ...voiceGate,
+          voiceBuilding: true,
+          scrapeStatus: "pending",
+          voiceReady: false,
+        },
+      });
+      toast.message("Rescanning…");
+    } finally {
+      setRescanning(false);
+    }
+  }
 
   async function handleDelete(pieceId: number) {
     setDeletingId(pieceId);
@@ -189,9 +264,14 @@ export function ContentStudioClient({
     });
   }
 
+  const voiceReady = voiceGate.voiceReady;
   const newContentAction = (
     <StudioNewContentButton
       onClick={() => {
+        if (!voiceReady) {
+          toast.error("Add a brand voice first");
+          return;
+        }
         setBriefDraft(null);
         setCreateOpen(true);
       }}
@@ -200,6 +280,12 @@ export function ContentStudioClient({
 
   return (
     <>
+      <VoiceRequiredBanner
+        projectId={projectId}
+        status={voiceGate}
+        onRescan={handleRescan}
+        rescanning={rescanning}
+      />
       <StudioView
         projectId={projectId}
         projectName={projectName || null}
@@ -232,7 +318,7 @@ export function ContentStudioClient({
       />
 
       <CreateContentModal
-        open={createOpen}
+        open={createOpen && voiceReady}
         onClose={() => {
           setCreateOpen(false);
           setBriefDraft(null);
@@ -253,6 +339,11 @@ export function ContentStudioClient({
             ],
           });
           setBriefDraft(null);
+          void loadData();
+        }}
+        onVoiceRequired={() => {
+          setCreateOpen(false);
+          toast.error("Add a brand voice first");
           void loadData();
         }}
       />

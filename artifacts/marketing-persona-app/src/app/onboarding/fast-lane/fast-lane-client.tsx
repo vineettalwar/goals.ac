@@ -89,7 +89,7 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
 
   const runFastLane = useCallback(async () => {
     setPhase("scan");
-    setMessage("Scanning your website for brand context…");
+    setMessage("Scanning your website…");
 
     let attempts = 0;
     while (attempts < 30) {

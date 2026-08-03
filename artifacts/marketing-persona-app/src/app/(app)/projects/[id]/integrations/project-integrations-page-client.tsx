@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import type { ProjectIntegrationsTab } from "@workspace/app-shell/integrations";
 import {
   orgIntegrationsPath,
@@ -16,10 +17,12 @@ import { AnalyticsPropertyConnectionsPanel } from "@/components/integrations/ana
 import { IntegrationTabBadge } from "@/components/integrations/integration-tile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useIntegrationCounts } from "@/hooks/use-integration-counts";
+import { contentStudioPath } from "@workspace/app-shell/project-paths";
 
 const VALID_TABS: ProjectIntegrationsTab[] = ["cms", "social", "esp", "search"];
 const SOCIAL_STATUS_KEYS = ["linkedin", "twitter", "meta", "bluesky", "mastodon"] as const;
 const SEARCH_STATUS_KEYS = ["gsc", "bing", "ga4"] as const;
+const SOCIAL_SUCCESS = new Set(["connected", "ok", "success", "1", "true"]);
 
 function parseTab(value: string | undefined): ProjectIntegrationsTab {
   if (value && VALID_TABS.includes(value as ProjectIntegrationsTab)) {
@@ -30,6 +33,14 @@ function parseTab(value: string | undefined): ProjectIntegrationsTab {
 
 function hasAnyParam(searchParams: URLSearchParams, keys: readonly string[]): boolean {
   return keys.some((key) => searchParams.has(key));
+}
+
+function socialConnectSucceeded(searchParams: URLSearchParams): string | null {
+  for (const key of SOCIAL_STATUS_KEYS) {
+    const value = searchParams.get(key);
+    if (value && SOCIAL_SUCCESS.has(value.toLowerCase())) return key;
+  }
+  return null;
 }
 
 export function ProjectIntegrationsPageClient({
@@ -44,7 +55,9 @@ export function ProjectIntegrationsPageClient({
   const { activeProject, setActiveProjectId, isLoading } = useActiveProject();
   const counts = useIntegrationCounts(projectId);
   const strippedRef = useRef(false);
+  const voiceSyncRef = useRef(false);
   const activeTab = parseTab(tab);
+  const [trainVoice, setTrainVoice] = useState(searchParams.get("trainVoice") === "1");
 
   useEffect(() => {
     const id = Number.parseInt(projectId, 10);
@@ -52,11 +65,45 @@ export function ProjectIntegrationsPageClient({
   }, [projectId, setActiveProjectId]);
 
   useEffect(() => {
+    if (searchParams.get("trainVoice") === "1") setTrainVoice(true);
+  }, [searchParams]);
+
+  function startVoiceHistorySync(connectedPlatform: string | null) {
+    if (voiceSyncRef.current) return;
+    voiceSyncRef.current = true;
+
+    void fetch(
+      `/api/website-projects/${projectId}/social/history-sync${
+        connectedPlatform ? `?platform=${connectedPlatform}` : ""
+      }`,
+      { method: "POST" },
+    )
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => null);
+          throw new Error(data?.error ?? "Social history sync failed");
+        }
+        toast.success(
+          connectedPlatform
+            ? `Voice trained from ${connectedPlatform}`
+            : "Voice trained from social posts",
+        );
+      })
+      .catch(() => {
+        voiceSyncRef.current = false;
+      });
+  }
+
+  useEffect(() => {
     if (strippedRef.current) return;
 
     const hasSocialStatus = hasAnyParam(searchParams, SOCIAL_STATUS_KEYS);
     const hasSearchStatus = hasAnyParam(searchParams, SEARCH_STATUS_KEYS);
     if (!hasSocialStatus && !hasSearchStatus && !searchParams.has("token")) return;
+
+    const connectedPlatform = socialConnectSucceeded(searchParams);
+    // Capture OAuth success before stripping status query params.
+    if (connectedPlatform) startVoiceHistorySync(connectedPlatform);
 
     const preferTab: ProjectIntegrationsTab = hasSocialStatus
       ? "social"
@@ -66,6 +113,7 @@ export function ProjectIntegrationsPageClient({
 
     const keepMetaSelect =
       searchParams.get("meta") === "select_page" && Boolean(searchParams.get("token"));
+    const keepTrainVoice = searchParams.get("trainVoice") === "1" || trainVoice;
 
     const next = new URLSearchParams();
     if (keepMetaSelect) {
@@ -73,12 +121,22 @@ export function ProjectIntegrationsPageClient({
       const token = searchParams.get("token");
       if (token) next.set("token", token);
     }
+    if (keepTrainVoice) next.set("trainVoice", "1");
 
     strippedRef.current = true;
     const qs = next.toString();
     const path = projectIntegrationsPath(projectId, preferTab);
     router.replace(qs ? `${path}?${qs}` : path);
-  }, [activeTab, projectId, router, searchParams]);
+  }, [activeTab, projectId, router, searchParams, trainVoice]);
+
+  useEffect(() => {
+    // trainVoice with accounts already connected (no fresh OAuth callback).
+    if (voiceSyncRef.current) return;
+    const wantsVoice = trainVoice || searchParams.get("trainVoice") === "1";
+    if (!wantsVoice || activeTab !== "social") return;
+    if (counts.social === 0) return;
+    startVoiceHistorySync(null);
+  }, [activeTab, counts.social, searchParams, trainVoice]);
 
   const projectName =
     activeProject && String(activeProject.id) === projectId ? activeProject.name : null;
@@ -104,10 +162,21 @@ export function ProjectIntegrationsPageClient({
         </p>
       </div>
 
+      {trainVoice && activeTab === "social" ? (
+        <p className="text-sm text-muted-foreground">
+          Connect LinkedIn or X to train voice from your posts.{" "}
+          <Link href={contentStudioPath(projectId)} className="text-primary hover:underline">
+            Back to Studio
+          </Link>
+        </p>
+      ) : null}
+
       <Tabs
         value={activeTab}
         onValueChange={(value) => {
-          router.push(projectIntegrationsPath(projectId, value as ProjectIntegrationsTab));
+          const next = value as ProjectIntegrationsTab;
+          const path = projectIntegrationsPath(projectId, next);
+          router.push(trainVoice && next === "social" ? `${path}?trainVoice=1` : path);
         }}
         className="space-y-5"
       >

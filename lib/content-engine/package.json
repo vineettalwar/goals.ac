@@ -40,6 +40,8 @@
     "./brand-scan-discovery": "./src/brand/brand-scan-discovery.ts",
     "./brand-scraper": "./src/brand/brand-scraper.ts",
     "./brand-voice": "./src/brand/brand-voice.ts",
+    "./project-voice-ready": "./src/brand/project-voice-ready.ts",
+    "./brand/project-voice-ready": "./src/brand/project-voice-ready.ts",
     "./brand-voice-chunker": "./src/brand/brand-voice-chunker.ts",
     "./brand-voice-indexer": "./src/brand/brand-voice-indexer.ts",
     "./brand-voice-retrieval": "./src/brand/brand-voice-retrieval.ts",

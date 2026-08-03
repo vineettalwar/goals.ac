@@ -21,6 +21,7 @@ import { getDefaultOutputMode } from "@workspace/content-engine/support/publishi
 import { resolveDefaultIntendedPlatform } from "@workspace/content-engine/support/publishing/intended-destination";
 import { parsePublishingSettings } from "@workspace/content-engine/support/publishing/publishing-settings";
 import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
+import { evaluateProjectVoiceReady } from "@workspace/content-engine/brand/project-voice-ready";
 import { loadCompetitorGenerationContext } from "@workspace/content-engine/support/competitor/competitor-generation-context";
 import {
   normalizeCompetitorUrl,
@@ -119,6 +120,39 @@ export async function loadProjectBrand(
   const brand = await loadBrandContextForProject(projectId);
   if (!brand) return null;
   return { brand, projectId };
+}
+
+/** 409 payload when brand/platform voice is missing. */
+export async function loadProjectVoiceGate(projectId: number) {
+  const [project] = await db
+    .select({ scrapeStatus: websiteProjectsTable.scrapeStatus })
+    .from(websiteProjectsTable)
+    .where(eq(websiteProjectsTable.id, projectId))
+    .limit(1);
+
+  const brand = await loadBrandContextForProject(projectId);
+  const evaluation = evaluateProjectVoiceReady({
+    scrapeStatus: project?.scrapeStatus ?? null,
+    voiceTone: brand?.voiceTone,
+    writingExamples: brand?.writingExamples,
+    brandVoiceSkill: brand?.brandVoiceSkill,
+    platformVoices: brand?.platformVoices,
+  });
+
+  return { evaluation, brand };
+}
+
+export function voiceRequiredJsonBody(evaluation: ReturnType<typeof evaluateProjectVoiceReady>) {
+  return {
+    code: "voice_required" as const,
+    error: evaluation.building
+      ? "Brand voice is still scanning. Try again in a moment."
+      : "Add a brand voice (or connect social) before generating.",
+    scrapeStatus: evaluation.scrapeStatus,
+    hasBrandVoice: evaluation.hasBrandVoice,
+    hasPlatformVoice: evaluation.hasPlatformVoice,
+    building: evaluation.building,
+  };
 }
 
 export async function loadUserAiSettings(userId: number): Promise<{

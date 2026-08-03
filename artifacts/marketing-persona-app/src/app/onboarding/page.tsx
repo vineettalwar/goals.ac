@@ -109,51 +109,40 @@ export default function OnboardingPage() {
       orgRole: "site_admin",
     });
 
-    if (readRoadmapIntent()) {
-      const projectRes = await fetch("/api/website-projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, url: data.websiteUrl, contentStyle: { primaryLanguage: language } }),
-      }).catch(() => null);
+    // Always create a website project so brand scrape builds voice (classic + roadmap + fast-lane).
+    let projectId: number | null = null;
+    const projectRes = await fetch("/api/website-projects", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, url: data.websiteUrl }),
+    }).catch(() => null);
 
-      if (projectRes?.ok) {
-        const created = (await projectRes.json()) as { id?: number; project?: { id: number } };
-        const projectId = created.project?.id ?? created.id;
-        if (projectId != null) {
-          await fetch("/api/goals", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              projectId,
-              objective: goalIntent.objective,
-              targetMetric: goalIntent.targetMetric,
-              status: "active",
-            }),
-          }).catch(() => {});
-        }
-      }
+    if (projectRes?.ok) {
+      const created = (await projectRes.json()) as { id?: number; project?: { id: number } };
+      projectId = created.project?.id ?? created.id ?? null;
+    } else if (projectRes?.status === 409) {
+      // Duplicate site — continue without blocking onboarding.
+    } else if (projectRes && !projectRes.ok) {
+      const { error: projErr } = await projectRes.json().catch(() => ({ error: "Failed to create project" }));
+      toast.error(projErr ?? "Failed to create project");
+      setLoading(false);
+      return;
     }
 
-    if (isFastLane) {
-      const projectRes = await fetch("/api/website-projects", {
+    if (projectId != null && readRoadmapIntent()) {
+      await fetch("/api/goals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
-          url: data.websiteUrl,
-          contentStyle: { primaryLanguage: language },
+          projectId,
+          objective: goalIntent.objective,
+          targetMetric: goalIntent.targetMetric,
+          status: "active",
         }),
-      });
+      }).catch(() => {});
+    }
 
-      if (!projectRes.ok) {
-        const { error: projErr } = await projectRes.json().catch(() => ({ error: "Failed to create project" }));
-        toast.error(projErr ?? "Failed to create project");
-        setLoading(false);
-        return;
-      }
-
-      const created = (await projectRes.json()) as { id?: number; project?: { id: number } };
-      const projectId = created.project?.id ?? created.id;
+    if (isFastLane) {
       if (projectId == null) {
         toast.error("Failed to create project");
         setLoading(false);
@@ -163,6 +152,10 @@ export default function OnboardingPage() {
       return;
     }
 
+    // Brand scrape runs in the background; Content Studio gates generate until voice is ready.
+    if (projectId != null) {
+      toast.message("Scanning your site for brand voice in the background.");
+    }
     router.push(`/onboarding/personas?companyId=${company.id}`);
   }
 
