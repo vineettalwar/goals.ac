@@ -91,7 +91,11 @@ async function loadGscTopPages(
     .map((row) => ({ url: row.page, impressions: row.impressions }));
 }
 
-async function loadCmsSiteGraph(
+/**
+ * Published posts from the CMS site graph. Exported so coverage checks can ask
+ * what the site already publishes before a brief becomes an article.
+ */
+export async function loadCmsSiteGraph(
   cmsIntegrations: unknown,
 ): Promise<{
   url: string;
@@ -231,6 +235,22 @@ export async function shouldAutoRefreshBrandAfterGscSync(projectId: number): Pro
 
   const elapsed = Date.now() - new Date(lastScannedAt).getTime();
   return elapsed >= AUTO_BRAND_REFRESH_MIN_MS;
+}
+
+/** Published posts for a project, for coverage checks and internal linking. */
+export async function loadPublishedPostsForProject(
+  projectId: number,
+): Promise<{ url: string; title?: string; excerpt?: string }[]> {
+  const [project] = await db
+    .select({ cmsIntegrations: websiteProjectsTable.cmsIntegrations })
+    .from(websiteProjectsTable)
+    .where(eq(websiteProjectsTable.id, projectId))
+    .limit(1);
+
+  if (!project) return [];
+
+  const posts = await loadCmsSiteGraph(project.cmsIntegrations);
+  return posts.map((post) => ({ url: post.url, title: post.title, excerpt: post.excerpt }));
 }
 
 /** Load full CMS post bodies for brand voice indexing. */
