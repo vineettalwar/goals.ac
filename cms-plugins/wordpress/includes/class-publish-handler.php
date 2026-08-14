@@ -217,6 +217,13 @@ class Publish_Handler {
 		if ( ! empty( $elementor_data ) && \is_string( $elementor_data ) ) {
 			\update_post_meta( $post_id, '_elementor_data', \wp_slash( $elementor_data ) );
 			\update_post_meta( $post_id, '_elementor_edit_mode', 'builder' );
+			// Without this, Elementor's editor does not fully adopt the post as
+			// its own — it renders _elementor_data but the version-driven data
+			// upgrade/migration path never registers the post as builder-managed.
+			// Read the site's actual installed version rather than hardcoding one.
+			if ( \defined( 'ELEMENTOR_VERSION' ) ) {
+				\update_post_meta( $post_id, '_elementor_version', \constant( 'ELEMENTOR_VERSION' ) );
+			}
 		}
 
 		$meta = $params['meta'] ?? array();

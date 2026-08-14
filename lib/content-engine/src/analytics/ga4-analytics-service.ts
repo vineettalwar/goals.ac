@@ -13,6 +13,7 @@ import {
   parseStoredTokens,
   resolveAccessToken,
 } from "../support/integrations/gsc-connection";
+import { recordSyncFailure, recordSyncSuccess } from "../support/integrations/connection-sync-status";
 import { normalizePagePath } from "../core/utils";
 import { logger } from "../core/logger";
 
@@ -30,6 +31,10 @@ export type Ga4SyncStatus = {
   propertyName: string | null;
   lastSyncedAt: string | null;
   pageCount: number;
+  /** Outcome of the most recent sync *attempt* — distinct from lastSyncedAt, which reflects the newest data row. Null before the first attempt. */
+  lastSyncStatus: "ok" | "auth_error" | "error" | null;
+  /** Set when lastSyncStatus is not "ok" — a short, user-facing reason. */
+  lastSyncError: string | null;
 };
 
 const UNSELECTED_PROPERTY_ID = "";
@@ -110,12 +115,20 @@ export async function syncGa4PageMetrics(projectId: number, days = 28): Promise<
   }
 
   const dateRange = defaultSyncDateRange(days);
-  const rows = await fetchAllGa4PageMetrics({
-    propertyId: connection.propertyId,
-    accessToken: resolved.accessToken,
-    startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
-  });
+  let rows: Awaited<ReturnType<typeof fetchAllGa4PageMetrics>>;
+  try {
+    rows = await fetchAllGa4PageMetrics({
+      propertyId: connection.propertyId,
+      accessToken: resolved.accessToken,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+    });
+  } catch (err) {
+    // Recorded so a founder relying on this data can see the pipe is dry,
+    // rather than a stale "connected and verified" badge that never changes.
+    await recordSyncFailure("analytics", connection.id, err);
+    throw err;
+  }
 
   let rowsUpserted = 0;
   for (const row of rows) {
@@ -134,6 +147,7 @@ export async function syncGa4PageMetrics(projectId: number, days = 28): Promise<
     rowsUpserted += 1;
   }
 
+  await recordSyncSuccess("analytics", connection.id);
   logger.info({ projectId, rowsUpserted, dateRange }, "GA4 page metrics synced");
   return { rowsUpserted, dateRange };
 }
@@ -144,6 +158,8 @@ export async function getGa4SyncStatus(projectId: number): Promise<Ga4SyncStatus
       propertyId: analyticsPropertyConnectionsTable.propertyId,
       propertyName: analyticsPropertyConnectionsTable.propertyName,
       propertyVerified: analyticsPropertyConnectionsTable.propertyVerified,
+      lastSyncStatus: analyticsPropertyConnectionsTable.lastSyncStatus,
+      lastSyncError: analyticsPropertyConnectionsTable.lastSyncError,
     })
     .from(analyticsPropertyConnectionsTable)
     .where(
@@ -174,6 +190,8 @@ export async function getGa4SyncStatus(projectId: number): Promise<Ga4SyncStatus
     propertyName: connection?.propertyName ?? null,
     lastSyncedAt: stats?.lastSyncedAt ?? null,
     pageCount: stats?.pageCount ?? 0,
+    lastSyncStatus: connection?.lastSyncStatus ?? null,
+    lastSyncError: connection?.lastSyncError ?? null,
   };
 }
 

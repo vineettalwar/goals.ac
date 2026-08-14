@@ -1,20 +1,24 @@
 "use client";
 
 import {
-  FORMAT_CATEGORIES,
   FORMAT_META,
+  formatCategoriesForSurface,
   type ContentFormatType,
+  type ProductSurface,
 } from "./content-studio-format-data";
 import { cn } from "@/lib/utils";
 
 export function CreateContentFormatPicker({
   onSelect,
+  surface = "blog_wordpress",
 }: {
   onSelect: (type: ContentFormatType) => void;
+  /** Which format set to offer. Defaults to the blog surface. */
+  surface?: ProductSurface;
 }) {
   return (
     <div className="space-y-8 mt-8 max-h-[min(60vh,520px)] overflow-y-auto pr-1">
-      {FORMAT_CATEGORIES.map((cat) => (
+      {formatCategoriesForSurface(surface).map((cat) => (
         <div key={cat.label}>
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70 mb-3">
             {cat.label}

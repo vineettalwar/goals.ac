@@ -16,6 +16,9 @@ export const BRAND_VOICE_SOURCE_TYPES = [
   "upload",
   "cms",
   "published",
+  // A generated draft after the founder edited it. The strongest voice signal
+  // available, because they corrected it by hand.
+  "user_edit",
   "social_linkedin",
   "social_twitter",
   "social_facebook",

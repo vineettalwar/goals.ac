@@ -66,10 +66,21 @@ export async function POST(
           format: draft.format,
           wordCount: draft.wordCount,
           successMetric: draft.successMetric,
+          internalLinkTargets: draft.internalLinkTargets ?? null,
           status: "draft",
         })),
       )
       .returning();
+
+    // Coverage verdicts are advisory and not persisted — they are recomputed
+    // from the live site graph each compile, so a stale verdict would mislead.
+    const coverageByTitle = new Map(
+      compiled.briefs.map((draft) => [draft.workingTitle, draft.coverage ?? null]),
+    );
+    const briefsWithCoverage = inserted.map((row) => ({
+      ...row,
+      coverage: coverageByTitle.get(row.workingTitle) ?? null,
+    }));
 
     await completeAiBilling(billingPrep.ctx, {
       userId: userId!,
@@ -82,7 +93,7 @@ export async function POST(
       totalTokens: compiled.generationUsage?.totalTokens,
     });
 
-    return NextResponse.json({ briefs: inserted }, { status: 201 });
+    return NextResponse.json({ briefs: briefsWithCoverage }, { status: 201 });
   } catch (err) {
     await cancelAiBilling(billingPrep.ctx, err instanceof Error ? err.message : "brief_compilation_failed");
     const message = err instanceof Error ? err.message : "Brief compilation failed";

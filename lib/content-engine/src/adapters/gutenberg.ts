@@ -1,27 +1,23 @@
 import { markdownToHtml } from "./markdown-html";
+import { escapeHtml, inlineToHtml } from "./markdown-inline";
 
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function inlineToHtml(text: string): string {
-  return escapeHtml(text)
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/__(.+?)__/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/_(.+?)_/g, "<em>$1</em>")
-    .replace(/`([^`]+?)`/g, "<code>$1</code>");
-}
-
-function block(type: string, innerHtml: string, attrs: Record<string, string> = {}): string {
-  const attrStr = Object.entries(attrs)
-    .map(([k, v]) => `${k}:"${v}"`)
-    .join(",");
-  const open = attrStr ? `<!-- wp:${type} {${attrStr}} -->` : `<!-- wp:${type} -->`;
+/**
+ * Serialize a Gutenberg block.
+ *
+ * WordPress runs `json_decode` over the attribute object in the block comment,
+ * so it must be strict JSON: quoted keys, and numbers as numbers. Emitting
+ * `{level:"2"}` parses as null and the editor flags the block as containing
+ * unexpected content, which is what a founder opening the post would see.
+ */
+function block(
+  type: string,
+  innerHtml: string,
+  attrs: Record<string, string | number | boolean> = {},
+): string {
+  const hasAttrs = Object.keys(attrs).length > 0;
+  const open = hasAttrs
+    ? `<!-- wp:${type} ${JSON.stringify(attrs)} -->`
+    : `<!-- wp:${type} -->`;
   return `${open}\n${innerHtml}\n<!-- /wp:${type} -->`;
 }
 
@@ -41,7 +37,11 @@ export function markdownToGutenbergBlocks(markdown: string): string {
     if (!listType || listItems.length === 0) return;
     const tag = listType === "ul" ? "ul" : "ol";
     const inner = listItems.map((item) => `<li>${inlineToHtml(item)}</li>`).join("");
-    blocks.push(block("list", `<${tag}>${inner}</${tag}>`));
+    // Without the ordered attribute Gutenberg treats an <ol> as a bullet list
+    // in the editor, so numbering disappears the moment anyone edits the post.
+    blocks.push(
+      block("list", `<${tag}>${inner}</${tag}>`, listType === "ol" ? { ordered: true } : {}),
+    );
     listType = null;
     listItems = [];
   };
@@ -83,7 +83,7 @@ export function markdownToGutenbergBlocks(markdown: string): string {
       const level = /^#+/.exec(line)![0].length;
       const text = line.replace(/^#+\s+/, "");
       const tag = `h${Math.min(level, 6)}`;
-      blocks.push(block("heading", `<${tag}>${inlineToHtml(text)}</${tag}>`, { level: String(level) }));
+      blocks.push(block("heading", `<${tag}>${inlineToHtml(text)}</${tag}>`, { level }));
       continue;
     }
 

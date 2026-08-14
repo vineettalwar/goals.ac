@@ -15,6 +15,7 @@
     "./analyticsDateRange": "./src/analyticsDateRange.ts",
     "./ga4Admin": "./src/ga4Admin.ts",
     "./gscOpportunityScorer": "./src/gscOpportunityScorer.ts",
+    "./contentDecayDetector": "./src/contentDecayDetector.ts",
     "./semrushGapAnalyzer": "./src/semrushGapAnalyzer.ts",
     "./freeTools": "./src/freeTools.ts",
     "./sitemap-crawl": "./src/sitemap-crawl.ts"

@@ -121,6 +121,13 @@ export function BrandVoiceSkillEditor({ projectId }: Props) {
         {stats && (
           <div className="flex flex-wrap gap-2">
             <Badge variant="muted">{stats.totalSources} sources</Badge>
+            {/* Learning from edits is invisible unless we say so. */}
+            {(stats.byType?.user_edit ?? 0) > 0 && (
+              <Badge variant="outline">
+                Shaped by {stats.byType.user_edit} of your edit
+                {stats.byType.user_edit === 1 ? "" : "s"}
+              </Badge>
+            )}
             {stats.lastIndexedAt && (
               <Badge variant="outline">
                 Indexed {new Date(stats.lastIndexedAt).toLocaleDateString()}

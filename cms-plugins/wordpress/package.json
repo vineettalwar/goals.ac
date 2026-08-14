@@ -8,6 +8,7 @@
     "start": "wp-env start",
     "stop": "wp-env stop",
     "test:php": "wp-env run tests-cli --env-cwd=wp-content/plugins/goals-ac-wp -- composer test",
+    "test:unit": "composer install --no-interaction --quiet && ./vendor/bin/phpunit",
     "lint": "wp-env run tests-cli --env-cwd=wp-content/plugins/goals-ac-wp -- composer lint"
   },
   "devDependencies": {

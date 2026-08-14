@@ -10,9 +10,7 @@ export const platformBedrockOrgGrantsTable = sqliteTable("platform_bedrock_org_g
     .primaryKey()
     .references(() => organizationsTable.id, { onDelete: "cascade" }),
   grantedBy: integer("granted_by").references(() => usersTable.id, { onDelete: "set null" }),
-  grantedAt: integer("granted_at", { mode: "timestamp_ms" })
-    .notNull()
-    .$defaultFn(() => new Date()),
+  grantedAt: integer("granted_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 
 export const insertPlatformBedrockOrgGrantSchema = createInsertSchema(

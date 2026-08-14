@@ -7,6 +7,7 @@ import {
   type DecryptedStockCredentialContext,
   type StockPhoto,
 } from "@workspace/stock-images";
+import { stockPhotoAttributionMarkdown } from "@workspace/stock-images/attribution";
 import type { AiProviderClient } from "../support/ai/resolve-ai-client";
 import { isSeoLongformFormat } from "../content/content-piece-seo";
 import { isHumanizableSocialFormat } from "../content/humanize-eligibility";
@@ -89,22 +90,68 @@ function extractH2Headings(body: string): string[] {
   return (body.match(/^## (.+)$/gm) ?? []).map((line) => line.replace(/^## /, "").trim());
 }
 
+/** Enough of a stock photo to attribute it — provider, photographer, their profile link. */
+export type PhotoAttribution = {
+  provider: string;
+  photographer: string;
+  photographerUrl: string;
+};
+
+/**
+ * The image markdown line plus its credit paragraph, as one unit. Unsplash's
+ * (and, more loosely, Pexels's) guideline requires visible attribution
+ * wherever a photo appears to end users — a WordPress media-library caption
+ * alone isn't reliably shown by every theme, so the credit travels in the
+ * body itself, where it is guaranteed to render regardless of theme and is
+ * visible to the founder editing the draft in Content Studio.
+ *
+ * "Atomic" matters: this unit is always inserted, matched, and replaced as a
+ * whole, never as two separately tracked lines — see
+ * `existingImageSpanRegExp`.
+ */
+function imageMarkdownWithCredit(alt: string, url: string, photo: PhotoAttribution): string {
+  const imageMd = `![${alt}](${url})`;
+  const credit = stockPhotoAttributionMarkdown(photo.provider, photo.photographer, photo.photographerUrl);
+  return credit ? `${imageMd}\n\n${credit}` : imageMd;
+}
+
+/**
+ * Matches an existing `![...](url)` line for this exact URL, optionally
+ * followed by its credit paragraph — generic to whichever provider produced
+ * it, matched by shape rather than exact photographer name. Used when
+ * swapping a featured image: replacing just the bare URL would leave the
+ * *previous* photographer's name credited under the *new* photo, which is
+ * misattribution — worse than no attribution. Matching and replacing the
+ * whole span removes the old credit along with the old image line.
+ */
+function existingImageSpanRegExp(url: string): RegExp {
+  return new RegExp(
+    `!\\[[^\\]]*\\]\\(${escapeRegExp(url)}\\)(\\n\\n\\*Photo by \\[[^\\]]*\\]\\([^)]*\\) on \\[[^\\]]*\\]\\([^)]*\\)\\*)?`,
+  );
+}
+
 function injectImageAfterHeading(
   body: string,
   heading: string,
   alt: string,
   url: string,
+  photo: PhotoAttribution,
 ): string {
   const pattern = new RegExp(`^(##\\s+${escapeRegExp(heading)}\\s*)$`, "m");
   if (!pattern.test(body)) return body;
-  const imageMd = `\n\n![${alt}](${url})\n`;
+  const imageMd = `\n\n${imageMarkdownWithCredit(alt, url, photo)}\n`;
   return body.replace(pattern, `$1${imageMd}`);
 }
 
-function injectHeroAfterIntro(body: string, alt: string, url: string): string {
+function injectHeroAfterIntro(
+  body: string,
+  alt: string,
+  url: string,
+  photo: PhotoAttribution,
+): string {
   const paragraphs = body.split(/\n\n+/);
-  if (paragraphs.length === 0) return `![${alt}](${url})\n\n${body}`;
-  const imageMd = `![${alt}](${url})`;
+  const imageMd = imageMarkdownWithCredit(alt, url, photo);
+  if (paragraphs.length === 0) return `${imageMd}\n\n${body}`;
   if (paragraphs[0].startsWith("#")) {
     paragraphs.splice(1, 0, imageMd);
   } else {
@@ -207,7 +254,7 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
       images.push(ref);
 
       if (isLongform && !body.includes(featured.url)) {
-        body = injectHeroAfterIntro(body, ref.alt, featured.url);
+        body = injectHeroAfterIntro(body, ref.alt, featured.url, featured);
       }
     }
 
@@ -248,7 +295,7 @@ export async function enrichContentPieceImages<T extends ImageEnrichablePiece>(
         images.push(ref);
         usedIds.push(`${inline.provider}:${inline.id}`);
         if (!body.includes(inline.url)) {
-          body = injectImageAfterHeading(body, heading, ref.alt, inline.url);
+          body = injectImageAfterHeading(body, heading, ref.alt, inline.url, inline);
         }
       }
     }
@@ -378,26 +425,35 @@ export function applyStockPhotoToPiece<T extends ImageEnrichablePiece>(
     const prevFeatured = prevImages.find((img) => img.role === "featured");
     nextImages = [...prevImages.filter((img) => img.role !== "featured"), ref];
     if (prevFeatured?.remoteUrl && body.includes(prevFeatured.remoteUrl)) {
-      body = body.split(prevFeatured.remoteUrl).join(photo.url);
-      if (prevFeatured.alt && prevFeatured.alt !== alt) {
-        body = body.replace(`![${prevFeatured.alt}](${photo.url})`, `![${alt}](${photo.url})`);
+      const span = existingImageSpanRegExp(prevFeatured.remoteUrl);
+      if (span.test(body)) {
+        // Replace the old image line and its old credit paragraph together.
+        // Swapping only the bare URL, as this used to do, would leave the
+        // previous photographer credited under the new photo — misattribution.
+        body = body.replace(span, imageMarkdownWithCredit(alt, photo.url, photo));
+      } else {
+        // The old URL appears in the body but not as a recognizable image
+        // line — fall back to a plain URL swap so the old photo is at least
+        // no longer referenced.
+        body = body.split(prevFeatured.remoteUrl).join(photo.url);
       }
     } else if (
       !body.includes(photo.url) &&
       piece.formatType &&
       isSeoLongformFormat(piece.formatType)
     ) {
-      body = injectHeroAfterIntro(body, alt, photo.url);
+      body = injectHeroAfterIntro(body, alt, photo.url, photo);
     }
   } else {
     nextImages = [...prevImages, ref];
     if (!body.includes(photo.url)) {
       const heading = options.sectionHeading?.trim();
+      const imageMd = imageMarkdownWithCredit(alt, photo.url, photo);
       if (heading) {
-        const injected = injectImageAfterHeading(body, heading, alt, photo.url);
-        body = injected === body ? `${body.trimEnd()}\n\n![${alt}](${photo.url})\n` : injected;
+        const injected = injectImageAfterHeading(body, heading, alt, photo.url, photo);
+        body = injected === body ? `${body.trimEnd()}\n\n${imageMd}\n` : injected;
       } else {
-        body = `${body.trimEnd()}\n\n![${alt}](${photo.url})\n`;
+        body = `${body.trimEnd()}\n\n${imageMd}\n`;
       }
     }
   }

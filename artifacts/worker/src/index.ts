@@ -21,6 +21,8 @@ import {
   GEO_REAUDIT_SWEEP_CRON,
   registerKeywordOpportunitySweepHandler,
   KEYWORD_OPPORTUNITY_SWEEP_CRON,
+  registerContentDecaySweepHandler,
+  CONTENT_DECAY_SWEEP_CRON,
   registerGscSearchAnalyticsSyncHandler,
   GSC_SEARCH_ANALYTICS_SYNC_CRON,
   registerGa4AnalyticsSyncHandler,
@@ -71,6 +73,7 @@ async function main(): Promise<void> {
   await registerLlmVisibilityCheckHandler(boss);
   await registerGeoReauditSweepHandler(boss);
   await registerKeywordOpportunitySweepHandler(boss);
+  await registerContentDecaySweepHandler(boss);
   await registerGscSearchAnalyticsSyncHandler(boss);
   await registerGa4AnalyticsSyncHandler(boss);
   await registerArticleIdeaSourceSyncHandler(boss);
@@ -88,6 +91,7 @@ async function main(): Promise<void> {
   await scheduleCron(QUEUES.llmVisibilityCheck, LLM_VISIBILITY_SWEEP_CRON, {});
   await scheduleCron(QUEUES.geoReauditSweep, GEO_REAUDIT_SWEEP_CRON, {});
   await scheduleCron(QUEUES.keywordOpportunitySweep, KEYWORD_OPPORTUNITY_SWEEP_CRON, {});
+  await scheduleCron(QUEUES.contentDecaySweep, CONTENT_DECAY_SWEEP_CRON, {});
   await scheduleCron(QUEUES.gscSearchAnalyticsSync, GSC_SEARCH_ANALYTICS_SYNC_CRON, {});
   await scheduleCron(QUEUES.ga4AnalyticsSync, GA4_ANALYTICS_SYNC_CRON, {});
   await scheduleCron(QUEUES.articleIdeaSourceSync, ARTICLE_IDEA_SOURCE_SYNC_CRON, {});

@@ -9,7 +9,15 @@ import type { WebhookArticlePayload } from "@workspace/connectors/webhook";
 import { publishToShopify } from "@workspace/connectors/shopify";
 import { publishToDrupal } from "@workspace/connectors/drupal";
 import { publishToJoomla } from "@workspace/connectors/joomla";
-import { publishToGoalsAcPlugin, injectGoalsAcSchema } from "@workspace/connectors/goals-ac-plugin";
+import {
+  publishToGoalsAcPlugin,
+  injectGoalsAcSchema,
+  fetchGoalsAcSiteGraph,
+  insertGoalsAcInternalLinks,
+  type GoalsAcPluginCredentials,
+} from "@workspace/connectors/goals-ac-plugin";
+import { planInternalLinks, type LinkSourcePost } from "../../strategy/internal-link-planner";
+import { logger } from "../../core/logger";
 import { publishToWordPress } from "@workspace/connectors/wordpress";
 import type { ContentPieceMetadata } from "@workspace/db";
 import type { CmsIntegrationCredentials, CmsPublishPlatform } from "./cms-integrations";
@@ -48,6 +56,51 @@ function resolveSeo(
     return { ...seo, ogImageUrl: ogImageOverride };
   }
   return seo;
+}
+
+/**
+ * Link a freshly published post from existing posts that already discuss it.
+ *
+ * Best effort by design. A published article is the deliverable; failing to add
+ * internal links is worth a log line, not a failed publish. Runs only on the
+ * plugin connection, which is what exposes the site graph and the write-back
+ * endpoint.
+ */
+async function maybeWriteBackInternalLinks(
+  pluginCreds: GoalsAcPluginCredentials,
+  piece: PublishableContentPiece,
+  publishedUrl: string,
+): Promise<void> {
+  const keyword = piece.targetKeyword?.trim() || piece.title?.trim();
+  if (!keyword || !publishedUrl) return;
+
+  try {
+    const graph = await fetchGoalsAcSiteGraph<{ posts?: LinkSourcePost[] }>(pluginCreds);
+    const plan = planInternalLinks({
+      targetUrl: publishedUrl,
+      targetKeyword: keyword,
+      posts: graph.posts ?? [],
+    });
+    if (!plan) return;
+
+    const result = await insertGoalsAcInternalLinks(pluginCreds, {
+      target_url: publishedUrl,
+      anchor_text: plan.anchorText,
+      post_ids: plan.postIds,
+    });
+
+    logger.info(
+      {
+        publishedUrl,
+        anchorText: plan.anchorText,
+        updated: result.updated.length,
+        skipped: result.skipped.length,
+      },
+      "Internal link write-back complete",
+    );
+  } catch (err) {
+    logger.warn({ err, publishedUrl }, "Internal link write-back failed; post published without inbound links");
+  }
 }
 
 async function maybeInjectSchema(
@@ -159,6 +212,9 @@ export async function publishPieceToWordPress(
       },
     );
     await maybeInjectSchema(creds, "wordpress", piece);
+    if (status === "publish") {
+      await maybeWriteBackInternalLinks(pluginCreds, piece, result.url);
+    }
     return result.url;
   }
 

@@ -152,6 +152,17 @@ class Rest_API {
 				'permission_callback' => array( $this, 'verify_hmac' ),
 			)
 		);
+
+		// Internal link write-back — HMAC auth required.
+		\register_rest_route(
+			self::NAMESPACE,
+			'/internal-links',
+			array(
+				'methods'             => \WP_REST_Server::CREATABLE,
+				'callback'            => array( $this, 'handle_internal_links' ),
+				'permission_callback' => array( $this, 'verify_hmac' ),
+			)
+		);
 	}
 
 	/**
@@ -242,6 +253,37 @@ class Rest_API {
 			return $this->with_request_id( \rest_ensure_response( $site_graph->export() ), $request );
 		} catch ( \Throwable $error ) {
 			return $this->handle_error( 'SITE_GRAPH_FAILED', 'Unable to export site graph.', $error, $request );
+		}
+	}
+
+	/**
+	 * POST /goals-ac/v1/internal-links
+	 *
+	 * Inserts a contextual link to a newly published post into existing posts,
+	 * so it does not sit orphaned. goals.ac picks which posts to link from —
+	 * it holds the site graph and the topic scoring.
+	 *
+	 * Body: { target_url, anchor_text, post_ids: [int] }
+	 *
+	 * @param \WP_REST_Request $request Incoming REST request.
+	 * @return \WP_REST_Response
+	 */
+	public function handle_internal_links( \WP_REST_Request $request ) {
+		try {
+			$target_url  = (string) $request->get_param( 'target_url' );
+			$anchor_text = (string) $request->get_param( 'anchor_text' );
+			$post_ids    = $request->get_param( 'post_ids' );
+
+			if ( ! \is_array( $post_ids ) ) {
+				$post_ids = array();
+			}
+
+			$links  = new Internal_Links();
+			$result = $links->insert( $target_url, $anchor_text, $post_ids );
+
+			return $this->with_request_id( \rest_ensure_response( $result ), $request );
+		} catch ( \Throwable $error ) {
+			return $this->handle_error( 'INTERNAL_LINKS_FAILED', 'Unable to insert internal links.', $error, $request );
 		}
 	}
 
