@@ -230,6 +230,41 @@ export const FORMAT_CATEGORIES: { label: string; formats: ContentFormatType[] }[
   },
 ];
 
+export type ProductSurface = "blog_wordpress" | "full";
+
+/**
+ * The blog surface offers one category: article formats that run the SEO
+ * pipeline and publish to WordPress. Matches `SEO_LONGFORM_FORMATS` in
+ * content-engine. `infographic_outline` sits under Long-form in the full
+ * catalog but is a designer brief, not an article, so it is not offered here.
+ */
+const BLOG_SURFACE_CATEGORIES: { label: string; formats: ContentFormatType[] }[] = [
+  {
+    label: "Articles",
+    formats: [
+      "blog_post",
+      "guide",
+      "tutorial",
+      "pillar_page",
+      "faq_article",
+      "news_article",
+      "whitepaper",
+      "location_page",
+    ],
+  },
+];
+
+/**
+ * Format categories for a product surface. Hidden formats stay valid in the
+ * schema and generatable through the API — this only decides what the picker
+ * offers.
+ */
+export function formatCategoriesForSurface(
+  surface: ProductSurface = "blog_wordpress",
+): { label: string; formats: ContentFormatType[] }[] {
+  return surface === "full" ? FORMAT_CATEGORIES : BLOG_SURFACE_CATEGORIES;
+}
+
 export {
   LINKEDIN_ARCHETYPES,
   LINKEDIN_HOOK_TYPES,

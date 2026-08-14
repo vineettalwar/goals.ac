@@ -24,6 +24,21 @@ export type NavItemDef = {
   matchPrefix?: string;
 };
 
+/**
+ * Which slice of the product a user sees.
+ *
+ * `blog_wordpress` is the default: one product, blog articles published to
+ * WordPress. `full` reveals the social, research, and GEO surfaces. Routes stay
+ * mounted under either surface — this only decides what navigation offers, so
+ * a direct link to a hidden page still works.
+ */
+export type ProductSurface = "blog_wordpress" | "full";
+
+export const DEFAULT_PRODUCT_SURFACE: ProductSurface = "blog_wordpress";
+
+/** Nav labels withheld from the blog surface. */
+const NON_BLOG_NAV_LABELS = new Set(["Social Hub", "GEO Audit", "Research"]);
+
 export const NAV_SECTIONS: Array<{ label: string; items: NavItemDef[] }> = [
   {
     label: "Overview",
@@ -66,8 +81,10 @@ export const FOOTER_ITEMS: NavItemDef[] = [
 export function buildNavModel(options: {
   userRole?: string | null;
   orgRole?: string | null;
+  surface?: ProductSurface | null;
 }) {
   const { userRole, orgRole } = options;
+  const surface = options.surface ?? DEFAULT_PRODUCT_SURFACE;
   const partner = showPartnerNav(userRole, orgRole);
   const admin = isSuperAdmin(userRole);
 
@@ -80,7 +97,15 @@ export function buildNavModel(options: {
   const navSections: Array<{ label: string; items: NavItemDef[] }> = [
     { label: "Overview", items: overviewItems },
     ...NAV_SECTIONS.slice(1),
-  ];
+  ]
+    .map((section) => ({
+      ...section,
+      items:
+        surface === "full"
+          ? section.items
+          : section.items.filter((item) => !NON_BLOG_NAV_LABELS.has(item.label)),
+    }))
+    .filter((section) => section.items.length > 0);
 
   const footerItems: NavItemDef[] = admin
     ? [...FOOTER_ITEMS, { label: "Admin", href: "/admin", icon: Shield }]

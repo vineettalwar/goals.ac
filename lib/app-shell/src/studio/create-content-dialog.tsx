@@ -21,7 +21,7 @@ import {
   type LinkedInArchetypeId,
   type LinkedInHookId,
 } from "./linkedin-archetypes";
-import { STUDIO_FORMAT_OPTIONS, formatTypeLabel } from "./types";
+import { STUDIO_FORMAT_OPTIONS, formatTypeLabel, studioFormatOptionsForSurface } from "./types";
 
 export type CreateContentDraftInput = {
   title: string;
@@ -204,6 +204,7 @@ export function CreateContentDialog({
   generatingHeadings = null,
   existingPieces = null,
   onLoadSourcePiece,
+  surface = "blog_wordpress",
 }: {
   open: boolean;
   onClose: () => void;
@@ -224,6 +225,8 @@ export function CreateContentDialog({
   onLoadSourcePiece?: (
     pieceId: number,
   ) => Promise<{ bodyMarkdown: string; targetKeyword?: string | null } | null>;
+  /** Which format set to offer. Defaults to the blog surface. */
+  surface?: "blog_wordpress" | "full";
 }) {
   const enableRepurpose = Boolean(onRepurpose);
   const [flow, setFlow] = useState<CreateFlow>("create");
@@ -244,6 +247,7 @@ export function CreateContentDialog({
   const [loadingSourcePiece, setLoadingSourcePiece] = useState(false);
   const [briefId, setBriefId] = useState<number | undefined>(undefined);
 
+  const formatOptions = useMemo(() => studioFormatOptionsForSurface(surface), [surface]);
   const contentFormat = asContentFormat(formatType);
   const destinations = useMemo(() => {
     if (flow === "repurpose" || !contentFormat) return [];
@@ -634,7 +638,7 @@ export function CreateContentDialog({
 
           {!showGenerating && currentStep === "format" ? (
             <div className="mt-4 max-h-[min(42vh,300px)] space-y-2 overflow-y-auto pr-1">
-              {STUDIO_FORMAT_OPTIONS.map((option) => {
+              {formatOptions.map((option) => {
                 const selected = formatType === option.value;
                 return (
                   <button

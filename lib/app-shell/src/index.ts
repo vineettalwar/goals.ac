@@ -5,7 +5,14 @@ export {
 } from "./AppSidebarShell";
 export { APP_SHELL_MAIN_OFFSET } from "./shell-constants";
 export { cn } from "./cn";
-export { buildNavModel, FOOTER_ITEMS, NAV_SECTIONS, type NavItemDef } from "./nav-config";
+export {
+  buildNavModel,
+  DEFAULT_PRODUCT_SURFACE,
+  FOOTER_ITEMS,
+  NAV_SECTIONS,
+  type NavItemDef,
+  type ProductSurface,
+} from "./nav-config";
 export { isNavItemActive, projectIdFromPathname, resolveNavHref } from "./nav-routing";
 export { isSiteAdmin, isSuperAdmin, showPartnerNav } from "./nav-roles";
 export * from "./dashboard";

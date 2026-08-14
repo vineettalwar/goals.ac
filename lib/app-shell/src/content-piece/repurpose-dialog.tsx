@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle2, Circle, Loader2, Shuffle, X } from "lucide-react";
-import { STUDIO_FORMAT_OPTIONS } from "../studio/types";
+import { STUDIO_FORMAT_OPTIONS, studioFormatOptionsForSurface } from "../studio/types";
 
 type RepurposeStep = "analyzing" | "generating" | "saving";
 
@@ -17,6 +17,7 @@ export function ContentPieceRepurposeDialog({
   currentFormat,
   onRepurpose,
   onSuccess,
+  surface = "blog_wordpress",
 }: {
   open: boolean;
   onClose: () => void;
@@ -24,6 +25,8 @@ export function ContentPieceRepurposeDialog({
   currentFormat: string;
   onRepurpose: (targetFormat: string) => Promise<{ id: number }>;
   onSuccess: (newPieceId: number) => void;
+  /** Which format set to offer as repurpose targets. Defaults to the blog surface. */
+  surface?: "blog_wordpress" | "full";
 }) {
   const [targetFormat, setTargetFormat] = useState("");
   const [isRepurposing, setIsRepurposing] = useState(false);
@@ -32,7 +35,9 @@ export function ContentPieceRepurposeDialog({
 
   if (!open) return null;
 
-  const otherFormats = STUDIO_FORMAT_OPTIONS.filter((option) => option.value !== currentFormat);
+  const otherFormats = studioFormatOptionsForSurface(surface).filter(
+    (option) => option.value !== currentFormat,
+  );
   const currentLabel =
     STUDIO_FORMAT_OPTIONS.find((option) => option.value === currentFormat)?.label ?? currentFormat;
 

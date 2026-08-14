@@ -19,7 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
+import {
+  FORMAT_OPTIONS,
+  formatOptionsForSurface,
+  type ProductSurface,
+} from "@/lib/content/content-format-options";
 import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import type { ContentFormatType } from "@/lib/projects/publishing-destinations";
 
@@ -37,9 +41,18 @@ interface Props {
   pieceId: number;
   projectId: number;
   currentFormat: string;
+  /** Which format set to offer as repurpose targets. Defaults to the blog surface. */
+  surface?: ProductSurface;
 }
 
-export function ContentPieceRepurposeDialog({ open, onClose, pieceId, projectId, currentFormat }: Props) {
+export function ContentPieceRepurposeDialog({
+  open,
+  onClose,
+  pieceId,
+  projectId,
+  currentFormat,
+  surface = "blog_wordpress",
+}: Props) {
   const router = useRouter();
   const [targetFormat, setTargetFormat] = useState<ContentFormatType | "">("");
   const [isRepurposing, setIsRepurposing] = useState(false);
@@ -125,7 +138,7 @@ export function ContentPieceRepurposeDialog({ open, onClose, pieceId, projectId,
     }
   };
 
-  const otherFormats = FORMAT_OPTIONS.filter((f) => f.value !== currentFormat);
+  const otherFormats = formatOptionsForSurface(surface).filter((f) => f.value !== currentFormat);
   const currentLabel = FORMAT_OPTIONS.find((f) => f.value === currentFormat)?.label ?? currentFormat;
 
   return (

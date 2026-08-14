@@ -22,3 +22,34 @@ export const FORMAT_OPTIONS = [
 ] as const;
 
 export type ContentFormatValue = (typeof FORMAT_OPTIONS)[number]["value"];
+export type ContentFormatOption = (typeof FORMAT_OPTIONS)[number];
+
+export type ProductSurface = "blog_wordpress" | "full";
+
+/**
+ * Formats offered on the blog surface — the article formats that run the SEO
+ * pipeline, matching `SEO_LONGFORM_FORMATS` in content-engine and
+ * `studioFormatOptionsForSurface` in app-shell. Note this is narrower than
+ * `category: "Long-form"`, which also holds `infographic_outline`.
+ */
+const BLOG_SURFACE_FORMATS = new Set<string>([
+  "blog_post",
+  "guide",
+  "tutorial",
+  "pillar_page",
+  "whitepaper",
+  "faq_article",
+  "news_article",
+  "location_page",
+]);
+
+/**
+ * Format options for a product surface. Hidden formats stay valid in the schema
+ * and generatable through the API — this only decides what the picker offers.
+ */
+export function formatOptionsForSurface(
+  surface: ProductSurface = "blog_wordpress",
+): readonly ContentFormatOption[] {
+  if (surface === "full") return FORMAT_OPTIONS;
+  return FORMAT_OPTIONS.filter((option) => BLOG_SURFACE_FORMATS.has(option.value));
+}

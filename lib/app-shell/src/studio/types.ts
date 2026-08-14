@@ -58,6 +58,37 @@ export const STUDIO_FORMAT_OPTIONS = [
   { value: "faq_article", label: "FAQ Article" },
 ] as const;
 
+export type StudioFormatOption = (typeof STUDIO_FORMAT_OPTIONS)[number];
+
+/**
+ * Formats offered on the blog surface. Mirrors `SEO_LONGFORM_FORMATS` in
+ * content-engine — the formats that run the SEO pipeline (scoring, enhance,
+ * humanize) and publish as articles. Kept as a literal here so app-shell keeps
+ * no db type dependency.
+ */
+const BLOG_SURFACE_FORMATS = new Set<string>([
+  "blog_post",
+  "guide",
+  "tutorial",
+  "pillar_page",
+  "whitepaper",
+  "faq_article",
+  "news_article",
+  "location_page",
+]);
+
+/**
+ * Format options for a product surface. The blog surface offers only article
+ * formats; social, ad, and email formats stay in the schema and remain
+ * generatable through the API, they are just not offered in the picker.
+ */
+export function studioFormatOptionsForSurface(
+  surface: "blog_wordpress" | "full" = "blog_wordpress",
+): readonly StudioFormatOption[] {
+  if (surface === "full") return STUDIO_FORMAT_OPTIONS;
+  return STUDIO_FORMAT_OPTIONS.filter((option) => BLOG_SURFACE_FORMATS.has(option.value));
+}
+
 const FORMAT_LABELS: Record<string, string> = Object.fromEntries(
   STUDIO_FORMAT_OPTIONS.map((option) => [option.value, option.label]),
 );
