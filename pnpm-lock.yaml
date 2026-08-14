@@ -1263,6 +1263,9 @@ importers:
       '@workspace/security':
         specifier: workspace:*
         version: link:../security
+      '@workspace/stock-images':
+        specifier: workspace:*
+        version: link:../stock-images
       marked:
         specifier: ^18.0.3
         version: 18.0.3

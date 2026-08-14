@@ -39,6 +39,7 @@
     "@atproto/api": "^0.20.28",
     "@workspace/media": "workspace:*",
     "@workspace/security": "workspace:*",
+    "@workspace/stock-images": "workspace:*",
     "marked": "^18.0.3"
   },
   "devDependencies": {

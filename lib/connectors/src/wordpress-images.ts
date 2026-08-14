@@ -6,6 +6,7 @@ import {
   decodeRasterFeaturedDataUri,
   isRasterFeaturedDataUri,
 } from "@workspace/media";
+import { stockPhotoAttributionHtml } from "@workspace/stock-images/attribution";
 import type { WordPressCredentials } from "./wordpress";
 import { uploadWordPressMedia } from "./wordpress";
 import type { GoalsAcPluginCredentials } from "./goals-ac-plugin";
@@ -82,8 +83,12 @@ async function uploadOptimizedImage(
     { maxWidth: 1920, quality: 85 },
   );
 
-  const sourceLabel = image.provider === "unsplash" ? "Unsplash" : "Pexels";
-  const caption = `Photo by ${image.photographer} on ${sourceLabel}`;
+  // Real linked HTML — WordPress media captions render as HTML, and
+  // Unsplash's guideline requires the photographer/platform links to be
+  // actual hyperlinks with UTM params, not plain text.
+  const caption =
+    stockPhotoAttributionHtml(image.provider, image.photographer, image.photographerUrl) ??
+    `Photo by ${image.photographer}`;
 
   return pushOptimizedMedia(
     optimized,
