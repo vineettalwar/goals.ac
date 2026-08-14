@@ -39,6 +39,10 @@ export type Ga4SyncStatus = {
   propertyName: string | null;
   lastSyncedAt: string | null;
   pageCount: number;
+  /** Outcome of the most recent sync attempt. Null before the first attempt. */
+  lastSyncStatus: "ok" | "auth_error" | "error" | null;
+  /** Set when lastSyncStatus is not "ok" — a short, user-facing reason. */
+  lastSyncError: string | null;
 };
 
 export type Ga4SyncResult = {

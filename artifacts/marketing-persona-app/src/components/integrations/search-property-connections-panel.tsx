@@ -207,6 +207,8 @@ function ConnectionDetails({
   gscSyncStatus?: {
     lastSyncedAt: string | null;
     queryCount: number;
+    lastSyncStatus: "ok" | "auth_error" | "error" | null;
+    lastSyncError: string | null;
   } | null;
 }) {
   const meta = PROVIDER_META[connection.provider];
@@ -272,6 +274,24 @@ function ConnectionDetails({
           ) : null}
           {connection.apiIngestionNote ? (
             <p className="text-xs">{connection.apiIngestionNote}</p>
+          ) : null}
+          {connection.provider === "google_search_console" &&
+          connection.propertyVerified &&
+          gscSyncStatus?.lastSyncStatus &&
+          gscSyncStatus.lastSyncStatus !== "ok" ? (
+            <p className="flex items-start gap-1.5 text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>
+                {gscSyncStatus.lastSyncStatus === "auth_error"
+                  ? "Google stopped accepting this connection — reconnect to keep search data flowing."
+                  : "The last sync failed. We'll retry automatically, but data may be stale."}
+                {gscSyncStatus.lastSyncError ? (
+                  <span className="block text-muted-foreground mt-0.5">
+                    {gscSyncStatus.lastSyncError}
+                  </span>
+                ) : null}
+              </span>
+            </p>
           ) : null}
           {connection.provider === "google_search_console" &&
           connection.propertyVerified &&
@@ -341,7 +361,9 @@ function ConnectionDetails({
               )}
               Disconnect
             </Button>
-            {!connection.propertyVerified ? (
+            {!connection.propertyVerified ||
+            (connection.provider === "google_search_console" &&
+              gscSyncStatus?.lastSyncStatus === "auth_error") ? (
               <Button size="sm" variant="outline" onClick={onConnect}>
                 Reconnect account
               </Button>
@@ -376,6 +398,8 @@ export function SearchPropertyConnectionsPanel({
   const [gscSyncStatus, setGscSyncStatus] = useState<{
     lastSyncedAt: string | null;
     queryCount: number;
+    lastSyncStatus: "ok" | "auth_error" | "error" | null;
+    lastSyncError: string | null;
   } | null>(null);
 
   const load = useCallback(async () => {
@@ -389,6 +413,8 @@ export function SearchPropertyConnectionsPanel({
       setGscSyncStatus({
         lastSyncedAt: status.lastSyncedAt ?? null,
         queryCount: status.queryCount ?? 0,
+        lastSyncStatus: status.lastSyncStatus ?? null,
+        lastSyncError: status.lastSyncError ?? null,
       });
     }
   }, [projectId]);

@@ -16,6 +16,7 @@ import {
   parseStoredTokens,
   resolveAccessToken,
 } from "../support/integrations/gsc-connection";
+import { recordSyncFailure, recordSyncSuccess } from "../support/integrations/connection-sync-status";
 import { logger } from "../core/logger";
 
 export type GscSyncResult = {
@@ -98,13 +99,21 @@ export async function syncGscSearchAnalytics(
   const dateRange = defaultSyncDateRange(days);
   const dimensions: Array<"query" | "page" | "date"> = ["date", "query", "page"];
 
-  const rows = await fetchAllSearchAnalytics({
-    siteUrl: connection.propertyUrl,
-    accessToken: resolved.accessToken,
-    startDate: dateRange.startDate,
-    endDate: dateRange.endDate,
-    dimensions,
-  });
+  let rows: Awaited<ReturnType<typeof fetchAllSearchAnalytics>>;
+  try {
+    rows = await fetchAllSearchAnalytics({
+      siteUrl: connection.propertyUrl,
+      accessToken: resolved.accessToken,
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate,
+      dimensions,
+    });
+  } catch (err) {
+    // Recorded so a founder relying on this data can see the pipe is dry,
+    // rather than a stale "connected and verified" badge that never changes.
+    await recordSyncFailure("search", connection.id, err);
+    throw err;
+  }
 
   let rowsUpserted = 0;
   for (const row of rows) {
@@ -125,6 +134,7 @@ export async function syncGscSearchAnalytics(
     rowsUpserted += 1;
   }
 
+  await recordSyncSuccess("search", connection.id);
   logger.info({ projectId, rowsUpserted, dateRange }, "GSC search analytics synced");
 
   const { maybeRefreshBrandAfterGscSync } = await import("../support/brand/brand-scrape-orchestrator");
@@ -173,11 +183,17 @@ export async function getGscSyncStatus(projectId: number): Promise<{
   propertyVerified: boolean;
   lastSyncedAt: string | null;
   queryCount: number;
+  /** Outcome of the most recent sync *attempt* — distinct from lastSyncedAt, which reflects the newest data row. Null before the first attempt. */
+  lastSyncStatus: "ok" | "auth_error" | "error" | null;
+  /** Set when lastSyncStatus is not "ok" — a short, user-facing reason. */
+  lastSyncError: string | null;
 }> {
   const [connection] = await db
     .select({
       propertyVerified: searchPropertyConnectionsTable.propertyVerified,
       propertyUrl: searchPropertyConnectionsTable.propertyUrl,
+      lastSyncStatus: searchPropertyConnectionsTable.lastSyncStatus,
+      lastSyncError: searchPropertyConnectionsTable.lastSyncError,
     })
     .from(searchPropertyConnectionsTable)
     .where(
@@ -201,6 +217,8 @@ export async function getGscSyncStatus(projectId: number): Promise<{
     propertyVerified: connection?.propertyVerified ?? false,
     lastSyncedAt: stats?.lastSyncedAt ?? null,
     queryCount: stats?.queryCount ?? 0,
+    lastSyncStatus: connection?.lastSyncStatus ?? null,
+    lastSyncError: connection?.lastSyncError ?? null,
   };
 }
 

@@ -19,6 +19,12 @@ export const searchPropertyConnectionsTable = pgTable(
     accountEmail: text("account_email"),
     encryptedTokens: text("encrypted_tokens").notNull(),
     propertyVerified: boolean("property_verified").notNull().default(false),
+    /** Set on every sync attempt. Null means never synced since connecting. */
+    lastSyncedAt: timestamp("last_synced_at", { withTimezone: true }),
+    /** ok | auth_error | error. auth_error means the token was rejected — reconnecting fixes it, retrying will not. */
+    lastSyncStatus: text("last_sync_status").$type<"ok" | "auth_error" | "error">(),
+    /** Short, user-facing reason for the last failure. Null when lastSyncStatus is "ok". */
+    lastSyncError: text("last_sync_error"),
     connectedAt: timestamp("connected_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
   },

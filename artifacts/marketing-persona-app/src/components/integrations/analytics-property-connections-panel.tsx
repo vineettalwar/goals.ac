@@ -254,6 +254,21 @@ function ConnectionDetails({
               Connected and verified
             </p>
           ) : null}
+          {connection.propertyVerified &&
+          ga4SyncStatus?.lastSyncStatus &&
+          ga4SyncStatus.lastSyncStatus !== "ok" ? (
+            <p className="flex items-start gap-1.5 text-amber-700 dark:text-amber-300">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span>
+                {ga4SyncStatus.lastSyncStatus === "auth_error"
+                  ? "Google stopped accepting this connection — reconnect to keep analytics data flowing."
+                  : "The last sync failed. We'll retry automatically, but data may be stale."}
+                {ga4SyncStatus.lastSyncError ? (
+                  <span className="block text-muted-foreground mt-0.5">{ga4SyncStatus.lastSyncError}</span>
+                ) : null}
+              </span>
+            </p>
+          ) : null}
           {connection.propertyVerified && ga4SyncStatus ? (
             <p className="text-xs">
               {ga4SyncStatus.pageCount > 0
@@ -314,7 +329,7 @@ function ConnectionDetails({
               )}
               Disconnect
             </Button>
-            {!connection.propertyVerified ? (
+            {!connection.propertyVerified || ga4SyncStatus?.lastSyncStatus === "auth_error" ? (
               <Button size="sm" variant="outline" onClick={onConnect}>
                 Reconnect account
               </Button>
