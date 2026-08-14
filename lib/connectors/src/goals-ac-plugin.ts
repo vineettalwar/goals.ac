@@ -337,6 +337,39 @@ export async function fetchGoalsAcSiteGraph<T = unknown>(
   return goalsAcRequest<T>(credentials, "GET", "site-graph");
 }
 
+export interface GoalsAcInternalLinkPayload {
+  /** Absolute URL of the newly published post. */
+  target_url: string;
+  /** Phrase to turn into the link where it already appears in the post. */
+  anchor_text: string;
+  /** Posts to link from, chosen by goals.ac from the site graph. */
+  post_ids: number[];
+}
+
+export interface GoalsAcInternalLinkResult {
+  updated: Array<{ post_id: number; url: string }>;
+  skipped: Array<{ post_id: number; reason: string }>;
+}
+
+/**
+ * Insert a contextual link to a newly published post into existing posts.
+ *
+ * A new post starts orphaned, inheriting none of the site's earned authority.
+ * The plugin skips any post that already links to the target or never mentions
+ * the anchor phrase in plain text, so this never forces a link.
+ */
+export async function insertGoalsAcInternalLinks(
+  credentials: GoalsAcPluginCredentials,
+  payload: GoalsAcInternalLinkPayload,
+): Promise<GoalsAcInternalLinkResult> {
+  return goalsAcRequest<GoalsAcInternalLinkResult>(
+    credentials,
+    "POST",
+    "internal-links",
+    payload,
+  );
+}
+
 export async function injectGoalsAcSchema(
   credentials: GoalsAcPluginCredentials,
   schema: { json_ld?: unknown; llms_txt?: string },
