@@ -1,5 +1,44 @@
 # Session Handoff
 
+## Refocus on blogs + WordPress (2026-08-14)
+
+**Status:** Product surface narrowed and all three missing personalization loops shipped on `claude/goals-ac-ai-content-1kib2e`. **Not yet run against a real WordPress site.**
+
+**Decision record:** `docs/DECISIONS.md` 2026-08-14
+
+### The finding that shaped this
+
+Eight shipped waves, ~200 API routes, 40+ tables, 45+ connectors — and zero users, nothing live, one Playwright spec. The constraint is proof, not capability. Everything below narrows the product and closes the loops that actually produce rankings.
+
+### Shipped
+
+| # | Change | Verify |
+|---|---|---|
+| 1 | `ProductSurface` gates nav + format pickers to blog/WordPress | `npx vitest run lib/app-shell` |
+| 2 | Cannibalization check on briefs against the CMS site graph | `npx vitest run lib/content-engine/src/strategy` |
+| 3 | Internal link write-back into existing posts on publish | `pnpm --filter @workspace/goals-ac-wp run test:unit` |
+| 4 | Content decay detection → `content_refresh` opportunities | `npx vitest run lib/seo-tools` |
+| 5 | Brand voice learns from founder edits | `npx vitest run lib/content-engine/src/brand` |
+| 6 | Founder-path e2e spec (written, **not executed**) | `pnpm run test:e2e` |
+
+Unit tests went from 224 passing to 305, plus 15 new PHPUnit tests (the WordPress plugin's first).
+
+### Next, in order
+
+1. **Run the founder path against goals.ac's own WordPress blog.** This is the gate everything else waits on. Needs a live app, a database, and an AI provider key — none available in the session that wrote this. Expect breakage; that discovery is the point. Record time-to-first-published-article as the activation metric.
+2. **Publish a refresh as an update to the same URL.** Half of the decay loop is missing: a `content_refresh` item carries refresh intent in its angle text but still publishes as a new post. Look up the `publish_records` row for the decaying URL and pass `update_id` to the plugin.
+3. **Collapse onboarding** to voice → WordPress → first article; move `personas` and `fast-lane` behind the surface flag.
+4. **Fold the 15 public feature pages** to the blog + WordPress story, keeping redirects so no URL 404s.
+5. **Configure Stripe.** The billing code is complete and gated only on config: set `STRIPE_PRICE_GROWTH_MONTHLY`, and either price Scale or drop the tier.
+
+### Watch out
+
+- `pnpm run typecheck` is red on `main` in `api-server`, `cf-read-worker`, and `cf-write-worker` — pre-existing, unrelated. Validate with `pnpm run typecheck:libs` plus the `marketing-persona-app`, `worker`, and `cf-jobs-worker` filters.
+- The coverage checker's rarity weighting is load-bearing. Removing it makes every brief on a single-topic blog collide with every post.
+- The link write-back edits published posts. `class-internal-links.php` skips rather than forces, and its PHPUnit tests cover the corruption cases (nested anchors, attributes, Gutenberg delimiters). Keep them passing.
+
+---
+
 ## Wave 6 — Honesty, proof, media (2026-07-23)
 
 **Status:** **6.A + 6.B2 done** on working tree. **6.C** still needs prod R2/`media.goals.ac` verify.

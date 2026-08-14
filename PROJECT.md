@@ -46,6 +46,23 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 - 2026-07-13 — SEO publish: plugin-first field mapping + WordPress `Seo_Meta_Mapper`
 - 2026-07-13 — Enterprise security phased: audit log + suspend live; MFA/SSO scaffolded
 
+## Product Surface (2026-08-14)
+
+`ProductSurface` = `blog_wordpress` (default) | `full`. The default shows one product: blog articles published to WordPress.
+
+- Navigation filter: `lib/app-shell/src/nav-config.ts` (`buildNavModel({ surface })`) hides Social Hub, GEO Audit, Research
+- Format pickers: `studioFormatOptionsForSurface` (app-shell) and `formatOptionsForSurface` / `formatCategoriesForSurface` (Next app) offer the eight SEO-longform article formats
+- **Hidden is not removed.** Routes stay mounted, hidden formats stay valid in the schema and generatable through the API, and the studio filter still lists every format so existing pieces stay reachable. Pass `surface="full"` to restore.
+
+## Personalization Loops
+
+| Loop | Where |
+|---|---|
+| Grounded in founder's material | `brand_voice_chunks` pgvector RAG → every generator |
+| Site-aware | `strategy/content-coverage.ts` (cannibalization at brief time), `strategy/internal-link-planner.ts` + `cms-plugins/wordpress/includes/class-internal-links.php` (link write-back on publish) |
+| Learns from performance | `seo-tools/contentDecayDetector.ts` → `strategy/content-decay-service.ts` → `keyword_opportunities` source `content_refresh` |
+| Learns from edits | `brand/edit-learning.ts` → `brand_voice_sources` type `user_edit` → existing index + skill-regen jobs |
+
 ## Current Status
 
 **Done (platform roadmap):**
@@ -76,6 +93,10 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 - Redis-backed rate limits for multi-instance deploy
 
 ## Known Issues / Fragile Areas
+
+- **`pnpm run typecheck` is red on `main`**, in packages unrelated to recent work: `artifacts/api-server` (2 errors, `pool` no longer exported from `@workspace/db`), `artifacts/cf-read-worker` (362), `artifacts/cf-write-worker` (622, D1 dialect mismatch). Libs, `marketing-persona-app`, `worker`, and `cf-jobs-worker` are clean — validate against those.
+- `lib/ai-providers/src/bedrock-auth.test.ts` fails wherever `AWS_*` env vars are present; `lib/content-engine/src/support/ai/platform-bedrock.test.ts` contains no test suite.
+- `cms-plugins/wordpress` phpcs cannot run: WPCS needs `phpcsstandards/phpcsextra`, which is not in `composer.json`. PHPUnit works (`pnpm --filter @workspace/goals-ac-wp run test:unit`).
 
 - Migrations `0040–0043` must be applied before platform ops work (`pnpm --filter @workspace/db run migrate`)
 - Middleware platform check uses HTTP self-fetch to `/api/platform/status` — fails open if DB unreachable

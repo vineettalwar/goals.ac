@@ -320,3 +320,25 @@ Tabs use **path segments**, not `?tab=` / `?project=` query params. Legacy `/int
 **Reason:** OAuth CSRF and webhook SSRF were the highest-risk gaps; unbounded site-graph and sync publish caused timeouts on large sites; `ConnectionField` label gaps affected every CMS/ESP form.
 
 **Implications:** `oauth-state.ts` signs callbacks with `AUTH_SECRET`; `requireIntegrationsManage` gates PATCH/DELETE/test; inline WP creds removed from publish API; WP/Joomla/TYPO3 site-graph capped at 500; brand scan caches site-graph 1h; publish UI defaults `async: true`; integration tiles expose status to screen readers.
+
+## 2026-08-14 — Refocus on blogs + WordPress, and close the personalization loops
+
+**Decision:** Narrow the default product surface to blog articles published to WordPress, and close the three personalization loops that were missing (site awareness, published performance, founder edits).
+
+**Context:** Eight shipped waves, ~200 API routes, 40+ tables, 45+ connectors, 15 public feature pages — and zero users, nothing live, one Playwright spec. The product had been built without contact with a market, and the breadth was working against the pitch.
+
+**Alternatives considered:**
+- Keep the full surface and deepen the blog path only — rejected; a founder wanting blog posts should not have to navigate roadmaps, GEO audits, LLM visibility, Reddit discovery, and six social networks to find it
+- Delete the unused surfaces — rejected; they cost nothing hidden, and an agency buyer may want them later
+- Build more features before selling — rejected; the binding constraint is proof, not capability
+
+**Reason:** Generation quality is table stakes. What produces rankings, and what almost no AI content tool does, is knowing what the site already covers, linking new posts from existing ones, and refreshing pages that decay.
+
+**Implications:**
+- `ProductSurface` (`blog_wordpress` | `full`) defaults to the blog surface and gates navigation (`lib/app-shell/src/nav-config.ts`) and every format picker. Routes stay mounted; hidden formats stay valid in the schema and generatable through the API.
+- Briefs are checked against the CMS site graph for cannibalization (`lib/content-engine/src/strategy/content-coverage.ts`). Word weighting by rarity across the site's titles is load-bearing: without it a two-word query sharing only the brand word collides with every post on a single-topic blog.
+- New posts are linked from existing ones on publish, via `POST /goals-ac/v1/internal-links`. Selection lives in TypeScript, insertion in PHP, so the matching logic stays under test and works the same for every platform.
+- Search Console decay produces `keyword_opportunities` rows with source `content_refresh` — a value the schema already defined and nothing produced.
+- Founder edits become `brand_voice_sources` rows of a new `user_edit` kind. No migration: `source_type` is a TypeScript union over a text column, not a database enum.
+
+**Still open:** publishing a refresh as an update to the same URL (intent currently travels in the item's angle text); onboarding collapse and marketing page fold; the first real end-to-end run against a live WordPress site.
