@@ -20,6 +20,7 @@ export const QUEUES = {
   llmVisibilityCheck: "llm-visibility-check",
   geoReauditSweep: "geo-reaudit-sweep",
   keywordOpportunitySweep: "keyword-opportunity-sweep",
+  contentDecaySweep: "content-decay-sweep",
   gscSearchAnalyticsSync: "gsc-search-analytics-sync",
   ga4AnalyticsSync: "ga4-analytics-sync",
   articleIdeaSourceSync: "article-idea-source-sync",
@@ -110,6 +111,13 @@ export interface KeywordOpportunitySweepPayload {
 
 export type KeywordOpportunitySweepJobData = KeywordOpportunitySweepPayload | Record<string, never>;
 
+/** Decay sweep for one project. Empty payload fans out across all due projects. */
+export interface ContentDecaySweepPayload {
+  projectId: number;
+}
+
+export type ContentDecaySweepJobData = ContentDecaySweepPayload | Record<string, never>;
+
 export interface GscSearchAnalyticsSyncPayload {
   projectId: number;
   userId?: number;
@@ -185,6 +193,7 @@ export interface QueuePayloadMap {
   [QUEUES.llmVisibilityCheck]: LlmVisibilityCheckJobData;
   [QUEUES.geoReauditSweep]: GeoReauditJobData;
   [QUEUES.keywordOpportunitySweep]: KeywordOpportunitySweepJobData;
+  [QUEUES.contentDecaySweep]: ContentDecaySweepJobData;
   [QUEUES.gscSearchAnalyticsSync]: GscSearchAnalyticsSyncJobData;
   [QUEUES.ga4AnalyticsSync]: Ga4AnalyticsSyncJobData;
   [QUEUES.articleIdeaSourceSync]: ArticleIdeaSourceSyncJobData;

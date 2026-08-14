@@ -8,6 +8,7 @@ import { processContentGenerateSweep } from "./handlers/contentGenerateSweep";
 import { processLlmVisibilityCheck } from "./handlers/llmVisibilityCheck";
 import { processGeoReauditSweep } from "./handlers/geoReauditSweep";
 import { processKeywordOpportunitySweep } from "./handlers/keywordOpportunitySweep";
+import { processContentDecaySweep } from "./handlers/contentDecaySweep";
 import { processGscSearchAnalyticsSync } from "./handlers/gscSearchAnalyticsSync";
 import { processGa4AnalyticsSync } from "./handlers/ga4AnalyticsSync";
 import { processArticleIdeaSourceSync } from "./handlers/articleIdeaSourceSync";
@@ -30,6 +31,7 @@ const processors: Record<QueueName, (payload: unknown) => Promise<void>> = {
   [QUEUES.llmVisibilityCheck]: (p) => processLlmVisibilityCheck(p as never),
   [QUEUES.geoReauditSweep]: (p) => processGeoReauditSweep(p as never),
   [QUEUES.keywordOpportunitySweep]: (p) => processKeywordOpportunitySweep(p as never),
+  [QUEUES.contentDecaySweep]: (p) => processContentDecaySweep(p as never),
   [QUEUES.gscSearchAnalyticsSync]: (p) => processGscSearchAnalyticsSync(p as never),
   [QUEUES.ga4AnalyticsSync]: (p) => processGa4AnalyticsSync(p as never),
   [QUEUES.articleIdeaSourceSync]: (p) => processArticleIdeaSourceSync(p as never),

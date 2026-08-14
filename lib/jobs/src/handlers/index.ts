@@ -25,6 +25,11 @@ export {
   KEYWORD_OPPORTUNITY_SWEEP_CRON,
 } from "./keywordOpportunitySweep";
 export {
+  registerContentDecaySweepHandler,
+  processContentDecaySweep,
+  CONTENT_DECAY_SWEEP_CRON,
+} from "./contentDecaySweep";
+export {
   registerGscSearchAnalyticsSyncHandler,
   GSC_SEARCH_ANALYTICS_SYNC_CRON,
 } from "./gscSearchAnalyticsSync";

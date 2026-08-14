@@ -92,6 +92,9 @@ async function runWeeklySweep(): Promise<void> {
   const sweeps = [
     QUEUES.llmVisibilityCheck,
     QUEUES.geoReauditSweep,
+    // Before the keyword sweep: a refresh for a page that already ranks should
+    // reach the autopilot queue ahead of new-article opportunities.
+    QUEUES.contentDecaySweep,
     QUEUES.keywordOpportunitySweep,
     QUEUES.articleIdeaSourceSync,
     QUEUES.brandVoiceResync,
