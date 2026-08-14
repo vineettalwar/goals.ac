@@ -4,6 +4,7 @@ import { contentPiecesTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { assertPieceOwner } from "@/lib/content/content-pieces-helpers";
+import { learnFromPieceEdit } from "@workspace/content-engine/brand/edit-learning";
 import { z } from "zod";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -112,6 +113,19 @@ export async function PATCH(
       .set(updates)
       .where(eq(contentPiecesTable.id, id))
       .returning();
+
+    // A founder editing a draft is showing how they want to sound. Feed that
+    // back into the brand voice so the next draft starts closer. Best effort —
+    // the edit is already saved above.
+    if (parsed.data.bodyMarkdown !== undefined) {
+      await learnFromPieceEdit({
+        projectId: piece!.websiteProjectId,
+        contentPieceId: id,
+        title: updated!.title,
+        previousBody: piece!.bodyMarkdown ?? "",
+        editedBody: parsed.data.bodyMarkdown,
+      });
+    }
 
     return NextResponse.json(updated);
   } catch (err) {
