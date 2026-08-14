@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { refreshAngle, refreshTitle } from "./content-decay-service";
+import {
+  isRefreshAlreadyQueued,
+  refreshAngle,
+  refreshTitle,
+  type ExistingRefreshWork,
+} from "./content-decay-service";
 import type { DecayedPage } from "@workspace/seo-tools/contentDecayDetector";
 
 function decayed(over: Partial<DecayedPage> = {}): DecayedPage {
@@ -51,5 +56,49 @@ describe("refreshAngle", () => {
 
     expect(angle).toContain("do not write a new article");
     expect(angle).toContain("meta description");
+  });
+});
+
+describe("isRefreshAlreadyQueued", () => {
+  function existing(over: Partial<ExistingRefreshWork> = {}): ExistingRefreshWork {
+    return { pages: new Set(), keywords: new Set(), ...over };
+  }
+
+  it("skips a page this sweep already queued", () => {
+    const work = existing({ pages: new Set(["https://example.com/a"]) });
+
+    expect(isRefreshAlreadyQueued({ page: "https://example.com/a", query: "x" }, work)).toBe(true);
+  });
+
+  it("skips a keyword the daily click-decline pass already queued", () => {
+    // That producer stores no URL, so a URL-only check would miss it and
+    // queue the same article a second time.
+    const work = existing({ keywords: new Set(["wordpress maintenance"]) });
+
+    expect(
+      isRefreshAlreadyQueued(
+        { page: "https://example.com/never-seen", query: "WordPress Maintenance" },
+        work,
+      ),
+    ).toBe(true);
+  });
+
+  it("allows a genuinely new decayed page", () => {
+    const work = existing({
+      pages: new Set(["https://example.com/other"]),
+      keywords: new Set(["something else"]),
+    });
+
+    expect(
+      isRefreshAlreadyQueued({ page: "https://example.com/a", query: "wordpress" }, work),
+    ).toBe(false);
+  });
+
+  it("ignores surrounding whitespace on the query", () => {
+    const work = existing({ keywords: new Set(["wordpress maintenance"]) });
+
+    expect(
+      isRefreshAlreadyQueued({ page: "https://example.com/a", query: "  wordpress maintenance " }, work),
+    ).toBe(true);
   });
 });

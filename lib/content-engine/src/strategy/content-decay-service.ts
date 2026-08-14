@@ -10,7 +10,7 @@
  * `content_refresh` — a value the schema already defined and nothing produced.
  */
 
-import { and, eq, gte, lte } from "drizzle-orm";
+import { and, eq, gte, inArray, lte } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { gscSearchQueriesTable, keywordOpportunitiesTable } from "@workspace/db/schema";
 import {
@@ -53,23 +53,60 @@ async function loadRows(
   return rows;
 }
 
-/** Refresh opportunities already recorded for this project, keyed by page URL. */
-async function existingRefreshPages(projectId: number): Promise<Set<string>> {
+export type ExistingRefreshWork = {
+  /** Page URLs already queued for refresh, from this sweep's own rows. */
+  pages: Set<string>;
+  /** Lowercased keywords already queued for refresh, from any producer. */
+  keywords: Set<string>;
+};
+
+/**
+ * Refresh work already outstanding for a project.
+ *
+ * Two producers write `content_refresh` rows: this sweep, keyed per page, and
+ * `createClickDeclineRefreshOpportunities` on the daily GSC sync, keyed per
+ * content piece keyword and with no URL attached. Deduping on the page URL
+ * alone would miss the other producer's rows entirely and queue the same
+ * decaying article twice, so both keys are checked.
+ *
+ * Only open and queued rows block. A dismissed opportunity can resurface if the
+ * page decays again, which matches how the keyword sweep behaves.
+ */
+export async function loadExistingRefreshWork(projectId: number): Promise<ExistingRefreshWork> {
   const rows = await db
-    .select({ competitorUrl: keywordOpportunitiesTable.competitorUrl })
+    .select({
+      competitorUrl: keywordOpportunitiesTable.competitorUrl,
+      keyword: keywordOpportunitiesTable.keyword,
+    })
     .from(keywordOpportunitiesTable)
     .where(
       and(
         eq(keywordOpportunitiesTable.websiteProjectId, projectId),
         eq(keywordOpportunitiesTable.source, "content_refresh"),
+        inArray(keywordOpportunitiesTable.status, ["open", "queued"]),
       ),
     );
 
-  return new Set(
-    rows
-      .map((row) => row.competitorUrl?.trim())
-      .filter((url): url is string => Boolean(url)),
-  );
+  return {
+    pages: new Set(
+      rows
+        .map((row) => row.competitorUrl?.trim())
+        .filter((url): url is string => Boolean(url)),
+    ),
+    keywords: new Set(
+      rows
+        .map((row) => row.keyword?.trim().toLowerCase())
+        .filter((keyword): keyword is string => Boolean(keyword)),
+    ),
+  };
+}
+
+/** Whether a decayed page is already covered by outstanding refresh work. */
+export function isRefreshAlreadyQueued(
+  page: { page: string; query: string },
+  existing: ExistingRefreshWork,
+): boolean {
+  return existing.pages.has(page.page) || existing.keywords.has(page.query.trim().toLowerCase());
 }
 
 /** Title for a refresh opportunity — says refresh, so it is never mistaken for a new post. */
@@ -96,9 +133,9 @@ export function refreshAngle(decayed: DecayedPage): string {
 /**
  * Find and record pages worth refreshing for one project.
  *
- * Returns the number of new opportunities written. Pages that already have an
- * open refresh opportunity are skipped, so repeated sweeps do not pile up
- * duplicates for the same URL.
+ * Returns the number of new opportunities written. Pages already covered by
+ * outstanding refresh work are skipped — by URL or by keyword, so this never
+ * duplicates what the daily GSC click-decline pass already queued.
  */
 export async function discoverContentDecay(projectId: number): Promise<number> {
   const currentRange = defaultSyncDateRange(WINDOW_DAYS);
@@ -117,13 +154,13 @@ export async function discoverContentDecay(projectId: number): Promise<number> {
   const decayed = detectContentDecay(current, previous);
   if (decayed.length === 0) return 0;
 
-  const alreadyTracked = await existingRefreshPages(projectId);
+  const existing = await loadExistingRefreshWork(projectId);
   let inserted = 0;
 
   for (const page of decayed) {
     if (inserted >= MAX_OPPORTUNITIES_PER_RUN) break;
-    if (alreadyTracked.has(page.page)) continue;
     if (!page.query) continue;
+    if (isRefreshAlreadyQueued(page, existing)) continue;
 
     await db.insert(keywordOpportunitiesTable).values({
       websiteProjectId: projectId,
@@ -141,7 +178,9 @@ export async function discoverContentDecay(projectId: number): Promise<number> {
       status: "open",
     });
 
-    alreadyTracked.add(page.page);
+    // Guard within this run too: two decayed pages can share a top query.
+    existing.pages.add(page.page);
+    existing.keywords.add(page.query.trim().toLowerCase());
     inserted += 1;
   }
 
