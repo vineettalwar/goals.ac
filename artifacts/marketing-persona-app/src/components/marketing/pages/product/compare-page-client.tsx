@@ -23,7 +23,7 @@ const ROWS = [
   { feature: "30-day content calendar", goals: true, autopilot: true },
   { feature: "Managed GEO/AEO program", goals: true, autopilot: false },
   { feature: "Consulting-led GEO program", goals: true, autopilot: false },
-  { feature: "Self-serve Growth plan ($49/mo, in-app)", goals: true, autopilot: true },
+  { feature: "Self-serve Growth plan ($49/mo in-app when Stripe is configured)", goals: true, autopilot: true },
   { feature: "Backlink exchange network", goals: false, autopilot: true },
   { feature: "Internal link hub (white-hat)", goals: true, autopilot: false },
   { feature: "Humanization pipeline", goals: true, autopilot: false },
@@ -114,7 +114,7 @@ export function ComparePageClient() {
           {
             question: "How is goals.ac priced?",
             answer:
-              "Start free on Starter. Upgrade to Growth ($49/mo) in Settings → Billing after signup for more sites and included AI credits. Hands-on GEO/AEO programs are scoped on /pricing — book a call for custom work.",
+              "Start free on Starter. Self-serve Growth is in Settings → Billing after signup — Growth is $49/mo when Stripe is configured. Hands-on GEO/AEO programs are scoped on /pricing — book a call for custom work.",
           },
           {
             question: "How do you compare on AI visibility?",

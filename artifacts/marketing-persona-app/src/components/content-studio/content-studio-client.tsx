@@ -266,17 +266,27 @@ export function ContentStudioClient({
 
   const voiceReady = voiceGate.voiceReady;
   const newContentAction = (
-    <StudioNewContentButton
-      onClick={() => {
-        if (!voiceReady) {
-          toast.error("Add a brand voice first");
-          return;
-        }
-        setBriefDraft(null);
-        setCreateOpen(true);
-      }}
-    />
+    <div className="flex items-center gap-2">
+      <StudioNewContentButton
+        onClick={() => {
+          if (!voiceReady) {
+            toast.error("Add a brand voice first");
+            return;
+          }
+          setBriefDraft(null);
+          setCreateOpen(true);
+        }}
+      />
+      <Link
+        href={`/projects/${projectId}/daily-five`}
+        className="inline-flex h-10 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted"
+      >
+        Daily Five
+      </Link>
+    </div>
   );
+
+  const suggestedSections = ["News", "Features", "Opinion", "Funding", "How-to"];
 
   return (
     <>
@@ -346,6 +356,7 @@ export function ContentStudioClient({
           toast.error("Add a brand voice first");
           void loadData();
         }}
+        suggestedSections={suggestedSections}
       />
     </>
   );

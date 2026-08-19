@@ -1,6 +1,7 @@
 import { getPlatformStats, type PlatformStats } from "@/lib/platform/platform-stats";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
 import { listAllUsers, listRecentOrganizations } from "@/lib/org/org-access";
+import { getPublishReliabilityWindow } from "@/lib/admin/publish-reliability";
 
 export type AdminAttentionItem = {
   label: string;
@@ -33,14 +34,19 @@ export type AdminOverview = {
   attention: AdminAttentionItem[];
   recentUsers: AdminOverviewRecentUser[];
   recentOrganizations: AdminOverviewRecentOrganization[];
+  publishReliability: {
+    failedPublishRecords24h: number;
+    pilotOrganizationIdsConfigured: boolean;
+  };
 };
 
 export async function getAdminOverview(): Promise<AdminOverview> {
-  const [stats, settings, usersResult, organizations] = await Promise.all([
+  const [stats, settings, usersResult, organizations, publishReliabilityWindow] = await Promise.all([
     getPlatformStats(),
     getPlatformSettings(),
     listAllUsers({ limit: 5 }),
     listRecentOrganizations(5),
+    getPublishReliabilityWindow({ windowHours: 24, failedRecordsLimit: 0, includeBackgroundJobFailures: false }),
   ]);
 
   const attention: AdminAttentionItem[] = [];
@@ -102,5 +108,9 @@ export async function getAdminOverview(): Promise<AdminOverview> {
       createdAt: org.createdAt.toISOString(),
       suspendedAt: org.suspendedAt?.toISOString() ?? null,
     })),
+    publishReliability: {
+      failedPublishRecords24h: publishReliabilityWindow.failedPublishRecordsCount,
+      pilotOrganizationIdsConfigured: publishReliabilityWindow.pilotOrganizationIdsConfigured,
+    },
   };
 }

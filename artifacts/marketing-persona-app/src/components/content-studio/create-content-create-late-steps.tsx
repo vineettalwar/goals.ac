@@ -45,7 +45,8 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
     addCompetitorUrl, newCompetitorUrl, setNewCompetitorUrl, projectId, projectIndustry,
     keyword, setKeyword, selectedFormat, intendedDestination, setIntendedDestination,
     cmsConnections, linkedinArchetype, setLinkedinArchetype, linkedinHook, setLinkedinHook,
-    angleHint, setAngleHint, plannedDate, setPlannedDate, generating, detectedSections,
+    angleHint, setAngleHint, contentSection, setContentSection, editorNotes, setEditorNotes,
+    sourceUrlsInput, setSourceUrlsInput, suggestedSections, plannedDate, setPlannedDate, generating, detectedSections,
     handleContinue, bypassCache, setBypassCache, competitorFocusUrl, setCompetitorFocusUrl,
     showBedrockModelPicker, bedrockModel, setBedrockModel, saveBedrockModel, setSaveBedrockModel,
     canManageBedrockModel,
@@ -55,16 +56,40 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
     <>
               {currentStep === "angle" && (
                 <WizardStep
-                  title="Any angle or special instructions?"
-                  subtitle="Optional — tone notes, audience, or context for the AI."
+                  title="Add section, notes, and sources"
+                  subtitle="News requires at least one source URL."
                 >
+                  <div className="mt-6 space-y-3">
+                    <label className="text-sm font-medium">Section</label>
+                    <Input
+                      list="suggested-sections"
+                      placeholder="News"
+                      value={contentSection}
+                      onChange={(e) => setContentSection(e.target.value)}
+                    />
+                    <datalist id="suggested-sections">
+                      {suggestedSections.map((section) => (
+                        <option key={section} value={section} />
+                      ))}
+                    </datalist>
+                  </div>
                   <Textarea
                     autoFocus
                     rows={4}
-                    placeholder="e.g. Focus on B2B SaaS founders, conversational tone…"
-                    value={angleHint}
-                    onChange={(e) => setAngleHint(e.target.value)}
-                    className="mt-8 text-lg min-h-[140px] resize-none"
+                    placeholder="Editor notes: audience, tone, claim focus..."
+                    value={editorNotes || angleHint}
+                    onChange={(e) => {
+                      setEditorNotes(e.target.value);
+                      setAngleHint(e.target.value);
+                    }}
+                    className="mt-4 min-h-30 resize-none text-lg"
+                  />
+                  <Textarea
+                    rows={3}
+                    placeholder="Source URLs (one per line or comma-separated)"
+                    value={sourceUrlsInput}
+                    onChange={(e) => setSourceUrlsInput(e.target.value)}
+                    className="mt-4 min-h-25 resize-none text-sm"
                   />
                   <StepActions onContinue={handleContinue} onSkip={handleContinue} />
                 </WizardStep>
@@ -132,7 +157,11 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
                         }
                       />
                     ) : null}
-                    {angleHint.trim() ? <ReviewRow label="Instructions" value={angleHint.trim()} /> : null}
+                    {contentSection.trim() ? <ReviewRow label="Section" value={contentSection.trim()} /> : null}
+                    {(editorNotes.trim() || angleHint.trim()) ? (
+                      <ReviewRow label="Instructions" value={(editorNotes || angleHint).trim()} />
+                    ) : null}
+                    {sourceUrlsInput.trim() ? <ReviewRow label="Sources" value={sourceUrlsInput.trim()} /> : null}
                     {plannedDate ? <ReviewRow label="Planned date" value={plannedDate} /> : null}
                     {showBedrockModelPicker && bedrockModel.trim() ? (
                       <ReviewRow label="Bedrock model" value={bedrockModel.trim()} />

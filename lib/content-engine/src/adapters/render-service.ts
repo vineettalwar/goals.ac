@@ -144,6 +144,7 @@ export async function renderAndPublish(
     featuredMediaId,
     idempotencyKey: input.idempotencyKey,
     existingRemoteId,
+    content: buildCanonicalContent(input.piece),
   });
 
   return {

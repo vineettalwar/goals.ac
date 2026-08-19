@@ -1,17 +1,18 @@
 # API parity matrix (local Next.js vs Cloudflare edge)
 
-Generated: 2026-07-15T15:20:06.179Z
+Generated: 2026-08-19T08:29:47.653Z
 
 | Metric | Count |
 |---|---|
-| Local route files | 205 |
-| Worker path patterns | 209 |
-| Routes missing in prod scan | 0 |
+| Local route files | 222 |
+| Worker path patterns | 223 |
+| Routes missing in prod scan | 1 |
 
 ## Missing routes by phase
 
 | Phase | Missing count |
 |---|---|
+| core | 1 |
 
 ## Behavioral diffs (intentional)
 
@@ -45,8 +46,11 @@ Generated: 2026-07-15T15:20:06.179Z
 | GET | `/api/admin/platform-integrations` | `artifacts/marketing-persona-app/src/app/api/admin/platform-integrations/route.ts` | partial+ | 1-admin |
 | PATCH | `/api/admin/platform-integrations` | `artifacts/marketing-persona-app/src/app/api/admin/platform-integrations/route.ts` | partial+ | 1-admin |
 | DELETE | `/api/admin/platform-integrations` | `artifacts/marketing-persona-app/src/app/api/admin/platform-integrations/route.ts` | partial+ | 1-admin |
+| POST | `/api/admin/platform-integrations/bedrock-models` | `artifacts/marketing-persona-app/src/app/api/admin/platform-integrations/bedrock-models/route.ts` | partial+ | 1-admin |
+| POST | `/api/admin/platform-integrations/bedrock-test` | `artifacts/marketing-persona-app/src/app/api/admin/platform-integrations/bedrock-test/route.ts` | partial+ | 1-admin |
 | GET | `/api/admin/platform-settings` | `artifacts/marketing-persona-app/src/app/api/admin/platform-settings/route.ts` | partial+ | 1-admin |
 | PATCH | `/api/admin/platform-settings` | `artifacts/marketing-persona-app/src/app/api/admin/platform-settings/route.ts` | partial+ | 1-admin |
+| POST | `/api/admin/publish-reliability/alert` | `artifacts/marketing-persona-app/src/app/api/admin/publish-reliability/alert/route.ts` | partial+ | 1-admin |
 | GET | `/api/admin/stats` | `artifacts/marketing-persona-app/src/app/api/admin/stats/route.ts` | partial+ | 1-admin |
 | GET | `/api/admin/stripe-connect` | `artifacts/marketing-persona-app/src/app/api/admin/stripe-connect/route.ts` | partial+ | 1-admin |
 | DELETE | `/api/admin/stripe-connect` | `artifacts/marketing-persona-app/src/app/api/admin/stripe-connect/route.ts` | partial+ | 1-admin |
@@ -67,6 +71,7 @@ Generated: 2026-07-15T15:20:06.179Z
 | GET | `/api/auth/bedrock-credentials` | `artifacts/marketing-persona-app/src/app/api/auth/bedrock-credentials/route.ts` | partial+ | core |
 | PATCH | `/api/auth/bedrock-credentials` | `artifacts/marketing-persona-app/src/app/api/auth/bedrock-credentials/route.ts` | partial+ | core |
 | DELETE | `/api/auth/bedrock-credentials` | `artifacts/marketing-persona-app/src/app/api/auth/bedrock-credentials/route.ts` | partial+ | core |
+| POST | `/api/auth/bedrock-credentials/models` | `artifacts/marketing-persona-app/src/app/api/auth/bedrock-credentials/models/route.ts` | partial+ | core |
 | POST | `/api/auth/bedrock-credentials/test` | `artifacts/marketing-persona-app/src/app/api/auth/bedrock-credentials/test/route.ts` | partial+ | core |
 | GET | `/api/auth/bing-webmaster` | `artifacts/marketing-persona-app/src/app/api/auth/bing-webmaster/route.ts` | partial+ | core |
 | GET | `/api/auth/bing-webmaster/callback` | `artifacts/marketing-persona-app/src/app/api/auth/bing-webmaster/callback/route.ts` | partial+ | core |
@@ -135,6 +140,7 @@ Generated: 2026-07-15T15:20:06.179Z
 | PATCH | `/api/companies` | `artifacts/marketing-persona-app/src/app/api/companies/route.ts` | partial+ | core |
 | POST | `/api/companies/humanization` | `artifacts/marketing-persona-app/src/app/api/companies/humanization/route.ts` | partial+ | core |
 | GET | `/api/competitor-analyses/:id` | `artifacts/marketing-persona-app/src/app/api/competitor-analyses/[id]/route.ts` | partial+ | core |
+| GET | `/api/competitor-analysis` | `artifacts/marketing-persona-app/src/app/api/competitor-analysis/route.ts` | partial+ | core |
 | POST | `/api/competitor-analysis` | `artifacts/marketing-persona-app/src/app/api/competitor-analysis/route.ts` | partial+ | core |
 | POST | `/api/contact` | `artifacts/marketing-persona-app/src/app/api/contact/route.ts` | partial+ | core |
 | PATCH | `/api/content-items/:id` | `artifacts/marketing-persona-app/src/app/api/content-items/[id]/route.ts` | partial+ | core |
@@ -145,7 +151,10 @@ Generated: 2026-07-15T15:20:06.179Z
 | POST | `/api/content-pieces/:id/approve` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/approve/route.ts` | partial+ | 2-studio |
 | POST | `/api/content-pieces/:id/enhance` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/enhance/route.ts` | partial+ | 2-studio |
 | POST | `/api/content-pieces/:id/humanize` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/humanize/route.ts` | partial+ | 2-studio |
+| POST | `/api/content-pieces/:id/humanize/revert` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/humanize/revert/route.ts` | partial+ | 2-studio |
+| POST | `/api/content-pieces/:id/images/attach` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/images/attach/route.ts` | partial+ | 2-studio |
 | POST | `/api/content-pieces/:id/images/regenerate` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/images/regenerate/route.ts` | partial+ | 2-studio |
+| GET | `/api/content-pieces/:id/images/search` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/images/search/route.ts` | partial+ | 2-studio |
 | POST | `/api/content-pieces/:id/publish` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/publish/route.ts` | partial+ | 2-studio |
 | POST | `/api/content-pieces/:id/publish/:destinationId` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/publish/[destinationId]/route.ts` | partial+ | 2-studio |
 | POST | `/api/content-pieces/:id/regenerate` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/regenerate/route.ts` | partial+ | 2-studio |
@@ -153,6 +162,7 @@ Generated: 2026-07-15T15:20:06.179Z
 | POST | `/api/content-pieces/:id/render-preview` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/render-preview/route.ts` | partial+ | 2-studio |
 | POST | `/api/content-pieces/:id/repurpose` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/repurpose/route.ts` | partial+ | 2-studio |
 | POST | `/api/content-pieces/:id/repurpose/stream` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/repurpose/stream/route.ts` | partial+ | 2-studio |
+| GET | `/api/content-pieces/:id/serp-score` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/serp-score/route.ts` | partial+ | 2-studio |
 | POST | `/api/content-pieces/:id/submit-review` | `artifacts/marketing-persona-app/src/app/api/content-pieces/[id]/submit-review/route.ts` | partial+ | 2-studio |
 | POST | `/api/content-pieces/generate` | `artifacts/marketing-persona-app/src/app/api/content-pieces/generate/route.ts` | partial+ | 2-studio |
 | GET | `/api/content-strategies` | `artifacts/marketing-persona-app/src/app/api/content-strategies/route.ts` | partial+ | 2-studio |
@@ -181,6 +191,7 @@ Generated: 2026-07-15T15:20:06.179Z
 | POST | `/api/keyword-analysis` | `artifacts/marketing-persona-app/src/app/api/keyword-analysis/route.ts` | partial+ | core |
 | POST | `/api/keyword-opportunities/:id` | `artifacts/marketing-persona-app/src/app/api/keyword-opportunities/[id]/route.ts` | partial+ | core |
 | PATCH | `/api/keyword-opportunities/:id` | `artifacts/marketing-persona-app/src/app/api/keyword-opportunities/[id]/route.ts` | partial+ | core |
+| GET | `/api/keyword-opportunities/:id/brief` | `artifacts/marketing-persona-app/src/app/api/keyword-opportunities/[id]/brief/route.ts` | partial+ | core |
 | PATCH | `/api/keyword-rank-alerts/:id` | `artifacts/marketing-persona-app/src/app/api/keyword-rank-alerts/[id]/route.ts` | partial+ | core |
 | GET | `/api/locations` | `artifacts/marketing-persona-app/src/app/api/locations/route.ts` | partial+ | core |
 | GET | `/api/onboarding/fast-lane` | `artifacts/marketing-persona-app/src/app/api/onboarding/fast-lane/route.ts` | partial+ | core |
@@ -194,14 +205,15 @@ Generated: 2026-07-15T15:20:06.179Z
 | DELETE | `/api/organizations/members/:userId` | `artifacts/marketing-persona-app/src/app/api/organizations/members/[userId]/route.ts` | partial+ | core |
 | GET | `/api/organizations/security` | `artifacts/marketing-persona-app/src/app/api/organizations/security/route.ts` | partial+ | 5-billing |
 | PATCH | `/api/organizations/security` | `artifacts/marketing-persona-app/src/app/api/organizations/security/route.ts` | partial+ | 5-billing |
+| GET | `/api/partner/projects` | `artifacts/marketing-persona-app/src/app/api/partner/projects/route.ts` | partial+ | core |
 | GET | `/api/personas` | `artifacts/marketing-persona-app/src/app/api/personas/route.ts` | partial+ | core |
 | PATCH | `/api/personas/:id` | `artifacts/marketing-persona-app/src/app/api/personas/[id]/route.ts` | partial+ | core |
 | DELETE | `/api/personas/:id` | `artifacts/marketing-persona-app/src/app/api/personas/[id]/route.ts` | partial+ | core |
 | POST | `/api/personas/generate` | `artifacts/marketing-persona-app/src/app/api/personas/generate/route.ts` | partial+ | core |
 | GET | `/api/platform/status` | `artifacts/marketing-persona-app/src/app/api/platform/status/route.ts` | partial+ | core |
 | GET | `/api/platform/stock-images/status` | `artifacts/marketing-persona-app/src/app/api/platform/stock-images/status/route.ts` | partial+ | core |
-| POST | `/api/public/geo-audits/generate` | `artifacts/marketing-persona-app/src/app/api/public/geo-audits/generate/route.ts` | partial+ | core |
 | GET | `/api/public/geo-audits/:id` | `artifacts/marketing-persona-app/src/app/api/public/geo-audits/[id]/route.ts` | partial+ | core |
+| POST | `/api/public/geo-audits/generate` | `artifacts/marketing-persona-app/src/app/api/public/geo-audits/generate/route.ts` | partial+ | core |
 | POST | `/api/reddit-discovery` | `artifacts/marketing-persona-app/src/app/api/reddit-discovery/route.ts` | partial+ | core |
 | GET | `/api/roadmaps` | `artifacts/marketing-persona-app/src/app/api/roadmaps/route.ts` | partial+ | 2-studio |
 | GET | `/api/roadmaps/:slug` | `artifacts/marketing-persona-app/src/app/api/roadmaps/[slug]/route.ts` | partial+ | 2-studio |
@@ -261,6 +273,7 @@ Generated: 2026-07-15T15:20:06.179Z
 | PUT | `/api/website-projects/:id/brand-profile/voice` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/brand-profile/voice/route.ts` | partial+ | core |
 | POST | `/api/website-projects/:id/brand-profile/voice/analyze` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/brand-profile/voice/analyze/route.ts` | partial+ | core |
 | POST | `/api/website-projects/:id/brand-voice/ingest` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/brand-voice/ingest/route.ts` | partial+ | core |
+| POST | `/api/website-projects/:id/brand-voice/resync-cms` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/brand-voice/resync-cms/route.ts` | partial+ | core |
 | GET | `/api/website-projects/:id/brand-voice/skill` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/brand-voice/skill/route.ts` | partial+ | core |
 | POST | `/api/website-projects/:id/brand-voice/skill` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/brand-voice/skill/route.ts` | partial+ | core |
 | PUT | `/api/website-projects/:id/brand-voice/skill` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/brand-voice/skill/route.ts` | partial+ | core |
@@ -270,10 +283,12 @@ Generated: 2026-07-15T15:20:06.179Z
 | DELETE | `/api/website-projects/:id/cms-integrations/:platform` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/cms-integrations/[platform]/route.ts` | partial+ | core |
 | PATCH | `/api/website-projects/:id/cms-integrations/:platform/output-mode` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/cms-integrations/[platform]/output-mode/route.ts` | partial+ | core |
 | POST | `/api/website-projects/:id/cms-integrations/test` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/cms-integrations/test/route.ts` | partial+ | core |
+| GET | `/api/website-projects/:id/command-center` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/command-center/route.ts` | partial+ | core |
 | GET | `/api/website-projects/:id/competitors` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/competitors/route.ts` | partial+ | core |
 | GET | `/api/website-projects/:id/content` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/content/route.ts` | partial+ | 2-studio |
 | GET | `/api/website-projects/:id/content-pieces` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/content-pieces/route.ts` | partial+ | core |
 | POST | `/api/website-projects/:id/content-pieces` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/content-pieces/route.ts` | partial+ | core |
+| POST | `/api/website-projects/:id/content-pieces/daily-five` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/content-pieces/daily-five/route.ts` | missing | core |
 | POST | `/api/website-projects/:id/content-pieces/generate/stream` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/content-pieces/generate/stream/route.ts` | partial+ | core |
 | POST | `/api/website-projects/:id/content-pieces/repurpose` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/content-pieces/repurpose/route.ts` | partial+ | core |
 | POST | `/api/website-projects/:id/crawl` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/crawl/route.ts` | partial+ | core |
@@ -281,9 +296,13 @@ Generated: 2026-07-15T15:20:06.179Z
 | PATCH | `/api/website-projects/:id/deepl-credentials` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/deepl-credentials/route.ts` | partial+ | core |
 | DELETE | `/api/website-projects/:id/deepl-credentials` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/deepl-credentials/route.ts` | partial+ | core |
 | GET | `/api/website-projects/:id/gsc-queries` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/gsc-queries/route.ts` | partial+ | 3-analytics |
+| GET | `/api/website-projects/:id/integrations/health` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/integrations/health/route.ts` | partial+ | core |
+| POST | `/api/website-projects/:id/integrations/health` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/integrations/health/route.ts` | partial+ | core |
 | GET | `/api/website-projects/:id/keyword-alerts` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/keyword-alerts/route.ts` | partial+ | core |
+| POST | `/api/website-projects/:id/keyword-clusters` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/keyword-clusters/route.ts` | partial+ | core |
 | GET | `/api/website-projects/:id/keyword-opportunities` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/keyword-opportunities/route.ts` | partial+ | core |
 | POST | `/api/website-projects/:id/keyword-opportunities` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/keyword-opportunities/route.ts` | partial+ | core |
+| GET | `/api/website-projects/:id/publish-records` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/publish-records/route.ts` | partial+ | core |
 | GET | `/api/website-projects/:id/publishing-settings` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/publishing-settings/route.ts` | partial+ | core |
 | PATCH | `/api/website-projects/:id/publishing-settings` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/publishing-settings/route.ts` | partial+ | core |
 | POST | `/api/website-projects/:id/roadmaps/:roadmapId` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/roadmaps/[roadmapId]/route.ts` | partial+ | core |
@@ -304,6 +323,7 @@ Generated: 2026-07-15T15:20:06.179Z
 | POST | `/api/website-projects/:id/social/metrics/sync` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/metrics/sync/route.ts` | partial+ | 4-social |
 | GET | `/api/website-projects/:id/social/queue` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/queue/route.ts` | partial+ | 4-social |
 | PATCH | `/api/website-projects/:id/social/queue/:pieceId` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/queue/[pieceId]/route.ts` | partial+ | 4-social |
+| DELETE | `/api/website-projects/:id/social/queue/:pieceId` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/queue/[pieceId]/route.ts` | partial+ | 4-social |
 | GET | `/api/website-projects/:id/social/schedule-settings` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/schedule-settings/route.ts` | partial+ | 4-social |
 | PATCH | `/api/website-projects/:id/social/schedule-settings` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/social/schedule-settings/route.ts` | partial+ | 4-social |
 | GET | `/api/website-projects/:id/stock-credentials` | `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/stock-credentials/route.ts` | partial+ | core |
@@ -335,6 +355,8 @@ Generated: 2026-07-15T15:20:06.179Z
 - `/api/admin/overview`
 - `/api/admin/plan-quotas`
 - `/api/admin/platform-integrations`
+- `/api/admin/platform-integrations/bedrock-models`
+- `/api/admin/platform-integrations/bedrock-test`
 - `/api/admin/platform-settings`
 - `/api/admin/stats`
 - `/api/admin/stripe-connect`
@@ -348,6 +370,7 @@ Generated: 2026-07-15T15:20:06.179Z
 - `/api/auth/api-key`
 - `/api/auth/api-key/test`
 - `/api/auth/bedrock-credentials`
+- `/api/auth/bedrock-credentials/models`
 - `/api/auth/bedrock-credentials/test`
 - `/api/auth/bing-webmaster`
 - `/api/auth/bing-webmaster/callback`
@@ -411,13 +434,17 @@ Generated: 2026-07-15T15:20:06.179Z
 - `/api/content-pieces/:id/enhance`
 - `/api/content-pieces/:id/generate`
 - `/api/content-pieces/:id/humanize`
+- `/api/content-pieces/:id/humanize/revert`
+- `/api/content-pieces/:id/images/attach`
 - `/api/content-pieces/:id/images/regenerate`
+- `/api/content-pieces/:id/images/search`
 - `/api/content-pieces/:id/publish`
 - `/api/content-pieces/:id/regenerate`
 - `/api/content-pieces/:id/reject`
 - `/api/content-pieces/:id/render-preview`
 - `/api/content-pieces/:id/repurpose`
 - `/api/content-pieces/:id/repurpose/stream`
+- `/api/content-pieces/:id/serp-score`
 - `/api/content-pieces/:id/submit-review`
 - `/api/content-pieces/generate`
 - `/api/content-strategies`
@@ -438,6 +465,7 @@ Generated: 2026-07-15T15:20:06.179Z
 - `/api/keyword-analyses/:id`
 - `/api/keyword-analysis`
 - `/api/keyword-opportunities/:id`
+- `/api/keyword-opportunities/:id/brief`
 - `/api/keyword-rank-alerts/:id`
 - `/api/locations`
 - `/api/onboarding/fast-lane`
@@ -453,8 +481,8 @@ Generated: 2026-07-15T15:20:06.179Z
 - `/api/plans`
 - `/api/platform/status`
 - `/api/platform/stock-images/status`
-- `/api/public/geo-audits/generate`
 - `/api/public/geo-audits/:id`
+- `/api/public/geo-audits/generate`
 - `/api/reddit-discovery`
 - `/api/roadmaps`
 - `/api/roadmaps/:id`
@@ -491,12 +519,14 @@ Generated: 2026-07-15T15:20:06.179Z
 - `/api/website-projects/:id/brand-profile/voice`
 - `/api/website-projects/:id/brand-profile/voice/analyze`
 - `/api/website-projects/:id/brand-voice/ingest`
+- `/api/website-projects/:id/brand-voice/resync-cms`
 - `/api/website-projects/:id/brand-voice/skill`
 - `/api/website-projects/:id/brand-voice/sources`
 - `/api/website-projects/:id/cms-integrations`
 - `/api/website-projects/:id/cms-integrations/:id`
 - `/api/website-projects/:id/cms-integrations/:id/output-mode`
 - `/api/website-projects/:id/cms-integrations/test`
+- `/api/website-projects/:id/command-center`
 - `/api/website-projects/:id/competitors`
 - `/api/website-projects/:id/content`
 - `/api/website-projects/:id/content-pieces`
@@ -504,8 +534,11 @@ Generated: 2026-07-15T15:20:06.179Z
 - `/api/website-projects/:id/crawl`
 - `/api/website-projects/:id/deepl-credentials`
 - `/api/website-projects/:id/gsc-queries`
+- `/api/website-projects/:id/integrations/health`
 - `/api/website-projects/:id/keyword-alerts`
+- `/api/website-projects/:id/keyword-clusters`
 - `/api/website-projects/:id/keyword-opportunities`
+- `/api/website-projects/:id/publish-records`
 - `/api/website-projects/:id/roadmaps/:id`
 - `/api/website-projects/:id/scrape`
 - `/api/website-projects/:id/search-properties`
@@ -522,8 +555,8 @@ Generated: 2026-07-15T15:20:06.179Z
 - `/api/website-projects/:id/social/schedule-settings`
 - `/api/website-projects/:id/stock-credentials`
 - `/api/website-projects/:id/visibility`
+- `/api/website-projects/:id/visibility(?:/check)?`
 - `/api/website-projects/:id/visibility-settings`
-- `/api/website-projects/:id/visibility/check`
 - `/api/wordpress/test`
 - `/oauth/bluesky-client-metadata.json`
 - `/oauth/bluesky-jwks.json`

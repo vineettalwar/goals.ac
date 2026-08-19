@@ -80,6 +80,8 @@ export async function POST(
     intendedEditorMode,
     competitorFocusUrl,
     competitorUrls,
+    cmsCategories,
+    cmsTags,
     bedrockModel,
     saveBedrockModel,
   } = parsed.data;
@@ -185,6 +187,9 @@ export async function POST(
                 intendedPublishPlatform: generationContext.resolvedIntendedPlatform,
                 intendedOutputMode: generationContext.intendedOutputMode,
                 intendedEditorMode: generationContext.intendedEditorMode,
+                angleHint,
+                cmsCategories,
+                cmsTags,
               });
               send("done", inserted);
             } catch (err) {
@@ -260,6 +265,9 @@ export async function POST(
             intendedPublishPlatform: generationContext.resolvedIntendedPlatform,
             intendedOutputMode: generationContext.intendedOutputMode,
             intendedEditorMode: generationContext.intendedEditorMode,
+            angleHint,
+            cmsCategories,
+            cmsTags,
           });
 
           await completeAiBilling(billingPrep.ctx, {

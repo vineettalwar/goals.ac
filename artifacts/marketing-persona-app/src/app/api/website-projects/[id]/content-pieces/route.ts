@@ -96,6 +96,8 @@ export async function POST(
     intendedEditorMode,
     competitorFocusUrl,
     competitorUrls,
+    cmsCategories,
+    cmsTags,
     bedrockModel,
     saveBedrockModel,
   } = parsed.data;
@@ -170,6 +172,9 @@ export async function POST(
         intendedPublishPlatform: generationContext.resolvedIntendedPlatform,
         intendedOutputMode: generationContext.intendedOutputMode,
         intendedEditorMode: generationContext.intendedEditorMode,
+        angleHint,
+        cmsCategories,
+        cmsTags,
       });
       return NextResponse.json(inserted, { status: 201, headers: { "X-Cache": "HIT" } });
     }
@@ -207,6 +212,9 @@ export async function POST(
       intendedPublishPlatform: generationContext.resolvedIntendedPlatform,
       intendedOutputMode: generationContext.intendedOutputMode,
       intendedEditorMode: generationContext.intendedEditorMode,
+      angleHint,
+      cmsCategories,
+      cmsTags,
     });
 
     await completeAiBilling(billingPrep.ctx, {

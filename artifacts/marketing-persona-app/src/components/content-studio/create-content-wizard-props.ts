@@ -33,6 +33,13 @@ export type CreateContentWizardProps = {
   setLinkedinHook: (v: LinkedInHookId | "") => void;
   angleHint: string;
   setAngleHint: (v: string) => void;
+  contentSection: string;
+  setContentSection: (v: string) => void;
+  editorNotes: string;
+  setEditorNotes: (v: string) => void;
+  sourceUrlsInput: string;
+  setSourceUrlsInput: (v: string) => void;
+  suggestedSections: string[];
   plannedDate: string;
   setPlannedDate: (v: string) => void;
   generating: boolean;

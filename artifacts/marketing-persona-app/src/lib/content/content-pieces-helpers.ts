@@ -63,6 +63,8 @@ export const GenerateBody = z
         const normalized = normalizeCompetitorUrlList(raw);
         return normalized.length > 0 ? normalized : undefined;
       }),
+    cmsCategories: z.array(z.string().trim().min(1)).max(20).optional(),
+    cmsTags: z.array(z.string().trim().min(1)).max(40).optional(),
   })
   .transform((data) => {
     const competitorUrls = data.competitorUrls;
@@ -322,6 +324,9 @@ export async function insertGeneratedContentPiece(params: {
   intendedPublishPlatform?: string;
   intendedOutputMode?: ContentPieceMetadata["intendedOutputMode"];
   intendedEditorMode?: ContentPieceMetadata["intendedEditorMode"];
+  angleHint?: string;
+  cmsCategories?: string[];
+  cmsTags?: string[];
 }) {
   const {
     projectId,
@@ -333,6 +338,9 @@ export async function insertGeneratedContentPiece(params: {
     intendedPublishPlatform,
     intendedOutputMode,
     intendedEditorMode,
+    angleHint,
+    cmsCategories,
+    cmsTags,
   } = params;
 
   const pieceMetadata: ContentPieceMetadata = {
@@ -340,6 +348,9 @@ export async function insertGeneratedContentPiece(params: {
     ...(intendedPublishPlatform ? { intendedPublishPlatform } : {}),
     ...(intendedOutputMode ? { intendedOutputMode } : {}),
     ...(intendedEditorMode ? { intendedEditorMode } : {}),
+    ...(angleHint?.trim() ? { contentAngle: angleHint.trim() } : {}),
+    ...(cmsCategories?.length ? { cmsCategories } : {}),
+    ...(cmsTags?.length ? { cmsTags } : {}),
   };
 
   const [inserted] = await db

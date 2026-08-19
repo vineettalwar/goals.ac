@@ -388,7 +388,7 @@ const createOrgBodySchema = z
     createUserIfMissing: z.boolean().optional().default(false),
     temporaryPassword: z.string().min(8).optional(),
     organizationName: z.string().min(1),
-    plan: z.literal("starter").default("starter"),
+    plan: z.enum(["starter", "growth", "scale"]).default("starter"),
     company: z
       .object({
         name: z.string().min(1),
@@ -426,7 +426,7 @@ const suspendSchema = z.object({
 
 const updatePlanSchema = z.object({
   organizationId: z.number().int().positive(),
-  plan: z.literal("starter"),
+  plan: z.enum(["starter", "growth", "scale"]),
   force: z.boolean().optional(),
 });
 
@@ -646,7 +646,11 @@ export async function handleAdminWrite(
         organizationId: parsed.data.organizationId,
         actorUserId: userId,
         action: "org.plan_changed",
-        metadata: { previousPlan: result.previousPlan, newPlan: parsed.data.plan },
+        metadata: {
+          previousPlan: result.previousPlan,
+          newPlan: parsed.data.plan,
+          ...(parsed.data.force ? { force: true } : {}),
+        },
         ip: clientIp(request),
       });
     }

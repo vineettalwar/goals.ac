@@ -126,12 +126,12 @@ class Publish_Handler {
 
 		$categories = $params['categories'] ?? array();
 		if ( ! empty( $categories ) ) {
-			$post_data['post_category'] = \array_map( 'intval', $categories );
+			$post_data['post_category'] = $this->resolve_term_ids( $categories, 'category' );
 		}
 
 		$tags = $params['tags'] ?? array();
 		if ( ! empty( $tags ) ) {
-			$post_data['tags_input'] = \array_map( 'intval', $tags );
+			$post_data['tags_input'] = $this->resolve_tag_names( $tags );
 		}
 
 		$post_id = \wp_insert_post( $post_data, true );
@@ -183,12 +183,12 @@ class Publish_Handler {
 
 		$categories = $params['categories'] ?? array();
 		if ( ! empty( $categories ) ) {
-			\wp_set_post_categories( $post_id, \array_map( 'intval', $categories ) );
+			\wp_set_post_categories( $post_id, $this->resolve_term_ids( $categories, 'category' ) );
 		}
 
 		$tags = $params['tags'] ?? array();
 		if ( ! empty( $tags ) ) {
-			\wp_set_post_tags( $post_id, \array_map( 'intval', $tags ) );
+			\wp_set_post_tags( $post_id, $this->resolve_tag_names( $tags ) );
 		}
 
 		$this->set_post_meta( $post_id, $params );
@@ -234,5 +234,69 @@ class Publish_Handler {
 			$sanitized_key = \sanitize_key( $key );
 			\update_post_meta( $post_id, $sanitized_key, \sanitize_text_field( $value ) );
 		}
+	}
+
+	/**
+	 * Resolve taxonomy values that may be numeric IDs or human-readable names.
+	 *
+	 * @param array<int|string> $values   Category or tag values from the publish payload.
+	 * @param string            $taxonomy WordPress taxonomy slug.
+	 * @return array<int>
+	 */
+	private function resolve_term_ids( array $values, string $taxonomy ): array {
+		$ids = array();
+
+		foreach ( $values as $value ) {
+			if ( is_numeric( $value ) ) {
+				$id = \intval( $value );
+				if ( $id > 0 ) {
+					$ids[] = $id;
+				}
+				continue;
+			}
+
+			if ( ! is_string( $value ) || '' === trim( $value ) ) {
+				continue;
+			}
+
+			$term = \get_term_by( 'name', trim( $value ), $taxonomy );
+			if ( ! $term ) {
+				$term = \get_term_by( 'slug', \sanitize_title( $value ), $taxonomy );
+			}
+			if ( $term && ! \is_wp_error( $term ) ) {
+				$ids[] = (int) $term->term_id;
+			}
+		}
+
+		return \array_values( \array_unique( $ids ) );
+	}
+
+	/**
+	 * Resolve tag values for wp_insert_post tags_input / wp_set_post_tags.
+	 *
+	 * @param array<int|string> $values Tag IDs or names.
+	 * @return array<int|string>
+	 */
+	private function resolve_tag_names( array $values ): array {
+		$resolved = array();
+
+		foreach ( $values as $value ) {
+			if ( is_numeric( $value ) ) {
+				$id = \intval( $value );
+				if ( $id > 0 ) {
+					$term = \get_term( $id, 'post_tag' );
+					if ( $term && ! \is_wp_error( $term ) ) {
+						$resolved[] = $term->name;
+					}
+				}
+				continue;
+			}
+
+			if ( is_string( $value ) && '' !== trim( $value ) ) {
+				$resolved[] = trim( $value );
+			}
+		}
+
+		return \array_values( \array_unique( $resolved ) );
 	}
 }

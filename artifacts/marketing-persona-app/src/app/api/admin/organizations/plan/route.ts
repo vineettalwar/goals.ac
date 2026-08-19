@@ -6,10 +6,12 @@ import { eq } from "drizzle-orm";
 import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
 import { updateOrganizationPlan } from "@/lib/org/org-access";
 import { logOrgAudit } from "@/lib/org/org-audit";
+import { type PlanId, PLAN_IDS } from "@/lib/billing/plans";
+import { headers } from "next/headers";
 
 const updatePlanSchema = z.object({
   organizationId: z.number().int().positive(),
-  plan: z.literal("starter"),
+  plan: z.enum(PLAN_IDS as unknown as [PlanId, ...PlanId[]]),
   /** Bypass Stripe guard — use only when subscription is already canceled in Stripe. */
   force: z.boolean().optional(),
 });
@@ -57,6 +59,8 @@ export async function PATCH(req: Request) {
   }
 
   if (result.previousPlan !== parsed.data.plan) {
+    const hdrs = await headers();
+    const ip = hdrs.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined;
     await logOrgAudit({
       organizationId: parsed.data.organizationId,
       actorUserId: admin.userId,
@@ -64,7 +68,9 @@ export async function PATCH(req: Request) {
       metadata: {
         previousPlan: result.previousPlan,
         newPlan: parsed.data.plan,
+        ...(parsed.data.force ? { force: true } : {}),
       },
+      ip,
     });
   }
 

@@ -8,6 +8,7 @@ import {
   updateBrandVoiceSkill,
 } from "@workspace/content-engine/brand/brand-voice-skill";
 import { ingestBrandVoiceDocuments } from "@workspace/content-engine/brand/brand-voice-indexer";
+import { loadCmsContentForBrandVoice } from "@workspace/content-engine/support/brand/brand-scan-context";
 import {
   analyzeAllPlatformChannels,
   analyzePlatformVoiceChannel,
@@ -200,6 +201,44 @@ export async function handleBrandVoiceWrite(
     );
 
     return withCors(request, Response.json({ ok: true, sourceIds, count: sourceIds.length }));
+  }
+
+  const resyncCmsMatch = path.match(/^\/api\/website-projects\/(\d+)\/brand-voice\/resync-cms$/);
+  if (resyncCmsMatch && request.method === "POST") {
+    const projectId = Number.parseInt(resyncCmsMatch[1]!, 10);
+    const access = await requireProjectAccess(projectId, userId);
+    if (!access.ok) {
+      return withCors(request, Response.json({ error: access.error }, { status: access.status }));
+    }
+
+    const docs = await loadCmsContentForBrandVoice(projectId);
+    if (docs.length === 0) {
+      return withCors(
+        request,
+        Response.json(
+          {
+            error: "no_cms_posts",
+            message:
+              "No CMS posts found. Connect the WordPress plugin (HMAC) and confirm GET /site-graph returns published posts.",
+          },
+          { status: 422 },
+        ),
+      );
+    }
+
+    const limit = 5;
+    const trimmed = docs.slice(0, limit);
+    const sourceIds = await ingestBrandVoiceDocuments(projectId, trimmed);
+
+    return withCors(
+      request,
+      Response.json({
+        ok: true,
+        ingested: trimmed.length,
+        totalAvailable: docs.length,
+        sourceIds,
+      }),
+    );
   }
 
   const platformVoicePutMatch = path.match(

@@ -6,7 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { PLAN_LABELS, normalizePlanId } from "@/lib/billing/plans";
+import { PLAN_IDS, PLAN_LABELS, normalizePlanId } from "@/lib/billing/plans";
 import { useAdminImpersonation } from "@/hooks/use-admin-impersonation";
 
 interface OrganizationDetailResponse {
@@ -64,6 +64,9 @@ export function AdminOrganizationDetailPanel({ organizationId }: { organizationI
   const [detail, setDetail] = useState<OrganizationDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const { impersonateOrganization, impersonateUser, isImpersonating } = useAdminImpersonation();
+  const [planDraft, setPlanDraft] = useState<string>("starter");
+  const [forceDraft, setForceDraft] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
 
   const loadDetail = useCallback(async () => {
     setLoading(true);
@@ -82,6 +85,43 @@ export function AdminOrganizationDetailPanel({ organizationId }: { organizationI
   useEffect(() => {
     void loadDetail();
   }, [loadDetail]);
+
+  useEffect(() => {
+    if (!detail) return;
+    setPlanDraft(detail.organization.plan ?? "starter");
+    setForceDraft(false);
+  }, [detail]);
+
+  async function changePlan() {
+    if (!detail) return;
+    const org = detail.organization;
+    if (planDraft === org.plan) return;
+
+    setSavingPlan(true);
+    try {
+      const res = await fetch("/api/admin/organizations/plan", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationId: org.id,
+          plan: planDraft,
+          force: forceDraft,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        const msg =
+          (data && typeof data.error === "string" && data.error) || "Plan update failed";
+        throw new Error(msg);
+      }
+      toast.success(`Plan updated to ${PLAN_LABELS[planDraft as keyof typeof PLAN_LABELS] ?? planDraft}`);
+      await loadDetail();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Plan update failed");
+    } finally {
+      setSavingPlan(false);
+    }
+  }
 
   async function toggleSuspend() {
     if (!detail) return;
@@ -198,6 +238,48 @@ export function AdminOrganizationDetailPanel({ organizationId }: { organizationI
           <DetailRow label="Price ID" value={org.stripePriceId} />
           <DetailRow label="Period ends" value={formatDate(org.currentPeriodEnd)} />
         </dl>
+
+        <div className="mt-4 space-y-3 rounded-lg border border-border p-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm font-medium">Change plan (super admin)</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-sm text-muted-foreground" htmlFor="org-plan-select">
+              Plan
+            </label>
+            <select
+              id="org-plan-select"
+              className="h-9 rounded-md border border-border bg-background px-3 text-sm"
+              value={planDraft}
+              onChange={(e) => setPlanDraft(e.target.value)}
+            >
+              {PLAN_IDS.map((p) => (
+                <option key={p} value={p}>
+                  {PLAN_LABELS[p]}
+                </option>
+              ))}
+            </select>
+
+            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={forceDraft}
+                onChange={(e) => setForceDraft(e.target.checked)}
+                disabled={!Boolean(org.stripeSubscriptionId || org.stripeCustomerId)}
+              />
+              Force (bypass Stripe guard)
+            </label>
+          </div>
+
+          <Button
+            size="sm"
+            onClick={() => void changePlan()}
+            disabled={savingPlan || planDraft === org.plan}
+          >
+            {savingPlan ? "Saving…" : "Update plan"}
+          </Button>
+        </div>
       </section>
 
       <section className="rounded-xl border border-border">

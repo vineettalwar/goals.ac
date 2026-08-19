@@ -4,6 +4,7 @@ import {
   FileText,
   LayoutDashboard,
   Plug,
+  ShieldAlert,
   Settings2,
   Users,
   type LucideIcon,
@@ -46,6 +47,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { label: "Plans", href: "/admin/plans", icon: CreditCard },
   { label: "Integrations", href: "/admin/integrations", icon: Plug },
   { label: "Content pipeline", href: "/admin/content-strategies", icon: FileText },
+  { label: "Publish reliability", href: "/admin/publish-reliability", icon: ShieldAlert },
   { label: "Platform", href: "/admin/platform", icon: Settings2 },
 ];
 

@@ -9,6 +9,7 @@ import {
 } from "@workspace/ai-providers";
 import type { AiProviderClient } from "@workspace/ai-providers/client";
 import { resolveAiClient } from "../support/ai/resolve-ai-client";
+import { buildNewsSourceGuardPrompt } from "./news-source-guard";
 import { assertAiGenerationEnabled } from "../support/publishing/platform-guard";
 import { getCache } from "../core/cache";
 import type { ContentFormatType, ContentStyle } from "@workspace/db";
@@ -423,6 +424,8 @@ async function buildPrompt(
   ]
     .filter(Boolean)
     .join("");
+  const newsSourceGuard = buildNewsSourceGuardPrompt(angleHint);
+  const newsSourceLine = newsSourceGuard ? `\n${newsSourceGuard}` : "";
 
   let languageLine = "";
   if (brand.projectId) {
@@ -502,7 +505,7 @@ Requirements:
 TARGET KEYWORD: "${keyword}"
 TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
 RELATED KEYWORDS TO WEAVE IN: ${kwList}
-${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${voiceLine ? `\n${voiceLine}` : ""}${languageLine}${existingArticlesCtx}
+${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${newsSourceLine}${voiceLine ? `\n${voiceLine}` : ""}${languageLine}${existingArticlesCtx}
 
 Write a complete, publish-ready ${wordRange}-word article. Use this outline as internal guidance only: do NOT copy these bullet labels, word counts, or placeholder headings into the output:
 ${config.structure}
@@ -518,7 +521,7 @@ ${buildSeoLongformRequirements(brand.companyName, keyword, wordRange)}${competit
 TARGET KEYWORD: "${keyword}"
 TARGET AUDIENCE: ${brand.targetAudience || "Business professionals and decision makers"}
 RELATED KEYWORDS TO WEAVE IN: ${kwList}
-${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${voiceLine ? `\n${voiceLine}` : ""}
+${angleHint ? `CONTENT ANGLE / TITLE HINT: ${angleHint}` : ""}${newsSourceLine}${voiceLine ? `\n${voiceLine}` : ""}
 
 Write a complete, publish-ready ${wordRange}-word piece. Use this outline as internal guidance only: do NOT copy outline labels into the output:
 ${config.structure}

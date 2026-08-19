@@ -15,6 +15,7 @@ import {
   resolveSeoFromCanonical,
   seoTitle,
 } from "./adapter-helpers";
+import { resolveWordPressTaxonomyIds } from "./wordpress-taxonomy";
 import { markdownToDiviShortcodes } from "./divi";
 import { markdownToElementorData } from "./elementor";
 import { markdownToGutenbergBlocks } from "./gutenberg";
@@ -118,7 +119,8 @@ export const wordpressAdapter: CmsAdapter = {
 
     const status = opts?.status === "draft" ? "draft" : "publish";
     const connectionType = resolveWordPressConnectionType(creds.wordpress);
-    const seo = resolveSeoFromCanonical({ meta: { title: payload.title }, markdown: "", id: "" });
+    const canonical = opts?.content ?? { meta: { title: payload.title }, markdown: "", id: "" };
+    const seo = resolveSeoFromCanonical(canonical);
 
     if (connectionType === "plugin") {
       if (!creds.wordpress.siteKey) {
@@ -130,13 +132,24 @@ export const wordpressAdapter: CmsAdapter = {
         platform: "wordpress" as const,
       };
 
+      let categoryIds: number[] = [];
+      let tagIds: number[] = [];
+      try {
+        const resolved = await resolveWordPressTaxonomyIds(pluginCreds, canonical);
+        categoryIds = resolved.categoryIds;
+        tagIds = resolved.tagIds;
+      } catch {
+        // ponytail: publish without taxonomy if site-graph is unreachable
+      }
+
       const result = await publishToGoalsAcPlugin(
         pluginCreds,
         {
           title: payload.title,
           content: payload.content,
           status: status === "publish" ? "publish" : "draft",
-          tags: payload.tags,
+          categories: categoryIds.length > 0 ? categoryIds : undefined,
+          tags: tagIds.length > 0 ? tagIds : payload.tags,
           featured_image_id: opts?.featuredImageId,
           meta: mapSeoToPluginMeta(seo),
           seo: seo as Record<string, string | undefined>,

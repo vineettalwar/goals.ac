@@ -20,6 +20,7 @@ interface Props {
   activeProvider?: AiProviderId;
   orgBedrockModel?: string | null;
   onVoiceRequired?: () => void;
+  suggestedSections?: string[];
 }
 
 export function CreateContentModal(props: Props) {

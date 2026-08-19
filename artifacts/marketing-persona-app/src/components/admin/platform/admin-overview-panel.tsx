@@ -111,7 +111,7 @@ function ViewAllLink({ href }: { href: string }) {
 }
 
 export function AdminOverviewPanel({ data }: { data: AdminOverview }) {
-  const { stats, attention, recentUsers, recentOrganizations } = data;
+  const { stats, attention, recentUsers, recentOrganizations, publishReliability } = data;
 
   return (
     <div className="space-y-8">
@@ -153,6 +153,50 @@ export function AdminOverviewPanel({ data }: { data: AdminOverview }) {
           );
         })}
       </div>
+
+      <Link href="/admin/publish-reliability" className="block">
+        <Card
+          className={cn(
+            "transition-shadow hover:shadow-md",
+            publishReliability.failedPublishRecords24h > 0
+              ? "border-destructive/30 bg-destructive/5"
+              : undefined,
+          )}
+        >
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className={cn(
+                    "flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10",
+                    publishReliability.failedPublishRecords24h > 0 ? "bg-destructive/10" : "bg-muted/30",
+                  )}
+                >
+                  <ShieldAlert className="h-5 w-5 text-destructive" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Publish reliability (last 24h)</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums tracking-tight">
+                    {publishReliability.failedPublishRecords24h}
+                  </p>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/70" />
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {publishReliability.failedPublishRecords24h > 0 ? (
+                <Badge variant="destructive">Failed publishes</Badge>
+              ) : (
+                <Badge variant="secondary">All clear</Badge>
+              )}
+              <span className="text-xs text-muted-foreground">
+                {publishReliability.pilotOrganizationIdsConfigured ? "Pilot filter active" : "Pilot filter not set"}
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
 
       {attention.length > 0 ? (
         <Card className="border-amber-500/20 bg-amber-500/3">

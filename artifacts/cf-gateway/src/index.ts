@@ -206,6 +206,9 @@ function isWritePath(path: string, method: string): boolean {
   if (/^\/api\/website-projects\/\d+\/brand-voice\/ingest$/.test(path) && method === "POST") {
     return true;
   }
+  if (/^\/api\/website-projects\/\d+\/brand-voice\/resync-cms$/.test(path) && method === "POST") {
+    return true;
+  }
   if (/^\/api\/website-projects\/\d+\/brand-profile\/platform-voice\/[^/]+$/.test(path) && method === "PUT") {
     return true;
   }

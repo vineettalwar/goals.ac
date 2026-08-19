@@ -34,6 +34,13 @@ export type BriefContentDraft = {
   workingTitle?: string;
 };
 
+function parseSourceUrls(raw: string): string[] {
+  return raw
+    .split(/\r?\n|,/)
+    .map((part) => part.trim())
+    .filter((part) => /^https?:\/\//i.test(part));
+}
+
 type CompetitorAnalysisRow = {
   competitorUrl: string;
   competitorName: string;
@@ -54,6 +61,7 @@ export function useCreateContentModal({
   activeProvider = "gemini",
   orgBedrockModel = null,
   onVoiceRequired,
+  suggestedSections = [],
 }: {
   open: boolean;
   onClose: () => void;
@@ -66,6 +74,7 @@ export function useCreateContentModal({
   activeProvider?: AiProviderId;
   orgBedrockModel?: string | null;
   onVoiceRequired?: () => void;
+  suggestedSections?: string[];
 }) {
 const { data: session } = useSession();
 const canManageBedrockModel =
@@ -81,6 +90,9 @@ const [stepIndex, setStepIndex] = useState(0);
 const [selectedFormat, setSelectedFormat] = useState<ContentFormatType | null>(null);
 const [keyword, setKeyword] = useState("");
 const [angleHint, setAngleHint] = useState("");
+const [contentSection, setContentSection] = useState("");
+const [editorNotes, setEditorNotes] = useState("");
+const [sourceUrlsInput, setSourceUrlsInput] = useState("");
 const [plannedDate, setPlannedDate] = useState("");
 const [briefId, setBriefId] = useState<number | null>(null);
 const [linkedinArchetype, setLinkedinArchetype] = useState<LinkedInArchetypeId | "">("");
@@ -151,6 +163,9 @@ function reset() {
   setSelectedFormat(null);
   setKeyword("");
   setAngleHint("");
+  setContentSection("");
+  setEditorNotes("");
+  setSourceUrlsInput("");
   setPlannedDate("");
   setLinkedinArchetype("");
   setLinkedinHook("");
@@ -255,11 +270,18 @@ function goBack() {
 }
 
 const buildAngleHint = useCallback((format: ContentFormatType): string | undefined => {
+  const parts: string[] = [];
+  const section = contentSection.trim();
+  const notes = editorNotes.trim() || angleHint.trim();
+  const sourceUrls = parseSourceUrls(sourceUrlsInput);
+  if (section) parts.push(`section:${section}`);
+  if (notes) parts.push(notes);
+  if (sourceUrls.length > 0) parts.push(`sources: ${sourceUrls.join(", ")}`);
   if (format === "linkedin_post") {
-    return `archetype:${linkedinArchetype || ""}|hook:${linkedinHook || ""}|${angleHint.trim() || ""}`;
+    parts.unshift(`archetype:${linkedinArchetype || ""}`, `hook:${linkedinHook || ""}`);
   }
-  return angleHint.trim() || undefined;
-}, [linkedinArchetype, linkedinHook, angleHint]);
+  return parts.join("|").trim() || undefined;
+}, [linkedinArchetype, linkedinHook, contentSection, editorNotes, sourceUrlsInput, angleHint]);
 
 const resolvedCompetitorFocusUrl = useCallback((): string | undefined => {
   if (!competitorFocusUrl) return undefined;
@@ -284,6 +306,7 @@ const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> =>
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (bypassCache) headers["x-bypass-cache"] = "true";
 
+  const trimmedSection = contentSection.trim();
   const res = await fetch(`/api/website-projects/${projectId}/content-pieces`, {
     method: "POST",
     headers,
@@ -293,6 +316,8 @@ const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> =>
       angleHint: buildAngleHint(selectedFormat!),
       plannedDate: plannedDate || undefined,
       briefId: briefId ?? undefined,
+      cmsCategories: trimmedSection ? [trimmedSection] : undefined,
+      cmsTags: undefined,
       ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
       ...competitorGenerateFields(),
       ...(showBedrockModelPicker && bedrockModel.trim()
@@ -329,6 +354,8 @@ const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> =>
   canManageBedrockModel,
   saveBedrockModel,
   onVoiceRequired,
+  sourceUrlsInput,
+  contentSection,
 ]);
 
 const runGeneration = useCallback(async () => {
@@ -340,6 +367,8 @@ const runGeneration = useCallback(async () => {
   if (bypassCache) headers["x-bypass-cache"] = "true";
 
   const payload = {
+    cmsCategories: contentSection.trim() ? [contentSection.trim()] : undefined,
+    cmsTags: undefined,
     formatType: selectedFormat,
     targetKeyword: keyword.trim(),
     angleHint: buildAngleHint(selectedFormat),
@@ -608,6 +637,10 @@ const handleContinue = useCallback(() => {
       toast.error("Enter a target keyword");
       return;
     }
+    if (contentSection.trim().toLowerCase() === "news" && parseSourceUrls(sourceUrlsInput).length === 0) {
+      toast.error("Add at least one source URL for News");
+      return;
+    }
     generationStarted.current = false;
     goNextStable();
     return;
@@ -698,6 +731,13 @@ const wizardProps = {
   setLinkedinHook,
   angleHint,
   setAngleHint,
+  contentSection,
+  setContentSection,
+  editorNotes,
+  setEditorNotes,
+  sourceUrlsInput,
+  setSourceUrlsInput,
+  suggestedSections,
   plannedDate,
   setPlannedDate,
   generating,

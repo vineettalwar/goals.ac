@@ -91,6 +91,12 @@ export type ContentPieceMetadata = {
   visualSummarySvg?: string;
   /** data:image/svg+xml for aside / markdown — not CMS featuredImageUrl */
   visualSummarySvgDataUri?: string;
+  /** Generation angle / editor notes (includes section: and source URLs for news). */
+  contentAngle?: string;
+  /** WordPress category names to resolve via site-graph at publish. */
+  cmsCategories?: string[];
+  /** WordPress tag names (falls back to keyword + format when omitted). */
+  cmsTags?: string[];
 };
 
 export const contentPiecesTable = pgTable("content_pieces", {

@@ -149,6 +149,8 @@ export interface PublishOpts {
   idempotencyKey?: string;
   /** Prior CMS remote id for create-or-update platforms (Ghost, Webflow, …). */
   existingRemoteId?: string;
+  /** Source content for SEO + taxonomy resolution at publish. */
+  content?: CanonicalContent;
 }
 
 export interface RemoteRef {
