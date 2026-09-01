@@ -1,9 +1,11 @@
 import { db } from "@workspace/db";
 import {
   brandProfilesTable,
+  organizationsTable,
   websiteProjectsTable,
   type BrandProfile,
   type ContentStyle,
+  type OrgVertical,
   type WebsiteProject,
 } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
@@ -52,6 +54,20 @@ function brandProfileToContext(
   };
 }
 
+/** Org vertical for a project, via its organization. Null when the project has no
+ * organization or the organization has not set a vertical yet. */
+export async function resolveOrgVerticalForProject(
+  projectId: number,
+): Promise<OrgVertical | null> {
+  const [row] = await db
+    .select({ vertical: organizationsTable.vertical })
+    .from(websiteProjectsTable)
+    .innerJoin(organizationsTable, eq(websiteProjectsTable.organizationId, organizationsTable.id))
+    .where(eq(websiteProjectsTable.id, projectId))
+    .limit(1);
+  return row?.vertical ?? null;
+}
+
 /** Caller must enforce project access (e.g. requireProjectAccess) when userId is set. */
 export async function loadBrandContextForProject(
   projectId: number,
@@ -70,7 +86,9 @@ export async function loadBrandContextForProject(
     .where(eq(brandProfilesTable.websiteProjectId, projectId))
     .limit(1);
 
-  return brandProfileToContext(project, brandProfile, { projectId });
+  const vertical = await resolveOrgVerticalForProject(projectId);
+
+  return brandProfileToContext(project, brandProfile, { projectId, vertical });
 }
 
 export async function findProjectIdForWebsiteUrl(

@@ -1,4 +1,5 @@
-import type { ContentStyle, PlatformVoices } from "@workspace/db";
+import type { ContentStyle, OrgVertical, PlatformVoices } from "@workspace/db";
+import { getVerticalPreset } from "../verticals/vertical-presets";
 
 export type HumanizationLevel = "off" | "light" | "strong";
 
@@ -41,6 +42,9 @@ export interface UnifiedBrandContext extends BrandVoiceFields {
   skillLocked?: boolean;
   projectId?: number;
   platformVoices?: PlatformVoices | null;
+  /** Org vertical, used to inject tone guardrails into the brand voice prompt. Null/undefined
+   * when the org has no vertical set — generation falls back to generic brand voice only. */
+  vertical?: OrgVertical | null;
 }
 
 export function normalizeSiteHost(url: string): string {
@@ -90,12 +94,17 @@ function listSection(label: string, items: string[] | undefined, max = 12): stri
 }
 
 export function buildBrandVoicePromptContext(
-  brand: BrandVoiceFields & { contentStyle?: ContentStyle | null },
+  brand: BrandVoiceFields & { contentStyle?: ContentStyle | null; vertical?: OrgVertical | null },
 ): string {
   const sections: string[] = [];
 
   if (brand.voiceTone?.trim()) {
     sections.push(`BRAND VOICE: ${brand.voiceTone.trim()}`);
+  }
+
+  if (brand.vertical) {
+    const preset = getVerticalPreset(brand.vertical);
+    sections.push(`VERTICAL TONE GUARDRAILS (${preset.label}): ${preset.toneGuidance}`);
   }
 
   if (brand.brandMemory?.summary?.trim()) {
@@ -214,6 +223,7 @@ export function brandVoiceCacheFingerprint(brand: UnifiedBrandContext): string {
     brand.brandMemory?.lastIndexedAt ?? "",
     brand.brandVoiceSkill?.slice(0, 200) ?? "",
     String(brand.brandMemory?.skillVersion ?? 0),
-    "brand-voice-v2",
+    brand.vertical ?? "",
+    "brand-voice-v3",
   ].join("::");
 }

@@ -61,6 +61,12 @@ import {
   LINKEDIN_ARCHETYPES,
   LINKEDIN_HOOK_TYPES,
 } from "./linkedin-archetypes";
+import { getVerticalPreset } from "../verticals/vertical-presets";
+import {
+  applyForbiddenClaimsGuardrail,
+  appendVerticalDisclaimer,
+  regenerateBodyWithoutForbiddenClaims,
+} from "../verticals/vertical-guardrails";
 
 export interface ContentPieceResult {
   title: string;
@@ -99,24 +105,36 @@ export type ContentGenerationContext = {
 
 export type BrandContext = UnifiedBrandContext;
 
+/** Vertical tone guardrails, appended after whichever voice source wins below — the
+ * vertical must not depend on which brand voice path (platform / RAG skill / plain
+ * brand fields) happened to resolve for this generation. */
+function verticalToneLine(brand: BrandContext): string {
+  if (!brand.vertical) return "";
+  const preset = getVerticalPreset(brand.vertical);
+  return `\nVERTICAL TONE GUARDRAILS (${preset.label}): ${preset.toneGuidance}\n`;
+}
+
 async function resolveVoicePromptContext(
   brand: BrandContext,
   format: ContentFormatType,
   keyword: string,
   angleHint?: string,
 ): Promise<string> {
+  const verticalLine = verticalToneLine(brand);
+
   const platform = platformForFormat(format);
   if (platform) {
     const platformVoice = buildPlatformVoicePromptContext(brand.platformVoices, platform);
-    if (platformVoice.trim()) return platformVoice;
+    if (platformVoice.trim()) return `${platformVoice}${verticalLine}`;
   }
   if (brand.projectId) {
     const ctx = await loadBrandVoiceGenerationContext(
       brand.projectId,
       `${keyword} ${format} ${angleHint ?? ""}`,
     );
-    if (ctx?.promptContext.trim()) return ctx.promptContext;
+    if (ctx?.promptContext.trim()) return `${ctx.promptContext}${verticalLine}`;
   }
+  // buildBrandVoicePromptContext already injects the vertical line itself.
   return buildBrandVoicePromptContext(brand);
 }
 
@@ -500,6 +518,8 @@ Requirements:
       ? `\nExisting content on this site (use for internal links): ${existingPieceTitles.slice(0, 12).join("; ")}`
       : "";
 
+    const schemaType = brand.vertical ? getVerticalPreset(brand.vertical).schemaType : "Article";
+
     return `Create a ${config.label} for ${brand.companyName} (${brand.websiteUrl}), a company in the ${brand.industry} industry.
 
 TARGET KEYWORD: "${keyword}"
@@ -511,9 +531,9 @@ Write a complete, publish-ready ${wordRange}-word article. Use this outline as i
 ${config.structure}
 
 Return ONLY this JSON object:
-${buildSeoLongformJsonSchema(keyword)}
+${buildSeoLongformJsonSchema(keyword, schemaType)}
 
-${buildSeoLongformRequirements(brand.companyName, keyword, wordRange)}${competitorContext}${destinationHint}`;
+${buildSeoLongformRequirements(brand.companyName, keyword, wordRange, schemaType)}${competitorContext}${destinationHint}`;
   }
 
   return `Create a ${config.label} for ${brand.companyName} (${brand.websiteUrl}), a company in the ${brand.industry} industry.
@@ -740,7 +760,50 @@ async function postProcessGeneratedResult(
     logger.warn({ err, format }, "Stock image enrichment skipped");
   }
 
+  result = await applyVerticalGuardrailsToResult(result, format, brand, ai);
+
   return result;
+}
+
+/**
+ * D1 guardrails: scans the draft for the vertical's forbidden claim patterns, retries
+ * once with the offending claims named (cheap relative to a full redraft) when there's
+ * a hit, and attaches whatever survives to pieceMetadata so a reviewer sees exactly
+ * what to fix — the draft is never silently passed. Appends the vertical disclaimer
+ * to SEO-longform articles for verticals that define one (law, dental).
+ */
+async function applyVerticalGuardrailsToResult(
+  result: ContentPieceResult,
+  format: ContentFormatType,
+  brand: BrandContext,
+  ai: AiProviderClient,
+): Promise<ContentPieceResult> {
+  if (!brand.vertical) return result;
+
+  const preset = getVerticalPreset(brand.vertical);
+  const guardrail = await applyForbiddenClaimsGuardrail(
+    result.body_markdown,
+    brand.vertical,
+    (hits, previousBody) => regenerateBodyWithoutForbiddenClaims(ai, hits, previousBody),
+  );
+
+  let body = guardrail.body;
+  if (isSeoLongformFormat(format) && preset.disclaimer) {
+    body = appendVerticalDisclaimer(body, brand.vertical);
+  }
+
+  return {
+    ...result,
+    body_markdown: body,
+    pieceMetadata: {
+      ...result.pieceMetadata,
+      forbiddenClaimHits: guardrail.hits.length > 0 ? guardrail.hits : undefined,
+      verticalGuardrailRegenerated: guardrail.regenerated || undefined,
+      requiresReview: preset.requiresReview,
+      verticalDisclaimer:
+        isSeoLongformFormat(format) && preset.disclaimer ? preset.disclaimer : undefined,
+    },
+  };
 }
 
 function validateResult(result: unknown, format: ContentFormatType): asserts result is ContentPieceResult {

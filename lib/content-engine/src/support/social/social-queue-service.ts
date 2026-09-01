@@ -152,6 +152,16 @@ export async function submitPieceForReview(pieceId: number): Promise<ContentPiec
 }
 
 export async function approvePiece(pieceId: number, userId: number): Promise<ContentPiece | null> {
+  // D2: pieceMetadata.requiresReview (set at generation time for law/dental drafts) is
+  // the flag every publish path actually checks — see publish-destination.ts and
+  // cms-publish.ts's assertVerticalReviewCleared / inline guard. Approval must clear
+  // it here, or an approved law/dental piece would still be refused at publish time.
+  const [existing] = await db
+    .select({ pieceMetadata: contentPiecesTable.pieceMetadata })
+    .from(contentPiecesTable)
+    .where(eq(contentPiecesTable.id, pieceId))
+    .limit(1);
+
   const [updated] = await db
     .update(contentPiecesTable)
     .set({
@@ -159,6 +169,9 @@ export async function approvePiece(pieceId: number, userId: number): Promise<Con
       approvedByUserId: userId,
       approvedAt: new Date(),
       status: "ready",
+      pieceMetadata: existing?.pieceMetadata
+        ? ({ ...existing.pieceMetadata, requiresReview: false } as ContentPieceMetadata)
+        : existing?.pieceMetadata,
     })
     .where(eq(contentPiecesTable.id, pieceId))
     .returning();

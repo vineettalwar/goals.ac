@@ -20,6 +20,8 @@ import {
   type CmsIntegrationCredentials,
   type SocialPlatform,
 } from "../support/publishing/cms-integrations";
+import { verticalRequiresReview } from "../verticals/vertical-presets";
+import type { ContentPieceApprovalStatus } from "@workspace/db/schema";
 
 const FORMAT_MAP: Record<string, ContentFormatType> = {
   "linkedin post": "linkedin_post",
@@ -120,6 +122,12 @@ export async function generateFromContentItem(
     options?.aiProviderOptions,
   );
 
+  // D2 review gating: fails closed when brand.vertical could not be determined (see
+  // resolveOrgVerticalForProject) — an unknown vertical is treated the same as
+  // law/dental, never the same as a verified low-risk vertical.
+  const requiresReview = verticalRequiresReview(brand.vertical) || !brand.vertical;
+  const approvalStatus: ContentPieceApprovalStatus = requiresReview ? "pending_review" : "draft";
+
   const [primary] = await db
     .insert(contentPiecesTable)
     .values({
@@ -130,6 +138,7 @@ export async function generateFromContentItem(
       targetKeyword: item.primaryKeyword,
       bodyMarkdown: generated.body_markdown,
       status: "draft",
+      approvalStatus,
       wordCount: generated.body_markdown.split(/\s+/).filter(Boolean).length,
       plannedDate,
       publishPlatform: null,
@@ -166,6 +175,7 @@ export async function generateFromContentItem(
           targetKeyword: item.primaryKeyword,
           bodyMarkdown: repurposed.body_markdown,
           status: "draft",
+          approvalStatus,
           wordCount: repurposed.body_markdown.split(/\s+/).filter(Boolean).length,
           plannedDate,
           publishPlatform: platform,

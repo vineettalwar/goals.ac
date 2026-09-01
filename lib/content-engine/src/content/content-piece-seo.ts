@@ -63,6 +63,19 @@ export type ContentPieceMetadata = {
    * Not for CMS featuredImageUrl — stock preferred; Node enricher may set PNG.
    */
   visualSummarySvgDataUri?: string;
+  /** Vertical disclaimer appended to the body (law, dental). Kept here too so a
+   * reviewer or the studio UI can show it without re-parsing the body. */
+  verticalDisclaimer?: string;
+  /**
+   * Forbidden-claim hits from the vertical guardrail check that survived a single
+   * cheap regeneration pass. Non-empty means the draft was NOT silently passed —
+   * a reviewer must resolve these before publish.
+   */
+  forbiddenClaimHits?: import("../verticals/vertical-presets").ForbiddenClaimHit[];
+  /** True when the forbidden-claims regeneration pass ran (whether or not it fully cleared). */
+  verticalGuardrailRegenerated?: boolean;
+  /** True for orgs whose vertical requires human review before any publish. */
+  requiresReview?: boolean;
 };
 
 export type RichContentPieceFields = ContentPieceMetadata & {
@@ -274,7 +287,7 @@ GOOD output (do this):
 
 Respond ONLY with a valid JSON object. No markdown code fences, no explanation.`;
 
-export function buildSeoLongformJsonSchema(keyword: string): string {
+export function buildSeoLongformJsonSchema(keyword: string, schemaType = "Article"): string {
   return `{
   "title": "<compelling SEO title with target keyword, 55-65 characters>",
   "target_keyword": "${keyword}",
@@ -287,7 +300,7 @@ export function buildSeoLongformJsonSchema(keyword: string): string {
   "faq_section": [{ "question": "<user-style question ending with ?>", "answer": "<2-4 sentence answer>" }],
   "citations": [{ "text": "<anchor text used in article>", "url": "<https://real-authoritative-url>", "source": "<publisher name>" }],
   "internal_link_suggestions": [{ "anchorText": "<phrase>", "suggestedSlug": "/blog/example-slug", "rationale": "<why link here>" }],
-  "json_ld_schema": { "@context": "https://schema.org", "@type": "Article", "headline": "<title>", "description": "<meta description>" }
+  "json_ld_schema": { "@context": "https://schema.org", "@type": "${schemaType}", "headline": "<title>", "description": "<meta description>" }
 }`;
 }
 
@@ -326,6 +339,7 @@ export function buildSeoLongformRequirements(
   brandName: string,
   keyword: string,
   wordRange: string,
+  schemaType = "Article",
 ): string {
   return `Requirements for body_markdown:
 - Write ${wordRange} words of publish-ready prose. NEVER an outline, brief, or template.
@@ -352,7 +366,7 @@ Requirements for meta_description:
 - Exactly 150-160 characters, includes "${keyword}", drives clicks
 
 Requirements for json_ld_schema:
-- Valid JSON-LD with @type Article; include FAQPage mainEntity when faq_section is present
+- Valid JSON-LD with @type ${schemaType}; include FAQPage mainEntity when faq_section is present
 
 Before responding, self-check: 1200+ words, 4+ H2s, 4+ external links, 3+ internal links, 4+ FAQs. If any check fails, fix before returning JSON.`;
 }

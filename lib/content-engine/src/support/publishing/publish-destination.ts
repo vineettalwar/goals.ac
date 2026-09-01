@@ -11,6 +11,11 @@ import {
 } from "./cms-publish";
 import { publishPieceToEsp } from "./esp-publish";
 import type { PublishEntitlements } from "./publish-entitlements";
+// The @workspace/db column type for pieceMetadata predates the vertical guardrail
+// fields (db schema is read-only for this stream). Generation always writes through
+// content-engine's own wider ContentPieceMetadata, so the review gate below reads
+// through that type instead.
+import type { ContentPieceMetadata as GeneratedPieceMetadata } from "../../content/content-piece-seo";
 
 export type BlogDestinationId =
   | "wordpress"
@@ -159,12 +164,29 @@ async function maybeInjectSchema(
   }
 }
 
+/**
+ * D2 last-mile review gate. `pieceMetadata.requiresReview` is set at generation time
+ * for law/dental drafts (see content-studio-generator's applyVerticalGuardrailsToResult)
+ * and cleared only when a human approves the piece (support/social/social-queue-service
+ * `approvePiece`). This is the single choke point every publish call funnels through —
+ * auto-publish and manual publish alike — so it is the last line of defense even if an
+ * upstream caller forgot to check approval status first.
+ */
+function assertVerticalReviewCleared(piece: PublishableContentPiece): void {
+  if ((piece.pieceMetadata as GeneratedPieceMetadata | null | undefined)?.requiresReview) {
+    throw new Error(
+      "This draft belongs to a vertical that requires human review before publishing. Approve it first.",
+    );
+  }
+}
+
 export async function publishPieceToDestination(
   platform: string,
   piece: PublishableContentPiece,
   creds: CmsIntegrationCredentials,
   options?: PublishDestinationOptions,
 ): Promise<PublishDestinationResult> {
+  assertVerticalReviewCleared(piece);
   const cmsStatus = mapCmsStatus(options?.status);
 
   if (ADAPTER_PLATFORMS.has(platform) && getAdapter(platform)) {

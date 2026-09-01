@@ -77,6 +77,20 @@ export type ContentPieceMetadata = {
   hasInfographicBlock?: boolean;
   deeplRefined?: boolean;
   deeplTargetLang?: string;
+  /**
+   * Regulated-vertical review gate. Set true at generation for verticals whose
+   * content must be approved by a human before it can be published (law, dental),
+   * and cleared only by the approval path. The publish call refuses while it is
+   * true, so it has to live on the column type and not only on the generator's
+   * view of metadata: every gate reads it back off a database row.
+   */
+  requiresReview?: boolean;
+  /** Disclaimer appended for regulated verticals, rendered at the foot of the article. */
+  verticalDisclaimer?: string;
+  /** Claims the vertical forbids that survived generation, for the reviewer to resolve. */
+  forbiddenClaimHits?: { claim: string; index: number; excerpt: string }[];
+  /** True when a forbidden-claim hit triggered one regeneration pass before surfacing. */
+  verticalGuardrailRegenerated?: boolean;
   /** Optional hint set at generation — pre-selects publish destination */
   intendedPublishPlatform?: string;
   /** WordPress-only: preferred editor output when publishing */
