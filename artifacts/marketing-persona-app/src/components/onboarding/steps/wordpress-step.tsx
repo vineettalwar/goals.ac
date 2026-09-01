@@ -22,23 +22,28 @@ type PluginFormData = z.infer<typeof pluginSchema>;
 type TestResult = { ok: boolean; siteName?: string; error?: string } | null;
 
 /**
- * Credential testing reuses the existing `/api/wordpress/test` endpoint (already
- * used by the legacy /onboarding/connect page, see connect-wordpress-forms.tsx).
- * GUESS: the fixed API contract does not name a dedicated "save WordPress
- * credentials" route for onboarding, so this step round-trips only `mode` and
- * `siteUrl` through the onboarding session PATCH, same as the other connect
- * steps. Persisting the tested credentials against the org's website project is
- * expected to happen server-side (session completion, or a route S3/S6 adds).
+ * Credential testing reuses `/api/wordpress/test`, and saving reuses
+ * `PATCH /api/website-projects/[id]/cms-integrations` — the same route the legacy
+ * connect page used, which encrypts the credentials at rest.
+ *
+ * The onboarding session only ever carries `mode` and `siteUrl`. The username,
+ * application password and site key go straight to the project's encrypted
+ * integrations and never touch `onboarding_sessions.answers`, which is a plain
+ * jsonb column that gets read back in full on every step.
  */
 export function WordpressStep({
   answer,
+  websiteProjectId,
   onResolved,
 }: {
   answer: OnboardingAnswers["wordpress"];
+  websiteProjectId: number | null;
   onResolved: (value: OnboardingAnswers["wordpress"]) => void;
 }) {
   const [connectionMethod, setConnectionMethod] = useState<"plugin" | "api">("plugin");
   const [testing, setTesting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<TestResult>(null);
 
   const apiForm = useForm<ApiFormData>({ resolver: zodResolver(apiSchema) });
@@ -75,11 +80,56 @@ export function WordpressStep({
     }
   }
 
+  /**
+   * Saves before advancing. A step that advanced on a green test but a failed save
+   * would tell the firm WordPress was connected while publishing had no credentials
+   * to use, and they would only find out when their first article failed to publish.
+   */
+  async function saveConnection(
+    payload: Record<string, unknown>,
+    resolved: NonNullable<OnboardingAnswers["wordpress"]>,
+  ) {
+    if (websiteProjectId == null) {
+      setSaveError("We could not find your site yet. Go back a step and confirm your website address.");
+      return;
+    }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/website-projects/${websiteProjectId}/cms-integrations`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wordpress: payload }),
+      });
+      if (!res.ok) {
+        const { error } = (await res.json().catch(() => ({}))) as { error?: string };
+        setSaveError(error ?? "We tested the connection but could not save it. Try again.");
+        return;
+      }
+      onResolved(resolved);
+    } catch {
+      setSaveError("We tested the connection but could not save it. Try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function submitPlugin(data: PluginFormData) {
-    onResolved({ mode: "plugin", siteUrl: data.siteUrl });
+    void saveConnection(
+      { connectionType: "plugin", siteUrl: data.siteUrl, siteKey: data.siteKey },
+      { mode: "plugin", siteUrl: data.siteUrl },
+    );
   }
   function submitApi(data: ApiFormData) {
-    onResolved({ mode: "app_password", siteUrl: data.siteUrl });
+    void saveConnection(
+      {
+        connectionType: "api",
+        siteUrl: data.siteUrl,
+        username: data.username,
+        appPassword: data.appPassword,
+      },
+      { mode: "app_password", siteUrl: data.siteUrl },
+    );
   }
 
   return (
@@ -104,13 +154,18 @@ export function WordpressStep({
           </button>
         ))}
       </div>
+      {saveError ? (
+        <p role="alert" className="text-sm text-destructive">
+          {saveError}
+        </p>
+      ) : null}
       <ConnectWordPressForms
         connectionMethod={connectionMethod}
         pluginForm={pluginForm}
         apiForm={apiForm}
         testResult={testResult}
         testing={testing}
-        saving={false}
+        saving={saving}
         onTest={handleTest}
         onSkip={() => onResolved({ mode: "skipped" })}
         onSubmitPlugin={submitPlugin}

@@ -36,11 +36,5 @@ export async function GET() {
     signedIn: Boolean(signedInEmail),
     signedInEmail,
     wrongEmail,
-    // Surfaced only while signed out. The account-creation form lives outside this stream's
-    // ownership (`src/app/api/auth/signup`) and still takes the invite token as a query param
-    // to bypass the invite-only signup gate and auto-accept the invite in the same request.
-    // Everything up to here — the emailed link and this page — never puts the token in a URL;
-    // closing this last hop needs a change to the signup route itself.
-    signupToken: signedInEmail ? undefined : token,
   });
 }

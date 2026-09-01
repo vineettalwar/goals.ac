@@ -44,6 +44,12 @@ export function TerminalStep() {
     try {
       const result = await completeSession();
       setProjectId(result.projectId);
+      if (result.contentItemId == null) {
+        // Onboarding itself succeeded; only the article dispatch did not start.
+        setPhase("failed");
+        setError("Your account is all set, but we couldn't start your first article yet.");
+        return;
+      }
       setPhase("queued");
       void poll(result.projectId, result.contentItemId);
     } catch {

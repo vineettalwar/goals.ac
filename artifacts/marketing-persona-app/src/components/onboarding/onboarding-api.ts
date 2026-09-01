@@ -57,7 +57,13 @@ export async function patchSession(input: {
   return parseOrThrow(res, "Could not save that answer.");
 }
 
-export async function completeSession(): Promise<{ projectId: number; contentItemId: number }> {
+/**
+ * `contentItemId` is null when onboarding finished but first-article dispatch did
+ * not start (queue unavailable, or no topic to write about). Onboarding still
+ * completes in that case, per the decision that generation never blocks the flow,
+ * so callers have to handle the null rather than assume an article is coming.
+ */
+export async function completeSession(): Promise<{ projectId: number; contentItemId: number | null }> {
   const res = await fetch("/api/onboarding/session/complete", { method: "POST" });
   return parseOrThrow(res, "Could not start your first article.");
 }

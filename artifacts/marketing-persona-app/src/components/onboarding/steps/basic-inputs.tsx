@@ -80,19 +80,19 @@ export function UrlQuestion({
 }
 
 export function ChoiceQuestion({
-  choices,
+  options,
   value,
   onSelect,
   highlightedIndex,
 }: {
-  choices: OnboardingChoiceOption[];
+  options: OnboardingChoiceOption[];
   value: string | undefined;
   onSelect: (value: string) => void;
   highlightedIndex: number;
 }) {
   return (
     <div role="listbox" aria-label="Choose one" className="flex flex-col gap-2">
-      {choices.map((choice, i) => {
+      {options.map((choice, i) => {
         const selected = choice.value === value;
         const highlighted = i === highlightedIndex;
         return (
@@ -112,7 +112,7 @@ export function ChoiceQuestion({
           >
             <span>
               <span className="block font-medium text-foreground">{choice.label}</span>
-              {choice.helper && <span className="block text-sm text-muted-foreground">{choice.helper}</span>}
+              {choice.blurb && <span className="block text-sm text-muted-foreground">{choice.blurb}</span>}
             </span>
             <span
               aria-hidden

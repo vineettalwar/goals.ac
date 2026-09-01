@@ -20,7 +20,6 @@ interface InviteSession {
   signedIn: boolean;
   signedInEmail: string | null;
   wrongEmail: boolean;
-  signupToken?: string;
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
@@ -185,9 +184,9 @@ export function AcceptInviteClient({ invalidToken }: { invalidToken: boolean }) 
 
   const callbackUrl = "/accept-invite";
   const loginHref = `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
-  const signupHref = invite.signupToken
-    ? `/signup?token=${encodeURIComponent(invite.signupToken)}&email=${encodeURIComponent(invite.email)}&callbackUrl=${encodeURIComponent(callbackUrl)}`
-    : `/signup?email=${encodeURIComponent(invite.email)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
+  // No token in this URL: signup reads the invite from the httpOnly cookie set by
+  // /accept-invite/[token], so the secret never reaches the client at all.
+  const signupHref = `/signup?email=${encodeURIComponent(invite.email)}&callbackUrl=${encodeURIComponent(callbackUrl)}`;
 
   return (
     <div className="paper-card p-8 space-y-6">

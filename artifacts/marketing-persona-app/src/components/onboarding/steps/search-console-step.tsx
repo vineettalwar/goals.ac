@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConnectShell } from "./connect-shell";
@@ -14,10 +14,14 @@ import type { OnboardingAnswers } from "@workspace/db/schema/onboarding_sessions
  * keyed on the session's website project, opened in a new tab so the onboarding
  * screen itself is never navigated away from and progress is never lost.
  *
- * GUESS: there is no endpoint in the contract to verify the OAuth outcome from
- * onboarding, so the "I've connected it" confirmation is a manual acknowledgement
- * rather than a live check. Search Console is optional per D6, so this never
- * blocks completion either way.
+ * The outcome is verified rather than taken on the user's word: once the OAuth tab
+ * has been opened, this polls the project's search-property connections and only
+ * records `connected` when a real Google Search Console row exists. A firm that
+ * clicks through OAuth but abandons the Google consent screen would otherwise be
+ * marked connected, and would then get no search data with nothing explaining why.
+ *
+ * Search Console is optional per D6, so a failed or abandoned connection never
+ * blocks completion — it just falls through to the skip path.
  */
 export function SearchConsoleStep({
   answer,
@@ -29,6 +33,60 @@ export function SearchConsoleStep({
   onResolved: (value: OnboardingAnswers["searchConsole"]) => void;
 }) {
   const [opened, setOpened] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [checkFailed, setCheckFailed] = useState(false);
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+  }, []);
+
+  const checkConnection = useCallback(async (): Promise<boolean> => {
+    if (websiteProjectId == null) return false;
+    try {
+      const res = await fetch(`/api/website-projects/${websiteProjectId}/search-properties`);
+      if (!res.ok) return false;
+      const data = (await res.json()) as {
+        connections?: { provider: string; connected: boolean; propertyUrl: string | null }[];
+      };
+      const gsc = data.connections?.find((c) => c.provider === "google_search_console");
+      if (gsc?.connected) {
+        onResolved({ mode: "connected", propertyUrl: gsc.propertyUrl ?? undefined });
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, [websiteProjectId, onResolved]);
+
+  // Poll while the OAuth tab is open; the callback lands in that tab, not this one.
+  useEffect(() => {
+    if (!opened) return;
+    setChecking(true);
+    pollRef.current = setInterval(() => {
+      void checkConnection().then((done) => {
+        if (done) {
+          stopPolling();
+          setChecking(false);
+        }
+      });
+    }, 2500);
+    return stopPolling;
+  }, [opened, checkConnection, stopPolling]);
+
+  // Re-check the moment the user comes back to this tab, so they rarely wait on the poll.
+  useEffect(() => {
+    if (!opened) return;
+    function onVisible() {
+      if (document.visibilityState === "visible") void checkConnection();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [opened, checkConnection]);
 
   if (answer?.mode === "connected" || answer?.mode === "skipped") {
     return (
@@ -61,9 +119,30 @@ export function SearchConsoleStep({
         </a>
       )}
       {opened && (
-        <Button type="button" variant="outline" className="w-fit" onClick={() => onResolved({ mode: "connected" })}>
-          I've connected it
-        </Button>
+        <div className="flex flex-col gap-2">
+          <p aria-live="polite" className="text-sm text-muted-foreground">
+            {checking ? "Waiting for Google to confirm the connection…" : "Finish in the other tab, then come back here."}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-fit"
+            onClick={() => {
+              setCheckFailed(false);
+              void checkConnection().then((done) => {
+                if (!done) setCheckFailed(true);
+              });
+            }}
+          >
+            Check again
+          </Button>
+          {checkFailed ? (
+            <p role="alert" className="text-sm text-destructive">
+              We cannot see a Search Console connection yet. Finish the Google consent screen, or skip this and we
+              will use competitor research instead.
+            </p>
+          ) : null}
+        </div>
       )}
       <p className="text-xs text-muted-foreground">
         No Search Console yet? We'll build your first topics from competitor research instead.

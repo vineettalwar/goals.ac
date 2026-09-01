@@ -29,6 +29,8 @@ export interface OnboardingStepDefinition {
   required: boolean;
   /** Present for `choice` steps. */
   options?: OnboardingStepOption[];
+  /** Input placeholder for `text`, `url` and `multi` steps. */
+  placeholder?: string;
   /** True once the answers already cover this step — invite prefill or a prior answer. */
   isSatisfied(answers: OnboardingAnswers): boolean;
 }
@@ -46,6 +48,7 @@ export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
     helper: "This is how we'll refer to you across the app.",
     kind: "text",
     required: true,
+    placeholder: "Thompson & Partners",
     isSatisfied: (a) => Boolean(a.orgName?.trim()),
   },
   {
@@ -63,6 +66,7 @@ export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
     helper: "We'll scan it so your content sounds like you from the first article.",
     kind: "url",
     required: true,
+    placeholder: "https://yourfirm.com",
     isSatisfied: (a) => Boolean(a.websiteUrl?.trim()),
   },
   {
@@ -84,6 +88,7 @@ export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
     helper: "A sentence is plenty. We'll refine it as we learn more.",
     kind: "text",
     required: true,
+    placeholder: "Homeowners in Berlin dealing with a rental dispute",
     isSatisfied: (a) => Boolean(a.audience?.trim()),
   },
   {
@@ -92,12 +97,13 @@ export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
     helper: "Add a few competitor websites, or skip this and add them later.",
     kind: "multi",
     required: false,
+    placeholder: "https://acompetitor.com",
     isSatisfied: (a) => Boolean(a.competitors && a.competitors.length > 0),
   },
   {
     id: "linkedin",
     question: "Want us to learn your voice from your LinkedIn posts?",
-    helper: "Connect LinkedIn, or paste a few posts instead. Either way we skip nothing to your privacy.",
+    helper: "Connect LinkedIn, or paste a few posts instead. Skip it and we'll learn from your site alone.",
     kind: "connect",
     required: false,
     isSatisfied: (a) => Boolean(a.linkedin),

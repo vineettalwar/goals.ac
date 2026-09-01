@@ -177,7 +177,7 @@ export function TypeformShell() {
         return;
       }
       case "choice": {
-        const choice = currentDef.choices?.[highlightedIndex];
+        const choice = currentDef.options?.[highlightedIndex];
         const existingField = fieldForStep(cursor);
         const existingValue = existingField ? (answers[existingField] as string | undefined) : undefined;
         const value = existingValue ?? choice?.value;
@@ -227,7 +227,7 @@ export function TypeformShell() {
         shiftKey: e.shiftKey,
         isMultiline,
         isChoiceLike,
-        choiceCount: currentDef.choices?.length ?? 0,
+        choiceCount: currentDef.options?.length ?? 0,
       });
       if (action.type === "submit") {
         // Inputs/buttons already handle their own Enter; only intercept for
@@ -241,12 +241,12 @@ export function TypeformShell() {
         }
       } else if (action.type === "select") {
         e.preventDefault();
-        const choice = currentDef.choices?.[action.index];
+        const choice = currentDef.options?.[action.index];
         if (choice) handleChoiceSelect(choice.value);
       } else if (action.type === "move") {
         e.preventDefault();
         setHighlightedIndex((i) => {
-          const count = currentDef.choices?.length ?? 1;
+          const count = currentDef.options?.length ?? 1;
           return action.direction === "down" ? Math.min(count - 1, i + 1) : Math.max(0, i - 1);
         });
       }
@@ -361,10 +361,10 @@ export function TypeformShell() {
                   <KeyHint>press Enter ↵</KeyHint>
                 </>
               )}
-              {currentDef.kind === "choice" && currentDef.choices && (
+              {currentDef.kind === "choice" && currentDef.options && (
                 <>
                   <ChoiceQuestion
-                    choices={currentDef.choices}
+                    options={currentDef.options}
                     value={fieldForStep(cursor) ? (answers[fieldForStep(cursor)!] as string | undefined) : undefined}
                     onSelect={handleChoiceSelect}
                     highlightedIndex={highlightedIndex}
@@ -396,7 +396,11 @@ export function TypeformShell() {
                 />
               )}
               {currentDef.kind === "connect" && cursor === "wordpress" && (
-                <WordpressStep answer={answers.wordpress} onResolved={handleConnectResolved} />
+                <WordpressStep
+                  answer={answers.wordpress}
+                  websiteProjectId={websiteProjectId}
+                  onResolved={handleConnectResolved}
+                />
               )}
               {currentDef.kind === "review" && <ReviewStep websiteProjectId={websiteProjectId} />}
               {currentDef.kind === "terminal" && <TerminalStep />}
