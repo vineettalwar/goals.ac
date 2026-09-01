@@ -30,6 +30,7 @@ export * from "./llm_visibility_snapshots";
 export * from "./locations";
 export * from "./marketing_personas";
 export * from "./messages";
+export * from "./onboarding_sessions";
 export * from "./org_audit_log";
 export * from "./org_invites";
 export * from "./organization_members";
