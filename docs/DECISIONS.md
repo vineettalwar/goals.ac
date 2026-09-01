@@ -342,3 +342,29 @@ Tabs use **path segments**, not `?tab=` / `?project=` query params. Legacy `/int
 - Founder edits become `brand_voice_sources` rows of a new `user_edit` kind. No migration: `source_type` is a TypeScript union over a text column, not a database enum.
 
 **Still open:** publishing a refresh as an update to the same URL (intent currently travels in the item's angle text); onboarding collapse and marketing page fold; the first real end-to-end run against a live WordPress site.
+
+## 2026-09-01 — Production firm onboarding: secure invites, one resumable flow, vertical guardrails
+
+**Decision:** Onboard the first four paying firms (law, dental, software development, marketing) through a super-admin invite that creates the organization at acceptance, followed by a single resumable Typeform-style flow that ends with the firm's first article being written. Law and dental content is gated behind human review.
+
+**Context:** Four firms are ready at roughly 500 EUR/month. The engine they are paying for already exists: brand scrape, voice extraction, LinkedIn ingest, GSC sync, keyword opportunities, WordPress publish, humanized drafting. What did not exist was a path from "admin decides to onboard them" to "first article is being written." Invites required an org that already existed, tokens sat in plaintext and travelled in a URL query param, acceptance dead-ended on `/dashboard`, and onboarding was four disconnected pages whose only state was one boolean. This closes the "onboarding collapse" item left open on 2026-08-14.
+
+**Alternatives considered:**
+- **Make `organizations.owner_id` nullable so admins can pre-create org shells** — rejected. That NOT NULL constraint is an invariant the whole permission model rests on, and weakening it to save one step in an admin form is a bad trade. The invite carries the admin's prefill instead, and the org is materialized at acceptance when the owner user exists.
+- **A separate onboarding flow per vertical** — rejected. Steps are data with an `isSatisfied` predicate, so a step answered by invite prefill auto-advances and never renders. One code path serves both the prefilled and the ask-everything case.
+- **Block onboarding until the first article finishes** — rejected. A three to five minute spinner in a firm's first session is the worst available first impression. The flow completes and the article streams its progress on the final screen.
+- **Require Search Console** — rejected. A new dental or law site may have no data at all. Ideas fall back to `ai_analysis` and `competitor_gap`, both already valid opportunity sources.
+- **Rebuild the drizzle snapshot chain before migrating** — rejected as out of scope for this change, but see below.
+
+**Reason:** The gap was never generation quality. It was that nothing carried a firm from invite to first article without a human holding their hand, and that the flow lost state on a refresh.
+
+**Implications:**
+- `org_invites.organization_id` is now nullable, with `kind` (`member` | `firm`) and a `prefill` jsonb. Member invites are unchanged.
+- Invite tokens are stored as SHA-256 digests only (`lib/security/src/invite-tokens.ts`), single-use and revocable. The token is exchanged for an httpOnly cookie on arrival so it stops living in the URL and leaking through Referer and access logs.
+- `onboarding_sessions` holds answers and per-step status, with a partial unique index allowing one unfinished session per user. Answers merge per key, so two tabs cannot clobber each other.
+- LinkedIn history ingest calls `/v2/ugcPosts?q=authors`, which needs `r_member_social` — a permission LinkedIn grants only approved partner apps. **Unverified against a real app.** A 403 is treated as an expected path and swaps in a paste-your-posts fallback rather than failing the step.
+- Law and dental verticals set `requiresReview`, which keeps drafts out of every auto-publish path until a human at the firm approves, and carry a disclaimer plus a forbidden-claim list scanned by `findForbiddenClaims`. Review gating fails closed on an unknown vertical: a missed gate on a law firm is a liability, an extra review click is an inconvenience.
+
+**Found along the way:** the drizzle snapshot chain stops at `0025_snapshot.json` (July 2026). Migrations 0026 through 0069 were all hand-written without regenerating snapshots, so `drizzle-kit generate` diffs against the July schema and emits a full baseline rather than an incremental migration. `0070_firm_onboarding.sql` is therefore hand-written like its 44 predecessors, but the generated `0070_snapshot.json` is kept, which repairs the chain for everything after it.
+
+**Still open:** whether the LinkedIn app has partner approval for reading member posts; the D1/Cloudflare mirror of the onboarding routes; billing checkout inside onboarding (the plan is set on the invite, money is still collected manually).
