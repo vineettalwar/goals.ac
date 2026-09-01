@@ -58,6 +58,34 @@ export function buildOrgInviteEmail(input: {
   };
 }
 
+export function buildFirmInviteEmail(input: {
+  inviteUrl: string;
+  contactName?: string | null;
+  orgName?: string | null;
+  inviterName: string;
+}): { subject: string; html: string } {
+  const { inviteUrl, contactName, orgName, inviterName } = input;
+  const greeting = contactName?.trim() ? `Hi ${contactName.trim()},` : "Hi there,";
+  const firmMention = orgName?.trim() ? ` for ${orgName.trim()}` : "";
+
+  return {
+    subject: "Setting up your goals.ac account",
+    html: `
+      <p>${greeting}</p>
+      <p>${inviterName} set up an invite for you on goals.ac${firmMention}. We built the platform
+      to take the brand scraping, keyword research, and first-draft writing off your plate, so
+      your team can spend its time on the articles that actually need a human eye.</p>
+      <p>Click below to create your account. It walks you through a few quick questions about
+      your firm, your voice, and where you want content published, and by the end you'll have
+      a first article already being written from your own material.</p>
+      <p><a href="${inviteUrl}">${inviteUrl}</a></p>
+      <p>Takes most people under five minutes. If anything looks off or you'd rather talk it
+      through first, just reply to this email.</p>
+      <p>This link expires in 7 days and only works once.</p>
+    `,
+  };
+}
+
 export function buildPasswordResetEmail(input: {
   resetUrl: string;
   userName: string;

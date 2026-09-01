@@ -33,6 +33,8 @@ export async function GET() {
       ...invite,
       expiresAt: invite.expiresAt.toISOString(),
       createdAt: invite.createdAt.toISOString(),
+      revokedAt: invite.revokedAt?.toISOString() ?? null,
+      lastSentAt: invite.lastSentAt?.toISOString() ?? null,
     })),
   });
 }
@@ -74,7 +76,7 @@ export async function POST(req: Request) {
   ]);
 
   const appUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3001";
-  const inviteUrl = `${appUrl}/accept-invite?token=${result.token}`;
+  const inviteUrl = `${appUrl}/accept-invite/${result.token}`;
   const orgName = org?.name ?? "your organization";
 
   const emailContent = buildOrgInviteEmail({

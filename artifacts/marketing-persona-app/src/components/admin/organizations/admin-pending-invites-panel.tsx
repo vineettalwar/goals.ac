@@ -9,17 +9,23 @@ import { Button } from "@/components/ui/button";
 interface PendingInvite {
   id: number;
   email: string;
-  organizationId: number;
-  organizationName: string;
+  kind: "member" | "firm";
+  organizationId: number | null;
+  organizationName: string | null;
   role: string;
   assignedProjectId: number | null;
+  prefill: { orgName?: string; vertical?: string; websiteUrl?: string; plan?: string } | null;
   expiresAt: string;
   createdAt: string;
+  revokedAt: string | null;
+  sendCount: number;
+  lastSentAt: string | null;
 }
 
-export function AdminPendingInvitesPanel() {
+export function AdminPendingInvitesPanel({ refreshKey }: { refreshKey?: number } = {}) {
   const [invites, setInvites] = useState<PendingInvite[]>([]);
   const [loading, setLoading] = useState(true);
+  const [resendingId, setResendingId] = useState<number | null>(null);
 
   const loadInvites = useCallback(async () => {
     setLoading(true);
@@ -37,7 +43,7 @@ export function AdminPendingInvitesPanel() {
 
   useEffect(() => {
     void loadInvites();
-  }, [loadInvites]);
+  }, [loadInvites, refreshKey]);
 
   async function revokeInvite(inviteId: number) {
     try {
@@ -47,6 +53,28 @@ export function AdminPendingInvitesPanel() {
       await loadInvites();
     } catch {
       toast.error("Could not revoke invitation");
+    }
+  }
+
+  async function resendInvite(inviteId: number) {
+    setResendingId(inviteId);
+    try {
+      const res = await fetch(`/api/admin/invites/${inviteId}/resend`, { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Failed to resend invite");
+      if (data.emailSent) {
+        toast.success("Invitation resent");
+      } else if (data.inviteUrl) {
+        await navigator.clipboard.writeText(data.inviteUrl as string);
+        toast.message("Email not configured — invite link copied to clipboard");
+      } else {
+        toast.success("Invitation refreshed");
+      }
+      await loadInvites();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not resend invitation");
+    } finally {
+      setResendingId(null);
     }
   }
 
@@ -64,6 +92,7 @@ export function AdminPendingInvitesPanel() {
         <thead className="border-b border-border bg-muted/40 text-left">
           <tr>
             <th className="px-4 py-3 font-medium">Email</th>
+            <th className="px-4 py-3 font-medium">Kind</th>
             <th className="px-4 py-3 font-medium">Organization</th>
             <th className="px-4 py-3 font-medium">Role</th>
             <th className="px-4 py-3 font-medium">Sent</th>
@@ -74,14 +103,27 @@ export function AdminPendingInvitesPanel() {
         <tbody className="divide-y divide-border">
           {invites.map((invite) => (
             <tr key={invite.id}>
-              <td className="px-4 py-3">{invite.email}</td>
               <td className="px-4 py-3">
-                <Link
-                  href={`/admin/organizations/${invite.organizationId}`}
-                  className="hover:underline"
-                >
-                  {invite.organizationName}
-                </Link>
+                {invite.email}
+                {invite.sendCount > 1 && (
+                  <span className="ml-2 text-xs text-muted-foreground">sent {invite.sendCount}×</span>
+                )}
+              </td>
+              <td className="px-4 py-3">
+                <Badge variant={invite.kind === "firm" ? "default" : "outline"} className="capitalize">
+                  {invite.kind}
+                </Badge>
+              </td>
+              <td className="px-4 py-3">
+                {invite.organizationId ? (
+                  <Link href={`/admin/organizations/${invite.organizationId}`} className="hover:underline">
+                    {invite.organizationName}
+                  </Link>
+                ) : (
+                  <span className="text-muted-foreground">
+                    {invite.prefill?.orgName || "New firm (name pending)"}
+                  </span>
+                )}
               </td>
               <td className="px-4 py-3">
                 <Badge variant="outline" className="capitalize">
@@ -95,9 +137,19 @@ export function AdminPendingInvitesPanel() {
                 {new Date(invite.expiresAt).toLocaleDateString()}
               </td>
               <td className="px-4 py-3 text-right">
-                <Button variant="ghost" size="sm" onClick={() => void revokeInvite(invite.id)}>
-                  Revoke
-                </Button>
+                <div className="flex justify-end gap-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={resendingId === invite.id}
+                    onClick={() => void resendInvite(invite.id)}
+                  >
+                    {resendingId === invite.id ? "Resending…" : "Resend"}
+                  </Button>
+                  <Button variant="ghost" size="sm" onClick={() => void revokeInvite(invite.id)}>
+                    Revoke
+                  </Button>
+                </div>
               </td>
             </tr>
           ))}
