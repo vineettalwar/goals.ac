@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { Plugin } from "vite";
+import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
 
 /**
@@ -31,11 +32,21 @@ function appScopedAtAlias(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [appScopedAtAlias()],
+  plugins: [appScopedAtAlias(), react()],
   test: {
-    include: ["lib/**/*.test.ts", "artifacts/**/*.test.ts"],
+    include: ["lib/**/*.test.ts", "artifacts/**/*.test.ts", "artifacts/**/*.test.tsx"],
     exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
     environment: "node",
+    /**
+     * Node stays the default so the 500+ existing unit tests keep running at their
+     * current speed with no DOM overhead. A component-render test opts into jsdom
+     * per file with a `// @vitest-environment jsdom` docblock at the top (vitest's
+     * documented mechanism for this) rather than a config-level glob: vitest 4
+     * dropped `environmentMatchGlobs` (it silently no-ops instead of erroring,
+     * which is worse than not having it — the config looked like it was scoping
+     * the environment and was not).
+     */
+    setupFiles: ["./vitest.setup.dom.ts"],
     restoreMocks: true,
     coverage: {
       reporter: ["text", "html", "lcov"],
