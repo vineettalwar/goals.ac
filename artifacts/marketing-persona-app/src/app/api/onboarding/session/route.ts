@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { ONBOARDING_STEP_IDS } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/auth/require-auth";
-import { getOrCreateSession, recordAnswer } from "@/lib/onboarding/session-service";
+import { getOrCreateSession, recordAnswer, OnboardingConcurrentWriteError } from "@/lib/onboarding/session-service";
 import { InvalidOnboardingAnswerError } from "@/lib/onboarding/answer-schema";
 
 /**
@@ -51,6 +51,12 @@ export async function PATCH(req: Request) {
       return NextResponse.json(
         { error: "Invalid answer", step: err.step, issues: err.issues },
         { status: 400 },
+      );
+    }
+    if (err instanceof OnboardingConcurrentWriteError) {
+      return NextResponse.json(
+        { error: "That saved somewhere else a moment ago. Try again." },
+        { status: 409 },
       );
     }
     throw err;

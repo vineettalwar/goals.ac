@@ -20,6 +20,17 @@ import { mergeAnswers, mergeStepStatus } from "./merge";
 
 export { mergeAnswers, mergeStepStatus } from "./merge";
 
+/** Thrown when recordAnswer gives up after repeated optimistic-lock conflicts on
+ *  the same session. Rare in practice (it needs sustained concurrent writes to the
+ *  same session within milliseconds of each other) but must not surface as a raw
+ *  500 with an internal message, so it gets its own type the route can catch. */
+export class OnboardingConcurrentWriteError extends Error {
+  constructor(public readonly sessionId: number) {
+    super(`Onboarding session ${sessionId}: too many concurrent writes`);
+    this.name = "OnboardingConcurrentWriteError";
+  }
+}
+
 async function findActiveSession(userId: number): Promise<OnboardingSession | null> {
   const [session] = await db
     .select()
@@ -119,31 +130,72 @@ export type RecordAnswerResult = {
  * an answer is supplied, and must be passed explicitly ("skipped") for a
  * skippable step with no answer.
  */
+const MAX_CONCURRENT_WRITE_RETRIES = 5;
+
+/**
+ * mergeAnswers/mergeStepStatus merge per key in JavaScript, but the write itself is
+ * still a read-then-write against the database: fetch the session, merge in memory,
+ * write the whole `answers`/`stepStatus` columns back. Two tabs answering *different*
+ * steps within the same round trip would both read the pre-merge row, and whichever
+ * write lands second would overwrite the first tab's answer with its own stale view
+ * of everything else — exactly the whole-document clobber the PRD's "last write wins
+ * on a per-step basis, not whole-doc" edge case rules out, even though the merge
+ * function in isolation is per-key and correct.
+ *
+ * `updatedAt` is used as an optimistic-lock token rather than a raw jsonb `||` merge
+ * in SQL: this table has to work on both the Postgres and D1/SQLite dialects
+ * (`DB_DIALECT`, see lib/db/src/dialect.ts), and a conditional UPDATE with a bounded
+ * retry-on-conflict is the one strategy that behaves identically on both without a
+ * dialect branch. Losing the race means re-reading the now-current row and re-merging
+ * against it, not losing the answer.
+ */
 export async function recordAnswer(
   userId: number,
   step: OnboardingStepId,
   rawAnswer: unknown,
   status?: OnboardingStepState,
 ): Promise<RecordAnswerResult> {
-  const session = await getOrCreateSession(userId);
+  let session = await getOrCreateSession(userId);
 
   const patch = rawAnswer === undefined ? {} : validateStepAnswer(step, rawAnswer);
   const resolvedStatus: OnboardingStepState = status ?? (rawAnswer === undefined ? "skipped" : "done");
 
-  const nextAnswers = mergeAnswers(session.answers, patch);
-  const nextStepStatus = mergeStepStatus(session.stepStatus, step, resolvedStatus);
-  const currentStep = resolveNextStep(nextAnswers, nextStepStatus);
+  let updated: OnboardingSession | undefined;
+  for (let attempt = 0; attempt < MAX_CONCURRENT_WRITE_RETRIES; attempt++) {
+    const nextAnswers = mergeAnswers(session.answers, patch);
+    const nextStepStatus = mergeStepStatus(session.stepStatus, step, resolvedStatus);
+    const currentStep = resolveNextStep(nextAnswers, nextStepStatus);
 
-  const [updated] = await db
-    .update(onboardingSessionsTable)
-    .set({
-      answers: nextAnswers,
-      stepStatus: nextStepStatus,
-      currentStep,
-      vertical: nextAnswers.vertical ?? session.vertical,
-    })
-    .where(eq(onboardingSessionsTable.id, session.id))
-    .returning();
+    const rows = await db
+      .update(onboardingSessionsTable)
+      .set({
+        answers: nextAnswers,
+        stepStatus: nextStepStatus,
+        currentStep,
+        vertical: nextAnswers.vertical ?? session.vertical,
+      })
+      .where(and(eq(onboardingSessionsTable.id, session.id), eq(onboardingSessionsTable.updatedAt, session.updatedAt)))
+      .returning();
+
+    if (rows[0]) {
+      updated = rows[0];
+      break;
+    }
+
+    // Someone else wrote in between the read and this write. Re-read the row they
+    // just wrote and merge this answer on top of it, rather than on top of stale data.
+    const [current] = await db
+      .select()
+      .from(onboardingSessionsTable)
+      .where(eq(onboardingSessionsTable.id, session.id))
+      .limit(1);
+    if (!current) throw new Error(`Onboarding session ${session.id} disappeared mid-write`);
+    session = current;
+  }
+
+  if (!updated) {
+    throw new OnboardingConcurrentWriteError(session.id);
+  }
 
   // The connect steps that follow (linkedin, search_console, wordpress) key their
   // sync services off a website_projects row, so create it the moment we have
@@ -161,5 +213,5 @@ export async function recordAnswer(
     }
   }
 
-  return { session: updated, nextStep: currentStep };
+  return { session: updated, nextStep: updated.currentStep };
 }
