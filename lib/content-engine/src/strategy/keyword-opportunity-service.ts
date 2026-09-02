@@ -602,6 +602,20 @@ export function fillSeedAngleTemplate(
  * keyword + title + angle; source is `competitor_gap` for the subset attributable to
  * a known competitor and `ai_analysis` otherwise — both valid without any GSC data.
  */
+/**
+ * Decides whether discoverOpportunities should fall back to the vertical-aware
+ * cold-start generator. Only when the caller asked for "all" or "ai" sources (a
+ * caller that explicitly asked for only "gsc" or "semrush" gets exactly that, no
+ * silent extra source) and every other source came back with nothing — a project
+ * that already has real data from any source is left alone.
+ */
+export function shouldRunColdStartFallback(
+  sourceMode: "all" | "gsc" | "ai" | "semrush",
+  collectedCount: number,
+): boolean {
+  return (sourceMode === "all" || sourceMode === "ai") && collectedCount === 0;
+}
+
 export async function discoverColdStartOpportunities(
   projectId: number,
   userId: number,
@@ -859,7 +873,36 @@ export async function discoverOpportunities(
     collected.push(...aiGaps);
   }
 
-  const inserted = await insertOpportunities(projectId, collected, existingKeywords);
+  /**
+   * A brand-new project (the common onboarding case: no GSC history because the
+   * firm just signed up, no keyword analysis or competitor analysis because those
+   * are separate features the firm hasn't touched yet) can reach this point having
+   * collected nothing from any source above. discoverAiGaps still ran, but its
+   * prompt is generic and vertical-blind; discoverColdStartOpportunities is the
+   * vertical-aware fallback D3 was built for — seeded from the firm's own vertical
+   * preset (law/dental/software/marketing angle templates) and the brand's real
+   * services rather than a generic "find some keywords" prompt. It was written and
+   * unit tested but never actually called from here, so a firm's first topic list
+   * was silently falling back to the generic path even in a vertical with tailored
+   * angles ready to use. Only runs when everything else came back empty, so it
+   * changes nothing for a project that already has real data to work from.
+   */
+  let coldStartCount = 0;
+  if (shouldRunColdStartFallback(sourceMode, collected.length)) {
+    try {
+      coldStartCount = await discoverColdStartOpportunities(projectId, userId);
+      if (coldStartCount > 0) {
+        logger.info({ projectId, coldStartCount }, "Keyword opportunities: vertical-aware cold start produced ideas after every other source came back empty");
+      }
+    } catch (err) {
+      logger.warn({ err, projectId }, "Vertical-aware cold-start discovery failed");
+    }
+  }
+
+  // discoverColdStartOpportunities inserts directly (its rows already carry their own
+  // source and dedup pass) rather than joining `collected`, so its count is added
+  // on rather than merged into the batch below.
+  const inserted = (await insertOpportunities(projectId, collected, existingKeywords)) + coldStartCount;
 
   const settings = parseAutopilotSettings(project.autopilotSettings);
   const updatedSettings: AutopilotSettings = {

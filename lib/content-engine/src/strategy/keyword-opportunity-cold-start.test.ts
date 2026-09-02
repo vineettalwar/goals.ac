@@ -78,3 +78,34 @@ describe("containsLiteralPlaceholder", () => {
     );
   });
 });
+
+describe("shouldRunColdStartFallback — the actual wiring decision", () => {
+  it("runs cold start when nothing was collected and the caller wanted all sources", async () => {
+    const { shouldRunColdStartFallback } = await import(
+      "@workspace/content-engine/strategy/keyword-opportunity-service"
+    );
+    expect(shouldRunColdStartFallback("all", 0)).toBe(true);
+  });
+
+  it("runs cold start when nothing was collected and the caller explicitly asked for ai", async () => {
+    const { shouldRunColdStartFallback } = await import(
+      "@workspace/content-engine/strategy/keyword-opportunity-service"
+    );
+    expect(shouldRunColdStartFallback("ai", 0)).toBe(true);
+  });
+
+  it("does not run when other sources already produced something — a firm with real data is left alone", async () => {
+    const { shouldRunColdStartFallback } = await import(
+      "@workspace/content-engine/strategy/keyword-opportunity-service"
+    );
+    expect(shouldRunColdStartFallback("all", 3)).toBe(false);
+  });
+
+  it("does not run for a caller who explicitly asked only for gsc or semrush", async () => {
+    const { shouldRunColdStartFallback } = await import(
+      "@workspace/content-engine/strategy/keyword-opportunity-service"
+    );
+    expect(shouldRunColdStartFallback("gsc", 0)).toBe(false);
+    expect(shouldRunColdStartFallback("semrush", 0)).toBe(false);
+  });
+});
