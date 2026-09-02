@@ -28,13 +28,28 @@ This closes the "collapse onboarding" item left open by the 2026-08-14 handoff.
 - **Two step registries** (server and UI) with different field names; collapsed onto the server one.
 - Vitest could not resolve the `@/` alias, so app-reaching tests failed at run time. Fixed in the root config; app tests went 13 → 67.
 
+### Second pass — review completion (2026-09-02)
+
+The adversarial review agent hit the account's monthly spend limit mid-pass and returned only "found a significant keyboard bug" with no detail. Rather than guess at what it meant, did the review by hand: traced the keyboard path, the invite-authorization path, the YMYL metadata rebuild, all nine of the PRD's edge cases, design-token compliance on every file this branch authored, and added the component-testing infrastructure that was missing. Six more real defects found and fixed, each verified by reverting the fix and watching a test fail before restoring it:
+
+- **Enter did nothing on every required text step.** Stale closure in the keydown listener — it read per-keystroke state through a handler captured at mount, when the draft was still empty. Fixed with a live ref; this is the one the review agent's last message was pointing at.
+- **The review gate could be stripped off a law or dental article on enhance/re-humanize.** `finalizeSeoContentPiece` rebuilds `pieceMetadata` from a fixed allowlist that didn't include `requiresReview`. Fixed; guardrail fields now survive the rebuild.
+- **Two concurrent accept requests for the same firm invite would each create an organization.** No atomicity between reading and writing `acceptedAt`. Fixed with a conditional `UPDATE ... WHERE accepted_at IS NULL`.
+- **Two tabs answering different onboarding steps could clobber each other**, despite the per-key merge function being correct — the gap was between the read and the write, not in the merge. Fixed with optimistic concurrency (retry on `updatedAt` mismatch), which also had zero test coverage before this pass.
+- **`discoverColdStartOpportunities` (the vertical-aware cold-start generator, D3) was built, unit tested, and never called from anywhere.** The real dispatch path only ran a generic, vertical-blind AI prompt. Wired in as the fallback when every other source returns nothing.
+- **The prior pass's vitest `@` alias was global** across four apps that each define their own `@/*`; no test exercised the collision yet, but it was a landmine. Replaced with an importer-scoped resolver.
+
+Added jsdom + `@testing-library/react` (the monorepo had neither), scoped per-file via `// @vitest-environment jsdom` since vitest 4 dropped `environmentMatchGlobs` — silently, so the first attempt at config-level scoping looked correct and did nothing. One real render test exists now, proven against the Enter-key regression.
+
+Design-system compliance, the 320px layout, copy quality, and the PRD's nine edge cases were all otherwise already correct on inspection — the six items above are the actual gaps, not a hedge.
+
 ### Next, in order
 
-1. **Walk the whole path once against a live database and a real WordPress site.** Invite a test firm, complete onboarding, confirm an article is generated and that a law-vertical draft will not auto-publish. Nothing here has been executed end to end; this is the gate.
+1. **Walk the whole path once against a live database and a real WordPress site.** Invite a test firm, complete onboarding, confirm an article is generated and that a law-vertical draft will not auto-publish. Nothing here has been executed end to end; this is still the gate, and it always will be until someone with live infrastructure runs it.
 2. **Answer the LinkedIn partner-approval question.** `/v2/ugcPosts?q=authors` needs `r_member_social`, which LinkedIn grants only approved partner apps. If the app lacks it, every firm hits the paste fallback, which is built and works but is not the pitch. Check the LinkedIn developer console before the first firm demo.
-3. **`lib/jobs` has no test infrastructure at all**, and no component-render tests exist anywhere (no jsdom, no `@testing-library/react`). The auto-publish hold is covered only through an extracted pure predicate. The keyboard defect above existed precisely because the shell could not be render-tested.
-4. **Unfinished from the review:** the adversarial pass stopped early on a spend limit. Design-system compliance, the 320px layout, the nine PRD edge cases, and invite authorization were not systematically audited.
-5. **D1/Cloudflare mirror** of the onboarding routes is not done.
+3. **Extend component-render coverage beyond the one Enter-key test.** The infrastructure exists now; the connect steps, the choice/multi screens, and the terminal step's polling are not yet covered by a real render test.
+4. **`lib/jobs` still has no test infrastructure of its own** — the auto-publish hold is covered only through an extracted pure predicate (`isPieceAwaitingReview`), not a test that runs an actual job handler.
+5. **D1/Cloudflare mirror** of the onboarding routes is not done — this branch's routes are Next.js route handlers; the Workers deploy path (`cf-read-worker`, `cf-write-worker`, `cf-public-worker`) has its own separate route files and none of them know about firm invites or onboarding sessions.
 6. **Billing:** the plan is set on the invite, money is still collected manually.
 
 ## Refocus on blogs + WordPress (2026-08-14)
