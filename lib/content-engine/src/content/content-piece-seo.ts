@@ -178,8 +178,30 @@ function appendVisualSummary(body: string, summary: string): string {
   return `${body.trim()}\n\n${summary.trim()}`;
 }
 
+/**
+ * Fields that are decided once, by the vertical guardrails, and must survive every
+ * later pass over a piece. normalizeMetadata rebuilds metadata from the raw model
+ * fields, and finalizeSeoContentPiece then overwrites `pieceMetadata` with the
+ * result — so anything not carried here is silently dropped. For requiresReview that
+ * is not a cosmetic loss: enhancing or re-humanizing a law or dental article would
+ * strip its review gate and let unreviewed content through the publish check.
+ */
+function carryGuardrailFields(raw: RichContentPieceFields): Partial<ContentPieceMetadata> {
+  const existing = (raw as { pieceMetadata?: ContentPieceMetadata | null }).pieceMetadata;
+  if (!existing) return {};
+  return {
+    ...(existing.requiresReview !== undefined ? { requiresReview: existing.requiresReview } : {}),
+    ...(existing.verticalDisclaimer !== undefined ? { verticalDisclaimer: existing.verticalDisclaimer } : {}),
+    ...(existing.forbiddenClaimHits !== undefined ? { forbiddenClaimHits: existing.forbiddenClaimHits } : {}),
+    ...(existing.verticalGuardrailRegenerated !== undefined
+      ? { verticalGuardrailRegenerated: existing.verticalGuardrailRegenerated }
+      : {}),
+  };
+}
+
 function normalizeMetadata(raw: RichContentPieceFields): ContentPieceMetadata {
   return {
+    ...carryGuardrailFields(raw),
     seoTitle: raw.seo_title ?? raw.seoTitle,
     metaDescription: raw.meta_description ?? raw.metaDescription,
     focusKeyword: raw.focus_keyword ?? raw.focusKeyword,

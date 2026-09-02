@@ -76,7 +76,7 @@ export type KeyContext = {
   shiftKey: boolean;
   /** Textareas want Shift+Enter to insert a newline instead of submitting. */
   isMultiline: boolean;
-  /** Only choice/multi screens honor number-key and arrow-key selection. */
+  /** Only `choice` screens honor number-key and arrow-key selection. */
   isChoiceLike: boolean;
   choiceCount: number;
 };

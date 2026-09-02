@@ -214,6 +214,21 @@ export function TypeformShell() {
     setAnswers((a) => ({ ...a, topicIds: next }));
   }
 
+  /**
+   * The keydown listener is re-subscribed only when the step changes, so anything it
+   * calls has to be read through a ref rather than captured. handlePrimarySubmit reads
+   * draftText, draftList, highlightedIndex and answers, all of which change on every
+   * keystroke: capturing it would freeze the handler at the render where the step first
+   * appeared, when the draft is still empty. Enter would then read an empty draft, hit
+   * the required-field guard, and silently do nothing on every text step.
+   */
+  const primarySubmitRef = useRef(handlePrimarySubmit);
+  const choiceSelectRef = useRef(handleChoiceSelect);
+  useEffect(() => {
+    primarySubmitRef.current = handlePrimarySubmit;
+    choiceSelectRef.current = handleChoiceSelect;
+  });
+
   // Global keyboard handling. Enter submits, Shift+Enter newlines in textareas,
   // digits and arrows drive choice-style screens. Escape is intentionally a no-op:
   // nothing is ever discarded by pressing it.
@@ -234,15 +249,15 @@ export function TypeformShell() {
         // choice screens where no native form element owns the keystroke.
         if (isChoiceLike) {
           e.preventDefault();
-          handlePrimarySubmit();
+          primarySubmitRef.current();
         } else if (target?.tagName === "INPUT") {
           e.preventDefault();
-          handlePrimarySubmit();
+          primarySubmitRef.current();
         }
       } else if (action.type === "select") {
         e.preventDefault();
         const choice = currentDef.options?.[action.index];
-        if (choice) handleChoiceSelect(choice.value);
+        if (choice) choiceSelectRef.current(choice.value);
       } else if (action.type === "move") {
         e.preventDefault();
         setHighlightedIndex((i) => {
@@ -253,7 +268,6 @@ export function TypeformShell() {
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- handlePrimarySubmit closes over current state each render
   }, [currentDef]);
 
   if (loading) {
