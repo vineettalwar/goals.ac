@@ -1,21 +1,5 @@
-import { AdminInviteUserCard } from "@/components/admin/organizations/admin-invite-user-card";
-import { AdminPendingInvitesPanel } from "@/components/admin/organizations/admin-pending-invites-panel";
+import { AdminInvitesPageContent } from "@/components/admin/organizations/admin-invites-page-content";
 
 export default function AdminUsersInvitePage() {
-  return (
-    <div className="max-w-4xl space-y-10">
-      <div className="max-w-2xl">
-        <AdminInviteUserCard />
-      </div>
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-lg font-semibold">Pending invitations</h2>
-          <p className="text-sm text-muted-foreground">
-            Outstanding invites that have not been accepted yet.
-          </p>
-        </div>
-        <AdminPendingInvitesPanel />
-      </section>
-    </div>
-  );
+  return <AdminInvitesPageContent />;
 }

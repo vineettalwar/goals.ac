@@ -17,12 +17,14 @@ export async function GET(_req: Request, context: RouteContext) {
     invite: {
       email: invite.email,
       role: invite.role,
+      kind: invite.kind,
       organizationId: invite.organizationId,
       organizationName: invite.organizationName,
       assignedProjectId: invite.assignedProjectId,
       expiresAt: invite.expiresAt.toISOString(),
       acceptedAt: invite.acceptedAt?.toISOString() ?? null,
       expired: invite.expired,
+      revoked: invite.revoked,
     },
   });
 }
@@ -38,15 +40,19 @@ export async function POST(req: Request, context: RouteContext) {
     return NextResponse.json({ error: result.error }, { status: 400 });
   }
 
-  await logOrgAudit({
-    organizationId: result.organizationId,
-    actorUserId: userId,
-    action: "invite.accepted",
-    resourceType: "user",
-    resourceId: userId,
-    metadata: { token },
-    ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined,
-  });
+  // Firm-invite acceptance already logs its own invite.accepted entry inside acceptOrgInvite
+  // (the organization doesn't exist until that point, so it can't be logged any earlier).
+  if (result.kind === "member") {
+    await logOrgAudit({
+      organizationId: result.organizationId,
+      actorUserId: userId,
+      action: "invite.accepted",
+      resourceType: "user",
+      resourceId: userId,
+      metadata: { token },
+      ip: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? undefined,
+    });
+  }
 
-  return NextResponse.json({ ok: true, organizationId: result.organizationId });
+  return NextResponse.json({ ok: true, organizationId: result.organizationId, kind: result.kind });
 }

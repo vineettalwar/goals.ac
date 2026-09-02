@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
@@ -8,6 +9,7 @@ import { getClientIp, rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-lim
 import { acceptOrgInvite } from "@/lib/org/org-access";
 import { getPlatformSettings } from "@/lib/platform/platform-settings";
 import { publicSignupsAvailable } from "@/lib/platform/platform-features";
+import { INVITE_TOKEN_COOKIE } from "@/app/api/invites/invite-cookie";
 
 const signupSchema = z.object({
   name: z.string().min(1),
@@ -32,7 +34,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 
-  const { name, email, password, referrer, inviteToken } = parsed.data;
+  const { name, email, password, referrer } = parsed.data;
+
+  /**
+   * The invite token normally arrives in the httpOnly cookie set by
+   * /accept-invite/[token], so the account-creation link never has to carry the
+   * secret in its URL. The body form is still accepted for invite links that were
+   * emailed before the cookie flow shipped.
+   */
+  const cookieStore = await cookies();
+  const inviteToken = parsed.data.inviteToken ?? cookieStore.get(INVITE_TOKEN_COOKIE)?.value;
 
   const settings = await getPlatformSettings();
   if (!publicSignupsAvailable(settings) && !inviteToken) {

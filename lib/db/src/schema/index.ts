@@ -32,6 +32,7 @@ export * from "./platform_bedrock_org_grants";
 export * from "./plan_quota_config";
 export * from "./org_audit_log";
 export * from "./org_invites";
+export * from "./onboarding_sessions";
 export * from "./marketing_personas";
 export * from "./scheduled_articles";
 export * from "./wordpress_connections";

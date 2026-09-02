@@ -1,5 +1,57 @@
 # Session Handoff
 
+## Production firm onboarding: invite, Typeform flow, vertical guardrails (2026-09-02)
+
+**Status:** Shipped on `claude/production-onboarding-ai-content-g5jrtv`. Typechecks clean, 530 of 531 tests pass. **Never run against a live database, a real WordPress site, or a real LinkedIn app.** That gap is the whole risk.
+
+**Decision record:** `docs/DECISIONS.md` 2026-09-01. **PRD:** `docs/prd/production-firm-onboarding.md`.
+
+This closes the "collapse onboarding" item left open by the 2026-08-14 handoff.
+
+### Shipped
+
+| # | Change | Verify |
+|---|---|---|
+| 1 | Firm invites: org created at acceptance, hashed single-use tokens, resend/revoke | `npx vitest run artifacts/marketing-persona-app/src/lib/org` |
+| 2 | Resumable `onboarding_sessions` + step registry + session API | `npx vitest run artifacts/marketing-persona-app/src/lib/onboarding` |
+| 3 | Typeform shell: one question per screen, keyboard-first, autosave, resume | `npx vitest run artifacts/marketing-persona-app/src/components/onboarding` |
+| 4 | Vertical presets, YMYL review gating, cold-start ideas, first-article service | `npx vitest run lib/content-engine/src/verticals` |
+| 5 | Migration 0070 (nullable invite org, kind/prefill/token_hash, onboarding_sessions) | `pnpm --filter @workspace/db run migrate` |
+
+### Defects found and fixed while integrating (all were "it says it worked but it did not")
+
+- **WordPress credentials were tested and discarded.** Green test, nothing saved. Now persisted to the project's encrypted integrations, and the step refuses to advance if the save fails.
+- **The review gate could be stripped.** `normalizeMetadata` rebuilds piece metadata from a ten-field allowlist and `finalizeSeoContentPiece` overwrites with it. Safe during generation (guardrails run after) but it runs again on enhance and re-humanize, so enhancing a law article dropped `requiresReview` and unreviewed content would have published. Guardrail fields now carried through; regression test verified by reverting the fix.
+- **Enter did nothing on every required text step.** Stale closure: the keydown effect re-subscribed only on step change while the submit handler read per-keystroke state, so it saw an empty draft and hit the required-field guard. Arrow-then-Enter always picked option one. Both now read through a live ref.
+- **Search Console was a self-declaration**; now verified against the real connection row.
+- **The invite token survived one hop into `/signup?token=`**; signup now reads the httpOnly cookie.
+- **Two step registries** (server and UI) with different field names; collapsed onto the server one.
+- Vitest could not resolve the `@/` alias, so app-reaching tests failed at run time. Fixed in the root config; app tests went 13 → 67.
+
+### Second pass — review completion (2026-09-02)
+
+The adversarial review agent hit the account's monthly spend limit mid-pass and returned only "found a significant keyboard bug" with no detail. Rather than guess at what it meant, did the review by hand: traced the keyboard path, the invite-authorization path, the YMYL metadata rebuild, all nine of the PRD's edge cases, design-token compliance on every file this branch authored, and added the component-testing infrastructure that was missing. Six more real defects found and fixed, each verified by reverting the fix and watching a test fail before restoring it:
+
+- **Enter did nothing on every required text step.** Stale closure in the keydown listener — it read per-keystroke state through a handler captured at mount, when the draft was still empty. Fixed with a live ref; this is the one the review agent's last message was pointing at.
+- **The review gate could be stripped off a law or dental article on enhance/re-humanize.** `finalizeSeoContentPiece` rebuilds `pieceMetadata` from a fixed allowlist that didn't include `requiresReview`. Fixed; guardrail fields now survive the rebuild.
+- **Two concurrent accept requests for the same firm invite would each create an organization.** No atomicity between reading and writing `acceptedAt`. Fixed with a conditional `UPDATE ... WHERE accepted_at IS NULL`.
+- **Two tabs answering different onboarding steps could clobber each other**, despite the per-key merge function being correct — the gap was between the read and the write, not in the merge. Fixed with optimistic concurrency (retry on `updatedAt` mismatch), which also had zero test coverage before this pass.
+- **`discoverColdStartOpportunities` (the vertical-aware cold-start generator, D3) was built, unit tested, and never called from anywhere.** The real dispatch path only ran a generic, vertical-blind AI prompt. Wired in as the fallback when every other source returns nothing.
+- **The prior pass's vitest `@` alias was global** across four apps that each define their own `@/*`; no test exercised the collision yet, but it was a landmine. Replaced with an importer-scoped resolver.
+
+Added jsdom + `@testing-library/react` (the monorepo had neither), scoped per-file via `// @vitest-environment jsdom` since vitest 4 dropped `environmentMatchGlobs` — silently, so the first attempt at config-level scoping looked correct and did nothing. One real render test exists now, proven against the Enter-key regression.
+
+Design-system compliance, the 320px layout, copy quality, and the PRD's nine edge cases were all otherwise already correct on inspection — the six items above are the actual gaps, not a hedge.
+
+### Next, in order
+
+1. **Walk the whole path once against a live database and a real WordPress site.** Invite a test firm, complete onboarding, confirm an article is generated and that a law-vertical draft will not auto-publish. Nothing here has been executed end to end; this is still the gate, and it always will be until someone with live infrastructure runs it.
+2. **Answer the LinkedIn partner-approval question.** `/v2/ugcPosts?q=authors` needs `r_member_social`, which LinkedIn grants only approved partner apps. If the app lacks it, every firm hits the paste fallback, which is built and works but is not the pitch. Check the LinkedIn developer console before the first firm demo.
+3. **Extend component-render coverage beyond the one Enter-key test.** The infrastructure exists now; the connect steps, the choice/multi screens, and the terminal step's polling are not yet covered by a real render test.
+4. **`lib/jobs` still has no test infrastructure of its own** — the auto-publish hold is covered only through an extracted pure predicate (`isPieceAwaitingReview`), not a test that runs an actual job handler.
+5. **D1/Cloudflare mirror** of the onboarding routes is not done — this branch's routes are Next.js route handlers; the Workers deploy path (`cf-read-worker`, `cf-write-worker`, `cf-public-worker`) has its own separate route files and none of them know about firm invites or onboarding sessions.
+6. **Billing:** the plan is set on the invite, money is still collected manually.
+
 ## Refocus on blogs + WordPress (2026-08-14)
 
 **Status:** Product surface narrowed and all three missing personalization loops shipped on `claude/goals-ac-ai-content-1kib2e`. **Not yet run against a real WordPress site.**

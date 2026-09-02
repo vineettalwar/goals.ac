@@ -20,6 +20,10 @@ import { planInternalLinks, type LinkSourcePost } from "../../strategy/internal-
 import { logger } from "../../core/logger";
 import { publishToWordPress } from "@workspace/connectors/wordpress";
 import type { ContentPieceMetadata } from "@workspace/db";
+// See the note on assertVerticalReviewCleared in publish-destination.ts: the db
+// column type predates the vertical guardrail fields, so reading requiresReview
+// back needs content-engine's own wider ContentPieceMetadata.
+import type { ContentPieceMetadata as GeneratedPieceMetadata } from "../../content/content-piece-seo";
 import type { CmsIntegrationCredentials, CmsPublishPlatform } from "./cms-integrations";
 import { resolveWordPressConnectionType } from "./cms-integrations";
 import { hostFeaturedImageForPublish } from "./host-featured-image";
@@ -143,6 +147,12 @@ export async function publishPieceToWordPress(
   creds: CmsIntegrationCredentials,
   options?: { status?: "draft" | "publish" },
 ): Promise<string> {
+  // D2 last-mile review gate — see the matching guard in publish-destination.ts.
+  if ((piece.pieceMetadata as GeneratedPieceMetadata | null | undefined)?.requiresReview) {
+    throw new Error(
+      "This draft belongs to a vertical that requires human review before publishing. Approve it first.",
+    );
+  }
   if (!creds.wordpress) {
     throw new Error("WordPress is not connected. Configure it in Project Settings → Publishing.");
   }

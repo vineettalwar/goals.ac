@@ -6,7 +6,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./encryption": "./src/encryption.ts",
-    "./ssrf-guard": "./src/ssrf-guard.ts"
+    "./ssrf-guard": "./src/ssrf-guard.ts",
+    "./invite-tokens": "./src/invite-tokens.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:"

@@ -158,7 +158,13 @@
     "./support/social/bluesky-platform-credentials": "./src/support/social/bluesky-platform-credentials.ts",
     "./support/social/social-tokens": "./src/support/social/social-tokens.ts",
     "./topical-map-generator": "./src/strategy/topical-map-generator.ts",
-    "./utils": "./src/core/utils.ts"
+    "./utils": "./src/core/utils.ts",
+    "./verticals/vertical-presets": "./src/verticals/vertical-presets.ts",
+    "./vertical-presets": "./src/verticals/vertical-presets.ts",
+    "./verticals/vertical-guardrails": "./src/verticals/vertical-guardrails.ts",
+    "./vertical-guardrails": "./src/verticals/vertical-guardrails.ts",
+    "./strategy/first-article-service": "./src/strategy/first-article-service.ts",
+    "./first-article-service": "./src/strategy/first-article-service.ts"
   },
   "dependencies": {
     "@google/genai": "^1.44.0",

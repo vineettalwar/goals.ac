@@ -4,12 +4,15 @@ import { z } from "zod/v4";
 import { usersTable } from "./users";
 import { companiesTable } from "./companies";
 import type { EncryptedStockCredentialsMap } from "./stock-credentials";
+import type { OrgVertical } from "./org_invites";
 
 export const organizationsTable = pgTable("organizations", {
   id: serial("id").primaryKey(),
   name: text("name").notNull(),
   /** starter | growth | scale — billing tier for site limits and quotas */
   plan: text("plan").notNull().default("starter"),
+  /** law | dental | software | marketing | other — drives onboarding presets and tone guardrails */
+  vertical: text("vertical").$type<OrgVertical>(),
   stripeCustomerId: text("stripe_customer_id"),
   stripeSubscriptionId: text("stripe_subscription_id"),
   /** Stripe subscription status: active, past_due, canceled, trialing, etc. */

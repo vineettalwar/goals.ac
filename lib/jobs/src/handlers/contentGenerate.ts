@@ -22,6 +22,7 @@ import {
   shouldAutoPublish,
   todayInTimezone,
 } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
+import { isPieceAwaitingReview } from "@workspace/content-engine/verticals/vertical-guardrails";
 import { logger } from "../logger";
 
 function userUsesByok(
@@ -53,17 +54,41 @@ async function finalizeGeneratedPieces(params: {
   const today = todayInTimezone(settings.timezone);
 
   if (autoPublish) {
-    await db
-      .update(contentPiecesTable)
-      .set({ status: "ready" })
-      .where(inArray(contentPiecesTable.id, pieceIds));
-
     const pieces = await db
-      .select({ id: contentPiecesTable.id, plannedDate: contentPiecesTable.plannedDate })
+      .select({
+        id: contentPiecesTable.id,
+        plannedDate: contentPiecesTable.plannedDate,
+        approvalStatus: contentPiecesTable.approvalStatus,
+        pieceMetadata: contentPiecesTable.pieceMetadata,
+      })
       .from(contentPiecesTable)
       .where(inArray(contentPiecesTable.id, pieceIds));
 
-    for (const piece of pieces) {
+    /**
+     * Regulated verticals (law, dental) generate as `pending_review` and carry
+     * `requiresReview` in their metadata. The publish call itself already refuses
+     * these, but letting them through to here would queue a job that can only fail,
+     * which reads to the firm as a broken pipeline rather than as content waiting on
+     * them. Hold them at draft instead and let approvePiece release them.
+     */
+    const awaitingReview = pieces.filter(isPieceAwaitingReview);
+    const releasable = pieces.filter((piece) => !awaitingReview.some((held) => held.id === piece.id));
+
+    if (releasable.length > 0) {
+      await db
+        .update(contentPiecesTable)
+        .set({ status: "ready" })
+        .where(inArray(contentPiecesTable.id, releasable.map((piece) => piece.id)));
+    }
+
+    if (awaitingReview.length > 0) {
+      logger.info(
+        { pieceIds: awaitingReview.map((piece) => piece.id), projectId },
+        "holding pieces from auto-publish until a human approves them",
+      );
+    }
+
+    for (const piece of releasable) {
       if (piece.plannedDate && piece.plannedDate <= today) {
         await enqueue(QUEUES.contentPublish, { contentPieceId: piece.id, userId });
       }
