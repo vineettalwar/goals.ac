@@ -70,8 +70,11 @@ function insertOnce<T>(result: T) {
   return built;
 }
 
-function updateOnce() {
-  const built = chain(undefined);
+/** `result` is what `.returning()` yields; defaults to a claimed row so the atomic
+ *  accept-invite claim (`UPDATE ... RETURNING id`) succeeds unless a test deliberately
+ *  wants to simulate losing the claim race by passing `[]`. */
+function updateOnce<T = { id: number }[]>(result?: T) {
+  const built = chain(result ?? ([{ id: 1 }] as unknown as T));
   dbMock.update.mockReturnValueOnce(built);
   return built;
 }
@@ -268,6 +271,25 @@ describe("acceptOrgInvite — firm invite acceptance", () => {
     const result = await acceptOrgInvite({ token: validToken, userId: 55 });
 
     expect(result).toEqual({ ok: false, error: "You already belong to an organization" });
+    expect(dbMock.insert).not.toHaveBeenCalled();
+  });
+
+  it("loses the double-accept race cleanly instead of creating a second organization", async () => {
+    // Simulates two concurrent accept requests for the same firm invite (a double-click,
+    // two open tabs, a retried network request). Both read the invite before either has
+    // written acceptedAt, so both pass the earlier ok-to-accept checks — the only thing
+    // standing between one organization and two is the atomic `UPDATE ... WHERE
+    // accepted_at IS NULL RETURNING id`. This test is the loser's view: the conditional
+    // update matches no row (someone else claimed it first), so `.returning()` yields [].
+    selectOnce([inviteRow()]);
+    selectOnce([{ id: 55, email: "owner@newfirm.com" }]);
+    selectOnce([]); // getOrgMembership — not in any org yet, same as the winner saw
+    updateOnce([]); // the claim lost the race
+
+    const result = await acceptOrgInvite({ token: validToken, userId: 55 });
+
+    expect(result).toEqual({ ok: false, error: "Invite has already been accepted" });
+    // No organization or membership row was created for the loser.
     expect(dbMock.insert).not.toHaveBeenCalled();
   });
 });

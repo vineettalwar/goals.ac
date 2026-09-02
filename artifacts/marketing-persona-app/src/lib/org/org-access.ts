@@ -1483,6 +1483,24 @@ export async function acceptOrgInvite(input: {
       return { ok: false, error: "You already belong to an organization" };
     }
 
+    /**
+     * Atomically claim the invite before creating anything. Without this, two
+     * concurrent accept requests for the same invite (a double-click, two open tabs,
+     * a retried network request — all realistic, not exotic) would both pass the
+     * `acceptedAt` check read above, since that read happens before either write, and
+     * each would create its own organization for the same firm. The conditional
+     * UPDATE only lets one request through; the loser gets a clean error instead of
+     * a duplicate org silently existing.
+     */
+    const [claimed] = await db
+      .update(orgInvitesTable)
+      .set({ acceptedAt: new Date() })
+      .where(and(eq(orgInvitesTable.id, invite.id), isNull(orgInvitesTable.acceptedAt)))
+      .returning({ id: orgInvitesTable.id });
+    if (!claimed) {
+      return { ok: false, error: "Invite has already been accepted" };
+    }
+
     const prefill = invite.prefill ?? {};
     const orgName = prefill.orgName?.trim() || deriveOrgNameFromEmail(user.email);
     const plan = normalizePlanId(prefill.plan);
@@ -1509,11 +1527,6 @@ export async function acceptOrgInvite(input: {
       ownerId: input.userId,
       name: orgName,
     });
-
-    await db
-      .update(orgInvitesTable)
-      .set({ acceptedAt: new Date() })
-      .where(eq(orgInvitesTable.id, invite.id));
 
     await logOrgAudit({
       organizationId: org.id,
