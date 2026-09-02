@@ -1,5 +1,42 @@
 # Session Handoff
 
+## Production firm onboarding: invite, Typeform flow, vertical guardrails (2026-09-02)
+
+**Status:** Shipped on `claude/production-onboarding-ai-content-g5jrtv`. Typechecks clean, 530 of 531 tests pass. **Never run against a live database, a real WordPress site, or a real LinkedIn app.** That gap is the whole risk.
+
+**Decision record:** `docs/DECISIONS.md` 2026-09-01. **PRD:** `docs/prd/production-firm-onboarding.md`.
+
+This closes the "collapse onboarding" item left open by the 2026-08-14 handoff.
+
+### Shipped
+
+| # | Change | Verify |
+|---|---|---|
+| 1 | Firm invites: org created at acceptance, hashed single-use tokens, resend/revoke | `npx vitest run artifacts/marketing-persona-app/src/lib/org` |
+| 2 | Resumable `onboarding_sessions` + step registry + session API | `npx vitest run artifacts/marketing-persona-app/src/lib/onboarding` |
+| 3 | Typeform shell: one question per screen, keyboard-first, autosave, resume | `npx vitest run artifacts/marketing-persona-app/src/components/onboarding` |
+| 4 | Vertical presets, YMYL review gating, cold-start ideas, first-article service | `npx vitest run lib/content-engine/src/verticals` |
+| 5 | Migration 0070 (nullable invite org, kind/prefill/token_hash, onboarding_sessions) | `pnpm --filter @workspace/db run migrate` |
+
+### Defects found and fixed while integrating (all were "it says it worked but it did not")
+
+- **WordPress credentials were tested and discarded.** Green test, nothing saved. Now persisted to the project's encrypted integrations, and the step refuses to advance if the save fails.
+- **The review gate could be stripped.** `normalizeMetadata` rebuilds piece metadata from a ten-field allowlist and `finalizeSeoContentPiece` overwrites with it. Safe during generation (guardrails run after) but it runs again on enhance and re-humanize, so enhancing a law article dropped `requiresReview` and unreviewed content would have published. Guardrail fields now carried through; regression test verified by reverting the fix.
+- **Enter did nothing on every required text step.** Stale closure: the keydown effect re-subscribed only on step change while the submit handler read per-keystroke state, so it saw an empty draft and hit the required-field guard. Arrow-then-Enter always picked option one. Both now read through a live ref.
+- **Search Console was a self-declaration**; now verified against the real connection row.
+- **The invite token survived one hop into `/signup?token=`**; signup now reads the httpOnly cookie.
+- **Two step registries** (server and UI) with different field names; collapsed onto the server one.
+- Vitest could not resolve the `@/` alias, so app-reaching tests failed at run time. Fixed in the root config; app tests went 13 → 67.
+
+### Next, in order
+
+1. **Walk the whole path once against a live database and a real WordPress site.** Invite a test firm, complete onboarding, confirm an article is generated and that a law-vertical draft will not auto-publish. Nothing here has been executed end to end; this is the gate.
+2. **Answer the LinkedIn partner-approval question.** `/v2/ugcPosts?q=authors` needs `r_member_social`, which LinkedIn grants only approved partner apps. If the app lacks it, every firm hits the paste fallback, which is built and works but is not the pitch. Check the LinkedIn developer console before the first firm demo.
+3. **`lib/jobs` has no test infrastructure at all**, and no component-render tests exist anywhere (no jsdom, no `@testing-library/react`). The auto-publish hold is covered only through an extracted pure predicate. The keyboard defect above existed precisely because the shell could not be render-tested.
+4. **Unfinished from the review:** the adversarial pass stopped early on a spend limit. Design-system compliance, the 320px layout, the nine PRD edge cases, and invite authorization were not systematically audited.
+5. **D1/Cloudflare mirror** of the onboarding routes is not done.
+6. **Billing:** the plan is set on the invite, money is still collected manually.
+
 ## Refocus on blogs + WordPress (2026-08-14)
 
 **Status:** Product surface narrowed and all three missing personalization loops shipped on `claude/goals-ac-ai-content-1kib2e`. **Not yet run against a real WordPress site.**
