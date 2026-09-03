@@ -1,4 +1,4 @@
-import { countAiSlopSignals } from "../content/ai-writing-rules";
+import { countAiSlopSignals, stripMarkdownForProse } from "../content/ai-writing-rules";
 
 export type ArticleQualityInput = {
   bodyMarkdown: string;
@@ -60,19 +60,6 @@ function inferMetaDescription(body: string): string | null {
   return firstParagraph ?? null;
 }
 
-function stripMarkdownForProse(body: string): string {
-  return body
-    .replace(/```[\s\S]*?```/g, " ")
-    .replace(/`[^`]+`/g, " ")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/^#{1,6}\s+/gm, "")
-    .replace(/^\s*[-*+]\s+/gm, "")
-    .replace(/^\s*\d+\.\s+/gm, "")
-    .replace(/[*_~>|]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function wordTokens(text: string): string[] {
   return text.split(/\s+/).filter(Boolean);
 }
@@ -105,7 +92,13 @@ function distinctiveTokens(tokens: Set<string>): Set<string> {
 }
 
 /**
- * Anti-slop half (~0–8): inverse of AI-tell count from countAiSlopSignals.
+ * Anti-slop half (0 to 8): inverse of the density-aware AI-tell score from countAiSlopSignals.
+ * countAiSlopSignals normalizes soft (moderation-fine) tells per 1,000 prose words, so this
+ * band is length-agnostic by construction: a clean 600-word draft and a clean 3,000-word draft
+ * both score 0 and land in the same top band. Hard tells (unambiguous AI-isms, em dashes) still
+ * count per occurrence: a handful of those is real sloppiness at any length, so the bands stay
+ * tight (a couple of stray tells is fine, 3+ distinct hard tells or heavy soft-word density is
+ * not).
  */
 function scoreAntiSlop(slop: number): number {
   if (slop === 0) return 8;
@@ -117,7 +110,7 @@ function scoreAntiSlop(slop: number): number {
 }
 
 /**
- * Rhythm / specificity half (~0–7), cheap heuristics — no ML/deps:
+ * Rhythm / specificity half (0 to 7), cheap heuristics — no ML/deps:
  * - sentence-length variance (short+long mix) → 0–2
  * - contraction usage → 0–2
  * - concrete number + mid-sentence Capital density → 0–2
@@ -293,8 +286,8 @@ function scoreBrandVoiceSignals(
 }
 
 /**
- * Human voice (max 15) = anti-slop (~0–8) + rhythm/specificity (~0–7)
- * + optional brand signals (Jaccard + distinctive tokens + glossary, 0–5), capped at 15.
+ * Human voice (max 15) = anti-slop (0 to 8) + rhythm/specificity (0 to 7)
+ * + optional brand signals (Jaccard + distinctive tokens + glossary, 0 to 5), capped at 15.
  * Detail strings report AI tells + rhythm — not detector/"undetectable" claims.
  */
 function scoreHumanVoice(

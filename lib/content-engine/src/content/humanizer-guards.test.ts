@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { countAiSlopSignals } from "./ai-writing-rules";
 import {
   passesHumanizeQualityGate,
   passesHumanizeStructureGuards,
@@ -73,6 +74,19 @@ describe("passesHumanizeQualityGate", () => {
     const after =
       "Ship one checklist this week. Measure opens, then cut the fluff you never needed.";
     const result = passesHumanizeQualityGate(before, after, 4, 0);
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("does not force an extra humanize pass over a single moderate corporate verb", () => {
+    // A realistic multi-paragraph draft with one ordinary "optimize" reads as clean prose,
+    // not an AI tell. countAiSlopSignals should score it 0, so the gate never demands an
+    // improvement that was never needed.
+    const paragraph =
+      "Our team shipped the new checklist last week after three rounds of user testing with real customers. " +
+      "The support queue dropped by half within four days, and onboarding time fell from twelve minutes to five. ";
+    const draft = `We want to optimize onboarding this quarter. ${paragraph.repeat(30)}`;
+    expect(countAiSlopSignals(draft)).toBe(0);
+    const result = passesHumanizeQualityGate(draft, draft, 0, 0);
     expect(result).toEqual({ ok: true });
   });
 });
