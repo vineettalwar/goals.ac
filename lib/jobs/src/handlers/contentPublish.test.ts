@@ -2,13 +2,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
   selectResults: [] as unknown[][],
-  updateCalls: [] as { values: Record<string, unknown>; }[],
+  updateCalls: [] as { values: Record<string, unknown> }[],
   runPublishMock: vi.fn(async (_args?: unknown) => ({
     publishedUrl: "https://example.com/post",
     publishPlatform: "wordpress",
     outputMode: null,
     warnings: [] as { code: string; message: string }[],
   })),
+  verifyCitationsMock: vi.fn(async (urls: string[], _options?: unknown) => ({
+    checks: urls.map((url) => ({ url, verdict: "reachable" as const })),
+    verifiedUrls: urls,
+  })),
+  siteGraphMock: vi.fn(async (_creds?: unknown) => ({ posts: [] as { slug?: string }[] })),
 }));
 
 vi.mock("@workspace/db", () => ({
@@ -33,7 +38,10 @@ vi.mock("@workspace/db", () => ({
 }));
 
 vi.mock("@workspace/content-engine/support/publishing/cms-integrations", () => ({
-  decryptCmsCredentials: () => ({}),
+  // Pass credentials through as-is so tests can control them via the project row.
+  decryptCmsCredentials: (raw: unknown) => raw,
+  resolveWordPressConnectionType: (wp: { connectionType?: string } | undefined) =>
+    wp?.connectionType ?? "api",
 }));
 
 vi.mock("@workspace/content-engine/support/autopilot/autopilot-scheduler", () => ({
@@ -57,6 +65,8 @@ vi.mock("@workspace/content-engine/articles/article-image-enricher", () => ({
 vi.mock("@workspace/content-engine/support/publishing/publish-destination", () => ({
   publishPieceToDestination: vi.fn(),
   publishBlogPieceToPrimaryDestination: (...args: unknown[]) => state.runPublishMock(args),
+  resolvePrimaryBlogDestination: (creds: { wordpress?: unknown } | undefined) =>
+    creds?.wordpress ? "wordpress" : null,
   resolvePrimaryEspDestination: () => undefined,
 }));
 
@@ -70,6 +80,17 @@ vi.mock("@workspace/content-engine/social/social-metrics-service", () => ({
 
 vi.mock("@workspace/content-engine/support/brand/brand-voice-generation", () => ({
   ingestPublishedContentPiece: vi.fn(async () => undefined),
+}));
+
+// Underlies collectReadinessInputs (imported for real, not mocked): mocking its
+// network edges is enough to keep the readiness gate's decisions realistic
+// without ever touching the network.
+vi.mock("@workspace/content-engine/content/citation-verifier", () => ({
+  verifyCitations: (urls: string[], options?: unknown) => state.verifyCitationsMock(urls, options),
+}));
+
+vi.mock("@workspace/connectors/goals-ac-plugin", () => ({
+  fetchGoalsAcSiteGraph: (creds: unknown) => state.siteGraphMock(creds),
 }));
 
 vi.mock("../logger", () => ({
@@ -106,6 +127,13 @@ const BASE_PIECE = {
 
 const BASE_PROJECT = { cmsIntegrations: {}, autopilotSettings: {} };
 
+const PLUGIN_PROJECT = {
+  cmsIntegrations: {
+    wordpress: { connectionType: "plugin", siteUrl: "https://goals.ac", siteKey: "test-site-key" },
+  },
+  autopilotSettings: {},
+};
+
 function queuePieceAndProject(piece: unknown, project: unknown = BASE_PROJECT) {
   state.selectResults.push([piece], [project]);
 }
@@ -120,6 +148,13 @@ beforeEach(() => {
     outputMode: null,
     warnings: [],
   });
+  state.verifyCitationsMock.mockClear();
+  state.verifyCitationsMock.mockImplementation(async (urls: string[]) => ({
+    checks: urls.map((url) => ({ url, verdict: "reachable" as const })),
+    verifiedUrls: urls,
+  }));
+  state.siteGraphMock.mockClear();
+  state.siteGraphMock.mockResolvedValue({ posts: [] });
 });
 
 describe("publishPiece readiness gate", () => {
@@ -140,8 +175,7 @@ describe("publishPiece readiness gate", () => {
       bodyMarkdown: "Too short.",
       pieceMetadata: { metaDescription: undefined },
     };
-    // only one select call happens: readiness check trips before the project fetch
-    state.selectResults.push([blockedPiece]);
+    queuePieceAndProject(blockedPiece);
 
     await publishPiece(1, 5);
 
@@ -175,6 +209,9 @@ describe("publishPiece readiness gate", () => {
     expect(state.runPublishMock).toHaveBeenCalledOnce();
     const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
     expect(publishUpdate).toBeDefined();
+    // Override means "do not spend time verifying anything".
+    expect(state.verifyCitationsMock).not.toHaveBeenCalled();
+    expect(state.siteGraphMock).not.toHaveBeenCalled();
   });
 
   it("does not block on warnings alone", async () => {
@@ -191,5 +228,92 @@ describe("publishPiece readiness gate", () => {
     expect(state.runPublishMock).toHaveBeenCalledOnce();
     const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
     expect(publishUpdate).toBeDefined();
+  });
+
+  it("still publishes a piece with internal links when the site graph fetch fails (regression)", async () => {
+    state.siteGraphMock.mockRejectedValueOnce(new Error("goals.ac plugin unreachable"));
+    const piece = {
+      ...BASE_PIECE,
+      pieceMetadata: {
+        ...BASE_PIECE.pieceMetadata,
+        internalLinkSuggestions: [
+          { anchorText: "related guide", suggestedSlug: "/some-other-post" },
+        ],
+      },
+    };
+    queuePieceAndProject(piece, PLUGIN_PROJECT);
+
+    await publishPiece(1, 5);
+
+    expect(state.siteGraphMock).toHaveBeenCalledOnce();
+    expect(state.runPublishMock).toHaveBeenCalledOnce();
+    const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
+    expect(publishUpdate).toBeDefined();
+  });
+
+  it("blocks a piece whose internal link is dangling once the site graph resolves", async () => {
+    state.siteGraphMock.mockResolvedValueOnce({ posts: [{ slug: "existing-post" }] });
+    const piece = {
+      ...BASE_PIECE,
+      pieceMetadata: {
+        ...BASE_PIECE.pieceMetadata,
+        internalLinkSuggestions: [
+          { anchorText: "related guide", suggestedSlug: "/some-other-post" },
+        ],
+      },
+    };
+    queuePieceAndProject(piece, PLUGIN_PROJECT);
+
+    await publishPiece(1, 5);
+
+    expect(state.runPublishMock).not.toHaveBeenCalled();
+    const [{ values }] = state.updateCalls;
+    expect(values.status).toBe("draft");
+    const meta = values.pieceMetadata as { publishBlocked?: { blockers: { code: string }[] } };
+    expect(meta.publishBlocked!.blockers.some((b) => b.code === "dangling_internal_link")).toBe(true);
+  });
+
+  it("blocks a piece when a citation URL is unreachable", async () => {
+    state.verifyCitationsMock.mockResolvedValueOnce({ checks: [], verifiedUrls: [] });
+    queuePieceAndProject(BASE_PIECE);
+
+    await publishPiece(1, 5);
+
+    expect(state.runPublishMock).not.toHaveBeenCalled();
+    const [{ values }] = state.updateCalls;
+    expect(values.status).toBe("draft");
+    const meta = values.pieceMetadata as { publishBlocked?: { blockers: { code: string }[] } };
+    expect(meta.publishBlocked!.blockers.some((b) => b.code === "unreachable_citation")).toBe(true);
+  });
+
+  it("publishes when all citation URLs verify as reachable", async () => {
+    queuePieceAndProject(BASE_PIECE);
+
+    await publishPiece(1, 5);
+
+    expect(state.verifyCitationsMock).toHaveBeenCalledOnce();
+    expect(state.runPublishMock).toHaveBeenCalledOnce();
+    const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
+    expect(publishUpdate).toBeDefined();
+  });
+
+  it("caps the number of citation URLs sent to verification per piece", async () => {
+    const manyLinks = Array.from({ length: 30 }, (_, i) => `[Source ${i}](https://example.com/source-${i})`).join(
+      " ",
+    );
+    const piece = {
+      ...BASE_PIECE,
+      bodyMarkdown: `## Overview\n\n${"Detail about widget maintenance. ".repeat(40)}\n\n${manyLinks}\n\n### FAQ\n\n${Array.from(
+        { length: 3 },
+        (_, i) => `**Q${i}: Question ${i}?**\nA${i}: Answer ${i}.`,
+      ).join("\n\n")}`,
+    };
+    queuePieceAndProject(piece);
+
+    await publishPiece(1, 5);
+
+    expect(state.verifyCitationsMock).toHaveBeenCalledOnce();
+    const [urls] = state.verifyCitationsMock.mock.calls[0]!;
+    expect((urls as string[]).length).toBeLessThanOrEqual(25);
   });
 });

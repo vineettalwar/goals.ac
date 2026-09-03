@@ -3,6 +3,14 @@ import {
   AI_WRITING_RULES_PROMPT,
   sanitizeAiProse,
 } from "./ai-writing-rules";
+import {
+  buildFunnelStagePrompt,
+  buildProofAssetPrompt,
+  type FunnelStage,
+  type ProofAsset,
+} from "./personalization";
+
+export type { FunnelStage, ProofAsset } from "./personalization";
 
 export { SEO_LONGFORM_FORMATS, isSeoLongformFormat } from "./seo-longform-formats";
 
@@ -362,8 +370,16 @@ export function buildSeoLongformRequirements(
   keyword: string,
   wordRange: string,
   schemaType = "Article",
+  personalization?: { funnelStage?: FunnelStage; proofAssets?: ProofAsset[] },
 ): string {
-  return `Requirements for body_markdown:
+  const funnelBlock = personalization?.funnelStage
+    ? `\n${buildFunnelStagePrompt(personalization.funnelStage)}\n`
+    : "";
+  const proofBlock = personalization?.proofAssets?.length
+    ? `\n${buildProofAssetPrompt(personalization.proofAssets)}\n`
+    : "";
+
+  return `${funnelBlock}${proofBlock}Requirements for body_markdown:
 - Write ${wordRange} words of publish-ready prose. NEVER an outline, brief, or template.
 - Open with a hook paragraph (no label like "Engaging introduction"). Start on the actual point, not a generic landscape opener.
 - Commit to direct claims instead of hedging. Prefer specifics over abstract noun fog.

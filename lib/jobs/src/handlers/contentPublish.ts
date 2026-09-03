@@ -11,10 +11,14 @@ import { featuredImageFromMetadata } from "@workspace/content-engine/articles/ar
 import {
   publishPieceToDestination,
   publishBlogPieceToPrimaryDestination,
+  resolvePrimaryBlogDestination,
   resolvePrimaryEspDestination,
 } from "@workspace/content-engine/support/publishing/publish-destination";
 import { withPublishRecord } from "@workspace/content-engine/support/publishing/publish-records";
+import { collectReadinessInputs } from "@workspace/content-engine/support/publishing/readiness-inputs";
 import { assessPublishReadiness } from "@workspace/content-engine/content/publish-readiness";
+import { resolveWordPressConnectionType } from "@workspace/content-engine/support/publishing/cms-integrations";
+import { fetchGoalsAcSiteGraph } from "@workspace/connectors/goals-ac-plugin";
 import { logger } from "../logger";
 import { seedSocialPostMetrics } from "@workspace/content-engine/social/social-metrics-service";
 
@@ -51,6 +55,21 @@ async function publishPiece(
   if (!piece) throw new Error("Content piece not found");
   if (piece.status === "published") return;
 
+  const [project] = await db
+    .select({
+      cmsIntegrations: websiteProjectsTable.cmsIntegrations,
+      autopilotSettings: websiteProjectsTable.autopilotSettings,
+    })
+    .from(websiteProjectsTable)
+    .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, userId)))
+    .limit(1);
+  if (!project) throw new Error("Project not found");
+
+  const autopilot = parseAutopilotSettings(project.autopilotSettings);
+  const wpStatus = wordpressPublishStatus(autopilot);
+  const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
+  const platform = platformOverride ?? piece.publishPlatform ?? FORMAT_TO_PLATFORM[piece.formatType];
+
   // Autopilot, the scheduled sweep, and cf-write-worker all funnel through this
   // function with no human present to supply an overrideReason. A blocker must
   // therefore neither publish nor silently vanish: hold the piece at "draft" (the
@@ -60,11 +79,37 @@ async function publishPiece(
   const existingMetadata = piece.pieceMetadata ?? undefined;
   const overrideReason = existingMetadata?.publishOverride?.reason;
   if (!overrideReason) {
-    const readiness = assessPublishReadiness({
-      title: piece.title,
+    // A human override means "do not spend time verifying anything" -- this
+    // branch (and its network calls) only runs when there is no override.
+    const effectiveDestination = platform ?? resolvePrimaryBlogDestination(creds);
+    const connectionType =
+      effectiveDestination === "wordpress" && creds.wordpress
+        ? resolveWordPressConnectionType(creds.wordpress)
+        : undefined;
+    const pluginCreds =
+      connectionType === "plugin" && creds.wordpress?.siteUrl && creds.wordpress.siteKey
+        ? { siteUrl: creds.wordpress.siteUrl, siteKey: creds.wordpress.siteKey, platform: "wordpress" as const }
+        : null;
+
+    const readinessInputs = await collectReadinessInputs({
       bodyMarkdown: piece.bodyMarkdown ?? "",
-      pieceMetadata: piece.pieceMetadata,
+      citations: piece.pieceMetadata?.citations,
+      internalLinkSuggestions: piece.pieceMetadata?.internalLinkSuggestions,
+      // Fetched at most once per publish run (there is exactly one call site
+      // here), and only when the destination is the goals.ac WordPress plugin
+      // with real credentials -- otherwise no fetcher is passed and the
+      // dangling-link check is skipped rather than failed.
+      siteGraphFetcher: pluginCreds ? () => fetchGoalsAcSiteGraph(pluginCreds) : undefined,
     });
+
+    const readiness = assessPublishReadiness(
+      {
+        title: piece.title,
+        bodyMarkdown: piece.bodyMarkdown ?? "",
+        pieceMetadata: piece.pieceMetadata,
+      },
+      readinessInputs,
+    );
     for (const warning of readiness.warnings) {
       logger.warn({ pieceId, code: warning.code, message: warning.message }, "Publish readiness warning");
     }
@@ -92,21 +137,6 @@ async function publishPiece(
       return;
     }
   }
-
-  const [project] = await db
-    .select({
-      cmsIntegrations: websiteProjectsTable.cmsIntegrations,
-      autopilotSettings: websiteProjectsTable.autopilotSettings,
-    })
-    .from(websiteProjectsTable)
-    .where(and(eq(websiteProjectsTable.id, piece.websiteProjectId), eq(websiteProjectsTable.userId, userId)))
-    .limit(1);
-  if (!project) throw new Error("Project not found");
-
-  const autopilot = parseAutopilotSettings(project.autopilotSettings);
-  const wpStatus = wordpressPublishStatus(autopilot);
-  const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
-  const platform = platformOverride ?? piece.publishPlatform ?? FORMAT_TO_PLATFORM[piece.formatType];
 
   // Wave 5.C.3: skip destinations with known-failed health (do not burn publish attempts).
   if (platform && !isSocialPlatform(platform) && platform !== "beehiiv") {

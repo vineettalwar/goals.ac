@@ -22,6 +22,11 @@ import {
   type ContentPieceMetadata,
 } from "./content-piece-seo";
 import { scoreArticleQuality } from "../articles/article-quality-score";
+import {
+  analyzeAltTextCoverage,
+  analyzeKeywordDensity,
+  findSimilarTitles,
+} from "./seo-guardrails";
 
 export type PublishReadinessSeverity = "blocker" | "warning";
 
@@ -46,6 +51,10 @@ export type PublishReadinessOptions = {
   knownSlugs?: string[];
   /** Citation URLs already verified as reachable. Omit to skip citation-reachability checks. */
   verifiedCitationUrls?: string[];
+  /** Target keyword for density scoring. Omit to skip keyword-density checks entirely. */
+  targetKeyword?: string;
+  /** Titles already live on the destination site. Omit to skip title-uniqueness checks. */
+  existingTitles?: string[];
 };
 
 /**
@@ -260,6 +269,52 @@ function checkUnreachableCitations(
   };
 }
 
+function checkKeywordStuffing(body: string, targetKeyword: string | undefined): PublishReadinessIssue | null {
+  if (!targetKeyword || targetKeyword.trim().length === 0) return null;
+  const report = analyzeKeywordDensity(body, targetKeyword);
+  if (report.verdict !== "over") return null;
+  return {
+    code: "keyword_stuffing",
+    severity: "blocker",
+    message: `Keyword "${report.keyword}" appears ${report.occurrences} times (${report.densityPercent.toFixed(2)}% density) across ${report.wordCount} words. That reads as stuffed; thin it out.`,
+  };
+}
+
+function checkKeywordUnderused(body: string, targetKeyword: string | undefined): PublishReadinessIssue | null {
+  if (!targetKeyword || targetKeyword.trim().length === 0) return null;
+  const report = analyzeKeywordDensity(body, targetKeyword);
+  if (report.verdict !== "under") return null;
+  return {
+    code: "keyword_underused",
+    severity: "warning",
+    message: `Keyword "${report.keyword}" appears only ${report.occurrences} time${report.occurrences === 1 ? "" : "s"} (${report.densityPercent.toFixed(2)}% density) across ${report.wordCount} words. Work it in more naturally.`,
+  };
+}
+
+function checkDuplicateTitle(title: string, existingTitles: string[] | undefined): PublishReadinessIssue | null {
+  if (!existingTitles) return null;
+  const hits = findSimilarTitles(title, existingTitles);
+  if (hits.length === 0) return null;
+  const closest = hits[0]!;
+  return {
+    code: "duplicate_title",
+    severity: "blocker",
+    message: `Title is ${(closest.similarity * 100).toFixed(0)}% similar to an existing title. That risks self-cannibalization in search.`,
+    detail: closest.existingTitle,
+  };
+}
+
+function checkWeakAltText(body: string): PublishReadinessIssue | null {
+  const coverage = analyzeAltTextCoverage(body);
+  if (coverage.lowQualityAlt.length === 0) return null;
+  return {
+    code: "weak_alt_text",
+    severity: "warning",
+    message: `${coverage.lowQualityAlt.length} image${coverage.lowQualityAlt.length === 1 ? "" : "s"} have alt text that is too short or duplicated across images (${coverage.coveragePercent.toFixed(0)}% coverage).`,
+    detail: coverage.lowQualityAlt[0],
+  };
+}
+
 export function assessPublishReadiness(
   piece: PublishReadinessPiece,
   options: PublishReadinessOptions = {},
@@ -276,8 +331,17 @@ export function assessPublishReadiness(
     checkMetaTitleLength(fields.metaTitle),
     checkDanglingInternalLinks(fields.body, fields.internalLinkSuggestions, options.knownSlugs),
     checkUnreachableCitations(fields.body, fields.citations, options.verifiedCitationUrls),
+    checkKeywordStuffing(fields.body, options.targetKeyword),
+    checkDuplicateTitle(fields.title, options.existingTitles),
   ]) {
     if (issue) blockers.push(issue);
+  }
+
+  for (const issue of [
+    checkKeywordUnderused(fields.body, options.targetKeyword),
+    checkWeakAltText(fields.body),
+  ]) {
+    if (issue) warnings.push(issue);
   }
 
   const wordCount = bodyWordCount(fields.body);

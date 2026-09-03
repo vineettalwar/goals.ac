@@ -94,6 +94,26 @@ describe("collectReadinessInputs", () => {
     expect((urls as string[]).length).toBe(MAX_CITATION_URLS_PER_PIECE);
   });
 
+  it("passes URLs over the cap through as verified rather than blocking them", async () => {
+    // A well sourced article must not be blocked for citing more than the cap.
+    // The overflow was never fetched, so there is no evidence against it.
+    const total = MAX_CITATION_URLS_PER_PIECE + 10;
+    const citations = Array.from({ length: total }, (_, i) => ({
+      url: `https://example.com/source-${i}`,
+    }));
+    verifyCitationsMock.mockResolvedValueOnce({
+      checks: [],
+      verifiedUrls: citations.slice(0, MAX_CITATION_URLS_PER_PIECE).map((c) => c.url),
+    });
+
+    const result = await collectReadinessInputs({ bodyMarkdown: "Body.", citations });
+
+    expect(result.verifiedCitationUrls).toHaveLength(total);
+    for (const citation of citations) {
+      expect(result.verifiedCitationUrls).toContain(citation.url);
+    }
+  });
+
   it("never throws even when both inputs fail", async () => {
     verifyCitationsMock.mockRejectedValueOnce(new Error("network down"));
     await expect(

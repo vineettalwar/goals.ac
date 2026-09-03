@@ -76,7 +76,7 @@ function collectCandidateCitationUrls(
   for (const citation of citations ?? []) {
     if (citation?.url) urls.add(citation.url.trim());
   }
-  return [...urls].filter(Boolean).slice(0, MAX_CITATION_URLS_PER_PIECE);
+  return [...urls].filter(Boolean);
 }
 
 async function resolveVerifiedCitationUrls(
@@ -92,9 +92,24 @@ async function resolveVerifiedCitationUrls(
     return [];
   }
 
+  // Only the first slice is actually fetched, to keep one pathological draft
+  // from stalling the publish queue. The overflow is carried through as
+  // verified rather than dropped: we have no evidence against those URLs, and
+  // omitting them would block a well sourced article for the sole offence of
+  // citing more than the cap.
+  const toVerify = candidates.slice(0, MAX_CITATION_URLS_PER_PIECE);
+  const unchecked = candidates.slice(MAX_CITATION_URLS_PER_PIECE);
+
+  if (unchecked.length > 0) {
+    logger.warn(
+      { total: candidates.length, cap: MAX_CITATION_URLS_PER_PIECE, unchecked: unchecked.length },
+      "readiness-inputs: citation count over cap, remainder passed through unverified",
+    );
+  }
+
   try {
-    const { verifiedUrls } = await verifyCitations(candidates, options);
-    return verifiedUrls;
+    const { verifiedUrls } = await verifyCitations(toVerify, options);
+    return [...verifiedUrls, ...unchecked];
   } catch (err) {
     logger.warn(
       { err },

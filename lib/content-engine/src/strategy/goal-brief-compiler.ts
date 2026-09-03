@@ -13,6 +13,7 @@ import {
   type CoverageVerdict,
 } from "./content-coverage";
 import type { Goal } from "@workspace/db/schema/goals";
+import type { FunnelStage } from "../content/personalization";
 
 export interface CompileBriefsResult {
   briefs: CompiledBriefDraft[];
@@ -27,7 +28,7 @@ export interface CompiledBriefDraft {
   workingTitle: string;
   targetKeywordCluster: string;
   searchIntent: string;
-  funnelStage: "tofu" | "mofu" | "bofu";
+  funnelStage: FunnelStage;
   angle: string;
   format: string;
   wordCount: number;

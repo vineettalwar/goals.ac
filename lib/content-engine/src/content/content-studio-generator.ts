@@ -22,6 +22,7 @@ import {
   seoQualitySignals,
   type ContentPieceMetadata,
 } from "./content-piece-seo";
+import type { FunnelStage, ProofAsset } from "./personalization";
 import {
   brandVoiceCacheFingerprint,
   buildBrandVoicePromptContext,
@@ -101,6 +102,10 @@ export type ContentGenerationContext = {
   competitorFocusUrl?: string;
   /** Per-piece competitor URLs (max 5); first is primary when focus omitted */
   competitorUrls?: string[];
+  /** From the compiled brief, when available. Shapes reader-awareness guidance in the SEO longform prompt. */
+  funnelStage?: FunnelStage;
+  /** Verified proof points from brand memory, pre-selected for this keyword. */
+  proofAssets?: ProofAsset[];
 };
 
 export type BrandContext = UnifiedBrandContext;
@@ -533,7 +538,10 @@ ${config.structure}
 Return ONLY this JSON object:
 ${buildSeoLongformJsonSchema(keyword, schemaType)}
 
-${buildSeoLongformRequirements(brand.companyName, keyword, wordRange, schemaType)}${competitorContext}${destinationHint}`;
+${buildSeoLongformRequirements(brand.companyName, keyword, wordRange, schemaType, {
+  funnelStage: generationContext?.funnelStage,
+  proofAssets: generationContext?.proofAssets,
+})}${competitorContext}${destinationHint}`;
   }
 
   return `Create a ${config.label} for ${brand.companyName} (${brand.websiteUrl}), a company in the ${brand.industry} industry.

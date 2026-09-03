@@ -284,6 +284,85 @@ describe("assessPublishReadiness - other warnings", () => {
   });
 });
 
+describe("assessPublishReadiness - keyword_stuffing / keyword_underused", () => {
+  it("is skipped entirely when targetKeyword is omitted", () => {
+    const result = assessPublishReadiness(CLEAN_META);
+    expect(result.blockers.map((b) => b.code)).not.toContain("keyword_stuffing");
+    expect(result.warnings.map((w) => w.code)).not.toContain("keyword_underused");
+  });
+
+  it("fires keyword_stuffing as a blocker when the keyword is over-repeated", () => {
+    const filler = new Array(20).fill("word").join(" ");
+    const stuffed = new Array(15).fill("local seo for dentists").join(" ");
+    const body = `## Section\n\n${filler} ${stuffed} ${filler}`;
+    const result = assessPublishReadiness(withBody(body), { targetKeyword: "local seo for dentists" });
+    expect(result.blockers.map((b) => b.code)).toContain("keyword_stuffing");
+    expect(result.ok).toBe(false);
+  });
+
+  it("fires keyword_underused as a warning, not a blocker, when the keyword barely appears", () => {
+    const result = assessPublishReadiness(CLEAN_META, { targetKeyword: "unrelated phrase never mentioned" });
+    expect(result.warnings.map((w) => w.code)).toContain("keyword_underused");
+    expect(result.blockers.map((b) => b.code)).not.toContain("keyword_underused");
+  });
+
+  it("does not fire either check when the keyword appears at a natural rate", () => {
+    const filler = new Array(40).fill("word").join(" ");
+    const body = `## Section One\n\n${filler} local seo for dentists is the topic here. ${filler}\n\n## Section Two\n\n${filler} another mention of local seo for dentists shows up here. ${filler}`;
+    const result = assessPublishReadiness(withBody(body), { targetKeyword: "local seo for dentists" });
+    expect(result.blockers.map((b) => b.code)).not.toContain("keyword_stuffing");
+    expect(result.warnings.map((w) => w.code)).not.toContain("keyword_underused");
+  });
+});
+
+describe("assessPublishReadiness - duplicate_title", () => {
+  it("is skipped entirely when existingTitles is omitted", () => {
+    const result = assessPublishReadiness(CLEAN_META);
+    expect(result.blockers.map((b) => b.code)).not.toContain("duplicate_title");
+  });
+
+  it("fires as a blocker when a near-identical title already exists", () => {
+    const result = assessPublishReadiness(CLEAN_META, {
+      existingTitles: ["Local SEO Basics for Small Teams!"],
+    });
+    expect(result.blockers.map((b) => b.code)).toContain("duplicate_title");
+    expect(result.ok).toBe(false);
+  });
+
+  it("does not fire when existing titles are genuinely different", () => {
+    const result = assessPublishReadiness(CLEAN_META, {
+      existingTitles: ["A Completely Unrelated Piece About Payroll Software"],
+    });
+    expect(result.blockers.map((b) => b.code)).not.toContain("duplicate_title");
+  });
+});
+
+describe("assessPublishReadiness - weak_alt_text", () => {
+  it("does not fire on well-written, distinct alt text", () => {
+    const body = `${CLEAN_BODY}\n\n![A local dentist office storefront with a clean sign](https://example.com/photo.jpg)`;
+    const result = assessPublishReadiness(withBody(body));
+    expect(result.warnings.map((w) => w.code)).not.toContain("weak_alt_text");
+  });
+
+  it("fires as a warning, not a blocker, when alt text is a single word", () => {
+    const body = `${CLEAN_BODY}\n\n![office](https://example.com/photo.jpg)`;
+    const result = assessPublishReadiness(withBody(body));
+    expect(result.warnings.map((w) => w.code)).toContain("weak_alt_text");
+    expect(result.blockers.map((b) => b.code)).not.toContain("weak_alt_text");
+  });
+
+  it("fires when the same alt text is reused across multiple images", () => {
+    const body = `${CLEAN_BODY}\n\n![dentist office front desk area](https://example.com/a.jpg)\n\n![dentist office front desk area](https://example.com/b.jpg)`;
+    const result = assessPublishReadiness(withBody(body));
+    expect(result.warnings.map((w) => w.code)).toContain("weak_alt_text");
+  });
+
+  it("does not fire and does not error when there are no images at all", () => {
+    const result = assessPublishReadiness(CLEAN_META);
+    expect(result.warnings.map((w) => w.code)).not.toContain("weak_alt_text");
+  });
+});
+
 describe("assessPublishReadiness - structural input shapes", () => {
   it("reads fields folded into pieceMetadata, matching a raw DB row shape", () => {
     const raw: PublishReadinessPiece = {
