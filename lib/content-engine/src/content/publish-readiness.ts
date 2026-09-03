@@ -345,14 +345,19 @@ export function assessPublishReadiness(
   }
 
   const wordCount = bodyWordCount(fields.body);
+  // scoreArticleQuality infers citations, FAQ items and internal links from the
+  // body when these are nullish, but an empty array is not nullish. Passing the
+  // [] that resolveFields defaults to would suppress that inference and score a
+  // body-only piece as though it cited nothing, so hand back undefined instead.
   const quality = scoreArticleQuality({
     bodyMarkdown: fields.body,
     metaTitle: fields.metaTitle,
     metaDescription: fields.metaDescription,
-    citations: fields.citations,
-    faqSection: fields.faqSection,
+    citations: fields.citations.length > 0 ? fields.citations : undefined,
+    faqSection: fields.faqSection.length > 0 ? fields.faqSection : undefined,
     jsonLdSchema: fields.jsonLdSchema,
-    internalLinkSuggestions: fields.internalLinkSuggestions,
+    internalLinkSuggestions:
+      fields.internalLinkSuggestions.length > 0 ? fields.internalLinkSuggestions : undefined,
     wordCount,
   });
 

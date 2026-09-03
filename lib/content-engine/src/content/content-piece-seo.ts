@@ -104,12 +104,18 @@ export type RichContentPieceFields = ContentPieceMetadata & {
   json_ld_schema?: object;
 };
 
+/**
+ * The negative lookbehind matters: `![alt](https://cdn/photo.jpg)` is an image
+ * embed, not a citation. Without it every stock image the enricher attaches
+ * counts as a source, inflating the citation band and suppressing the
+ * few-citations warning on articles that cite nothing at all.
+ */
 export function countExternalLinks(body: string): number {
-  return (body.match(/\[.+?\]\(https?:\/\/[^)]+\)/g) ?? []).length;
+  return (body.match(/(?<!!)\[.+?\]\(https?:\/\/[^)]+\)/g) ?? []).length;
 }
 
 export function countInternalLinks(body: string): number {
-  return (body.match(/\[.+?\]\(\/[^)]+\)/g) ?? []).length;
+  return (body.match(/(?<!!)\[.+?\]\(\/[^)]+\)/g) ?? []).length;
 }
 
 export function countFaqItems(body: string): number {

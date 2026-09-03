@@ -35,12 +35,13 @@ function countMatches(text: string, pattern: RegExp): number {
   return (text.match(pattern) ?? []).length;
 }
 
+/** Lookbehind excludes `![alt](url)` image embeds, which are not citations. */
 function countExternalLinks(body: string): number {
-  return countMatches(body, /\[.+?\]\(https?:\/\/[^)]+\)/g);
+  return countMatches(body, /(?<!!)\[.+?\]\(https?:\/\/[^)]+\)/g);
 }
 
 function countInternalLinks(body: string): number {
-  return countMatches(body, /\[.+?\]\(\/[^)]+\)/g);
+  return countMatches(body, /(?<!!)\[.+?\]\(\/[^)]+\)/g);
 }
 
 function inferFaqCount(body: string): number {
