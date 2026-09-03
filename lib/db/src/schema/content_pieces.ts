@@ -107,7 +107,10 @@ export type ContentPieceMetadata = {
   publishOverride?: {
     reason: string | undefined;
     blockers: { code: string; severity: "blocker" | "warning"; message: string; detail?: string }[];
-    userId: number;
+    /** Absent when the override came through an API key rather than a signed-in user. */
+    userId?: number;
+    /** Set instead of userId for public API publishes, so the org is still attributable. */
+    organizationId?: number;
     overriddenAt: string;
   };
   /** Markdown visual summary block injected post-generation */

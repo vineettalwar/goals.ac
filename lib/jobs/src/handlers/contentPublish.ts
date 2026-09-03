@@ -14,6 +14,7 @@ import {
   resolvePrimaryEspDestination,
 } from "@workspace/content-engine/support/publishing/publish-destination";
 import { withPublishRecord } from "@workspace/content-engine/support/publishing/publish-records";
+import { assessPublishReadiness } from "@workspace/content-engine/content/publish-readiness";
 import { logger } from "../logger";
 import { seedSocialPostMetrics } from "@workspace/content-engine/social/social-metrics-service";
 
@@ -49,6 +50,48 @@ async function publishPiece(
     .limit(1);
   if (!piece) throw new Error("Content piece not found");
   if (piece.status === "published") return;
+
+  // Autopilot, the scheduled sweep, and cf-write-worker all funnel through this
+  // function with no human present to supply an overrideReason. A blocker must
+  // therefore neither publish nor silently vanish: hold the piece at "draft" (the
+  // same status used to pull regulated-vertical pieces back for human review) so
+  // it surfaces for attention instead of being force-published or looping through
+  // the scheduled sweep, which only selects status "ready".
+  const existingMetadata = piece.pieceMetadata ?? undefined;
+  const overrideReason = existingMetadata?.publishOverride?.reason;
+  if (!overrideReason) {
+    const readiness = assessPublishReadiness({
+      title: piece.title,
+      bodyMarkdown: piece.bodyMarkdown ?? "",
+      pieceMetadata: piece.pieceMetadata,
+    });
+    for (const warning of readiness.warnings) {
+      logger.warn({ pieceId, code: warning.code, message: warning.message }, "Publish readiness warning");
+    }
+    if (!readiness.ok) {
+      const priorAttempt = existingMetadata?.publishBlocked?.attempt ?? 0;
+      await db
+        .update(contentPiecesTable)
+        .set({
+          status: "draft",
+          publishError: `Blocked by readiness gate: ${readiness.blockers.map((b) => b.message).join(" ")}`,
+          pieceMetadata: {
+            ...(existingMetadata ?? {}),
+            publishBlocked: {
+              blockers: readiness.blockers,
+              blockedAt: new Date().toISOString(),
+              attempt: priorAttempt + 1,
+            },
+          },
+        })
+        .where(eq(contentPiecesTable.id, pieceId));
+      logger.error(
+        { pieceId, blockers: readiness.blockers.map((b) => b.code) },
+        "Publish blocked by readiness gate, held for human review",
+      );
+      return;
+    }
+  }
 
   const [project] = await db
     .select({
@@ -189,6 +232,7 @@ async function publishPiece(
     ...(warningMessages && warningMessages.length > 0
       ? { lastPublishWarnings: warningMessages }
       : { lastPublishWarnings: undefined }),
+    publishBlocked: undefined,
   };
 
   await db

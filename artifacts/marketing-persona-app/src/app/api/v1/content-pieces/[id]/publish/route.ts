@@ -7,6 +7,7 @@ import { renderAndPublish } from "@workspace/content-engine/adapters/render-serv
 import { resolveEntitlementsForOrg } from "@workspace/content-engine/support/publishing/resolve-publish-entitlements";
 import { assertProjectInOrg } from "@workspace/content-engine/support/auth/api-key-auth";
 import { withPublishRecord } from "@workspace/content-engine/support/publishing/publish-records";
+import { assessPublishReadiness } from "@workspace/content-engine/content/publish-readiness";
 import { requireApiKeyScope, withPublicApiKey } from "@/lib/public-api/auth";
 
 export async function POST(
@@ -24,6 +25,7 @@ export async function POST(
     const body = (await req.json().catch(() => ({}))) as {
       platform?: string;
       projectId?: number;
+      overrideReason?: string;
     };
 
     if (!body.platform || !body.projectId) {
@@ -40,6 +42,26 @@ export async function POST(
 
     if (!piece || piece.websiteProjectId !== body.projectId) {
       return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
+    }
+
+    // Same gate the interactive route applies. A public API key is still a
+    // publish path to a customer's live site, so it does not get a free pass.
+    const readiness = assessPublishReadiness({
+      title: piece.title,
+      bodyMarkdown: piece.bodyMarkdown ?? "",
+      pieceMetadata: piece.pieceMetadata,
+    });
+
+    if (!readiness.ok && !body.overrideReason) {
+      return NextResponse.json(
+        {
+          error: "Content not ready to publish",
+          blockers: readiness.blockers,
+          warnings: readiness.warnings,
+          qualityScore: readiness.qualityScore,
+        },
+        { status: 422 },
+      );
     }
 
     const [project] = await db
@@ -92,6 +114,19 @@ export async function POST(
         publishedUrl: publishOutcome.publishedUrl,
         publishPlatform: body.platform,
         publishError: null,
+        ...(readiness.ok
+          ? {}
+          : {
+              pieceMetadata: {
+                ...((piece.pieceMetadata as Record<string, unknown> | null) ?? {}),
+                publishOverride: {
+                  reason: body.overrideReason,
+                  blockers: readiness.blockers,
+                  organizationId: key.organizationId,
+                  overriddenAt: new Date().toISOString(),
+                },
+              },
+            }),
       })
       .where(eq(contentPiecesTable.id, pieceId));
 
