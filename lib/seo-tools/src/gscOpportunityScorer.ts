@@ -106,22 +106,24 @@ export function scoreGscQueries(
       pattern = "striking_distance";
       score += Math.min(20, Math.round((20 - q.position) * 1.5));
     } else if (q.position > 10 && q.position <= 30 && q.impressions >= 100) {
-      // Page two and three (positions 11-30): score on impression-weighted
-      // proximity to page one so a heavy-impression position-12 query beats a
-      // light position-29 query, but a thin query in either sub-band still
-      // falls under the score < 40 cutoff below.
+      // Page two and three (positions 11-30). The whole band is scored below
+      // striking distance's floor of 70, because the two ranges land in one
+      // sorted list and the product surfaces that order: a page-one-adjacent
+      // query has to stay above a page-three one at equal quality. The band
+      // spans 25 (thin, filtered by the score < 40 cutoff below) to 65.
       //
-      // proximity: 1.0 at position 11 (one click ahead of striking distance),
-      // 0.0 at position 30 (bottom of page three). Linear across the band.
-      const proximity = (30 - q.position) / (30 - 11);
+      // proximity: 1.0 at position 11, 0.0 at position 30, clamped because
+      // GSC positions are impression-weighted averages and arrive
+      // fractional, so a position of 10.001 would otherwise score above
+      // position 11 and make getting worse look better.
+      const proximity = Math.min(1, Math.max(0, (30 - q.position) / (30 - 11)));
       // impressionWeight: log-scaled 0..1 so a query needs real demand (not
-      // just a single huge outlier) to earn the full impression bonus.
-      // impressions === 100 (the floor) yields ~0, impressions >= 1100
-      // saturates at 1.
+      // one huge outlier) to earn the full bonus. At the 100-impression
+      // floor it is ~0 and it saturates around 1100.
       const impressionWeight = Math.min(1, Math.log10(q.impressions / 100) / Math.log10(11));
       // Rounded so every pattern contributes a whole-number score; the UI
       // renders opportunityScore directly.
-      score += Math.round(25 + proximity * 35 + impressionWeight * 25);
+      score += Math.round(25 + proximity * 25 + impressionWeight * 15);
       pattern = "low_hanging_fruit";
     }
 

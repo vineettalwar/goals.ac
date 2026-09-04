@@ -19,6 +19,9 @@ export const ONBOARDING_STEP_IDS = [
   "linkedin",
   "search_console",
   "wordpress",
+  "style_pitch",
+  "style_rivals",
+  "style_jargon",
   "voice_review",
   "topics",
   "done",
@@ -44,6 +47,14 @@ export type OnboardingAnswers = {
   linkedin?: { mode: "oauth" | "paste" | "skipped"; postCount?: number };
   searchConsole?: { mode: "connected" | "skipped"; propertyUrl?: string };
   wordpress?: { mode: "plugin" | "app_password" | "skipped"; siteUrl?: string };
+  /**
+   * The style questionnaire fallback (PRD 2.2/2.3), only ever rendered when the
+   * website scan did not yield enough material to learn a voice from. Absent
+   * on every session where the scan was sufficient.
+   */
+  stylePitch?: string;
+  styleRivals?: string[];
+  styleJargon?: string;
   topicIds?: number[];
 };
 

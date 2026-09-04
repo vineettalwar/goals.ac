@@ -84,6 +84,47 @@ function stripHtml(html: string, maxChars = 8000): string {
     .slice(0, maxChars);
 }
 
+/**
+ * Same text extraction as stripHtml, but block structure survives as
+ * newlines: paragraph breaks, list markers and heading lines. The style
+ * vector measures paragraph shape, list use and heading density, and
+ * stripHtml collapses all whitespace to single spaces, so measuring its
+ * output reports every page as one unbroken paragraph with no lists and no
+ * headings. Only the style vector reads this; the prompt text, the page
+ * documents and the brand-voice index keep the stripHtml output they have
+ * always had.
+ */
+export function stripHtmlStructured(html: string, maxChars = 8000): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
+    .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
+    .replace(/<header[\s\S]*?<\/header>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    // Headings and list items carry their markdown marker so the line scan
+    // in computeStyleVector recognises them.
+    .replace(/<h([1-6])[^>]*>/gi, (_match, level: string) => `\n\n${"#".repeat(Number(level))} `)
+    .replace(/<\/h[1-6]>/gi, "\n\n")
+    .replace(/<li[^>]*>/gi, "\n- ")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:p|div|section|article|tr|blockquote|ul|ol|table)>/gi, "\n\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    // Collapse runs of spaces and tabs, but keep line breaks. Three or more
+    // blank lines read the same as one paragraph break.
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]*\n[ \t]*/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maxChars);
+}
+
 /** Fetches a batch of URLs with bounded concurrency, skipping anything robots.txt disallows. */
 async function fetchCrawlBatch(
   urls: string[],
@@ -364,7 +405,14 @@ export async function scrapeBrandProfile(
     .join("\n\n---\n\n")
     .slice(0, 12000);
 
-  const styleVector = computeStyleVector(pageDocuments.map((doc) => ({ text: doc.text, title: doc.title })));
+  // Measured from structure-preserving text: the same pages, read with their
+  // paragraph, list and heading breaks intact. CMS excerpts are markdown and
+  // already carry their own line breaks.
+  const styleVector = computeStyleVector([
+    { text: stripHtmlStructured(homepageHtml) },
+    ...crawledPages.map((page) => ({ text: stripHtmlStructured(page.html) })),
+    ...(scanPlan?.cmsExcerpts ?? []).map((entry) => ({ text: entry.text, title: entry.title })),
+  ]);
 
   const ai = await getAiProviderClient();
 

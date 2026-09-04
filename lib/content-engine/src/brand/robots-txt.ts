@@ -70,23 +70,46 @@ function agentToken(userAgent: string): string {
   return userAgent.trim().toLowerCase();
 }
 
-/** Picks the most specific matching group: an exact/prefix agent match beats `*`. */
+/**
+ * Merges every group matching at the chosen specificity level. RFC 9309
+ * requires all records for a matching product token to be combined, not
+ * just the first one encountered.
+ */
+function mergeGroups(groups: Group[]): Group {
+  const merged: Group = { agents: [], disallow: [], allow: [] };
+  for (const group of groups) {
+    merged.agents.push(...group.agents);
+    merged.disallow.push(...group.disallow);
+    merged.allow.push(...group.allow);
+    if (group.crawlDelaySeconds !== undefined) merged.crawlDelaySeconds = group.crawlDelaySeconds;
+  }
+  return merged;
+}
+
+/**
+ * Picks the most specific matching groups and merges them: a case-insensitive
+ * prefix match of the product token beats `*`. Per RFC 9309 the match is a
+ * prefix test against the token, not a two-way substring test — a group for
+ * "a" must not capture a request from "goalsac".
+ */
 function selectGroup(groups: Group[], userAgent: string): Group | null {
   const token = agentToken(userAgent);
-  let wildcard: Group | null = null;
-  let specific: Group | null = null;
+  const wildcardGroups: Group[] = [];
+  const specificGroups: Group[] = [];
 
   for (const group of groups) {
     for (const agent of group.agents) {
       if (agent === "*") {
-        wildcard = wildcard ?? group;
-      } else if (token.includes(agent) || agent.includes(token)) {
-        specific = specific ?? group;
+        wildcardGroups.push(group);
+      } else if (agent.length > 0 && token.startsWith(agent)) {
+        specificGroups.push(group);
       }
     }
   }
 
-  return specific ?? wildcard;
+  if (specificGroups.length > 0) return mergeGroups(specificGroups);
+  if (wildcardGroups.length > 0) return mergeGroups(wildcardGroups);
+  return null;
 }
 
 export function parseRobotsTxt(text: string, userAgent: string): RobotsRules {
@@ -156,12 +179,19 @@ export function createRobotsGate(
   function rulesForOrigin(origin: string): Promise<RobotsRules> {
     let pending = rulesByOrigin.get(origin);
     if (!pending) {
-      pending = fetchText(`${origin}/robots.txt`)
-        .then((text) => (text ? parseRobotsTxt(text, userAgent) : { disallow: [], allow: [] }))
-        .catch(() => ({ disallow: [], allow: [] }) as RobotsRules);
+      pending = fetchText(`${origin}/robots.txt`).then((text) =>
+        text ? parseRobotsTxt(text, userAgent) : { disallow: [], allow: [] },
+      );
+      // A missing/500/unparseable robots.txt is a definitive answer (allow
+      // all) and stays cached above. A thrown fetch is not an answer — a
+      // DNS blip or timeout must not permanently disable robots for the
+      // rest of the run, so drop the cache entry and let the next URL retry.
+      pending.catch(() => {
+        rulesByOrigin.delete(origin);
+      });
       rulesByOrigin.set(origin, pending);
     }
-    return pending;
+    return pending.catch(() => ({ disallow: [], allow: [] }) as RobotsRules);
   }
 
   return {

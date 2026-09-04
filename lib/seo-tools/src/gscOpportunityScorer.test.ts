@@ -204,4 +204,39 @@ describe("gscOpportunityScorer", () => {
     expect(opp.keyword).toBe("saas pricing page");
     expect(opp.suggestedTitle).toContain("saas pricing page");
   });
+  it("keeps a page-one-adjacent query ahead of a page-two query in the sorted list", () => {
+    // The two bands land in one sorted list and the product surfaces that
+    // order, so at equal demand a stronger position must not be outranked
+    // just because the new band's ceiling sits higher. Compared at equal
+    // impressions and CTR so neither picks up an additive bonus: those
+    // bonuses are a separate, pre-existing behaviour.
+    const scored = scoreGscQueries(
+      rollupGscQueries([
+        { query: "page one adjacent", page: "/a", impressions: 1500, clicks: 15, ctr: 0.01, position: 4 },
+        { query: "page two same demand", page: "/b", impressions: 1500, clicks: 15, ctr: 0.01, position: 11 },
+      ]),
+    );
+
+    expect(scored[0]?.query).toBe("page one adjacent");
+    const adjacent = scored.find((s) => s.query === "page one adjacent");
+    const pageTwo = scored.find((s) => s.query === "page two same demand");
+    expect(adjacent!.opportunityScore).toBeGreaterThan(pageTwo!.opportunityScore);
+  });
+
+  it("does not reward a query for slipping off page one", () => {
+    // GSC positions are impression-weighted averages, so 10.001 is ordinary
+    // input. Before the proximity clamp it scored above position 11, which
+    // made getting worse look better.
+    const at = (position: number) =>
+      scoreGscQueries(
+        rollupGscQueries([
+          { query: "drifting query", page: "/p", impressions: 1500, clicks: 5, ctr: 0.003, position },
+        ]),
+      )[0]!.opportunityScore;
+
+    expect(at(10.001)).toBeLessThanOrEqual(at(10));
+    expect(at(10.001)).toBeLessThanOrEqual(at(11) + 1);
+    expect(at(11)).toBeGreaterThan(at(12));
+  });
+
 });

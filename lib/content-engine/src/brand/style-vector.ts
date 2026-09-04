@@ -38,6 +38,11 @@ const SECOND_PERSON_RE = /\b(you|your|yours)\b/i;
 const LIST_LINE_RE = /^\s*(?:[-*•]|\d+[.)]|[a-z][.)])\s+\S/i;
 const HEADING_MARKDOWN_RE = /^\s*#{1,6}\s+\S/;
 
+function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.min(max, Math.max(min, value));
+}
+
 function round2(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.round(value * 100) / 100;
@@ -208,8 +213,14 @@ export function computeStyleVector(docs: { text: string; title?: string }[]): St
   const wordsPerSentence = avgSentenceWords;
   const syllablesPerWord = totalLetterWords > 0 ? totalSyllables / totalLetterWords : 0;
 
-  const fleschReadingEase = 206.835 - 1.015 * wordsPerSentence - 84.6 * syllablesPerWord;
-  const readingGradeLevel = 0.39 * wordsPerSentence + 11.8 * syllablesPerWord - 15.59;
+  // Both formulas are unbounded, and text they were never designed for
+  // pushes them well outside their meaningful range: a CJK page, which has
+  // no whitespace to count words by, yields grade -15.2 and ease 205.8.
+  // These numbers become instructions in a generation prompt, and "write at
+  // grade -15.2" instructs nothing, so clamp to the range each scale is
+  // actually defined over.
+  const fleschReadingEase = clamp(206.835 - 1.015 * wordsPerSentence - 84.6 * syllablesPerWord, 0, 100);
+  const readingGradeLevel = clamp(0.39 * wordsPerSentence + 11.8 * syllablesPerWord - 15.59, 1, 18);
   const complexWordRatio = totalLetterWords > 0 ? complexWords / totalLetterWords : 0;
 
   return {
@@ -241,7 +252,16 @@ export function isEmptyStyleVector(v: StyleVector): boolean {
 }
 
 function pct(ratio: number): string {
-  return `${Math.round(ratio * 100)}%`;
+  return `${Math.round(num(ratio) * 100)}%`;
+}
+
+/**
+ * Vectors are read back off a jsonb column, so a field can be missing or
+ * non-numeric on a row written by an older or partial scan. Without this a
+ * gap renders as "undefined words" or "NaN%" inside a generation prompt.
+ */
+function num(value: number): number {
+  return Number.isFinite(value) ? value : 0;
 }
 
 function frequencyWord(ratio: number): string {
@@ -261,30 +281,30 @@ export function describeStyleVector(v: StyleVector): string {
 
   const lines: string[] = [];
 
-  const spread = v.avgSentenceWords > 0 ? v.sentenceLengthStdDev / v.avgSentenceWords : 0;
+  const spread = num(v.avgSentenceWords) > 0 ? num(v.sentenceLengthStdDev) / num(v.avgSentenceWords) : 0;
   const lengthShape = spread < 0.3 ? "consistent lengths" : "mixed lengths";
   lines.push(
-    `Average sentence: ${v.avgSentenceWords} words (${lengthShape}; ${pct(v.longSentenceRatio)} run long, ${pct(v.shortSentenceRatio)} run short).`,
+    `Average sentence: ${num(v.avgSentenceWords)} words (${lengthShape}; ${pct(v.longSentenceRatio)} run long, ${pct(v.shortSentenceRatio)} run short).`,
   );
 
-  lines.push(`Paragraphs run about ${v.avgParagraphSentences} sentences.`);
+  lines.push(`Paragraphs run about ${num(v.avgParagraphSentences)} sentences.`);
 
   lines.push(
-    `Reading level: grade ${v.readingGradeLevel} (${v.vocabularyTier} vocabulary, ${pct(v.complexWordRatio)} complex words).`,
-  );
-
-  lines.push(
-    `${capitalize(frequencyWord(v.questionRatio))} asks questions; ${frequencyWord(v.exclamationRatio)} uses exclamation points.`,
+    `Reading level: grade ${num(v.readingGradeLevel)} (${v.vocabularyTier ?? "plain"} vocabulary, ${pct(v.complexWordRatio)} complex words).`,
   );
 
   lines.push(
-    `Speaks in first person (I/we) ${frequencyWord(v.firstPersonRatio)}; addresses the reader as "you" ${frequencyWord(v.secondPersonRatio)}.`,
+    `${capitalize(frequencyWord(num(v.questionRatio)))} asks questions; ${frequencyWord(num(v.exclamationRatio))} uses exclamation points.`,
   );
 
-  lines.push(`Contractions ${frequencyWord(v.contractionRatio)} used (don't, we're, it's).`);
+  lines.push(
+    `Speaks in first person (I/we) ${frequencyWord(num(v.firstPersonRatio))}; addresses the reader as "you" ${frequencyWord(num(v.secondPersonRatio))}.`,
+  );
 
-  const listNote = v.listUsageRatio >= 0.1 ? "uses lists" : "rarely uses lists";
-  const headingNote = v.headingDensity >= 2 ? "breaks sections with headings" : "uses few headings";
+  lines.push(`Contractions ${frequencyWord(num(v.contractionRatio))} used (don't, we're, it's).`);
+
+  const listNote = num(v.listUsageRatio) >= 0.1 ? "uses lists" : "rarely uses lists";
+  const headingNote = num(v.headingDensity) >= 2 ? "breaks sections with headings" : "uses few headings";
   lines.push(`Formatting: ${listNote}; ${headingNote}.`);
 
   return lines.join("\n");

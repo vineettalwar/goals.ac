@@ -46,6 +46,51 @@ export type BrandMemoryProofAsset = {
   url?: string;
 };
 
+/**
+ * Measured (not qualitative) writing style, computed deterministically over
+ * the scanned corpus. Mirrors `StyleVector` in
+ * `@workspace/content-engine/brand/style-vector` structurally; declared
+ * independently here since `db` must not depend on `content-engine`.
+ * Type-only addition on the existing brand_memory jsonb column, no
+ * migration required.
+ */
+export type BrandStyleVector = {
+  avgSentenceWords: number;
+  sentenceLengthStdDev: number;
+  avgParagraphSentences: number;
+  longSentenceRatio: number;
+  shortSentenceRatio: number;
+  questionRatio: number;
+  exclamationRatio: number;
+  firstPersonRatio: number;
+  secondPersonRatio: number;
+  contractionRatio: number;
+  avgWordLength: number;
+  complexWordRatio: number;
+  fleschReadingEase: number;
+  readingGradeLevel: number;
+  vocabularyTier: "plain" | "professional" | "technical";
+  listUsageRatio: number;
+  headingDensity: number;
+  sampleWordCount: number;
+  sampleDocumentCount: number;
+  computedAt: string;
+};
+
+/**
+ * Result of scoring the scanned corpus for whether it carries enough real
+ * writing for the style vector to be trustworthy. Mirrors
+ * `StyleSufficiency` in `@workspace/content-engine/brand/style-sufficiency`
+ * structurally, for the same reason as `BrandStyleVector` above.
+ */
+export type BrandStyleSufficiency = {
+  sufficient: boolean;
+  score: number;
+  totalWords: number;
+  usablePages: number;
+  reasons: string[];
+};
+
 export type BrandMemory = {
   summary?: string;
   voiceTraits?: string[];
@@ -62,6 +107,12 @@ export type BrandMemory = {
    * existing brand_memory jsonb column, no migration required.
    */
   proofAssets?: BrandMemoryProofAsset[];
+  /** Deterministic style measurement over the scanned corpus. Absent for
+   * existing projects that were scanned before this field existed. */
+  styleVector?: BrandStyleVector;
+  /** Sufficiency score for the corpus behind `styleVector`. Absent for
+   * existing projects that were scanned before this field existed. */
+  styleSufficiency?: BrandStyleSufficiency;
 };
 
 export const insertBrandProfileSchema = createInsertSchema(

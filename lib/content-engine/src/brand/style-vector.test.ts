@@ -155,3 +155,29 @@ describe("describeStyleVector", () => {
     expect(technicalDescription).not.toEqual(chattyDescription);
   });
 });
+
+describe("readability bounds and partial vectors", () => {
+  it("keeps reading grade and ease inside their defined ranges for text the formulas were not built for", () => {
+    // No whitespace to count words by, which drove grade to -15.2 and ease
+    // to 205.8 before the clamp. Those values reach a generation prompt.
+    const v = computeStyleVector([{ text: "私たちは住宅所有者を支援します。ベルリンを拠点としています。" }]);
+    expect(v.readingGradeLevel).toBeGreaterThanOrEqual(1);
+    expect(v.readingGradeLevel).toBeLessThanOrEqual(18);
+    expect(v.fleschReadingEase).toBeGreaterThanOrEqual(0);
+    expect(v.fleschReadingEase).toBeLessThanOrEqual(100);
+  });
+
+  it("renders a partially written vector without leaking undefined or NaN into the prompt", () => {
+    // Vectors come back off a jsonb column, so a row written by an older or
+    // interrupted scan can be missing fields entirely.
+    const partial = {
+      sampleWordCount: 500,
+      sampleDocumentCount: 3,
+      vocabularyTier: "plain",
+    } as unknown as StyleVector;
+
+    const described = describeStyleVector(partial);
+    expect(described).not.toContain("undefined");
+    expect(described).not.toContain("NaN");
+  });
+});

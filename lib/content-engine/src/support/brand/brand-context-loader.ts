@@ -24,13 +24,20 @@ function withMeasuredStyle(
   voiceTone: string,
   brandMemory: BrandProfile["brandMemory"] | undefined,
 ): string {
+  // Only ever an addition to a voice the project already has. The voice gate
+  // (evaluateProjectVoiceReady) treats a non-empty voiceTone as proof that a
+  // brand voice exists, so returning measured style for a project whose tone
+  // is empty would quietly satisfy the gate and let generation run on a
+  // project that never got a voice.
+  if (!voiceTone.trim()) return voiceTone;
+
   const vector = brandMemory?.styleVector;
   if (!vector || isEmptyStyleVector(vector)) return voiceTone;
 
   const measured = describeStyleVector(vector);
   if (!measured) return voiceTone;
 
-  return voiceTone.trim() ? `${voiceTone.trim()}\n\n${measured}` : measured;
+  return `${voiceTone.trim()}\n\n${measured}`;
 }
 
 type CompanyLike = {
