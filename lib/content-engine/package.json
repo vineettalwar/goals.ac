@@ -67,6 +67,8 @@
     "./canonical-content": "./src/content/canonical-content.ts",
     "./content-piece-enhance": "./src/content/content-piece-enhance.ts",
     "./content-piece-seo": "./src/content/content-piece-seo.ts",
+    "./content-piece-versions": "./src/content/content-piece-versions.ts",
+    "./content/content-piece-versions": "./src/content/content-piece-versions.ts",
     "./content/personalization": "./src/content/personalization.ts",
     "./personalization": "./src/content/personalization.ts",
     "./content-strategy-generator": "./src/content/content-strategy-generator.ts",

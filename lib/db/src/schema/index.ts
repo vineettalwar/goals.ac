@@ -24,6 +24,7 @@ export * from "./brand_voice_chunks";
 export * from "./pgvector";
 export * from "./project_roadmaps";
 export * from "./content_pieces";
+export * from "./content_piece_versions";
 export * from "./companies";
 export * from "./organizations";
 export * from "./organization_members";

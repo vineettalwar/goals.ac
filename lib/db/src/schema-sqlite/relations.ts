@@ -10,6 +10,7 @@ import { brandVoiceChunksTable } from "./brand_voice_chunks";
 import { goalsTable } from "./goals";
 import { briefsTable } from "./briefs";
 import { contentPiecesTable } from "./content_pieces";
+import { contentPieceVersionsTable } from "./content_piece_versions";
 import { trackedKeywordsTable } from "./tracked_keywords";
 import { keywordRankSnapshotsTable } from "./keyword_rank_snapshots";
 import { sessionsTable } from "./sessions";
@@ -120,7 +121,7 @@ export const briefsRelations = relations(briefsTable, ({ one, many }) => ({
   contentPieces: many(contentPiecesTable),
 }));
 
-export const contentPiecesRelations = relations(contentPiecesTable, ({ one }) => ({
+export const contentPiecesRelations = relations(contentPiecesTable, ({ one, many }) => ({
   websiteProject: one(websiteProjectsTable, {
     fields: [contentPiecesTable.websiteProjectId],
     references: [websiteProjectsTable.id],
@@ -128,6 +129,14 @@ export const contentPiecesRelations = relations(contentPiecesTable, ({ one }) =>
   brief: one(briefsTable, {
     fields: [contentPiecesTable.briefId],
     references: [briefsTable.id],
+  }),
+  versions: many(contentPieceVersionsTable),
+}));
+
+export const contentPieceVersionsRelations = relations(contentPieceVersionsTable, ({ one }) => ({
+  contentPiece: one(contentPiecesTable, {
+    fields: [contentPieceVersionsTable.contentPieceId],
+    references: [contentPiecesTable.id],
   }),
 }));
 
