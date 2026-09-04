@@ -19,6 +19,7 @@ import { extractInternalLinks } from "./brand-scraper-links";
 import { createRobotsGate } from "./robots-txt";
 import { computeStyleVector } from "./style-vector";
 import { evaluateStyleSufficiency } from "./style-sufficiency";
+import { getCachedBrandScrapePage, setCachedBrandScrapePage } from "./brand-scrape-page-cache";
 
 export type { BrandExtract, Confidence } from "./brand-extract-types";
 export { extractInternalLinks } from "./brand-scraper-links";
@@ -26,6 +27,10 @@ export { extractInternalLinks } from "./brand-scraper-links";
 export type ScrapeBrandProfileOptions = {
   scanPlan?: BrandScanPlan;
   discoveryInput?: Omit<BrandScanDiscoveryInput, "websiteUrl" | "homepageLinks">;
+  /** Scopes the page fetch cache to one project so a rescan reuses only its own cached pages. */
+  websiteProjectId?: number;
+  /** Bypasses the page fetch cache and re-fetches every page, e.g. for an explicit "force rescan". */
+  refresh?: boolean;
 };
 
 const SYSTEM_PROMPT = `You are an expert brand analyst. Given raw text scraped from a company's website, extract brand information and rate your confidence for each field. You MUST respond with a single valid JSON object and nothing else. No markdown code fences, no explanation — only raw JSON.`;
@@ -43,12 +48,29 @@ type CrawledPage = { url: string; html: string };
 
 const CRAWL_CONCURRENCY = 5;
 
-async function fetchPage(url: string): Promise<string | null> {
+export type FetchPageOptions = {
+  websiteProjectId?: number;
+  /** Bypass the cached read (force rescan), but still write the fresh fetch back to cache. */
+  refresh?: boolean;
+  /** Skip the TTL cache entirely, read and write: the one-off robots.txt fetch. */
+  noCache?: boolean;
+};
+
+// Exported for tests only (cache-hit / refresh-bypass wiring); not part of
+// the module's intended public surface.
+export async function fetchPage(url: string, opts: FetchPageOptions = {}): Promise<string | null> {
   try {
     await assertPublicUrl(url);
   } catch {
     return null;
   }
+
+  const cacheEnabled = !opts.noCache;
+  if (cacheEnabled && !opts.refresh) {
+    const cached = await getCachedBrandScrapePage(url, opts.websiteProjectId);
+    if (cached != null) return cached;
+  }
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
@@ -58,7 +80,13 @@ async function fetchPage(url: string): Promise<string | null> {
     });
     clearTimeout(timeout);
     if (!resp.ok) return null;
-    return await resp.text();
+    const html = await resp.text();
+    // Only a successful fetch is cacheable — never cache the SSRF-guard
+    // rejection above or a non-2xx/network failure below.
+    if (cacheEnabled) {
+      await setCachedBrandScrapePage(url, html, opts.websiteProjectId);
+    }
+    return html;
   } catch {
     clearTimeout(timeout);
     return null;
@@ -129,6 +157,7 @@ export function stripHtmlStructured(html: string, maxChars = 8000): string {
 async function fetchCrawlBatch(
   urls: string[],
   robotsGate: { isAllowed(url: string): Promise<boolean> },
+  fetchOpts: FetchPageOptions = {},
 ): Promise<CrawledPage[]> {
   const pages: CrawledPage[] = [];
   for (let i = 0; i < urls.length; i += CRAWL_CONCURRENCY) {
@@ -137,7 +166,7 @@ async function fetchCrawlBatch(
       chunk.map(async (url): Promise<CrawledPage | null> => {
         const allowed = await robotsGate.isAllowed(url);
         if (!allowed) return null;
-        const html = await fetchPage(url);
+        const html = await fetchPage(url, fetchOpts);
         if (!html) return null;
         return { url, html };
       }),
@@ -162,6 +191,7 @@ async function crawlSupplementalPages(
   budget: number,
   maxDepth: number,
   robotsGate: { isAllowed(url: string): Promise<boolean> },
+  fetchOpts: FetchPageOptions = {},
 ): Promise<CrawledPage[]> {
   const visited = new Set<string>([homepageNorm]);
   const fetched: CrawledPage[] = [];
@@ -178,7 +208,7 @@ async function crawlSupplementalPages(
   while (frontier.length > 0 && fetched.length < budget && depth <= maxDepth) {
     const remaining = budget - fetched.length;
     const batch = frontier.slice(0, remaining);
-    const results = await fetchCrawlBatch(batch, robotsGate);
+    const results = await fetchCrawlBatch(batch, robotsGate, fetchOpts);
     fetched.push(...results);
 
     if (fetched.length >= budget || depth >= maxDepth) break;
@@ -333,10 +363,14 @@ export async function scrapeBrandProfile(
 ): Promise<BrandExtract> {
   await assertAiGenerationEnabled();
   const origin = new URL(websiteUrl).origin;
+  const fetchOpts: FetchPageOptions = {
+    websiteProjectId: options?.websiteProjectId,
+    refresh: options?.refresh,
+  };
   // The customer supplied this URL themselves to be scanned, so the
   // homepage fetch always bypasses robots.txt. Only the supplemental
   // crawl below is gated.
-  const homepageHtml = (await fetchPage(websiteUrl)) ?? "";
+  const homepageHtml = (await fetchPage(websiteUrl, fetchOpts)) ?? "";
 
   const internalLinks = extractInternalLinks(homepageHtml, origin);
 
@@ -356,7 +390,10 @@ export async function scrapeBrandProfile(
 
   const seedUrls = scanPlan?.pagesToFetch ?? pickKeyPages(internalLinks, supplementalBudget);
 
-  const robotsGate = createRobotsGate(ROBOTS_USER_AGENT, fetchPage);
+  // robots.txt itself is not scraped brand content and is already deduped
+  // per-origin for the life of this run by createRobotsGate, so it skips
+  // the page cache rather than sharing a TTL meant for page content.
+  const robotsGate = createRobotsGate(ROBOTS_USER_AGENT, (url) => fetchPage(url, { noCache: true }));
   const homepageNorm = normalizeBrandScanUrl(websiteUrl);
 
   const crawledPages = await crawlSupplementalPages(
@@ -366,6 +403,7 @@ export async function scrapeBrandProfile(
     supplementalBudget,
     maxDepth,
     robotsGate,
+    fetchOpts,
   );
 
   const homepageText = stripHtml(homepageHtml);

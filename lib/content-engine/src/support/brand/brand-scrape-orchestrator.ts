@@ -90,6 +90,12 @@ export async function runBrandScrapeWithDiscovery(
         gscTopPages: context.gscTopPages,
         cmsSiteGraph: context.cmsSiteGraph,
       },
+      websiteProjectId: projectId,
+      // An explicit rescan (overwrite: true, e.g. the user hitting "rescan")
+      // bypasses the page fetch cache so it reflects the live site; the
+      // quieter auto-refresh-after-GSC-sync path (overwrite: false) is fine
+      // reusing recently cached pages.
+      refresh: overwrite,
     });
     await applyBrandExtract(projectId, extract, overwrite);
 
