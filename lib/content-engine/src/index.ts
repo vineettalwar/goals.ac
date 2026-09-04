@@ -21,6 +21,8 @@ export * from "./strategy/persona-generator";
 export * from "./articles/article-generator";
 export * from "./brand/brand-voice";
 export * from "./brand/project-voice-ready";
+export * from "./brand/style-vector";
+export * from "./brand/style-sufficiency";
 export * from "./content/humanizer";
 export * from "./support/brand/brand-context-loader";
 export * from "./support/content/roadmap-project-context";

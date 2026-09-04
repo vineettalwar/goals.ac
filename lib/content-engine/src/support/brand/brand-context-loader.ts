@@ -14,6 +14,24 @@ import {
   type UnifiedBrandContext,
   normalizeSiteHost,
 } from "../../brand/brand-voice";
+import { describeStyleVector, isEmptyStyleVector } from "../../brand/style-vector";
+
+/** Renders the measured style vector (when present and non-empty) into a
+ * prompt-ready line to sit alongside the qualitative voice tone. Projects
+ * scanned before the style vector existed simply get the qualitative tone
+ * back unchanged. */
+function withMeasuredStyle(
+  voiceTone: string,
+  brandMemory: BrandProfile["brandMemory"] | undefined,
+): string {
+  const vector = brandMemory?.styleVector;
+  if (!vector || isEmptyStyleVector(vector)) return voiceTone;
+
+  const measured = describeStyleVector(vector);
+  if (!measured) return voiceTone;
+
+  return voiceTone.trim() ? `${voiceTone.trim()}\n\n${measured}` : measured;
+}
 
 type CompanyLike = {
   name: string;
@@ -35,7 +53,7 @@ function brandProfileToContext(
     websiteUrl: project.url,
     industry: brandProfile?.industry ?? "",
     targetAudience: brandProfile?.targetAudience ?? "",
-    voiceTone: brandProfile?.voiceTone ?? "",
+    voiceTone: withMeasuredStyle(brandProfile?.voiceTone ?? "", brandProfile?.brandMemory),
     primaryKeywords: brandProfile?.primaryKeywords ?? [],
     writingExamples: brandProfile?.writingExamples ?? [],
     brandGlossary: brandProfile?.brandGlossary ?? [],
