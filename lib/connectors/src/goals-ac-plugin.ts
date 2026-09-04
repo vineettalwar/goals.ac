@@ -331,7 +331,50 @@ export async function publishToGoalsAcPlugin(
   };
 }
 
-export async function fetchGoalsAcSiteGraph<T = unknown>(
+/** A published post as exported by `class-site-graph.php`. */
+export interface GoalsAcSiteGraphPost {
+  id: number;
+  title: string;
+  slug: string;
+  url: string;
+  excerpt: string;
+  body: string;
+  contentMarkdown: string;
+  categories: number[];
+  tags: number[];
+  published_at: string;
+  updated_at: string;
+}
+
+/** A category or tag term as exported by `class-site-graph.php`. */
+export interface GoalsAcSiteGraphTerm {
+  id: number;
+  name: string;
+  slug: string;
+  count: number;
+  parent: number;
+}
+
+/** An internal `<a>` link found inside a published post's content. */
+export interface GoalsAcSiteGraphInternalLink {
+  source_id: number;
+  source_slug: string;
+  target_url: string;
+  target_path: string;
+}
+
+/**
+ * Shape of the `site-graph` endpoint response, mirroring
+ * `cms-plugins/wordpress/includes/class-site-graph.php`'s `export()` method.
+ */
+export interface GoalsAcSiteGraph {
+  posts: GoalsAcSiteGraphPost[];
+  categories: GoalsAcSiteGraphTerm[];
+  tags: GoalsAcSiteGraphTerm[];
+  internal_links: GoalsAcSiteGraphInternalLink[];
+}
+
+export async function fetchGoalsAcSiteGraph<T = GoalsAcSiteGraph>(
   credentials: GoalsAcPluginCredentials,
 ): Promise<T> {
   return goalsAcRequest<T>(credentials, "GET", "site-graph");

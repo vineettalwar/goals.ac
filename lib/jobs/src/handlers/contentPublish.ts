@@ -11,9 +11,14 @@ import { featuredImageFromMetadata } from "@workspace/content-engine/articles/ar
 import {
   publishPieceToDestination,
   publishBlogPieceToPrimaryDestination,
+  resolvePrimaryBlogDestination,
   resolvePrimaryEspDestination,
 } from "@workspace/content-engine/support/publishing/publish-destination";
-import { withPublishRecord } from "@workspace/content-engine/support/publishing/publish-records";
+import { withPublishRecord, recordReadinessAssessment } from "@workspace/content-engine/support/publishing/publish-records";
+import { collectReadinessInputs } from "@workspace/content-engine/support/publishing/readiness-inputs";
+import { assessPublishReadiness } from "@workspace/content-engine/content/publish-readiness";
+import { resolveWordPressConnectionType } from "@workspace/content-engine/support/publishing/cms-integrations";
+import { fetchGoalsAcSiteGraph } from "@workspace/connectors/goals-ac-plugin";
 import { logger } from "../logger";
 import { seedSocialPostMetrics } from "@workspace/content-engine/social/social-metrics-service";
 
@@ -64,6 +69,92 @@ async function publishPiece(
   const wpStatus = wordpressPublishStatus(autopilot);
   const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
   const platform = platformOverride ?? piece.publishPlatform ?? FORMAT_TO_PLATFORM[piece.formatType];
+
+  // Autopilot, the scheduled sweep, and cf-write-worker all funnel through this
+  // function with no human present to supply an overrideReason. A blocker must
+  // therefore neither publish nor silently vanish: hold the piece at "draft" (the
+  // same status used to pull regulated-vertical pieces back for human review) so
+  // it surfaces for attention instead of being force-published or looping through
+  // the scheduled sweep, which only selects status "ready".
+  const existingMetadata = piece.pieceMetadata ?? undefined;
+  const overrideReason = existingMetadata?.publishOverride?.reason;
+  const recordProvider = platform ?? piece.publishPlatform ?? "auto";
+  if (!overrideReason) {
+    // A human override means "do not spend time verifying anything" -- this
+    // branch (and its network calls) only runs when there is no override.
+    const effectiveDestination = platform ?? resolvePrimaryBlogDestination(creds);
+    const connectionType =
+      effectiveDestination === "wordpress" && creds.wordpress
+        ? resolveWordPressConnectionType(creds.wordpress)
+        : undefined;
+    const pluginCreds =
+      connectionType === "plugin" && creds.wordpress?.siteUrl && creds.wordpress.siteKey
+        ? { siteUrl: creds.wordpress.siteUrl, siteKey: creds.wordpress.siteKey, platform: "wordpress" as const }
+        : null;
+
+    const readinessInputs = await collectReadinessInputs({
+      bodyMarkdown: piece.bodyMarkdown ?? "",
+      citations: piece.pieceMetadata?.citations,
+      internalLinkSuggestions: piece.pieceMetadata?.internalLinkSuggestions,
+      // Fetched at most once per publish run (there is exactly one call site
+      // here), and only when the destination is the goals.ac WordPress plugin
+      // with real credentials -- otherwise no fetcher is passed and the
+      // dangling-link check is skipped rather than failed.
+      siteGraphFetcher: pluginCreds ? () => fetchGoalsAcSiteGraph(pluginCreds) : undefined,
+    });
+
+    const readiness = assessPublishReadiness(
+      {
+        title: piece.title,
+        bodyMarkdown: piece.bodyMarkdown ?? "",
+        pieceMetadata: piece.pieceMetadata,
+      },
+      readinessInputs,
+    );
+    for (const warning of readiness.warnings) {
+      logger.warn({ pieceId, code: warning.code, message: warning.message }, "Publish readiness warning");
+    }
+    // Recorded regardless of outcome: a blocked attempt is the most informative
+    // data point available for choosing minQualityScore, so it must not be dropped.
+    // recordReadinessAssessment already swallows its own write errors; this catch
+    // is defense in depth so telemetry can never take the publish down with it.
+    try {
+      await recordReadinessAssessment({
+        contentPieceId: pieceId,
+        websiteProjectId: piece.websiteProjectId,
+        provider: recordProvider,
+        qualityScore: readiness.qualityScore,
+        blockerCodes: readiness.blockers.map((b) => b.code),
+        warningCodes: readiness.warnings.map((w) => w.code),
+        blocked: !readiness.ok,
+      });
+    } catch (err) {
+      logger.error({ err, pieceId }, "Failed to record publish readiness telemetry");
+    }
+    if (!readiness.ok) {
+      const priorAttempt = existingMetadata?.publishBlocked?.attempt ?? 0;
+      await db
+        .update(contentPiecesTable)
+        .set({
+          status: "draft",
+          publishError: `Blocked by readiness gate: ${readiness.blockers.map((b) => b.message).join(" ")}`,
+          pieceMetadata: {
+            ...(existingMetadata ?? {}),
+            publishBlocked: {
+              blockers: readiness.blockers,
+              blockedAt: new Date().toISOString(),
+              attempt: priorAttempt + 1,
+            },
+          },
+        })
+        .where(eq(contentPiecesTable.id, pieceId));
+      logger.error(
+        { pieceId, blockers: readiness.blockers.map((b) => b.code) },
+        "Publish blocked by readiness gate, held for human review",
+      );
+      return;
+    }
+  }
 
   // Wave 5.C.3: skip destinations with known-failed health (do not burn publish attempts).
   if (platform && !isSocialPlatform(platform) && platform !== "beehiiv") {
@@ -160,7 +251,6 @@ async function publishPiece(
     };
   };
 
-  const recordProvider = platform ?? piece.publishPlatform ?? "auto";
   const publishOutcome = await withPublishRecord(
     {
       contentPieceId: pieceId,
@@ -189,6 +279,7 @@ async function publishPiece(
     ...(warningMessages && warningMessages.length > 0
       ? { lastPublishWarnings: warningMessages }
       : { lastPublishWarnings: undefined }),
+    publishBlocked: undefined,
   };
 
   await db

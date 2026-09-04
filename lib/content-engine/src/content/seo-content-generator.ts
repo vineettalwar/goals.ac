@@ -10,6 +10,12 @@ import {
   type UnifiedBrandContext,
 } from "../brand/brand-voice";
 import { humanizeArticle } from "./humanizer";
+import {
+  buildFunnelStagePrompt,
+  buildProofAssetPrompt,
+  type FunnelStage,
+  type ProofAsset,
+} from "./personalization";
 
 export interface SeoArticleContent {
   title: string;
@@ -95,6 +101,7 @@ function buildPrompt(
   stage: string,
   contentStyle?: ContentStyle | null,
   brandVoiceContext?: string,
+  personalization?: { funnelStage?: FunnelStage; proofAssets?: ProofAsset[] },
 ): string {
   const stageContext: Record<string, string> = {
     "pre-seed": "early-stage startup validating its concept",
@@ -110,10 +117,16 @@ function buildPrompt(
     : "1200–1500";
   const styleContext = buildContentStyleContext(contentStyle);
   const voiceBlock = brandVoiceContext?.trim() ? `\n${brandVoiceContext.trim()}` : "";
+  const funnelBlock = personalization?.funnelStage
+    ? `\n${buildFunnelStagePrompt(personalization.funnelStage)}`
+    : "";
+  const proofBlock = personalization?.proofAssets?.length
+    ? `\n${buildProofAssetPrompt(personalization.proofAssets)}`
+    : "";
 
   return `Write a comprehensive, brand-aligned SEO article for ${brandName} (${websiteUrl}), a ${stageDesc} in the ${industry} industry based in ${location}.
 
-The article must be ${wordRange} words, structured for both search ranking and AI citation. Write from the perspective of a knowledgeable insider in the ${industry} space in ${location}.${styleContext}${voiceBlock}
+The article must be ${wordRange} words, structured for both search ranking and AI citation. Write from the perspective of a knowledgeable insider in the ${industry} space in ${location}.${styleContext}${voiceBlock}${funnelBlock}${proofBlock}
 
 Return ONLY this exact JSON structure with no additional text:
 
@@ -153,6 +166,7 @@ async function generateWithClient(
   brand?: UnifiedBrandContext,
   userApiKey?: string | null,
   aiProviderOptions?: AiProviderOptions,
+  personalization?: { funnelStage?: FunnelStage; proofAssets?: ProofAsset[] },
 ): Promise<SeoArticleContent> {
   const prompt = buildPrompt(
     brandName,
@@ -162,6 +176,7 @@ async function generateWithClient(
     stage,
     contentStyle,
     brandVoiceContext,
+    personalization,
   );
   let lastError: unknown;
 
@@ -207,6 +222,7 @@ export async function generateSeoArticleContent(
   aiProviderOptions?: AiProviderOptions,
   projectId?: number,
   brand?: UnifiedBrandContext,
+  personalization?: { funnelStage?: FunnelStage; proofAssets?: ProofAsset[] },
 ): Promise<SeoArticleContent> {
   let brandVoiceContext = "";
   if (projectId) {
@@ -229,6 +245,7 @@ export async function generateSeoArticleContent(
     brand,
     userApiKey,
     aiProviderOptions,
+    personalization,
   );
 }
 

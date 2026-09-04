@@ -1,7 +1,7 @@
 import { getAiProviderClient } from "@workspace/ai-providers/client";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import type { BrandExtract, Confidence } from "./brand-extract-types";
-import { sanitizeBrandExtract } from "./brand-extract-sanitize";
+import { sanitizeBrandExtract, sanitizeProofAssets } from "./brand-extract-sanitize";
 import { cleanAndParse } from "../core/utils";
 import { logger } from "../core/logger";
 import { assertAiGenerationEnabled } from "../support/publishing/platform-guard";
@@ -89,17 +89,36 @@ function extractWritingSamples(homepageText: string, pageTexts: string[]): strin
   return samples.slice(0, 5);
 }
 
+function buildSourcedPageText(
+  pageDocuments: import("./brand-extract-types").BrandPageDocument[],
+  maxChars: number,
+): string {
+  let out = "";
+  for (const doc of pageDocuments) {
+    if (!doc.text.trim()) continue;
+    const chunk = `=== PAGE URL: ${doc.sourceUrl} ===\n${doc.text}\n\n`;
+    if (out.length + chunk.length > maxChars) break;
+    out += chunk;
+  }
+  return out;
+}
+
 async function analyzeBrandVoiceDeep(
   websiteUrl: string,
   allText: string,
   writingSamples: string[],
   scanSources: string[],
+  pageDocuments: import("./brand-extract-types").BrandPageDocument[],
 ): Promise<BrandExtract["deep"]> {
   const ai = await getAiProviderClient();
+  const sourcedText = buildSourcedPageText(pageDocuments, 10000);
   const prompt = `Analyze brand voice from website copy. URL: ${websiteUrl}
 
 COPY:
 ${allText.slice(0, 10000)}
+
+PAGES BY SOURCE URL (use this section, not COPY above, to find the "url" for any proof asset):
+${sourcedText}
 
 WRITING SAMPLES:
 ${writingSamples.join("\n---\n")}
@@ -119,9 +138,26 @@ Return ONLY valid JSON:
     "audienceInsights": ["2-4 audience insights"],
     "competitorPositioning": "how they differentiate vs competitors",
     "scanSources": ${JSON.stringify(scanSources)},
-    "confidence": { "summary": "high|medium|low" }
+    "confidence": { "summary": "high|medium|low" },
+    "proofAssets": [
+      {
+        "kind": "metric|case_study|customer_quote|named_example",
+        "claim": "the exact number, result, or quote as it appears on the page",
+        "source": "who or what the page attributes it to, if named",
+        "url": "the page URL this came from"
+      }
+    ]
   }
-}`;
+}
+
+PROOF ASSETS. Read this section carefully before filling "proofAssets":
+Look through the supplied page text for concrete proof material the company itself has published: case study results, named metrics ("reduced churn by 22%"), named customers, testimonial quotes attributed to a person or company, and award or ranking claims.
+
+Strict rules, because a fabricated proof asset is worse than none and will be presented to readers as a verified fact:
+- Extract ONLY a claim that appears verbatim or near-verbatim in the supplied page text. Never infer it, never round a number, never generalize a specific result into a broader one, and never invent a plausible-sounding statistic, quote, or customer name.
+- Every asset needs a "claim" copied from the text and, when the page provides it, the "url" of the page it came from and the "source" the page itself names (a customer, a report, a named team). Leave "source" out if the page does not name one. Do not guess an attribution.
+- "kind" must be exactly one of: metric, case_study, customer_quote, named_example.
+- If the supplied pages contain no such material, return "proofAssets": []. An empty array is the normal, correct result for most brochure-style sites. Do not stretch a vague marketing claim ("trusted by teams everywhere") into a manufactured proof asset just to produce output.`;
 
   const response = await ai.generate({
     prompt,
@@ -155,6 +191,7 @@ Return ONLY valid JSON:
         typeof memory.confidence === "object" && memory.confidence
           ? (memory.confidence as Record<string, Confidence>)
           : { summary: "medium" },
+      proofAssets: sanitizeProofAssets(memory.proofAssets),
     },
   };
 }
@@ -290,7 +327,7 @@ Banned in all string fields: placeholder URLs, example.com, "competitor1", buzzw
         scannedPages,
         pageDocuments,
         discoveryMeta: scanPlan?.discoveryMeta,
-        deep: await analyzeBrandVoiceDeep(websiteUrl, allText, writingSamples, scannedPages),
+        deep: await analyzeBrandVoiceDeep(websiteUrl, allText, writingSamples, scannedPages, pageDocuments),
       });
     } catch (err) {
       logger.warn({ err, attempt }, "Brand scrape parse error");

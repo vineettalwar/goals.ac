@@ -99,6 +99,20 @@ export type ContentPieceMetadata = {
   intendedOutputMode?: string;
   /** Raster/data featured warnings from last CMS publish (Notion/Webflow omit, etc.) */
   lastPublishWarnings?: { code: string; message: string }[];
+  /**
+   * Audit trail for a publish that went through despite unresolved
+   * assessPublishReadiness blockers. Set only when the caller supplied an
+   * overrideReason; a reviewer can see who overrode what and why after the fact.
+   */
+  publishOverride?: {
+    reason: string | undefined;
+    blockers: { code: string; severity: "blocker" | "warning"; message: string; detail?: string }[];
+    /** Absent when the override came through an API key rather than a signed-in user. */
+    userId?: number;
+    /** Set instead of userId for public API publishes, so the org is still attributable. */
+    organizationId?: number;
+    overriddenAt: string;
+  };
   /** Markdown visual summary block injected post-generation */
   visualSummaryMarkdown?: string;
   /** Raw SVG “At a glance” graphic */
@@ -111,6 +125,18 @@ export type ContentPieceMetadata = {
   cmsCategories?: string[];
   /** WordPress tag names (falls back to keyword + format when omitted). */
   cmsTags?: string[];
+  /**
+   * Set by the publish job when assessPublishReadiness finds unresolved
+   * blockers and there is no human present to supply an override reason.
+   * The piece is held at status "draft" for human attention instead of
+   * being published or silently dropped. Cleared once a human resolves the
+   * blockers (edit + re-ready) or supplies a publishOverride.
+   */
+  publishBlocked?: {
+    blockers: { code: string; severity: "blocker" | "warning"; message: string; detail?: string }[];
+    blockedAt: string;
+    attempt?: number;
+  };
 };
 
 export const contentPiecesTable = pgTable("content_pieces", {

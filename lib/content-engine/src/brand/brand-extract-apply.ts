@@ -5,6 +5,9 @@ export function brandMemoryFromExtract(deep: BrandExtract["deep"]): BrandMemory 
   if (!deep?.brandMemory) return null;
   return {
     ...deep.brandMemory,
+    // Older extracts (before proof-asset support) carry no proofAssets key;
+    // default to [] so downstream consumers never see it as undefined.
+    proofAssets: deep.brandMemory.proofAssets ?? [],
     lastScannedAt: new Date().toISOString(),
   };
 }

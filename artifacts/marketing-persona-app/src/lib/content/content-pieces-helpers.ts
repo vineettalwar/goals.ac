@@ -5,9 +5,14 @@ import {
   goalsTable,
   websiteProjectsTable,
   organizationsTable,
+  brandProfilesTable,
   CONTENT_FORMAT_TYPES,
   type ContentFormatType,
 } from "@workspace/db/schema";
+import {
+  selectProofAssets,
+  type FunnelStage,
+} from "@workspace/content-engine/content/personalization";
 import type { ContentPieceMetadata } from "@workspace/db";
 import { eq, and, desc } from "drizzle-orm";
 import { requireProjectAccess } from "@/lib/org/org-access";
@@ -249,6 +254,45 @@ export async function loadExistingPieceTitles(projectId: number): Promise<string
   return rows.flatMap((row) => (row.title ? [row.title] : []));
 }
 
+/**
+ * Verified proof points the brand scan pulled off the customer's own pages,
+ * narrowed to the ones relevant to this keyword. Without these the generator is
+ * told to be concrete and given nothing concrete to work from, which is the
+ * pressure that produces invented statistics.
+ */
+async function loadProofAssetsForKeyword(
+  projectId: number,
+  keyword: string | undefined,
+): Promise<ReturnType<typeof selectProofAssets> | undefined> {
+  if (!keyword?.trim()) return undefined;
+
+  const [brand] = await db
+    .select({ brandMemory: brandProfilesTable.brandMemory })
+    .from(brandProfilesTable)
+    .where(eq(brandProfilesTable.websiteProjectId, projectId))
+    .limit(1);
+
+  const assets = brand?.brandMemory?.proofAssets;
+  if (!assets?.length) return undefined;
+
+  const selected = selectProofAssets(assets, keyword);
+  return selected.length > 0 ? selected : undefined;
+}
+
+/** Funnel stage from the compiled brief, when this generation came from one. */
+async function loadFunnelStage(briefId: number | undefined): Promise<FunnelStage | undefined> {
+  if (!briefId) return undefined;
+
+  const [brief] = await db
+    .select({ funnelStage: briefsTable.funnelStage })
+    .from(briefsTable)
+    .where(eq(briefsTable.id, briefId))
+    .limit(1);
+
+  const stage = brief?.funnelStage;
+  return stage === "tofu" || stage === "mofu" || stage === "bofu" ? stage : undefined;
+}
+
 export async function loadGenerationContext(
   projectId: number,
   input: Pick<
@@ -259,7 +303,7 @@ export async function loadGenerationContext(
     | "intendedEditorMode"
     | "competitorFocusUrl"
     | "competitorUrls"
-  >,
+  > & { targetKeyword?: string; briefId?: number },
 ): Promise<ContentGenerationContext & { resolvedIntendedPlatform?: string }> {
   const [project] = await db
     .select({
@@ -276,9 +320,11 @@ export async function loadGenerationContext(
     ? normalizeCompetitorUrlList(input.competitorUrls)
     : undefined;
   const competitorFocusUrl = input.competitorFocusUrl ?? pieceCompetitorUrls?.[0];
-  const [existingPieceTitles, competitorContext] = await Promise.all([
+  const [existingPieceTitles, competitorContext, proofAssets, funnelStage] = await Promise.all([
     loadExistingPieceTitles(projectId),
     loadCompetitorGenerationContext(projectId, competitorFocusUrl, pieceCompetitorUrls),
+    loadProofAssetsForKeyword(projectId, input.targetKeyword),
+    loadFunnelStage(input.briefId),
   ]);
 
   const resolvedIntendedPlatform =
@@ -311,6 +357,8 @@ export async function loadGenerationContext(
     competitorPromptBlock: competitorContext.promptBlock || undefined,
     competitorFocusUrl: competitorContext.focusUrl,
     competitorUrls: pieceCompetitorUrls,
+    proofAssets,
+    funnelStage,
   };
 }
 

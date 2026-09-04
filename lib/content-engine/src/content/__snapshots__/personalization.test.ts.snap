@@ -1,0 +1,32 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`backward compatibility: buildSeoLongformRequirements with no personalization options > matches the exact pre-personalization output 1`] = `
+"Requirements for body_markdown:
+- Write 1200-1500 words of publish-ready prose. NEVER an outline, brief, or template.
+- Open with a hook paragraph (no label like "Engaging introduction"). Start on the actual point, not a generic landscape opener.
+- Commit to direct claims instead of hedging. Prefer specifics over abstract noun fog.
+- Use 4-6 concrete ## H2 headings named for the topic (e.g. "## How proximity beats a prettier website", NOT "## Core Insight 1" or "## Why X Matters")
+- Every stat or research claim needs an inline citation: [Source Name](https://real-url)
+- Minimum 4 external citations to authoritative sources (.gov, .edu, industry research, named publications)
+- Minimum 3 internal links inline in paragraphs: [anchor text](/blog/suggested-slug)
+- End with ## Frequently Asked Questions containing 4-6 ### questions (each ending with ?) and 2-4 sentence answers
+- Reference Acme 2-3 times naturally without sounding promotional
+- Target "best crm software" in the intro, 2+ H2 headings, and conclusion
+
+Requirements for faq_section:
+- Mirror the FAQ in body_markdown: 4-6 pairs targeting People Also Ask queries for "best crm software"
+
+Requirements for citations:
+- One entry per external link used in body_markdown (text, url, source)
+
+Requirements for internal_link_suggestions:
+- 3-5 opportunities; every suggestedSlug MUST appear as an inline link in body_markdown
+
+Requirements for meta_description:
+- Exactly 150-160 characters, includes "best crm software", drives clicks
+
+Requirements for json_ld_schema:
+- Valid JSON-LD with @type Article; include FAQPage mainEntity when faq_section is present
+
+Before responding, self-check: 1200+ words, 4+ H2s, 4+ external links, 3+ internal links, 4+ FAQs. If any check fails, fix before returning JSON."
+`;

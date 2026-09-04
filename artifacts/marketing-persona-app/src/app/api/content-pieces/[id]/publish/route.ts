@@ -22,6 +22,7 @@ import { resolveEntitlementsForProject } from "@workspace/content-engine/support
 import { withPublishRecord } from "@workspace/content-engine/support/publishing/publish-records";
 import { publishPieceToWordPress } from "@workspace/content-engine/support/publishing/cms-publish";
 import { featuredImageFromMetadata } from "@workspace/content-engine/articles/article-image-enricher";
+import { assessPublishReadiness } from "@workspace/content-engine/content/publish-readiness";
 import { decryptSecret } from "@workspace/security/encryption";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand/brand-voice-generation";
@@ -49,6 +50,8 @@ const PublishBody = z.object({
   platform: z.enum(ALL_PUBLISH_PLATFORMS as unknown as [string, ...string[]]).optional(),
   wordpressConnectionId: z.number().int().positive().optional(),
   async: z.boolean().optional(),
+  /** Required to publish despite blockers from assessPublishReadiness. Persisted for audit. */
+  overrideReason: z.string().min(10).max(500).optional(),
 }).refine(
   (d) => d.platform || d.wordpressConnectionId,
   { message: "Provide platform or WordPress connection" },
@@ -85,7 +88,45 @@ export async function POST(
   if (ownerError === "not_found") return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
   if (ownerError === "forbidden") return NextResponse.json({ error: "Access denied" }, { status: 403 });
 
+  const readiness = assessPublishReadiness({
+    title: piece!.title,
+    bodyMarkdown: piece!.bodyMarkdown ?? "",
+    pieceMetadata: piece!.pieceMetadata,
+  });
+
+  if (!readiness.ok && !parsed.data.overrideReason) {
+    return NextResponse.json(
+      {
+        error: "Content not ready to publish",
+        blockers: readiness.blockers,
+        warnings: readiness.warnings,
+        qualityScore: readiness.qualityScore,
+      },
+      { status: 422 },
+    );
+  }
+
+  const publishOverride = !readiness.ok
+    ? {
+        reason: parsed.data.overrideReason,
+        blockers: readiness.blockers,
+        userId: userId!,
+        overriddenAt: new Date().toISOString(),
+      }
+    : undefined;
+
   if (parsed.data.async) {
+    if (publishOverride) {
+      await db
+        .update(contentPiecesTable)
+        .set({
+          pieceMetadata: {
+            ...((piece!.pieceMetadata as Record<string, unknown> | null) ?? {}),
+            publishOverride,
+          },
+        })
+        .where(eq(contentPiecesTable.id, id));
+    }
     // Pass platform so the job publishes to the destination picked in the dialog
     // (not FORMAT_TO_PLATFORM / primary-connection fallback).
     await enqueue(QUEUES.contentPublish, {
@@ -93,7 +134,7 @@ export async function POST(
       userId: userId!,
       platform: parsed.data.platform,
     });
-    return NextResponse.json({ queued: true });
+    return NextResponse.json({ queued: true, warnings: readiness.warnings });
   }
 
   const [project] = await db
@@ -209,6 +250,7 @@ export async function POST(
       ...(warnings && warnings.length > 0
         ? { lastPublishWarnings: warnings }
         : { lastPublishWarnings: undefined }),
+      ...(publishOverride ? { publishOverride } : {}),
     };
 
     const [updated] = await db
@@ -241,7 +283,7 @@ export async function POST(
 
     return NextResponse.json({
       ...updated,
-      warnings: warnings ?? [],
+      warnings: [...readiness.warnings, ...(warnings ?? [])],
     });
   } catch (err) {
     return NextResponse.json(

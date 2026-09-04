@@ -38,6 +38,19 @@ export const brandProfilesTable = pgTable("brand_profiles", {
     .$onUpdate(() => new Date()),
 });
 
+/**
+ * A verified, concrete proof point the content generators may cite (a
+ * metric, case study, customer quote, or named example). Mirrors
+ * `ProofAsset` in `@workspace/content-engine/personalization` structurally;
+ * declared independently here since `db` must not depend on `content-engine`.
+ */
+export type BrandMemoryProofAsset = {
+  kind: "metric" | "case_study" | "customer_quote" | "named_example";
+  claim: string;
+  source?: string;
+  url?: string;
+};
+
 export type BrandMemory = {
   summary?: string;
   voiceTraits?: string[];
@@ -48,6 +61,12 @@ export type BrandMemory = {
   skillVersion?: number;
   scanSources?: string[];
   confidence?: Record<string, string>;
+  /**
+   * Concrete, verified proof points the content generators may cite for
+   * specific claims instead of inventing them. Type-only addition on the
+   * existing brand_memory jsonb column, no migration required.
+   */
+  proofAssets?: BrandMemoryProofAsset[];
 };
 
 export const insertBrandProfileSchema = createInsertSchema(

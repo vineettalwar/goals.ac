@@ -3,6 +3,14 @@ import {
   AI_WRITING_RULES_PROMPT,
   sanitizeAiProse,
 } from "./ai-writing-rules";
+import {
+  buildFunnelStagePrompt,
+  buildProofAssetPrompt,
+  type FunnelStage,
+  type ProofAsset,
+} from "./personalization";
+
+export type { FunnelStage, ProofAsset } from "./personalization";
 
 export { SEO_LONGFORM_FORMATS, isSeoLongformFormat } from "./seo-longform-formats";
 
@@ -96,12 +104,18 @@ export type RichContentPieceFields = ContentPieceMetadata & {
   json_ld_schema?: object;
 };
 
+/**
+ * The negative lookbehind matters: `![alt](https://cdn/photo.jpg)` is an image
+ * embed, not a citation. Without it every stock image the enricher attaches
+ * counts as a source, inflating the citation band and suppressing the
+ * few-citations warning on articles that cite nothing at all.
+ */
 export function countExternalLinks(body: string): number {
-  return (body.match(/\[.+?\]\(https?:\/\/[^)]+\)/g) ?? []).length;
+  return (body.match(/(?<!!)\[.+?\]\(https?:\/\/[^)]+\)/g) ?? []).length;
 }
 
 export function countInternalLinks(body: string): number {
-  return (body.match(/\[.+?\]\(\/[^)]+\)/g) ?? []).length;
+  return (body.match(/(?<!!)\[.+?\]\(\/[^)]+\)/g) ?? []).length;
 }
 
 export function countFaqItems(body: string): number {
@@ -362,8 +376,16 @@ export function buildSeoLongformRequirements(
   keyword: string,
   wordRange: string,
   schemaType = "Article",
+  personalization?: { funnelStage?: FunnelStage; proofAssets?: ProofAsset[] },
 ): string {
-  return `Requirements for body_markdown:
+  const funnelBlock = personalization?.funnelStage
+    ? `\n${buildFunnelStagePrompt(personalization.funnelStage)}\n`
+    : "";
+  const proofBlock = personalization?.proofAssets?.length
+    ? `\n${buildProofAssetPrompt(personalization.proofAssets)}\n`
+    : "";
+
+  return `${funnelBlock}${proofBlock}Requirements for body_markdown:
 - Write ${wordRange} words of publish-ready prose. NEVER an outline, brief, or template.
 - Open with a hook paragraph (no label like "Engaging introduction"). Start on the actual point, not a generic landscape opener.
 - Commit to direct claims instead of hedging. Prefer specifics over abstract noun fog.
