@@ -1,4 +1,6 @@
 import type { BrandMemoryProofAsset } from "@workspace/db";
+import type { StyleVector } from "./style-vector";
+import type { StyleSufficiency } from "./style-sufficiency";
 
 export type Confidence = "high" | "medium" | "low";
 
@@ -63,6 +65,8 @@ export interface BrandExtract {
   deep?: BrandDeepExtract;
   scannedPages?: string[];
   pageDocuments?: BrandPageDocument[];
+  styleVector?: StyleVector;
+  styleSufficiency?: StyleSufficiency;
   discoveryMeta?: {
     sitemap: boolean;
     gsc: boolean;

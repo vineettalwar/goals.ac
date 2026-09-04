@@ -16,8 +16,15 @@ export const BRAND_KEY_PATHS = [
   "case-studies",
 ];
 
+// Kept for any existing caller that still references the old one-hop cap.
+// Discovery itself now sizes its fetch list off maxPages (default below).
 export const MAX_SUPPLEMENTAL_BRAND_PAGES = 8;
 export const MAX_CMS_EXCERPTS = 10;
+
+/** Total pages a brand scan will touch, homepage included. */
+export const DEFAULT_BRAND_SCAN_MAX_PAGES = 20;
+/** Link hops the crawler will follow off the homepage. */
+export const DEFAULT_BRAND_SCAN_MAX_DEPTH = 2;
 
 export type BrandScanDiscoveryInput = {
   websiteUrl: string;
@@ -31,6 +38,10 @@ export type BrandScanDiscoveryInput = {
     contentMarkdown?: string;
   }[];
   homepageLinks?: string[];
+  /** Total page budget for the scan, homepage included. Defaults to DEFAULT_BRAND_SCAN_MAX_PAGES. */
+  maxPages?: number;
+  /** Link hops the crawler may follow off the homepage. Defaults to DEFAULT_BRAND_SCAN_MAX_DEPTH. */
+  maxDepth?: number;
 };
 
 export type BrandScanDiscoveryMeta = {
@@ -48,6 +59,8 @@ export type BrandScanPlan = {
   cmsExcerpts: { url: string; text: string; title?: string }[];
   scanSources: string[];
   discoveryMeta: BrandScanDiscoveryMeta;
+  maxPages: number;
+  maxDepth: number;
 };
 
 type ScoredUrl = {
@@ -98,6 +111,11 @@ export function pickKeyPages(links: string[], max = MAX_SUPPLEMENTAL_BRAND_PAGES
   return picked;
 }
 
+/** Orders newly-discovered crawl candidates so brand-critical paths get fetched first. */
+export function prioritizeDiscoveredUrls(urls: string[]): string[] {
+  return [...urls].sort((a, b) => Number(isBrandCriticalPath(b)) - Number(isBrandCriticalPath(a)));
+}
+
 function sameOrigin(url: string, websiteUrl: string): boolean {
   try {
     return new URL(url).origin === new URL(websiteUrl).origin;
@@ -112,6 +130,10 @@ function impressionsScore(impressions: number): number {
 }
 
 export function discoverBrandScanUrls(input: BrandScanDiscoveryInput): BrandScanPlan {
+  const maxPages = input.maxPages ?? DEFAULT_BRAND_SCAN_MAX_PAGES;
+  const maxDepth = input.maxDepth ?? DEFAULT_BRAND_SCAN_MAX_DEPTH;
+  // The homepage always occupies one slot in the page budget.
+  const supplementalCap = Math.max(0, maxPages - 1);
   const homepageNorm = normalizeBrandScanUrl(input.websiteUrl);
   const scored = new Map<string, ScoredUrl>();
 
@@ -161,10 +183,10 @@ export function discoverBrandScanUrls(input: BrandScanDiscoveryInput): BrandScan
   if (scored.size > 0) {
     pagesToFetch = [...scored.values()]
       .sort((a, b) => b.score - a.score)
-      .slice(0, MAX_SUPPLEMENTAL_BRAND_PAGES)
+      .slice(0, supplementalCap)
       .map((entry) => entry.url);
   } else if (homepageLinks.length > 0) {
-    pagesToFetch = pickKeyPages(homepageLinks);
+    pagesToFetch = pickKeyPages(homepageLinks, supplementalCap);
   }
 
   const fetchedSet = new Set(pagesToFetch.map(normalizeBrandScanUrl));
@@ -198,6 +220,8 @@ export function discoverBrandScanUrls(input: BrandScanDiscoveryInput): BrandScan
     pagesToFetch,
     cmsExcerpts,
     scanSources: uniqueScanSources,
+    maxPages,
+    maxDepth,
     discoveryMeta: {
       sitemap: sitemapUrls.length > 0,
       gsc: gscTopPages.length > 0,

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_BRAND_SCAN_MAX_DEPTH,
+  DEFAULT_BRAND_SCAN_MAX_PAGES,
   discoverBrandScanUrls,
   isBrandCriticalPath,
-  MAX_SUPPLEMENTAL_BRAND_PAGES,
   normalizeBrandScanUrl,
   pickKeyPages,
+  prioritizeDiscoveredUrls,
 } from "./brand-scan-discovery";
 
 describe("normalizeBrandScanUrl", () => {
@@ -33,6 +35,19 @@ describe("pickKeyPages", () => {
     const picked = pickKeyPages(links, 2);
     expect(picked).toContain("https://example.com/about");
     expect(picked.length).toBeLessThanOrEqual(2);
+  });
+});
+
+describe("prioritizeDiscoveredUrls", () => {
+  it("puts brand-critical paths first without dropping other URLs", () => {
+    const urls = [
+      "https://example.com/random",
+      "https://example.com/pricing",
+      "https://example.com/blog/post",
+    ];
+    const ranked = prioritizeDiscoveredUrls(urls);
+    expect(ranked).toHaveLength(3);
+    expect(ranked[0]).toBe("https://example.com/pricing");
   });
 });
 
@@ -66,10 +81,28 @@ describe("discoverBrandScanUrls", () => {
     expect(plan.pagesToFetch).toHaveLength(1);
   });
 
-  it("caps supplemental page fetches", () => {
+  it("caps supplemental page fetches at the default page budget minus the homepage", () => {
     const sitemapUrls = Array.from({ length: 30 }, (_, i) => `https://example.com/page-${i}`);
     const plan = discoverBrandScanUrls({ websiteUrl, sitemapUrls });
-    expect(plan.pagesToFetch.length).toBeLessThanOrEqual(MAX_SUPPLEMENTAL_BRAND_PAGES);
+    expect(plan.pagesToFetch.length).toBeLessThanOrEqual(DEFAULT_BRAND_SCAN_MAX_PAGES - 1);
+    expect(plan.maxPages).toBe(DEFAULT_BRAND_SCAN_MAX_PAGES);
+    expect(plan.maxDepth).toBe(DEFAULT_BRAND_SCAN_MAX_DEPTH);
+  });
+
+  it("respects a caller-supplied maxPages budget", () => {
+    const sitemapUrls = Array.from({ length: 30 }, (_, i) => `https://example.com/page-${i}`);
+    const plan = discoverBrandScanUrls({ websiteUrl, sitemapUrls, maxPages: 5, maxDepth: 1 });
+    expect(plan.pagesToFetch.length).toBeLessThanOrEqual(4);
+    expect(plan.maxPages).toBe(5);
+    expect(plan.maxDepth).toBe(1);
+  });
+
+  it("returns every page when the site has fewer pages than the budget", () => {
+    const plan = discoverBrandScanUrls({
+      websiteUrl,
+      sitemapUrls: ["https://example.com/about", "https://example.com/pricing"],
+    });
+    expect(plan.pagesToFetch).toHaveLength(2);
   });
 
   it("falls back to homepage link heuristics when no scored URLs exist", () => {
@@ -93,6 +126,7 @@ describe("discoverBrandScanUrls", () => {
       websiteUrl,
       cmsSiteGraph,
       sitemapUrls: cmsSiteGraph.map((p) => p.url),
+      maxPages: 9,
     });
 
     expect(plan.discoveryMeta.cms).toBe(true);

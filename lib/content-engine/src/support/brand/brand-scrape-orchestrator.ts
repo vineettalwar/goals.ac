@@ -8,6 +8,9 @@ import { ingestBrandVoiceDocuments } from "../../brand/brand-voice-indexer";
 import { ingestSocialBrandVoice } from "../../brand/brand-voice-social-ingest";
 import { logger } from "../../core/logger";
 
+/** PRD 4.1: brand scrape report should complete within 60s. Instrumentation only, nothing fails on a breach. */
+export const BRAND_SCRAPE_BUDGET_MS = 60000;
+
 async function applyBrandExtract(
   projectId: number,
   extract: Awaited<ReturnType<typeof scrapeBrandProfile>>,
@@ -66,6 +69,7 @@ export async function runBrandScrapeWithDiscovery(
   options?: { overwrite?: boolean; refreshSitemap?: boolean },
 ): Promise<void> {
   const overwrite = options?.overwrite ?? false;
+  const startedAt = Date.now();
 
   await db
     .update(websiteProjectsTable)
@@ -114,12 +118,30 @@ export async function runBrandScrapeWithDiscovery(
         logger.warn({ err, projectId }, "Social brand voice ingest after scrape failed");
       });
     }
+
+    logBrandScrapeDuration(startedAt, projectId, extract.scannedPages?.length ?? 0);
   } catch (err) {
+    logBrandScrapeDuration(startedAt, projectId, undefined, err);
     logger.error({ err, projectId, url }, "Brand scrape with discovery failed");
     await db
       .update(websiteProjectsTable)
       .set({ scrapeStatus: "failed" })
       .where(eq(websiteProjectsTable.id, projectId));
+  }
+}
+
+function logBrandScrapeDuration(
+  startedAt: number,
+  projectId: number,
+  pageCount: number | undefined,
+  err?: unknown,
+): void {
+  const elapsedMs = Date.now() - startedAt;
+  const fields = { elapsedMs, projectId, pageCount, budgetMs: BRAND_SCRAPE_BUDGET_MS, failed: Boolean(err) };
+  if (elapsedMs > BRAND_SCRAPE_BUDGET_MS) {
+    logger.warn(fields, "Brand scrape exceeded performance budget");
+  } else {
+    logger.info(fields, "Brand scrape completed within performance budget");
   }
 }
 
