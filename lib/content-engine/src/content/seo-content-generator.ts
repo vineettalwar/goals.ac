@@ -211,6 +211,11 @@ async function generateWithClient(
   throw lastError;
 }
 
+// PRD 4.1: a full article with research is budgeted at 3 minutes. This is
+// instrumentation only - crossing the budget is logged, not failed, so we can
+// find out whether the budget or the pipeline needs to move.
+export const ARTICLE_GENERATION_BUDGET_MS = 180000;
+
 export async function generateSeoArticleContent(
   brandName: string,
   websiteUrl: string,
@@ -224,6 +229,7 @@ export async function generateSeoArticleContent(
   brand?: UnifiedBrandContext,
   personalization?: { funnelStage?: FunnelStage; proofAssets?: ProofAsset[] },
 ): Promise<SeoArticleContent> {
+  const startedAt = Date.now();
   let brandVoiceContext = "";
   if (projectId) {
     const ctx = await loadBrandVoiceGenerationContext(
@@ -233,20 +239,40 @@ export async function generateSeoArticleContent(
     brandVoiceContext = ctx?.promptContext ?? "";
   }
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
-  return generateWithClient(
-    client,
-    brandName,
-    websiteUrl,
-    industry,
-    location,
-    stage,
-    contentStyle,
-    brandVoiceContext,
-    brand,
-    userApiKey,
-    aiProviderOptions,
-    personalization,
-  );
+  try {
+    const result = await generateWithClient(
+      client,
+      brandName,
+      websiteUrl,
+      industry,
+      location,
+      stage,
+      contentStyle,
+      brandVoiceContext,
+      brand,
+      userApiKey,
+      aiProviderOptions,
+      personalization,
+    );
+
+    const elapsedMs = Date.now() - startedAt;
+    const wordCount = result.content ? result.content.trim().split(/\s+/).length : 0;
+    const logPayload = { elapsedMs, wordCount, projectId, brandName };
+    if (elapsedMs > ARTICLE_GENERATION_BUDGET_MS) {
+      logger.warn(logPayload, "SEO article generation exceeded the 3-minute performance budget");
+    } else {
+      logger.info(logPayload, "SEO article generation completed within the performance budget");
+    }
+
+    return result;
+  } catch (err) {
+    const elapsedMs = Date.now() - startedAt;
+    logger.warn(
+      { err, elapsedMs, projectId, brandName },
+      "SEO article generation failed before completing",
+    );
+    throw err;
+  }
 }
 
 async function generateStreamWithClient(
