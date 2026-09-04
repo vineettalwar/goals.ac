@@ -77,3 +77,6 @@ cloudflare-env.d.ts
 .wrangler/
 **/.wrangler/
 .cursor/skills/
+
+# Agent worktree scratch space
+.claude/worktrees/
