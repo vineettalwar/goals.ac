@@ -50,6 +50,12 @@ function fieldForStep(id: OnboardingStepId): keyof OnboardingAnswers | null {
       return "audience";
     case "competitors":
       return "competitors";
+    case "style_pitch":
+      return "stylePitch";
+    case "style_rivals":
+      return "styleRivals";
+    case "style_jargon":
+      return "styleJargon";
     case "topics":
       return "topicIds";
     default:
@@ -78,12 +84,12 @@ export function TypeformShell() {
     setLoading(true);
     setLoadError(null);
     try {
-      const { session: s } = await getSession();
+      const { session: s, styleSufficiency: sufficiency } = await getSession();
       if (!s) throw new OnboardingApiError("No onboarding session yet.");
       setSession(s);
       setAnswers(s.answers ?? {});
       setCursor(s.currentStep);
-      setVisibleStepIds(computeVisibleStepIds(s.stepStatus ?? {}));
+      setVisibleStepIds(computeVisibleStepIds(s.stepStatus ?? {}, ONBOARDING_STEPS, { styleSufficiency: sufficiency ?? null }));
     } catch (err) {
       setLoadError(err instanceof OnboardingApiError ? err.message : "Could not load your onboarding session.");
     } finally {
@@ -107,6 +113,12 @@ export function TypeformShell() {
       setDraftText((field ? (answers[field] as string) : "") ?? "");
     } else if (currentDef.kind === "multi" && cursor === "competitors") {
       const existing = (answers.competitors as string[] | undefined) ?? [];
+      setDraftList(existing.length > 0 ? existing : [""]);
+    } else if (currentDef.kind === "multi" && cursor === "style_rivals") {
+      // Prefill from the competitors step's answer when the firm hasn't already
+      // given its own style_rivals answer -- see the comment on the step
+      // definition for why this is a prefill, not a shared field.
+      const existing = answers.styleRivals ?? answers.competitors ?? [];
       setDraftList(existing.length > 0 ? existing : [""]);
     }
     setHighlightedIndex(0);
@@ -186,7 +198,7 @@ export function TypeformShell() {
         return;
       }
       case "multi": {
-        if (cursor === "competitors") {
+        if (cursor === "competitors" || cursor === "style_rivals") {
           const cleaned = draftList.map((v) => v.trim()).filter(Boolean).slice(0, 5);
           void submitAnswer({ answer: cleaned.length > 0 ? cleaned : undefined, status: cleaned.length > 0 ? "done" : "skipped" });
         } else if (cursor === "topics") {
@@ -364,7 +376,7 @@ export function TypeformShell() {
                     value={draftText}
                     onChange={setDraftText}
                     placeholder={currentDef.placeholder}
-                    multiline={cursor === "audience"}
+                    multiline={cursor === "audience" || cursor === "style_pitch" || cursor === "style_jargon"}
                   />
                   <KeyHint>press Enter ↵</KeyHint>
                 </>
@@ -386,7 +398,7 @@ export function TypeformShell() {
                   <KeyHint>press a number, or use ↑ ↓ then Enter ↵</KeyHint>
                 </>
               )}
-              {currentDef.kind === "multi" && cursor === "competitors" && (
+              {currentDef.kind === "multi" && (cursor === "competitors" || cursor === "style_rivals") && (
                 <>
                   <MultiTextQuestion values={draftList} onChange={setDraftList} placeholder={currentDef.placeholder} />
                   <KeyHint>press Enter ↵ when you're done, or skip</KeyHint>

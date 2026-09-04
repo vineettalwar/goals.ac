@@ -23,4 +23,5 @@ export {
   type OnboardingStepOption as OnboardingChoiceOption,
   type OnboardingStepDefinition,
   type OnboardingStepDefinition as OnboardingStepDef,
+  type OnboardingStepContext,
 } from "@/lib/onboarding/steps";

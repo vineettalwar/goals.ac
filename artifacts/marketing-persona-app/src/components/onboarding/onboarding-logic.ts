@@ -5,7 +5,7 @@
  * vitest.config.ts at the repo root, and there is no @testing-library/react installed
  * anywhere in the monorepo, so component-render tests are not possible here today).
  */
-import { ONBOARDING_STEPS, type OnboardingStepDef } from "./onboarding-contract";
+import { ONBOARDING_STEPS, type OnboardingStepDef, type OnboardingStepContext } from "./onboarding-contract";
 import type { OnboardingStepId, OnboardingStepStatus } from "@workspace/db/schema/onboarding_sessions";
 
 const NON_RENDERING = new Set<OnboardingStepId>(["done"]);
@@ -16,13 +16,24 @@ const NON_RENDERING = new Set<OnboardingStepId>(["done"]);
  * time (rather than recomputing live) is what keeps "question N of M" from
  * jumping later when the user skips a connect step of their own accord. Only
  * skips that already existed before the user ever saw a question (i.e. from
- * invite prefill) are excluded from the count.
+ * invite prefill, or a conditional step's `shouldAsk` reporting false) are
+ * excluded from the count.
+ *
+ * `context` mirrors what the server's `resolveNextStep` used to decide the
+ * session's `currentStep` at load time (see the `styleSufficiency` the session
+ * route now returns): a step whose `shouldAsk` reports false for it is dropped
+ * from the count exactly like one already marked "skipped", so the style
+ * questionnaire never inflates "question N of M" for a firm that will never see
+ * it. Omitted, it defaults to "nothing known", the same conditional steps
+ * `resolveNextStep` itself treats as not-yet-decided, so the two never disagree.
  */
 export function computeVisibleStepIds(
   stepStatusAtLoad: OnboardingStepStatus,
-  steps: OnboardingStepDef[] = ONBOARDING_STEPS
+  steps: OnboardingStepDef[] = ONBOARDING_STEPS,
+  context: OnboardingStepContext = {}
 ): OnboardingStepId[] {
   return steps
+    .filter((s) => !s.shouldAsk || s.shouldAsk(context))
     .map((s) => s.id)
     .filter((id) => !NON_RENDERING.has(id))
     .filter((id) => stepStatusAtLoad[id] !== "skipped");

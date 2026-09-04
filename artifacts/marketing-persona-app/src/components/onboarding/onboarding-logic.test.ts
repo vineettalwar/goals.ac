@@ -27,10 +27,13 @@ describe("onboarding-logic: resuming mid-flow", () => {
     const visible = computeVisibleStepIds(stepStatus);
 
     // "done" steps are counted (they already happened), only the terminal
-    // screen is excluded.
+    // screen and the style questionnaire fallback are excluded: the latter
+    // because no context was passed, which reads as "sufficiency not recorded",
+    // the same as resolveNextStep treats it server-side.
     expect(visible).toContain("firm_name");
     expect(visible).not.toContain("done");
-    expect(totalQuestions(visible)).toBe(ONBOARDING_STEPS.length - 1);
+    expect(visible).not.toContain("style_pitch");
+    expect(totalQuestions(visible)).toBe(ONBOARDING_STEPS.length - 1 - 3);
 
     // Resuming at question 6 (competitors) reports position 6, not 1.
     expect(positionOf(visible, "competitors")).toBe(6);
@@ -46,7 +49,7 @@ describe("onboarding-logic: resuming mid-flow", () => {
     const visible = computeVisibleStepIds(stepStatus);
     expect(visible).not.toContain("firm_name");
     expect(visible).not.toContain("vertical");
-    expect(totalQuestions(visible)).toBe(ONBOARDING_STEPS.length - 1 - 2);
+    expect(totalQuestions(visible)).toBe(ONBOARDING_STEPS.length - 1 - 2 - 3);
 
     // The user's first real question is "website" and it reports position 1.
     expect(positionOf(visible, "website")).toBe(1);
@@ -62,6 +65,30 @@ describe("onboarding-logic: resuming mid-flow", () => {
     // it only advances the current step past it.
     expect(visible).toContain("linkedin");
     expect(totalQuestions(visible)).toBe(totalAtLoad);
+  });
+});
+
+describe("onboarding-logic: the style questionnaire fallback in the visible count", () => {
+  it("counts all three style steps when the scan came back insufficient", () => {
+    const visible = computeVisibleStepIds({}, ONBOARDING_STEPS, { styleSufficiency: { sufficient: false } });
+    expect(visible).toContain("style_pitch");
+    expect(visible).toContain("style_rivals");
+    expect(visible).toContain("style_jargon");
+    expect(totalQuestions(visible)).toBe(ONBOARDING_STEPS.length - 1);
+  });
+
+  it("excludes all three when the scan was sufficient", () => {
+    const visible = computeVisibleStepIds({}, ONBOARDING_STEPS, { styleSufficiency: { sufficient: true } });
+    expect(visible).not.toContain("style_pitch");
+    expect(visible).not.toContain("style_rivals");
+    expect(visible).not.toContain("style_jargon");
+    expect(totalQuestions(visible)).toBe(ONBOARDING_STEPS.length - 1 - 3);
+  });
+
+  it("excludes all three when sufficiency has not been recorded, with no context passed at all", () => {
+    const visible = computeVisibleStepIds({});
+    expect(visible).not.toContain("style_pitch");
+    expect(totalQuestions(visible)).toBe(ONBOARDING_STEPS.length - 1 - 3);
   });
 });
 

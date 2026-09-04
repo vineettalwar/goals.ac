@@ -58,6 +58,55 @@ describe("resolveNextStep", () => {
     expect(resolveNextStep(answers, {})).toBe("competitors");
   });
 
+  describe("the style questionnaire fallback (shouldAsk)", () => {
+    const answersThroughWordpress: OnboardingAnswers = {
+      orgName: "Acme Law",
+      vertical: "law",
+      websiteUrl: "https://acmelaw.example",
+      goal: "leads",
+      audience: "People who need a lawyer",
+    };
+    const stepStatusThroughWordpress: OnboardingStepStatus = {
+      competitors: "skipped",
+      linkedin: "skipped",
+      search_console: "skipped",
+      wordpress: "skipped",
+    };
+
+    it("skips all three style steps when the scan was sufficient", () => {
+      const next = resolveNextStep(answersThroughWordpress, stepStatusThroughWordpress, {
+        styleSufficiency: { sufficient: true },
+      });
+      expect(next).toBe("voice_review");
+    });
+
+    it("asks all three style steps in order when the scan was insufficient", () => {
+      const context = { styleSufficiency: { sufficient: false } };
+      expect(resolveNextStep(answersThroughWordpress, stepStatusThroughWordpress, context)).toBe(
+        "style_pitch",
+      );
+
+      const afterPitch = { ...answersThroughWordpress, stylePitch: "We fight for tenants." };
+      expect(resolveNextStep(afterPitch, stepStatusThroughWordpress, context)).toBe("style_rivals");
+
+      const afterRivals = { ...afterPitch, styleRivals: ["https://rival.example"] };
+      expect(resolveNextStep(afterRivals, stepStatusThroughWordpress, context)).toBe("style_jargon");
+
+      const afterJargon = { ...afterRivals, styleJargon: "Love: tenant | Never: landlord-friendly" };
+      expect(resolveNextStep(afterJargon, stepStatusThroughWordpress, context)).toBe("voice_review");
+    });
+
+    it("does not ask, and does not block, when sufficiency has not been recorded yet", () => {
+      // No context passed at all -- the scan may still be running, or the firm
+      // skipped past `website`. Either way the flow must keep moving.
+      expect(resolveNextStep(answersThroughWordpress, stepStatusThroughWordpress)).toBe("voice_review");
+      // Same result passing an explicit context with no signal on it.
+      expect(
+        resolveNextStep(answersThroughWordpress, stepStatusThroughWordpress, { styleSufficiency: null }),
+      ).toBe("voice_review");
+    });
+  });
+
   it("stays on done once every prior step is satisfied or resolved", () => {
     const answers: OnboardingAnswers = {
       orgName: "Acme Law",

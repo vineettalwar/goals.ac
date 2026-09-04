@@ -12,9 +12,10 @@ import {
   type OrgInvitePrefill,
 } from "@workspace/db/schema";
 import { resolveOrganizationIdForUser } from "@/lib/org/org-access";
-import { resolveNextStep } from "./steps";
+import { resolveNextStep, type OnboardingStepContext } from "./steps";
 import { validateStepAnswer } from "./answer-schema";
 import { initCompanyAndProject } from "./project-init";
+import { loadStyleSufficiencyContext } from "./style-context";
 import { logger } from "@/lib/utils/logger";
 import { mergeAnswers, mergeStepStatus } from "./merge";
 
@@ -122,6 +123,9 @@ export async function getOrCreateSession(userId: number): Promise<OnboardingSess
 export type RecordAnswerResult = {
   session: OnboardingSession;
   nextStep: OnboardingStepId;
+  /** The style-sufficiency signal resolveNextStep branched on for this write, so
+   *  the route can hand it to the client without a second database read. */
+  styleSufficiency: OnboardingStepContext["styleSufficiency"];
 };
 
 /**
@@ -160,11 +164,16 @@ export async function recordAnswer(
   const patch = rawAnswer === undefined ? {} : validateStepAnswer(step, rawAnswer);
   const resolvedStatus: OnboardingStepState = status ?? (rawAnswer === undefined ? "skipped" : "done");
 
+  // Read once up front rather than per retry attempt: it does not change within
+  // this call (the answer being written here never touches brand_memory), and a
+  // conflict retry re-reads the session row, not the brand profile.
+  const styleContext = await loadStyleSufficiencyContext(session.websiteProjectId);
+
   let updated: OnboardingSession | undefined;
   for (let attempt = 0; attempt < MAX_CONCURRENT_WRITE_RETRIES; attempt++) {
     const nextAnswers = mergeAnswers(session.answers, patch);
     const nextStepStatus = mergeStepStatus(session.stepStatus, step, resolvedStatus);
-    const currentStep = resolveNextStep(nextAnswers, nextStepStatus);
+    const currentStep = resolveNextStep(nextAnswers, nextStepStatus, styleContext);
 
     const rows = await db
       .update(onboardingSessionsTable)
@@ -213,5 +222,5 @@ export async function recordAnswer(
     }
   }
 
-  return { session: updated, nextStep: updated.currentStep };
+  return { session: updated, nextStep: updated.currentStep, styleSufficiency: styleContext.styleSufficiency };
 }

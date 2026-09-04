@@ -4,17 +4,23 @@ import { ONBOARDING_STEP_IDS } from "@workspace/db/schema";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getOrCreateSession, recordAnswer, OnboardingConcurrentWriteError } from "@/lib/onboarding/session-service";
 import { InvalidOnboardingAnswerError } from "@/lib/onboarding/answer-schema";
+import { loadStyleSufficiencyContext } from "@/lib/onboarding/style-context";
 
 /**
- * GET  -> { session }, creating the active session on first call.
- * PATCH { step, answer?, status? } -> { session, nextStep }
+ * GET  -> { session, styleSufficiency }, creating the active session on first call.
+ * PATCH { step, answer?, status? } -> { session, nextStep, styleSufficiency }
+ *
+ * `styleSufficiency` is the same signal `resolveNextStep` branches the style
+ * questionnaire steps on (see `lib/onboarding/steps.ts`), handed to the client so
+ * its progress count can agree with what the server will and won't ask.
  */
 export async function GET() {
   const { userId, error } = await requireAuth();
   if (error) return error;
 
   const session = await getOrCreateSession(userId!);
-  return NextResponse.json({ session });
+  const { styleSufficiency } = await loadStyleSufficiencyContext(session.websiteProjectId);
+  return NextResponse.json({ session, styleSufficiency: styleSufficiency ?? null });
 }
 
 const PatchBody = z.object({
@@ -39,13 +45,13 @@ export async function PATCH(req: Request) {
   const { step, answer, status } = parsed.data;
 
   try {
-    const { session, nextStep } = await recordAnswer(
+    const { session, nextStep, styleSufficiency } = await recordAnswer(
       userId!,
       step as (typeof ONBOARDING_STEP_IDS)[number],
       answer,
       status,
     );
-    return NextResponse.json({ session, nextStep });
+    return NextResponse.json({ session, nextStep, styleSufficiency: styleSufficiency ?? null });
   } catch (err) {
     if (err instanceof InvalidOnboardingAnswerError) {
       return NextResponse.json(
