@@ -7,6 +7,8 @@ export const queryKeys = {
   keywordOpportunities: (projectId: string | number) =>
     ["keyword-opportunities", String(projectId)] as const,
   keywordAlerts: (projectId: string | number) => ["keyword-alerts", String(projectId)] as const,
+  integrationHealthAlerts: (projectId: string | number) =>
+    ["integration-health-alerts", String(projectId)] as const,
   keywordSnapshots: (trackedId: number) => ["keyword-snapshots", trackedId] as const,
   projectContent: (projectId: string | number) => ["project-content", String(projectId)] as const,
   visibilitySettings: (projectId: string | number) =>

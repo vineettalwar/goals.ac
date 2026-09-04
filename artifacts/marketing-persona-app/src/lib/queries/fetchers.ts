@@ -1,6 +1,7 @@
 import type {
   Brief,
   Goal,
+  IntegrationHealthAlert,
   KeywordAlert,
   KeywordOpportunity,
   KeywordSnapshot,
@@ -51,6 +52,15 @@ export async function fetchKeywordOpportunities(projectId: string): Promise<Keyw
 export async function fetchKeywordAlerts(projectId: string): Promise<KeywordAlert[]> {
   const data = await fetchJson<{ alerts?: KeywordAlert[] }>(
     `/api/website-projects/${projectId}/keyword-alerts`,
+  );
+  return data.alerts ?? [];
+}
+
+export async function fetchIntegrationHealthAlerts(
+  projectId: string | number,
+): Promise<IntegrationHealthAlert[]> {
+  const data = await fetchJson<{ alerts?: IntegrationHealthAlert[] }>(
+    `/api/website-projects/${projectId}/integration-health-alerts`,
   );
   return data.alerts ?? [];
 }

@@ -505,6 +505,13 @@
       "when": 1788500416085,
       "tag": "0071_handy_nightmare",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1788595200000,
+      "tag": "0072_integration_health_alerts",
+      "breakpoints": true
     }
   ]
 }

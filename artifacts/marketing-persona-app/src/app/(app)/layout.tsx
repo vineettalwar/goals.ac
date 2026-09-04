@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { ActiveProjectProvider } from "@/context/active-project";
 import { ImpersonationBanner } from "@/components/admin/layout/impersonation-banner";
+import { IntegrationHealthAlertBannerContainer } from "@/components/integrations/integration-health-alert-banner";
 import { MfaComplianceGate } from "@/components/mfa/mfa-compliance-gate";
 import { APP_SHELL_MAIN_OFFSET } from "@workspace/app-shell/shell-constants";
 
@@ -34,6 +35,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           className={`flex min-w-0 flex-1 flex-col overflow-hidden ${APP_SHELL_MAIN_OFFSET}`}
         >
           <ImpersonationBanner />
+          <IntegrationHealthAlertBannerContainer />
           <MfaComplianceGate>
             <main className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
           </MfaComplianceGate>

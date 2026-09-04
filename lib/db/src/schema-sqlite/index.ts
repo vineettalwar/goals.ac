@@ -20,6 +20,7 @@ export * from "./goals";
 export * from "./gsc_search_queries";
 export * from "./industries";
 export * from "./integration_connections";
+export * from "./integration_health_alerts";
 export * from "./keyword_analyses";
 export * from "./keyword_opportunities";
 export * from "./keyword_rank_alerts";
