@@ -6,6 +6,7 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { generateContentPiece, buildCacheKey, cacheGet } from "@/lib/ai/content-studio-generator";
 import { loadProjectBrand, loadProjectVoiceGate, voiceRequiredJsonBody } from "@/lib/content/content-pieces-helpers";
+import { recordContentPieceVersion } from "@workspace/content-engine/content-piece-versions";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "@/lib/billing/ai-billing";
 import { isCfEdgeHttp } from "@/lib/cf-edge-http";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
@@ -90,6 +91,14 @@ export async function POST(req: Request) {
           pieceMetadata: aiCached.pieceMetadata ?? null,
         })
         .returning();
+      await recordContentPieceVersion({
+        contentPieceId: inserted!.id,
+        title: inserted!.title,
+        bodyMarkdown: inserted!.bodyMarkdown ?? "",
+        pieceMetadata: inserted!.pieceMetadata ?? null,
+        changeType: "generate",
+        createdByUserId: userId!,
+      });
       return NextResponse.json(inserted, { status: 201, headers: { "X-Cache": "HIT" } });
     }
 
@@ -119,6 +128,14 @@ export async function POST(req: Request) {
           pieceMetadata: result.pieceMetadata ?? null,
         })
         .returning();
+      await recordContentPieceVersion({
+        contentPieceId: inserted!.id,
+        title: inserted!.title,
+        bodyMarkdown: inserted!.bodyMarkdown ?? "",
+        pieceMetadata: inserted!.pieceMetadata ?? null,
+        changeType: "generate",
+        createdByUserId: userId!,
+      });
 
       await completeAiBilling(billingPrep.ctx, {
         userId: userId!,

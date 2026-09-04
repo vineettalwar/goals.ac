@@ -9,6 +9,7 @@ export * from "./briefs";
 export * from "./companies";
 export * from "./competitor_analyses";
 export * from "./contact_submissions";
+export * from "./content_piece_versions";
 export * from "./content_pieces";
 export * from "./content_strategies";
 export * from "./conversations";

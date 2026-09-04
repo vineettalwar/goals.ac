@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { humanizeContentPiece } from "@workspace/content-engine/content/humanizer";
 import { isHumanizableFormat } from "@workspace/content-engine/content/humanize-eligibility";
+import { recordContentPieceVersion } from "@workspace/content-engine/content-piece-versions";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import {
   assertPieceOwner,
@@ -88,6 +89,16 @@ export async function POST(
       ctx.brand,
       { userApiKey, aiProviderOptions, formatType: formatType },
     );
+
+    // Snapshot the pre-humanize state before it's overwritten below.
+    await recordContentPieceVersion({
+      contentPieceId: id,
+      title: piece!.title,
+      bodyMarkdown: piece!.bodyMarkdown ?? "",
+      pieceMetadata: piece!.pieceMetadata ?? null,
+      changeType: "humanize",
+      createdByUserId: userId!,
+    });
 
     const [updated] = await db
       .update(contentPiecesTable)

@@ -8,6 +8,7 @@ import {
   generateContentPiece,
   buildCacheKey,
 } from "@workspace/content-engine/content/content-studio-generator";
+import { recordContentPieceVersion } from "@workspace/content-engine/content-piece-versions";
 import {
   assertPieceOwner,
   loadProjectBrand,
@@ -75,6 +76,16 @@ export async function POST(
     );
 
     const cacheKeyStr = buildCacheKey(piece!.formatType, piece!.targetKeyword ?? "", ctx.brand, angleHint);
+
+    // Snapshot the pre-regenerate state before it's overwritten below.
+    await recordContentPieceVersion({
+      contentPieceId: id,
+      title: piece!.title,
+      bodyMarkdown: piece!.bodyMarkdown ?? "",
+      pieceMetadata: piece!.pieceMetadata ?? null,
+      changeType: "regenerate",
+      createdByUserId: userId!,
+    });
 
     const [updated] = await db
       .update(contentPiecesTable)
