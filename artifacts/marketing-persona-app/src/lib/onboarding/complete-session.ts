@@ -5,6 +5,7 @@ import { getVerticalPreset } from "@workspace/content-engine/vertical-presets";
 import { dispatchFirstArticleGeneration } from "./first-article";
 import { getOrCreateSession } from "./session-service";
 import { initCompanyAndProject } from "./project-init";
+import { applyStyleAnswersToBrandProfile } from "./style-answers";
 
 export class OnboardingIncompleteError extends Error {}
 
@@ -52,16 +53,34 @@ export async function completeSession(userId: number): Promise<CompleteSessionRe
     .limit(1);
 
   if (existingBrand) {
+    const baseVoiceTone = existingBrand.voiceTone
+      ? `${existingBrand.voiceTone}\n\n${preset.toneGuidance}`
+      : preset.toneGuidance;
+    // Style questionnaire fallback (PRD 2.3): a firm that skipped it, or whose
+    // site scan was already sufficient, has none of these three answers set, so
+    // this is a no-op and `existing` comes back unchanged.
+    const styleFields = applyStyleAnswersToBrandProfile(answers, {
+      voiceTone: baseVoiceTone,
+      competitorUrls: existingBrand.competitorUrls,
+      doWords: existingBrand.doWords,
+      dontWords: existingBrand.dontWords,
+      antiPatterns: existingBrand.antiPatterns,
+    });
     await db
       .update(brandProfilesTable)
       .set({
-        voiceTone: existingBrand.voiceTone
-          ? `${existingBrand.voiceTone}\n\n${preset.toneGuidance}`
-          : preset.toneGuidance,
+        ...styleFields,
         targetAudience: existingBrand.targetAudience || answers.audience || preset.defaultAudience,
       })
       .where(eq(brandProfilesTable.websiteProjectId, projectId));
   } else {
+    const styleFields = applyStyleAnswersToBrandProfile(answers, {
+      voiceTone: preset.toneGuidance,
+      competitorUrls: [],
+      doWords: [],
+      dontWords: [],
+      antiPatterns: [],
+    });
     await db
       .insert(brandProfilesTable)
       .values({
@@ -69,7 +88,7 @@ export async function completeSession(userId: number): Promise<CompleteSessionRe
         companyName: answers.orgName,
         industry: preset.label,
         targetAudience: answers.audience || preset.defaultAudience,
-        voiceTone: preset.toneGuidance,
+        ...styleFields,
       })
       .onConflictDoNothing({ target: brandProfilesTable.websiteProjectId });
   }

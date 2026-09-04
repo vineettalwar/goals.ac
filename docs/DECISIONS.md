@@ -1,3 +1,15 @@
+## 2026-09-04 — Close the six PRD conformance gaps, measure style rather than describe it
+
+**Decision:** Audit the product PRD against the shipped codebase, then close only what the audit showed missing: a configurable crawl budget with robots.txt compliance, a deterministic style vector plus sufficiency scoring, the conditional style questionnaire, the 11-30 GSC band, and performance-budget instrumentation. Everything else in the PRD was already built and was left alone.
+
+**Alternatives considered:**
+- Rebuild against the PRD as if greenfield — rejected; roughly four fifths of it already ships, and rewriting working paths trades real behaviour for a fresh set of bugs
+- Keep style as the LLM's qualitative tone line — rejected; an adjective gives a writing model nothing to match, and the sufficiency branch the PRD asks for needs a number to branch on
+- Fail a request that breaches the 60s / 3min budgets — rejected; we have never measured either in production, so measure first and decide what to move once there is data
+- Widen the striking-distance band in place — rejected; positions 4-10 and 11-30 are different jobs, and reusing one pattern would have silently reshuffled the idea lists founders already work from
+
+**Reason:** The constraint on this product remains proof, not capability. The gaps that mattered were the ones where the system claimed something it did not do: a crawler that read robots.txt only to find sitemaps, a "style analysis" with nothing measured in it, a documented questionnaire fallback that never rendered, and a stated 11-30 target range implemented as 4-20.
+
 ## 2026-07-23 — Wave 6 honesty + proof + media (not new engines)
 
 **Decision:** After Waves 0–5 and the world-class gaps tranche, execute **Wave 6** focused on (A) marketing claim honesty vs Basic-publish reality and pricing/llms.txt alignment, (B) proof without fake case studies (empty-state polish or one permissioned story), (C) content-media R2 happy path so HTTPS-only social gates work in demos. Do **not** build Surfer NLP, hosted blog, TikTok/YouTube, or deepen Basic-publish CMS unless a named partner deal requires it.

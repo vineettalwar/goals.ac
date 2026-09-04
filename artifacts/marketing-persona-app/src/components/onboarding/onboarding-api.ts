@@ -21,6 +21,14 @@ export type OnboardingSessionDTO = {
   completedAt: string | null;
 };
 
+/**
+ * The style-sufficiency signal read off the project's brand profile, the same
+ * one the server's `resolveNextStep` branches the style questionnaire steps on.
+ * `null` covers both "no signal recorded yet" and "no project yet". The client
+ * only ever needs to tell "recorded" from "not", never why it's missing.
+ */
+export type OnboardingStyleSufficiency = { sufficient: boolean } | null;
+
 export class OnboardingApiError extends Error {
   constructor(
     message: string,
@@ -39,7 +47,10 @@ async function parseOrThrow<T>(res: Response, fallbackMessage: string): Promise<
   return res.json() as Promise<T>;
 }
 
-export async function getSession(): Promise<{ session: OnboardingSessionDTO | null }> {
+export async function getSession(): Promise<{
+  session: OnboardingSessionDTO | null;
+  styleSufficiency?: OnboardingStyleSufficiency;
+}> {
   const res = await fetch("/api/onboarding/session", { method: "GET" });
   return parseOrThrow(res, "Could not load your onboarding session.");
 }
@@ -48,7 +59,7 @@ export async function patchSession(input: {
   step: OnboardingStepId;
   answer?: unknown;
   status?: "pending" | "skipped" | "done" | "failed";
-}): Promise<{ session: OnboardingSessionDTO; nextStep: OnboardingStepId }> {
+}): Promise<{ session: OnboardingSessionDTO; nextStep: OnboardingStepId; styleSufficiency?: OnboardingStyleSufficiency }> {
   const res = await fetch("/api/onboarding/session", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },

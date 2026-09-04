@@ -54,6 +54,9 @@ const STEP_ANSWER_SCHEMAS = {
   linkedin: linkedinField,
   search_console: searchConsoleField,
   wordpress: wordpressField,
+  style_pitch: z.string().trim().min(3).max(1000),
+  style_rivals: z.array(urlField).max(5),
+  style_jargon: z.string().trim().min(3).max(1000),
   topics: z.array(z.number().int().positive()).min(1),
 } satisfies Partial<Record<OnboardingStepId, z.ZodType>>;
 
@@ -67,6 +70,9 @@ const STEP_ANSWER_KEY: Record<keyof typeof STEP_ANSWER_SCHEMAS, keyof Onboarding
   linkedin: "linkedin",
   search_console: "searchConsole",
   wordpress: "wordpress",
+  style_pitch: "stylePitch",
+  style_rivals: "styleRivals",
+  style_jargon: "styleJargon",
   topics: "topicIds",
 };
 

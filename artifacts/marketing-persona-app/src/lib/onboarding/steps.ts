@@ -18,6 +18,30 @@ export interface OnboardingStepOption {
   blurb?: string;
 }
 
+/**
+ * Context resolveNextStep needs beyond the session's own answers/status to decide
+ * a conditional step. Kept to a single field today (the style-sufficiency signal)
+ * but shaped as its own type so a future conditional step does not have to grow
+ * resolveNextStep's parameter list again.
+ *
+ * `styleSufficiency` is read off the project's brand profile
+ * (`brand_profiles.brand_memory.styleSufficiency`), written by a separate work
+ * stream's `evaluateStyleSufficiency()`. This module never imports that function,
+ * it only knows the shape of what it writes, declared structurally wherever the
+ * value is read off the database (see `style-context.ts`), so this registry does
+ * not depend on that stream's build order.
+ *
+ * `undefined`/`null` means "not recorded yet": the scan may still be running, or
+ * the firm skipped past `website` entirely. Steps that key off this context must
+ * treat that case as "do not ask" rather than "block until it arrives". The scan
+ * finishing is not an onboarding-flow dependency, `voice_review` and the terminal
+ * step already carry their own "still learning" state for a scan in flight, and a
+ * step that blocked here could strand a firm behind a scan that never completes.
+ */
+export interface OnboardingStepContext {
+  styleSufficiency?: { sufficient: boolean } | null;
+}
+
 export interface OnboardingStepDefinition {
   id: OnboardingStepId;
   /** The single question shown on screen. */
@@ -33,6 +57,15 @@ export interface OnboardingStepDefinition {
   placeholder?: string;
   /** True once the answers already cover this step — invite prefill or a prior answer. */
   isSatisfied(answers: OnboardingAnswers): boolean;
+  /**
+   * Whether this step is even in play for this session. Default (omitted) is
+   * "always ask": only a step that is genuinely conditional on something outside
+   * the answers themselves (a style-sufficiency signal, say) needs to define this.
+   * A step that returns false here is treated exactly like one satisfied by invite
+   * prefill: resolveNextStep skips past it without ever rendering it or writing a
+   * stepStatus entry for it.
+   */
+  shouldAsk?(context: OnboardingStepContext): boolean;
 }
 
 const verticalOptions: OnboardingStepOption[] = VERTICAL_IDS.map((id) => ({
@@ -124,6 +157,51 @@ export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
     required: false,
     isSatisfied: (a) => Boolean(a.wordpress),
   },
+  // The style questionnaire fallback (PRD 2.2/2.3). All three only render when
+  // the website scan did not yield enough material to learn a voice from, see
+  // `shouldAsk` on each. When the scan was sufficient, none of these three
+  // are ever shown and nothing about them is written to the session.
+  {
+    id: "style_pitch",
+    question: "How would you describe your firm to someone you just met?",
+    helper: "Answer the way you'd actually say it out loud. That's the whole point of the question.",
+    kind: "text",
+    // Skippable on purpose. These three exist because the site gave us
+    // little, and hard-blocking a firm we already know little about is
+    // exactly backwards: the flow continues on whatever the scan found.
+    required: false,
+    placeholder: "We help homeowners get their deposit back when a landlord won't play fair.",
+    isSatisfied: (a) => Boolean(a.stylePitch?.trim()),
+    shouldAsk: (ctx) => ctx.styleSufficiency?.sufficient === false,
+  },
+  {
+    id: "style_rivals",
+    question: "Which firms' websites should we read to hear what you are up against?",
+    // Deliberately distinct from `competitors` (which feeds opportunity scoring on
+    // content gaps): this is purely about tone. Prefilled from the competitors
+    // answer in the UI when one exists, since most firms mean the same names by
+    // both questions and re-typing them would be busywork, but it stays its own
+    // step and its own field, and either can be edited without touching the other.
+    helper: "Paste their web addresses. This is about how you read next to them, not what they publish.",
+    kind: "multi",
+    required: false,
+    placeholder: "https://acompetitor.com",
+    isSatisfied: (a) => Boolean(a.styleRivals && a.styleRivals.length > 0),
+    shouldAsk: (ctx) => ctx.styleSufficiency?.sufficient === false,
+  },
+  {
+    id: "style_jargon",
+    question: "What words do your people love, and which should we never write?",
+    helper: "Say it however you like. Naming them as lists helps us hold you to it.",
+    kind: "text",
+    // Skippable on purpose. These three exist because the site gave us
+    // little, and hard-blocking a firm we already know little about is
+    // exactly backwards: the flow continues on whatever the scan found.
+    required: false,
+    placeholder: "Love: fiduciary, counsel. Never: boilerplate, turnkey.",
+    isSatisfied: (a) => Boolean(a.styleJargon?.trim()),
+    shouldAsk: (ctx) => ctx.styleSufficiency?.sufficient === false,
+  },
   {
     id: "voice_review",
     question: "Here's what we picked up about how you write.",
@@ -174,11 +252,25 @@ export function getStepDefinition(id: OnboardingStepId): OnboardingStepDefinitio
 export function resolveNextStep(
   answers: OnboardingAnswers,
   stepStatus: OnboardingStepStatus,
+  context: OnboardingStepContext = {},
 ): OnboardingStepId {
-  for (const step of ONBOARDING_STEPS) {
+  // A conditional step's condition can turn true long after the firm walked
+  // past it: the site scan starts at the `website` step and writes its
+  // verdict whenever it finishes, which can be after the last question is
+  // answered. Reopening the step then would throw the firm backwards from
+  // the end of the flow, so a conditional step the firm has already moved
+  // past stays behind them.
+  const lastAnsweredIndex = ONBOARDING_STEPS.reduce((last, step, index) => {
+    const state = stepStatus[step.id];
+    return state === "done" || state === "skipped" ? index : last;
+  }, -1);
+
+  for (const [index, step] of ONBOARDING_STEPS.entries()) {
     const state = stepStatus[step.id];
     if (state === "done" || state === "skipped") continue;
     if (step.isSatisfied(answers)) continue;
+    if (step.shouldAsk && !step.shouldAsk(context)) continue;
+    if (step.shouldAsk && index < lastAnsweredIndex) continue;
     return step.id;
   }
   return "done";

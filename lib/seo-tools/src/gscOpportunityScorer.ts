@@ -17,7 +17,12 @@ export type GscScoredOpportunity = {
   ctr: number;
   position: number;
   opportunityScore: number;
-  pattern: "striking_distance" | "high_impressions_low_ctr" | "rising_query" | "page_mismatch";
+  pattern:
+    | "striking_distance"
+    | "low_hanging_fruit"
+    | "high_impressions_low_ctr"
+    | "rising_query"
+    | "page_mismatch";
   topPage: string | null;
 };
 
@@ -94,10 +99,32 @@ export function scoreGscQueries(
     let score = 0;
     let pattern: GscScoredOpportunity["pattern"] = "striking_distance";
 
-    if (q.position >= 4 && q.position <= 20 && q.impressions >= 100) {
+    if (q.position >= 4 && q.position <= 10 && q.impressions >= 100) {
+      // Unchanged from the original formula so today's page-one-adjacent
+      // opportunity lists do not reshuffle.
       score += 55;
       pattern = "striking_distance";
       score += Math.min(20, Math.round((20 - q.position) * 1.5));
+    } else if (q.position > 10 && q.position <= 30 && q.impressions >= 100) {
+      // Page two and three (positions 11-30). The whole band is scored below
+      // striking distance's floor of 70, because the two ranges land in one
+      // sorted list and the product surfaces that order: a page-one-adjacent
+      // query has to stay above a page-three one at equal quality. The band
+      // spans 25 (thin, filtered by the score < 40 cutoff below) to 65.
+      //
+      // proximity: 1.0 at position 11, 0.0 at position 30, clamped because
+      // GSC positions are impression-weighted averages and arrive
+      // fractional, so a position of 10.001 would otherwise score above
+      // position 11 and make getting worse look better.
+      const proximity = Math.min(1, Math.max(0, (30 - q.position) / (30 - 11)));
+      // impressionWeight: log-scaled 0..1 so a query needs real demand (not
+      // one huge outlier) to earn the full bonus. At the 100-impression
+      // floor it is ~0 and it saturates around 1100.
+      const impressionWeight = Math.min(1, Math.log10(q.impressions / 100) / Math.log10(11));
+      // Rounded so every pattern contributes a whole-number score; the UI
+      // renders opportunityScore directly.
+      score += Math.round(25 + proximity * 25 + impressionWeight * 15);
+      pattern = "low_hanging_fruit";
     }
 
     if (q.impressions >= impressionThreshold && q.ctr < siteCtrMedian * 0.7) {
@@ -153,7 +180,8 @@ export function gscScoredToGapOpportunity(
   },
 ): GapOpportunity {
   const patternLabels: Record<GscScoredOpportunity["pattern"], string> = {
-    striking_distance: "striking distance (positions 4–20)",
+    striking_distance: "striking distance (positions 4–10)",
+    low_hanging_fruit: "low-hanging fruit (page two and three, positions 11–30)",
     high_impressions_low_ctr: "high impressions with low CTR",
     rising_query: "rising search demand",
     page_mismatch: "split across multiple pages",
@@ -168,7 +196,13 @@ export function gscScoredToGapOpportunity(
     keyword: scored.query,
     source: "gsc_query",
     estimatedVolume: `${scored.impressions.toLocaleString()} imp/28d`,
-    difficulty: enrichment?.difficulty ?? (scored.position <= 10 ? "medium" : "low"),
+    // Page one (<=10) is already established and defended, so treat it as
+    // medium difficulty. Page two (11-20) is the easiest lift: one page of
+    // competitors away from the front page, so low. Page three (21-30) is a
+    // bigger jump across two pages worth of competitors even though its
+    // opportunity score can still be strong, so treat it as high difficulty.
+    difficulty:
+      enrichment?.difficulty ?? (scored.position <= 10 ? "medium" : scored.position <= 20 ? "low" : "high"),
     opportunityScore: scored.opportunityScore,
     intent: enrichment?.intent ?? "informational",
     suggestedTitle: defaultTitle,

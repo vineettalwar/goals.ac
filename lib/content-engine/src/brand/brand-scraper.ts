@@ -6,12 +6,19 @@ import { cleanAndParse } from "../core/utils";
 import { logger } from "../core/logger";
 import { assertAiGenerationEnabled } from "../support/publishing/platform-guard";
 import {
+  DEFAULT_BRAND_SCAN_MAX_DEPTH,
+  DEFAULT_BRAND_SCAN_MAX_PAGES,
   discoverBrandScanUrls,
+  normalizeBrandScanUrl,
   pickKeyPages,
+  prioritizeDiscoveredUrls,
   type BrandScanDiscoveryInput,
   type BrandScanPlan,
 } from "./brand-scan-discovery";
 import { extractInternalLinks } from "./brand-scraper-links";
+import { createRobotsGate } from "./robots-txt";
+import { computeStyleVector } from "./style-vector";
+import { evaluateStyleSufficiency } from "./style-sufficiency";
 
 export type { BrandExtract, Confidence } from "./brand-extract-types";
 export { extractInternalLinks } from "./brand-scraper-links";
@@ -26,6 +33,15 @@ const SYSTEM_PROMPT = `You are an expert brand analyst. Given raw text scraped f
 const FETCH_HEADERS = {
   "User-Agent": "Mozilla/5.0 (compatible; GoalsAC/1.0; +https://goals.ac)",
 };
+
+// Token robots.txt group matching looks for. Matches the product name in
+// FETCH_HEADERS above without the version/URL suffix.
+const ROBOTS_USER_AGENT = "GoalsAC";
+
+// A page fetched during the crawl and the internal links found on it.
+type CrawledPage = { url: string; html: string };
+
+const CRAWL_CONCURRENCY = 5;
 
 async function fetchPage(url: string): Promise<string | null> {
   try {
@@ -49,11 +65,6 @@ async function fetchPage(url: string): Promise<string | null> {
   }
 }
 
-async function fetchPageText(url: string, maxChars = 8000): Promise<string | null> {
-  const html = await fetchPage(url);
-  return html ? stripHtml(html, maxChars) : null;
-}
-
 function stripHtml(html: string, maxChars = 8000): string {
   return html
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
@@ -71,6 +82,121 @@ function stripHtml(html: string, maxChars = 8000): string {
     .replace(/\s{2,}/g, " ")
     .trim()
     .slice(0, maxChars);
+}
+
+/**
+ * Same text extraction as stripHtml, but block structure survives as
+ * newlines: paragraph breaks, list markers and heading lines. The style
+ * vector measures paragraph shape, list use and heading density, and
+ * stripHtml collapses all whitespace to single spaces, so measuring its
+ * output reports every page as one unbroken paragraph with no lists and no
+ * headings. Only the style vector reads this; the prompt text, the page
+ * documents and the brand-voice index keep the stripHtml output they have
+ * always had.
+ */
+export function stripHtmlStructured(html: string, maxChars = 8000): string {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
+    .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
+    .replace(/<header[\s\S]*?<\/header>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    // Headings and list items carry their markdown marker so the line scan
+    // in computeStyleVector recognises them.
+    .replace(/<h([1-6])[^>]*>/gi, (_match, level: string) => `\n\n${"#".repeat(Number(level))} `)
+    .replace(/<\/h[1-6]>/gi, "\n\n")
+    .replace(/<li[^>]*>/gi, "\n- ")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(?:p|div|section|article|tr|blockquote|ul|ol|table)>/gi, "\n\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    // Collapse runs of spaces and tabs, but keep line breaks. Three or more
+    // blank lines read the same as one paragraph break.
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]*\n[ \t]*/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+    .slice(0, maxChars);
+}
+
+/** Fetches a batch of URLs with bounded concurrency, skipping anything robots.txt disallows. */
+async function fetchCrawlBatch(
+  urls: string[],
+  robotsGate: { isAllowed(url: string): Promise<boolean> },
+): Promise<CrawledPage[]> {
+  const pages: CrawledPage[] = [];
+  for (let i = 0; i < urls.length; i += CRAWL_CONCURRENCY) {
+    const chunk = urls.slice(i, i + CRAWL_CONCURRENCY);
+    const results = await Promise.all(
+      chunk.map(async (url): Promise<CrawledPage | null> => {
+        const allowed = await robotsGate.isAllowed(url);
+        if (!allowed) return null;
+        const html = await fetchPage(url);
+        if (!html) return null;
+        return { url, html };
+      }),
+    );
+    for (const result of results) {
+      if (result) pages.push(result);
+    }
+  }
+  return pages;
+}
+
+/**
+ * Breadth-first crawl off the seed URLs (the homepage's one-hop links,
+ * scored by discovery) up to `budget` pages and `maxDepth` hops. Never
+ * revisits a normalized URL, never leaves the origin (extractInternalLinks
+ * already filters same-origin), and skips anything robots.txt disallows.
+ */
+async function crawlSupplementalPages(
+  origin: string,
+  homepageNorm: string,
+  seedUrls: string[],
+  budget: number,
+  maxDepth: number,
+  robotsGate: { isAllowed(url: string): Promise<boolean> },
+): Promise<CrawledPage[]> {
+  const visited = new Set<string>([homepageNorm]);
+  const fetched: CrawledPage[] = [];
+
+  let frontier: string[] = [];
+  for (const url of seedUrls) {
+    const norm = normalizeBrandScanUrl(url);
+    if (visited.has(norm)) continue;
+    visited.add(norm);
+    frontier.push(url);
+  }
+
+  let depth = 1;
+  while (frontier.length > 0 && fetched.length < budget && depth <= maxDepth) {
+    const remaining = budget - fetched.length;
+    const batch = frontier.slice(0, remaining);
+    const results = await fetchCrawlBatch(batch, robotsGate);
+    fetched.push(...results);
+
+    if (fetched.length >= budget || depth >= maxDepth) break;
+
+    const nextCandidates: string[] = [];
+    for (const page of results) {
+      for (const link of extractInternalLinks(page.html, origin)) {
+        const norm = normalizeBrandScanUrl(link);
+        if (visited.has(norm)) continue;
+        visited.add(norm);
+        nextCandidates.push(link);
+      }
+    }
+    frontier = prioritizeDiscoveredUrls(nextCandidates);
+    depth += 1;
+  }
+
+  return fetched;
 }
 
 function extractWritingSamples(homepageText: string, pageTexts: string[]): string[] {
@@ -207,6 +333,9 @@ export async function scrapeBrandProfile(
 ): Promise<BrandExtract> {
   await assertAiGenerationEnabled();
   const origin = new URL(websiteUrl).origin;
+  // The customer supplied this URL themselves to be scanned, so the
+  // homepage fetch always bypasses robots.txt. Only the supplemental
+  // crawl below is gated.
   const homepageHtml = (await fetchPage(websiteUrl)) ?? "";
 
   const internalLinks = extractInternalLinks(homepageHtml, origin);
@@ -221,20 +350,44 @@ export async function scrapeBrandProfile(
         })
       : undefined);
 
-  const extraPages = scanPlan?.pagesToFetch ?? pickKeyPages(internalLinks);
-  const scannedPages = scanPlan?.scanSources ?? [websiteUrl, ...extraPages];
+  const maxPages = scanPlan?.maxPages ?? options?.discoveryInput?.maxPages ?? DEFAULT_BRAND_SCAN_MAX_PAGES;
+  const maxDepth = scanPlan?.maxDepth ?? options?.discoveryInput?.maxDepth ?? DEFAULT_BRAND_SCAN_MAX_DEPTH;
+  const supplementalBudget = Math.max(0, maxPages - 1);
 
-  const extraTexts = await Promise.all(extraPages.map((url) => fetchPageText(url)));
+  const seedUrls = scanPlan?.pagesToFetch ?? pickKeyPages(internalLinks, supplementalBudget);
+
+  const robotsGate = createRobotsGate(ROBOTS_USER_AGENT, fetchPage);
+  const homepageNorm = normalizeBrandScanUrl(websiteUrl);
+
+  const crawledPages = await crawlSupplementalPages(
+    origin,
+    homepageNorm,
+    seedUrls,
+    supplementalBudget,
+    maxDepth,
+    robotsGate,
+  );
+
   const homepageText = stripHtml(homepageHtml);
   const cmsTexts = (scanPlan?.cmsExcerpts ?? []).map((entry) => entry.text);
-  const fetchedTexts = extraTexts.filter(Boolean) as string[];
+  const crawledTexts = crawledPages.map((page) => stripHtml(page.html));
+
+  const scannedPages = [...new Set([websiteUrl, ...crawledPages.map((page) => page.url)])];
+  if (scanPlan?.scanSources) {
+    for (const url of scanPlan.scanSources) {
+      const norm = normalizeBrandScanUrl(url);
+      if (!scannedPages.some((existing) => normalizeBrandScanUrl(existing) === norm)) {
+        scannedPages.push(url);
+      }
+    }
+  }
 
   const pageDocuments: import("./brand-extract-types").BrandPageDocument[] = [
     { sourceUrl: websiteUrl, text: homepageText, sourceType: "website" },
-    ...extraPages
-      .map((url, index) => ({
-        sourceUrl: url,
-        text: extraTexts[index] ?? "",
+    ...crawledPages
+      .map((page, index) => ({
+        sourceUrl: page.url,
+        text: crawledTexts[index] ?? "",
         sourceType: "website" as const,
       }))
       .filter((doc) => doc.text.trim().length > 100),
@@ -246,11 +399,20 @@ export async function scrapeBrandProfile(
     })),
   ];
 
-  const writingSamples = extractWritingSamples(homepageText, [...fetchedTexts, ...cmsTexts]);
+  const writingSamples = extractWritingSamples(homepageText, [...crawledTexts, ...cmsTexts]);
 
-  const allText = [homepageText, ...fetchedTexts, ...cmsTexts]
+  const allText = [homepageText, ...crawledTexts, ...cmsTexts]
     .join("\n\n---\n\n")
     .slice(0, 12000);
+
+  // Measured from structure-preserving text: the same pages, read with their
+  // paragraph, list and heading breaks intact. CMS excerpts are markdown and
+  // already carry their own line breaks.
+  const styleVector = computeStyleVector([
+    { text: stripHtmlStructured(homepageHtml) },
+    ...crawledPages.map((page) => ({ text: stripHtmlStructured(page.html) })),
+    ...(scanPlan?.cmsExcerpts ?? []).map((entry) => ({ text: entry.text, title: entry.title })),
+  ]);
 
   const ai = await getAiProviderClient();
 
@@ -309,6 +471,12 @@ Banned in all string fields: placeholder URLs, example.com, "competitor1", buzzw
         throw new Error("Incomplete brand extract");
       }
 
+      const voiceToneConfidence = parseConfidence(parsed.voiceToneConfidence);
+      const styleSufficiency = evaluateStyleSufficiency({
+        pageDocuments: pageDocuments.map((doc) => ({ text: doc.text })),
+        voiceToneConfidence,
+      });
+
       return sanitizeBrandExtract({
         companyName: String(parsed.companyName || ""),
         industry: String(parsed.industry || ""),
@@ -320,13 +488,15 @@ Banned in all string fields: placeholder URLs, example.com, "competitor1", buzzw
           companyName: parseConfidence(parsed.companyNameConfidence),
           industry: parseConfidence(parsed.industryConfidence),
           targetAudience: parseConfidence(parsed.targetAudienceConfidence),
-          voiceTone: parseConfidence(parsed.voiceToneConfidence),
+          voiceTone: voiceToneConfidence,
           primaryKeywords: parseConfidence(parsed.primaryKeywordsConfidence),
           competitorUrls: parseConfidence(parsed.competitorUrlsConfidence),
         },
         scannedPages,
         pageDocuments,
         discoveryMeta: scanPlan?.discoveryMeta,
+        styleVector,
+        styleSufficiency,
         deep: await analyzeBrandVoiceDeep(websiteUrl, allText, writingSamples, scannedPages, pageDocuments),
       });
     } catch (err) {
