@@ -48,6 +48,13 @@ export interface KeywordAlert {
   message: string;
 }
 
+export interface IntegrationHealthAlert {
+  id: number;
+  platform: string;
+  alertType: "reauth_required" | "connection_failing";
+  message: string;
+}
+
 export interface ProjectSummary {
   id: number;
   name: string;

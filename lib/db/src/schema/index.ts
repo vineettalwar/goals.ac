@@ -56,4 +56,5 @@ export * from "./article_idea_sources";
 export * from "./platform_voices";
 export * from "./social_post_metrics";
 export * from "./publish_records";
+export * from "./integration_health_alerts";
 export * from "./relations";

@@ -6,6 +6,7 @@ import {
   resolveWordPressConnectionType,
   type CmsIntegrationCredentials,
 } from "./cms-integrations";
+import { applyIntegrationHealthTransition } from "./integration-health-alerts";
 
 export type PlatformHealthStatus = {
   platform: string;
@@ -357,6 +358,7 @@ export async function runProjectIntegrationHealth(
     .select({
       id: websiteProjectsTable.id,
       cmsIntegrations: websiteProjectsTable.cmsIntegrations,
+      organizationId: websiteProjectsTable.organizationId,
     })
     .from(websiteProjectsTable)
     .where(eq(websiteProjectsTable.id, projectId))
@@ -419,9 +421,16 @@ export async function runProjectIntegrationHealth(
   const nextIntegrations = {
     ...((project.cmsIntegrations as Record<string, unknown> | null) ?? {}),
   };
+  const healthTransitions: Array<{ platform: string; previousOk: boolean | null | undefined; currentOk: boolean | null; error?: string }> = [];
   for (const status of platforms) {
     if (!status.connected) continue;
     const existing = (nextIntegrations[status.platform] as Record<string, unknown> | undefined) ?? {};
+    healthTransitions.push({
+      platform: status.platform,
+      previousOk: existing.lastHealthOk as boolean | null | undefined,
+      currentOk: status.ok,
+      error: status.error,
+    });
     nextIntegrations[status.platform] = {
       ...existing,
       lastHealthOk: status.ok,
@@ -440,6 +449,19 @@ export async function runProjectIntegrationHealth(
     .update(websiteProjectsTable)
     .set({ cmsIntegrations: nextIntegrations })
     .where(eq(websiteProjectsTable.id, projectId));
+
+  // Fire alert transitions after the health state is durably persisted, so a
+  // failure here never blocks or rolls back the health-check write itself.
+  for (const transition of healthTransitions) {
+    await applyIntegrationHealthTransition({
+      websiteProjectId: projectId,
+      organizationId: project.organizationId ?? null,
+      platform: transition.platform,
+      previousOk: transition.previousOk,
+      currentOk: transition.currentOk,
+      error: transition.error,
+    });
+  }
 
   return { platforms, checkedAt };
 }
