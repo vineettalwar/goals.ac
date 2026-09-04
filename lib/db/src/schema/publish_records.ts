@@ -1,4 +1,4 @@
-import { pgTable, serial, text, integer, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, integer, jsonb, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 import { contentPiecesTable } from "./content_pieces";
@@ -24,6 +24,12 @@ export const publishRecordsTable = pgTable(
     errorMessage: text("error_message"),
     /** Resolved CMS output mode at publish time (e.g. gutenberg, lexical, body_html). */
     outputMode: text("output_mode"),
+    /** assessPublishReadiness score (0-100) at the time of this attempt. Null for older rows and for attempts published under a human override, where readiness was never assessed. */
+    qualityScore: integer("quality_score"),
+    /** Blocker codes from the readiness gate at assessment time (codes only, not full messages, to keep rows small). */
+    readinessBlockers: jsonb("readiness_blockers").$type<string[] | null>(),
+    /** Warning codes from the readiness gate at assessment time. */
+    readinessWarnings: jsonb("readiness_warnings").$type<string[] | null>(),
     publishedAt: timestamp("published_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),

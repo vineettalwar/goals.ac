@@ -24,6 +24,12 @@ export const publishRecordsTable = sqliteTable(
     errorMessage: text("error_message"),
     /** Resolved CMS output mode at publish time (e.g. gutenberg, lexical, body_html). */
     outputMode: text("output_mode"),
+    /** assessPublishReadiness score (0-100) at the time of this attempt. Null for older rows and for attempts published under a human override, where readiness was never assessed. */
+    qualityScore: integer("quality_score"),
+    /** Blocker codes from the readiness gate at assessment time (codes only, not full messages, to keep rows small). */
+    readinessBlockers: text("readiness_blockers", { mode: "json" }).$type<string[] | null>(),
+    /** Warning codes from the readiness gate at assessment time. */
+    readinessWarnings: text("readiness_warnings", { mode: "json" }).$type<string[] | null>(),
     publishedAt: integer("published_at", { mode: "timestamp_ms" }),
     createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     updatedAt: integer("updated_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()).$onUpdateFn(() => new Date()),

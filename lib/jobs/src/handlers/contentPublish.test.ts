@@ -14,6 +14,7 @@ const state = vi.hoisted(() => ({
     verifiedUrls: urls,
   })),
   siteGraphMock: vi.fn(async (_creds?: unknown) => ({ posts: [] as { slug?: string }[] })),
+  recordReadinessAssessmentMock: vi.fn(async (_input?: unknown) => undefined),
 }));
 
 vi.mock("@workspace/db", () => ({
@@ -72,6 +73,7 @@ vi.mock("@workspace/content-engine/support/publishing/publish-destination", () =
 
 vi.mock("@workspace/content-engine/support/publishing/publish-records", () => ({
   withPublishRecord: async (_meta: unknown, fn: () => Promise<unknown>) => fn(),
+  recordReadinessAssessment: (input: unknown) => state.recordReadinessAssessmentMock(input),
 }));
 
 vi.mock("@workspace/content-engine/social/social-metrics-service", () => ({
@@ -155,6 +157,8 @@ beforeEach(() => {
   }));
   state.siteGraphMock.mockClear();
   state.siteGraphMock.mockResolvedValue({ posts: [] });
+  state.recordReadinessAssessmentMock.mockClear();
+  state.recordReadinessAssessmentMock.mockResolvedValue(undefined);
 });
 
 describe("publishPiece readiness gate", () => {
@@ -315,5 +319,48 @@ describe("publishPiece readiness gate", () => {
     expect(state.verifyCitationsMock).toHaveBeenCalledOnce();
     const [urls] = state.verifyCitationsMock.mock.calls[0]!;
     expect((urls as string[]).length).toBeLessThanOrEqual(25);
+  });
+
+  it("records the quality score and blocker codes for a blocked attempt", async () => {
+    const blockedPiece = {
+      ...BASE_PIECE,
+      bodyMarkdown: "Too short.",
+      pieceMetadata: { metaDescription: undefined },
+    };
+    queuePieceAndProject(blockedPiece);
+
+    await publishPiece(1, 5);
+
+    expect(state.recordReadinessAssessmentMock).toHaveBeenCalledOnce();
+    const [telemetry] = state.recordReadinessAssessmentMock.mock.calls[0]! as [
+      { blocked: boolean; qualityScore: number; blockerCodes: string[] },
+    ];
+    expect(telemetry.blocked).toBe(true);
+    expect(typeof telemetry.qualityScore).toBe("number");
+    expect(telemetry.blockerCodes.length).toBeGreaterThan(0);
+  });
+
+  it("records the quality score for a clean, published attempt with no blocker codes", async () => {
+    queuePieceAndProject(BASE_PIECE);
+
+    await publishPiece(1, 5);
+
+    expect(state.recordReadinessAssessmentMock).toHaveBeenCalledOnce();
+    const [telemetry] = state.recordReadinessAssessmentMock.mock.calls[0]! as [
+      { blocked: boolean; qualityScore: number; blockerCodes: string[] },
+    ];
+    expect(telemetry.blocked).toBe(false);
+    expect(telemetry.blockerCodes).toEqual([]);
+    expect(state.runPublishMock).toHaveBeenCalledOnce();
+  });
+
+  it("does not fail the publish when readiness telemetry recording throws", async () => {
+    state.recordReadinessAssessmentMock.mockRejectedValueOnce(new Error("telemetry db down"));
+    queuePieceAndProject(BASE_PIECE);
+
+    await expect(publishPiece(1, 5)).resolves.toBeUndefined();
+
+    const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
+    expect(publishUpdate).toBeDefined();
   });
 });

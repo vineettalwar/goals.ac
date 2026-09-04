@@ -1,6 +1,7 @@
 import { db } from "@workspace/db";
 import { contentPiecesTable, publishRecordsTable } from "@workspace/db/schema";
 import { and, desc, eq } from "drizzle-orm";
+import { logger } from "../../core/logger";
 
 export function buildPublishIdempotencyKey(
   contentPieceId: number,
@@ -85,6 +86,70 @@ export async function markPublishRecordFailed(input: {
       updatedAt: new Date(),
     })
     .where(eq(publishRecordsTable.idempotencyKey, input.idempotencyKey));
+}
+
+export type ReadinessAssessmentTelemetry = {
+  contentPieceId: number;
+  websiteProjectId: number;
+  provider: string;
+  connectionId?: number | null;
+  /** assessPublishReadiness score (0-100) for this attempt. */
+  qualityScore: number;
+  /** Blocker codes only, not full message objects, to keep rows small. */
+  blockerCodes: string[];
+  /** Warning codes only. */
+  warningCodes: string[];
+  /** True when the gate held this attempt back (readiness.ok === false). */
+  blocked: boolean;
+};
+
+/**
+ * Records the readiness gate's quality signals on the publish_records row for
+ * this attempt, so a human can later study the real score distribution
+ * (including blocked attempts, the most informative data point for choosing
+ * a threshold) instead of guessing at `minQualityScore`.
+ *
+ * Deliberately isolated from the row's core status/remote fields: this is
+ * observability, not the publish decision, so a failure here (a transient
+ * write error) must never fail the publish itself. Errors are logged and
+ * swallowed.
+ */
+export async function recordReadinessAssessment(input: ReadinessAssessmentTelemetry): Promise<void> {
+  try {
+    const idempotencyKey = buildPublishIdempotencyKey(
+      input.contentPieceId,
+      input.provider,
+      input.connectionId,
+    );
+    await db
+      .insert(publishRecordsTable)
+      .values({
+        contentPieceId: input.contentPieceId,
+        websiteProjectId: input.websiteProjectId,
+        provider: input.provider,
+        connectionId: input.connectionId ?? null,
+        idempotencyKey,
+        status: input.blocked ? "blocked" : "pending",
+        qualityScore: input.qualityScore,
+        readinessBlockers: input.blockerCodes,
+        readinessWarnings: input.warningCodes,
+      })
+      .onConflictDoUpdate({
+        target: publishRecordsTable.idempotencyKey,
+        set: {
+          qualityScore: input.qualityScore,
+          readinessBlockers: input.blockerCodes,
+          readinessWarnings: input.warningCodes,
+          ...(input.blocked ? { status: "blocked" as const } : {}),
+          updatedAt: new Date(),
+        },
+      });
+  } catch (err) {
+    logger.error(
+      { err, contentPieceId: input.contentPieceId, provider: input.provider },
+      "Failed to record publish readiness telemetry",
+    );
+  }
 }
 
 /** Last successful remote id for piece+provider (create-or-update). */

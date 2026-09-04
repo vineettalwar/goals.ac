@@ -14,7 +14,7 @@ import {
   resolvePrimaryBlogDestination,
   resolvePrimaryEspDestination,
 } from "@workspace/content-engine/support/publishing/publish-destination";
-import { withPublishRecord } from "@workspace/content-engine/support/publishing/publish-records";
+import { withPublishRecord, recordReadinessAssessment } from "@workspace/content-engine/support/publishing/publish-records";
 import { collectReadinessInputs } from "@workspace/content-engine/support/publishing/readiness-inputs";
 import { assessPublishReadiness } from "@workspace/content-engine/content/publish-readiness";
 import { resolveWordPressConnectionType } from "@workspace/content-engine/support/publishing/cms-integrations";
@@ -78,6 +78,7 @@ async function publishPiece(
   // the scheduled sweep, which only selects status "ready".
   const existingMetadata = piece.pieceMetadata ?? undefined;
   const overrideReason = existingMetadata?.publishOverride?.reason;
+  const recordProvider = platform ?? piece.publishPlatform ?? "auto";
   if (!overrideReason) {
     // A human override means "do not spend time verifying anything" -- this
     // branch (and its network calls) only runs when there is no override.
@@ -112,6 +113,23 @@ async function publishPiece(
     );
     for (const warning of readiness.warnings) {
       logger.warn({ pieceId, code: warning.code, message: warning.message }, "Publish readiness warning");
+    }
+    // Recorded regardless of outcome: a blocked attempt is the most informative
+    // data point available for choosing minQualityScore, so it must not be dropped.
+    // recordReadinessAssessment already swallows its own write errors; this catch
+    // is defense in depth so telemetry can never take the publish down with it.
+    try {
+      await recordReadinessAssessment({
+        contentPieceId: pieceId,
+        websiteProjectId: piece.websiteProjectId,
+        provider: recordProvider,
+        qualityScore: readiness.qualityScore,
+        blockerCodes: readiness.blockers.map((b) => b.code),
+        warningCodes: readiness.warnings.map((w) => w.code),
+        blocked: !readiness.ok,
+      });
+    } catch (err) {
+      logger.error({ err, pieceId }, "Failed to record publish readiness telemetry");
     }
     if (!readiness.ok) {
       const priorAttempt = existingMetadata?.publishBlocked?.attempt ?? 0;
@@ -233,7 +251,6 @@ async function publishPiece(
     };
   };
 
-  const recordProvider = platform ?? piece.publishPlatform ?? "auto";
   const publishOutcome = await withPublishRecord(
     {
       contentPieceId: pieceId,

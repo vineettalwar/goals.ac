@@ -382,3 +382,49 @@ describe("assessPublishReadiness - structural input shapes", () => {
     expect(result.ok).toBe(true);
   });
 });
+
+describe("assessPublishReadiness - unattributed_claim", () => {
+  const UNSOURCED_CLAIM_BODY = `${CLEAN_BODY}\n\nAccording to a 2024 Harvard study, 73 percent of buyers abandon checkout.`;
+
+  it("is skipped entirely when checkUnattributedClaims is omitted", () => {
+    const result = assessPublishReadiness(withBody(UNSOURCED_CLAIM_BODY));
+    expect(result.warnings.map((w) => w.code)).not.toContain("unattributed_claim");
+    expect(result.blockers.map((b) => b.code)).not.toContain("unattributed_claim");
+  });
+
+  it("is skipped entirely when checkUnattributedClaims is explicitly false", () => {
+    const result = assessPublishReadiness(withBody(UNSOURCED_CLAIM_BODY), {
+      checkUnattributedClaims: false,
+    });
+    expect(result.warnings.map((w) => w.code)).not.toContain("unattributed_claim");
+  });
+
+  it("fires as a warning, never a blocker, when an unsourced stat is present and the check is enabled", () => {
+    const result = assessPublishReadiness(withBody(UNSOURCED_CLAIM_BODY), {
+      checkUnattributedClaims: true,
+    });
+    expect(result.warnings.map((w) => w.code)).toContain("unattributed_claim");
+    expect(result.blockers.map((b) => b.code)).not.toContain("unattributed_claim");
+
+    const issue = result.warnings.find((w) => w.code === "unattributed_claim");
+    expect(issue?.severity).toBe("warning");
+    expect(issue?.detail).toContain("73 percent of buyers abandon checkout");
+  });
+
+  it("caps the listed offending sentences in detail at 3", () => {
+    const manyClaims = Array.from(
+      { length: 5 },
+      (_, i) => `According to a 20${10 + i} study, ${10 + i} percent of shoppers switched brands.`,
+    ).join(" ");
+    const body = `${CLEAN_BODY}\n\n${manyClaims}`;
+    const result = assessPublishReadiness(withBody(body), { checkUnattributedClaims: true });
+    const issue = result.warnings.find((w) => w.code === "unattributed_claim");
+    expect(issue).toBeDefined();
+    expect(issue!.detail!.split(" | ")).toHaveLength(3);
+  });
+
+  it("does not fire on the clean fixture body even when enabled, since every claim there is linked", () => {
+    const result = assessPublishReadiness(CLEAN_META, { checkUnattributedClaims: true });
+    expect(result.warnings.map((w) => w.code)).not.toContain("unattributed_claim");
+  });
+});

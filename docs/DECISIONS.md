@@ -368,3 +368,15 @@ Tabs use **path segments**, not `?tab=` / `?project=` query params. Legacy `/int
 **Found along the way:** the drizzle snapshot chain stops at `0025_snapshot.json` (July 2026). Migrations 0026 through 0069 were all hand-written without regenerating snapshots, so `drizzle-kit generate` diffs against the July schema and emits a full baseline rather than an incremental migration. `0070_firm_onboarding.sql` is therefore hand-written like its 44 predecessors, but the generated `0070_snapshot.json` is kept, which repairs the chain for everything after it.
 
 **Still open:** whether the LinkedIn app has partner approval for reading member posts; the D1/Cloudflare mirror of the onboarding routes; billing checkout inside onboarding (the plan is set on the invite, money is still collected manually).
+
+## 2026-09-04: Publish quality observability before setting `minQualityScore`
+
+**Decision:** `assessPublishReadiness`'s `minQualityScore` option stays unset until a human reviews the real score distribution from `publish_records`. `publish_records` now carries `qualityScore`, `readinessBlockers`, and `readinessWarnings` (blocker/warning codes only) for every publish attempt, including attempts the gate blocked, and a platform-admin-only endpoint aggregates them.
+
+**Alternatives considered:**
+- Pick a threshold now from intuition, e.g. 70 (rejected; the whole point of the gate going live was that nobody could answer what a safe cutoff was, and a guessed threshold can silently strand the pipeline the day it's turned on).
+- Only record scores on published pieces (rejected; a blocked attempt is the most informative data point for choosing a threshold, and dropping it would bias the sample toward drafts that already passed).
+
+**Reason:** The last step of the content-quality work was blocked on missing observability, not missing logic.
+
+**Implications:** `GET /api/admin/publish-quality-distribution` (gated by `requirePlatformAdminApi`, matching `publish-reliability`) returns count/min/max/median/p10/p25/p75/p90, a 10-point histogram, and blocker/warning code frequency, windowed by an optional `days` query param. Once someone has looked at that output and picked a number, `minQualityScore` can be set on the gate call in `contentPublish.ts`.

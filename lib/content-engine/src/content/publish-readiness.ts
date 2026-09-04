@@ -12,6 +12,7 @@ import {
   countEmDashes,
   diagnoseAiTells,
 } from "./ai-writing-rules";
+import { extractFactualClaims } from "./claim-extractor";
 import {
   bodyWordCount,
   countExternalLinks,
@@ -55,6 +56,8 @@ export type PublishReadinessOptions = {
   targetKeyword?: string;
   /** Titles already live on the destination site. Omit to skip title-uniqueness checks. */
   existingTitles?: string[];
+  /** When true, screen the body for statistics and study references that carry no attribution. */
+  checkUnattributedClaims?: boolean;
 };
 
 /**
@@ -304,6 +307,36 @@ function checkDuplicateTitle(title: string, existingTitles: string[] | undefined
   };
 }
 
+const MAX_UNATTRIBUTED_CLAIM_EXAMPLES = 3;
+
+/**
+ * A WARNING, never a blocker, and gated behind an explicit option (absent means the
+ * check does not run at all, per this file's convention). extractFactualClaims is a
+ * heuristic screen with an unavoidable false-positive rate: it flags sentences that
+ * merely look like they cite a stat or a study, not sentences confirmed to be
+ * fabricated. Blocking a publish on a guess is exactly the failure mode the rest of
+ * this file is careful to avoid (see the module doc: every other blocker here is an
+ * objective, no-judgment-call check). Surfacing it as a warning still gets the
+ * signal in front of a reviewer without letting a false positive stop a real
+ * publish.
+ */
+function checkUnattributedClaims(
+  body: string,
+  enabled: boolean | undefined,
+): PublishReadinessIssue | null {
+  if (!enabled) return null;
+  const audit = extractFactualClaims(body);
+  if (audit.unattributed.length === 0) return null;
+
+  const examples = audit.unattributed.slice(0, MAX_UNATTRIBUTED_CLAIM_EXAMPLES).map((claim) => claim.sentence);
+  return {
+    code: "unattributed_claim",
+    severity: "warning",
+    message: `${audit.unattributed.length} statement${audit.unattributed.length === 1 ? "" : "s"} read like a statistic or study reference but carry no link or named source. Verify or cite before publishing.`,
+    detail: examples.join(" | "),
+  };
+}
+
 function checkWeakAltText(body: string): PublishReadinessIssue | null {
   const coverage = analyzeAltTextCoverage(body);
   if (coverage.lowQualityAlt.length === 0) return null;
@@ -340,6 +373,7 @@ export function assessPublishReadiness(
   for (const issue of [
     checkKeywordUnderused(fields.body, options.targetKeyword),
     checkWeakAltText(fields.body),
+    checkUnattributedClaims(fields.body, options.checkUnattributedClaims),
   ]) {
     if (issue) warnings.push(issue);
   }
