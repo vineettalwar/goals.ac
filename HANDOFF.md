@@ -1,5 +1,53 @@
 # Session Handoff
 
+## PRD conformance tranche: crawl budget, robots, style vector, questionnaire, GSC band (2026-09-04)
+
+**Status:** Shipped on `claude/goals-ac-prd-review-wvxq2q`. `npx tsc --build` clean, `marketing-persona-app` typecheck clean, 803 of 804 unit tests pass (the one failure and one empty suite are the pre-existing Bedrock ones in PROJECT.md). **Nothing here has been run against a live site, database, or WordPress install.**
+
+**PRD:** `docs/prd/prd-conformance-tranche.md` — it carries the full requirement-by-requirement audit of the product PRD against the codebase.
+
+The audit's finding: the product PRD is largely already built. The scrape engine, resumable onboarding, integrations, weekly ideation, research-grounded generation, the humanizer, the approval workflow and WordPress/LinkedIn/Twitter publishing all shipped in earlier waves. Six requirements were missing or narrower than stated, and those are what this tranche closes.
+
+### Shipped
+
+| # | Gap | Change | Verify |
+|---|---|---|---|
+| 1 | PRD 3.1.1 | Breadth-first crawl to a configurable budget (default 20 pages, depth 2) instead of one hop capped at 8 | `npx vitest run lib/content-engine/src/brand` |
+| 2 | PRD 3.1.2 | `computeStyleVector` measures cadence, reading grade, vocabulary tier, structure; `describeStyleVector` renders it into the generation prompt | same |
+| 3 | PRD 2.2/2.3 | `evaluateStyleSufficiency` + three conditional onboarding questions when the site gave us too little | `npx vitest run artifacts/marketing-persona-app/src/lib/onboarding` |
+| 4 | PRD 3.2.1 | GSC opportunities widened to positions 11-30 as a `low_hanging_fruit` pattern | `npx vitest run lib/seo-tools` |
+| 5 | PRD 4.1 | Scrape and article generation timed against the 60s / 3min budgets (logged, never failed) | n/a, instrumentation |
+| 6 | PRD 4.2 | Brand crawler honours `robots.txt` Disallow, per-origin, RFC 9309 group merging and prefix agent matching | `npx vitest run lib/content-engine/src/brand/robots-txt.test.ts` |
+
+### Defects found in review and fixed (every one was "it says it works and it does not")
+
+- **robots.txt was fail-open twice over.** Only the first group matching our agent was read, so a file repeating `User-agent: *` further down had its later Disallow rules ignored. And agent matching was a two-way substring test, so a group for `a` or `sac` captured us and, ranking as more specific than `*`, could block a crawl we were welcome to make. Both now follow RFC 9309.
+- **A single timeout disabled robots for the whole run.** The rejected promise was memoised. Definitive answers (missing, 500, unparseable) stay cached; a thrown fetch does not.
+- **The style vector's structural fields were always zero.** `stripHtml` collapses each page to one line, so paragraph, list and heading measurement had nothing to read, and every site was described to the writing model as "rarely uses lists" with paragraphs the length of the page. The vector now reads a structure-preserving strip; all other consumers keep the text they had.
+- **Style data was dropped for exactly the sites it exists for.** It was persisted only when the deep AI analysis produced brand memory, and a site too thin for that analysis is the site whose sufficiency verdict drives the questionnaire.
+- **The new GSC band outranked page one.** Scores for positions 4-10 never changed, but the band's ceiling sat above them and the product surfaces one sorted list. The band now spans 25-65, under striking distance's floor of 70. Proximity is clamped too: positions arrive fractional and 10.001 scored above 11, making a slip off page one look like an improvement.
+- **Reading grade was unclamped.** A CJK page produced "grade -15.2" as a writing instruction.
+- **Measured style could pass the voice gate alone.** The prompt context appends it to `voiceTone`, and the gate reads a non-empty `voiceTone` as proof a voice exists.
+- **The questionnaire could not be skipped**, contradicting the PRD's own edge case, and **a late-arriving verdict threw a firm from the last question back to question ten**. The shell also froze its step list at load, so the questionnaire showed "question 11 of 11" with no back button.
+- **The D1 schema mirrors carried none of the new types.** Latent until the first Workers-side switch over the step ids.
+
+Each fix has a test verified by reverting the fix and watching it fail.
+
+### Next, in order
+
+1. **Run a real crawl against a real site.** Every claim here is unit-tested and none is executed end to end. Point the scan at a site with a real `robots.txt` and confirm the page budget, the disallow skips, and the elapsed-time log against the 60s budget, which is likely unreachable while the LLM extraction sits inside it.
+2. **Decide what the wider crawl is for.** `allText` still truncates to 12k chars, so pages 3 through 19 never reach the extraction prompt. They do reach the style vector and the brand-voice index, so the crawl is not wasted, but latency rose roughly 2.4x for no gain in the brand extract itself. Either raise the window, or stop fetching pages the prompt will not read.
+3. **Nothing renders `styleSufficiency.reasons`.** They are written as user-facing copy explaining what the scan could not find, and the questionnaire is the natural place to show them.
+4. **Instrument the other generation entrypoints.** Only `generateSeoArticleContent` is timed; the streaming path, `content-studio-generator` and the `contentGenerate` job are not, so a budget breach on the studio path is invisible.
+5. **Redirect-following is still unguarded.** `fetchPage` validates the initial URL with `assertPublicUrl` and then follows redirects, so a public host that 302s to a link-local address is fetched and its body reaches the prompt and the database. Pre-existing, but this tranche took the attacker-influenceable URL count from 8 one-hop links to 19 across two hops. Worth its own ticket.
+6. **`crawl-delay` is parsed and ignored**, while the crawler fires five concurrent requests. Odd under a change whose stated motivation is politeness.
+
+### Watch out
+
+- The additive `high_impressions_low_ctr` / `rising_query` / `page_mismatch` bonuses each overwrite `pattern`, so a position-25 query split across pages reports as `page_mismatch` while most of its score came from the new band, and its `suggestedAngle` names neither. Pre-existing design; the new band makes the mismatch more common.
+- `normalizeBrandScanUrl` strips the query string, so a paginated archive contributes one page to the crawl.
+- `BrandStyleVector` in `lib/db` is a hand-copied mirror of `StyleVector`. A field added to one and not the other is persisted and silently invisible to DB-side readers.
+
 ## Production firm onboarding: invite, Typeform flow, vertical guardrails (2026-09-02)
 
 **Status:** Shipped on `claude/production-onboarding-ai-content-g5jrtv`. Typechecks clean, 530 of 531 tests pass. **Never run against a live database, a real WordPress site, or a real LinkedIn app.** That gap is the whole risk.
