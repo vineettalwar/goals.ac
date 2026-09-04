@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ONBOARDING_STEP_IDS, type OnboardingAnswers, type OnboardingStepStatus } from "@workspace/db/schema";
-import { ONBOARDING_STEPS, resolveNextStep, getStepDefinition } from "./steps";
+import { ONBOARDING_STEPS, getStepDefinition, resolveNextStep } from "./steps";
 
 describe("ONBOARDING_STEPS", () => {
   it("covers every schema-declared step id, in the schema's order", () => {
@@ -94,6 +94,39 @@ describe("resolveNextStep", () => {
 
       const afterJargon = { ...afterRivals, styleJargon: "Love: tenant | Never: landlord-friendly" };
       expect(resolveNextStep(afterJargon, stepStatusThroughWordpress, context)).toBe("voice_review");
+    });
+
+    it("does not drag the firm backwards when the verdict lands after they have moved on", () => {
+      // The scan starts at `website` and finishes whenever it finishes. A firm
+      // that reached the last question before the verdict arrived must not be
+      // thrown back to question ten.
+      const atTheEnd: OnboardingStepStatus = {
+        ...stepStatusThroughWordpress,
+        voice_review: "done",
+        topics: "done",
+      };
+
+      expect(
+        resolveNextStep(answersThroughWordpress, atTheEnd, { styleSufficiency: { sufficient: false } }),
+      ).toBe("done");
+    });
+
+    it("still asks when the verdict arrives while the firm is standing on an earlier step", () => {
+      // The guard above must not swallow the questionnaire entirely: nothing
+      // past the style steps has been answered here, so they are still ahead.
+      expect(
+        resolveNextStep(answersThroughWordpress, stepStatusThroughWordpress, {
+          styleSufficiency: { sufficient: false },
+        }),
+      ).toBe("style_pitch");
+    });
+
+    it("lets a firm skip every style question", () => {
+      // These exist because the site told us little. Hard-blocking a firm we
+      // already know little about is exactly backwards.
+      for (const id of ["style_pitch", "style_rivals", "style_jargon"] as const) {
+        expect(getStepDefinition(id).required).toBe(false);
+      }
     });
 
     it("does not ask, and does not block, when sufficiency has not been recorded yet", () => {

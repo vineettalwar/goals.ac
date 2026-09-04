@@ -150,6 +150,15 @@ export function TypeformShell() {
         });
         setSaveState("saved");
         setSession(result.session);
+        // The site scan can land its verdict after the flow has started, and
+        // PATCH returns the current one. Recomputing here keeps the progress
+        // count and the back button on the steps the firm will actually be
+        // asked, instead of the set that existed at page load.
+        setVisibleStepIds(
+          computeVisibleStepIds(result.session.stepStatus ?? {}, ONBOARDING_STEPS, {
+            styleSufficiency: result.styleSufficiency ?? null,
+          }),
+        );
         advanceTo(result.nextStep);
       } catch (err) {
         setSaveState("error");

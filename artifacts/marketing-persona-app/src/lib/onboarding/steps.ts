@@ -166,20 +166,23 @@ export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
     question: "How would you describe your firm to someone you just met?",
     helper: "Answer the way you'd actually say it out loud. That's the whole point of the question.",
     kind: "text",
-    required: true,
+    // Skippable on purpose. These three exist because the site gave us
+    // little, and hard-blocking a firm we already know little about is
+    // exactly backwards: the flow continues on whatever the scan found.
+    required: false,
     placeholder: "We help homeowners get their deposit back when a landlord won't play fair.",
     isSatisfied: (a) => Boolean(a.stylePitch?.trim()),
     shouldAsk: (ctx) => ctx.styleSufficiency?.sufficient === false,
   },
   {
     id: "style_rivals",
-    question: "Which firms should we make sure you sound sharper than?",
+    question: "Which firms' websites should we read to hear what you are up against?",
     // Deliberately distinct from `competitors` (which feeds opportunity scoring on
     // content gaps): this is purely about tone. Prefilled from the competitors
     // answer in the UI when one exists, since most firms mean the same names by
     // both questions and re-typing them would be busywork, but it stays its own
     // step and its own field, and either can be edited without touching the other.
-    helper: "Reuse the competitors you already gave us, or name different ones. This is about how you read next to them, not what they publish.",
+    helper: "Paste their web addresses. This is about how you read next to them, not what they publish.",
     kind: "multi",
     required: false,
     placeholder: "https://acompetitor.com",
@@ -191,7 +194,10 @@ export const ONBOARDING_STEPS: OnboardingStepDefinition[] = [
     question: "What words do your people love, and which should we never write?",
     helper: "Say it however you like. Naming them as lists helps us hold you to it.",
     kind: "text",
-    required: true,
+    // Skippable on purpose. These three exist because the site gave us
+    // little, and hard-blocking a firm we already know little about is
+    // exactly backwards: the flow continues on whatever the scan found.
+    required: false,
     placeholder: "Love: fiduciary, counsel. Never: boilerplate, turnkey.",
     isSatisfied: (a) => Boolean(a.styleJargon?.trim()),
     shouldAsk: (ctx) => ctx.styleSufficiency?.sufficient === false,
@@ -248,11 +254,23 @@ export function resolveNextStep(
   stepStatus: OnboardingStepStatus,
   context: OnboardingStepContext = {},
 ): OnboardingStepId {
-  for (const step of ONBOARDING_STEPS) {
+  // A conditional step's condition can turn true long after the firm walked
+  // past it: the site scan starts at the `website` step and writes its
+  // verdict whenever it finishes, which can be after the last question is
+  // answered. Reopening the step then would throw the firm backwards from
+  // the end of the flow, so a conditional step the firm has already moved
+  // past stays behind them.
+  const lastAnsweredIndex = ONBOARDING_STEPS.reduce((last, step, index) => {
+    const state = stepStatus[step.id];
+    return state === "done" || state === "skipped" ? index : last;
+  }, -1);
+
+  for (const [index, step] of ONBOARDING_STEPS.entries()) {
     const state = stepStatus[step.id];
     if (state === "done" || state === "skipped") continue;
     if (step.isSatisfied(answers)) continue;
     if (step.shouldAsk && !step.shouldAsk(context)) continue;
+    if (step.shouldAsk && index < lastAnsweredIndex) continue;
     return step.id;
   }
   return "done";
