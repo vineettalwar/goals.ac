@@ -135,6 +135,8 @@ export async function POST(
     intendedEditorMode,
     competitorFocusUrl,
     competitorUrls,
+    targetKeyword,
+    briefId,
   });
 
   const bypassCache = req.headers.get("x-bypass-cache") === "true";

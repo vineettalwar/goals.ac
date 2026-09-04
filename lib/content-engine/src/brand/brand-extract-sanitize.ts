@@ -1,6 +1,68 @@
-import type { BrandExtract, Confidence } from "./brand-extract-types";
+import type { BrandExtract, Confidence, ProofAssetExtract } from "./brand-extract-types";
 
 export type { BrandExtract, Confidence } from "./brand-extract-types";
+
+const VALID_PROOF_ASSET_KINDS = new Set([
+  "metric",
+  "case_study",
+  "customer_quote",
+  "named_example",
+]);
+
+/** Upper bound on stored proof assets per brand so a runaway extraction cannot bloat every future prompt. */
+export const MAX_PROOF_ASSETS = 20;
+
+/** Upper bound on a single claim's length, for the same reason. */
+export const MAX_PROOF_ASSET_CLAIM_LENGTH = 300;
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const parsed = new URL(value);
+    return parsed.protocol === "http:" || parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Sanitizes raw, unverified proof-asset extraction output before it is
+ * stored on `brandMemory`. Anything that does not clearly match the expected
+ * shape is dropped rather than coerced, since a malformed or fabricated
+ * proof asset is more harmful than having none.
+ */
+export function sanitizeProofAssets(raw: unknown): ProofAssetExtract[] {
+  if (!Array.isArray(raw)) return [];
+
+  const result: ProofAssetExtract[] = [];
+  for (const entry of raw) {
+    if (result.length >= MAX_PROOF_ASSETS) break;
+    if (!entry || typeof entry !== "object") continue;
+
+    const candidate = entry as Record<string, unknown>;
+    const kind = typeof candidate.kind === "string" ? candidate.kind.trim() : "";
+    if (!VALID_PROOF_ASSET_KINDS.has(kind)) continue;
+
+    const claim = typeof candidate.claim === "string" ? candidate.claim.trim() : "";
+    if (!claim) continue;
+
+    const asset: ProofAssetExtract = {
+      kind: kind as ProofAssetExtract["kind"],
+      claim: repairIncompleteText(claim, MAX_PROOF_ASSET_CLAIM_LENGTH),
+    };
+
+    if (typeof candidate.source === "string" && candidate.source.trim()) {
+      asset.source = candidate.source.trim().slice(0, 200);
+    }
+
+    if (typeof candidate.url === "string" && candidate.url.trim() && isHttpUrl(candidate.url.trim())) {
+      asset.url = candidate.url.trim();
+    }
+
+    result.push(asset);
+  }
+
+  return result;
+}
 
 const PLACEHOLDER_URL_RE =
   /^(?:https?:\/\/)?(?:www\.)?(competitor\d*|example\d*|sample|test|placeholder|your(?:site|company|domain)|domain|company|rival\d*)\./i;
