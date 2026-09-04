@@ -98,3 +98,10 @@ export {
 } from "./integration-icons";
 export { IntegrationTabBadge } from "./integrations-view-helpers";
 export { SimpleDialog, inputClassName } from "./cms-connect-dialogs";
+export {
+  IntegrationHealthAlertBanner,
+  platformDisplayName,
+  type IntegrationHealthAlertBannerProps,
+  type IntegrationHealthAlertItem,
+  type IntegrationHealthAlertType,
+} from "./integration-health-alert-banner";

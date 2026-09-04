@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { assertPieceOwner } from "@/lib/content/content-pieces-helpers";
 import { learnFromPieceEdit } from "@workspace/content-engine/brand/edit-learning";
+import { recordContentPieceVersion } from "@workspace/content-engine/content-piece-versions";
 import { z } from "zod";
 
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -106,6 +107,19 @@ export async function PATCH(
         (prevMeta as { featuredImageUrl?: string }).featuredImageUrl = parsed.data.featuredImageUrl;
       }
       updates.pieceMetadata = prevMeta;
+    }
+
+    // A title/body edit overwrites the piece below — snapshot the pre-edit
+    // state first so it stays retrievable as prior version history.
+    if (parsed.data.title !== undefined || parsed.data.bodyMarkdown !== undefined) {
+      await recordContentPieceVersion({
+        contentPieceId: id,
+        title: piece!.title,
+        bodyMarkdown: piece!.bodyMarkdown ?? "",
+        pieceMetadata: piece!.pieceMetadata ?? null,
+        changeType: "edit",
+        createdByUserId: userId!,
+      });
     }
 
     const [updated] = await db
