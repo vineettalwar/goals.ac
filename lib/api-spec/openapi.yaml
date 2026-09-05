@@ -915,6 +915,8 @@ paths:
         Requires scope content:generate. Feed the returned id into
         /v1/content/render for a platform-shaped payload (Gutenberg, Elementor,
         LinkedIn, Twitter thread, ...) or into /v1/content-pieces/{id}/publish.
+        Served by both the Next.js app (Postgres) and the Cloudflare
+        cf-public-worker (D1) deploy targets.
       security:
         - ApiKeyAuth: []
       requestBody:
@@ -973,7 +975,9 @@ paths:
         Sources a stock photo (Unsplash/Pexels, whichever the project has
         credentials for) matched to the piece's keyword/headings. Requires
         scope image:generate. There is no AI image-generation provider wired
-        into goals.ac yet — this is stock search, not text-to-image.
+        into goals.ac yet — this is stock search, not text-to-image. Served by
+        both the Next.js app (Postgres) and the Cloudflare cf-public-worker
+        (D1) deploy targets.
       security:
         - ApiKeyAuth: []
       parameters:

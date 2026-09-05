@@ -15,8 +15,13 @@
 | 3 | `POST /v1/content-pieces/{id}/image` — attaches a licensed stock photo (Unsplash/Pexels) as the featured image | `artifacts/marketing-persona-app/src/app/api/v1/content-pieces/[id]/image/route.ts` |
 | 4 | `resolveOrgBillingUserId` — AI billing (`prepareAiBillingSession`) resolves plan/quota/credits off a `userId`; a public API key has none, so both new routes bill against the org's owner | `lib/content-engine/src/support/auth/api-key-auth.ts` |
 | 5 | OpenAPI spec entries for both routes + scope notes | `lib/api-spec/openapi.yaml` |
+| 6 | Same two routes mirrored into the Cloudflare/D1 deploy path | `artifacts/cf-public-worker/src/v1-api-routes.ts` + new `src/ai-billing.ts` (per-worker copy, same pattern as `cf-write-worker`) |
 
 Both routes reuse the exact persistence/billing helpers the authenticated Studio routes use (`insertGeneratedContentPiece`, `loadGenerationContext`, `enrichContentPieceImages`, `prepareAiBilling`/`completeAiBilling`/`cancelAiBilling`) — no parallel code path, so the personalization loops (brand voice, style vector, coverage/cannibalization checks) and credit ledger apply the same way a public-API-generated piece does as a UI-generated one. The full flow an external caller now has: `generate` → `render` (per-destination shape) or `image` → `publish` (or draft review in-product).
+
+**Parity note:** `/v1/connections`, `/v1/content/render`, and `/v1/content-pieces` (draft ingest) already existed in three places — the Next.js app, `cf-public-worker` (D1/Workers), and the legacy Express `api-server`. The two new routes are now mirrored into the first two (the app and the Cloudflare deploy target). `api-server` was left alone on purpose: it's explicitly "opt-in legacy" per `README.md`/`PROJECT.md`, its typecheck is already red on `main` for an unrelated pre-existing reason (`pool` not exported from `@workspace/db`), and it is not a deploy target — extending it would add maintenance surface to a path the project has already deprioritized. If that judgment call is wrong, `artifacts/api-server/src/routes/publicApi.ts` is the file, and the Next.js route in this same tranche is the template to port.
+
+**Also found, not touched:** `cf-public-worker`'s `/v1` surface never had a `content-pieces/{id}/publish` route at all — Next and `api-server` both have one, Cloudflare doesn't. That gap predates this session and isn't part of the generate/image work; it's a real "finish the D1 parity" item for whoever picks up the Cloudflare public-API surface next, and it likely wants `withPublishRecord`'s idempotency wiring checked against D1 before porting rather than a blind copy.
 
 ### Explicitly not built — and why
 
