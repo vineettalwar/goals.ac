@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { toast } from "sonner";
 import { FileText, PenLine, RefreshCw, TrendingUp, X } from "lucide-react";
 import { explainOpportunityScore } from "@workspace/seo-tools/keywordGapAnalyzer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import type { KeywordOpportunity } from "@/lib/queries/types";
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -26,13 +28,13 @@ const DIFFICULTY_COLORS = {
   high: "destructive" as const,
 };
 
-function contentStudioHref(projectId: number, opp: KeywordOpportunity): string {
+function contentStudioHref(projectId: number, opp: KeywordOpportunity, angle = opp.suggestedAngle): string {
   const params = new URLSearchParams({
     create: "1",
     format: "blog_article",
     keyword: opp.keyword,
     title: opp.suggestedTitle,
-    angle: opp.suggestedAngle,
+    angle,
   });
   return `/projects/${projectId}/content-studio?${params.toString()}`;
 }
@@ -63,15 +65,23 @@ export function ArticleIdeasOpportunityList({
   const [briefLoadingId, setBriefLoadingId] = useState<number | null>(null);
 
   async function openBrief(opp: KeywordOpportunity) {
+    if (activeProjectId == null) return;
     setBriefLoadingId(opp.id);
     const res = await fetch(`/api/keyword-opportunities/${opp.id}/brief`);
     setBriefLoadingId(null);
-    if (!res.ok) return;
-    const data = (await res.json()) as { brief?: { outline?: string[] } };
-    const outline = data.brief?.outline?.join("\n• ") ?? "";
-    if (activeProjectId != null) {
-      window.location.href = contentStudioHref(activeProjectId, opp) + `&briefOutline=${encodeURIComponent(outline)}`;
+    if (!res.ok) {
+      toast.error("Failed to build brief");
+      return;
     }
+    const data = (await res.json()) as { brief?: { outline?: string[] } };
+    const outline = data.brief?.outline?.length
+      ? `\n\nSuggested outline:\n• ${data.brief.outline.join("\n• ")}`
+      : "";
+    // The outline is real content the AI just built for this idea, not a
+    // side note — it has to reach the generation prompt via `angle`, the one
+    // field content-studio-utils.ts actually reads into angleHint. A separate
+    // `briefOutline` query param here was written and never read anywhere.
+    window.location.href = contentStudioHref(activeProjectId, opp, opp.suggestedAngle + outline);
   }
 
   return (
@@ -132,9 +142,9 @@ export function ArticleIdeasOpportunityList({
               )}
             </div>
             <div className="flex flex-col gap-1 shrink-0">
-              {opp.linkedContentPieceId ? (
+              {opp.linkedContentPieceId && activeProjectId != null ? (
                 <Button asChild size="sm">
-                  <Link href={`/content-piece/${opp.linkedContentPieceId}`}>
+                  <Link href={contentPiecePath(activeProjectId, opp.linkedContentPieceId)}>
                     <RefreshCw className="h-3.5 w-3.5 mr-1" />
                     Refresh article
                   </Link>
