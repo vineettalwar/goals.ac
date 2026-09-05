@@ -20,6 +20,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useActiveProject } from "@/context/use-active-project";
 import { queryKeys, useGscQueries, useGscSyncStatus, useKeywordIntelligence, useSemrushStatus } from "@/lib/queries";
 import { queueOpportunityErrorMessage } from "@/lib/seo/keyword-opportunity-ui";
+import { contentPiecePath } from "@/lib/projects/content-piece-path";
 import {
   contentLanguageLabel,
   semrushDatabaseLabel,
@@ -201,7 +202,7 @@ export function ArticleIdeasHub({
     await refetchOpportunities();
     onRefetch?.();
     if (data.primaryPieceId && activeProjectId) {
-      window.location.href = `/projects/${activeProjectId}/content-piece/${data.primaryPieceId}`;
+      window.location.href = contentPiecePath(activeProjectId, data.primaryPieceId);
     }
   }
 
@@ -250,9 +251,10 @@ export function ArticleIdeasHub({
         <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
           <p className="font-medium">Working without Semrush</p>
           <p className="mt-1 text-muted-foreground">
-            Use <span className="font-medium text-foreground">From GSC</span> for real query opportunities,
-            or <span className="font-medium text-foreground">AI gaps</span> for estimated clusters. Volume
-            and difficulty stay blank until you{" "}
+            Use <span className="font-medium text-foreground">From GSC</span> for ideas backed by real
+            Search Console impressions, or <span className="font-medium text-foreground">AI gaps</span> for
+            AI-estimated clusters — their volume and difficulty are educated guesses, not measured search
+            data, until you{" "}
             <Link href="/integrations/tools" className="font-medium text-primary hover:underline">
               connect Semrush
             </Link>
