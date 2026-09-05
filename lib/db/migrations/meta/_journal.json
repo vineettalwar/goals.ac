@@ -519,6 +519,13 @@
       "when": 1788595200000,
       "tag": "0073_integration_health_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1788595200001,
+      "tag": "0074_connection_sync_status",
+      "breakpoints": true
     }
   ]
 }

@@ -557,16 +557,23 @@ export function containsLiteralPlaceholder(text: string): boolean {
  * happens") from real brand data. Returns null — never the literal placeholder text —
  * when a token has nothing real to fill it with (e.g. no services on the brand
  * profile yet), so the caller can skip that angle instead of fabricating one.
+ *
+ * `startIndex` lets a caller filling several templates in sequence (see
+ * discoverColdStartOpportunities) rotate across the whole services list rather
+ * than every template independently restarting at services[0] — a brand with
+ * four real offerings should see all four across its seed angles, not one
+ * offering four times.
  */
 export function fillSeedAngleTemplate(
   template: string,
   fillers: ColdStartFillers,
+  startIndex = 0,
 ): string | null {
   const tokens = [...template.matchAll(/\{([^}]+)\}/g)];
   if (tokens.length === 0) return template;
 
   let filled = template;
-  let serviceIndex = 0;
+  let serviceIndex = startIndex;
   for (const match of tokens) {
     const raw = match[1]!;
     const key = raw.trim().toLowerCase();
@@ -644,7 +651,7 @@ export async function discoverColdStartOpportunities(
   };
 
   const filledAngles = preset.seedAngles
-    .map((template) => fillSeedAngleTemplate(template, fillers))
+    .map((template, index) => fillSeedAngleTemplate(template, fillers, index))
     .filter((angle): angle is string => Boolean(angle));
 
   if (filledAngles.length === 0) {

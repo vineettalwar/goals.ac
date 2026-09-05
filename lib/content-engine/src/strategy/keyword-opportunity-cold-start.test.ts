@@ -65,6 +65,31 @@ describe("fillSeedAngleTemplate", () => {
       "A plain title with no tokens",
     );
   });
+
+  it("rotates across the services list when a caller fills several templates in sequence", () => {
+    // This is what discoverColdStartOpportunities actually does: preset.seedAngles.map(...)
+    // over several single-placeholder templates. Without a shared starting index every
+    // call restarts at services[0], so a brand with four real offerings would see the
+    // same one four times.
+    const fourServices: ColdStartFillers = {
+      services: ["dental implants", "teeth whitening", "root canals", "orthodontics"],
+      industry: "dentistry",
+      location: "Austin",
+    };
+    const templates = [
+      "{Procedure}: what actually happens",
+      "What {procedure} costs and what drives the range",
+      "{Procedure} explained step by step",
+      "Common mistakes patients make with {procedure}",
+    ];
+    const filled = templates.map((t, i) => fillSeedAngleTemplate(t, fourServices, i));
+    expect(filled).toEqual([
+      "dental implants: what actually happens",
+      "What teeth whitening costs and what drives the range",
+      "root canals explained step by step",
+      "Common mistakes patients make with orthodontics",
+    ]);
+  });
 });
 
 describe("containsLiteralPlaceholder", () => {
