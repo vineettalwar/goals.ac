@@ -15,7 +15,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-type ApiKeyScope = "publish:write" | "content:read" | "render:preview";
+type ApiKeyScope =
+  | "publish:write"
+  | "content:read"
+  | "render:preview"
+  | "content:generate"
+  | "image:generate";
 
 type ApiKeyRow = {
   id: number;
@@ -31,6 +36,8 @@ const SCOPE_LABELS: Record<ApiKeyScope, string> = {
   "render:preview": "Render preview",
   "content:read": "Read content",
   "publish:write": "Publish content",
+  "content:generate": "Generate content (AI)",
+  "image:generate": "Generate images",
 };
 
 interface Props {

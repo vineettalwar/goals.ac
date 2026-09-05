@@ -1,6 +1,12 @@
 import crypto from "node:crypto";
-import { db, apiKeysTable, websiteProjectsTable, type ApiKeyScope } from "@workspace/db";
-import { and, eq, isNull } from "drizzle-orm";
+import {
+  db,
+  apiKeysTable,
+  websiteProjectsTable,
+  organizationMembersTable,
+  type ApiKeyScope,
+} from "@workspace/db";
+import { and, asc, eq, isNull } from "drizzle-orm";
 
 export interface AuthenticatedApiKey {
   id: number;
@@ -77,6 +83,27 @@ export async function assertProjectInOrg(
     )
     .limit(1);
   if (!project) throw new Error("Project not found");
+}
+
+/**
+ * AI billing runs per-user (plan/quota/credit balance resolve off a userId).
+ * A public API key has no user — bill against the org's owner, the account
+ * that pays for the plan, so key-triggered generation draws from the same
+ * pool interactive use does.
+ */
+export async function resolveOrgBillingUserId(organizationId: number): Promise<number | null> {
+  const [owner] = await db
+    .select({ userId: organizationMembersTable.userId })
+    .from(organizationMembersTable)
+    .where(
+      and(
+        eq(organizationMembersTable.organizationId, organizationId),
+        eq(organizationMembersTable.role, "owner"),
+      ),
+    )
+    .orderBy(asc(organizationMembersTable.createdAt))
+    .limit(1);
+  return owner?.userId ?? null;
 }
 
 /** In-memory rate limit bucket keyed by api key id + hour window */
