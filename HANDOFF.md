@@ -1,5 +1,39 @@
 # Session Handoff
 
+## Public API: generate + image endpoints (2026-09-05)
+
+**Status:** Shipped on `claude/company-api-content-gen-asfhph`. Typechecks clean (`typecheck:libs`, `marketing-persona-app`, `worker`, `cf-jobs-worker`). **Not run against a live database or a real API key.**
+
+**The gap:** goals.ac already had a public `/api/v1` surface — `gac_…` API keys with scopes, `content:read`/`render:preview`/`publish:write`, rate limiting (`lib/content-engine/src/support/auth/api-key-auth.ts`, `artifacts/marketing-persona-app/src/lib/public-api/auth.ts`). It could render existing markdown to a destination's native shape (Gutenberg, Elementor, LinkedIn, Twitter thread, ...) and publish it, but nothing could ask it to *generate* content from the project's brand/dataset in the first place — `POST /v1/content-pieces` only builds canonical content from markdown the caller already wrote. There was also no way to attach an image through the public API.
+
+### Shipped
+
+| # | Change | Where |
+|---|---|---|
+| 1 | Two new API key scopes: `content:generate`, `image:generate` | `lib/db/src/schema/api_keys.ts` + `schema-sqlite` mirror (plain TS union, no migration), org key-issuing route + settings UI |
+| 2 | `POST /v1/content-pieces/generate` — runs the same brand-voice/style-vector/research-grounded generator as the interactive Studio, persists a draft, returns its id | `artifacts/marketing-persona-app/src/app/api/v1/content-pieces/generate/route.ts` |
+| 3 | `POST /v1/content-pieces/{id}/image` — attaches a licensed stock photo (Unsplash/Pexels) as the featured image | `artifacts/marketing-persona-app/src/app/api/v1/content-pieces/[id]/image/route.ts` |
+| 4 | `resolveOrgBillingUserId` — AI billing (`prepareAiBillingSession`) resolves plan/quota/credits off a `userId`; a public API key has none, so both new routes bill against the org's owner | `lib/content-engine/src/support/auth/api-key-auth.ts` |
+| 5 | OpenAPI spec entries for both routes + scope notes | `lib/api-spec/openapi.yaml` |
+| 6 | Same two routes mirrored into the Cloudflare/D1 deploy path | `artifacts/cf-public-worker/src/v1-api-routes.ts` + new `src/ai-billing.ts` (per-worker copy, same pattern as `cf-write-worker`) |
+
+Both routes reuse the exact persistence/billing helpers the authenticated Studio routes use (`insertGeneratedContentPiece`, `loadGenerationContext`, `enrichContentPieceImages`, `prepareAiBilling`/`completeAiBilling`/`cancelAiBilling`) — no parallel code path, so the personalization loops (brand voice, style vector, coverage/cannibalization checks) and credit ledger apply the same way a public-API-generated piece does as a UI-generated one. The full flow an external caller now has: `generate` → `render` (per-destination shape) or `image` → `publish` (or draft review in-product).
+
+**Parity note:** `/v1/connections`, `/v1/content/render`, and `/v1/content-pieces` (draft ingest) already existed in three places — the Next.js app, `cf-public-worker` (D1/Workers), and the legacy Express `api-server`. The two new routes are now mirrored into the first two (the app and the Cloudflare deploy target). `api-server` was left alone on purpose: it's explicitly "opt-in legacy" per `README.md`/`PROJECT.md`, its typecheck is already red on `main` for an unrelated pre-existing reason (`pool` not exported from `@workspace/db`), and it is not a deploy target — extending it would add maintenance surface to a path the project has already deprioritized. If that judgment call is wrong, `artifacts/api-server/src/routes/publicApi.ts` is the file, and the Next.js route in this same tranche is the template to port.
+
+**Also found, not touched:** `cf-public-worker`'s `/v1` surface never had a `content-pieces/{id}/publish` route at all — Next and `api-server` both have one, Cloudflare doesn't. That gap predates this session and isn't part of the generate/image work; it's a real "finish the D1 parity" item for whoever picks up the Cloudflare public-API surface next, and it likely wants `withPublishRecord`'s idempotency wiring checked against D1 before porting rather than a blind copy.
+
+### Explicitly not built — and why
+
+- **AI image generation** (DALL-E / Stable Diffusion / fal.ai text-to-image). Nothing in the codebase calls an image-generation model today — only stock-photo search (Unsplash/Pexels) and FAL/R2 *hosting* of already-produced images. Wiring a new provider means a new encrypted-credential type, a cost/entitlement gate, and a provider client — real work, not a one-route addition. `/v1/content-pieces/{id}/image` ships the stock-photo capability that does exist; the OpenAPI description says so explicitly rather than implying more.
+- **Direct platform OAuth from the public API** (an external caller connecting their own LinkedIn/WordPress from outside the product). The public API publishes through connections a project already has (`/v1/connections`, `/v1/content-pieces/{id}/publish`); those connections are still made through the product UI's existing OAuth/credential flows, not re-implemented per-key.
+
+### Next, in order
+
+1. **Run one real call against a live database and org.** Everything above is typechecked, nothing is executed — same gap the last several handoff entries flag for their own work.
+2. **Credit accounting note:** billing against the org owner's `userId` mirrors how quotas already resolve org-wide, but if an org ever wants *per-key* spend limits (distinct from the owner's personal quota), that needs its own ledger dimension — not built here.
+3. If external demand for AI-generated (not stock) images shows up, scope a provider integration properly: BYOK-style encrypted key storage (same pattern as Bedrock/Gemini), a cost tier, and a fallback when unconfigured — do not bolt a single provider in ad hoc.
+
 ## PRD conformance tranche: crawl budget, robots, style vector, questionnaire, GSC band (2026-09-04)
 
 **Status:** Shipped on `claude/goals-ac-prd-review-wvxq2q`. `npx tsc --build` clean, `marketing-persona-app` typecheck clean, 803 of 804 unit tests pass (the one failure and one empty suite are the pre-existing Bedrock ones in PROJECT.md). **Nothing here has been run against a live site, database, or WordPress install.**

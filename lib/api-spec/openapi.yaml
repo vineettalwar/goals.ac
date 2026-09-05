@@ -904,6 +904,102 @@ paths:
         "200":
           description: Connected platforms with adapter capabilities
 
+  /v1/content-pieces/generate:
+    post:
+      operationId: generateContentPiecePublic
+      tags: [publish]
+      summary: Generate a personalized content draft from the project's brand/dataset
+      description: >-
+        Runs the same brand-voice / style-vector / research-grounded generator as
+        the interactive Studio and persists the result as a draft content piece.
+        Requires scope content:generate. Feed the returned id into
+        /v1/content/render for a platform-shaped payload (Gutenberg, Elementor,
+        LinkedIn, Twitter thread, ...) or into /v1/content-pieces/{id}/publish.
+        Served by both the Next.js app (Postgres) and the Cloudflare
+        cf-public-worker (D1) deploy targets.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, formatType, targetKeyword]
+              properties:
+                projectId:
+                  type: integer
+                formatType:
+                  type: string
+                targetKeyword:
+                  type: string
+                angleHint:
+                  type: string
+                intendedPublishPlatform:
+                  type: string
+                intendedOutputMode:
+                  type: string
+                intendedEditorMode:
+                  type: string
+                  enum: [classic, gutenberg, elementor, divi]
+                competitorFocusUrl:
+                  type: string
+                competitorUrls:
+                  type: array
+                  items:
+                    type: string
+                cmsCategories:
+                  type: array
+                  items:
+                    type: string
+                cmsTags:
+                  type: array
+                  items:
+                    type: string
+                plannedDate:
+                  type: string
+                bypassCache:
+                  type: boolean
+      responses:
+        "201":
+          description: Generated draft content piece
+        "409":
+          description: Project has no brand voice yet (voice_required)
+
+  /v1/content-pieces/{id}/image:
+    post:
+      operationId: attachContentPieceImagePublic
+      tags: [publish]
+      summary: Attach a licensed stock photo to a piece as its featured image
+      description: >-
+        Sources a stock photo (Unsplash/Pexels, whichever the project has
+        credentials for) matched to the piece's keyword/headings. Requires
+        scope image:generate. There is no AI image-generation provider wired
+        into goals.ac yet — this is stock search, not text-to-image. Served by
+        both the Next.js app (Postgres) and the Cloudflare cf-public-worker
+        (D1) deploy targets.
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId]
+              properties:
+                projectId:
+                  type: integer
+      responses:
+        "200":
+          description: Updated piece with attached featured image
+
   /v1/content/render:
     post:
       operationId: renderContentForPlatform

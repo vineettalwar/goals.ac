@@ -3,7 +3,12 @@ import { createInsertSchema } from "drizzle-zod";
 import { organizationsTable } from "./organizations";
 import { usersTable } from "./users";
 
-export type ApiKeyScope = "publish:write" | "content:read" | "render:preview";
+export type ApiKeyScope =
+  | "publish:write"
+  | "content:read"
+  | "render:preview"
+  | "content:generate"
+  | "image:generate";
 
 export const apiKeysTable = sqliteTable(
   "api_keys",

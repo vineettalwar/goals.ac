@@ -10,7 +10,15 @@ import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/or
 const CreateBody = z.object({
   name: z.string().min(1).max(120),
   scopes: z
-    .array(z.enum(["publish:write", "content:read", "render:preview"]))
+    .array(
+      z.enum([
+        "publish:write",
+        "content:read",
+        "render:preview",
+        "content:generate",
+        "image:generate",
+      ]),
+    )
     .min(1)
     .default(["render:preview"]),
   rateLimitPerHour: z.number().int().min(10).max(10000).optional(),

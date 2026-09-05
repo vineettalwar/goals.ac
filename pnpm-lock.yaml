@@ -377,6 +377,9 @@ importers:
       '@workspace/seo-tools':
         specifier: workspace:*
         version: link:../../lib/seo-tools
+      '@workspace/stock-images':
+        specifier: workspace:*
+        version: link:../../lib/stock-images
       bcryptjs:
         specifier: ^3.0.3
         version: 3.0.3
