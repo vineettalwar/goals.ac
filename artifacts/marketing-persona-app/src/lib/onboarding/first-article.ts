@@ -7,7 +7,10 @@ import {
   type OrgVertical,
 } from "@workspace/db/schema";
 import { enqueue, QUEUES } from "@workspace/jobs";
-import { queueOpportunityToStrategy } from "@workspace/content-engine/strategy/keyword-opportunity-service";
+import {
+  queueOpportunityToStrategy,
+  discoverColdStartOpportunities,
+} from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { getVerticalPreset } from "@workspace/content-engine/vertical-presets";
 import { seedColdStartOpportunities } from "./cold-start";
 
@@ -78,6 +81,7 @@ async function initMinimalStrategy(
  */
 async function resolveFirstOpportunityId(
   projectId: number,
+  userId: number,
   vertical: OrgVertical | null | undefined,
   topicIds: number[] | undefined,
   competitorUrls: string[] | undefined,
@@ -104,8 +108,16 @@ async function resolveFirstOpportunityId(
     .limit(1);
   if (top) return top.id;
 
-  // Cold start (B5 / D6): no GSC data, no competitor gaps queued yet, nothing to pick from.
-  await seedColdStartOpportunities(projectId, vertical, competitorUrls ?? []);
+  // Cold start (B5 / D6): no GSC data, no competitor gaps queued yet, nothing to
+  // pick from. Prefer the vertical-aware, AI-driven generator that fills the
+  // preset's seed angles with the brand's real scraped services/offerings —
+  // seedColdStartOpportunities is only a fallback for when that comes back empty
+  // (no AI client configured, or the AI pass failed), and it's a placeholder-only
+  // strip, not a brand-specific idea.
+  const discovered = await discoverColdStartOpportunities(projectId, userId).catch(() => 0);
+  if (discovered === 0) {
+    await seedColdStartOpportunities(projectId, vertical, competitorUrls ?? []);
+  }
 
   const [seeded] = await db
     .select({ id: keywordOpportunitiesTable.id })
@@ -133,7 +145,7 @@ export async function dispatchFirstArticleGeneration(params: {
   const { projectId, userId, vertical, topicIds, competitorUrls } = params;
 
   try {
-    const opportunityId = await resolveFirstOpportunityId(projectId, vertical, topicIds, competitorUrls);
+    const opportunityId = await resolveFirstOpportunityId(projectId, userId, vertical, topicIds, competitorUrls);
     if (opportunityId == null) {
       return { dispatched: false, contentItemId: null, error: "No topic available to generate from yet" };
     }

@@ -4,14 +4,19 @@ import { keywordOpportunitiesTable, type OrgVertical } from "@workspace/db/schem
 import { getVerticalPreset } from "@workspace/content-engine/vertical-presets";
 
 /**
- * If Search Console was skipped or came back empty, ideas must still exist (PRD
- * B5 / D6). Rather than parallel the AI-gap machinery in
- * `keyword-opportunity-service.ts`, this seeds a handful of `ai_analysis` rows
- * straight from the vertical preset's `seedAngles` — enough for the onboarding
- * completion screen and the first article, with the real discovery pipeline
- * (`discoverOpportunities`) taking over once the firm has real GSC/competitor
- * data to work from.
+ * Last-resort cold start: only reached when the vertical-aware, brand-grounded
+ * `discoverColdStartOpportunities` (content-engine's keyword-opportunity-service)
+ * itself produced nothing — no AI client configured, or the AI pass failed. That
+ * function fills each vertical preset's `{token}` seed angles with the brand's
+ * real scraped services; this one cannot, so it strips the tokens out instead of
+ * ever writing one verbatim. `suggestedTitle` goes through the same strip as
+ * `keyword` — a raw template like "{Process} explained step by step" is a
+ * customer-visible defect (D3), not a cosmetic one.
  */
+function stripPlaceholderTokens(angle: string): string {
+  return angle.replace(/\{[^}]+\}/g, "").replace(/\s+/g, " ").trim();
+}
+
 export async function seedColdStartOpportunities(
   projectId: number,
   vertical: OrgVertical | null | undefined,
@@ -33,7 +38,7 @@ export async function seedColdStartOpportunities(
   let inserted = 0;
 
   for (const angle of preset.seedAngles) {
-    const keyword = angle.replace(/\{[^}]+\}/g, "").replace(/\s+/g, " ").trim();
+    const keyword = stripPlaceholderTokens(angle);
     const key = keyword.toLowerCase();
     if (!key || existingKeywords.has(key)) continue;
     existingKeywords.add(key);
@@ -43,8 +48,8 @@ export async function seedColdStartOpportunities(
       keyword,
       source: "ai_analysis",
       opportunityScore: 50,
-      suggestedTitle: angle,
-      suggestedAngle: `A first piece for a ${preset.label.toLowerCase()} audience: ${angle}`,
+      suggestedTitle: keyword,
+      suggestedAngle: `A first piece for a ${preset.label.toLowerCase()} audience: ${keyword}`,
       status: "open",
     });
     inserted += 1;
