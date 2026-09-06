@@ -30,7 +30,7 @@
     "next-auth": "^5.0.0-beta.30"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20260708.1",
+    "@cloudflare/workers-types": "^5.20260906.1",
     "typescript": "~5.9.2"
   }
 }

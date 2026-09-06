@@ -49,8 +49,7 @@ class SeoMetaMapperTest extends TestCase {
 				'custom_field'          => 'keep',
 			)
 		);
-		$this->assertArrayNotHasKey( '_yoast_wpseo_metadesc', $stripped );
-		$this->assertSame( 'keep', $stripped['custom_field'] );
+		$this->assertSame( array( 'custom_field' => 'keep' ), $stripped );
 	}
 
 	/**
