@@ -60,6 +60,9 @@ if ( file_exists( $autoload_file ) ) {
 function goals_ac_init(): void {
 	$schema_inject = new Goals_AC\Schema_Inject();
 	$schema_inject->init();
+
+	$seo_rest_meta = new Goals_AC\Seo_Rest_Meta();
+	$seo_rest_meta->init();
 }
 add_action( 'plugins_loaded', 'goals_ac_init' );
 

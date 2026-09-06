@@ -1,6 +1,6 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   contentItemsTable,
   contentStrategiesTable,
@@ -82,10 +82,10 @@ export async function handleContentStrategiesWrite(
     }
 
     const access = await assertStrategyAccess(item.strategyId, userId);
-    if (access.error === "not_found") {
+    if ("error" in access && access.error === "not_found") {
       return withCors(request, Response.json({ error: "Content strategy not found" }, { status: 404 }));
     }
-    if (access.error === "forbidden") {
+    if ("error" in access && access.error === "forbidden") {
       return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
     }
 
@@ -115,10 +115,10 @@ export async function handleContentStrategiesWrite(
     }
 
     const access = await assertStrategyAccess(strategyId, userId);
-    if (access.error === "not_found") {
+    if ("error" in access && access.error === "not_found") {
       return withCors(request, Response.json({ error: "Content strategy not found" }, { status: 404 }));
     }
-    if (access.error === "forbidden") {
+    if ("error" in access && access.error === "forbidden") {
       return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
     }
 

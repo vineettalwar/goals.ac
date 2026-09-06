@@ -13,6 +13,7 @@
     "@workspace/db": "workspace:*",
     "@workspace/jobs": "workspace:*",
     "@workspace/security": "workspace:*",
+    "@workspace/serp-provider": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {

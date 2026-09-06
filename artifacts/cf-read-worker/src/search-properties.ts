@@ -1,4 +1,5 @@
-import { db, countDistinctAsInt } from "@workspace/db";
+import { db } from "./db";
+import { countDistinctAsInt } from "@workspace/db";
 import {
   gscSearchQueriesTable,
   platformSettingsTable,

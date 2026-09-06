@@ -9,7 +9,7 @@ import {
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectIdFromPathname } from "@workspace/app-shell";
-import { navigationTargetForActiveProject } from "@/lib/active-project/routing";
+import { navigationTargetForActiveProject, queryStringForProjectSwitch } from "@/lib/active-project/routing";
 import { fetchWebsiteProjects } from "@/lib/queries/fetchers";
 import { removeProjectScopedQueries } from "@/lib/queries/invalidate-project-queries";
 import { queryKeys } from "@/lib/queries/keys";
@@ -103,9 +103,7 @@ export function ActiveProjectProvider({ children }: { children: ReactNode }) {
         : null;
 
       if (navigationTarget && navigationTarget !== pathname) {
-        const nextQuery = new URLSearchParams(searchParams.toString());
-        nextQuery.delete("project");
-        const queryString = nextQuery.toString();
+        const queryString = queryStringForProjectSwitch(searchParams.toString());
         navigate(queryString ? `${navigationTarget}?${queryString}` : navigationTarget);
       }
     },

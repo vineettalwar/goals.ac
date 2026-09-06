@@ -33,6 +33,7 @@ export const QUEUES = {
   publicGeoAudit: "public-geo-audit",
   siteAuditCrawl: "site-audit-crawl",
   gscUrlInspection: "gsc-url-inspection",
+  publishReliabilityAlert: "publish-reliability-alert",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
@@ -195,6 +196,8 @@ export interface GscUrlInspectionPayload {
   publishRecordId?: number;
 }
 
+export type PublishReliabilityAlertPayload = Record<string, never>;
+
 /** Maps each queue name to the payload shape(s) it accepts. */
 export interface QueuePayloadMap {
   [QUEUES.connectionHealthCheck]: ConnectionHealthCheckJobData;
@@ -219,6 +222,7 @@ export interface QueuePayloadMap {
   [QUEUES.publicGeoAudit]: PublicGeoAuditPayload;
   [QUEUES.siteAuditCrawl]: SiteAuditCrawlPayload;
   [QUEUES.gscUrlInspection]: GscUrlInspectionPayload;
+  [QUEUES.publishReliabilityAlert]: PublishReliabilityAlertPayload;
 }
 
 export type QueuePayloadFor<Q extends QueueName> = QueuePayloadMap[Q];

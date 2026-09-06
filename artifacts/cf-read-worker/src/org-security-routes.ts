@@ -1,6 +1,6 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { requireSiteAdminAccess } from "@workspace/cf-edge/project-access";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { usersTable } from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";
 

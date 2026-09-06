@@ -11,8 +11,19 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * Exports published content and internal links for goals.ac.
+ *
+ * @note Ceiling: post export is capped at SITE_GRAPH_POST_LIMIT (500) and
+ *       internal-link scanning at SITE_GRAPH_LINK_SCAN_LIMIT (200 most-recent).
+ *       Upgrade path: push full graph incrementally via a cursor/offset endpoint
+ *       instead of a single bulk export.
  */
 class Site_Graph {
+
+	/** Hard cap on total posts fetched. Response includes truncated=true when hit. */
+	const SITE_GRAPH_POST_LIMIT = 500;
+
+	/** Subset of (most-recent) posts whose content is regex-scanned for links. */
+	const SITE_GRAPH_LINK_SCAN_LIMIT = 200;
 
 	/**
 	 * Memo for one export() pass — posts + internal links share the same query.
@@ -24,16 +35,25 @@ class Site_Graph {
 	/**
 	 * Export the site graph as JSON.
 	 *
-	 * @return array{posts: array, categories: array, tags: array, internal_links: array}
+	 * @return array{posts: array, categories: array, tags: array, internal_links: array, truncated?: bool, post_limit?: int}
 	 */
 	public function export(): array {
 		$this->published_posts_cache = null;
-		return array(
+		$truncated                   = \count( $this->query_published_posts() ) >= self::SITE_GRAPH_POST_LIMIT;
+
+		$result = array(
 			'posts'          => $this->get_posts(),
 			'categories'     => $this->get_terms( 'category' ),
 			'tags'           => $this->get_terms( 'post_tag' ),
 			'internal_links' => $this->get_internal_links(),
 		);
+
+		if ( $truncated ) {
+			$result['truncated']  = true;
+			$result['post_limit'] = self::SITE_GRAPH_POST_LIMIT;
+		}
+
+		return $result;
 	}
 
 	/**
@@ -66,7 +86,7 @@ class Site_Graph {
 	}
 
 	/**
-	 * Fetch all published posts in pages of 100 (phpcs PostsPerPage ceiling).
+	 * Fetch published posts in pages of 100, capped at SITE_GRAPH_POST_LIMIT.
 	 *
 	 * @return array<int, \WP_Post>
 	 */
@@ -93,7 +113,12 @@ class Site_Graph {
 			$batch_count = \count( $batch );
 			$all         = \array_merge( $all, $batch );
 			++$page;
-		} while ( $batch_count === $per_page );
+		} while ( $batch_count === $per_page && \count( $all ) < self::SITE_GRAPH_POST_LIMIT );
+
+		// Trim to cap (safety: last batch could push count slightly past the limit).
+		if ( \count( $all ) > self::SITE_GRAPH_POST_LIMIT ) {
+			$all = \array_slice( $all, 0, self::SITE_GRAPH_POST_LIMIT );
+		}
 
 		$this->published_posts_cache = $all;
 		return $all;
@@ -132,15 +157,18 @@ class Site_Graph {
 	}
 
 	/**
-	 * Extract internal links from published post content.
+	 * Extract internal links from the most-recent SITE_GRAPH_LINK_SCAN_LIMIT posts.
+	 *
+	 * Scanning only the tail keeps regex cost O(scan_limit) not O(all posts).
 	 *
 	 * @return array<int, array<string, mixed>>
 	 */
 	private function get_internal_links(): array {
-		$site_url = \untrailingslashit( \get_site_url() );
-		$links    = array();
+		$site_url    = \untrailingslashit( \get_site_url() );
+		$links       = array();
+		$posts_slice = \array_slice( $this->query_published_posts(), -self::SITE_GRAPH_LINK_SCAN_LIMIT );
 
-		foreach ( $this->query_published_posts() as $post ) {
+		foreach ( $posts_slice as $post ) {
 			$content = $post->post_content;
 			if ( empty( $content ) ) {
 				continue;

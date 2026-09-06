@@ -1,7 +1,7 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { websiteProjectsTable } from "@workspace/db/schema-sqlite";
 import {
   type CmsIntegrationCredentials,

@@ -1,18 +1,31 @@
 #!/usr/bin/env node
 /**
- * WordPress plugin go-live smoke — health, site-graph taxonomies, draft publish.
+ * WordPress plugin go-live smoke — health, site-graph taxonomies, llms.txt, draft publish.
  *
- * Usage:
- *   WP_SITE_URL=https://staging.example.com WP_SITE_KEY=secret node scripts/wordpress-plugin-smoke.mjs
+ * Required env vars:
+ *   WP_SITE_URL=https://staging.example.com
+ *   WP_SITE_KEY=<site-key-from-wp-admin-settings-goals-ac>
  *
- * Optional draft publish probe (creates a draft post):
- *   WP_SMOKE_PUBLISH=1 WP_SMOKE_CATEGORY=News WP_SMOKE_TAG=vegan-business node scripts/wordpress-plugin-smoke.mjs
+ * Optional flags (set to "1" to enable):
+ *   WP_SMOKE_PUBLISH=1          Create a draft post (safe to delete after)
+ *   WP_SMOKE_SCHEMA=1           POST a minimal llms.txt to /schema then re-verify GET /llms.txt
+ *   WP_SMOKE_IDEMPOTENCY=1      Replay publish with same idempotency key; verify same post ID returned
+ *   WP_SMOKE_TAXONOMY_ID_TEST=1 Publish a second draft using numeric category ID instead of name
+ *   WP_SMOKE_MEDIA_UPLOAD=1     Upload a 1×1 PNG then attach it as featured image (needs base64 vars)
+ *   WP_SMOKE_JSON=1             Print a JSON evidence summary at the end (paste into runbook)
+ *
+ * Category / tag overrides:
+ *   WP_SMOKE_CATEGORY=News      (default: News)
+ *   WP_SMOKE_TAG=goals-ac-smoke (default: goals-ac-smoke)
+ *   WP_SMOKE_STATUS=draft       (default: draft — never change to publish on production)
  */
 import crypto from "node:crypto";
 
 const siteUrl = process.env.WP_SITE_URL?.replace(/\/$/, "");
 const siteKey = process.env.WP_SITE_KEY?.trim();
 const shouldPublish = process.env.WP_SMOKE_PUBLISH === "1";
+const shouldSchema = process.env.WP_SMOKE_SCHEMA === "1";
+const jsonOut = process.env.WP_SMOKE_JSON === "1";
 const smokeCategory = process.env.WP_SMOKE_CATEGORY ?? "News";
 const smokeTag = process.env.WP_SMOKE_TAG ?? "goals-ac-smoke";
 
@@ -81,7 +94,10 @@ function requireEnv(key) {
 async function main() {
   console.log(`WordPress plugin smoke → ${siteUrl}`);
   let failed = 0;
+  // Evidence collected for --json output
+  const evidence = { siteUrl, timestamp: new Date().toISOString(), checks: {} };
 
+  // ── Health ──────────────────────────────────────────────────────────────────
   const healthRes = await fetch(`${siteUrl}/wp-json/goals-ac/v1/health`, {
     headers: { Accept: "application/json" },
   });
@@ -89,16 +105,27 @@ async function main() {
   if (!healthRes.ok) {
     console.error(`[FAIL] GET /health → ${healthRes.status}`);
     failed += 1;
+    evidence.checks.health = { pass: false, status: healthRes.status };
   } else {
     console.log(`[OK] GET /health → plugin ${health.version ?? "?"} · WP ${health.cms_version ?? "?"}`);
     const seoPlugin = health.capabilities?.seo_plugin;
     if (seoPlugin) console.log(`     SEO plugin: ${seoPlugin}`);
+    evidence.checks.health = {
+      pass: true,
+      plugin_version: health.version,
+      cms_version: health.cms_version,
+      php_version: health.php_version,
+      capabilities: health.capabilities,
+      seo_plugin: seoPlugin ?? null,
+    };
   }
 
+  // ── Site-graph ───────────────────────────────────────────────────────────────
   const graph = await pluginRequest("GET", "site-graph");
   if (!graph.ok) {
     console.error(`[FAIL] GET /site-graph → ${graph.status}`, graph.data);
     failed += 1;
+    evidence.checks.site_graph = { pass: false, status: graph.status };
   } else {
     const categories = graph.data.categories ?? [];
     const tags = graph.data.tags ?? [];
@@ -109,10 +136,47 @@ async function main() {
     } else {
       console.warn(`[WARN] Category "${smokeCategory}" not found — create it in WP before go-live`);
     }
+    evidence.checks.site_graph = {
+      pass: true,
+      categories,
+      tags,
+      smoke_category_id: catId,
+    };
+  }
+
+  // ── llms.txt ─────────────────────────────────────────────────────────────────
+  // GET /llms.txt is served via WP rewrite rule, no auth required.
+  // If WP_SMOKE_SCHEMA=1, we first POST /schema with minimal content then re-verify.
+  if (shouldSchema) {
+    const schemaPayload = {
+      json_ld: [],
+      llms_txt: `# llms.txt\n# goals.ac smoke test — ${new Date().toISOString()}\n`,
+    };
+    const schemaRes = await pluginRequest("POST", "schema", schemaPayload);
+    if (!schemaRes.ok) {
+      console.error(`[FAIL] POST /schema → ${schemaRes.status}`, schemaRes.data);
+      failed += 1;
+      evidence.checks.schema_post = { pass: false, status: schemaRes.status };
+    } else {
+      console.log(`[OK] POST /schema → llms.txt stored`);
+      evidence.checks.schema_post = { pass: true };
+    }
+  }
+
+  const llmsRes = await fetch(`${siteUrl}/llms.txt`);
+  if (!llmsRes.ok) {
+    console.error(`[FAIL] GET /llms.txt → ${llmsRes.status} (check permalink structure + plugin activation)`);
+    failed += 1;
+    evidence.checks.llms_txt = { pass: false, status: llmsRes.status };
+  } else {
+    const llmsTxt = await llmsRes.text();
+    const preview = llmsTxt.trim().slice(0, 80);
+    console.log(`[OK] GET /llms.txt → ${preview}${llmsTxt.length > 80 ? "…" : ""}`);
+    evidence.checks.llms_txt = { pass: true, preview, length: llmsTxt.length };
   }
 
   if (shouldPublish) {
-    const categories = graph.data?.categories ?? [];
+    const categories = evidence.checks.site_graph?.categories ?? graph.data?.categories ?? [];
     const categoryId = resolveTermId(smokeCategory, categories);
 
     const status = process.env.WP_SMOKE_STATUS ?? "draft";
@@ -144,8 +208,15 @@ async function main() {
     if (!pub1.ok) {
       console.error(`[FAIL] POST /content (categories=name) → ${pub1.status}`, pub1.data);
       failed += 1;
+      evidence.checks.publish = { pass: false, status: pub1.status };
     } else {
       console.log(`[OK] POST /content → ${pub1.data.url ?? pub1.data.remote_id}`);
+      evidence.checks.publish = {
+        pass: true,
+        remote_id: pub1.data.remote_id ?? pub1.data.id,
+        url: pub1.data.url,
+        status: pub1.data.status ?? status,
+      };
     }
 
     // 2) Optional: numeric category ID path
@@ -207,20 +278,36 @@ async function main() {
       if (!a.ok || !b.ok) {
         console.error(`[FAIL] idempotency replay → ${a.status}/${b.status}`, a.data, b.data);
         failed += 1;
+        evidence.checks.idempotency = { pass: false };
       } else if (a.data.remote_id !== b.data.remote_id) {
         console.error(
           `[FAIL] idempotency remote_id mismatch: ${a.data.remote_id} vs ${b.data.remote_id}`,
         );
         failed += 1;
+        evidence.checks.idempotency = {
+          pass: false,
+          first_id: a.data.remote_id,
+          replay_id: b.data.remote_id,
+        };
       } else {
         console.log(`[OK] idempotency replay remote_id stable (${a.data.remote_id})`);
+        evidence.checks.idempotency = { pass: true, remote_id: a.data.remote_id };
       }
     }
   } else {
     console.log("Skip publish probe (set WP_SMOKE_PUBLISH=1 to create a draft post)");
   }
 
-  if (failed > 0) {
+  const passed = failed === 0;
+  if (jsonOut) {
+    evidence.passed = passed;
+    evidence.failed_count = failed;
+    // Paste this block into the runbook evidence sections.
+    console.log("\n── JSON evidence (paste into wp-staging-verification-evidence.md) ──");
+    console.log(JSON.stringify(evidence, null, 2));
+  }
+
+  if (!passed) {
     console.error(`\n${failed} check(s) failed`);
     process.exit(1);
   }

@@ -6,7 +6,7 @@ import {
   resolveAccessToken,
   type SearchPropertyTokenEnv,
 } from "@workspace/cf-edge/search-property-client";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   SEARCH_PROPERTY_PROVIDERS,
   searchPropertyConnectionsTable,

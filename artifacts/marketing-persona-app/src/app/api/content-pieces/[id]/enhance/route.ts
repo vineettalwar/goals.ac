@@ -155,7 +155,6 @@ export async function POST(
       existingPieceTitles.filter((title) => title !== piece!.title),
       userApiKey,
       aiProviderOptions,
-      ctx.brand,
     );
 
     const [updated] = await db

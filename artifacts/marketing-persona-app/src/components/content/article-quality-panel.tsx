@@ -166,12 +166,12 @@ function ArticleQualityPanelBody({
   const displayOgTitle = props.ogTitle ?? displaySeoTitle;
 
   return (
-    <div className="paper-card rounded-xl p-5 space-y-4">
+    <div className="paper-card space-y-6 rounded-xl p-6">
       <div className="flex items-center gap-4">
         <ScoreRing score={displayTotal} size={88} label="Article score" />
-        <div>
-          <h3 className="font-semibold text-sm">Quality breakdown</h3>
-          <p className="text-xs text-muted-foreground mt-1">
+        <div className="min-w-0 space-y-1.5">
+          <h3 className="text-sm font-semibold">Quality breakdown</h3>
+          <p className="text-sm text-muted-foreground">
             {dual && serpTotal != null && editorialTotal >= 70 && serpTotal >= 65
               ? "Publish-ready (editorial + SERP)"
               : displayTotal >= 80
@@ -181,22 +181,22 @@ function ArticleQualityPanelBody({
                   : "Improve before publishing"}
           </p>
           {dual ? (
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               Editorial {editorialTotal} (live draft) · SERP {serpTotal} (last saved) · Combined{" "}
               {displayTotal}
             </p>
           ) : (
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               Editorial {editorialTotal} (live draft)
             </p>
           )}
           {dual && draftDiffersFromSaved ? (
-            <p className="mt-1 text-xs text-muted-foreground">
+            <p className="text-xs leading-relaxed text-muted-foreground">
               SERP and H2 are from the last saved body — save or refresh to update.
             </p>
           ) : null}
           {scoreDelta !== 0 ? (
-            <p className="mt-1 text-xs font-medium tabular-nums text-muted-foreground">
+            <p className="text-xs font-medium tabular-nums text-muted-foreground">
               {formatScoreDelta(scoreDelta)}
             </p>
           ) : null}
@@ -205,7 +205,7 @@ function ArticleQualityPanelBody({
               type="button"
               variant="link"
               size="sm"
-              className="mt-1 h-auto px-0 text-xs"
+              className="h-auto px-0 pt-0.5 text-xs"
               onClick={() => void refetchSerpScore()}
               disabled={isRefreshingSerp}
             >
@@ -215,47 +215,57 @@ function ArticleQualityPanelBody({
         </div>
       </div>
 
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-        Editorial (live draft)
-      </p>
-      {result.breakdown.map((item) => (
-        <div key={item.label} className="space-y-1">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">{item.label}</span>
-            <span className={item.score === 0 ? "font-medium text-destructive" : "font-medium"}>
-              {item.score}/{item.max}
-            </span>
-          </div>
-          {item.label === "Human voice" && item.detail ? (
-            <p className="text-[11px] leading-relaxed text-muted-foreground/80">
-              {item.detail}
-            </p>
-          ) : null}
-        </div>
-      ))}
+      <div className="space-y-3.5">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Editorial (live draft)
+        </p>
+        <ul className="space-y-3.5">
+          {result.breakdown.map((item) => (
+            <li key={item.label} className="space-y-1.5">
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">{item.label}</span>
+                <span
+                  className={
+                    item.score === 0
+                      ? "shrink-0 font-medium tabular-nums text-destructive"
+                      : "shrink-0 font-medium tabular-nums"
+                  }
+                >
+                  {item.score}/{item.max}
+                </span>
+              </div>
+              {item.label === "Human voice" && item.detail ? (
+                <p className="text-xs leading-relaxed text-muted-foreground/80">{item.detail}</p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {dual?.serp.breakdown?.length ? (
-        <div className="border-t border-border pt-3 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="space-y-3.5 border-t border-border pt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             SERP / H2 (last saved)
           </p>
-          {dual.serp.breakdown.map((item) => (
-            <div key={item.label} className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground" title={item.detail}>
-                {item.label}
-              </span>
-              <span className="font-medium">
-                {item.score}/{item.max}
-              </span>
-            </div>
-          ))}
+          <ul className="space-y-3.5">
+            {dual.serp.breakdown.map((item) => (
+              <li key={item.label} className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-muted-foreground" title={item.detail}>
+                  {item.label}
+                </span>
+                <span className="shrink-0 font-medium tabular-nums">
+                  {item.score}/{item.max}
+                </span>
+              </li>
+            ))}
+          </ul>
           {dual.serp.h2Coverage && dual.serp.h2Coverage.total > 0 ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               {`H2 coverage: ${dual.serp.h2Coverage.percent}% (${dual.serp.h2Coverage.covered}/${dual.serp.h2Coverage.total} rival topics)`}
             </p>
           ) : null}
           {dual.serp.gaps.length > 0 ? (
-            <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
+            <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
               {dual.serp.gaps.slice(0, 4).map((gap) => (
                 <li key={gap}>• {gap}</li>
               ))}
@@ -265,14 +275,20 @@ function ArticleQualityPanelBody({
       ) : null}
 
       {dual?.competitorDiff && dual.competitorDiff.length > 0 ? (
-        <div className="border-t border-border pt-3 space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="space-y-3.5 border-t border-border pt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Competitor topics (top SERP)
           </p>
-          <ul className="space-y-1.5">
+          <ul className="space-y-3">
             {dual.competitorDiff.map((row) => (
-              <li key={row.title} className="flex items-start justify-between gap-2 text-xs">
-                <span className={row.covered ? "text-muted-foreground" : "text-foreground"}>
+              <li key={row.title} className="flex items-start justify-between gap-3 text-sm">
+                <span
+                  className={
+                    row.covered
+                      ? "leading-relaxed text-muted-foreground"
+                      : "leading-relaxed text-foreground"
+                  }
+                >
                   {row.title}
                 </span>
                 <span
@@ -291,13 +307,15 @@ function ArticleQualityPanelBody({
       ) : null}
 
       {canEnhance && needsEnhance && onEnhance ? (
-        <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
-          <p className="text-xs text-muted-foreground">
-            {dual?.serp.gaps.length
-              ? "Fix gaps runs an enhance pass targeting SERP, FAQ, citations, and internal links."
-              : "Missing FAQ, citations, or SERP angles? Enhance adds them without a full rewrite."}
+        <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {enhancing
+              ? "Still working — usually under a minute. The draft updates when this finishes."
+              : dual?.serp.gaps.length
+                ? "Fix gaps runs an enhance pass targeting SERP, FAQ, citations, and internal links."
+                : "Missing FAQ, citations, or SERP angles? Enhance adds them without a full rewrite."}
           </p>
-          <Button className="w-full" size="sm" onClick={onEnhance} disabled={enhancing}>
+          <Button className="w-full" onClick={onEnhance} disabled={enhancing}>
             <TrendingUp className="h-3.5 w-3.5" />
             {enhancing
               ? "Fixing gaps…"
@@ -309,40 +327,40 @@ function ArticleQualityPanelBody({
       ) : null}
 
       {(displaySeoTitle || props.metaDescription || displayOgTitle || props.ogDescription) && (
-        <div className="pt-2 border-t border-border space-y-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <div className="space-y-4 border-t border-border pt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             SEO metadata
           </p>
           {displaySeoTitle ? (
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-1">
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">
                 SEO title ({displaySeoTitle.length} chars)
               </p>
-              <p className="text-xs leading-relaxed">{displaySeoTitle}</p>
+              <p className="text-sm leading-relaxed">{displaySeoTitle}</p>
             </div>
           ) : null}
           {props.metaDescription ? (
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-1">
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">
                 Meta description ({props.metaDescription.length} chars)
               </p>
-              <p className="text-xs leading-relaxed">{props.metaDescription}</p>
+              <p className="text-sm leading-relaxed">{props.metaDescription}</p>
             </div>
           ) : null}
           {displayOgTitle && displayOgTitle !== displaySeoTitle ? (
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-1">
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">
                 Open Graph title ({displayOgTitle.length} chars)
               </p>
-              <p className="text-xs leading-relaxed">{displayOgTitle}</p>
+              <p className="text-sm leading-relaxed">{displayOgTitle}</p>
             </div>
           ) : null}
           {props.ogDescription && props.ogDescription !== props.metaDescription ? (
-            <div>
-              <p className="text-[10px] text-muted-foreground mb-1">
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">
                 Open Graph description ({props.ogDescription.length} chars)
               </p>
-              <p className="text-xs leading-relaxed">{props.ogDescription}</p>
+              <p className="text-sm leading-relaxed">{props.ogDescription}</p>
             </div>
           ) : null}
         </div>

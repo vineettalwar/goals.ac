@@ -6,7 +6,10 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { Globe, Plus } from "lucide-react";
 import { useActiveProject } from "@/context/use-active-project";
-import { navigationTargetForActiveProject } from "@/lib/active-project/routing";
+import {
+  navigationTargetForActiveProject,
+  queryStringForProjectSwitch,
+} from "@/lib/active-project/routing";
 import { NewProjectDialog } from "@/components/projects/new-project-dialog";
 import {
   Select,
@@ -60,7 +63,7 @@ export function ProjectSwitcher({ className }: { className?: string }) {
 
     const target = navigationTargetForActiveProject(pathname, projectId);
     if (target) {
-      const query = searchParams.toString();
+      const query = queryStringForProjectSwitch(searchParams.toString());
       router.push(query ? `${target}?${query}` : target);
       return;
     }

@@ -1,10 +1,14 @@
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { websiteProjectsTable, wordpressConnectionsTable } from "@workspace/db/schema";
+import { websiteProjectsTable, wordpressConnectionsTable, organizationsTable } from "@workspace/db/schema";
 import { decryptSecret } from "@workspace/security/encryption";
 import { testWordPressConnection } from "@workspace/connectors/wordpress";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { ConnectionHealthCheckJobData, ConnectionHealthCheckPayload, PgBoss } from "@workspace/jobs";
+import {
+  applyIntegrationHealthTransition,
+  detectHealthTransition,
+} from "@workspace/content-engine/support/publishing/integration-health-alerts";
 import { logger } from "../logger";
 
 /**
@@ -105,6 +109,8 @@ async function checkWordPressConnection(connectionId: number): Promise<void> {
     return;
   }
 
+  const previousOk = connection.isVerified;
+
   const appPassword = decryptSecret(connection.encryptedAppPassword);
   const result = await testWordPressConnection({
     siteUrl: connection.siteUrl,
@@ -116,4 +122,37 @@ async function checkWordPressConnection(connectionId: number): Promise<void> {
     .update(wordpressConnectionsTable)
     .set({ lastTestedAt: new Date(), isVerified: result.ok })
     .where(eq(wordpressConnectionsTable.id, connectionId));
+
+  // Wire legacy WordPress connections through the health-alert transition.
+  // Chain: wordpressConnection.companyId → organization.companyId → project.organizationId
+  const transition = detectHealthTransition(previousOk, result.ok);
+  if (transition !== "no_change") {
+    try {
+      const [org] = await db
+        .select({ id: organizationsTable.id })
+        .from(organizationsTable)
+        .where(eq(organizationsTable.companyId, connection.companyId))
+        .limit(1);
+
+      if (org) {
+        const projects = await db
+          .select({ id: websiteProjectsTable.id })
+          .from(websiteProjectsTable)
+          .where(eq(websiteProjectsTable.organizationId, org.id));
+
+        for (const project of projects) {
+          await applyIntegrationHealthTransition({
+            websiteProjectId: project.id,
+            organizationId: org.id,
+            platform: "wordpress",
+            previousOk,
+            currentOk: result.ok,
+            error: result.ok ? undefined : (result as { error?: string }).error,
+          });
+        }
+      }
+    } catch (err) {
+      logger.error({ err, connectionId }, "Failed to apply health transition for legacy WordPress connection");
+    }
+  }
 }

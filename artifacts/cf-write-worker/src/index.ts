@@ -40,6 +40,7 @@ import { handleInviteAcceptPost } from "./invite-routes";
 import { handleVisibilityWrite } from "./visibility-routes";
 import { handleGscUrlInspectionWrite } from "./gsc-url-inspection-routes";
 import { handleSiteAuditWrite } from "./site-audit-routes";
+import { handleBacklinksWrite } from "./backlinks-routes";
 import { handleTrackedKeywordsWrite } from "./tracked-keywords-routes";
 import { handleCompetitorAnalysisWrite } from "./competitor-analysis-routes";
 import { handleContentStrategiesWrite } from "./content-strategies-routes";
@@ -61,6 +62,8 @@ export interface Env extends CfEdgeBindings {
   FORCE_QUEUE_WRITES: string;
   AUTH_SECRET: string;
   GEMINI_KEY_ENCRYPTION_SECRET: string;
+  DATAFORSEO_LOGIN?: string;
+  DATAFORSEO_PASSWORD?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   BING_WEBMASTER_CLIENT_ID?: string;
@@ -221,6 +224,9 @@ export default {
       const siteAuditHandled = await handleSiteAuditWrite(request, path, userId);
       if (siteAuditHandled) return siteAuditHandled;
 
+      const backlinksHandled = await handleBacklinksWrite(request, path, userId);
+      if (backlinksHandled) return backlinksHandled;
+
       const trackedKeywordsHandled = await handleTrackedKeywordsWrite(
         request,
         path,
@@ -305,7 +311,7 @@ export default {
           return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
         }
 
-        const { db } = await import("@workspace/db");
+        const { db } = await import("./db");
         const { contentPiecesTable } = await import("@workspace/db/schema-sqlite");
         const { eq } = await import("drizzle-orm");
         const [piece] = await db
@@ -426,6 +432,10 @@ export default {
         if (!parsed.success) {
           return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
         }
+        const project = await getAccessibleProject(parsed.data.projectId, userId);
+        if (!project) {
+          return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+        }
         const jobId = await sendToCfQueue(QUEUES.brandVoiceIndex, {
           projectId: parsed.data.projectId,
         });
@@ -437,6 +447,10 @@ export default {
       const syncMatch = path.match(/^\/api\/website-projects\/(\d+)\/search-properties\/gsc\/sync$/);
       if (syncMatch && request.method === "POST") {
         const projectId = Number.parseInt(syncMatch[1]!, 10);
+        const project = await getAccessibleProject(projectId, userId);
+        if (!project) {
+          return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+        }
         const jobId = await sendToCfQueue(QUEUES.gscSearchAnalyticsSync, { projectId, userId });
         const id = jobId ?? `cf:${QUEUES.gscSearchAnalyticsSync}:${Date.now()}`;
         await trackJob(env, id, QUEUES.gscSearchAnalyticsSync, { userId, projectId });
@@ -446,6 +460,10 @@ export default {
       const ga4Match = path.match(/^\/api\/website-projects\/(\d+)\/analytics-properties\/ga4\/sync$/);
       if (ga4Match && request.method === "POST") {
         const projectId = Number.parseInt(ga4Match[1]!, 10);
+        const project = await getAccessibleProject(projectId, userId);
+        if (!project) {
+          return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+        }
         const jobId = await sendToCfQueue(QUEUES.ga4AnalyticsSync, { projectId, userId });
         const id = jobId ?? `cf:${QUEUES.ga4AnalyticsSync}:${Date.now()}`;
         await trackJob(env, id, QUEUES.ga4AnalyticsSync, { userId, projectId });

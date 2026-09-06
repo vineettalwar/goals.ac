@@ -18,6 +18,10 @@ import {
 import { assessPublishReadiness } from "@workspace/content-engine/content/publish-readiness";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import {
+  fetchBacklinksOverview,
+  isBacklinksConfigured,
+} from "@workspace/serp-provider";
+import {
   enqueue,
   QUEUES,
   JobsUnavailableError,
@@ -390,6 +394,43 @@ export async function inspectUrl(
     });
 
     return okJson({ inspection: result });
+  } catch (err) {
+    return errResult(err);
+  }
+}
+
+export async function getBacklinksOverview(
+  ctx: McpToolContext,
+  args: { projectId: number; referringDomainsLimit?: number },
+): Promise<McpToolResult> {
+  try {
+    requireApiKeyScope(ctx.key, "content:read");
+    await assertProjectInOrg(args.projectId, ctx.key.organizationId);
+
+    if (!isBacklinksConfigured()) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: "Backlinks provider not configured — set DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD.",
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const [project] = await db
+      .select({ url: websiteProjectsTable.url })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, args.projectId))
+      .limit(1);
+    if (!project) throw new McpToolError("Project not found", "not_found");
+
+    const overview = await fetchBacklinksOverview({
+      target: project.url,
+      referringDomainsLimit: args.referringDomainsLimit,
+    });
+    return okJson(overview);
   } catch (err) {
     return errResult(err);
   }

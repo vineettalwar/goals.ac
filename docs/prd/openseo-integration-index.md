@@ -26,7 +26,7 @@ Go-live Gate 0 (SEC-2 IDOR, BLOCK-3 LinkedIn draft honesty, WP packaging) remain
 | 3 | goals.ac MCP + agent skills | [feature-3-goals-ac-mcp-skills.md](./feature-3-goals-ac-mcp-skills.md) | Feature 1 for audit tools | **Shipped (lib + Next + CF public)** — `/api/mcp` + skill |
 | 4 | GSC URL Inspection | [feature-4-gsc-url-inspection.md](./feature-4-gsc-url-inspection.md) | GSC OAuth | **Shipped (lib + Next + CF)** — migrate `0078` / D1 `0013`; Performance + publish hook + CF GET/POST |
 | 5 | Rank tracking hardening | [feature-5-rank-tracking-hardening.md](./feature-5-rank-tracking-hardening.md) | Existing rank jobs | **Shipped (hardening)** — richer SERP features + 45m debounce |
-| 6 | Backlinks overview | [feature-6-backlinks-overview.md](./feature-6-backlinks-overview.md) | DataForSEO creds | **Shipped (lib + Next)** — summary + top referring domains on Search → Site |
+| 6 | Backlinks overview | [feature-6-backlinks-overview.md](./feature-6-backlinks-overview.md) | DataForSEO creds | **Shipped (lib + Next + CF + MCP)** — summary + top referring domains; `get_backlinks_overview` |
 
 ## Kill / success (product-level)
 

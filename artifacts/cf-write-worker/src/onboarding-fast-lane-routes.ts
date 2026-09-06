@@ -1,5 +1,5 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { generateRoadmapSlug } from "@workspace/db";
 import {
   companiesTable,

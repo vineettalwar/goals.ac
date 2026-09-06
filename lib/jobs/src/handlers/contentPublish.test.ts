@@ -103,6 +103,15 @@ vi.mock("@workspace/connectors/goals-ac-plugin", () => ({
   fetchGoalsAcSiteGraph: (creds: unknown) => state.siteGraphMock(creds),
 }));
 
+vi.mock("@workspace/content-engine/support/email/send-platform-email", () => ({
+  sendPlatformEmail: vi.fn(async () => ({ sent: true })),
+  resolveAppOrigin: () => "https://app.goals.ac",
+}));
+
+vi.mock("@workspace/db/schema", () => ({
+  usersTable: { id: "id", email: "email" },
+}));
+
 vi.mock("../logger", () => ({
   logger: {
     info: vi.fn(),
@@ -111,7 +120,7 @@ vi.mock("../logger", () => ({
   },
 }));
 
-import { publishPiece } from "./contentPublish";
+import { publishPiece, PUBLISH_MAX_ATTEMPTS } from "./contentPublish";
 
 const BASE_PIECE = {
   id: 1,
@@ -119,8 +128,20 @@ const BASE_PIECE = {
   status: "ready",
   title: "A Well-Formed Guide to Widget Maintenance",
   bodyMarkdown:
-    "## Overview\n\nThis is a thorough guide to widget maintenance with plenty of detail. ".repeat(20) +
-    "\n\n" +
+    "## Overview\n\nKeeping your widgets in top condition requires a disciplined approach. " +
+    "Regular inspections catch wear before it becomes failure, and a structured maintenance schedule saves both time and money. " +
+    "This guide covers everything from daily visual checks to annual rebuilds, giving facilities teams a single reference " +
+    "they can hand to every technician on the floor.\n\n" +
+    "## Daily Visual Checks\n\nWalk the line every morning. Look for chips, discoloration, and unusual vibrations. " +
+    "Log every anomaly in the shift report so night-shift can follow up. A five-minute walk now prevents a five-hour outage later.\n\n" +
+    "## Weekly Lubrication\n\nApply the manufacturer-recommended grease to all pivot points. Over-lubricating is as bad as under-lubricating: " +
+    "excess grease traps debris and accelerates wear on seals. Use a calibrated grease gun and record the volume dispensed.\n\n" +
+    "## Monthly Calibration\n\nAlign sensors against the reference jig. Drift beyond 0.05 mm means the part tolerance is at risk. " +
+    "Recalibrate, retest, and sign off before the next production run starts.\n\n" +
+    "## Quarterly Parts Replacement\n\nSwap consumable inserts, belts, and filters on the published schedule. " +
+    "Do not stretch intervals to save cost: a snapped belt shuts down the whole cell and the replacement lead time is two weeks.\n\n" +
+    "## Annual Rebuild\n\nOnce a year, strip the assembly down to the frame. Inspect every bearing, bushing, and fastener. " +
+    "Replace anything that shows micro-cracking under dye-penetrant testing. Reassemble to factory torque specs.\n\n" +
     Array.from({ length: 4 }, (_, i) => `[Source ${i}](https://example.com/source-${i})`).join(" ") +
     "\n\n### FAQ\n\n" +
     Array.from({ length: 3 }, (_, i) => `**Q${i}: Question ${i}?**\nA${i}: Answer ${i}.`).join("\n\n"),
@@ -390,5 +411,39 @@ describe("publishPiece readiness gate", () => {
     expect(claimUpdate).toBeDefined();
     const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
     expect(publishUpdate).toBeUndefined();
+  });
+
+  it("skips a dead-lettered piece without attempting publish", async () => {
+    const deadPiece = {
+      ...BASE_PIECE,
+      pieceMetadata: { ...BASE_PIECE.pieceMetadata, publishDeadLettered: true, publishFailCount: PUBLISH_MAX_ATTEMPTS },
+    };
+    queuePieceAndProject(deadPiece);
+
+    await publishPiece(1, 5);
+
+    expect(state.runPublishMock).not.toHaveBeenCalled();
+    const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
+    expect(publishUpdate).toBeUndefined();
+  });
+
+  it("clears publishFailCount and publishDeadLettered on successful publish", async () => {
+    const retriedPiece = {
+      ...BASE_PIECE,
+      pieceMetadata: { ...BASE_PIECE.pieceMetadata, publishFailCount: 2 },
+    };
+    queuePieceAndProject(retriedPiece);
+
+    await publishPiece(1, 5);
+
+    expect(state.runPublishMock).toHaveBeenCalledOnce();
+    const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
+    expect(publishUpdate).toBeDefined();
+    const meta = publishUpdate!.values.pieceMetadata as {
+      publishFailCount?: number;
+      publishDeadLettered?: boolean;
+    };
+    expect(meta.publishFailCount).toBeUndefined();
+    expect(meta.publishDeadLettered).toBeUndefined();
   });
 });

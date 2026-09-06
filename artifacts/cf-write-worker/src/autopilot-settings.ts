@@ -1,5 +1,5 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { websiteProjectsTable } from "@workspace/db/schema-sqlite";
 import type { AutopilotSettings } from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";

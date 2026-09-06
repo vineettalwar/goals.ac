@@ -140,15 +140,9 @@ export async function runAutopilotForProject(projectId: number): Promise<void> {
     triggeredByAutopilot: true,
   });
 
-  await db
-    .update(websiteProjectsTable)
-    .set({
-      autopilotSettings: {
-        ...settings,
-        lastRunAt: new Date().toISOString(),
-      },
-    })
-    .where(eq(websiteProjectsTable.id, projectId));
+  // Do not stamp lastRunAt here — HIGH-7: if generation fails after enqueue,
+  // shouldRunAutopilot must still allow a retry on the next sweep. Stamp on
+  // successful generate completion in contentGenerate.ts instead.
 
   logger.info({ projectId, contentItemId: next.itemId }, "Autopilot: enqueued content generation");
 }

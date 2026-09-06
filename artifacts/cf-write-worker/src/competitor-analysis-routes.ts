@@ -1,5 +1,5 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { competitorAnalysesTable } from "@workspace/db/schema-sqlite";
 import { analyzeCompetitor } from "@workspace/seo-tools/competitorAnalyzer";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";

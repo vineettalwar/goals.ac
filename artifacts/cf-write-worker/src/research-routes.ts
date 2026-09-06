@@ -1,5 +1,5 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   brandProfilesTable,
   contentPiecesTable,
@@ -213,7 +213,11 @@ One reply per thread index. Be conversational and value-first.`;
 
     let opportunitiesInserted = 0;
     try {
-      opportunitiesInserted = await persistRedditOpportunities(projectId, threads, keywords);
+      opportunitiesInserted = await persistRedditOpportunities(
+        parsed.data.projectId,
+        threads,
+        keywords,
+      );
     } catch {
       // discovery still succeeds even if opportunity persist fails
     }

@@ -1,5 +1,5 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   brandProfilesTable,
   CONTENT_FORMAT_TYPES,
@@ -587,7 +587,6 @@ async function handleEnhance(
       existingPieceTitles.filter((title) => title !== piece.title),
       userApiKey,
       aiProviderOptions,
-      brand,
     );
 
     const [updated] = await db

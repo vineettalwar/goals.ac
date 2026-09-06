@@ -84,9 +84,10 @@ export function BrandAiProfileCard({
 }) {
   if (loading) {
     return (
-      <div className={cn("mb-6 animate-pulse border-b border-border pb-5", className)}>
+      <div className={cn("animate-pulse border-b border-border pb-8", className)}>
         <div className="h-4 w-32 rounded bg-muted" />
-        <div className="mt-3 h-3 w-full max-w-2xl rounded bg-muted" />
+        <div className="mt-4 h-3 w-full max-w-2xl rounded bg-muted" />
+        <div className="mt-2 h-3 w-2/3 max-w-xl rounded bg-muted" />
       </div>
     );
   }
@@ -113,30 +114,30 @@ export function BrandAiProfileCard({
   ].filter(Boolean);
 
   return (
-    <div className={cn("mb-6 border-b border-border pb-5", className)}>
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+    <div className={cn("border-b border-border pb-8", className)}>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
         <h2 className="text-sm font-semibold text-foreground">Brand voice</h2>
         {metaBits.length > 0 ? (
           <p className="text-xs text-muted-foreground">{metaBits.join(" · ")}</p>
         ) : null}
       </div>
-      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{summary}</p>
+      <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">{summary}</p>
       {(memory?.voiceTraits?.length ?? 0) > 0 ? (
-        <p className="mt-2 text-xs text-muted-foreground">
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
           Traits: {memory!.voiceTraits!.join(" · ")}
         </p>
       ) : null}
       {(profile.primaryKeywords?.length ?? 0) > 0 ? (
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
           Focus: {profile.primaryKeywords!.slice(0, 6).join(", ")}
         </p>
       ) : null}
       {scanSources.length > 0 ? (
-        <details className="mt-3">
+        <details className="mt-4">
           <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
             Pages scanned ({scanSources.length})
           </summary>
-          <ul className="mt-1.5 space-y-0.5">
+          <ul className="mt-2 space-y-1">
             {scanSources.slice(0, 6).map((source) => (
               <li key={source}>
                 <a

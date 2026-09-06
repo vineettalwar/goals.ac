@@ -67,3 +67,4 @@ export {
   registerGscUrlInspectionHandler,
   processGscUrlInspection,
 } from "./gscUrlInspection";
+export { processPublishReliabilityAlert, registerPublishReliabilityAlertHandler } from "./publishReliabilityAlert";

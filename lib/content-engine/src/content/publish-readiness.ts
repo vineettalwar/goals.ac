@@ -28,6 +28,7 @@ import {
   analyzeKeywordDensity,
   findSimilarTitles,
 } from "./seo-guardrails";
+import { findPublishPlaceholders } from "./publish-placeholders";
 
 export type PublishReadinessSeverity = "blocker" | "warning";
 
@@ -377,6 +378,20 @@ function checkWeakAltText(body: string): PublishReadinessIssue | null {
   };
 }
 
+function checkPlaceholders(
+  body: string,
+  unattended: boolean | undefined,
+): PublishReadinessIssue | null {
+  const hits = findPublishPlaceholders(body);
+  if (hits.length === 0) return null;
+  return {
+    code: "placeholder_token",
+    severity: unattended ? "blocker" : "warning",
+    message: `${hits.length} unfilled template placeholder${hits.length === 1 ? "" : "s"} found in the body. Fill or remove before publishing.`,
+    detail: hits.slice(0, 3).join(", "),
+  };
+}
+
 export function assessPublishReadiness(
   piece: PublishReadinessPiece,
   options: PublishReadinessOptions = {},
@@ -397,6 +412,15 @@ export function assessPublishReadiness(
     checkDuplicateTitle(fields.title, options.existingTitles),
   ]) {
     if (issue) blockers.push(issue);
+  }
+
+  const placeholderIssue = checkPlaceholders(fields.body, options.unattended);
+  if (placeholderIssue) {
+    if (placeholderIssue.severity === "blocker") {
+      blockers.push(placeholderIssue);
+    } else {
+      warnings.push(placeholderIssue);
+    }
   }
 
   for (const issue of [

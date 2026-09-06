@@ -1,5 +1,5 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { projectRoadmapsTable, roadmapsTable } from "@workspace/db/schema-sqlite";
 import { and, eq } from "drizzle-orm";
 import { getAccessibleProject } from "./project-access";

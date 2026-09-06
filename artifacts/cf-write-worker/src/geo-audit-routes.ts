@@ -1,6 +1,6 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { geoAuditsTable } from "@workspace/db/schema-sqlite";
 import { auditUrl } from "@workspace/seo-tools/geoAuditor";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";

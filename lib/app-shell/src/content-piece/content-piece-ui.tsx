@@ -915,7 +915,7 @@ function ContentPieceAside({
   const checklistBlocks = publishReadyChecklistBlocks(checklist);
 
   return (
-    <aside className="space-y-4 lg:sticky lg:top-6">
+    <aside className="space-y-5 lg:sticky lg:top-6">
       {asideExtra}
       {editing ? (
         <div className="paper-card space-y-3 rounded-xl p-4">
@@ -1123,11 +1123,13 @@ function ContentPieceAside({
           ) : null}
         </div>
       ) : onQueueSocial ? (
-        <div className="paper-card space-y-3 rounded-xl p-4">
-          <p className="text-sm font-medium">Social distribution</p>
-          <p className="text-xs text-muted-foreground">
-            Create LinkedIn and X variants from this article.
-          </p>
+        <div className="paper-card space-y-4 rounded-xl p-6">
+          <div className="space-y-1.5">
+            <p className="text-sm font-medium">Social distribution</p>
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Create LinkedIn and X variants from this article.
+            </p>
+          </div>
           <button
             type="button"
             disabled={busy || editing}

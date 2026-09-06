@@ -1,4 +1,5 @@
-import { db, countAsInt } from "@workspace/db";
+import { db } from "./db";
+import { countAsInt } from "@workspace/db";
 import {
   contentPiecesTable,
   socialPostMetricsTable,

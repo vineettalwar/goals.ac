@@ -1,4 +1,5 @@
-import { db, sumAsInt } from "@workspace/db";
+import { db } from "./db";
+import { sumAsInt } from "@workspace/db";
 import {
   analyticsPropertyConnectionsTable,
   gscSearchQueriesTable,

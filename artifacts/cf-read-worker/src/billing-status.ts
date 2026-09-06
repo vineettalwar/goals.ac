@@ -1,4 +1,4 @@
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { isStripeBillingActive, normalizePlanId, type PlanId } from "@workspace/billing";
 import {
   organizationsTable,

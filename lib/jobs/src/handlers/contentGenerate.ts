@@ -296,6 +296,18 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
       totalTokens: result.generationUsage?.totalTokens,
     });
 
+    if (triggeredByAutopilot === true) {
+      await db
+        .update(websiteProjectsTable)
+        .set({
+          autopilotSettings: {
+            ...settings,
+            lastRunAt: new Date().toISOString(),
+          },
+        })
+        .where(eq(websiteProjectsTable.id, projectId));
+    }
+
     logger.info({ contentItemId, contentPieceId, autoPublish, ...result }, "Content generate job completed");
   } catch (err) {
     if (billingCtx) {

@@ -155,6 +155,10 @@ export type ContentPieceMetadata = {
   updateConfirmed?: boolean;
   /** Secondary / coverage keywords for dual score checklist. */
   secondaryKeywords?: string[];
+  /** Consecutive publish-attempt failures (incremented on each CMS/social error). */
+  publishFailCount?: number;
+  /** True once publishFailCount reaches PUBLISH_MAX_ATTEMPTS — sweep skips this piece. */
+  publishDeadLettered?: boolean;
 };
 
 export const contentPiecesTable = sqliteTable("content_pieces", {

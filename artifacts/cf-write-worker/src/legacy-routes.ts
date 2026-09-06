@@ -1,6 +1,6 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { requireSiteAdminAccess } from "@workspace/cf-edge/project-access";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   apiKeysTable,
   companiesTable,

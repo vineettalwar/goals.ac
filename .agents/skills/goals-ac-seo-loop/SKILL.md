@@ -154,6 +154,15 @@ All tools use JSON-RPC 2.0 over `POST /api/mcp` with `Authorization: Bearer gac_
 - Requires GSC connection on the project (Settings → Integrations → Google Search Console)
 - Use for: check if a newly published page has been indexed and verify Google's canonical
 
+**`get_backlinks_overview(projectId, referringDomainsLimit?)`** — Live DataForSEO backlinks summary for the project domain
+- Annotations: `readOnly`, `openWorld` (calls DataForSEO)
+- Params:
+  - `projectId` (required)
+  - `referringDomainsLimit` (optional, 1–25, default 10)
+- Returns: `{ target, summary: { backlinks, referringDomains, spamScore, ... }, referringDomains: [...], costEstimateUsd }`
+- Requires platform `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`. Honest error when unset.
+- Use for: off-site authority context before planning outreach or content refresh priority
+
 ## Recommended Workflow
 
 1. **Authenticate & discover**

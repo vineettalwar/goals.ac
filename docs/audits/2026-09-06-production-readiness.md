@@ -14,6 +14,8 @@ Go-live audit against a specific commercial target: paying customers at **€500
 | `cf-read-worker` typecheck | **362 errors** |
 | `cf-public-worker` / `cf-jobs-worker` / `cf-gateway` / `marketing-persona-app` / `worker` | 0 errors |
 
+**Remediation update (same day, later session):** Gate 0 code blockers closed — see `HANDOFF.md`. Later same day: HIGH-1 SEO REST meta + excerpt; HIGH-8 publish dead-letter (5); HIGH-10 ownership on scrape/GSC/GA4; HIGH-16 site-graph caps; MED-1 placeholder scanner. BLOCK-5 live WP evidence still human.
+
 ---
 
 ## Verdict

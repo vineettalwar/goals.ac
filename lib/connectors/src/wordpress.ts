@@ -72,6 +72,32 @@ export async function uploadWordPressMedia(
   };
 }
 
+/** Known description meta keys across Yoast / RankMath / AIOSEO / SEOPress. */
+const DESCRIPTION_META_KEYS = [
+  "_yoast_wpseo_metadesc",
+  "rank_math_description",
+  "_aioseo_description",
+  "_seopress_titles_desc",
+] as const;
+
+/**
+ * Pick the best value for `excerpt` from an explicit metaDescription arg or
+ * the first recognised description key inside a meta bag. Returns undefined
+ * when nothing useful is available.
+ */
+export function pickExcerpt(
+  metaDescription: string | undefined,
+  meta: Record<string, string> | undefined,
+): string | undefined {
+  if (metaDescription?.trim()) return metaDescription.trim();
+  if (!meta) return undefined;
+  for (const key of DESCRIPTION_META_KEYS) {
+    const v = meta[key];
+    if (v?.trim()) return v.trim();
+  }
+  return undefined;
+}
+
 /** True when a value WordPress echoed back for a meta key matches what we sent. */
 function metaKeyPersisted(sentValue: string, echoed: unknown): boolean {
   return typeof echoed === "string" && echoed === sentValue;
@@ -149,6 +175,9 @@ export async function publishToWordPress(
         ? { _yoast_wpseo_metadesc: metaDescription }
         : undefined;
   if (sentMeta) body.meta = sentMeta;
+
+  const excerpt = pickExcerpt(metaDescription, meta);
+  if (excerpt) body.excerpt = excerpt;
 
   // Idempotent create-or-update: a previously recorded remote post id (see
   // publish_records / getLatestPublishedRemoteId) is checked and, when it

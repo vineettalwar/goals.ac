@@ -20,12 +20,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: monorepoRoot,
     resolveAlias: {
-      "@workspace/cf-edge": "lib/cf-edge/src/index.ts",
-      "@workspace/cf-edge/http-mode": "lib/cf-edge/src/http-mode.ts",
-      "@workspace/jobs": "lib/jobs/src/index.ts",
-      "@workspace/jobs/boss": "lib/jobs/src/boss.ts",
-      "@workspace/jobs/queues": "lib/jobs/src/queues.ts",
-      "@workspace/deepl": "lib/deepl/src/index.ts",
+      "@workspace/cf-edge": "./lib/cf-edge/src/index.ts",
+      "@workspace/cf-edge/http-mode": "./lib/cf-edge/src/http-mode.ts",
+      "@workspace/jobs": "./lib/jobs/src/index.ts",
+      "@workspace/jobs/boss": "./lib/jobs/src/boss.ts",
+      "@workspace/jobs/queues": "./lib/jobs/src/queues.ts",
+      "@workspace/deepl": "./lib/deepl/src/index.ts",
       sharp: "./sharp-stub.js",
       "@/app/root-providers": "./src/app/marketing-providers.tsx",
       "next/dist/build/polyfills/polyfill-module": {

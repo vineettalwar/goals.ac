@@ -41,6 +41,7 @@ import {
   SOCIAL_METRICS_SYNC_CRON,
   registerSiteAuditCrawlHandler,
   registerGscUrlInspectionHandler,
+  registerPublishReliabilityAlertHandler,
 } from "@workspace/jobs";
 import pino from "pino";
 import { startHealthServer, stopHealthServer } from "./health-server";
@@ -54,6 +55,7 @@ const workerLogger = pino({
 
 const CONNECTION_HEALTH_CHECK_CRON = "0 4 * * *";
 const SCHEDULED_PUBLISH_SWEEP_CRON = "*/15 * * * *";
+const PUBLISH_RELIABILITY_ALERT_CRON = "0 7 * * *";
 
 async function main(): Promise<void> {
   const boss = await getBoss();
@@ -87,6 +89,7 @@ async function main(): Promise<void> {
   await registerSocialMetricsSyncHandler(boss);
   await registerSiteAuditCrawlHandler(boss);
   await registerGscUrlInspectionHandler(boss);
+  await registerPublishReliabilityAlertHandler(boss);
 
   await scheduleCron(QUEUES.connectionHealthCheck, CONNECTION_HEALTH_CHECK_CRON, {});
   await scheduleCron(QUEUES.keywordRankCheck, KEYWORD_RANK_SWEEP_CRON, {});
@@ -103,6 +106,7 @@ async function main(): Promise<void> {
   await scheduleCron(QUEUES.evergreenRecycleSweep, EVERGREEN_RECYCLE_SWEEP_CRON, {});
   await scheduleCron(QUEUES.socialHistorySync, SOCIAL_HISTORY_SYNC_CRON, {});
   await scheduleCron(QUEUES.socialMetricsSync, SOCIAL_METRICS_SYNC_CRON, {});
+  await scheduleCron(QUEUES.publishReliabilityAlert, PUBLISH_RELIABILITY_ALERT_CRON, {});
 
   startHealthServer(workerLogger);
   workerLogger.info({ queues: Object.values(QUEUES) }, "Job worker started");

@@ -21,6 +21,7 @@ import { processSocialMetricsSync } from "./handlers/socialMetricsSync";
 import { processPublicGeoAudit } from "./handlers/publicGeoAudit";
 import { processSiteAuditCrawl } from "./handlers/siteAuditCrawl";
 import { processGscUrlInspection } from "./handlers/gscUrlInspection";
+import { processPublishReliabilityAlert } from "./handlers/publishReliabilityAlert";
 import type { JobEnvelope } from "./cf-queues";
 
 const processors: Record<QueueName, (payload: unknown) => Promise<void>> = {
@@ -46,6 +47,7 @@ const processors: Record<QueueName, (payload: unknown) => Promise<void>> = {
   [QUEUES.publicGeoAudit]: (p) => processPublicGeoAudit(p as never),
   [QUEUES.siteAuditCrawl]: (p) => processSiteAuditCrawl(p as never),
   [QUEUES.gscUrlInspection]: (p) => processGscUrlInspection(p as never),
+  [QUEUES.publishReliabilityAlert]: () => processPublishReliabilityAlert(),
 };
 
 export async function processJobEnvelope(envelope: JobEnvelope): Promise<void> {

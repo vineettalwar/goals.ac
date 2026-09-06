@@ -1,4 +1,4 @@
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { normalizePlanId, type PlanId } from "@workspace/billing";
 import { organizationsTable, usersTable } from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";

@@ -82,6 +82,7 @@ async function runDailySweep(): Promise<void> {
     QUEUES.gscSearchAnalyticsSync,
     QUEUES.ga4AnalyticsSync,
     QUEUES.socialMetricsSync,
+    QUEUES.publishReliabilityAlert,
   ] as const;
   for (const queue of sweeps) {
     await processJobEnvelope({ queue, payload: {} });

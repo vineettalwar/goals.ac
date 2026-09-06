@@ -8,8 +8,12 @@ import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/u
 import { createMultiPlatformBundle } from "@workspace/content-engine/support/social/social-queue-service";
 import { scheduleSocialPiece } from "@workspace/content-engine/support/social/social-queue-service";
 import { isValidSocialPlatform } from "@workspace/content-engine/platform-voice";
-import { db } from "@workspace/db";
-import { contentPiecesTable, websiteProjectsTable } from "@workspace/db/schema-sqlite";
+import { db } from "./db";
+import {
+  contentPiecesTable,
+  websiteProjectsTable,
+  type SocialScheduleSettings,
+} from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "./ai-billing";
@@ -176,7 +180,7 @@ export async function handleSocialWrite(
     }
     await db
       .update(websiteProjectsTable)
-      .set({ socialScheduleSettings: parsed.data })
+      .set({ socialScheduleSettings: parsed.data as SocialScheduleSettings })
       .where(eq(websiteProjectsTable.id, projectId));
     return withCors(request, Response.json({ ok: true, settings: parsed.data }));
   }

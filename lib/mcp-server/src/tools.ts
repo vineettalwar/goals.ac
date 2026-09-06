@@ -10,6 +10,7 @@ import {
   getPublishReadiness,
   whoami,
   inspectUrl,
+  getBacklinksOverview,
 } from "./handlers";
 
 export const MCP_TOOLS: McpToolDefinition[] = [
@@ -140,6 +141,24 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   },
+  {
+    name: "get_backlinks_overview",
+    description:
+      "Fetch a live DataForSEO backlinks overview for a project domain: summary counts (backlinks, referring domains, spam score) plus top referring domains. Requires DATAFORSEO_LOGIN and DATAFORSEO_PASSWORD. No CRM persistence.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "number", description: "Website project ID" },
+        referringDomainsLimit: {
+          type: "number",
+          description: "Max referring domains to return (1–25, default 10)",
+        },
+      },
+      required: ["projectId"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  },
 ];
 
 const toolHandlers: Record<string, (ctx: McpToolContext, args: Record<string, unknown>) => Promise<McpToolResult> | McpToolResult> = {
@@ -184,6 +203,12 @@ const toolHandlers: Record<string, (ctx: McpToolContext, args: Record<string, un
       projectId: Number(a.projectId),
       inspectionUrl: a.inspectionUrl as string,
       contentPieceId: a.contentPieceId != null ? Number(a.contentPieceId) : undefined,
+    }),
+  get_backlinks_overview: (ctx, a) =>
+    getBacklinksOverview(ctx, {
+      projectId: Number(a.projectId),
+      referringDomainsLimit:
+        a.referringDomainsLimit != null ? Number(a.referringDomainsLimit) : undefined,
     }),
 };
 

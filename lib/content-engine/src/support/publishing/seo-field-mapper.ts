@@ -41,15 +41,15 @@ export function mapSeoToWordPressRestMeta(seo: CanonicalSeoFields): Record<strin
     meta.rank_math_focus_keyword = seo.focusKeyword;
   }
   if (seo.ogTitle) {
-    meta._yoast_wpseo_opengraph_title = seo.ogTitle;
+    meta["_yoast_wpseo_opengraph-title"] = seo.ogTitle;
     meta.rank_math_facebook_title = seo.ogTitle;
   }
   if (seo.ogDescription) {
-    meta._yoast_wpseo_opengraph_description = seo.ogDescription;
+    meta["_yoast_wpseo_opengraph-description"] = seo.ogDescription;
     meta.rank_math_facebook_description = seo.ogDescription;
   }
   if (seo.ogImageUrl) {
-    meta._yoast_wpseo_opengraph_image = seo.ogImageUrl;
+    meta["_yoast_wpseo_opengraph-image"] = seo.ogImageUrl;
     meta.rank_math_facebook_image = seo.ogImageUrl;
   }
   return meta;

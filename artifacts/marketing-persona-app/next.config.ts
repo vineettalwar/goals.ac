@@ -63,15 +63,16 @@ const nextConfig: NextConfig = {
   },
   turbopack: {
     root: monorepoRoot,
+    // Paths must be ./relative or absolute — bare "lib/..." is treated as npm package "lib".
     resolveAlias: {
-      "@workspace/cf-edge": "lib/cf-edge/src/index.ts",
-      "@workspace/cf-edge/http-mode": "lib/cf-edge/src/http-mode.ts",
-      "@workspace/jobs": "lib/jobs/src/index.ts",
-      "@workspace/jobs/boss": "lib/jobs/src/boss.ts",
-      "@workspace/jobs/queues": "lib/jobs/src/queues.ts",
-      "@workspace/deepl": "lib/deepl/src/index.ts",
-      "@workspace/serp-provider": "lib/serp-provider/src/index.ts",
-      "@workspace/mcp-server": "lib/mcp-server/src/index.ts",
+      "@workspace/cf-edge": "./lib/cf-edge/src/index.ts",
+      "@workspace/cf-edge/http-mode": "./lib/cf-edge/src/http-mode.ts",
+      "@workspace/jobs": "./lib/jobs/src/index.ts",
+      "@workspace/jobs/boss": "./lib/jobs/src/boss.ts",
+      "@workspace/jobs/queues": "./lib/jobs/src/queues.ts",
+      "@workspace/deepl": "./lib/deepl/src/index.ts",
+      "@workspace/serp-provider": "./lib/serp-provider/src/index.ts",
+      "@workspace/mcp-server": "./lib/mcp-server/src/index.ts",
     },
   },
   transpilePackages: [

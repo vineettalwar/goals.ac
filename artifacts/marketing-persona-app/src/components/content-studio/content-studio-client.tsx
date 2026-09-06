@@ -270,7 +270,7 @@ export function ContentStudioClient({
 
   const voiceReady = voiceGate.voiceReady;
   const newContentAction = (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-3">
       <StudioNewContentButton
         onClick={() => {
           if (!voiceReady) {
@@ -283,7 +283,7 @@ export function ContentStudioClient({
       />
       <Link
         href={`/projects/${projectId}/daily-five`}
-        className="inline-flex h-10 items-center rounded-md border border-border px-3 text-sm font-medium hover:bg-muted"
+        className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-medium hover:bg-muted"
       >
         Daily Five
       </Link>

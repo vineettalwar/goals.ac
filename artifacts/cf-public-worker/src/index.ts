@@ -70,6 +70,8 @@ export interface Env extends CfEdgeBindings {
   CF_EDGE_HTTP: string;
   AUTH_SECRET: string;
   GEMINI_KEY_ENCRYPTION_SECRET?: string;
+  DATAFORSEO_LOGIN?: string;
+  DATAFORSEO_PASSWORD?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   LINKEDIN_CLIENT_ID?: string;

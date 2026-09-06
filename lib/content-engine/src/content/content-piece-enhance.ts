@@ -15,8 +15,6 @@ import {
 import { applyInfographicToContentPiece } from "./infographic-template";
 import { AI_WRITING_FROM_SCRATCH_PROMPT, AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
 import { loadBrandVoiceGenerationContext } from "../support/brand/brand-voice-generation";
-import type { UnifiedBrandContext } from "../brand/brand-voice";
-import { humanizeContentPiece } from "./humanizer";
 import { isHumanizableSocialFormat } from "./humanize-eligibility";
 import {
   PLATFORM_CHAR_LIMITS,
@@ -228,7 +226,6 @@ export async function enhanceContentPiece(
   existingPieceTitles: string[] = [],
   userApiKey?: string | null,
   aiProviderOptions?: AiProviderOptions,
-  unifiedBrand?: UnifiedBrandContext,
 ): Promise<ContentPieceResult> {
   if (isHumanizableSocialFormat(input.formatType)) {
     return tightenSocialContentPiece(input, userApiKey, aiProviderOptions);
@@ -252,6 +249,7 @@ export async function enhanceContentPiece(
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
   let lastError: unknown;
 
+  // ponytail: no nested humanize — UI has a separate Humanize action; stacking both made Fix gaps feel stuck (2+ min).
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       const response = await client.generate({
@@ -259,7 +257,8 @@ export async function enhanceContentPiece(
         systemInstruction: ENHANCE_SYSTEM_PROMPT,
         responseMimeType: "application/json",
         maxOutputTokens: 16384,
-        thinkingBudget: 2048,
+        // Editing pass, not from-scratch reasoning — keep latency closer to one AI call.
+        thinkingBudget: 0,
       });
 
       const rawText = response.text;
@@ -276,29 +275,11 @@ export async function enhanceContentPiece(
       const signals = seoQualitySignals(finalized.body_markdown);
       if (signals.words < 800) throw new Error("Enhanced article still too short");
 
-      const withInfographic = (piece: ContentPieceResult) =>
-        applyInfographicToContentPiece(piece, input.formatType, input.brand.companyName);
-
-      if (unifiedBrand) {
-        const { result: humanizedResult, humanized } = await humanizeContentPiece(finalized, unifiedBrand, {
-          userApiKey,
-          aiProviderOptions,
-        });
-        if (humanized) {
-          return withInfographic(finalizeSeoContentPiece(humanizedResult));
-        }
-        return withInfographic(
-          finalizeSeoContentPiece({
-            ...humanizedResult,
-            pieceMetadata: {
-              ...humanizedResult.pieceMetadata,
-              humanized: finalized.pieceMetadata?.humanized,
-            },
-          }),
-        );
-      }
-
-      return withInfographic(finalized);
+      return applyInfographicToContentPiece(
+        finalized,
+        input.formatType,
+        input.brand.companyName,
+      );
     } catch (err) {
       lastError = err;
       logger.warn({ err, attempt, pieceTitle: input.title }, "Content enhance attempt failed");

@@ -1,5 +1,5 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { contentPiecesTable, websiteProjectsTable } from "@workspace/db/schema-sqlite";
 import { renderContentForPlatform } from "@workspace/content-engine/adapters/render-service";
 import { decryptCmsCredentials } from "@workspace/content-engine/support/publishing/cms-integrations";

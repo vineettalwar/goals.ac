@@ -1,9 +1,11 @@
 import { eq, and, lte, notInArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { contentPiecesTable, websiteProjectsTable, SOCIAL_FORMAT_TYPES } from "@workspace/db";
+import { usersTable } from "@workspace/db/schema";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { ContentPublishPayload, ScheduledPublishSweepPayload, PgBoss } from "@workspace/jobs";
 import { decryptCmsCredentials, type CmsIntegrationCredentials } from "@workspace/content-engine/support/publishing/cms-integrations";
+import { sendPlatformEmail, resolveAppOrigin } from "@workspace/content-engine/support/email/send-platform-email";
 import { parseAutopilotSettings, wordpressPublishStatus } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import { publishPieceToSocial, isSocialPlatform } from "@workspace/content-engine/support/social/social-publish";
 import { listDueSocialPieces } from "@workspace/content-engine/support/social/social-queue-service";
@@ -23,6 +25,8 @@ import { fetchGoalsAcSiteGraph } from "@workspace/connectors/goals-ac-plugin";
 import { logger } from "../logger";
 import { seedSocialPostMetrics } from "@workspace/content-engine/social/social-metrics-service";
 import { enqueueGscUrlInspectionAfterPublish } from "@workspace/content-engine/analytics/enqueue-gsc-url-inspection";
+
+const PUBLISH_MAX_ATTEMPTS = 5;
 
 const FORMAT_TO_PLATFORM: Record<string, string> = {
   linkedin_post: "linkedin",
@@ -56,6 +60,7 @@ async function publishPiece(
     .limit(1);
   if (!piece) throw new Error("Content piece not found");
   if (piece.status === "published") return;
+  if (piece.pieceMetadata?.publishDeadLettered) return;
 
   // Atomic claim: prevents duplicate publish when the scheduled sweep and
   // finalizeGeneratedPieces enqueue the same piece concurrently.
@@ -296,6 +301,8 @@ async function publishPiece(
       ? { lastPublishWarnings: warningMessages }
       : { lastPublishWarnings: undefined }),
     publishBlocked: undefined,
+    publishFailCount: undefined,
+    publishDeadLettered: undefined,
     ...(remotePostId && publishPlatform === "wordpress"
       ? { cmsRemoteId: remotePostId }
       : {}),
@@ -350,11 +357,40 @@ export async function processContentPublish(payload: ContentPublishPayload): Pro
     logger.info({ contentPieceId }, "Content publish job completed");
   } catch (err) {
     const message = err instanceof Error ? err.message : "Publish failed";
+
+    const [current] = await db
+      .select({
+        pieceMetadata: contentPiecesTable.pieceMetadata,
+        websiteProjectId: contentPiecesTable.websiteProjectId,
+      })
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.id, contentPieceId))
+      .limit(1);
+
+    const meta = current?.pieceMetadata ?? {};
+    const failCount = (meta.publishFailCount ?? 0) + 1;
+    const deadLettered = failCount >= PUBLISH_MAX_ATTEMPTS;
+
     await db
       .update(contentPiecesTable)
-      .set({ publishError: message, status: "ready" })
+      .set({
+        publishError: message,
+        status: "ready",
+        pieceMetadata: {
+          ...meta,
+          publishFailCount: failCount,
+          ...(deadLettered ? { publishDeadLettered: true } : {}),
+        },
+      })
       .where(eq(contentPiecesTable.id, contentPieceId));
-    logger.error({ err, contentPieceId }, "Content publish job failed");
+
+    if (deadLettered && current) {
+      notifyPublishDeadLetter(contentPieceId, current.websiteProjectId, message).catch((e) => {
+        logger.error({ err: e, contentPieceId }, "Dead-letter notification failed");
+      });
+    }
+
+    logger.error({ err, contentPieceId, failCount, deadLettered }, "Content publish job failed");
     throw err;
   }
 }
@@ -363,10 +399,11 @@ export async function processScheduledPublishSweep(): Promise<void> {
   const today = new Date().toISOString().slice(0, 10);
   const socialDue = await listDueSocialPieces(new Date());
 
-  const blogDue = await db
+  const blogDueRaw = await db
     .select({
       id: contentPiecesTable.id,
       websiteProjectId: contentPiecesTable.websiteProjectId,
+      pieceMetadata: contentPiecesTable.pieceMetadata,
     })
     .from(contentPiecesTable)
     .innerJoin(websiteProjectsTable, eq(contentPiecesTable.websiteProjectId, websiteProjectsTable.id))
@@ -377,6 +414,8 @@ export async function processScheduledPublishSweep(): Promise<void> {
         notInArray(contentPiecesTable.formatType, [...SOCIAL_FORMAT_TYPES]),
       ),
     );
+
+  const blogDue = blogDueRaw.filter((p) => !p.pieceMetadata?.publishDeadLettered);
 
   const duePieces = [
     ...socialDue.map((p: { id: number; websiteProjectId: number; userId: number }) => ({
@@ -417,4 +456,41 @@ export async function registerScheduledPublishSweepHandler(boss: PgBoss): Promis
   });
 }
 
-export { publishPiece };
+async function notifyPublishDeadLetter(
+  contentPieceId: number,
+  websiteProjectId: number,
+  error: string,
+): Promise<void> {
+  const [owner] = await db
+    .select({ email: usersTable.email })
+    .from(websiteProjectsTable)
+    .innerJoin(usersTable, eq(websiteProjectsTable.userId, usersTable.id))
+    .where(eq(websiteProjectsTable.id, websiteProjectId))
+    .limit(1);
+  if (!owner?.email) return;
+
+  const [proj] = await db
+    .select({ name: websiteProjectsTable.name })
+    .from(websiteProjectsTable)
+    .where(eq(websiteProjectsTable.id, websiteProjectId))
+    .limit(1);
+
+  const projectName = proj?.name ?? `Project #${websiteProjectId}`;
+  const appOrigin = resolveAppOrigin();
+  const pieceUrl = `${appOrigin}/projects/${websiteProjectId}/content`;
+  const snippet = error.slice(0, 200).replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
+  await sendPlatformEmail({
+    to: owner.email,
+    subject: `Publish failed: content piece #${contentPieceId} on ${projectName}`,
+    html: `
+      <h2>Publish dead-lettered</h2>
+      <p>Content piece <strong>#${contentPieceId}</strong> on <strong>${projectName}</strong>
+        failed to publish after ${PUBLISH_MAX_ATTEMPTS} consecutive attempts and will not be retried automatically.</p>
+      <p style="color:#666;">${snippet}</p>
+      <p><a href="${pieceUrl}">View content</a></p>
+    `,
+  });
+}
+
+export { publishPiece, PUBLISH_MAX_ATTEMPTS };

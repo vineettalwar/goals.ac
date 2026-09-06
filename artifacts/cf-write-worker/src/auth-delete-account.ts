@@ -4,7 +4,7 @@ import {
   clearSessionCookie,
   requestUsesSecureCookies,
 } from "@workspace/cf-edge/session-cookie";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   usersTable,
   websiteProjectsTable,

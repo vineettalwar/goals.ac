@@ -1,4 +1,4 @@
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { organizationsTable } from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";

@@ -71,7 +71,7 @@ function FilterSelect({
   return (
     <select
       aria-label={ariaLabel}
-      className="h-8 rounded-md border border-input bg-transparent px-2 text-xs text-foreground"
+      className="h-9 rounded-md border border-input bg-transparent px-3 text-sm text-foreground"
       value={value}
       onChange={(event) => onChange(event.target.value)}
     >
@@ -123,8 +123,8 @@ function StudioPieceCard({
       className={cn(
         "flex gap-4",
         viewMode === "grid"
-          ? "h-full flex-col rounded-lg border border-border bg-card p-4"
-          : "items-start justify-between py-3.5",
+          ? "h-full flex-col rounded-lg border border-border bg-card p-5"
+          : "items-start justify-between gap-6 py-5",
       )}
     >
       <div className="min-w-0 flex-1">
@@ -135,7 +135,7 @@ function StudioPieceCard({
         >
           {piece.title ?? "Untitled"}
         </StudioLink>
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
           {metaParts.map((part, index) => (
             <span key={`${part}-${index}`} className="inline-flex items-center gap-2">
               {index > 0 ? <span aria-hidden>·</span> : null}
@@ -223,7 +223,7 @@ function StudioHubFilters({
   const hasActiveFilters = filterFormat !== "all" || filterStatus !== "all";
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-3">
       <FilterSelect
         value={filterFormat}
         onChange={onFilterFormatChange}
@@ -261,7 +261,7 @@ function StudioHubFilters({
         ]}
       />
       {totalCount > 0 ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           {totalCount} total
           {statsBreakdown.length > 0
             ? ` · ${statsBreakdown.map((stat) => `${stat.count} ${stat.label}`).join(" · ")}`
@@ -272,7 +272,7 @@ function StudioHubFilters({
         {hasActiveFilters ? (
           <button
             type="button"
-            className="h-8 px-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="h-9 px-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
             onClick={onClearFilters}
           >
             Clear filters
@@ -283,7 +283,7 @@ function StudioHubFilters({
             type="button"
             aria-label="List view"
             className={cn(
-              "inline-flex h-7 w-7 items-center justify-center rounded-sm",
+              "inline-flex h-8 w-8 items-center justify-center rounded-sm",
               viewMode === "list" ? "bg-secondary text-foreground" : "text-muted-foreground",
             )}
             onClick={() => onViewModeChange("list")}
@@ -294,7 +294,7 @@ function StudioHubFilters({
             type="button"
             aria-label="Grid view"
             className={cn(
-              "inline-flex h-7 w-7 items-center justify-center rounded-sm",
+              "inline-flex h-8 w-8 items-center justify-center rounded-sm",
               viewMode === "grid" ? "bg-secondary text-foreground" : "text-muted-foreground",
             )}
             onClick={() => onViewModeChange("grid")}
@@ -381,9 +381,9 @@ export function StudioView({
   }
 
   return (
-    <div className={`${APP_SHELL_PAGE_WIDE} space-y-6`}>
-      <div className="mb-2">
-        <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
+    <div className={`${APP_SHELL_PAGE_WIDE} space-y-8`}>
+      <header className="space-y-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <StudioLink
             renderLink={renderLink}
             href="/dashboard"
@@ -407,20 +407,20 @@ export function StudioView({
           <span className="text-foreground">Content Studio</span>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Content Studio</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="max-w-2xl space-y-2">
+            <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Content Studio</h1>
+            <p className="text-sm leading-relaxed text-muted-foreground sm:text-base">
               Draft, manage, and schedule content
               {projectName ? ` for ${projectName}` : ""}.
             </p>
           </div>
           {newContentAction}
         </div>
-      </div>
+      </header>
 
       {newContentNote ? (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-muted-foreground">
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-4 py-3.5 text-sm text-muted-foreground">
           {newContentNote}
         </div>
       ) : null}
@@ -434,47 +434,48 @@ export function StudioView({
         renderLink={renderLink}
       />
 
-      <div className="flex gap-1 border-b border-border">
-        <button
-          type="button"
-          className={cn(
-            "-mb-px flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors",
-            activeTab === "hub"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground",
-          )}
-          onClick={() => setActiveTab("hub")}
-        >
-          <LayoutGrid className="h-4 w-4" aria-hidden />
-          Hub
-          {pieces.length > 0 ? (
-            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-              {pieces.length}
-            </span>
-          ) : null}
-        </button>
-        <button
-          type="button"
-          className={cn(
-            "-mb-px flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition-colors",
-            activeTab === "calendar"
-              ? "border-primary text-foreground"
-              : "border-transparent text-muted-foreground hover:text-foreground",
-          )}
-          onClick={() => setActiveTab("calendar")}
-        >
-          <CalendarDays className="h-4 w-4" aria-hidden />
-          Calendar
-          {scheduledCount > 0 ? (
-            <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
-              {scheduledCount}
-            </span>
-          ) : null}
-        </button>
-      </div>
+      <div className="space-y-6">
+        <div className="flex gap-1 border-b border-border">
+          <button
+            type="button"
+            className={cn(
+              "-mb-px flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors",
+              activeTab === "hub"
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => setActiveTab("hub")}
+          >
+            <LayoutGrid className="h-4 w-4" aria-hidden />
+            Hub
+            {pieces.length > 0 ? (
+              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                {pieces.length}
+              </span>
+            ) : null}
+          </button>
+          <button
+            type="button"
+            className={cn(
+              "-mb-px flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors",
+              activeTab === "calendar"
+                ? "border-primary text-foreground"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+            onClick={() => setActiveTab("calendar")}
+          >
+            <CalendarDays className="h-4 w-4" aria-hidden />
+            Calendar
+            {scheduledCount > 0 ? (
+              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground">
+                {scheduledCount}
+              </span>
+            ) : null}
+          </button>
+        </div>
 
       {activeTab === "hub" ? (
-        <>
+        <div className="space-y-5">
           <StudioHubFilters
             filterFormat={filterFormat}
             filterStatus={filterStatus}
@@ -497,14 +498,14 @@ export function StudioView({
               Loading content…
             </div>
           ) : sorted.length === 0 ? (
-            <div className="py-12">
+            <div className="py-16">
               {pieces.length === 0 ? (
                 <>
                   <h2 className="text-base font-semibold">No content yet</h2>
-                  <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                  <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
                     Start from a keyword, or optimize a live page.
                   </p>
-                  <div className="mt-5 flex flex-wrap items-center gap-3">
+                  <div className="mt-6 flex flex-wrap items-center gap-3">
                     {newContentAction}
                     {projectId ? (
                       <StudioLink
@@ -530,12 +531,12 @@ export function StudioView({
               ) : (
                 <>
                   <p className="font-medium">No items match filters</p>
-                  <p className="mt-1 max-w-md text-sm text-muted-foreground">
+                  <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
                     Clear filters to see all content.
                   </p>
                   <button
                     type="button"
-                    className="mt-4 inline-flex h-9 items-center justify-center rounded-lg border border-input bg-card px-4 text-sm font-medium transition-colors hover:bg-secondary"
+                    className="mt-5 inline-flex h-9 items-center justify-center rounded-lg border border-input bg-card px-4 text-sm font-medium transition-colors hover:bg-secondary"
                     onClick={() => {
                       setFilterFormat("all");
                       setFilterStatus("all");
@@ -550,7 +551,7 @@ export function StudioView({
             <div
               className={cn(
                 viewMode === "grid"
-                  ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+                  ? "grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
                   : "divide-y divide-border border-t border-border",
               )}
             >
@@ -570,7 +571,7 @@ export function StudioView({
               ))}
             </div>
           )}
-        </>
+        </div>
       ) : loading ? (
         <div className="flex items-center justify-center p-16 text-sm text-muted-foreground">
           Loading calendar…
@@ -585,6 +586,7 @@ export function StudioView({
           activeDragId={activeDragId}
         />
       )}
+      </div>
     </div>
   );
 }
@@ -593,7 +595,7 @@ export function StudioNewContentButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
-      className="inline-flex h-9 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
+      className="inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground"
       onClick={onClick}
     >
       <Plus className="mr-1.5 h-4 w-4" aria-hidden />

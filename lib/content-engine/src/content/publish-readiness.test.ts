@@ -363,6 +363,43 @@ describe("assessPublishReadiness - weak_alt_text", () => {
   });
 });
 
+describe("assessPublishReadiness - placeholder_token", () => {
+  it("does not fire on a clean body with no placeholders", () => {
+    const result = assessPublishReadiness(CLEAN_META);
+    expect(result.warnings.map((w) => w.code)).not.toContain("placeholder_token");
+    expect(result.blockers.map((b) => b.code)).not.toContain("placeholder_token");
+  });
+
+  it("warns (not blocks) on placeholders when unattended is false", () => {
+    const body = `${CLEAN_BODY}\n\nContact [Company Name] at [CEO/Founder Name].`;
+    const result = assessPublishReadiness(withBody(body), { unattended: false });
+    expect(result.warnings.map((w) => w.code)).toContain("placeholder_token");
+    expect(result.blockers.map((b) => b.code)).not.toContain("placeholder_token");
+    expect(result.ok).toBe(true);
+  });
+
+  it("warns (not blocks) on placeholders when unattended is omitted", () => {
+    const body = `${CLEAN_BODY}\n\nTODO: fill in the stats here.`;
+    const result = assessPublishReadiness(withBody(body));
+    expect(result.warnings.map((w) => w.code)).toContain("placeholder_token");
+    expect(result.blockers.map((b) => b.code)).not.toContain("placeholder_token");
+  });
+
+  it("blocks when unattended is true and placeholders are present", () => {
+    const body = `${CLEAN_BODY}\n\nThis was written by [CEO/Founder Name] at [Company Name].`;
+    const result = assessPublishReadiness(withBody(body), { unattended: true });
+    expect(result.blockers.map((b) => b.code)).toContain("placeholder_token");
+    expect(result.ok).toBe(false);
+  });
+
+  it("includes the placeholder tokens in the issue detail", () => {
+    const body = `${CLEAN_BODY}\n\nFor [Company Name], contact [Name, Title, Company].`;
+    const result = assessPublishReadiness(withBody(body));
+    const issue = result.warnings.find((w) => w.code === "placeholder_token");
+    expect(issue?.detail).toContain("[Company Name]");
+  });
+});
+
 describe("assessPublishReadiness - structural input shapes", () => {
   it("reads fields folded into pieceMetadata, matching a raw DB row shape", () => {
     const raw: PublishReadinessPiece = {

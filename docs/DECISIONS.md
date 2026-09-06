@@ -444,3 +444,13 @@ Tabs use **path segments**, not `?tab=` / `?project=` query params. Legacy `/int
 **Reason:** The last step of the content-quality work was blocked on missing observability, not missing logic.
 
 **Implications:** `GET /api/admin/publish-quality-distribution` (gated by `requirePlatformAdminApi`, matching `publish-reliability`) returns count/min/max/median/p10/p25/p75/p90, a 10-point histogram, and blocker/warning code frequency, windowed by an optional `days` query param. Once someone has looked at that output and picked a number, `minQualityScore` can be set on the gate call in `contentPublish.ts`.
+
+- Scale offered at €500/mo display (self-serve); Stripe `automatic_tax` enabled on all checkout sessions for EU B2B VAT / reverse-charge compliance.
+
+## 2026-09-06 — Public signups stay invite-only by default
+
+**Decision:** Keep `signupsEnabled: false` as the platform default. New customers enter via firm/member invite or admin-flipped signups — not open self-serve.
+
+**Reason:** Matches the consulting-led / partner-onboarding GTM already used for the first paying firms. Opening public signup before live WP staging evidence and pilot scorecards would flood unpaid accounts into a half-proven publish path.
+
+**Implications:** `/signup` without an invite token shows the invite-only contact screen. Flip `signupsEnabled` in Admin → Platform when self-serve Growth is ready to take traffic. Pricing already surfaces Growth/Scale for demand capture; checkout still requires Stripe price env + an enabled account path.

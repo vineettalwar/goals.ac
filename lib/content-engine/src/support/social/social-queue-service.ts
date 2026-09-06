@@ -451,6 +451,7 @@ export async function listDueSocialPieces(now = new Date()): Promise<
       approvalStatus: contentPiecesTable.approvalStatus,
       socialScheduleSettings: websiteProjectsTable.socialScheduleSettings,
       formatType: contentPiecesTable.formatType,
+      pieceMetadata: contentPiecesTable.pieceMetadata,
     })
     .from(contentPiecesTable)
     .innerJoin(
@@ -472,6 +473,7 @@ export async function listDueSocialPieces(now = new Date()): Promise<
 
   return rows
     .filter((row) => {
+      if (row.pieceMetadata?.publishDeadLettered) return false;
       const settings = parseSocialScheduleSettings(row.socialScheduleSettings);
       const platform = FORMAT_TO_SOCIAL_PLATFORM[row.formatType as SocialFormatType];
       const config = settings.platforms[platform];

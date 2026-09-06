@@ -246,6 +246,9 @@ function isWritePath(path: string, method: string): boolean {
   if (/^\/api\/website-projects\/\d+\/site-audits$/.test(path) && method === "POST") {
     return true;
   }
+  if (/^\/api\/website-projects\/\d+\/backlinks$/.test(path) && method === "POST") {
+    return true;
+  }
   if (/^\/api\/content-pieces\/\d+\/repurpose\/stream$/.test(path) && method === "POST") return true;
   if (/^\/api\/website-projects\/\d+\/brand-profile\/platform-voice\/[^/]+\/analyze$/.test(path) && method === "POST") {
     return true;

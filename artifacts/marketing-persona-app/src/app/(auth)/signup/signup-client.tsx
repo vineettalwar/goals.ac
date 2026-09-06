@@ -34,7 +34,8 @@ function InviteOnlyMessage() {
     <div className="paper-card p-8 text-center">
       <h1 className="text-2xl font-bold">Invite only</h1>
       <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-        goals.ac is in early access. Start creating in the content studio, or reach out if you need a hand.
+        goals.ac is invite-only while we onboard design partners. Ask your contact for an invite
+        link, or reach out if you want a hands-on program.
       </p>
       <div className="mt-8 flex flex-col gap-3">
         <Button asChild className="w-full">

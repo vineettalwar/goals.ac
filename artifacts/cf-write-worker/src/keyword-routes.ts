@@ -1,6 +1,6 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   articleIdeaSourcesTable,
   keywordAnalysesTable,
@@ -773,7 +773,9 @@ export async function handleKeywordWrite(
         eventType: "keyword_cluster",
         usedByok: billingPrep.usedByok,
         tier: "planning",
-        usage: result.generationUsage,
+        promptTokens: result.generationUsage?.promptTokens,
+        outputTokens: result.generationUsage?.outputTokens,
+        totalTokens: result.generationUsage?.totalTokens,
       });
       return withCors(request, Response.json(result));
     } catch (err) {

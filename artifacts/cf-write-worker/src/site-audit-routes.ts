@@ -1,5 +1,5 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { siteAuditsTable, websiteProjectsTable } from "@workspace/db/schema-sqlite";
 import { assertPublicUrlSync } from "@workspace/security/ssrf-guard";
 import { processSiteAuditCrawl } from "@workspace/jobs/handlers";

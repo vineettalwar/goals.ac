@@ -441,7 +441,9 @@ export function ContentPieceClient({
             }
             const updated = await res.json();
             setPieceRecord((prev) => mergePieceJson(updated, prev));
-            setEnhanceMessage(formatEnhanceSuccessMessage());
+            const msg = formatEnhanceSuccessMessage();
+            setEnhanceMessage(msg);
+            toast.success(msg);
           } finally {
             setEnhancing(false);
           }

@@ -19,10 +19,15 @@ describe("MCP tool catalog", () => {
     expect(names).toContain("generate_content_piece");
     expect(names).toContain("whoami");
     expect(names).toContain("get_project_context");
+    expect(names).toContain("get_backlinks_overview");
 
     const audit = MCP_TOOLS.find((t) => t.name === "run_site_audit")!;
     expect(audit.annotations.openWorldHint).toBe(true);
     expect(audit.annotations.readOnlyHint).toBe(false);
+
+    const backlinks = MCP_TOOLS.find((t) => t.name === "get_backlinks_overview")!;
+    expect(backlinks.annotations.readOnlyHint).toBe(true);
+    expect(backlinks.annotations.openWorldHint).toBe(true);
 
     const list = MCP_TOOLS.find((t) => t.name === "list_projects")!;
     expect(list.annotations.readOnlyHint).toBe(true);

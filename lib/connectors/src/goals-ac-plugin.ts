@@ -366,12 +366,19 @@ export interface GoalsAcSiteGraphInternalLink {
 /**
  * Shape of the `site-graph` endpoint response, mirroring
  * `cms-plugins/wordpress/includes/class-site-graph.php`'s `export()` method.
+ *
+ * When the site has more posts than the plugin's cap (currently 500),
+ * `truncated` is `true` and `post_limit` reports the cap used.
  */
 export interface GoalsAcSiteGraph {
   posts: GoalsAcSiteGraphPost[];
   categories: GoalsAcSiteGraphTerm[];
   tags: GoalsAcSiteGraphTerm[];
   internal_links: GoalsAcSiteGraphInternalLink[];
+  /** Present and true when the post set was capped server-side. */
+  truncated?: boolean;
+  /** The cap applied when `truncated` is true. */
+  post_limit?: number;
 }
 
 export async function fetchGoalsAcSiteGraph<T = GoalsAcSiteGraph>(

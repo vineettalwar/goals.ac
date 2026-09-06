@@ -23,3 +23,12 @@ export const db = new Proxy({} as NodePgDatabase<typeof pgSchema>, {
     return typeof value === "function" ? value.bind(instance) : value;
   },
 });
+
+/** D1-typed lazy proxy — use in CF workers where schema-sqlite tables are passed. */
+export const d1Db = new Proxy({} as GoalsD1Database, {
+  get(_target, prop, receiver) {
+    const instance = resolveD1Db();
+    const value = Reflect.get(instance as object, prop, receiver);
+    return typeof value === "function" ? value.bind(instance) : value;
+  },
+});

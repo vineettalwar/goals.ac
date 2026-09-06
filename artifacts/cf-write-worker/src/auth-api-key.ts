@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { createUserGeminiClient } from "@workspace/ai-providers";
 import { withCors } from "@workspace/cf-edge/cors";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   organizationMembersTable,
   organizationsTable,

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { publishToWordPress, testWordPressConnection, type WordPressCredentials } from "./wordpress";
+import { pickExcerpt, publishToWordPress, testWordPressConnection, type WordPressCredentials } from "./wordpress";
 
 vi.mock("@workspace/security/ssrf-guard", () => ({
   assertPublicUrl: vi.fn().mockResolvedValue(undefined),
@@ -247,6 +247,49 @@ describe("testWordPressConnection — capability check (HIGH-2)", () => {
     // Previously this fell back to `true` and reported "Connected" even
     // though nothing confirmed publish permission.
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("pickExcerpt — excerpt from meta description (HIGH-1)", () => {
+  it("prefers explicit metaDescription over meta bag keys", () => {
+    expect(pickExcerpt("explicit desc", { _yoast_wpseo_metadesc: "yoast desc" })).toBe("explicit desc");
+  });
+
+  it("falls back to the first known description key in meta", () => {
+    expect(pickExcerpt(undefined, { rank_math_description: "rm desc" })).toBe("rm desc");
+  });
+
+  it("returns undefined when nothing useful is available", () => {
+    expect(pickExcerpt(undefined, undefined)).toBeUndefined();
+    expect(pickExcerpt("", {})).toBeUndefined();
+    expect(pickExcerpt("  ", { rank_math_title: "title only" })).toBeUndefined();
+  });
+});
+
+describe("publishToWordPress — excerpt is set from meta description (HIGH-1)", () => {
+  it("sends excerpt alongside meta in the request body", async () => {
+    const meta = { _yoast_wpseo_metadesc: "SEO description" };
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ id: 1, link: "https://example.test/?p=1", meta }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await publishToWordPress(credentials, "Title", "body", "publish", undefined, undefined, meta);
+
+    const sent = JSON.parse(fetchMock.mock.calls[0]![1].body as string) as Record<string, unknown>;
+    expect(sent.excerpt).toBe("SEO description");
+  });
+
+  it("uses explicit metaDescription for excerpt even without meta bag", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ id: 1, link: "https://example.test/?p=1" }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await publishToWordPress(credentials, "Title", "body", "publish", "My desc");
+
+    const sent = JSON.parse(fetchMock.mock.calls[0]![1].body as string) as Record<string, unknown>;
+    expect(sent.excerpt).toBe("My desc");
   });
 });
 

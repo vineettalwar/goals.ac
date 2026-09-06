@@ -1,4 +1,4 @@
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { planQuotaConfigTable } from "@workspace/db/schema-sqlite";
 import {
   DEFAULT_PLAN_QUOTA_LIMITS,

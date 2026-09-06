@@ -23,6 +23,39 @@ import {
 const glassCard = cardSurfaceClass("glass");
 const glassCardStatic = cardSurfaceClass("glass", false);
 
+const SAAS_PLANS = [
+  {
+    name: "Growth",
+    price: "$49/mo",
+    description: "Self-serve studio for founders and small teams",
+    features: [
+      "30 articles / month",
+      "12 roadmaps",
+      "3 connected sites",
+      "500 platform AI credits / month",
+      "WordPress, Ghost, Shopify, and more",
+      "GEO & AEO tracking",
+    ],
+    cta: { label: "Start free trial", href: "/signup" },
+  },
+  {
+    name: "Scale",
+    price: "€500/mo",
+    description: "High-volume content operations for scaling B2B teams",
+    featured: true,
+    features: [
+      "Unlimited articles & roadmaps",
+      "Unlimited connected sites",
+      "5,000 platform AI credits / month",
+      "Priority content queue",
+      "Multi-site CMS publishing",
+      "Dedicated support",
+    ],
+    cta: { label: "Get started", href: "/signup?plan=scale" },
+    note: "VAT auto-calculated at checkout. Tax ID collection for B2B reverse charge.",
+  },
+];
+
 const ENGAGEMENTS = [
   {
     name: "GEO Audit Sprint",
@@ -76,6 +109,72 @@ export function PricingPageClient() {
         />
       }
     >
+      {/* ── Self-serve SaaS plans ─────────────────────────────── */}
+      <section className="py-16 bg-black relative z-20 border-t border-white/10">
+        <div className="max-w-5xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <EditorialHeading
+              line1="Self-serve"
+              line2="platform"
+              description="Pick a plan, connect your CMS, and start publishing — no sales call required."
+              theme="dark"
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+            {SAAS_PLANS.map((plan) => (
+              <div
+                key={plan.name}
+                className={`rounded-2xl p-8 flex flex-col ${
+                  plan.featured
+                    ? `${glassCard} ring-2 ring-(--accent-warm) shadow-lg shadow-black/40`
+                    : glassCard
+                }`}
+              >
+                {plan.featured && (
+                  <span className="text-xs font-semibold uppercase tracking-wide mb-4 text-(--accent-warm)">
+                    Most popular
+                  </span>
+                )}
+                <h2 className="text-xl font-bold text-white">{plan.name}</h2>
+                <p className="text-3xl font-bold text-white mt-2">
+                  {plan.price}
+                  <span className="text-sm font-normal text-white/50 ml-1">billed monthly</span>
+                </p>
+                <p className="text-sm mt-2 mb-6 text-white/65">{plan.description}</p>
+                <ul className="space-y-3 flex-1 mb-8">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2.5 text-sm text-white/80">
+                      <Check className="h-4 w-4 shrink-0 mt-0.5 text-(--accent-warm)" aria-hidden="true" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Link
+                  href={plan.cta.href}
+                  className={`block text-center px-6 py-3 rounded-full font-medium transition-all ${
+                    plan.featured
+                      ? "bg-(--accent-warm) text-(--accent-warm-foreground) hover:bg-(--accent-warm-hover)"
+                      : "border border-white/30 bg-white/10 text-white hover:bg-white/20"
+                  }`}
+                >
+                  {plan.cta.label}
+                </Link>
+                {plan.note && (
+                  <p className="text-xs text-white/40 mt-4 text-center">{plan.note}</p>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-center text-sm text-white/50 mt-10">
+            Need custom volume or a dedicated strategist?{" "}
+            <Link href={CONTACT_HREF} className="text-white/80 hover:text-white hover:underline">
+              {CONTACT_CTA_LABEL}
+            </Link>
+          </p>
+        </div>
+      </section>
+
+      {/* ── Hands-on content programs ─────────────────────────── */}
       <section className="py-16 bg-black relative z-20 border-t border-white/10">
         <div className="max-w-5xl mx-auto px-6">
           <div className="text-center mb-12">

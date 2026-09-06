@@ -1,5 +1,6 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { db, countAsInt } from "@workspace/db";
+import { db } from "./db";
+import { countAsInt } from "@workspace/db";
 import {
   websiteProjectsTable,
   brandProfilesTable,

@@ -1,6 +1,6 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { trackedKeywordsTable } from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";
 import { z } from "zod";

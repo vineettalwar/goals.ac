@@ -16,7 +16,7 @@ import {
   invalidateStripeClientCache,
   type PlanId,
 } from "@workspace/billing";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import {
   companiesTable,
   orgAuditLogTable,

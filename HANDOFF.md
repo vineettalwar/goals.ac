@@ -1,5 +1,90 @@
 # Session Handoff
 
+## Leftovers (2026-09-06) — start here
+
+**Done in code this arc:** OpenSEO Features 1–6 · Gate 0 (SEC/BLOCK except live evidence) · HIGH-1/8/10/13/16 · MED-1 · CF `d1Db` typing.  
+**Source audit:** [`docs/audits/2026-09-06-production-readiness.md`](docs/audits/2026-09-06-production-readiness.md) (remediation notes at top; body text is historical).  
+**Do not restart:** Gate 0 packaging, LinkedIn draft honesty, readiness options wiring, SEO REST meta registration, publish dead-letter, site-graph caps, placeholder scanner.
+
+### P0 — human / live env (blocks “one WP customer works”)
+
+| ID | What | How to close |
+|---|---|---|
+| **BLOCK-5** | No filled evidence against a real WordPress staging site | Runbook: [`docs/playbooks/wp-staging-verification-evidence.md`](docs/playbooks/wp-staging-verification-evidence.md). Smoke: `WP_SITE_URL=… WP_SITE_KEY=… WP_SMOKE_PUBLISH=1 WP_SMOKE_JSON=1 node scripts/wordpress-plugin-smoke.mjs` → paste JSON + sign-off into the playbook |
+| **Plugin update channel** | Packaged zip exists; no auto-update path (not WP.org) | Decide: private update server vs manual re-zip; document in playbook |
+| **Live smokes** | Mentions / GSC inspect / site audit / backlinks / LinkedIn | Need real keys + apps; not mockable end-to-end |
+
+**Package plugin:** `pnpm --filter @workspace/goals-ac-wp run package` → `/downloads/goals-ac.zip`
+
+### P1 — still open from audit (code)
+
+| ID | Problem | Start here | Notes |
+|---|---|---|---|
+| **HIGH-4** | LinkedIn API header `Linkedin-Version: 202401` likely stale | `lib/connectors/src/linkedin.ts` | One-line bump; **validate only with a live LinkedIn app** — do not ship blind |
+| **HIGH-5** | No refresh token on current scopes → posts die ~60d | `social-tokens.ts`, `cf-public-worker` LinkedIn OAuth scopes | Needs LinkedIn “Programmatic Refresh Tokens” partner access **or** honest reconnect UX + pre-expiry email (dead-letter already pages after 5 fails) |
+| **HIGH-9** | SSRF via unvalidated redirects on brand scrape + media download | `lib/content-engine/src/brand/brand-scraper.ts`, `lib/media/src/index.ts` | Copy pattern from `citation-verifier.ts` (`redirect: "manual"` + re-`assertPublicUrl` per hop) |
+| **HIGH-11** | `viewer` can write via routes outside middleware allowlist | Next `middleware.ts` `WRITE_API_PREFIXES` + handlers that only `requireAuth()` | Add missing prefixes **or** `requireOrgPermission` on `/api/goals`, `/briefs`, `/companies`, `/personas`, `/tracked-keywords`, `/competitor-analysis`, `/keyword-analysis`, `/roadmaps` |
+| **HIGH-12** | Coverage/cannibalization verdict computed but not enforced upstream | `content-coverage.ts`, `content-strategy-generator.ts` | `existingTitles` now reaches publish gate (BLOCK-4); strategy generator still parallel batches with no cross-batch dedup — drop or re-rank overlapped briefs |
+| **HIGH-17** | Dark mode toggle with no `.dark` token block | `globals.css`, `lib/app-shell/src/product-theme.css` | Either ship real dark tokens or remove the toggle |
+| **HIGH-18** | No Impressum / cookie consent (EU B2B) | Marketing `(public)` pages | Counsel before EU charge; privacy/terms exist |
+| **BLOCK-4 residual** | `minQualityScore` still unset | `contentPublish.ts` + admin publish-quality distribution | **Intentional** until someone reads score histogram — see `docs/DECISIONS.md` 2026-09-04 |
+
+### P2 — medium / lower (pick when P0–P1 clear)
+
+| ID | One-liner | Path hint |
+|---|---|---|
+| MED-2 | Model preamble inside JSON string values not stripped | `lib/content-engine/src/core/utils.ts` `extractJsonBlock` |
+| MED-3 | Citation “verify” = reachability only | `citation-verifier.ts` |
+| MED-4 | Unknown WP category silently dropped (tags auto-create) | `class-publish-handler.php` |
+| MED-5 | `wp_insert_post` without `wp_slash()` | `class-publish-handler.php`, `class-internal-links.php` |
+| MED-6 | AIOSEO v4 table vs post-meta; multi-plugin key spam | `class-seo-meta-mapper.php` / `mapSeoToPluginMeta` (partially improved via detected plugin) |
+| MED-7/8 | CMS save without test gate; test route may leak ciphertext | WP test/save routes |
+| MED-9 | Media upload no size cap | `class-media-handler.php` |
+| MED-10 | HMAC publish author falls back to user 1 | `class-publish-handler.php` + settings `goals_ac_author_id` (UI exists — wire into insert) |
+| MED-11 | IP allowlist CIDR is string-prefix | `org-security.ts` |
+| MED-14 | No payment dunning | billing / Stripe |
+| HIGH-14/15 | Credits ignore real token COGS; money paths untested | `lib/billing` |
+| LOW-* | LinkedIn 3k silent truncate, no company-page, cron docs drift | audit MED/LOW section |
+
+### Already closed — do not re-implement
+
+SEC-1/2 · BLOCK-1–4 · BLOCK-6–10 (BLOCK-9 = invite-only **decision**) · HIGH-1/2/3/6/7/8/10/13/16 · MED-1 · OpenSEO 1–6 code · CF read/write `d1Db` · publish reliability digest + health-flip email.
+
+**Verify sample:**
+```sh
+npx vitest run lib/connectors/src/wordpress.test.ts lib/jobs/src/handlers/contentPublish.test.ts \
+  lib/content-engine/src/content/publish-placeholders.test.ts
+pnpm --filter @workspace/goals-ac-wp run test:unit
+pnpm --filter @workspace/cf-write-worker run typecheck
+pnpm --filter @workspace/cf-read-worker run typecheck
+```
+
+**Recommended next session order:** (1) BLOCK-5 staging evidence with a human, (2) HIGH-9 SSRF redirects, (3) HIGH-11 viewer writes, (4) HIGH-4+5 with live LinkedIn, (5) HIGH-12 strategy dedup.
+
+---
+
+## Feature 6 CF + MCP parity (2026-09-06)
+
+**Status:** Feature 6 backlinks complete — lib + Next + CF write + MCP `get_backlinks_overview`.
+
+| Piece | Where |
+|---|---|
+| Client (8 tests) | `lib/serp-provider/src/backlinks.ts` |
+| Next API / UI | `POST …/backlinks`; Search → Site → `BacklinksOverviewPanel` |
+| CF | gateway write route → `cf-write-worker` `handleBacklinksWrite`; `wireCfEdgeEnv` copies `DATAFORSEO_*` secrets |
+| MCP | `get_backlinks_overview` (`content:read`, openWorld) |
+
+**Verify:**
+```sh
+npx vitest run lib/serp-provider/src/backlinks.test.ts lib/mcp-server
+# Secrets (write + public workers): wrangler secret put DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD
+# Live: Search → Site → Refresh backlinks; MCP tools/call get_backlinks_overview
+```
+
+**Next:** live staging smokes + Gate 0 human items (WP zip install, plugin update channel).
+
+---
+
 ## OpenSEO Feature 6 + MCP inspect_url (2026-09-06)
 
 **Status:** Feature 6 backlinks overview + Feature 4 MCP `inspect_url` shipped (lib + Next). OpenSEO Features **1–6 complete**.
@@ -18,7 +103,7 @@ npx vitest run lib/serp-provider/src/backlinks.test.ts lib/mcp-server
 # Live: GSC connected → MCP tools/call inspect_url
 ```
 
-**Next:** live staging smokes + Gate 0 human items (WP zip install, plugin update channel). Optional: MCP backlinks tools; CF parity for backlinks.
+**Next:** live staging smokes + Gate 0 human items (WP zip install, plugin update channel).
 
 ---
 
@@ -37,9 +122,8 @@ npx vitest run lib/serp-provider/src/backlinks.test.ts lib/mcp-server
 
 **Still needs a human / live env**
 
-- Live WP staging smoke with packaged zip
+- Live WP staging smoke with packaged zip — runbook + smoke ready; evidence not filled yet
 - Plugin update channel (not WP.org)
-- Gate 0 commercial items (plan/VAT/pricing) if charging €500
 
 **Verify BLOCK-2:** `pnpm exec vitest run lib/connectors/src/wordpress.test.ts`
 
@@ -61,7 +145,23 @@ npx vitest run lib/serp-provider/src/backlinks.test.ts lib/mcp-server
 
 ---
 
-## Feature 4 CF parity — GSC URL Inspection (2026-09-06)
+## Gate 0 + Gate 1/2 progress (2026-09-06)
+
+**Status:** Gate 0 code closed. Gate 1/2 high findings closed in this pass. Remaining human item is live WP staging evidence.
+
+| Finding | Status |
+|---|---|
+| SEC-1 job-status IDOR | **Fixed** |
+| SEC-2 persona `&&` IDOR | **Fixed** |
+| BLOCK-1 … BLOCK-10 (except live BLOCK-5 evidence) | **Fixed / decided** — see prior Gate 0 table |
+| HIGH-1 SEO meta on app-password path | **Fixed** — `Seo_Rest_Meta` registers keys for REST; connector sets `excerpt`; Yoast OG keys use hyphens |
+| HIGH-8 publish retry forever | **Fixed** — 5-attempt dead-letter + owner email; sweep skips |
+| HIGH-10 CF scrape/GSC/GA4 ownership | **Fixed** — `getAccessibleProject` on all three |
+| HIGH-13 invent statistic template | **Fixed earlier** — no numeric template |
+| HIGH-16 unbounded site graph | **Fixed** — 500 post cap, 200 link-scan, `truncated` flag |
+| MED-1 placeholder scanner | **Fixed** — `placeholder_token` blocker when unattended |
+
+**Next:** run BLOCK-5 staging smoke with a real WP site and paste evidence into the playbook.
 
 **Status:** CF gateway + read GET + write POST wired (mirrors Next route).
 
@@ -113,7 +213,8 @@ npx vitest run lib/serp-provider/src/backlinks.test.ts lib/mcp-server
 **Start here (next agent):**
 1. Live staging smokes (WP zip install; GSC inspect; DataForSEO Mentions + backlinks; MCP with real `gac_` key)
 2. Gate 0 leftovers ([`docs/audits/2026-09-06-production-readiness.md`](docs/audits/2026-09-06-production-readiness.md)) — BLOCK-2 idempotency completeness, BLOCK-4 readiness options, plugin update channel
-3. Optional: MCP backlinks tools; CF parity for backlinks route
+
+Feature 6 CF + MCP parity is done (see top of this file).
 
 ### Feature 5 shipped (local) — Rank tracking hardening
 
@@ -186,15 +287,16 @@ npx vitest run lib/serp-provider/src/backlinks.test.ts lib/mcp-server
 git clone --depth 1 git@github.com:every-app/open-seo.git /tmp/open-seo-research
 ```
 
-### Feature 6 shipped (local) — Backlinks overview
+### Feature 6 shipped — Backlinks overview
 
 | Piece | Where |
 |---|---|
 | Client + tests (8) | `lib/serp-provider/src/backlinks.ts` |
-| API | `POST …/website-projects/:id/backlinks` |
+| API | `POST …/website-projects/:id/backlinks` (Next + CF write) |
 | UI | Search → Site → `BacklinksOverviewPanel` |
+| MCP | `get_backlinks_overview` |
 
-**Creds:** `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`. No CF parity in v1. No persistent CRM table.
+**Creds:** `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD` (wrangler secrets on write + public). No persistent CRM table.
 
 **Next:** Live staging smokes + Gate 0 human items.
 

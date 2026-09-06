@@ -1,4 +1,4 @@
-export { db, getDb, setD1Binding, type GoalsDatabase } from "./db-instance";
+export { db, d1Db, getDb, setD1Binding, type GoalsDatabase } from "./db-instance";
 export { getDbDialect, isD1Dialect, type DbDialect } from "./dialect";
 export { createD1Db, type D1DatabaseBinding, type GoalsD1Database } from "./d1";
 export { getPostgresDb, getPostgresPool, closePostgresPool } from "./postgres";

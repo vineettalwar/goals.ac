@@ -1,5 +1,5 @@
 import { withCors } from "@workspace/cf-edge/cors";
-import { db } from "@workspace/db";
+import { db } from "./db";
 import { contentPiecesTable } from "@workspace/db/schema-sqlite";
 import { and, asc, count, eq, inArray } from "drizzle-orm";
 import { getAccessibleProject } from "./project-access";

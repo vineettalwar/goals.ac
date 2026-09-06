@@ -1,6 +1,6 @@
 # Feature 6 — Backlinks overview
 
-**Status:** Shipped (lib + Next) · **Index:** [openseo-integration-index.md](./openseo-integration-index.md)  
+**Status:** Shipped (lib + Next + CF + MCP) · **Index:** [openseo-integration-index.md](./openseo-integration-index.md)  
 **Date:** 2026-09-06 · **Depends on:** DataForSEO platform creds (`DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`)
 
 ## Problem
@@ -24,15 +24,15 @@ As a marketer, on Search → Site I can pull a DataForSEO backlinks overview for
 | Piece | Where |
 |---|---|
 | Client + tests (8) | `lib/serp-provider/src/backlinks.ts` |
-| API | `POST …/website-projects/[id]/backlinks` |
+| API | `POST …/website-projects/[id]/backlinks` (Next + CF write) |
 | UI | Search → Site → `BacklinksOverviewPanel` |
+| MCP | `get_backlinks_overview` (`content:read`) |
 
 ## Scope out
 
 - Ahrefs DR scrape
 - Link-building CRM / outreach
 - Historical timeseries charts
-- MCP backlinks tools (follow-on)
 
 ## Kill condition
 
