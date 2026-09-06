@@ -79,3 +79,4 @@ if ( ! function_exists( 'is_plugin_active' ) ) {
 
 require_once __DIR__ . '/../includes/class-internal-links.php';
 require_once __DIR__ . '/../includes/class-site-graph.php';
+require_once __DIR__ . '/../includes/class-health.php';

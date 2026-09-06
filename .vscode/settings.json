@@ -98,6 +98,7 @@
   ],
   "intelephense.environment.phpVersion": "8.1.0",
   "intelephense.environment.constants": {
+    "ABSPATH": "/var/www/html/",
     "DRUPAL_ROOT": "/var/www/html",
     "_JEXEC": true,
     "TYPO3": true

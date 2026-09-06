@@ -6,8 +6,7 @@
  */
 
 use PHPUnit\Framework\TestCase;
-
-require_once __DIR__ . '/../includes/class-health.php';
+use Goals_AC\Health;
 
 /**
  * Covers recommended editor mode selection from detected builders.
@@ -22,7 +21,7 @@ class HealthTest extends TestCase {
 	public function test_recommended_editor_mode_prefers_elementor(): void {
 		$this->assertSame(
 			'elementor',
-			\Goals_AC\Health::recommended_editor_mode( array( 'gutenberg', 'elementor' ) )
+			Health::recommended_editor_mode( array( 'gutenberg', 'elementor' ) )
 		);
 	}
 
@@ -32,7 +31,7 @@ class HealthTest extends TestCase {
 	public function test_recommended_editor_mode_falls_back_to_gutenberg(): void {
 		$this->assertSame(
 			'gutenberg',
-			\Goals_AC\Health::recommended_editor_mode( array( 'gutenberg' ) )
+			Health::recommended_editor_mode( array( 'gutenberg' ) )
 		);
 	}
 
@@ -40,6 +39,6 @@ class HealthTest extends TestCase {
 	 * Classic is used when no builders are detected.
 	 */
 	public function test_recommended_editor_mode_classic_when_empty(): void {
-		$this->assertSame( 'classic', \Goals_AC\Health::recommended_editor_mode( array() ) );
+		$this->assertSame( 'classic', Health::recommended_editor_mode( array() ) );
 	}
 }
