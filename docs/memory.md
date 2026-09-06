@@ -4,6 +4,36 @@ Living document capturing architectural decisions, historical context, and lesso
 
 ---
 
+## Built, tested, and switched off is the dominant failure mode here (2026-09-06)
+
+**Lesson:** A six-domain production-readiness audit found that goals.ac's biggest safety gaps are not missing code — they are finished code that no production call site activates. The pattern repeated across three independent areas:
+
+- `assessPublishReadiness` supports `minQualityScore`, `targetKeyword`, `existingTitles`, `checkUnattributedClaims`. Every production call site passes **none** of them; only tests do. The quality floor, keyword-stuffing check, cannibalization blocker and fabricated-statistic screen are all dead in production while appearing shipped.
+- `annotateBriefsWithCoverage` computes a real cannibalization verdict that nothing downstream reads.
+- `claim-extractor.ts` is a well-built fabricated-stat heuristic gated behind a flag no caller sets.
+
+**Why it happens:** the option-bag API (`assessPublishReadiness(piece, options)`) makes "not passed" indistinguishable from "deliberately off" at the call site, and there is no test asserting the *autopilot path* enables them. A capability audit that greps for a function's definition finds it present; only grepping the call sites finds it inert.
+
+**Rule going forward:** when a safety feature lands, the acceptance criterion is a test on the **unattended path** proving the gate fires — not a unit test of the gate in isolation. Grep call sites, not definitions, when auditing whether a guard is live.
+
+**Corollary found the same session:** "typechecks clean, never run against a live database / real WordPress / real LinkedIn app" appears in every handoff entry back to July. Type safety has been substituting for verification. `wp-staging-verification-evidence.md` is still a blank template, and `e2e/founder-path.spec.ts` stubs the WordPress plugin contract rather than hitting one.
+
+**See:** `docs/audits/2026-09-06-production-readiness.md` (full findings, file:line evidence, and a "checked and found clean" list), `HANDOFF.md` (2026-09-06 entry).
+
+---
+
+## The product exists twice, and the deployed copy is the unchecked one (2026-09-06)
+
+**Lesson:** Production is `cf-gateway` -> `cf-public/read/write-worker` + `goals-app-ui` on Cloudflare Pages. `marketing-persona-app` (80k LOC, 236 API routes) is **not deployed** — root `cf:deploy` errors with "OpenNext monolith is retired." Yet the admin dashboard, the only email-alert hook, and the entire e2e suite all live in that undeployed app, and `cf-write-worker`/`cf-read-worker` carry 622/362 type errors from a single root cause (SQLite/D1 tables passed into a Drizzle handle typed as Postgres).
+
+Every feature is therefore written twice, and the copy serving customers is the one with no type safety and drifting route coverage. `docs/parity-matrix.md` only checks that a path exists, never that it behaves the same, and it is stale by 14 routes.
+
+**Rule going forward:** treat "which runtime serves this?" as the first question in any goals.ac audit or feature estimate. A change is not shipped when it lands in `marketing-persona-app`; it is shipped when it lands in the workers. Cost every feature at 2x until the dialect fix retires the duplication.
+
+**See:** `docs/audits/2026-09-06-production-readiness.md` (structural finding + correction log).
+
+---
+
 ## Continuous packaging beats new engines (2026-07-15)
 
 **Lesson:** After Waves 0–3.2, the highest-ROI work was continuous packaging — empty CTAs, social Reject/requireApproval, ESP checklists, analytics Sync, stock images for all formats, voice sample scoring — not new scoring or CMS engines.
