@@ -1,65 +1,31 @@
-import { useEffect, useState, type FormEvent } from "react";
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { AuthPageShell, AuthView } from "@workspace/app-shell";
-import { useAuth } from "@/context/auth";
-import { getApiBase } from "@/lib/api";
+import { Link } from "react-router-dom";
+import { AuthPageShell } from "@workspace/app-shell";
+
+const CONTACT_EMAIL = "contact@goals.ac";
+const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`;
 
 export function SignupPage() {
-  const { user, loading, signup } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [searchParams] = useSearchParams();
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState(searchParams.get("email") ?? "");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  const callbackUrl = searchParams.get("callbackUrl");
-  const from =
-    callbackUrl ??
-    (location.state as { from?: string } | null)?.from ??
-    "/onboarding";
-
-  useEffect(() => {
-    if (!loading && user) navigate(from, { replace: true });
-  }, [loading, user, navigate, from]);
-
-  const onSubmit = async (event: FormEvent) => {
-    event.preventDefault();
-    setError(null);
-    setSubmitting(true);
-    try {
-      await signup(name.trim(), email.trim(), password);
-      navigate(from, { replace: true });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Request failed");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   return (
     <AuthPageShell>
-      <AuthView
-        mode="signup"
-        name={name}
-        email={email}
-        password={password}
-        onNameChange={setName}
-        onEmailChange={setEmail}
-        onPasswordChange={setPassword}
-        error={error}
-        submitting={submitting}
-        onSubmit={onSubmit}
-        googleSignInHref={`${getApiBase()}/api/auth/google?returnUrl=${encodeURIComponent(window.location.origin + "/onboarding")}`}
-        renderLink={({ href, className, children }) => (
-          <Link to={href} className={className}>
-            {children}
+      <div className="paper-card p-8 text-center">
+        <h1 className="text-2xl font-bold">Private beta</h1>
+        <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+          goals.ac isn&apos;t open for self-serve signup yet. Email us for beta access —
+          we&apos;ll send an invite when there&apos;s a seat.
+        </p>
+        <a
+          href={CONTACT_MAILTO}
+          className="mt-8 inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90"
+        >
+          Email {CONTACT_EMAIL}
+        </a>
+        <p className="mt-6 text-sm text-muted-foreground">
+          Already have an account?{" "}
+          <Link to="/login" className="font-medium text-foreground hover:underline">
+            Sign in
           </Link>
-        )}
-      />
+        </p>
+      </div>
     </AuthPageShell>
   );
 }

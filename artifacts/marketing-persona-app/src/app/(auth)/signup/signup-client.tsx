@@ -32,17 +32,17 @@ export function SignupPageClient({ signupsEnabled, callbackUrl }: SignupPageClie
 function InviteOnlyMessage() {
   return (
     <div className="paper-card p-8 text-center">
-      <h1 className="text-2xl font-bold">Invite only</h1>
+      <h1 className="text-2xl font-bold">Private beta</h1>
       <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
-        goals.ac is invite-only while we onboard design partners. Ask your contact for an invite
-        link, or reach out if you want a hands-on program.
+        goals.ac isn&apos;t open for self-serve signup yet. Email us for beta access — we&apos;ll
+        send an invite when there&apos;s a seat.
       </p>
       <div className="mt-8 flex flex-col gap-3">
         <Button asChild className="w-full">
-          <Link href={CONTACT_HREF}>{CONTACT_CTA_LABEL}</Link>
+          <a href={CONTACT_MAILTO}>Email {CONTACT_EMAIL}</a>
         </Button>
         <Button asChild variant="outline" className="w-full">
-          <a href={CONTACT_MAILTO}>Email {CONTACT_EMAIL}</a>
+          <Link href={CONTACT_HREF}>{CONTACT_CTA_LABEL}</Link>
         </Button>
       </div>
       <p className="mt-6 text-sm text-muted-foreground">

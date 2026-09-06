@@ -92,6 +92,7 @@ export function AuthView({
   onSubmit,
   forgotPasswordHref,
   googleSignInHref,
+  showModeSwitch = true,
   renderLink,
   renderForgotPasswordLink,
 }: {
@@ -106,7 +107,10 @@ export function AuthView({
   submitting: boolean;
   onSubmit: (event: FormEvent) => void;
   forgotPasswordHref?: string;
+  /** Omit while Google OAuth is not configured. */
   googleSignInHref?: string;
+  /** Hide “Create an account” / “Sign in” switch (e.g. private beta). */
+  showModeSwitch?: boolean;
   renderLink: (props: AuthLinkProps) => ReactNode;
   renderForgotPasswordLink?: (props: AuthLinkProps) => ReactNode;
 }) {
@@ -236,27 +240,29 @@ export function AuthView({
         </button>
       </form>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
-        {mode === "signup" ? (
-          <>
-            Already have an account?{" "}
-            {renderLink({
-              href: "/login",
-              className: "font-medium text-foreground hover:underline",
-              children: "Sign in",
-            })}
-          </>
-        ) : (
-          <>
-            New here?{" "}
-            {renderLink({
-              href: "/signup",
-              className: "font-medium text-foreground hover:underline",
-              children: "Create an account",
-            })}
-          </>
-        )}
-      </p>
+      {showModeSwitch ? (
+        <p className="mt-6 text-center text-sm text-muted-foreground">
+          {mode === "signup" ? (
+            <>
+              Already have an account?{" "}
+              {renderLink({
+                href: "/login",
+                className: "font-medium text-foreground hover:underline",
+                children: "Sign in",
+              })}
+            </>
+          ) : (
+            <>
+              New here?{" "}
+              {renderLink({
+                href: "/signup",
+                className: "font-medium text-foreground hover:underline",
+                children: "Create an account",
+              })}
+            </>
+          )}
+        </p>
+      ) : null}
     </div>
   );
 }

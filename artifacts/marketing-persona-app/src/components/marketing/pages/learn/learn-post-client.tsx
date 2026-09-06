@@ -18,7 +18,7 @@ export function LearnPostClient({ post }: { post: LearnPost }) {
     <MarketingPageShell
       hero={
         <PageHero
-          badge="Learn"
+          badge={post.category}
           titleLine1={post.title.split(" ").slice(0, Math.ceil(post.title.split(" ").length / 2)).join(" ")}
           titleLine2={post.title.split(" ").slice(Math.ceil(post.title.split(" ").length / 2)).join(" ") || undefined}
           description={post.description}

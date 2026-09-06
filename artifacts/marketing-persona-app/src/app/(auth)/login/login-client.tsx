@@ -5,11 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AuthView } from "@workspace/app-shell/auth";
-import {
-  CONTACT_CTA_LABEL,
-  CONTACT_EMAIL,
-  CONTACT_HREF,
-} from "@/lib/marketing/site/marketing-contact";
+import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/marketing/site/marketing-contact";
 import { signInWithCredentials } from "@/lib/auth/sign-in-credentials";
 
 type LoginPageClientProps = {
@@ -64,6 +60,7 @@ function LoginPageContent({ postLoginRedirect }: LoginPageClientProps) {
         submitting={submitting}
         onSubmit={onSubmit}
         forgotPasswordHref="/forgot-password"
+        showModeSwitch={false}
         renderLink={({ href, className, children }) => (
           <Link href={href} className={className}>
             {children}
@@ -76,14 +73,11 @@ function LoginPageContent({ postLoginRedirect }: LoginPageClientProps) {
         )}
       />
       <p className="mt-4 text-center text-sm text-muted-foreground">
-        Need access?{" "}
-        <Link href={CONTACT_HREF} className="font-medium text-foreground hover:underline">
-          {CONTACT_CTA_LABEL}
-        </Link>
-        {" "}or email{" "}
-        <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium text-foreground hover:underline">
-          {CONTACT_EMAIL}
-        </a>
+        Private beta — not launched yet.{" "}
+        <a href={CONTACT_MAILTO} className="font-medium text-foreground hover:underline">
+          Email {CONTACT_EMAIL}
+        </a>{" "}
+        for access.
       </p>
     </>
   );

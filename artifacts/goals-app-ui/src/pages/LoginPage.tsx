@@ -2,7 +2,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { AuthPageShell, AuthView } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
-import { getApiBase } from "@/lib/api";
+
+const CONTACT_EMAIL = "contact@goals.ac";
+const CONTACT_MAILTO = `mailto:${CONTACT_EMAIL}`;
 
 export function LoginPage() {
   const { user, loading, login } = useAuth();
@@ -53,7 +55,7 @@ export function LoginPage() {
         submitting={submitting}
         onSubmit={onSubmit}
         forgotPasswordHref="/forgot-password"
-        googleSignInHref={`${getApiBase()}/api/auth/google?returnUrl=${encodeURIComponent(window.location.origin + "/dashboard")}`}
+        showModeSwitch={false}
         renderLink={({ href, className, children }) => (
           <Link to={href} className={className}>
             {children}
@@ -65,6 +67,13 @@ export function LoginPage() {
           </Link>
         )}
       />
+      <p className="mt-4 text-center text-sm text-muted-foreground">
+        Private beta — not launched yet.{" "}
+        <a href={CONTACT_MAILTO} className="font-medium text-foreground hover:underline">
+          Email {CONTACT_EMAIL}
+        </a>{" "}
+        for access.
+      </p>
     </AuthPageShell>
   );
 }
