@@ -190,3 +190,26 @@ Impeccable design context for the canonical Next.js app lives in:
 - `artifacts/marketing-persona-app/DESIGN.md` — paper/forest-green tokens, typography, surfaces (`paper-card` vs `glass-card`), components
 
 Run design commands from the app directory or with `--target artifacts/marketing-persona-app`. Legacy `docs/design.md` describes the older blue/glass Vite app; prefer `DESIGN.md` for new work.
+
+## Cursor Cloud specific instructions
+
+This is a **pnpm-workspace monorepo** for **goals.ac**. See `README.md` and `docs/local-dev.md` for the canonical setup; the notes below only capture non-obvious caveats for running it in the Cursor Cloud VM.
+
+**Cloud VM path (no Docker):** Postgres + legacy Express API + Vite frontend. The canonical product for local/Docker is `marketing-persona-app` on :3001 — use that when Docker is available.
+
+### Services & how to run them
+
+Run each natively (Docker is not installed in the Cloud VM):
+
+- **PostgreSQL 16** (installed via apt; satisfies the repo's "14+" requirement). Start it if not already running:
+  `sudo pg_ctlcluster 16 main start`. DB `goalsac`, user `postgres`/`postgres` on `localhost:5432`.
+- **API server** (port 8080): `PORT=8080 pnpm --filter @workspace/api-server run dev` — builds with esbuild then starts; it **auto-runs DB migrations on boot**.
+- **Frontend** (port 5173): `PORT=5173 BASE_PATH=/ VITE_API_PROXY_TARGET=http://localhost:8080 pnpm --filter @workspace/goals-ac run dev`.
+
+### Non-obvious gotchas
+
+- **pnpm version matters.** Use **pnpm 10.x** (corepack is pinned to `10.33.3`). pnpm 11 does **not** honor the repo's `onlyBuiltDependencies` correctly and skips building `esbuild`, which breaks the API server build. If `pnpm --version` reports 11.x, run `corepack prepare pnpm@10.33.3 --activate`.
+- **`.env` is required.** It needs `DATABASE_URL`, `JWT_SECRET`, and `GEMINI_KEY_ENCRYPTION_SECRET` (the API hard-fails on boot without all three). A dev `.env` with random secrets is already created in the VM. Do not commit secrets.
+- **Env loading for scripts:** `lib/db` scripts (`migrate`/`seed`) read `process.env` directly and do **not** auto-load `.env`. Export it first, e.g. `set -a && . ./.env && set +a` before running `pnpm --filter @workspace/db run migrate`.
+- **AI features need a key.** Roadmap/content generation needs `GEMINI_API_KEY` (or a user-supplied key at runtime). Without it the UI shows "Roadmap generation temporarily unavailable" — auth, onboarding, projects, and all non-AI flows still work.
+- **Quality gate:** `pnpm run typecheck` is the de-facto check. The only package `lint` script is `pnpm --filter @workspace/marketing-persona-app run lint`. E2E verification is manual (sign up → onboard → create project).
