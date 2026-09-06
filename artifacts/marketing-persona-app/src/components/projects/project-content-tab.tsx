@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { BarChart3, FileText, Map, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,48 @@ import type { ProjectContent } from "@/lib/projects/project-detail-types";
 interface Props {
   projectId: string;
   initialContent?: ProjectContent;
+}
+
+function ContentSection({
+  title,
+  icon,
+  children,
+}: {
+  title: string;
+  icon: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="paper-card overflow-hidden rounded-xl">
+      <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
+        <span className="text-primary">{icon}</span>
+        <h3 className="text-sm font-semibold">{title}</h3>
+      </div>
+      <div className="divide-y divide-border">{children}</div>
+    </section>
+  );
+}
+
+function ContentRow({
+  title,
+  meta,
+  href,
+}: {
+  title: string;
+  meta: string;
+  href: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-4 px-5 py-3.5">
+      <div className="min-w-0">
+        <p className="truncate text-sm font-medium">{title}</p>
+        <p className="mt-0.5 text-xs text-muted-foreground">{meta}</p>
+      </div>
+      <Button size="sm" variant="ghost" asChild className="shrink-0">
+        <Link href={href}>View</Link>
+      </Button>
+    </div>
+  );
 }
 
 export function ProjectContentTab({ projectId, initialContent }: Props) {
@@ -26,7 +69,11 @@ export function ProjectContentTab({ projectId, initialContent }: Props) {
   }
 
   if (!content) {
-    return <p className="text-sm text-muted-foreground">Failed to load content inventory.</p>;
+    return (
+      <div className="paper-card rounded-xl p-6">
+        <p className="text-sm text-muted-foreground">Failed to load content inventory.</p>
+      </div>
+    );
   }
 
   const isEmpty =
@@ -37,130 +84,79 @@ export function ProjectContentTab({ projectId, initialContent }: Props) {
 
   if (isEmpty) {
     return (
-      <div className="paper-card p-12 rounded-xl border-dashed flex flex-col items-center text-center">
-        <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
-          <FileText className="w-7 h-7 text-primary" />
-        </div>
-        <h3 className="text-lg font-semibold mb-2">No content yet</h3>
-        <p className="text-sm text-muted-foreground max-w-sm mb-6">
+      <div className="py-12">
+        <h3 className="text-base font-semibold">No content yet</h3>
+        <p className="mt-1 max-w-md text-sm text-muted-foreground">
           Generate a growth roadmap, then content strategies and articles. Linked content appears
           here automatically.
         </p>
-        <div className="flex flex-wrap gap-2 justify-center">
-          <Link href="/strategy/roadmaps">
-            <Button>Growth Roadmaps</Button>
-          </Link>
-          <Link href={`/projects/${projectId}/content-studio`}>
-            <Button variant="outline">Content Studio</Button>
-          </Link>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <Button asChild>
+            <Link href="/strategy/roadmaps">Growth Roadmaps</Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link href={`/projects/${projectId}/content-studio`}>Content Studio</Link>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {content.seoArticles.length > 0 && (
-        <div className="paper-card p-6 rounded-xl">
-          <h3 className="font-semibold flex items-center gap-2 text-base mb-4">
-            <FileText className="w-4 h-4 text-blue-500" />
-            SEO Articles
-          </h3>
-          <div className="divide-y divide-border">
-            {content.seoArticles.map((article) => (
-              <div key={article.id} className="py-3 flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm truncate">{article.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {article.primaryKeyword} · {article.wordCount} words
-                  </p>
-                </div>
-                <Button size="sm" variant="ghost" asChild>
-                  <Link href={`/seo-article/${article.id}`}>View</Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ContentSection title="SEO Articles" icon={<FileText className="h-4 w-4" aria-hidden />}>
+          {content.seoArticles.map((article) => (
+            <ContentRow
+              key={article.id}
+              title={article.title}
+              meta={`${article.primaryKeyword} · ${article.wordCount} words`}
+              href={`/seo-article/${article.id}`}
+            />
+          ))}
+        </ContentSection>
       )}
 
       {content.contentStrategies.length > 0 && (
-        <div className="paper-card p-6 rounded-xl">
-          <h3 className="font-semibold flex items-center gap-2 text-base mb-4">
-            <BarChart3 className="w-4 h-4 text-blue-500" />
-            Content Strategies
-          </h3>
-          <div className="divide-y divide-border">
-            {content.contentStrategies.map((strategy) => (
-              <div key={strategy.id} className="py-3 flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm">
-                    {strategy.industry} · {strategy.location}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{strategy.stage}</p>
-                </div>
-                <Button size="sm" variant="ghost" asChild>
-                  <Link href={`/content-strategy/${strategy.id}`}>View</Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ContentSection
+          title="Content Strategies"
+          icon={<BarChart3 className="h-4 w-4" aria-hidden />}
+        >
+          {content.contentStrategies.map((strategy) => (
+            <ContentRow
+              key={strategy.id}
+              title={`${strategy.industry} · ${strategy.location}`}
+              meta={strategy.stage}
+              href={`/content-strategy/${strategy.id}`}
+            />
+          ))}
+        </ContentSection>
       )}
 
       {content.geoAudits.length > 0 && (
-        <div className="paper-card p-6 rounded-xl">
-          <h3 className="font-semibold flex items-center gap-2 text-base mb-4">
-            <Search className="w-4 h-4 text-sky-500" />
-            GEO Audits
-          </h3>
-          <div className="divide-y divide-border">
-            {content.geoAudits.map((audit) => (
-              <div key={audit.id} className="py-3 flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm truncate">
-                    {audit.url.replace(/^https?:\/\//, "")}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    GEO Score:{" "}
-                    <span className="text-blue-600 dark:text-blue-400 font-semibold">
-                      {audit.geoScore}/100
-                    </span>
-                  </p>
-                </div>
-                <Button size="sm" variant="ghost" asChild>
-                  <Link href={`/audit/${audit.id}`}>View</Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ContentSection title="GEO Audits" icon={<Search className="h-4 w-4" aria-hidden />}>
+          {content.geoAudits.map((audit) => (
+            <ContentRow
+              key={audit.id}
+              title={audit.url.replace(/^https?:\/\//, "")}
+              meta={`GEO Score: ${audit.geoScore}/100`}
+              href={`/audit/${audit.id}`}
+            />
+          ))}
+        </ContentSection>
       )}
 
       {content.roadmaps.length > 0 && (
-        <div className="paper-card p-6 rounded-xl">
-          <h3 className="font-semibold flex items-center gap-2 text-base mb-4">
-            <Map className="w-4 h-4 text-emerald-600" />
-            Growth Roadmaps
-          </h3>
-          <div className="divide-y divide-border">
-            {content.roadmaps.map((roadmap) => (
-              <div key={roadmap.id} className="py-3 flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-medium text-sm">
-                    {roadmap.industry} · {roadmap.location}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                    {roadmap.stage} stage
-                  </p>
-                </div>
-                <Button size="sm" variant="ghost" asChild>
-                  <Link href={`/growth-roadmaps/${roadmap.slug}`}>View</Link>
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
+        <ContentSection title="Growth Roadmaps" icon={<Map className="h-4 w-4" aria-hidden />}>
+          {content.roadmaps.map((roadmap) => (
+            <ContentRow
+              key={roadmap.id}
+              title={`${roadmap.industry} · ${roadmap.location}`}
+              meta={`${roadmap.stage} stage`}
+              href={`/growth-roadmaps/${roadmap.slug}`}
+            />
+          ))}
+        </ContentSection>
       )}
     </div>
   );

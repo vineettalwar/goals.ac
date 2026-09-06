@@ -513,7 +513,7 @@ export function ResearchCompetitorsPage() {
   return (
     <SectionShell
       title="Competitor research"
-      description="AI-powered competitive intelligence."
+      description="Competitive intelligence from SERP and site signals."
       tabs={researchTabs}
     >
       <ResearchCompetitorsBody key={projectId ?? "none"} projectId={projectId} />
@@ -722,7 +722,7 @@ export function SocialHubPage() {
           className={
             hub.flash.level === "error"
               ? "mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-              : "mb-4 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-sm text-foreground"
+              : "mb-4 rounded-lg border border-border bg-secondary/40 px-3 py-2 text-sm text-foreground"
           }
           role="status"
         >

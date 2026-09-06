@@ -9,6 +9,7 @@ import {
   orgIntegrationsPath,
   projectIntegrationsPath,
 } from "@workspace/app-shell/project-detail";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useActiveProject } from "@/context/use-active-project";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import { ProjectPublishingTab } from "@/components/projects/project-publishing-tab";
@@ -146,7 +147,7 @@ export function ProjectIntegrationsPageClient({
   }
 
   return (
-    <div className="px-8 py-8 max-w-5xl space-y-6">
+    <div className={`${APP_SHELL_PAGE} space-y-6`}>
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Project integrations</h1>
         <p className="text-sm text-muted-foreground">

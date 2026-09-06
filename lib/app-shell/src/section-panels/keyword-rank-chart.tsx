@@ -19,6 +19,10 @@ export type SerpFeatureSummary = {
   peopleAlsoAsk: string[];
   organicCount: number;
   topResults: Array<{ url?: string; title?: string }>;
+  featureTypes: string[];
+  aiOverview: boolean;
+  localPack: boolean;
+  knowledgeGraph: boolean;
 };
 
 export function parseSerpFeatures(raw?: Record<string, unknown> | null): SerpFeatureSummary | null {
@@ -29,13 +33,23 @@ export function parseSerpFeatures(raw?: Record<string, unknown> | null): SerpFea
   const topResults = Array.isArray(raw.topResults)
     ? (raw.topResults as Array<{ url?: string; title?: string }>)
     : [];
+  const featureTypes = Array.isArray(raw.featureTypes)
+    ? raw.featureTypes.filter((t): t is string => typeof t === "string")
+    : [];
   return {
     featuredSnippet: Boolean(raw.featuredSnippet),
     peopleAlsoAsk,
     organicCount: typeof raw.organicCount === "number" ? raw.organicCount : 0,
     topResults: topResults.slice(0, 3),
+    featureTypes,
+    aiOverview: Boolean(raw.aiOverview),
+    localPack: Boolean(raw.localPack),
+    knowledgeGraph: Boolean(raw.knowledgeGraph),
   };
 }
+
+const SERP_CHIP =
+  "inline-block rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] leading-tight text-muted-foreground";
 
 export function SerpFeaturesPanel({ features }: { features: SerpFeatureSummary | null }) {
   if (!features) return null;
@@ -43,6 +57,21 @@ export function SerpFeaturesPanel({ features }: { features: SerpFeatureSummary |
   return (
     <div className="mt-3 rounded-lg border border-border bg-muted/20 px-3 py-2 text-xs">
       <p className="font-medium text-foreground">SERP snapshot</p>
+      {/* Feature-type chips */}
+      {(features.aiOverview || features.localPack || features.knowledgeGraph || features.featureTypes.length > 0) && (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {features.aiOverview && <span className={SERP_CHIP}>AI Overview</span>}
+          {features.localPack && <span className={SERP_CHIP}>Local Pack</span>}
+          {features.knowledgeGraph && <span className={SERP_CHIP}>Knowledge Graph</span>}
+          {features.featuredSnippet && <span className={SERP_CHIP}>Featured Snippet</span>}
+          {features.featureTypes
+            .filter((t) => !["organic", "ai_overview", "local_pack", "knowledge_graph", "featured_snippet", "people_also_ask"].includes(t))
+            .slice(0, 6)
+            .map((t) => (
+              <span key={t} className={SERP_CHIP}>{t.replace(/_/g, " ")}</span>
+            ))}
+        </div>
+      )}
       <ul className="mt-2 space-y-1 text-muted-foreground">
         <li>{features.featuredSnippet ? "Featured snippet present" : "No featured snippet"}</li>
         <li>{features.organicCount > 0 ? `${features.organicCount} organic results tracked` : "Organic depth unknown"}</li>

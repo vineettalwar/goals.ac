@@ -2,7 +2,7 @@ import {
   isRasterFeaturedDataUri,
   prepareWordPressImages,
 } from "@workspace/connectors/wordpress-images";
-import { publishToWordPress } from "@workspace/connectors/wordpress";
+import { publishToWordPress, wordpressSlugFromTitle } from "@workspace/connectors/wordpress";
 import { publishToGoalsAcPlugin } from "@workspace/connectors/goals-ac-plugin";
 import type { CanonicalContent } from "../content/canonical-content";
 import type { CmsIntegrationCredentials, WordPressEditorMode } from "../support/publishing/cms-integrations";
@@ -189,6 +189,7 @@ export const wordpressAdapter: CmsAdapter = {
         // (populated from publish_records) instead of always creating a new
         // post — see publishToWordPress for the reliability rationale.
         existingRemoteId: opts?.existingRemoteId,
+        slug: wordpressSlugFromTitle(payload.title) ?? undefined,
       },
     );
     return {

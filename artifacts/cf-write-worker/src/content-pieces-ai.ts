@@ -13,6 +13,7 @@ import {
   repurposeContentPiece,
 } from "@workspace/content-engine/content/content-studio-generator";
 import { enhanceContentPiece } from "@workspace/content-engine/content/content-piece-enhance";
+import { createRefreshContentPiece } from "@workspace/content-engine/content/create-refresh-content-piece";
 import {
   applyStockPhotoToPiece,
   enrichContentPieceImages,
@@ -86,6 +87,17 @@ const repurposeFromTextBody = z.object({
   targetKeyword: z.string().min(1, "Target keyword is required"),
 });
 
+const refreshBody = z.object({
+  url: z.string().url(),
+  targetKeyword: z.string().min(1).max(200),
+  secondaryKeywords: z.array(z.string().min(1).max(100)).max(12).optional(),
+  bodyMarkdown: z.string().min(1).max(200_000).optional(),
+  titleHint: z.string().min(1).max(300).optional(),
+  confirmCanonical: z.boolean().optional(),
+  refreshOf: z.number().int().positive().optional(),
+  cmsRemoteId: z.string().min(1).max(40).optional(),
+});
+
 export async function handleContentPiecesAiWrite(
   request: Request,
   path: string,
@@ -121,6 +133,13 @@ export async function handleContentPiecesAiWrite(
   );
   if (projectRepurposeMatch && request.method === "POST") {
     return handleProjectRepurpose(request, Number.parseInt(projectRepurposeMatch[1]!, 10), userId);
+  }
+
+  const projectRefreshMatch = path.match(
+    /^\/api\/website-projects\/(\d+)\/content-pieces\/refresh$/,
+  );
+  if (projectRefreshMatch && request.method === "POST") {
+    return handleProjectRefresh(request, Number.parseInt(projectRefreshMatch[1]!, 10), userId);
   }
 
   const imagesMatch = path.match(/^\/api\/content-pieces\/(\d+)\/images\/regenerate$/);
@@ -758,6 +777,63 @@ async function handleProjectRepurpose(
     await cancelAiBilling(billingPrep.ctx);
     return withCors(request, Response.json({ error: "Failed to repurpose content" }, { status: 503 }));
   }
+}
+
+async function handleProjectRefresh(
+  request: Request,
+  projectId: number,
+  userId: number,
+): Promise<Response> {
+  const limited = await rateLimitResponse(
+    `refresh-import:user:${userId}`,
+    RATE_LIMITS.AI_GENERATION_PER_USER.limit,
+    RATE_LIMITS.AI_GENERATION_PER_USER.windowMs,
+  );
+  if (limited) return withCors(request, limited);
+
+  const parsed = refreshBody.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return withCors(
+      request,
+      Response.json({ error: parsed.error.errors[0]?.message ?? "Invalid request" }, { status: 400 }),
+    );
+  }
+
+  const project = await getAccessibleProject(projectId, userId);
+  if (!project) {
+    return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+  }
+
+  const result = await createRefreshContentPiece({
+    projectId,
+    ...parsed.data,
+  });
+
+  if (!result.ok) {
+    return withCors(
+      request,
+      Response.json(
+        {
+          error: result.error,
+          ...(result.pasteFallback ? { pasteFallback: true } : {}),
+          ...(result.needsCanonicalConfirm
+            ? {
+                needsCanonicalConfirm: true,
+                enteredUrl: result.enteredUrl,
+                fetchedCanonicalUrl: result.fetchedCanonicalUrl,
+                title: result.title,
+              }
+            : {}),
+        },
+        { status: result.status },
+      ),
+    );
+  }
+
+  return withCors(
+    request,
+    Response.json({ piece: result.piece, warnings: result.warnings }, { status: 201 }),
+  );
 }
 
 async function handleImagesRegenerate(

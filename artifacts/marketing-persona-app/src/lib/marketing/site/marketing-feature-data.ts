@@ -34,6 +34,12 @@ export const PLATFORM_FEATURES = [
     status: "live" as const,
   },
   {
+    icon: PenLine,
+    title: "Optimize existing pages",
+    desc: "Diagnose → Fix → Stay: import a live URL, dual score (not Surfer NLP), Fix gaps, update WordPress.",
+    status: "live" as const,
+  },
+  {
     icon: MapIcon,
     title: "30-day content strategy",
     desc: "Calendar from keyword research and topical maps, not generic topic lists.",
@@ -366,7 +372,7 @@ export const LANDER_CONFIG = {
     features: [
       { icon: BarChart3, title: "GSC + GA4 join", description: "Clicks and on-site engagement per published article." },
       { icon: Search, title: "Keyword tracking", description: "Rank snapshots and alerts when DataForSEO is configured." },
-      { icon: Target, title: "Opportunity scoring", description: "GSC gaps and Semrush BYOK for competitive keywords." },
+      { icon: Target, title: "Refresh queue", description: "Decay, rank drops, and AI misses in one Diagnose → Fix list." },
       { icon: Eye, title: "AI visibility tie-in", description: "Connect search performance with LLM citation trends." },
     ],
     faq: [

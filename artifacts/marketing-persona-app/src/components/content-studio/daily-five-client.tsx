@@ -5,9 +5,12 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RepeaterField } from "@/components/ui/repeater-field";
 import { Textarea } from "@/components/ui/textarea";
 import { isDailyFiveItemValid, parseSourceUrls } from "@/lib/content/daily-five-validation";
 import type { ContentPieceRow } from "./content-studio-utils";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 
 type DraftItem = {
   keyword: string;
@@ -17,11 +20,12 @@ type DraftItem = {
 };
 
 const EMPTY_ITEM: DraftItem = { keyword: "", section: "", notes: "", sourceUrls: "" };
+const MAX_TOPICS = 5;
 
 export function DailyFiveClient({ projectId }: { projectId: string }) {
   const [step, setStep] = useState<"setup" | "topics" | "review">("setup");
   const [sectionDefaults, setSectionDefaults] = useState("News");
-  const [items, setItems] = useState<DraftItem[]>(Array.from({ length: 5 }, () => ({ ...EMPTY_ITEM })));
+  const [items, setItems] = useState<DraftItem[]>([{ ...EMPTY_ITEM }]);
   const [running, setRunning] = useState(false);
   const [created, setCreated] = useState<ContentPieceRow[]>([]);
   const [humanizingIds, setHumanizingIds] = useState<Record<number, boolean>>({});
@@ -36,7 +40,7 @@ export function DailyFiveClient({ projectId }: { projectId: string }) {
           sourceUrls: item.sourceUrls,
         }),
       ),
-    [items],
+    [items, sectionDefaults],
   );
 
   async function runBatch() {
@@ -48,7 +52,11 @@ export function DailyFiveClient({ projectId }: { projectId: string }) {
           .map((item) => ({
             formatType: "blog_post",
             targetKeyword: item.keyword.trim(),
-            angleHint: [`section:${item.section.trim() || sectionDefaults}`, item.notes.trim(), item.sourceUrls.trim() ? `sources: ${parseSourceUrls(item.sourceUrls).join(", ")}` : ""]
+            angleHint: [
+              `section:${item.section.trim() || sectionDefaults}`,
+              item.notes.trim(),
+              item.sourceUrls.trim() ? `sources: ${parseSourceUrls(item.sourceUrls).join(", ")}` : "",
+            ]
               .filter(Boolean)
               .join("|"),
             cmsCategories: [item.section.trim() || sectionDefaults],
@@ -109,60 +117,94 @@ export function DailyFiveClient({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className={`${APP_SHELL_PAGE} space-y-6`}>
+      <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">Daily Five</h1>
-          <p className="text-sm text-muted-foreground">Capture topics, generate drafts, then humanize and queue WordPress drafts.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Capture topics, generate drafts, then humanize and queue WordPress drafts.
+          </p>
         </div>
-        <Link href={`/projects/${projectId}/content-studio`} className="text-sm text-primary hover:underline">
+        <Link
+          href={`/projects/${projectId}/content-studio`}
+          className="shrink-0 text-sm text-primary hover:underline"
+        >
           Back to studio
         </Link>
       </div>
 
       {step === "setup" ? (
-        <div className="space-y-4 rounded-xl border p-4">
-          <p className="text-sm text-muted-foreground">Set your default section for today. You can override per topic.</p>
-          <Input value={sectionDefaults} onChange={(e) => setSectionDefaults(e.target.value)} />
+        <div className="paper-card space-y-4 rounded-xl p-4 sm:p-6">
+          <div className="space-y-2">
+            <Label htmlFor="daily-five-default-section">Default section</Label>
+            <p className="text-sm text-muted-foreground">
+              Used when a topic leaves section blank. You can override per topic.
+            </p>
+            <Input
+              id="daily-five-default-section"
+              value={sectionDefaults}
+              onChange={(e) => setSectionDefaults(e.target.value)}
+            />
+          </div>
           <Button onClick={() => setStep("topics")}>Start topic capture</Button>
         </div>
       ) : null}
 
       {step === "topics" ? (
         <div className="space-y-4">
-          {items.map((item, index) => (
-            <div key={index} className="space-y-3 rounded-xl border p-4">
-              <p className="text-sm font-medium">Topic {index + 1}</p>
-              <Input
-                placeholder="Keyword or angle"
-                value={item.keyword}
-                onChange={(e) =>
-                  setItems((prev) => prev.map((row, i) => (i === index ? { ...row, keyword: e.target.value } : row)))
-                }
-              />
-              <Input
-                placeholder="Section (News, Features, Opinion...)"
-                value={item.section}
-                onChange={(e) =>
-                  setItems((prev) => prev.map((row, i) => (i === index ? { ...row, section: e.target.value } : row)))
-                }
-              />
-              <Textarea
-                placeholder="Notes for angle, voice, and claims"
-                value={item.notes}
-                onChange={(e) =>
-                  setItems((prev) => prev.map((row, i) => (i === index ? { ...row, notes: e.target.value } : row)))
-                }
-              />
-              <Textarea
-                placeholder="Source URLs (required for News)"
-                value={item.sourceUrls}
-                onChange={(e) =>
-                  setItems((prev) => prev.map((row, i) => (i === index ? { ...row, sourceUrls: e.target.value } : row)))
-                }
-              />
-            </div>
-          ))}
+          <RepeaterField
+            values={items}
+            onChange={setItems}
+            createItem={() => ({ ...EMPTY_ITEM, section: sectionDefaults })}
+            maxItems={MAX_TOPICS}
+            minItems={1}
+            label="Topics"
+            description="Add up to five keyword angles for today’s batch."
+            addFirstLabel="Add first topic"
+            addAnotherLabel="Add another topic"
+            emptyDescription="Add at least one topic to generate drafts."
+            itemLabel={(index) => `Topic ${index + 1}`}
+            renderItem={(item, index, update) => (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor={`daily-five-keyword-${index}`}>Keyword or angle</Label>
+                  <Input
+                    id={`daily-five-keyword-${index}`}
+                    placeholder="Keyword or angle"
+                    value={item.keyword}
+                    onChange={(e) => update({ ...item, keyword: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`daily-five-section-${index}`}>Section</Label>
+                  <Input
+                    id={`daily-five-section-${index}`}
+                    placeholder="News, Features, Opinion..."
+                    value={item.section}
+                    onChange={(e) => update({ ...item, section: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`daily-five-notes-${index}`}>Notes</Label>
+                  <Textarea
+                    id={`daily-five-notes-${index}`}
+                    placeholder="Angle, voice, and claims"
+                    value={item.notes}
+                    onChange={(e) => update({ ...item, notes: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`daily-five-sources-${index}`}>Source URLs</Label>
+                  <Textarea
+                    id={`daily-five-sources-${index}`}
+                    placeholder="Required for News — one URL per line"
+                    value={item.sourceUrls}
+                    onChange={(e) => update({ ...item, sourceUrls: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+          />
           <Button onClick={runBatch} disabled={!canRun || running}>
             {running ? "Generating..." : "Generate drafts"}
           </Button>
@@ -175,18 +217,25 @@ export function DailyFiveClient({ projectId }: { projectId: string }) {
             Progress: {created.length} generated. Humanize and publish each draft.
           </p>
           {created.map((piece, idx) => (
-            <div key={piece.id} className="flex items-center justify-between rounded-xl border p-4">
-              <div>
+            <div
+              key={piece.id}
+              className="paper-card flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div className="min-w-0">
                 <p className="font-medium">
                   {idx + 1}. {piece.title}
                 </p>
-                <p className="text-xs text-muted-foreground">{piece.targetKeyword}</p>
+                <p className="truncate text-xs text-muted-foreground">{piece.targetKeyword}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 flex-wrap items-center gap-2">
                 <Button variant="outline" disabled={!!humanizingIds[piece.id]} onClick={() => void humanize(piece.id)}>
                   Humanize
                 </Button>
-                <Button variant="outline" disabled={!!publishingIds[piece.id]} onClick={() => void publishDraft(piece.id)}>
+                <Button
+                  variant="outline"
+                  disabled={!!publishingIds[piece.id]}
+                  onClick={() => void publishDraft(piece.id)}
+                >
                   Queue WP draft
                 </Button>
                 <Link

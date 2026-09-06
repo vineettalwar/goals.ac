@@ -16,6 +16,7 @@ import type {
   PgBoss,
 } from "@workspace/jobs";
 import { logger } from "../logger";
+import { shouldSkipRankCheck } from "./keyword-rank-debounce";
 
 const KEYWORD_RANK_SWEEP_CRON = "0 6 * * *";
 
@@ -41,14 +42,23 @@ function isSingleKeywordPayload(
 
 async function sweepAllKeywords(): Promise<void> {
   const rows = await db
-    .select({ id: trackedKeywordsTable.id })
+    .select({ id: trackedKeywordsTable.id, lastCheckedAt: trackedKeywordsTable.lastCheckedAt })
     .from(trackedKeywordsTable)
     .where(eq(trackedKeywordsTable.isActive, true));
 
   logger.info({ count: rows.length }, "Keyword rank sweep: enumerated tracked keywords");
 
+  const now = new Date();
+  let skipped = 0;
   for (const row of rows) {
+    if (shouldSkipRankCheck(row.lastCheckedAt, now)) {
+      skipped++;
+      continue;
+    }
     await enqueue(QUEUES.keywordRankCheck, { trackedKeywordId: row.id });
+  }
+  if (skipped > 0) {
+    logger.info({ skipped }, "Keyword rank sweep: skipped recently-checked keywords (debounce)");
   }
 }
 
@@ -62,6 +72,11 @@ async function checkSingleKeyword(trackedKeywordId: number): Promise<void> {
 
     if (!kw || !kw.isActive) {
       logger.warn({ trackedKeywordId }, "Tracked keyword not found or inactive");
+      return;
+    }
+
+    if (shouldSkipRankCheck(kw.lastCheckedAt)) {
+      logger.info({ trackedKeywordId, lastCheckedAt: kw.lastCheckedAt }, "Keyword rank check skipped — debounce active (checked within 45 min)");
       return;
     }
 

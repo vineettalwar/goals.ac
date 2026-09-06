@@ -221,7 +221,7 @@ export function PublishingSettingsGridLayout({
       ) : null}
 
       <Dialog open={activeDialog != null} onOpenChange={(open) => !open && onActiveDialogChange(null)}>
-        <DialogContent className="max-w-xl gap-0 overflow-y-auto p-0 sm:max-w-2xl max-h-[88vh]">
+        <DialogContent className="max-w-lg gap-0 overflow-hidden border-border bg-card p-0 shadow-lg sm:max-w-xl max-h-[88vh]">
           {activeDialog ? (
             <DialogTitle className="sr-only">
               {getIntegrationDialogTitle(activeDialog, [
@@ -232,7 +232,9 @@ export function PublishingSettingsGridLayout({
               ])}
             </DialogTitle>
           ) : null}
-          <div className="p-6">{renderDialogBody()}</div>
+          <div className="max-h-[88vh] overflow-y-auto overscroll-contain p-6 pr-12">
+            {renderDialogBody()}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

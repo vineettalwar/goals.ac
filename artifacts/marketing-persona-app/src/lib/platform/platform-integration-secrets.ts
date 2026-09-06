@@ -36,16 +36,25 @@ import {
   getPlatformBedrockStatus,
   savePlatformBedrockCredentials,
   setPlatformBedrockOrgGrants,
-  type PlatformBedrockStatus,
   type SavePlatformBedrockCredentialsInput,
 } from "@/lib/platform/platform-bedrock-admin";
+import type {
+  IntegrationFieldStatus,
+  PlatformBedrockStatus,
+  PlatformIntegrationStatus,
+} from "@/lib/platform/platform-integration-types";
+
+export type {
+  IntegrationFieldStatus,
+  PlatformBedrockStatus,
+  PlatformIntegrationStatus,
+} from "@/lib/platform/platform-integration-types";
 
 export {
   clearStoredPlatformBedrockCredentials,
   getPlatformBedrockStatus,
   savePlatformBedrockCredentials,
   setPlatformBedrockOrgGrants,
-  type PlatformBedrockStatus,
   type SavePlatformBedrockCredentialsInput,
 };
 
@@ -60,72 +69,6 @@ function isPexelsManagedByEnv(): boolean {
 function invalidatePlatformStockCredentialsCache(): void {
   // Platform stock keys are read from env in @workspace/stock-images; DB cache not used yet.
 }
-
-export type IntegrationFieldStatus = {
-  configured: boolean;
-  source: "db" | "env" | null;
-  lastFour: string | null;
-};
-
-export type PlatformIntegrationStatus = {
-  stripe: {
-    managedByEnv: boolean;
-    envVars: string[];
-    connectAvailable: boolean;
-    connect: {
-      connected: boolean;
-      accountId: string | null;
-      livemode: boolean | null;
-      connectedAt: string | null;
-      lastFour: string | null;
-    };
-    secretKey: IntegrationFieldStatus;
-    webhookSecret: IntegrationFieldStatus;
-    priceGrowthMonthly: { configured: boolean; value: string | null; source: "db" | "env" | null };
-    priceScaleMonthly: { configured: boolean; value: string | null; source: "db" | "env" | null };
-  };
-  resend: {
-    managedByEnv: boolean;
-    envVars: string[];
-    apiKey: IntegrationFieldStatus;
-    fromEmail: { configured: boolean; value: string | null; source: "db" | "env" | null };
-  };
-  unsplash: {
-    managedByEnv: boolean;
-    envVars: string[];
-    accessKey: IntegrationFieldStatus;
-  };
-  pexels: {
-    managedByEnv: boolean;
-    envVars: string[];
-    apiKey: IntegrationFieldStatus;
-  };
-  linkedin: {
-    managedByEnv: boolean;
-    envVars: string[];
-    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
-    clientSecret: IntegrationFieldStatus;
-  };
-  twitter: {
-    managedByEnv: boolean;
-    envVars: string[];
-    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
-    clientSecret: IntegrationFieldStatus;
-  };
-  meta: {
-    managedByEnv: boolean;
-    envVars: string[];
-    appId: { configured: boolean; value: string | null; source: "db" | "env" | null };
-    appSecret: IntegrationFieldStatus;
-  };
-  bluesky: {
-    managedByEnv: boolean;
-    envVars: string[];
-    clientName: { configured: boolean; value: string | null; source: "db" | "env" | null };
-    privateKeyJwk: IntegrationFieldStatus;
-  };
-  bedrock: PlatformBedrockStatus;
-};
 
 const STRIPE_ENV_VARS = [
   "STRIPE_SECRET_KEY",

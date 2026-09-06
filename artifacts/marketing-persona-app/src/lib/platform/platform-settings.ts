@@ -3,30 +3,18 @@ import "server-only";
 import { db } from "@workspace/db";
 import { platformSettingsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import {
+  DEFAULT_PLATFORM_STATUS,
+  type PlatformStatus,
+} from "./platform-status";
 
-export interface PlatformStatus {
-  platformEnabled: boolean;
-  aiGenerationEnabled: boolean;
-  maintenanceMessage: string | null;
-  signupsEnabled: boolean;
-  stripeBillingEnabled: boolean;
-  googleIntegrationsEnabled: boolean;
-  bingWebmasterEnabled: boolean;
-  socialPublishingEnabled: boolean;
-  emailEnabled: boolean;
-}
+export type { PlatformStatus } from "./platform-status";
 
-const DEFAULT_STATUS: PlatformStatus = {
-  platformEnabled: true,
-  aiGenerationEnabled: true,
-  maintenanceMessage: null,
-  signupsEnabled: false,
-  stripeBillingEnabled: false,
-  googleIntegrationsEnabled: true,
-  bingWebmasterEnabled: true,
-  socialPublishingEnabled: true,
-  emailEnabled: true,
-};
+const DEFAULT_STATUS = DEFAULT_PLATFORM_STATUS;
+
+/** Short TTL so /api/platform/status (and assert*) don't hit D1 on every call. */
+const SETTINGS_TTL_MS = 15_000;
+let settingsCache: { value: PlatformStatus; expiresAt: number } | null = null;
 
 function rowToStatus(row: {
   platformEnabled: boolean;
@@ -54,7 +42,16 @@ function rowToStatus(row: {
   };
 }
 
+export function invalidatePlatformSettingsCache(): void {
+  settingsCache = null;
+}
+
 export async function getPlatformSettings(): Promise<PlatformStatus> {
+  const now = Date.now();
+  if (settingsCache && now < settingsCache.expiresAt) {
+    return settingsCache.value;
+  }
+
   try {
     const [row] = await db
       .select()
@@ -62,8 +59,9 @@ export async function getPlatformSettings(): Promise<PlatformStatus> {
       .where(eq(platformSettingsTable.id, 1))
       .limit(1);
 
-    if (!row) return DEFAULT_STATUS;
-    return rowToStatus(row);
+    const value = row ? rowToStatus(row) : DEFAULT_STATUS;
+    settingsCache = { value, expiresAt: now + SETTINGS_TTL_MS };
+    return value;
   } catch {
     return DEFAULT_STATUS;
   }
@@ -105,6 +103,7 @@ export async function updatePlatformSettings(
       },
     });
 
+  settingsCache = { value: next, expiresAt: Date.now() + SETTINGS_TTL_MS };
   return next;
 }
 

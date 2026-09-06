@@ -80,3 +80,5 @@ cloudflare-env.d.ts
 
 # Agent worktree scratch space
 .claude/worktrees/
+artifacts/marketing-persona-app/public/downloads/*.zip
+cms-plugins/wordpress/dist/

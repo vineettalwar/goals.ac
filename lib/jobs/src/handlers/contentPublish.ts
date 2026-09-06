@@ -17,10 +17,12 @@ import {
 import { withPublishRecord, recordReadinessAssessment } from "@workspace/content-engine/support/publishing/publish-records";
 import { collectReadinessInputs } from "@workspace/content-engine/support/publishing/readiness-inputs";
 import { assessPublishReadiness } from "@workspace/content-engine/content/publish-readiness";
+import { buildPublishReadinessOptions } from "@workspace/content-engine/support/publishing/readiness-options";
 import { resolveWordPressConnectionType } from "@workspace/content-engine/support/publishing/cms-integrations";
 import { fetchGoalsAcSiteGraph } from "@workspace/connectors/goals-ac-plugin";
 import { logger } from "../logger";
 import { seedSocialPostMetrics } from "@workspace/content-engine/social/social-metrics-service";
+import { enqueueGscUrlInspectionAfterPublish } from "@workspace/content-engine/analytics/enqueue-gsc-url-inspection";
 
 const FORMAT_TO_PLATFORM: Record<string, string> = {
   linkedin_post: "linkedin",
@@ -103,13 +105,17 @@ async function publishPiece(
       siteGraphFetcher: pluginCreds ? () => fetchGoalsAcSiteGraph(pluginCreds) : undefined,
     });
 
+    const readinessOptions = await buildPublishReadinessOptions(
+      { id: piece.id, websiteProjectId: piece.websiteProjectId, targetKeyword: piece.targetKeyword },
+      { unattended: true },
+    );
     const readiness = assessPublishReadiness(
       {
         title: piece.title,
         bodyMarkdown: piece.bodyMarkdown ?? "",
         pieceMetadata: piece.pieceMetadata,
       },
-      readinessInputs,
+      { ...readinessInputs, ...readinessOptions },
     );
     for (const warning of readiness.warnings) {
       logger.warn({ pieceId, code: warning.code, message: warning.message }, "Publish readiness warning");
@@ -281,6 +287,9 @@ async function publishPiece(
       ? { lastPublishWarnings: warningMessages }
       : { lastPublishWarnings: undefined }),
     publishBlocked: undefined,
+    ...(remotePostId && publishPlatform === "wordpress"
+      ? { cmsRemoteId: remotePostId }
+      : {}),
   };
 
   await db
@@ -314,6 +323,15 @@ async function publishPiece(
   ).catch((err: unknown) => {
     logger.warn({ err, contentPieceId: pieceId }, "Brand voice ingest after publish failed");
   });
+
+  if (publishedUrl && publishPlatform) {
+    enqueueGscUrlInspectionAfterPublish({
+      projectId: piece.websiteProjectId,
+      publishedUrl,
+      publishPlatform,
+      contentPieceId: pieceId,
+    }).catch(() => {});
+  }
 }
 
 export async function processContentPublish(payload: ContentPublishPayload): Promise<void> {

@@ -177,7 +177,8 @@ export function RoadmapGeneratorApp({
       <div>
         <h2 className="font-semibold">Generate growth roadmap</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          AI-generated 12-month strategy tailored to your brand scan, site data, and goals. Saved to this project automatically.
+          12-month strategy tailored to your brand scan, site data, and goals. Saved to this project
+          automatically.
         </p>
       </div>
 
@@ -251,8 +252,8 @@ export function RoadmapGeneratorApp({
         </Button>
 
         {isPending && (
-          <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 space-y-2">
-            <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-2">
+          <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
               Building your roadmap…
             </p>
             {(Object.keys(PHASE_LABELS) as GenerationPhase[]).map((key) => {

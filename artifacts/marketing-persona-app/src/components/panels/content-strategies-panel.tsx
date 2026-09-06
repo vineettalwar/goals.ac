@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { useActiveProject } from "@/context/use-active-project";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useProjectContent } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
 
@@ -79,7 +80,7 @@ export function ContentStrategiesPanel({ embedded = false }: { embedded?: boolea
     toast.success("Content strategy generated");
   }
 
-  const containerClass = embedded ? "space-y-6" : "px-8 py-8 max-w-4xl space-y-6";
+  const containerClass = embedded ? "space-y-6" : `${APP_SHELL_PAGE} space-y-6`;
 
   if (projectLoading) {
     return (

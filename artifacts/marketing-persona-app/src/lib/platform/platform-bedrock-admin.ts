@@ -10,6 +10,9 @@ import { encryptSecret, decryptSecret } from "@workspace/security/encryption";
 import { lastFour } from "@workspace/billing";
 import { eq, inArray } from "drizzle-orm";
 import type { BedrockCredentialOptions } from "@workspace/ai-providers";
+import type { PlatformBedrockStatus } from "./platform-integration-types";
+
+export type { PlatformBedrockStatus } from "./platform-integration-types";
 
 const BEDROCK_ENV_VARS = [
   "AWS_BEARER_TOKEN_BEDROCK",
@@ -45,18 +48,6 @@ export function isBedrockManagedByEnv(): boolean {
       (envTrim("AWS_ACCESS_KEY_ID") && envTrim("AWS_SECRET_ACCESS_KEY")),
   );
 }
-
-export type PlatformBedrockStatus = {
-  managedByEnv: boolean;
-  envVars: string[];
-  accessKeyId: { configured: boolean; source: "db" | "env" | null; lastFour: string | null };
-  secretAccessKey: { configured: boolean; source: "db" | "env" | null; lastFour: string | null };
-  hasSessionToken: boolean;
-  region: { configured: boolean; value: string | null; source: "db" | "env" | null };
-  model: { configured: boolean; value: string | null; source: "db" | "env" | null };
-  configured: boolean;
-  grantedOrganizations: Array<{ id: number; name: string }>;
-};
 
 function secretFieldStatus(
   dbEncrypted: string | null | undefined,

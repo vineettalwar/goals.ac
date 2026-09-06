@@ -33,6 +33,13 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Keep Node-only deps out of the webpack graph (pg/dns; atproto undici_v* aliases).
+  serverExternalPackages: [
+    "pg",
+    "bcryptjs",
+    "@atproto/oauth-client-node",
+    "@atproto-labs/fetch-node",
+  ],
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
@@ -63,6 +70,8 @@ const nextConfig: NextConfig = {
       "@workspace/jobs/boss": "lib/jobs/src/boss.ts",
       "@workspace/jobs/queues": "lib/jobs/src/queues.ts",
       "@workspace/deepl": "lib/deepl/src/index.ts",
+      "@workspace/serp-provider": "lib/serp-provider/src/index.ts",
+      "@workspace/mcp-server": "lib/mcp-server/src/index.ts",
     },
   },
   transpilePackages: [
@@ -78,6 +87,7 @@ const nextConfig: NextConfig = {
     "@workspace/deepl",
     "@workspace/jobs",
     "@workspace/media",
+    "@workspace/mcp-server",
     "@workspace/seo-tools",
     "@workspace/serp-provider",
   ],

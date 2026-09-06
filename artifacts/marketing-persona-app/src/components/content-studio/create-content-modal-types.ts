@@ -13,6 +13,8 @@ export type WizardStepId =
   | "repurpose-format"
   | "repurpose-keyword"
   | "repurpose-source"
-  | "repurpose-generating";
+  | "repurpose-generating"
+  | "optimize-url"
+  | "optimize-importing";
 
-export type Flow = "create" | "repurpose";
+export type Flow = "create" | "repurpose" | "optimize";

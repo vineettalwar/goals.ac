@@ -74,8 +74,8 @@ export function ResearchCompetitorsView({
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
       {semrushConfigured === false ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
-          Semrush is not configured — competitor analysis is scrape + AI only.{" "}
+        <p className="rounded-xl border border-border px-4 py-3 text-sm text-muted-foreground">
+          Semrush is not configured — competitor analysis is scrape-based only.{" "}
           {renderLink({
             href: paths.settingsHref(),
             className: "font-medium text-primary underline-offset-2 hover:underline",

@@ -362,7 +362,7 @@ export function StrategyTopicalMapView({
         ))}
       </div>
       {keywords.length === 0 ? (
-        <div className="paper-card border-dashed p-8 text-center text-sm text-muted-foreground">
+        <div className="py-8 text-sm text-muted-foreground">
           Add keywords in your brand profile.
           {projectDetailHref ? (
             <>

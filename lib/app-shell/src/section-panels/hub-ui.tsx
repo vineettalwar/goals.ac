@@ -7,6 +7,7 @@ import {
   Globe,
   Lightbulb,
   Map,
+  RefreshCw,
   Search,
   Target,
   TrendingUp,
@@ -127,6 +128,13 @@ export function SearchHubGrid({
         title="Suggestions"
         hint="Keyword opportunities"
         icon={<Lightbulb className="h-4 w-4 text-amber-600" />}
+      />
+      <HubTile
+        renderLink={renderLink}
+        href="/search/refresh"
+        title="Refresh queue"
+        hint="Decay, rank drops, AI misses"
+        icon={<RefreshCw className="h-4 w-4 text-rose-600" />}
       />
       <HubTile
         renderLink={renderLink}

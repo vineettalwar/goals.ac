@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./llm-mentions": "./src/llm-mentions.ts",
+    "./backlinks": "./src/backlinks.ts"
   },
   "devDependencies": {
     "@types/node": "catalog:"

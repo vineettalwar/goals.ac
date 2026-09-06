@@ -102,6 +102,8 @@ export class DataForSeoProvider implements SerpProvider {
       }
     }
 
+    const featureTypes = Array.from(new Set(items.map((i) => i.type).filter(Boolean))) as string[];
+
     const serpFeatures: Record<string, unknown> = {
       organicCount: organic.length,
       featuredSnippet: items.some((item) => item.type === "featured_snippet"),
@@ -111,6 +113,10 @@ export class DataForSeoProvider implements SerpProvider {
         url: item.url,
         title: item.title,
       })),
+      featureTypes,
+      aiOverview: featureTypes.some((t) => t === "ai_overview" || t.includes("ai_overview")),
+      localPack: featureTypes.includes("local_pack"),
+      knowledgeGraph: featureTypes.includes("knowledge_graph"),
     };
 
     const { position, rankingUrl } = findRankingPosition(organic, targetUrl);

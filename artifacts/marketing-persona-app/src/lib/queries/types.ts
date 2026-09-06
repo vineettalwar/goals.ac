@@ -36,6 +36,8 @@ export interface KeywordOpportunity {
   estimatedVolume: string | null;
   intent: string | null;
   status: string;
+  /** Own decaying page URL for content_refresh / rank_drop sources. */
+  competitorUrl?: string | null;
   linkedContentPieceId?: number | null;
 }
 

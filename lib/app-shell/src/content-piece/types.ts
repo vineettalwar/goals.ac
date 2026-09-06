@@ -51,6 +51,15 @@ export type ContentPieceMetadata = {
   visualSummaryMarkdown?: string | null;
   visualSummarySvg?: string | null;
   visualSummarySvgDataUri?: string | null;
+  /** Content Refresh Loop — piece imported from a live URL. */
+  source?: "refresh" | null;
+  sourceUrl?: string | null;
+  fetchedCanonicalUrl?: string | null;
+  refreshOf?: number | null;
+  cmsRemoteId?: string | null;
+  cmsRemoteLink?: string | null;
+  extractTruncated?: boolean | null;
+  updateConfirmed?: boolean | null;
 };
 
 export type ContentPieceDetail = {
@@ -66,6 +75,7 @@ export type ContentPieceDetail = {
   bodyMarkdown?: string | null;
   pieceMetadata?: ContentPieceMetadata | null;
   briefId?: number | null;
+  publishedUrl?: string | null;
 };
 
 export type ContentPieceGeneratingState = {

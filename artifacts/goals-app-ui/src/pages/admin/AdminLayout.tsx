@@ -5,11 +5,10 @@ import {
   FolderKanban,
   LogOut,
   Menu,
-  Shield,
   X,
   type LucideIcon,
 } from "lucide-react";
-import { APP_SHELL_MAIN_OFFSET, cn } from "@workspace/app-shell";
+import { APP_SHELL_MAIN_OFFSET, GoalsBrandMark, cn } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { apiFetch } from "@/lib/api";
 import { ADMIN_NAV_ITEMS, isAdminNavActive } from "./admin-nav";
@@ -162,9 +161,7 @@ export function AdminLayout() {
           <Menu className="h-5 w-5" />
         </button>
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary">
-            <Shield className="h-3.5 w-3.5 text-primary-foreground" />
-          </div>
+          <GoalsBrandMark size={22} className="shrink-0 text-primary" />
           <span className="truncate text-sm font-semibold tracking-tight">goals.ac Admin</span>
         </div>
       </header>
@@ -187,9 +184,7 @@ export function AdminLayout() {
         )}
       >
         <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
-            <Shield className="h-3.5 w-3.5 text-primary-foreground" />
-          </div>
+          <GoalsBrandMark size={22} className="shrink-0 text-primary" />
           <div className="min-w-0">
             <span className="block text-sm font-semibold tracking-tight">goals.ac</span>
             <span className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">

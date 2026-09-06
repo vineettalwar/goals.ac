@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "../cn";
+import { APP_SHELL_PAGE } from "../shell-constants";
 import type { OrgIntegrationsTab } from "./types";
 
 const TABS: Array<{ id: OrgIntegrationsTab; label: string }> = [
@@ -25,7 +26,7 @@ export function OrgIntegrationsView({
   footer?: ReactNode;
 }) {
   return (
-    <div className="max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <div className={`${APP_SHELL_PAGE} space-y-6`}>
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Org integrations</h1>
         <p className="text-sm text-muted-foreground">

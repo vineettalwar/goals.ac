@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { Spinner } from "@/components/ui/spinner";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import { useActiveProject } from "@/context/use-active-project";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useVisibilityData } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
 import { SearchPropertyConnectionsPanel } from "@/components/integrations/search-property-connections-panel";
@@ -51,6 +52,9 @@ interface VisibilitySummary {
   visibilityScore: number;
   promptCount: number;
   prompts: VisibilityPrompt[];
+  dataMode: "live" | "simulated";
+  llmMentionsConfigured: boolean;
+  brandLookupCostEstimateUsd?: number;
   trend: Array<{ date: string; score: number; cited?: number; total?: number }>;
   byEngine: Array<{ engine: string; cited: number; total: number; score: number }>;
   competitorMentions: Array<{ name: string; count: number }>;
@@ -63,6 +67,7 @@ interface VisibilitySummary {
     cited: boolean;
     competitorsMentioned: string[];
     checkedAt: string;
+    source?: "live" | "simulated";
   }>;
 }
 
@@ -117,6 +122,37 @@ function isPollutedPrompt(prompt: string): boolean {
 }
 
 const ENGINE_CHIPS = ["ChatGPT", "Perplexity", "Claude", "Gemini"] as const;
+const LIVE_ENGINE_CHIPS = ["ChatGPT", "Google AI Overview"] as const;
+
+function DataModeBadges({
+  dataMode,
+  costEstimateUsd,
+}: {
+  dataMode: "live" | "simulated";
+  costEstimateUsd?: number;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {dataMode === "live" ? (
+        <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium tracking-wide text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300">
+          Live API
+        </span>
+      ) : (
+        <span className="rounded-md border border-border bg-secondary/60 px-2.5 py-1 text-xs font-medium tracking-wide text-foreground">
+          Simulated
+        </span>
+      )}
+      <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium tracking-wide text-muted-foreground">
+        {dataMode === "live" ? "DataForSEO LLM Mentions" : "Not search logs"}
+      </span>
+      {dataMode === "live" && costEstimateUsd != null ? (
+        <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium tracking-wide text-muted-foreground">
+          ~${costEstimateUsd.toFixed(2)} / lookup
+        </span>
+      ) : null}
+    </div>
+  );
+}
 
 function groupPrompts(prompts: VisibilityPrompt[]) {
   const groups = new Map<string, VisibilityPrompt[]>();
@@ -214,14 +250,16 @@ function SourcesDisclosure({ projectId }: { projectId: string }) {
 function CheckStatusBanner({
   status,
   promptCount,
+  dataMode,
 }: {
   status: "idle" | "queuing" | "running";
   promptCount: number;
+  dataMode: "live" | "simulated";
 }) {
   if (status === "idle") return null;
 
   return (
-    <div className="rounded-xl border border-primary/20 bg-primary/4 px-5 py-4">
+    <div className="rounded-xl border border-border px-5 py-4">
       <div className="flex items-start gap-3">
         <Spinner size="sm" className="mt-1" />
         <div className="min-w-0 space-y-1.5">
@@ -229,9 +267,9 @@ function CheckStatusBanner({
             {status === "queuing" ? "Starting citation check" : "Citation check running"}
           </p>
           <p className="max-w-prose text-sm leading-6 tracking-normal text-muted-foreground text-pretty">
-            Sending {promptCount} probe questions to ChatGPT, Perplexity, Claude, and Gemini. This is
-            not live search traffic. Answers usually arrive in 2–5 minutes. This page refreshes
-            automatically when results land.
+            {dataMode === "live"
+              ? "Running a live DataForSEO LLM Mentions brand lookup (ChatGPT + Google AI Overview). Results usually arrive in under a minute. This page refreshes automatically when they land."
+              : `Sending ${promptCount} probe questions through a simulated Gemini role-play of ChatGPT, Perplexity, Claude, and Gemini. This is not live search traffic. Answers usually arrive in 2–5 minutes. This page refreshes automatically when results land.`}
           </p>
         </div>
       </div>
@@ -279,6 +317,8 @@ function PendingCheckState({
   settings,
   saving,
   regenerating,
+  dataMode,
+  costEstimateUsd,
   onSettingsChange,
   onRegenerate,
 }: {
@@ -287,6 +327,8 @@ function PendingCheckState({
   settings: VisibilitySettings;
   saving: boolean;
   regenerating: boolean;
+  dataMode: "live" | "simulated";
+  costEstimateUsd?: number;
   onSettingsChange: (next: VisibilitySettings) => void;
   onRegenerate: () => void;
 }) {
@@ -294,31 +336,28 @@ function PendingCheckState({
   const groups = groupPrompts(unique);
   const duplicateCount = prompts.filter((p) => p.isActive).length - unique.length;
   const polluted = unique.some((p) => isPollutedPrompt(p.prompt));
+  const engineChips = dataMode === "live" ? LIVE_ENGINE_CHIPS : ENGINE_CHIPS;
 
   return (
     <div className="space-y-10">
       <header className="max-w-2xl space-y-4">
-        <div className="flex flex-wrap gap-2">
-          <span className="rounded-md border border-border bg-secondary/60 px-2.5 py-1 text-xs font-medium tracking-wide text-foreground">
-            Synthetic probes
-          </span>
-          <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium tracking-wide text-muted-foreground">
-            Not search logs
-          </span>
-          <span className="rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium tracking-wide text-muted-foreground">
-            Sourced from brand profile
-          </span>
-        </div>
+        <DataModeBadges dataMode={dataMode} costEstimateUsd={costEstimateUsd} />
         <div className="space-y-2">
           <h2 className="text-xl font-semibold tracking-normal">Ready to measure citations</h2>
           <p className="max-w-prose text-[15px] leading-7 tracking-normal text-muted-foreground text-pretty">
-            We write short probe questions from your brand profile, then ask four AI engines each
-            one. A citation score is the share of answers that mention your brand. These are not
-            questions real buyers typed into Google or ChatGPT.
+            {dataMode === "live"
+              ? "With DataForSEO credentials configured, Run check uses live LLM Mentions for ChatGPT and Google AI Overview. Share-of-voice and mention counts come from that API, not from our own model role-play."
+              : "Without DataForSEO LLM Mentions credentials, we write short probe questions from your brand profile and ask a simulated Gemini role-play of four AI engines. A citation score is the share of answers that mention your brand. These are not questions real buyers typed into Google or ChatGPT."}
           </p>
+          {dataMode === "live" ? (
+            <p className="max-w-prose text-sm leading-6 tracking-normal text-muted-foreground text-pretty">
+              Typical cost is about $0.20–0.40 per brand lookup
+              {costEstimateUsd != null ? ` (estimate for this project: $${costEstimateUsd.toFixed(2)})` : ""}.
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2 pt-1">
-          {ENGINE_CHIPS.map((engine) => (
+          {engineChips.map((engine) => (
             <span
               key={engine}
               className="rounded-full bg-secondary px-3 py-1 text-xs font-medium tracking-wide text-foreground"
@@ -498,11 +537,16 @@ function parsePrompts(raw: unknown): VisibilityPrompt[] {
 function parseSummary(data: Record<string, unknown> | undefined, settings: VisibilitySettings): VisibilitySummary | null {
   if (!data) return null;
   const prompts = parsePrompts(data.prompts);
+  const dataMode = data.dataMode === "live" ? "live" : "simulated";
   return {
     settings: (data.settings as VisibilitySettings) ?? settings,
     visibilityScore: (data.visibilityScore as number) ?? (data.score as { overall?: number })?.overall ?? 0,
     promptCount: (data.promptCount as number) ?? prompts.filter((p) => p.isActive).length,
     prompts,
+    dataMode,
+    llmMentionsConfigured: Boolean(data.llmMentionsConfigured) || dataMode === "live",
+    brandLookupCostEstimateUsd:
+      typeof data.brandLookupCostEstimateUsd === "number" ? data.brandLookupCostEstimateUsd : undefined,
     trend: (data.trend as VisibilitySummary["trend"]) ?? [],
     byEngine: (data.byEngine as VisibilitySummary["byEngine"]) ?? [],
     competitorMentions: (data.competitorMentions as VisibilitySummary["competitorMentions"]) ?? [],
@@ -550,6 +594,8 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
 
   const hasSnapshots = (summary?.recentSnapshots.length ?? 0) > 0;
   const hasPrompts = (summary?.promptCount ?? 0) > 0;
+  const dataMode = summary?.dataMode ?? "simulated";
+  const canRunCheck = dataMode === "live" || hasPrompts;
   const uniquePromptCount = summary ? dedupePrompts(summary.prompts).length : 0;
   const enginesWithData = summary?.byEngine.filter((e) => e.total > 0) ?? [];
 
@@ -654,7 +700,7 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
   }
 
   return (
-    <div className={embedded ? "space-y-8" : "max-w-5xl space-y-8 px-8 py-8"}>
+    <div className={embedded ? "space-y-8" : `${APP_SHELL_PAGE} space-y-8`}>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           {!embedded ? (
@@ -675,7 +721,7 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
         {projectId ? (
           <Button
             onClick={runCheckNow}
-            disabled={checking || loading || !hasPrompts || checkStatus === "running"}
+            disabled={checking || loading || !canRunCheck || checkStatus === "running"}
             size="sm"
             className="shrink-0 gap-1.5"
           >
@@ -697,7 +743,11 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
 
       {projectId && (
         <>
-          <CheckStatusBanner status={checkStatus} promptCount={uniquePromptCount || summary?.promptCount || 0} />
+          <CheckStatusBanner
+            status={checkStatus}
+            promptCount={uniquePromptCount || summary?.promptCount || 0}
+            dataMode={summary?.dataMode ?? "simulated"}
+          />
 
           {error && (
             <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -709,7 +759,7 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
           {loading ? (
             <PageSkeleton />
           ) : summary ? (
-            !hasPrompts ? (
+            !hasPrompts && summary.dataMode !== "live" ? (
               <SetupEmptyState
                 projectId={projectId}
                 settings={settings}
@@ -723,11 +773,32 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
                 settings={settings}
                 saving={saving}
                 regenerating={regenerating}
+                dataMode={summary.dataMode}
+                costEstimateUsd={summary.brandLookupCostEstimateUsd}
                 onSettingsChange={saveSettings}
                 onRegenerate={regeneratePrompts}
               />
             ) : (
               <div className="space-y-8">
+                <DataModeBadges
+                  dataMode={summary.dataMode}
+                  costEstimateUsd={summary.brandLookupCostEstimateUsd}
+                />
+                {summary.dataMode === "live" ? (
+                  <p className="max-w-prose text-sm leading-6 tracking-normal text-muted-foreground text-pretty">
+                    Live results use DataForSEO LLM Mentions (ChatGPT + Google AI Overview). Typical cost is
+                    about $0.20–0.40 per lookup
+                    {summary.brandLookupCostEstimateUsd != null
+                      ? ` (this project ≈ $${summary.brandLookupCostEstimateUsd.toFixed(2)})`
+                      : ""}
+                    .
+                  </p>
+                ) : (
+                  <p className="max-w-prose text-sm leading-6 tracking-normal text-muted-foreground text-pretty">
+                    Simulated mode: probe answers come from a Gemini role-play of four engines, not live
+                    ChatGPT or Google AI Overview logs. Configure DataForSEO credentials to switch to Live API.
+                  </p>
+                )}
                 <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-10">
                   <div>
                     <p className="text-xs font-medium uppercase tracking-[0.08em] text-muted-foreground">
@@ -821,12 +892,33 @@ export function AiVisibilityDashboard({ embedded = false }: { embedded?: boolean
                             </span>
                           </div>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            {ENGINE_LABELS[snap.engine] ?? snap.engine} ·{" "}
+                            {ENGINE_LABELS[snap.engine] ?? snap.engine}
+                            {snap.source === "live" ? " · Live API" : snap.source === "simulated" ? " · Simulated" : null}
+                            {" · "}
                             {new Date(snap.checkedAt).toLocaleString("en-US", { timeZone: "UTC" })} UTC
                             {snap.competitorsMentioned?.length > 0
                               ? ` · Also mentioned: ${snap.competitorsMentioned.join(", ")}`
                               : null}
                           </p>
+                          {!snap.cited && projectId ? (
+                            <div className="mt-2 flex flex-wrap gap-3">
+                              <Link
+                                href={`/projects/${projectId}/content-studio?${new URLSearchParams({
+                                  optimize: "1",
+                                  keyword: snap.prompt.slice(0, 80),
+                                }).toString()}`}
+                                className="text-xs font-medium text-primary hover:underline"
+                              >
+                                Optimize for this prompt
+                              </Link>
+                              <Link
+                                href="/search/refresh"
+                                className="text-xs font-medium text-muted-foreground hover:text-primary hover:underline"
+                              >
+                                Open refresh queue
+                              </Link>
+                            </div>
+                          ) : null}
                         </li>
                       ))}
                     </ul>

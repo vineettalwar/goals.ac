@@ -1,4 +1,8 @@
 import type { ReactNode } from "react";
+import {
+  APP_SHELL_PAGE,
+  APP_SHELL_PAGE_WIDE,
+} from "@workspace/app-shell/shell-constants";
 import { AdminSubnav, type AdminSubnavItem } from "@/components/admin/layout/admin-subnav";
 
 interface AdminSectionLayoutProps {
@@ -19,7 +23,7 @@ export function AdminSectionLayout({
   wide = false,
 }: AdminSectionLayoutProps) {
   return (
-    <div className={`space-y-6 px-8 py-8 ${wide ? "max-w-6xl" : "max-w-5xl"}`}>
+    <div className={`space-y-6 ${wide ? APP_SHELL_PAGE_WIDE : APP_SHELL_PAGE}`}>
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{title}</h1>

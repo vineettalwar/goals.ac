@@ -4,6 +4,7 @@ import { geoAuditsTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { GeoAuditResultView } from "@/components/geo-audit/geo-audit-result-view";
 import { parseGeoIssues } from "@/lib/content/parse-geo-issues";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 
 export default async function AuditResultPage({
   params,
@@ -47,7 +48,7 @@ export default async function AuditResultPage({
   const issues = parseGeoIssues(audit.issues);
 
   return (
-    <div className="px-8 py-8">
+    <div className={APP_SHELL_PAGE}>
       <GeoAuditResultView
         url={audit.url}
         geoScore={audit.geoScore}

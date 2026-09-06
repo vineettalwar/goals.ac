@@ -138,6 +138,7 @@ Hero entrances: `.hero-reveal`, `.hero-fade`, `.hero-zoom` with `cubic-bezier(0.
 
 ### App patterns
 
+- **Page chrome (locked):** import `APP_SHELL_PAGE` or `APP_SHELL_PAGE_WIDE` from `@workspace/app-shell/shell-constants`. Left-aligned, shared gutters — never `mx-auto` page roots beside the sidebar. See `.cursor/rules/app-shell-grid.mdc`.
 - Dialogs: `max-w-2xl` forms, `max-h-[85vh] overflow-y-auto`
 - Status colors: draft `muted-foreground`, ready blue, published green, error `destructive`, cached amber
 - Sidebar: `--sidebar-bg` white, `--sidebar-border` matches `--border`
@@ -160,3 +161,4 @@ Hero entrances: `.hero-reveal`, `.hero-fade`, `.hero-zoom` with `cubic-bezier(0.
 - Add tracked uppercase eyebrows to every section — one deliberate label system max
 - Use left accent rails, gradient text, or hero-metric stat grids
 - Exceed `rounded-2xl` (16px) on large section cards; reserve full pill for tags and hero CTAs
+- Invent per-page product shells (`mx-auto max-w-* px-4 py-8…`) — use `APP_SHELL_PAGE` / `APP_SHELL_PAGE_WIDE`

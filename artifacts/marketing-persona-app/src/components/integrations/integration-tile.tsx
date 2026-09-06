@@ -154,7 +154,7 @@ export function IntegrationTabBadge({
 
 export function IntegrationTilesSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {Array.from({ length: count }, (_, index) => (
         <div
           key={index}

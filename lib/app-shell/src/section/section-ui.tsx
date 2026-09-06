@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../cn";
+import { APP_SHELL_PAGE } from "../shell-constants";
 import type { SectionLinkProps, SectionProject, SectionTab } from "./types";
 
 function SectionLink({
@@ -148,7 +149,7 @@ export function SectionShell({
     !projectSwitcher && requireProject && projectList.length > 0 && onProjectChange;
 
   return (
-    <div className="max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className={APP_SHELL_PAGE}>
       <h1 className="mb-2 text-2xl font-bold">{title}</h1>
       <p className="mb-6 text-sm text-muted-foreground">{description}</p>
 
@@ -225,7 +226,7 @@ export function SectionDetailLayout({
   className?: string;
 }) {
   return (
-    <div className={cn("max-w-4xl px-4 py-8 sm:px-6 lg:px-8", className)}>
+    <div className={cn(APP_SHELL_PAGE, className)}>
       <SectionLink
         renderLink={renderLink}
         href={backHref}

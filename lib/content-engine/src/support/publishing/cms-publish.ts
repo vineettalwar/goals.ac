@@ -18,7 +18,7 @@ import {
 } from "@workspace/connectors/goals-ac-plugin";
 import { planInternalLinks, type LinkSourcePost } from "../../strategy/internal-link-planner";
 import { logger } from "../../core/logger";
-import { publishToWordPress } from "@workspace/connectors/wordpress";
+import { publishToWordPress, wordpressSlugFromTitle } from "@workspace/connectors/wordpress";
 import type { ContentPieceMetadata } from "@workspace/db";
 // See the note on assertVerticalReviewCleared in publish-destination.ts: the db
 // column type predates the vertical guardrail fields, so reading requiresReview
@@ -270,8 +270,13 @@ export async function publishPieceToWordPress(
   // Legacy Express path (@deprecated re-export in publish-destination.ts) — kept
   // idempotent the same way the primary adapter path is: reuse a prior remote
   // post id for this piece rather than always creating a new post.
+  const metadataRemoteId =
+    typeof piece.pieceMetadata?.cmsRemoteId === "string" && piece.pieceMetadata.cmsRemoteId.trim()
+      ? piece.pieceMetadata.cmsRemoteId.trim()
+      : undefined;
   const existingRemoteId =
-    piece.id != null ? ((await getLatestPublishedRemoteId(piece.id, "wordpress")) ?? undefined) : undefined;
+    metadataRemoteId ??
+    (piece.id != null ? ((await getLatestPublishedRemoteId(piece.id, "wordpress")) ?? undefined) : undefined);
   const result = await publishToWordPress(
     wpCreds,
     seo.seoTitle ?? piece.title,
@@ -280,7 +285,11 @@ export async function publishPieceToWordPress(
     seo.metaDescription,
     undefined,
     Object.keys(wpMeta).length > 0 ? wpMeta : undefined,
-    { featuredMediaId, existingRemoteId },
+    {
+      featuredMediaId,
+      existingRemoteId,
+      slug: wordpressSlugFromTitle(seo.seoTitle ?? piece.title) ?? undefined,
+    },
   );
   if (result.metaWarning) {
     logger.warn({ pieceId: piece.id, url: result.url }, result.metaWarning);

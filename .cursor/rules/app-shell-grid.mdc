@@ -1,0 +1,47 @@
+---
+description: Product app page grid is locked to APP_SHELL_PAGE / APP_SHELL_PAGE_WIDE
+alwaysApply: true
+---
+
+# App shell page grid — locked
+
+Product UI (`(app)`, admin, `lib/app-shell`) shares **one** page chrome. Do not invent per-page max-widths, paddings, or centering.
+
+## Source of truth
+
+`lib/app-shell/src/shell-constants.ts`:
+
+| Constant | Use |
+|---|---|
+| `APP_SHELL_PAGE` | Standard pages (`max-w-5xl`) |
+| `APP_SHELL_PAGE_WIDE` | Dashboard, Content Studio, dense data (`max-w-7xl`) |
+| `APP_SHELL_MAIN_OFFSET` | Main column top offset for mobile header only |
+
+Import from `@workspace/app-shell/shell-constants` (or package index).
+
+## Locked rules
+
+- **Left-align** — never `mx-auto` on product page shells. Centering beside the sidebar opens a void gutter on wide screens.
+- **Same gutters** — `px-4 py-8 sm:px-6 lg:px-8` only via the constants above. Do not hand-roll `px-4 py-8 sm:px-6…` on page roots.
+- **Pick one width** — `APP_SHELL_PAGE` or `APP_SHELL_PAGE_WIDE`. No `max-w-3xl` / `max-w-6xl` page roots (inner content measures like `max-w-prose` are fine).
+- **Grids inside pages** — children use `min-w-0` when in CSS grid/flex so columns stay equal and do not clip.
+
+## Do not
+
+```tsx
+// bad — ad-hoc shell
+<div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+
+// bad — centered beside sidebar
+<div className="mx-auto w-full max-w-5xl …">
+```
+
+```tsx
+// good
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
+<div className={APP_SHELL_PAGE}>
+```
+
+Marketing `(public)` pages are exempt (they keep their own centered marketing measure).
+
+**Enforced in:** `lib/app-shell/src/shell-constants.ts`, `.agents/skills/goals-ac-conventions/SKILL.md`, `docs/memory.md`.

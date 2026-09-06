@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useActiveProject } from "@/context/use-active-project";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import {
   useGoals,
   useBriefs,
@@ -226,7 +227,7 @@ export function GoalsPanel({ embedded = false }: { embedded?: boolean }) {
     toast.success("Brief approved");
   }
 
-  const containerClass = embedded ? "space-y-8" : "px-8 py-8 max-w-4xl space-y-8";
+  const containerClass = embedded ? "space-y-8" : `${APP_SHELL_PAGE} space-y-8`;
 
   return (
     <div className={containerClass}>

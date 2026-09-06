@@ -95,6 +95,7 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 - MFA TOTP (schema + settings UI; verification not enforced yet)
 - SSO/OIDC (not started)
 - Redis-backed rate limits for multi-instance deploy
+- OpenSEO hybrid integration: Features 1–2 shipped in lib + Next (migrate `0076`–`0077`); Feature 3 MCP is next — see `docs/prd/openseo-integration-index.md`
 
 ## Known Issues / Fragile Areas
 

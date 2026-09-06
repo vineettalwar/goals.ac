@@ -133,10 +133,18 @@ export async function renderAndPublish(
   const wpStatus =
     input.status === "draft" ? "draft" : input.status === "published" ? "published" : "publish";
 
-  const existingRemoteId =
-    input.piece.id && adapter.capabilities.updates
-      ? ((await getLatestPublishedRemoteId(input.piece.id, input.platform)) ?? undefined)
+  // Refresh pieces stash cmsRemoteId at import; prefer that over publish_records
+  // so optimize-existing-page updates the live WP post, not a new draft.
+  const metadataRemoteId =
+    typeof input.piece.pieceMetadata?.cmsRemoteId === "string" &&
+    input.piece.pieceMetadata.cmsRemoteId.trim()
+      ? input.piece.pieceMetadata.cmsRemoteId.trim()
       : undefined;
+  const existingRemoteId =
+    metadataRemoteId ??
+    (input.piece.id && adapter.capabilities.updates
+      ? ((await getLatestPublishedRemoteId(input.piece.id, input.platform)) ?? undefined)
+      : undefined);
 
   const remote = await adapter.publish(input.creds, renderResult.payload, {
     status: wpStatus,

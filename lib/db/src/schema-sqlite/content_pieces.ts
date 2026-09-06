@@ -137,6 +137,24 @@ export type ContentPieceMetadata = {
     blockedAt: string;
     attempt?: number;
   };
+  /** Content Refresh Loop — piece imported from a live URL (not generated). */
+  source?: "refresh";
+  /** URL the user asked to optimize. */
+  sourceUrl?: string;
+  /** Canonical URL from the fetched page `<link rel="canonical">`, when present. */
+  fetchedCanonicalUrl?: string;
+  /** Optional prior content piece this refresh replaces. */
+  refreshOf?: number;
+  /** WordPress (or other CMS) remote post id for update-in-place publish. */
+  cmsRemoteId?: string;
+  /** Remote post link matched at import time (for confirm UI). */
+  cmsRemoteLink?: string;
+  /** True when body was truncated for import size limits. */
+  extractTruncated?: boolean;
+  /** User confirmed CMS update target before publish (WP-first refresh). */
+  updateConfirmed?: boolean;
+  /** Secondary / coverage keywords for dual score checklist. */
+  secondaryKeywords?: string[];
 };
 
 export const contentPiecesTable = sqliteTable("content_pieces", {

@@ -5,9 +5,10 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ArrowRight, ChevronDown, ChevronUp, Map, Pin, PinOff } from "lucide-react";
+import { ArrowRight, ChevronDown, ChevronUp, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import dynamic from "next/dynamic";
 import { useActiveProject } from "@/context/use-active-project";
 import { useProjectContent, useRoadmapsCatalog, useWebsiteProject } from "@/lib/queries";
@@ -123,7 +124,7 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
   const pinnedIds = new Set(projectRoadmaps.map((r) => r.id));
   const unpinnedCatalog = (catalogRoadmaps as RoadmapSummary[]).filter((r) => !pinnedIds.has(r.id));
 
-  const containerClass = embedded ? "space-y-8" : "px-8 py-8 max-w-5xl space-y-8";
+  const containerClass = embedded ? "space-y-8" : `${APP_SHELL_PAGE} space-y-8`;
 
   if (projectLoading && !activeProjectId) {
     return (
@@ -147,21 +148,22 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
           <p className="mt-1 text-sm text-muted-foreground">
             {activeProject
               ? `12-month growth strategies for ${activeProject.name}`
-              : "AI-generated B2B growth strategies tied to your projects"}
+              : "B2B growth strategies tied to your projects"}
           </p>
         </div>
       ) : null}
 
       {!activeProjectId ? (
-        <div className="paper-card rounded-xl flex flex-col items-center justify-center p-12 text-center">
-          <Map className="h-10 w-10 text-muted-foreground mb-3" />
+        <div className="py-12">
           <p className="font-medium">No project selected</p>
-          <p className="text-sm text-muted-foreground mt-1 mb-4">
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
             Create a website project to generate and save roadmaps.
           </p>
-          <Link href="/projects">
-            <Button>Create project</Button>
-          </Link>
+          <div className="mt-5">
+            <Link href="/projects">
+              <Button>Create project</Button>
+            </Link>
+          </div>
         </div>
       ) : (
         <RoadmapGeneratorApp
@@ -180,10 +182,9 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
             <Spinner />
           </div>
         ) : !activeProjectId ? null : projectRoadmaps.length === 0 ? (
-          <div className="paper-card rounded-xl flex flex-col items-center justify-center p-12 text-center">
-            <Map className="h-10 w-10 text-muted-foreground mb-3" />
+          <div className="py-8">
             <p className="font-medium">No roadmaps yet</p>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="mt-1 max-w-md text-sm text-muted-foreground">
               Generate your first roadmap above, or pin one from the catalog below.
             </p>
           </div>

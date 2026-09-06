@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { APP_SHELL_PAGE } from "../shell-constants";
 
 export type ProjectLinkProps = {
   href: string;
@@ -50,7 +51,7 @@ export function ProjectsView({
   onDeleteProject?: (project: ProjectListItem) => void;
 }) {
   return (
-    <div className="max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className={APP_SHELL_PAGE}>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">Projects</h1>
@@ -149,26 +150,12 @@ export function ProjectsView({
 
 function ProjectsEmptyState({ newProjectAction }: { newProjectAction: ReactNode }) {
   return (
-    <div className="paper-card flex flex-col items-center justify-center gap-4 p-16 text-center">
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        className="h-10 w-10 text-muted-foreground/40"
-        aria-hidden
-      >
-        <circle cx="12" cy="12" r="10" />
-        <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-      </svg>
-      <div>
-        <p className="font-medium">No projects yet</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Create a project to generate content strategies, roadmaps, and SEO articles for your
-          website.
-        </p>
-      </div>
-      {newProjectAction}
+    <div className="py-12">
+      <p className="font-medium">No projects yet</p>
+      <p className="mt-1 max-w-md text-sm text-muted-foreground">
+        Create a project to plan strategy, roadmaps, and SEO articles for your site.
+      </p>
+      <div className="mt-5">{newProjectAction}</div>
     </div>
   );
 }

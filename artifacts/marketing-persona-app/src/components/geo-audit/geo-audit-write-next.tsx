@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Lightbulb, PenLine, ArrowRight } from "lucide-react";
+import { PenLine, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormatBadge } from "@/components/content-studio/content-studio-format-meta";
 import {
@@ -21,24 +21,19 @@ export function GeoAuditWriteNext({ recommendations, projectId }: GeoAuditWriteN
   const topPick = recommendations[0];
 
   return (
-    <div className="paper-card rounded-2xl p-6 space-y-5 border-primary/20 bg-primary/5">
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <Lightbulb className="h-4 w-4 text-primary" />
-        </div>
-        <div>
-          <h2 className="font-semibold">Write next</h2>
-          <p className="text-sm text-muted-foreground mt-0.5">
-            Content ideas tied to failed checks — create in Content Studio to fix technical gaps
-            with publish-ready copy.
-          </p>
-        </div>
+    <div className="paper-card rounded-2xl p-6 space-y-5">
+      <div>
+        <h2 className="font-semibold">Write next</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">
+          Content ideas tied to failed checks — create in Content Studio to fix technical gaps
+          with publish-ready copy.
+        </p>
       </div>
 
       {topPick && (
-        <div className="rounded-xl border border-primary/20 bg-background p-4 space-y-3">
+        <div className="rounded-xl border border-border bg-background p-4 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-primary">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Top pick
             </span>
             <FormatBadge type={topPick.formatType} />

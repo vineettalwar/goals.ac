@@ -7,6 +7,7 @@ import { Map, TrendingUp, Zap, CircleCheck, CircleDashed, ChevronDown, ChevronRi
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useActiveProject } from "@/context/use-active-project";
 
 interface SupportingTopic {
@@ -94,7 +95,7 @@ export function TopicalMapPanel({ embedded = false }: { embedded?: boolean }) {
     setMap(data.map);
   }
 
-  const containerClass = embedded ? "space-y-6" : "px-8 py-8 max-w-5xl space-y-6";
+  const containerClass = embedded ? "space-y-6" : `${APP_SHELL_PAGE} space-y-6`;
 
   if (projectLoading && !activeProjectId) {
     return (

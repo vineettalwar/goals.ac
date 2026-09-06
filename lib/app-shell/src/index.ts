@@ -3,7 +3,12 @@ export {
   type AppShellLinkProps,
   type AppSidebarShellProps,
 } from "./AppSidebarShell";
-export { APP_SHELL_MAIN_OFFSET } from "./shell-constants";
+export { GoalsBrandMark } from "./brand-mark";
+export {
+  APP_SHELL_MAIN_OFFSET,
+  APP_SHELL_PAGE,
+  APP_SHELL_PAGE_WIDE,
+} from "./shell-constants";
 export { cn } from "./cn";
 export {
   buildNavModel,

@@ -1,6 +1,7 @@
 import { db } from "@workspace/db";
 import {
   articleIdeaSourcesTable,
+  gscUrlInspectionsTable,
   keywordOpportunitiesTable,
   keywordRankAlertsTable,
   keywordRankSnapshotsTable,
@@ -192,6 +193,45 @@ export async function handleKeywordRead(
     );
     const enriched = await attachLinkedContentPieces(projectId, opportunities);
     return withCors(request, Response.json({ opportunities: enriched }));
+  }
+
+  const refreshQueueMatch = path.match(/^\/api\/website-projects\/(\d+)\/refresh-queue$/);
+  if (refreshQueueMatch && method === "GET") {
+    const projectId = Number.parseInt(refreshQueueMatch[1]!, 10);
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+    const { listRefreshQueueItems } = await import(
+      "@workspace/content-engine/strategy/refresh-queue-service"
+    );
+    const items = await listRefreshQueueItems(projectId);
+    return withCors(request, Response.json({ items }));
+  }
+
+  const gscInspectionsMatch = path.match(/^\/api\/website-projects\/(\d+)\/gsc-url-inspections$/);
+  if (gscInspectionsMatch && method === "GET") {
+    const projectId = Number.parseInt(gscInspectionsMatch[1]!, 10);
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+    const limit = Math.min(Number(url.searchParams.get("limit") ?? 20), 100);
+    const contentPieceId = url.searchParams.get("contentPieceId");
+    const conditions = [eq(gscUrlInspectionsTable.websiteProjectId, projectId)];
+    if (contentPieceId) {
+      const cpId = Number(contentPieceId);
+      if (!Number.isNaN(cpId)) {
+        conditions.push(eq(gscUrlInspectionsTable.contentPieceId, cpId));
+      }
+    }
+    const rows = await db
+      .select()
+      .from(gscUrlInspectionsTable)
+      .where(and(...conditions))
+      .orderBy(desc(gscUrlInspectionsTable.inspectedAt))
+      .limit(limit);
+    return withCors(request, Response.json({ inspections: rows }));
   }
 
   const commandCenterMatch = path.match(/^\/api\/website-projects\/(\d+)\/command-center$/);

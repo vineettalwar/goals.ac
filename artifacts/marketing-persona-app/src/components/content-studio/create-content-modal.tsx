@@ -15,6 +15,7 @@ interface Props {
   existingPieces: ContentPieceRow[];
   onCreated: (piece: ContentPieceRow) => void;
   initialDraft?: BriefContentDraft | null;
+  initialOptimize?: { url: string; keyword: string } | null;
   cmsConnections?: CmsConnectionSnapshot;
   primaryBlogDestination?: string | null;
   activeProvider?: AiProviderId;

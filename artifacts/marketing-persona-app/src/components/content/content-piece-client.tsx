@@ -625,6 +625,20 @@ export function ContentPieceClient({
         stockImagesConfigured={stockImagesConfigured}
         fetchDualScore={fetchDualScore}
         fetchBrief={fetchBrief}
+        onSaveCmsRemoteId={async (cmsRemoteId) => {
+          const res = await fetch(`/api/content-pieces/${pieceId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cmsRemoteId }),
+          });
+          if (!res.ok) {
+            toast.error("Failed to save WordPress post id");
+            return;
+          }
+          const updated = await res.json();
+          setPieceRecord((prev) => mergePieceJson(updated, prev));
+          toast.success(cmsRemoteId ? "WordPress post id saved" : "WordPress post id cleared");
+        }}
         renderLink={({ href, className, children }) => (
           <Link href={href} className={className}>
             {children}
@@ -648,11 +662,49 @@ export function ContentPieceClient({
           setPublishing(true);
           setPublishMessage(null);
           try {
-            const res = await fetch(`/api/content-pieces/${pieceId}/publish`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ platform, async: true }),
-            });
+            const publishOnce = async (confirmCmsUpdate?: boolean) => {
+              const res = await fetch(`/api/content-pieces/${pieceId}/publish`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  platform,
+                  async: true,
+                  ...(confirmCmsUpdate ? { confirmCmsUpdate: true } : {}),
+                }),
+              });
+              return res;
+            };
+
+            let res = await publishOnce();
+            if (res.status === 422) {
+              const body = (await res.json().catch(() => null)) as {
+                needsConfirm?: boolean;
+                cmsRemoteId?: string | null;
+                cmsRemoteLink?: string | null;
+                sourceUrl?: string | null;
+                createNew?: boolean;
+                error?: string;
+              } | null;
+              if (body?.needsConfirm) {
+                const target =
+                  body.cmsRemoteLink ||
+                  (body.cmsRemoteId ? `WordPress post #${body.cmsRemoteId}` : null) ||
+                  body.sourceUrl ||
+                  "this page";
+                const msg = body.createNew
+                  ? `No matching WordPress post for ${body.sourceUrl ?? "this URL"}. Publish as a new post?`
+                  : `Update existing WordPress post (${target})? This overwrites the live page.`;
+                if (!confirm(msg)) {
+                  setPublishMessage("Publish cancelled");
+                  return;
+                }
+                res = await publishOnce(true);
+              } else {
+                setPublishMessage(body?.error ?? "Failed to publish");
+                toast.error(body?.error ?? "Failed to publish");
+                return;
+              }
+            }
             if (!res.ok) {
               setPublishMessage("Failed to publish");
               toast.error("Failed to publish");

@@ -1,4 +1,3 @@
-import { ScanSearch } from "lucide-react";
 import { cn } from "../cn";
 import { aiProviderUnavailableMessage } from "./studio-hub-utils";
 
@@ -85,9 +84,9 @@ export function BrandAiProfileCard({
 }) {
   if (loading) {
     return (
-      <div className={cn("paper-card mb-6 animate-pulse rounded-xl border-primary/20 p-4", className)}>
-        <div className="h-4 w-48 rounded bg-muted" />
-        <div className="mt-3 h-3 w-full rounded bg-muted" />
+      <div className={cn("mb-6 animate-pulse border-b border-border pb-5", className)}>
+        <div className="h-4 w-32 rounded bg-muted" />
+        <div className="mt-3 h-3 w-full max-w-2xl rounded bg-muted" />
       </div>
     );
   }
@@ -102,83 +101,60 @@ export function BrandAiProfileCard({
     (profile.scanSources?.length ?? 0) > 0
       ? profile.scanSources!
       : (memory?.scanSources ?? []);
+  const summary =
+    memory?.summary ||
+    profile.voiceTone ||
+    "Voice and focus topics come from your site scan.";
+  const metaBits = [
+    scanning ? "Scanning website…" : null,
+    memory?.confidence?.summary ? `${memory.confidence.summary} confidence` : null,
+    discoveryLabel ? `via ${discoveryLabel}` : null,
+    lastScannedLabel ? `Last scanned ${lastScannedLabel}` : null,
+  ].filter(Boolean);
 
   return (
-    <div className={cn("paper-card mb-6 rounded-xl border-primary/20 p-4", className)}>
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <ScanSearch className="h-4 w-4 text-primary" aria-hidden />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-sm font-semibold">AI-built brand profile</h2>
-            {scanning ? (
-              <span className="inline-flex rounded-full border border-input px-2 py-0.5 text-xs">
-                Scanning website…
-              </span>
-            ) : null}
-            {memory?.confidence?.summary ? (
-              <span className="inline-flex rounded-full bg-secondary px-2 py-0.5 text-xs capitalize">
-                {memory.confidence.summary} confidence
-              </span>
-            ) : null}
-          </div>
-          {memory?.summary ? (
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{memory.summary}</p>
-          ) : profile.voiceTone ? (
-            <p className="mt-2 text-sm text-muted-foreground">{profile.voiceTone}</p>
-          ) : (
-            <p className="mt-2 text-sm text-muted-foreground">
-              We scan your website on project create to build voice and keywords automatically.
-            </p>
-          )}
-          {discoveryLabel ? (
-            <p className="mt-2 text-xs text-muted-foreground">Scanned via {discoveryLabel}</p>
-          ) : null}
-          {lastScannedLabel ? (
-            <p className="mt-1 text-xs text-muted-foreground">Last scanned {lastScannedLabel}</p>
-          ) : null}
-          {(memory?.voiceTraits?.length ?? 0) > 0 ? (
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {memory!.voiceTraits!.map((trait) => (
-                <span
-                  key={trait}
-                  className="inline-flex rounded-full border border-input px-2 py-0.5 text-xs font-normal"
-                >
-                  {trait}
-                </span>
-              ))}
-            </div>
-          ) : null}
-          {(profile.primaryKeywords?.length ?? 0) > 0 ? (
-            <p className="mt-3 text-xs text-muted-foreground">
-              Focus topics: {profile.primaryKeywords!.slice(0, 6).join(", ")}
-            </p>
-          ) : null}
-          {scanSources.length > 0 ? (
-            <div className="mt-3">
-              <p className="text-xs font-medium text-muted-foreground">Pages scanned</p>
-              <ul className="mt-1 space-y-0.5">
-                {scanSources.slice(0, 6).map((source) => (
-                  <li key={source}>
-                    <a
-                      href={source}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block truncate text-xs text-primary hover:underline"
-                    >
-                      {source.replace(/^https?:\/\//, "")}
-                    </a>
-                  </li>
-                ))}
-                {scanSources.length > 6 ? (
-                  <li className="text-xs text-muted-foreground">+{scanSources.length - 6} more</li>
-                ) : null}
-              </ul>
-            </div>
-          ) : null}
-        </div>
+    <div className={cn("mb-6 border-b border-border pb-5", className)}>
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <h2 className="text-sm font-semibold text-foreground">Brand voice</h2>
+        {metaBits.length > 0 ? (
+          <p className="text-xs text-muted-foreground">{metaBits.join(" · ")}</p>
+        ) : null}
       </div>
+      <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">{summary}</p>
+      {(memory?.voiceTraits?.length ?? 0) > 0 ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Traits: {memory!.voiceTraits!.join(" · ")}
+        </p>
+      ) : null}
+      {(profile.primaryKeywords?.length ?? 0) > 0 ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          Focus: {profile.primaryKeywords!.slice(0, 6).join(", ")}
+        </p>
+      ) : null}
+      {scanSources.length > 0 ? (
+        <details className="mt-3">
+          <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
+            Pages scanned ({scanSources.length})
+          </summary>
+          <ul className="mt-1.5 space-y-0.5">
+            {scanSources.slice(0, 6).map((source) => (
+              <li key={source}>
+                <a
+                  href={source}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate text-xs text-primary hover:underline"
+                >
+                  {source.replace(/^https?:\/\//, "")}
+                </a>
+              </li>
+            ))}
+            {scanSources.length > 6 ? (
+              <li className="text-xs text-muted-foreground">+{scanSources.length - 6} more</li>
+            ) : null}
+          </ul>
+        </details>
+      ) : null}
     </div>
   );
 }

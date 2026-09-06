@@ -7,13 +7,13 @@ import {
   BarChart2,
   CheckCircle2,
   Copy,
-  FileText,
   Globe,
   Printer,
   ScanSearch,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatCard } from "@workspace/app-shell/section-panels";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 import { STORY_KIT_MARKDOWN_TEMPLATE } from "@/lib/marketing/content/story-kit-constants";
 import { cn } from "@/lib/utils";
 
@@ -86,7 +86,7 @@ export function PartnerWorkspaceClient({ projects, organizationName, generatedAt
   });
 
   return (
-    <div className="px-8 py-8 max-w-6xl space-y-8">
+    <div className={`${APP_SHELL_PAGE_WIDE} space-y-8`}>
       <style>{`
         @media print {
           body * { visibility: hidden !important; }
@@ -341,18 +341,13 @@ export function PartnerWorkspaceClient({ projects, organizationName, generatedAt
           )}
         </section>
 
-        <aside className="partner-no-print flex flex-wrap items-center justify-between gap-4 rounded-xl border border-primary/15 bg-primary/3 px-5 py-4">
-          <div className="flex min-w-0 items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <FileText className="h-4 w-4" />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold tracking-tight">Client story template</p>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground text-pretty">
-                Placeholder markdown for approved client stories — fill from GSC, GEO, or authority
-                exports only.
-              </p>
-            </div>
+        <aside className="partner-no-print flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border px-5 py-4">
+          <div className="min-w-0">
+            <p className="text-sm font-semibold tracking-tight">Client story template</p>
+            <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground text-pretty">
+              Placeholder markdown for approved client stories — fill from GSC, GEO, or authority
+              exports only.
+            </p>
           </div>
           <Button onClick={handleCopyTemplate} size="sm" variant="outline" className="shrink-0">
             {copied ? (

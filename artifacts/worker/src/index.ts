@@ -39,6 +39,8 @@ import {
   SOCIAL_HISTORY_SYNC_CRON,
   registerSocialMetricsSyncHandler,
   SOCIAL_METRICS_SYNC_CRON,
+  registerSiteAuditCrawlHandler,
+  registerGscUrlInspectionHandler,
 } from "@workspace/jobs";
 import pino from "pino";
 import { startHealthServer, stopHealthServer } from "./health-server";
@@ -83,6 +85,8 @@ async function main(): Promise<void> {
   await registerEvergreenRecycleSweepHandler(boss);
   await registerSocialHistorySyncHandler(boss);
   await registerSocialMetricsSyncHandler(boss);
+  await registerSiteAuditCrawlHandler(boss);
+  await registerGscUrlInspectionHandler(boss);
 
   await scheduleCron(QUEUES.connectionHealthCheck, CONNECTION_HEALTH_CHECK_CRON, {});
   await scheduleCron(QUEUES.keywordRankCheck, KEYWORD_RANK_SWEEP_CRON, {});

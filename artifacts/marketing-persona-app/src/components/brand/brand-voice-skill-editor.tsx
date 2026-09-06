@@ -115,7 +115,7 @@ export function BrandVoiceSkillEditor({ projectId }: Props) {
             Brand Voice Skill
           </h3>
           <p className="text-xs text-muted-foreground mt-0.5">
-            AI-generated voice guide from your indexed content. Edit to tune how content is written.
+            Voice guide from your indexed content. Edit to tune how drafts are written.
           </p>
         </div>
         {stats && (

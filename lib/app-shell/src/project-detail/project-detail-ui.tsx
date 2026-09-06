@@ -15,6 +15,7 @@ import {
 import { BrandProfileEditView } from "./brand-edit-ui";
 import { VoiceStyleEditView } from "./voice-edit-ui";
 import { cn } from "../cn";
+import { APP_SHELL_PAGE } from "../shell-constants";
 import {
   brandProfileToFormValues,
   contentPiecePath,
@@ -106,7 +107,7 @@ function BrandTabPanel({
 
   if (!brand) {
     return (
-      <div className="paper-card rounded-xl border-dashed p-12 text-center">
+      <div className="py-8">
         <p className="text-sm text-muted-foreground">
           No brand profile yet. Run a website scan on the Brand tab.
         </p>
@@ -168,7 +169,7 @@ function VoiceTabPanel({
 
   if (!style) {
     return (
-      <div className="paper-card rounded-xl border-dashed p-12 text-center">
+      <div className="py-8">
         <p className="text-sm text-muted-foreground">No brand voice settings configured yet.</p>
       </div>
     );
@@ -200,17 +201,15 @@ function ContentTabPanel({
 }) {
   if (pieces.length === 0) {
     return (
-      <div className="paper-card flex flex-col items-center rounded-xl border-dashed p-12 text-center">
-        <FileText className="mb-4 h-10 w-10 text-primary/60" aria-hidden />
-        <h3 className="mb-2 text-lg font-semibold">No content yet</h3>
-        <p className="mb-6 max-w-sm text-sm text-muted-foreground">
-          Generate articles and guides from Content Studio. Linked content appears here
-          automatically.
+      <div className="py-8">
+        <h3 className="text-base font-semibold">No content yet</h3>
+        <p className="mt-1 max-w-md text-sm text-muted-foreground">
+          Draft articles and guides in Content Studio. Linked pieces show up here.
         </p>
         <DetailLink
           renderLink={renderLink}
           href={contentStudioPath(projectId)}
-          className="inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+          className="mt-5 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
         >
           Open Content Studio
         </DetailLink>
@@ -339,7 +338,7 @@ export function ProjectDetailView({
   ];
 
   return (
-    <div className="max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <div className={`${APP_SHELL_PAGE} space-y-6`}>
       <DetailLink
         renderLink={renderLink}
         href={backHref}

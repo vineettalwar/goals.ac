@@ -23,10 +23,12 @@ import { withPublishRecord } from "@workspace/content-engine/support/publishing/
 import { publishPieceToWordPress } from "@workspace/content-engine/support/publishing/cms-publish";
 import { featuredImageFromMetadata } from "@workspace/content-engine/articles/article-image-enricher";
 import { assessPublishReadiness } from "@workspace/content-engine/content/publish-readiness";
+import { buildPublishReadinessOptions } from "@workspace/content-engine/support/publishing/readiness-options";
 import { decryptSecret } from "@workspace/security/encryption";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand/brand-voice-generation";
 import { seedSocialPostMetrics } from "@workspace/content-engine/social/social-metrics-service";
+import { enqueueGscUrlInspectionAfterPublish } from "@workspace/content-engine/analytics/enqueue-gsc-url-inspection";
 import { z } from "zod";
 
 const ALL_PUBLISH_PLATFORMS = [
@@ -52,6 +54,11 @@ const PublishBody = z.object({
   async: z.boolean().optional(),
   /** Required to publish despite blockers from assessPublishReadiness. Persisted for audit. */
   overrideReason: z.string().min(10).max(500).optional(),
+  /**
+   * Required for Content Refresh Loop pieces that will update an existing WP post.
+   * Confirms the cmsRemoteId / sourceUrl match before overwrite.
+   */
+  confirmCmsUpdate: z.boolean().optional(),
 }).refine(
   (d) => d.platform || d.wordpressConnectionId,
   { message: "Provide platform or WordPress connection" },
@@ -88,11 +95,71 @@ export async function POST(
   if (ownerError === "not_found") return NextResponse.json({ error: "Content piece not found" }, { status: 404 });
   if (ownerError === "forbidden") return NextResponse.json({ error: "Access denied" }, { status: 403 });
 
-  const readiness = assessPublishReadiness({
-    title: piece!.title,
-    bodyMarkdown: piece!.bodyMarkdown ?? "",
-    pieceMetadata: piece!.pieceMetadata,
-  });
+  const meta = (piece!.pieceMetadata ?? {}) as {
+    source?: string;
+    sourceUrl?: string;
+    cmsRemoteId?: string;
+    cmsRemoteLink?: string;
+    updateConfirmed?: boolean;
+  };
+  const isWordpressTarget =
+    parsed.data.platform === "wordpress" || Boolean(parsed.data.wordpressConnectionId);
+  if (meta.source === "refresh" && isWordpressTarget) {
+    const remoteId = meta.cmsRemoteId?.trim();
+    if (remoteId && !meta.updateConfirmed && !parsed.data.confirmCmsUpdate) {
+      return NextResponse.json(
+        {
+          error: "Confirm WordPress update target before publishing",
+          needsConfirm: true,
+          cmsRemoteId: remoteId,
+          cmsRemoteLink: meta.cmsRemoteLink ?? null,
+          sourceUrl: meta.sourceUrl ?? null,
+        },
+        { status: 422 },
+      );
+    }
+    if (remoteId && parsed.data.confirmCmsUpdate && !meta.updateConfirmed) {
+      await db
+        .update(contentPiecesTable)
+        .set({
+          pieceMetadata: {
+            ...((piece!.pieceMetadata as Record<string, unknown> | null) ?? {}),
+            updateConfirmed: true,
+          },
+        })
+        .where(eq(contentPiecesTable.id, id));
+      piece!.pieceMetadata = {
+        ...((piece!.pieceMetadata as Record<string, unknown> | null) ?? {}),
+        updateConfirmed: true,
+      } as typeof piece.pieceMetadata;
+    }
+    if (!remoteId && !parsed.data.confirmCmsUpdate) {
+      return NextResponse.json(
+        {
+          error:
+            "No WordPress post matched this URL. Set cmsRemoteId on the piece, or confirm creating a new post.",
+          needsConfirm: true,
+          cmsRemoteId: null,
+          sourceUrl: meta.sourceUrl ?? null,
+          createNew: true,
+        },
+        { status: 422 },
+      );
+    }
+  }
+
+  const readinessOptions = await buildPublishReadinessOptions(
+    { id: piece!.id, websiteProjectId: piece!.websiteProjectId, targetKeyword: piece!.targetKeyword },
+    { unattended: false },
+  );
+  const readiness = assessPublishReadiness(
+    {
+      title: piece!.title,
+      bodyMarkdown: piece!.bodyMarkdown ?? "",
+      pieceMetadata: piece!.pieceMetadata,
+    },
+    readinessOptions,
+  );
 
   if (!readiness.ok && !parsed.data.overrideReason) {
     return NextResponse.json(
@@ -281,6 +348,13 @@ export async function POST(
       piece!.bodyMarkdown ?? "",
       publishedUrl,
     ).catch(() => {});
+
+    enqueueGscUrlInspectionAfterPublish({
+      projectId: piece!.websiteProjectId,
+      publishedUrl,
+      publishPlatform,
+      contentPieceId: id,
+    }).catch(() => {});
 
     return NextResponse.json({
       ...updated,

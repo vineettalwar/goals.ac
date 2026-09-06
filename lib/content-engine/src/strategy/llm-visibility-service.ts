@@ -12,11 +12,20 @@ import {
   competitorNamesFromUrls,
   LLM_VISIBILITY_ENGINES,
 } from "@workspace/seo-tools/llmVisibilityChecker";
+import { isLlmMentionsConfigured, lookupBrandMentions } from "@workspace/serp-provider";
 import { resolveAiClient } from "@workspace/ai-providers";
 import { getDecryptedUserGeminiKey } from "../support/ai/user-api-key";
 import { getUserAiProviderOptions } from "../support/ai/user-ai-provider";
 import { parseVisibilitySettings } from "../support/settings/visibility-settings";
 import { logger } from "../core/logger";
+import {
+  brandLookupQuery,
+  liveVisibilitySnapshotsFromLookup,
+} from "./live-visibility-snapshots";
+
+export function getVisibilityDataMode(): "live" | "simulated" {
+  return isLlmMentionsConfigured() ? "live" : "simulated";
+}
 
 export async function seedPromptsForProject(
   projectId: number,
@@ -72,6 +81,42 @@ export async function seedPromptsForProject(
   return defaults.length;
 }
 
+async function markVisibilityChecked(projectId: number, visibilitySettings: unknown) {
+  const settings = parseVisibilitySettings(visibilitySettings);
+  await db
+    .update(websiteProjectsTable)
+    .set({
+      visibilitySettings: {
+        ...settings,
+        lastVisibilityCheckAt: new Date().toISOString(),
+      },
+    })
+    .where(eq(websiteProjectsTable.id, projectId));
+}
+
+async function runLiveBrandLookup(
+  projectId: number,
+  brandName: string,
+  brandUrl: string,
+  competitorUrls: string[],
+): Promise<number> {
+  const result = await lookupBrandMentions({
+    query: brandLookupQuery(brandUrl, brandName),
+    competitors: competitorUrls,
+  });
+
+  const rows = liveVisibilitySnapshotsFromLookup(result);
+  for (const row of rows) {
+    await db.insert(llmVisibilitySnapshotsTable).values({
+      websiteProjectId: projectId,
+      promptId: null,
+      ...row,
+    });
+  }
+
+  return rows.length;
+}
+
 export async function runVisibilityCheckForProject(projectId: number): Promise<number> {
   const [project] = await db
     .select({
@@ -88,6 +133,36 @@ export async function runVisibilityCheckForProject(projectId: number): Promise<n
   if (!project) {
     logger.warn({ projectId }, "Visibility check: project not found");
     return 0;
+  }
+
+  const [brand] = await db
+    .select()
+    .from(brandProfilesTable)
+    .where(eq(brandProfilesTable.websiteProjectId, projectId))
+    .limit(1);
+
+  const brandName = brand?.companyName || project.name;
+  const brandUrl = project.url;
+  const competitorUrls = brand?.competitorUrls ?? [];
+
+  if (isLlmMentionsConfigured()) {
+    try {
+      const inserted = await runLiveBrandLookup(projectId, brandName, brandUrl, competitorUrls);
+      if (inserted > 0) {
+        await markVisibilityChecked(projectId, project.visibilitySettings);
+        logger.info({ projectId, inserted, mode: "live" }, "Visibility check completed");
+        return inserted;
+      }
+      logger.warn(
+        { projectId },
+        "Visibility check: live lookup returned no platforms; falling back to simulated",
+      );
+    } catch (err) {
+      logger.error(
+        { err, projectId },
+        "Visibility check: live brand lookup failed; falling back to simulated",
+      );
+    }
   }
 
   let prompts = await db
@@ -118,15 +193,7 @@ export async function runVisibilityCheckForProject(projectId: number): Promise<n
     return 0;
   }
 
-  const [brand] = await db
-    .select()
-    .from(brandProfilesTable)
-    .where(eq(brandProfilesTable.websiteProjectId, projectId))
-    .limit(1);
-
-  const brandName = brand?.companyName || project.name;
-  const brandUrl = project.url;
-  const competitorNames = competitorNamesFromUrls(brand?.competitorUrls ?? []);
+  const competitorNames = competitorNamesFromUrls(competitorUrls);
 
   const [userApiKey, aiProviderOptions] = await Promise.all([
     getDecryptedUserGeminiKey(project.userId),
@@ -161,6 +228,7 @@ export async function runVisibilityCheckForProject(projectId: number): Promise<n
           citationUrl: result.citationUrl,
           competitorsMentioned: result.competitorsMentioned,
           responseSnippet: result.responseSnippet,
+          source: "simulated",
         });
         inserted += 1;
       } catch (err) {
@@ -169,17 +237,8 @@ export async function runVisibilityCheckForProject(projectId: number): Promise<n
     }
   }
 
-  const settings = parseVisibilitySettings(project.visibilitySettings);
-  await db
-    .update(websiteProjectsTable)
-    .set({
-      visibilitySettings: {
-        ...settings,
-        lastVisibilityCheckAt: new Date().toISOString(),
-      },
-    })
-    .where(eq(websiteProjectsTable.id, projectId));
+  await markVisibilityChecked(projectId, project.visibilitySettings);
 
-  logger.info({ projectId, inserted }, "Visibility check completed");
+  logger.info({ projectId, inserted, mode: "simulated" }, "Visibility check completed");
   return inserted;
 }

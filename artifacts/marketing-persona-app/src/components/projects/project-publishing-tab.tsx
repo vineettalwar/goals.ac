@@ -208,7 +208,7 @@ export function ProjectPublishingTab({
       {showAutomation ? <ProjectAutomationPanel projectId={projectId} /> : null}
 
       <div className="space-y-4">
-        {layout === "grid" && showAutomation ? (
+        {layout === "grid" ? (
           <div className="border-b border-border/50 pb-3">
             <h2 className="text-sm font-medium">Publishing destinations</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">

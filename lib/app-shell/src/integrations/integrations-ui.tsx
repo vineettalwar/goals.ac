@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "../cn";
+import { APP_SHELL_PAGE } from "../shell-constants";
 import { projectDetailPath, type ProjectLinkProps } from "../projects/projects-ui";
 import type { CmsIntegrationRow, ProjectIntegrationsTab } from "./types";
 import {
@@ -124,7 +125,7 @@ export function IntegrationsView({
       : "/integrations";
 
   return (
-    <div className="max-w-5xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <div className={`${APP_SHELL_PAGE} space-y-6`}>
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Integrations</h1>
         <p className="text-sm text-muted-foreground">
@@ -174,7 +175,7 @@ export function IntegrationsView({
       </div>
 
       {!projectId ? (
-        <div className="rounded-xl border border-dashed p-10 text-center text-sm text-muted-foreground">
+        <div className="py-10 text-sm text-muted-foreground">
           Choose a project in the sidebar to manage CMS, social, email, and search connections.
         </div>
       ) : null}

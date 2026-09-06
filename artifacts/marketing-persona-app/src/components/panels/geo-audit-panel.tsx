@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import { useActiveProject } from "@/context/use-active-project";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useProjectContent } from "@/lib/queries";
 import { normalizeHttpUrl } from "@/lib/utils/normalize-url";
 
@@ -86,7 +87,7 @@ export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
     }
 
     return (
-      <div className={embedded ? "max-w-3xl" : "px-8 py-8 max-w-3xl"}>
+      <div className={embedded ? undefined : APP_SHELL_PAGE}>
         <p className="text-sm text-muted-foreground">
           Select a project to run GEO audits and track technical AI visibility scores.
         </p>
@@ -103,7 +104,7 @@ export function GeoAuditPanel({ embedded = false }: { embedded?: boolean }) {
     [];
 
   return (
-    <div className={embedded ? "max-w-3xl space-y-8" : "px-8 py-8 max-w-3xl space-y-8"}>
+    <div className={embedded ? "space-y-8" : `${APP_SHELL_PAGE} space-y-8`}>
       <div className="paper-card rounded-xl p-6 space-y-5">
         <div>
           <h2 className="text-lg font-semibold">Run GEO audit</h2>

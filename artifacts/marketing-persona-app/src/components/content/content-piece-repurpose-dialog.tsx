@@ -174,13 +174,13 @@ export function ContentPieceRepurposeDialog({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              The AI will adapt this content&apos;s key insights and messaging into the chosen format.
+              Adapts this content&apos;s key insights and messaging into the chosen format.
             </p>
           </div>
 
           {isRepurposing && (
-            <div className="rounded-lg border border-primary/20 bg-primary/5 px-4 py-3 space-y-2">
-              <p className="text-xs font-semibold text-primary uppercase tracking-wide mb-2">
+            <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 space-y-2">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
                 Repurposing…
               </p>
               {REPURPOSE_STEPS.map(({ key, label }) => {

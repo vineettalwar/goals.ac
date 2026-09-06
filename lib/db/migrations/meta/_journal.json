@@ -533,6 +533,27 @@
       "when": 1788675725473,
       "tag": "0075_worried_rhino",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1788700000000,
+      "tag": "0076_site_audits",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1788700000001,
+      "tag": "0077_llm_visibility_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1788800000000,
+      "tag": "0078_gsc_url_inspections",
+      "breakpoints": true
     }
   ]
 }

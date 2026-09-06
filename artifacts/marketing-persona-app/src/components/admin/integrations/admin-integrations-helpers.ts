@@ -1,4 +1,4 @@
-import type { PlatformIntegrationStatus } from "@/lib/platform/platform-integration-secrets";
+import type { PlatformIntegrationStatus } from "@/lib/platform/platform-integration-types";
 import {
   integrationEnvReady,
   type IntegrationEnvStatus,

@@ -43,6 +43,9 @@
       "path": "./lib/serp-provider"
     },
     {
+      "path": "./lib/mcp-server"
+    },
+    {
       "path": "./lib/keyword-research-provider"
     },
     {

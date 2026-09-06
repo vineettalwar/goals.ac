@@ -11,6 +11,7 @@
     "./llmVisibilityChecker": "./src/llmVisibilityChecker.ts",
     "./keywordGapAnalyzer": "./src/keywordGapAnalyzer.ts",
     "./gscSearchAnalytics": "./src/gscSearchAnalytics.ts",
+    "./gscUrlInspection": "./src/gscUrlInspection.ts",
     "./ga4Analytics": "./src/ga4Analytics.ts",
     "./analyticsDateRange": "./src/analyticsDateRange.ts",
     "./ga4Admin": "./src/ga4Admin.ts",
@@ -18,7 +19,8 @@
     "./contentDecayDetector": "./src/contentDecayDetector.ts",
     "./semrushGapAnalyzer": "./src/semrushGapAnalyzer.ts",
     "./freeTools": "./src/freeTools.ts",
-    "./sitemap-crawl": "./src/sitemap-crawl.ts"
+    "./sitemap-crawl": "./src/sitemap-crawl.ts",
+    "./site-audit": "./src/site-audit/index.ts"
   },
   "dependencies": {
     "@workspace/security": "workspace:*",

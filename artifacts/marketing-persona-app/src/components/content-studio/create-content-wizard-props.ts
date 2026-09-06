@@ -5,7 +5,7 @@ import type { ContentPieceRow } from "./content-studio-utils";
 import type { BriefContentDraft } from "./use-create-content-modal";
 
 export type CreateContentWizardProps = {
-  selectPath: (flow: "create" | "repurpose") => void;
+  selectPath: (flow: "create" | "repurpose" | "optimize") => void;
   selectFormat: (type: ContentFormatType) => void;
   loadingCompetitors: boolean;
   competitorUrls: string[];
@@ -69,4 +69,13 @@ export type CreateContentWizardProps = {
   saveBedrockModel: boolean;
   setSaveBedrockModel: (v: boolean) => void;
   canManageBedrockModel: boolean;
+  optimizeUrl: string;
+  setOptimizeUrl: (v: string) => void;
+  optimizeKeyword: string;
+  setOptimizeKeyword: (v: string) => void;
+  optimizeSecondary: string;
+  setOptimizeSecondary: (v: string) => void;
+  optimizePaste: string;
+  setOptimizePaste: (v: string) => void;
+  optimizeError: string | null;
 };

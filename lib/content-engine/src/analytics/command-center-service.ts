@@ -17,6 +17,7 @@ export type CommandCenterOpportunityPreview = {
   opportunityScore: number;
   suggestedTitle: string;
   source: string;
+  competitorUrl?: string | null;
 };
 
 export type CommandCenterRecentPiece = {
@@ -144,6 +145,7 @@ export async function loadCommandCenterSummary(projectId: number): Promise<Comma
         opportunityScore: keywordOpportunitiesTable.opportunityScore,
         suggestedTitle: keywordOpportunitiesTable.suggestedTitle,
         source: keywordOpportunitiesTable.source,
+        competitorUrl: keywordOpportunitiesTable.competitorUrl,
       })
       .from(keywordOpportunitiesTable)
       .where(

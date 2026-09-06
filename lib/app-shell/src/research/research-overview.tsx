@@ -271,10 +271,10 @@ export function ResearchOverviewView({
           </div>
         </div>
         {articleIdeas.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+          <div className="py-6 text-sm text-muted-foreground">
             No open article ideas yet.{" "}
             {onDiscoverIdeas
-              ? "Run Discover to pull GSC, competitor gaps, and brand-fit AI topics."
+              ? "Run Discover to pull GSC, competitor gaps, and brand-fit topics."
               : "Run GSC sync or Semrush gaps from the Keywords hub."}
           </div>
         ) : (
@@ -359,7 +359,7 @@ export function ResearchOverviewView({
           })}
         </div>
         {peekThreads.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground">
+          <div className="py-6 text-sm text-muted-foreground">
             No signals in this session yet. Open Signals to search live Reddit discussions matching your brand keywords.
           </div>
         ) : (

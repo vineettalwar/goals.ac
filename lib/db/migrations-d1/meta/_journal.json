@@ -78,6 +78,27 @@
       "when": 1788675791598,
       "tag": "0010_yielding_lilandra",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1788700000000,
+      "tag": "0011_site_audits",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1788700000001,
+      "tag": "0012_llm_visibility_source",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1788800000000,
+      "tag": "0013_gsc_url_inspections",
+      "breakpoints": true
     }
   ]
 }

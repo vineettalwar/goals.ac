@@ -59,3 +59,11 @@ export {
   registerSocialMetricsSyncHandler,
   SOCIAL_METRICS_SYNC_CRON,
 } from "./socialMetricsSync";
+export {
+  registerSiteAuditCrawlHandler,
+  processSiteAuditCrawl,
+} from "./siteAuditCrawl";
+export {
+  registerGscUrlInspectionHandler,
+  processGscUrlInspection,
+} from "./gscUrlInspection";

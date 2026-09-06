@@ -16,6 +16,12 @@ export {
   formatPublishHealth,
 } from "./dashboard-ui";
 export {
+  buildPipelineSlices,
+  buildPublishActivitySeries,
+  DashboardActivityChart,
+  DashboardPipelineDonut,
+} from "./dashboard-charts";
+export {
   contentPiecePath,
   countByStatus,
   type DashboardArticleUsage,

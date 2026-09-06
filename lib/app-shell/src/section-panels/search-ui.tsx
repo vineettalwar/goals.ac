@@ -283,7 +283,7 @@ export function SearchVisibilityView({
       ) : null}
 
       {!summary?.byEngine?.length && !loading ? (
-        <div className="paper-card border-dashed p-8 text-center text-sm text-muted-foreground">
+        <div className="py-8 text-sm text-muted-foreground">
           Add competitors and keywords in your brand profile, then run a visibility check.
         </div>
       ) : null}

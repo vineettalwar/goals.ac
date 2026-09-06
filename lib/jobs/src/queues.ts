@@ -31,6 +31,8 @@ export const QUEUES = {
   socialHistorySync: "social-history-sync",
   socialMetricsSync: "social-metrics-sync",
   publicGeoAudit: "public-geo-audit",
+  siteAuditCrawl: "site-audit-crawl",
+  gscUrlInspection: "gsc-url-inspection",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
@@ -182,6 +184,17 @@ export interface PublicGeoAuditPayload {
   clientIp?: string;
 }
 
+export interface SiteAuditCrawlPayload {
+  siteAuditId: number;
+}
+
+export interface GscUrlInspectionPayload {
+  projectId: number;
+  inspectionUrl: string;
+  contentPieceId?: number;
+  publishRecordId?: number;
+}
+
 /** Maps each queue name to the payload shape(s) it accepts. */
 export interface QueuePayloadMap {
   [QUEUES.connectionHealthCheck]: ConnectionHealthCheckJobData;
@@ -204,6 +217,8 @@ export interface QueuePayloadMap {
   [QUEUES.socialHistorySync]: SocialHistorySyncJobData;
   [QUEUES.socialMetricsSync]: SocialMetricsSyncJobData;
   [QUEUES.publicGeoAudit]: PublicGeoAuditPayload;
+  [QUEUES.siteAuditCrawl]: SiteAuditCrawlPayload;
+  [QUEUES.gscUrlInspection]: GscUrlInspectionPayload;
 }
 
 export type QueuePayloadFor<Q extends QueueName> = QueuePayloadMap[Q];

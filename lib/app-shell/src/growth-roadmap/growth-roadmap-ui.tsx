@@ -53,14 +53,7 @@ export function GrowthRoadmapView({
     : slug.replace(/-/g, " ");
 
   return (
-    <div className="max-w-4xl">
-      <RoadmapLink
-        renderLink={renderLink}
-        href={growthRoadmapsListPath()}
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Roadmaps
-      </RoadmapLink>
+    <div className="w-full">
 
       {error ? <p className="mt-4 text-sm text-red-700">{error}</p> : null}
 

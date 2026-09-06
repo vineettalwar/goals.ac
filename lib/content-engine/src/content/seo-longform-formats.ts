@@ -1,4 +1,4 @@
-import type { ContentFormatType } from "@workspace/db";
+import type { ContentFormatType } from "@workspace/db/schema";
 
 /** Formats that use the SEO longform pipeline (scoring, enhance, humanize). */
 export const SEO_LONGFORM_FORMATS: ContentFormatType[] = [

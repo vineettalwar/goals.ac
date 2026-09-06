@@ -6,7 +6,8 @@
   "compatibility_date": "2026-07-14",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "alias": {
-    "sharp": "../../lib/cf-edge/src/sharp-stub.ts"
+    "sharp": "../../lib/cf-edge/src/sharp-stub.ts",
+    "@workspace/stock-images/attribution": "../../lib/stock-images/src/attribution.ts"
   },
   "d1_databases": [
     {

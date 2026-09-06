@@ -7,6 +7,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "../cn";
+import { APP_SHELL_PAGE } from "../shell-constants";
 import {
   PLAN_LABELS,
   type SettingsBillingSummary,
@@ -110,7 +111,7 @@ export function SettingsView({
   const visibleTabs = TABS.filter((tab) => !tab.hideWhenGoogleOnly || !isGoogleOnly);
 
   return (
-    <div className="max-w-3xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <div className={`${APP_SHELL_PAGE} space-y-6`}>
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
         <p className="mt-1 text-sm text-muted-foreground">

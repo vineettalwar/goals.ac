@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Leaf } from "lucide-react";
+import { ArrowLeft, ArrowRight } from "lucide-react";
+import { GoalsBrandMark } from "@workspace/app-shell/brand-mark";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -333,9 +334,7 @@ export function TypeformShell() {
 
       <header className="mx-auto flex w-full max-w-2xl items-center justify-between px-4 pt-6 sm:px-6">
         <div className="flex items-center gap-2">
-          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary">
-            <Leaf className="h-3.5 w-3.5 text-primary-foreground" aria-hidden />
-          </div>
+          <GoalsBrandMark size={22} className="text-primary" />
           <span className="text-sm font-semibold">goals.ac</span>
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">

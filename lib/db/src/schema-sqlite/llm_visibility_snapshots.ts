@@ -3,6 +3,7 @@ import { websiteProjectsTable } from "./website_projects";
 import { llmVisibilityPromptsTable } from "./llm_visibility_prompts";
 
 export type LlmVisibilityEngine = "chatgpt" | "perplexity" | "claude" | "gemini";
+export type LlmVisibilitySource = "live" | "simulated";
 
 export const llmVisibilitySnapshotsTable = sqliteTable("llm_visibility_snapshots", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -16,6 +17,7 @@ export const llmVisibilitySnapshotsTable = sqliteTable("llm_visibility_snapshots
   citationUrl: text("citation_url"),
   competitorsMentioned: text("competitors_mentioned", { mode: "json" }).$type<string[]>().notNull().default([]),
   responseSnippet: text("response_snippet"),
+  source: text("source").notNull().default("simulated").$type<LlmVisibilitySource>(),
   checkedAt: integer("checked_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
 });
 

@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Palette, CheckCircle2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import { StockByokPanel } from "@/components/settings/stock-byok-panel";
 import { DeeplByokPanel } from "@/components/settings/deepl-byok-panel";
 import {
@@ -210,7 +210,7 @@ export function ProjectContentStyleFields({
               placeholder='e.g. "Alex, our Head of Growth"'
             />
             <p className="text-xs text-muted-foreground">
-              Give the AI writer a name and role to adopt when generating content
+              Name and role for the writing persona on new drafts
             </p>
           </div>
 
@@ -306,7 +306,7 @@ export function ProjectContentStyleFields({
               placeholder="synergy, leverage, disruptive, game-changer"
             />
             <p className="text-xs text-muted-foreground">
-              Comma-separated — the AI will avoid these in all generated content
+              Comma-separated — kept out of generated content
             </p>
           </div>
 

@@ -97,7 +97,56 @@ describe("publishToWordPress — idempotent create-or-update (BLOCK-2)", () => {
     expect(createInit.method).toBe("POST");
   });
 
-  it("raises a clear duplicate-risk error when the create request times out", async () => {
+  it("updates by slug when no remote id is known (timed-out first create hole)", async () => {
+    const fetchMock = vi
+      .fn()
+      // 1) slug lookup -> found
+      .mockResolvedValueOnce(jsonResponse([{ id: 77, link: "https://example.test/?p=77" }]))
+      // 2) update
+      .mockResolvedValueOnce(jsonResponse({ id: 77, link: "https://example.test/?p=77" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await publishToWordPress(
+      credentials,
+      "My Post Title",
+      "body",
+      "publish",
+      undefined,
+      undefined,
+      undefined,
+      { slug: "my-post-title" },
+    );
+
+    expect(result.postId).toBe(77);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0]![0])).toContain("slug=my-post-title");
+    expect(fetchMock.mock.calls[1]![1].method).toBe("PUT");
+  });
+
+  it("sets slug on create when lookup misses", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse({ id: 5, link: "https://example.test/?p=5" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await publishToWordPress(
+      credentials,
+      "Fresh Title",
+      "body",
+      "publish",
+      undefined,
+      undefined,
+      undefined,
+      { slug: "fresh-title" },
+    );
+
+    const [, createInit] = fetchMock.mock.calls[1]!;
+    expect(createInit.method).toBe("POST");
+    const sent = JSON.parse(createInit.body as string) as { slug?: string };
+    expect(sent.slug).toBe("fresh-title");
+  });
+});
     const timeoutError = new DOMException("The operation was aborted.", "TimeoutError");
     const fetchMock = vi.fn().mockRejectedValue(timeoutError);
     vi.stubGlobal("fetch", fetchMock);
@@ -197,5 +246,27 @@ describe("testWordPressConnection — capability check (HIGH-2)", () => {
     // Previously this fell back to `true` and reported "Connected" even
     // though nothing confirmed publish permission.
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("wordpressSlugFromUrl / findWordPressPostByUrl", () => {
+  it("extracts the last path segment as slug", async () => {
+    const { wordpressSlugFromUrl } = await import("./wordpress");
+    expect(wordpressSlugFromUrl("https://example.test/blog/my-post/")).toBe("my-post");
+  });
+
+  it("looks up a post by slug", async () => {
+    const { findWordPressPostByUrl } = await import("./wordpress");
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse([{ id: 99, link: "https://example.test/blog/my-post/" }]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const match = await findWordPressPostByUrl(
+      credentials,
+      "https://example.test/blog/my-post/",
+    );
+    expect(match?.id).toBe(99);
+    expect(String(fetchMock.mock.calls[0]![0])).toContain("slug=my-post");
   });
 });

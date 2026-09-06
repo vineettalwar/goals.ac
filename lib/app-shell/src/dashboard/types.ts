@@ -94,6 +94,7 @@ export type DashboardCommandCenter = {
     opportunityScore: number;
     suggestedTitle: string;
     source: string;
+    competitorUrl?: string | null;
   }>;
   /** Coverage % from `/internal-links` rules; null when no pages in map. */
   internalLinkCoverage?: number | null;

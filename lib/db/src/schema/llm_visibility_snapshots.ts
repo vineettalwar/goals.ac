@@ -3,6 +3,7 @@ import { websiteProjectsTable } from "./website_projects";
 import { llmVisibilityPromptsTable } from "./llm_visibility_prompts";
 
 export type LlmVisibilityEngine = "chatgpt" | "perplexity" | "claude" | "gemini";
+export type LlmVisibilitySource = "live" | "simulated";
 
 export const llmVisibilitySnapshotsTable = pgTable("llm_visibility_snapshots", {
   id: serial("id").primaryKey(),
@@ -16,6 +17,7 @@ export const llmVisibilitySnapshotsTable = pgTable("llm_visibility_snapshots", {
   citationUrl: text("citation_url"),
   competitorsMentioned: text("competitors_mentioned").array().notNull().default([]),
   responseSnippet: text("response_snippet"),
+  source: text("source").notNull().default("simulated").$type<LlmVisibilitySource>(),
   checkedAt: timestamp("checked_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

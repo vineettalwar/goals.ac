@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db, ilikeCompat } from "@workspace/db";
 import {
   companiesTable,
@@ -129,7 +130,8 @@ function roleHasAllProjects(orgRole: OrgMemberRole): boolean {
   return orgRole === "owner" || orgRole === "site_admin";
 }
 
-export async function listAccessibleProjectIds(
+/** Request-scoped dedupe — dashboard/layout often call this more than once. */
+export const listAccessibleProjectIds = cache(async function listAccessibleProjectIds(
   userId: number,
   supportOrganizationId?: number | null,
 ): Promise<number[]> {
@@ -189,7 +191,7 @@ export async function listAccessibleProjectIds(
   }
 
   return [];
-}
+});
 
 export async function listAccessibleProjects(
   userId: number,

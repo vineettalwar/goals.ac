@@ -43,7 +43,7 @@ export function OptionCard({
       onClick={onClick}
       className="group text-left p-6 sm:p-8 rounded-2xl border border-border hover:border-primary hover:bg-accent/30 transition-all"
     >
-      <span className="inline-flex p-3 rounded-xl bg-primary/10 text-primary mb-4">{icon}</span>
+      <span className="mb-4 inline-flex text-muted-foreground">{icon}</span>
       <p className="text-xl font-semibold">{title}</p>
       <p className="text-muted-foreground mt-2 leading-relaxed">{description}</p>
       <span className="inline-flex items-center gap-1 mt-6 text-sm font-medium text-primary">

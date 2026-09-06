@@ -75,3 +75,11 @@ export {
   type GscQueryRollup,
   type GscScoredOpportunity,
 } from "./gscOpportunityScorer";
+export {
+  runSiteAuditCrawl,
+  AUDIT_ISSUE_TYPES,
+  getIssueDescriptor,
+  type SiteAuditResult,
+  type DetectedIssue,
+  type AuditIssueType,
+} from "./site-audit";

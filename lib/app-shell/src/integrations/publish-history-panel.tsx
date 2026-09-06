@@ -1,6 +1,13 @@
-import { ExternalLink, Loader2, RefreshCw } from "lucide-react";
+import { ExternalLink, Loader2, RefreshCw, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { cn } from "../cn";
+
+export type GscInspectionSummary = {
+  verdict: string | null;
+  coverageState: string | null;
+  indexingState: string | null;
+  inspectedAt: string;
+};
 
 export type PublishHistoryRecord = {
   id: number;
@@ -14,6 +21,8 @@ export type PublishHistoryRecord = {
   createdAt: string | Date;
   pieceTitle?: string | null;
   outputMode?: string | null;
+  /** Latest GSC URL inspection for the remoteUrl, if available. */
+  gscInspection?: GscInspectionSummary | null;
 };
 
 export type PublishHistoryLinkProps = {
@@ -21,6 +30,29 @@ export type PublishHistoryLinkProps = {
   className?: string;
   children: ReactNode;
 };
+
+function GscCoverageBadge({ inspection }: { inspection: GscInspectionSummary | null | undefined }) {
+  if (!inspection) return null;
+  const label = inspection.coverageState ?? inspection.verdict ?? "Pending…";
+  const isIndexed =
+    inspection.verdict === "PASS" ||
+    (inspection.coverageState?.toLowerCase().includes("submitted") &&
+      inspection.indexingState === "INDEXING_ALLOWED");
+  const isError =
+    inspection.verdict === "FAIL" ||
+    inspection.coverageState?.toLowerCase().includes("error") ||
+    inspection.coverageState?.toLowerCase().includes("excluded");
+  const cls = isIndexed
+    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+    : isError
+      ? "bg-destructive/10 text-destructive"
+      : "bg-amber-500/10 text-amber-800 dark:text-amber-200";
+  return (
+    <span className={cn("inline-flex rounded-full px-2 py-0.5 text-xs", cls)}>
+      {label.replace(/_/g, " ")}
+    </span>
+  );
+}
 
 function formatTimestamp(value: string | Date | null | undefined): string {
   if (!value) return "—";
@@ -55,6 +87,8 @@ export function PublishHistoryPanel({
   pieceHref,
   renderLink,
   onRefresh,
+  onInspect,
+  inspecting,
 }: {
   records: PublishHistoryRecord[];
   loading?: boolean;
@@ -62,6 +96,10 @@ export function PublishHistoryPanel({
   pieceHref: (record: PublishHistoryRecord) => string;
   renderLink: (props: PublishHistoryLinkProps) => ReactNode;
   onRefresh?: () => void;
+  /** Called when user clicks Inspect for a record with a remoteUrl. */
+  onInspect?: (record: PublishHistoryRecord) => void;
+  /** Set of record ids currently being inspected (shows spinner). */
+  inspecting?: Set<number>;
 }) {
   return (
     <section className="space-y-3">
@@ -145,6 +183,26 @@ export function PublishHistoryPanel({
                         Live
                         <ExternalLink className="h-3 w-3" />
                       </a>
+                    ) : null}
+                    {record.remoteUrl ? (
+                      <div className="flex flex-col items-end gap-1">
+                        <GscCoverageBadge inspection={record.gscInspection} />
+                        {onInspect ? (
+                          <button
+                            type="button"
+                            disabled={inspecting?.has(record.id)}
+                            onClick={() => onInspect(record)}
+                            className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline disabled:opacity-50"
+                          >
+                            {inspecting?.has(record.id) ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Search className="h-3 w-3" />
+                            )}
+                            {inspecting?.has(record.id) ? "Queued…" : "Inspect"}
+                          </button>
+                        ) : null}
+                      </div>
                     ) : null}
                   </div>
                 </div>

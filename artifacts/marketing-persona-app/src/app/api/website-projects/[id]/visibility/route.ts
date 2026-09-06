@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import {
   websiteProjectsTable,
+  brandProfilesTable,
   llmVisibilityPromptsTable,
   llmVisibilitySnapshotsTable,
   geoAuditsTable,
@@ -13,11 +14,16 @@ import { parseVisibilitySettings } from "@workspace/content-engine/support/setti
 import {
   seedPromptsForProject,
   runVisibilityCheckForProject,
+  getVisibilityDataMode,
 } from "@workspace/content-engine/strategy/llm-visibility-service";
 import {
   computeVisibilityScore,
   aggregateSnapshotsByDate,
 } from "@workspace/seo-tools/llmVisibilityChecker";
+import {
+  isLlmMentionsConfigured,
+  estimateBrandLookupCostUsd,
+} from "@workspace/serp-provider";
 import { enqueue, QUEUES } from "@workspace/jobs";
 
 async function loadOwnedProject(projectId: number, userId: number) {
@@ -72,7 +78,20 @@ export async function GET(
   const citedLatest = latestBatch.filter((s) => s.cited).length;
   const visibilityScore = computeVisibilityScore(citedLatest, latestBatch.length || 1);
 
-  const byEngine = ["chatgpt", "perplexity", "claude", "gemini"].map((engine) => {
+  const competitorHeatmap = new Map<string, number>();
+  for (const snap of latestBatch) {
+    for (const comp of snap.competitorsMentioned ?? []) {
+      competitorHeatmap.set(comp, (competitorHeatmap.get(comp) ?? 0) + 1);
+    }
+  }
+
+  const llmMentionsConfigured = isLlmMentionsConfigured();
+  const dataMode = getVisibilityDataMode();
+  const engineKeys =
+    dataMode === "live"
+      ? (["chatgpt", "gemini"] as const)
+      : (["chatgpt", "perplexity", "claude", "gemini"] as const);
+  const byEngine = engineKeys.map((engine) => {
     const engineSnaps = latestBatch.filter((s) => s.engine === engine);
     const cited = engineSnaps.filter((s) => s.cited).length;
     return {
@@ -83,17 +102,23 @@ export async function GET(
     };
   });
 
-  const competitorHeatmap = new Map<string, number>();
-  for (const snap of latestBatch) {
-    for (const comp of snap.competitorsMentioned ?? []) {
-      competitorHeatmap.set(comp, (competitorHeatmap.get(comp) ?? 0) + 1);
-    }
+  let brandLookupCostEstimateUsd: number | undefined;
+  if (llmMentionsConfigured) {
+    const [brand] = await db
+      .select({ competitorUrls: brandProfilesTable.competitorUrls })
+      .from(brandProfilesTable)
+      .where(eq(brandProfilesTable.websiteProjectId, projectId))
+      .limit(1);
+    brandLookupCostEstimateUsd = estimateBrandLookupCostUsd(brand?.competitorUrls?.length ?? 0);
   }
 
   return NextResponse.json({
     settings: parseVisibilitySettings(project.visibilitySettings),
     visibilityScore,
     promptCount: prompts.filter((p) => p.isActive).length,
+    dataMode,
+    llmMentionsConfigured,
+    ...(brandLookupCostEstimateUsd != null ? { brandLookupCostEstimateUsd } : {}),
     trend: aggregateSnapshotsByDate(snapshots),
     byEngine,
     competitorMentions: [...competitorHeatmap.entries()]

@@ -122,7 +122,13 @@ export async function publishToWordPress(
   metaDescription?: string,
   categoryIds?: number[],
   meta?: Record<string, string>,
-  options?: { featuredMediaId?: number; htmlContent?: string; existingRemoteId?: string },
+  options?: {
+    featuredMediaId?: number;
+    htmlContent?: string;
+    existingRemoteId?: string;
+    /** When set and no usable existingRemoteId, look up by slug before creating. */
+    slug?: string;
+  },
 ): Promise<WordPressPostResult> {
   const apiBase = credentials.siteUrl.replace(/\/$/, "") + "/wp-json/wp/v2";
   await assertPublicUrl(apiBase + "/posts");
@@ -158,6 +164,17 @@ export async function publishToWordPress(
     // the WP side) — nothing left to update against.
   }
 
+  // Residual hole after a timed-out first create: no remote id was recorded,
+  // but WP may already have the post. Slug lookup closes that before POST.
+  const slug = options?.slug?.trim() || null;
+  if (!updateId && slug) {
+    const bySlug = await findWordPressPostBySlug(credentials, slug);
+    if (bySlug) updateId = String(bySlug.id);
+  }
+  if (!updateId && slug) {
+    body.slug = slug;
+  }
+
   const url = updateId ? `${apiBase}/posts/${updateId}` : `${apiBase}/posts`;
   let res: Response;
   try {
@@ -189,6 +206,70 @@ export async function publishToWordPress(
   const post = (await res.json()) as { id: number; link: string; meta?: unknown };
   const metaWarning = detectMetaWarning(sentMeta, post.meta);
   return { postId: post.id, url: post.link, ...(metaWarning ? { metaWarning } : {}) };
+}
+
+/** Last path segment of a public post URL, used as the WP REST `slug` query. */
+export function wordpressSlugFromUrl(pageUrl: string): string | null {
+  try {
+    const u = new URL(pageUrl);
+    const parts = u.pathname.replace(/\/+$/, "").split("/").filter(Boolean);
+    const last = parts[parts.length - 1];
+    if (!last || last === "blog" || last === "posts") return null;
+    return decodeURIComponent(last);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Approximate WordPress's title→slug transform so a timed-out first publish
+ * can be found again on retry without a stored remote id.
+ */
+export function wordpressSlugFromTitle(title: string): string | null {
+  const slug = title
+    .trim()
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 200);
+  return slug || null;
+}
+
+/** Resolve a WordPress post id via REST slug lookup. */
+export async function findWordPressPostBySlug(
+  credentials: WordPressCredentials,
+  slug: string,
+): Promise<{ id: number; link: string } | null> {
+  const trimmed = slug.trim();
+  if (!trimmed) return null;
+
+  const apiBase = credentials.siteUrl.replace(/\/$/, "") + "/wp-json/wp/v2";
+  const lookupUrl = `${apiBase}/posts?slug=${encodeURIComponent(trimmed)}&status=publish,draft,private,future&per_page=1`;
+  await assertPublicUrl(lookupUrl);
+
+  const res = await connectorFetch(lookupUrl, {
+    headers: { Authorization: makeAuthHeader(credentials.username, credentials.appPassword) },
+  });
+  if (!res.ok) return null;
+  const rows = (await res.json().catch(() => null)) as Array<{ id?: number; link?: string }> | null;
+  const post = rows?.[0];
+  if (!post?.id) return null;
+  return { id: post.id, link: post.link ?? "" };
+}
+
+/**
+ * Resolve a live page URL to a WordPress post id via REST slug lookup.
+ * Returns null when the slug is missing or no post matches.
+ */
+export async function findWordPressPostByUrl(
+  credentials: WordPressCredentials,
+  pageUrl: string,
+): Promise<{ id: number; link: string } | null> {
+  const slug = wordpressSlugFromUrl(pageUrl);
+  if (!slug) return null;
+  return findWordPressPostBySlug(credentials, slug);
 }
 
 export async function testWordPressConnection(

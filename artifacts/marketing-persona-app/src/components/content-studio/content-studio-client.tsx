@@ -28,6 +28,7 @@ import { ArticlePerformanceBadge } from "./article-performance-badge";
 import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
 import { loadContentStudioData } from "./content-studio-load-data";
 import type { ContentPieceRow, StudioPiece } from "./content-studio-utils";
+import { isRefreshPiece } from "./content-studio-utils";
 import { VoiceRequiredBanner, type VoiceGateStatus } from "./voice-required-banner";
 
 export { FORMAT_OPTIONS };
@@ -37,6 +38,7 @@ interface Props {
   projectId: string;
   initialBriefDraft?: BriefContentDraft | null;
   initialCreateOpen?: boolean;
+  initialOptimize?: { url: string; keyword: string } | null;
 }
 
 type StudioLoadState = {
@@ -94,6 +96,7 @@ function toShellPieces(pieces: StudioPiece[]): ShellStudioPiece[] {
     plannedDate: piece.plannedDate,
     publishedUrl: piece.publishedUrl,
     createdAt: piece.createdAt,
+    isRefresh: piece.isRefresh,
   }));
 }
 
@@ -101,6 +104,7 @@ export function ContentStudioClient({
   projectId,
   initialBriefDraft = null,
   initialCreateOpen = false,
+  initialOptimize = null,
 }: Props) {
   const [studioData, dispatchStudioData] = useReducer(studioLoadReducer, initialStudioLoadState);
   const {
@@ -336,6 +340,7 @@ export function ContentStudioClient({
         projectId={projectId}
         existingPieces={pieces}
         initialDraft={briefDraft}
+        initialOptimize={initialOptimize}
         cmsConnections={cmsConnections}
         primaryBlogDestination={primaryBlogDestination}
         activeProvider={activeProvider}
@@ -344,7 +349,11 @@ export function ContentStudioClient({
           dispatchStudioData({
             type: "setPieces",
             updater: (prev) => [
-              { ...piece, source: "studio" },
+              {
+                ...piece,
+                source: "studio",
+                isRefresh: isRefreshPiece(piece),
+              },
               ...prev.filter((p) => p.id !== piece.id),
             ],
           });

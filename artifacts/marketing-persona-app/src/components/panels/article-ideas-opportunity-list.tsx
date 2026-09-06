@@ -29,6 +29,14 @@ const DIFFICULTY_COLORS = {
 };
 
 function contentStudioHref(projectId: number, opp: KeywordOpportunity, angle = opp.suggestedAngle): string {
+  if (opp.source === "content_refresh" || opp.source === "rank_drop") {
+    const params = new URLSearchParams({
+      optimize: "1",
+      keyword: opp.keyword,
+    });
+    if (opp.competitorUrl) params.set("url", opp.competitorUrl);
+    return `/projects/${projectId}/content-studio?${params.toString()}`;
+  }
   const params = new URLSearchParams({
     create: "1",
     format: "blog_article",
@@ -172,7 +180,9 @@ export function ArticleIdeasOpportunityList({
                 <Button asChild size="sm" variant="ghost">
                   <Link href={contentStudioHref(activeProjectId, opp)}>
                     <PenLine className="h-3.5 w-3.5 mr-1" />
-                    Studio
+                    {opp.source === "content_refresh" || opp.source === "rank_drop"
+                      ? "Optimize"
+                      : "Studio"}
                   </Link>
                 </Button>
               ) : null}

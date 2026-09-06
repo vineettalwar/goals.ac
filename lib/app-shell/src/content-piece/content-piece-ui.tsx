@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { cn } from "../cn";
+import { APP_SHELL_PAGE_WIDE } from "../shell-constants";
 import { SOCIAL_FORMAT_TYPES } from "../social/types";
 import { ContentBriefPanel, type ContentBriefSummary } from "./content-brief-panel";
 import { ContentPieceFeaturedImage } from "./content-featured-image";
@@ -274,6 +275,9 @@ function ContentPieceHeader({
           </span>
           <StatusBadge status={piece.status} />
           {piece.pieceMetadata?.humanized ? <MetaBadge>Humanized</MetaBadge> : null}
+          {piece.pieceMetadata?.source === "refresh" ? (
+            <MetaBadge>Refresh</MetaBadge>
+          ) : null}
           {piece.plannedDate && !editing ? (
             <span className="text-xs text-muted-foreground">Planned {piece.plannedDate}</span>
           ) : null}
@@ -362,6 +366,35 @@ function ContentPieceStatusBanners({
             >
               Reset to draft
             </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {piece.pieceMetadata?.source === "refresh" ? (
+        <div
+          className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm"
+          role="status"
+        >
+          <p className="font-medium">Refresh piece — Diagnose → Fix → Stay</p>
+          <p className="mt-1 text-muted-foreground">
+            {piece.pieceMetadata.intendedPublishPlatform === "wordpress"
+              ? "Imported from a live page. Score it, Fix gaps / Humanize, then publish an update to WordPress (confirm the post target first)."
+              : "Imported from a live page. Score it, Fix gaps / Humanize, then copy or export the markdown — in-place CMS update is WordPress-only for now."}
+          </p>
+          {piece.pieceMetadata.sourceUrl ? (
+            <a
+              href={piece.pieceMetadata.sourceUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-block text-primary hover:underline break-all"
+            >
+              {piece.pieceMetadata.sourceUrl}
+            </a>
+          ) : null}
+          {piece.pieceMetadata.extractTruncated ? (
+            <p className="mt-2 text-amber-800 dark:text-amber-200">
+              Body was truncated on import. Long sections may need a paste refresh.
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -804,6 +837,7 @@ function ContentPieceAside({
   onInsertOutline,
   asideExtra,
   destinationHealthOk = null,
+  onSaveCmsRemoteId,
 }: {
   editing: boolean;
   statusDraft: "draft" | "ready";
@@ -828,9 +862,18 @@ function ContentPieceAside({
   asideExtra?: ReactNode;
   /** null = unknown / not loaded; false soft-blocks publish. */
   destinationHealthOk?: boolean | null;
+  onSaveCmsRemoteId?: (cmsRemoteId: string | null) => void | Promise<void>;
 }) {
   const body = displayBody.trim();
   const [dual, setDual] = useState<DualContentScore | null>(null);
+  const [cmsRemoteDraft, setCmsRemoteDraft] = useState(
+    piece.pieceMetadata?.cmsRemoteId?.trim() ?? "",
+  );
+  const [savingRemote, setSavingRemote] = useState(false);
+
+  useEffect(() => {
+    setCmsRemoteDraft(piece.pieceMetadata?.cmsRemoteId?.trim() ?? "");
+  }, [piece.pieceMetadata?.cmsRemoteId]);
 
   useEffect(() => {
     if (!piece.id || !fetchDualScore) {
@@ -911,6 +954,51 @@ function ContentPieceAside({
         </div>
       ) : null}
 
+      {piece.pieceMetadata?.source === "refresh" && onSaveCmsRemoteId ? (
+        <div className="paper-card space-y-3 rounded-xl p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            WordPress post id
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Required to update the live page in place. Leave empty only if you intend to create a
+            new post.
+          </p>
+          {piece.pieceMetadata.cmsRemoteLink ? (
+            <a
+              href={piece.pieceMetadata.cmsRemoteLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-xs text-primary hover:underline break-all"
+            >
+              Matched: {piece.pieceMetadata.cmsRemoteLink}
+            </a>
+          ) : null}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={cmsRemoteDraft}
+              onChange={(e) => setCmsRemoteDraft(e.target.value)}
+              placeholder="e.g. 42"
+              className="h-9 flex-1 rounded-lg border border-input bg-card px-2 text-sm"
+              aria-label="WordPress post id"
+            />
+            <button
+              type="button"
+              disabled={savingRemote || busy}
+              className="inline-flex h-9 items-center rounded-lg border border-input bg-card px-3 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+              onClick={() => {
+                const next = cmsRemoteDraft.trim() || null;
+                setSavingRemote(true);
+                void Promise.resolve(onSaveCmsRemoteId(next)).finally(() => setSavingRemote(false));
+              }}
+            >
+              {savingRemote ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <ContentBriefPanel
         briefId={piece.briefId}
         projectId={piece.websiteProjectId}
@@ -951,6 +1039,26 @@ function ContentPieceAside({
             onInsertOutline && editing
               ? (snippet) => onInsertOutline(`${displayBody}\n\n${snippet}`)
               : undefined
+          }
+          onReplaceBody={onInsertOutline && editing ? onInsertOutline : undefined}
+          excludeInternalSlug={
+            piece.publishedUrl
+              ? (() => {
+                  try {
+                    return new URL(piece.publishedUrl).pathname;
+                  } catch {
+                    return piece.publishedUrl;
+                  }
+                })()
+              : piece.pieceMetadata?.sourceUrl
+                ? (() => {
+                    try {
+                      return new URL(piece.pieceMetadata.sourceUrl).pathname;
+                    } catch {
+                      return null;
+                    }
+                  })()
+                : null
           }
           canEnhance={canEnhance}
           onEnhance={onEnhance ? (missingTerms) => void onEnhance(missingTerms) : undefined}
@@ -1088,6 +1196,7 @@ export function ContentPieceView({
   headerExtra,
   asideExtra,
   destinationHealthOk = null,
+  onSaveCmsRemoteId,
 }: {
   piece: ContentPieceDetail;
   renderLink: (props: ContentPieceLinkProps) => ReactNode;
@@ -1149,6 +1258,8 @@ export function ContentPieceView({
   asideExtra?: ReactNode;
   /** Primary CMS destination lastHealthOk; null = unknown (does not soft-block). */
   destinationHealthOk?: boolean | null;
+  /** Persist WordPress remote id for refresh-piece update-in-place. */
+  onSaveCmsRemoteId?: (cmsRemoteId: string | null) => void | Promise<void>;
 }) {
   const [editor, dispatch] = useReducer(editorReducer, piece, createEditorState);
   const [stockPickerRole, setStockPickerRole] = useState<"featured" | "inline" | null>(null);
@@ -1293,7 +1404,7 @@ export function ContentPieceView({
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+    <div className={`${APP_SHELL_PAGE_WIDE} space-y-6`}>
       <ContentPieceHeader
         piece={piece}
         editing={editor.editing}
@@ -1431,6 +1542,7 @@ export function ContentPieceView({
           }
           asideExtra={asideExtra}
           destinationHealthOk={destinationHealthOk}
+          onSaveCmsRemoteId={onSaveCmsRemoteId}
         />
       </div>
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { BarChart3, MousePointerClick } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useArticlePerformance } from "@/lib/queries";
 
@@ -61,16 +60,10 @@ export function ArticlePerformanceBadge({
   return (
     <span className="inline-flex items-center gap-2 text-xs text-muted-foreground">
       {metrics.sessions > 0 ? (
-        <span className="inline-flex items-center gap-1" title="GA4 sessions (last 28 days)">
-          <BarChart3 className="h-3 w-3" />
-          {metrics.sessions.toLocaleString()}
-        </span>
+        <span title="GA4 sessions (last 28 days)">{metrics.sessions.toLocaleString()} sessions</span>
       ) : null}
       {metrics.clicks > 0 ? (
-        <span className="inline-flex items-center gap-1" title="GSC clicks (last 28 days)">
-          <MousePointerClick className="h-3 w-3" />
-          {metrics.clicks.toLocaleString()}
-        </span>
+        <span title="GSC clicks (last 28 days)">{metrics.clicks.toLocaleString()} clicks</span>
       ) : null}
     </span>
   );

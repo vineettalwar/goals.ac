@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle2, Eye, Leaf, Loader2 } from "lucide-react";
+import { CheckCircle2, Eye, Loader2 } from "lucide-react";
+import { GoalsBrandMark } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { apiFetch } from "@/lib/api";
 import { StepIndicator } from "@/components/onboarding/StepIndicator";
@@ -176,10 +177,8 @@ export function FastLanePage() {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-lg px-4 py-12">
         <div className="mb-10 flex flex-col items-center text-center">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Leaf className="h-4 w-4 text-primary-foreground" />
-            </div>
+          <div className="mb-4 flex items-center gap-2.5">
+            <GoalsBrandMark size={28} className="text-primary" />
             <span className="text-lg font-semibold">goals.ac</span>
           </div>
           <StepIndicator

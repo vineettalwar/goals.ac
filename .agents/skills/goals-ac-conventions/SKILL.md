@@ -45,6 +45,25 @@ Lucide **`Sparkles`** (glitter / “AI magic” star) is **banned** in product U
 
 **Enforced in:** `.cursor/rules/no-sparkles.mdc`, `docs/memory.md`.
 
+## Product page grid — locked
+
+Product app pages share one chrome from `lib/app-shell/src/shell-constants.ts`:
+
+| Constant | When |
+|---|---|
+| `APP_SHELL_PAGE` | Standard pages (`max-w-5xl`) |
+| `APP_SHELL_PAGE_WIDE` | Dashboard, Content Studio, dense data (`max-w-7xl`) |
+
+- **Left-align** — never `mx-auto` on product page roots (void gutter beside sidebar).
+- **Same gutters** — only via those constants (`px-4 py-8 sm:px-6 lg:px-8`).
+- Do not hand-roll `max-w-3xl|5xl|6xl|7xl … px-4 py-8` page shells.
+- Inner measures (`max-w-prose`, dialog `max-w-lg`) are fine; page roots are not.
+- Marketing `(public)` pages are exempt.
+
+Check: `node lib/app-shell/scripts/check-page-chrome.mjs`
+
+**Enforced in:** `.cursor/rules/app-shell-grid.mdc`, `docs/memory.md`.
+
 ## Build artifacts — do not commit
 
 These are generated locally or in CI/Workers Builds and are **gitignored**. Never add them to git:
@@ -72,4 +91,6 @@ node scripts/build-marketing-static.mjs
 
 - `.cursor/rules/no-ensure.mdc`
 - `.cursor/rules/no-github-ci.mdc`
+- `.cursor/rules/no-sparkles.mdc`
+- `.cursor/rules/app-shell-grid.mdc`
 - `docs/memory.md`

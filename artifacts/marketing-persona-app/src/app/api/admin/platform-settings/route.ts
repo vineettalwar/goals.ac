@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requirePlatformAdminApi } from "@/lib/auth/require-platform-admin";
 import { getPlatformSettings, updatePlatformSettings } from "@/lib/platform/platform-settings";
-import { getIntegrationEnvStatus, getPlatformIntegrationDefinitions } from "@/lib/platform/platform-features";
+import { getPlatformIntegrationDefinitions } from "@/lib/platform/platform-features";
+import { getIntegrationEnvStatus } from "@/lib/platform/platform-features.server";
 
 const updateSchema = z.object({
   platformEnabled: z.boolean().optional(),

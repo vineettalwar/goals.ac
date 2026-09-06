@@ -14,7 +14,7 @@ function ManualAssistBanner() {
       <div className="space-y-1">
         <p className="font-medium">Manual assist — we never post for you</p>
         <p className="text-amber-900/90 dark:text-amber-100/90">
-          Threads come from Reddit&apos;s public search (real posts). Reply text is an AI draft —
+          Threads come from Reddit&apos;s public search (real posts). Reply text is a draft —
           copy, edit, and post yourself.
         </p>
       </div>
@@ -139,7 +139,7 @@ export function ResearchSignalsView({
             ) : null}
             <div className="rounded-lg bg-secondary/50 p-3">
               <p className="mb-1.5 text-xs font-medium text-muted-foreground">
-                Suggested reply (AI draft — edit before posting)
+                Suggested reply (draft — edit before posting)
               </p>
               <p className="text-sm text-muted-foreground">{thread.suggestedReply}</p>
             </div>

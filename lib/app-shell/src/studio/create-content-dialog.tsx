@@ -762,7 +762,7 @@ export function CreateContentDialog({
                       placeholder={
                         isLinkedIn
                           ? "Optional context beyond archetype and hook…"
-                          : "Tone, audience, or angle for the AI…"
+                          : "Tone, audience, or angle…"
                       }
                       className="w-full resize-none rounded-lg border border-input bg-card px-3 py-2 text-sm"
                     />

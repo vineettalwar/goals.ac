@@ -2,7 +2,8 @@
 
 import { useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { Leaf, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
+import { GoalsBrandMark } from "@workspace/app-shell/brand-mark";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -69,10 +70,8 @@ export function PersonasPageContent({ companyId }: { companyId: string }) {
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-3xl px-4 py-12">
         <div className="mb-10 flex flex-col items-center text-center">
-          <div className="mb-4 flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <Leaf className="h-4 w-4 text-primary-foreground" />
-            </div>
+          <div className="mb-4 flex items-center gap-2.5">
+            <GoalsBrandMark size={28} className="text-primary" />
             <span className="text-lg font-semibold">goals.ac</span>
           </div>
           <StepIndicator steps={["Company", "Personas", "WordPress"]} current={1} />
@@ -89,7 +88,7 @@ export function PersonasPageContent({ companyId }: { companyId: string }) {
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 text-sm">
+            <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
               <p className="font-medium">Next: analyze your competitors</p>
               <p className="text-muted-foreground mt-1">
                 After onboarding, run Competitor Analysis to find content and GEO gaps using the URLs you added.

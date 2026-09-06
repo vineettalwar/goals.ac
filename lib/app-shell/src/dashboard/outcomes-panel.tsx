@@ -1,3 +1,5 @@
+"use client";
+
 import type { ReactNode } from "react";
 import { CheckCircle2, Eye, FileText, ScanSearch, XCircle } from "lucide-react";
 import { cn } from "../cn";
@@ -31,18 +33,39 @@ function OutcomeTile({ label, value, hint, href, renderLink, icon, tone = "defau
       renderLink={renderLink}
       href={href}
       className={cn(
-        "block rounded-xl border border-border bg-card p-4 transition-colors hover:bg-secondary/40",
-        tone === "ok" && "border-emerald-200/80",
-        tone === "warn" && "border-amber-200/80",
-        tone === "bad" && "border-rose-200/80",
+        "group relative flex h-full min-w-0 flex-col rounded-xl border border-border bg-card p-5 transition-[background-color,border-color,box-shadow] duration-200 ease-out",
+        "hover:border-primary/20 hover:bg-secondary/30 hover:shadow-[0_4px_14px_rgba(0,0,0,0.04)]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25",
+        tone === "ok" && "border-emerald-200/70 bg-emerald-500/[0.03]",
+        tone === "warn" && "border-amber-200/70 bg-amber-500/[0.03]",
+        tone === "bad" && "border-rose-200/70 bg-rose-500/[0.03]",
       )}
     >
-      <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        <span className="text-primary">{icon}</span>
-        {label}
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <p className="text-sm text-muted-foreground">{label}</p>
+        <span
+          className={cn(
+            "flex h-7 w-7 items-center justify-center rounded-lg bg-secondary text-primary transition-colors group-hover:bg-primary/10",
+            tone === "ok" && "bg-emerald-500/10 text-emerald-700",
+            tone === "warn" && "bg-amber-500/10 text-amber-700",
+            tone === "bad" && "bg-rose-500/10 text-rose-700",
+          )}
+        >
+          {icon}
+        </span>
       </div>
-      <p className="text-2xl font-bold tabular-nums tracking-tight">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+      <p
+        className={cn(
+          "text-2xl font-bold tabular-nums tracking-tight text-foreground break-words",
+          value === "—" && "text-muted-foreground/70",
+          value === "No publishes yet" && "text-lg leading-snug text-muted-foreground",
+        )}
+      >
+        {value}
+      </p>
+      {hint ? (
+        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground text-pretty">{hint}</p>
+      ) : null}
     </DashLink>
   );
 }
@@ -70,16 +93,16 @@ export function OutcomesPanel({
     formatCitationDelta(commandCenter.llmCitationDelta) ?? "Cited across recent LLM checks";
 
   return (
-    <section className="paper-card mb-8 p-6" aria-labelledby="outcomes-heading">
-      <div className="mb-4">
-        <h2 id="outcomes-heading" className="text-sm font-semibold tracking-tight">
+    <section aria-labelledby="outcomes-heading">
+      <div className="mb-3">
+        <h2 id="outcomes-heading" className="text-base font-semibold tracking-tight">
           Outcomes
         </h2>
-        <p className="mt-0.5 text-xs text-muted-foreground">
+        <p className="mt-0.5 max-w-2xl text-sm text-muted-foreground text-pretty">
           Articles shipped, publish health, AI citations, and GEO — one glance for partner demos.
         </p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <OutcomeTile
           label="Articles"
           value={String(published)}

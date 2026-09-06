@@ -95,6 +95,21 @@ Every feature is therefore written twice, and the copy serving customers is the 
 
 ---
 
+## Product page grid — locked
+
+**Policy (2026-09-06):** Product app pages use shared chrome from `lib/app-shell/src/shell-constants.ts` only.
+
+- `APP_SHELL_PAGE` (`max-w-5xl`) for standard pages; `APP_SHELL_PAGE_WIDE` (`max-w-7xl`) for dashboard / Content Studio / dense data.
+- **Left-aligned** — never `mx-auto` on product page roots (centering beside the sidebar leaves a void gutter).
+- Same gutters everywhere: `px-4 py-8 sm:px-6 lg:px-8` via those constants — do not hand-roll page shells.
+- Marketing `(public)` pages are exempt.
+
+Check: `node lib/app-shell/scripts/check-page-chrome.mjs`
+
+**Enforced in:** `.cursor/rules/app-shell-grid.mdc`, `.agents/skills/goals-ac-conventions/SKILL.md`.
+
+---
+
 ## `.marketing-out/` — build artifact, not in repo
 
 **Policy:** `artifacts/marketing-persona-app/.marketing-out/` is the static marketing export produced by `scripts/build-marketing-static.mjs` (Next.js `distDir` for the marketing-only build). It is listed in `.gitignore` and must **never** be committed.

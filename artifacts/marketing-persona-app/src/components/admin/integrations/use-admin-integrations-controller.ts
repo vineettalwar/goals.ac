@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import type { PlatformIntegrationStatus } from "@/lib/platform/platform-integration-secrets";
+import type { PlatformIntegrationStatus } from "@/lib/platform/platform-integration-types";
 import {
   getPlatformIntegrationsByCategory,
   integrationEnvReady,

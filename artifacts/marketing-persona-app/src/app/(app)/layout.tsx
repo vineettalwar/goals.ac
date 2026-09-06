@@ -37,7 +37,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           <ImpersonationBanner />
           <IntegrationHealthAlertBannerContainer />
           <MfaComplianceGate>
-            <main className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
+            <main className="flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
           </MfaComplianceGate>
         </div>
       </div>

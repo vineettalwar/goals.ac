@@ -1,0 +1,23 @@
+# Files / dirs excluded from the distributable WordPress plugin zip.
+# Keep the zip installable: production Composer vendor must be included.
+
+.git
+.gitignore
+.distignore
+.DS_Store
+node_modules
+package.json
+package-lock.json
+pnpm-lock.yaml
+.phpunit.result.cache
+phpcs.xml
+phpcs.xml.dist
+phpunit.xml
+composer.lock
+tests
+scripts
+.wp-env.json
+.wp-env.override.json
+README.md
+*.md
+!readme.txt

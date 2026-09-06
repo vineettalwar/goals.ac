@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { SocialHubView, parseSocialHubTab } from "@workspace/app-shell/social";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 import { useSocialHubClient } from "./use-social-hub-client";
 
 export function SocialHubClient({ projectId }: { projectId: string }) {
@@ -10,7 +11,7 @@ export function SocialHubClient({ projectId }: { projectId: string }) {
   const hub = useSocialHubClient(projectId, parseSocialHubTab(searchParams.get("tab")));
 
   return (
-    <div className="max-w-6xl space-y-5 px-8 py-8">
+    <div className={`${APP_SHELL_PAGE_WIDE} space-y-5`}>
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Social Hub</h1>
         <p className="text-sm text-muted-foreground">Queue, schedule, and publish across channels.</p>

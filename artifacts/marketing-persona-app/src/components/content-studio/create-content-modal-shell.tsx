@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { CreateContentCreateSteps } from "./create-content-create-steps";
 import { CreateContentRepurposeSteps } from "./create-content-repurpose-steps";
+import { CreateContentOptimizeSteps } from "./create-content-optimize-steps";
 import type { WizardStepId } from "./create-content-modal-types";
 
 import type { CreateContentWizardProps } from "./create-content-wizard-props";
@@ -57,7 +58,7 @@ export function CreateContentModalShell({
       >
         <DialogTitle className="sr-only">Create new content</DialogTitle>
         <DialogDescription className="sr-only">
-          Step-by-step wizard to create or repurpose content
+          Step-by-step wizard to create, repurpose, or optimize content
         </DialogDescription>
 
         <LazyMotion features={domAnimation} strict>
@@ -117,6 +118,8 @@ export function CreateContentModalShell({
                   >
                     {currentStep.startsWith("repurpose") ? (
                       <CreateContentRepurposeSteps currentStep={currentStep} wizard={wizardProps} />
+                    ) : currentStep.startsWith("optimize") ? (
+                      <CreateContentOptimizeSteps currentStep={currentStep} wizard={wizardProps} />
                     ) : (
                       <CreateContentCreateSteps currentStep={currentStep} wizard={wizardProps} />
                     )}

@@ -97,7 +97,14 @@ export interface ProjectContent {
   }>;
 }
 
-export const PROJECT_TABS = ["brand", "voice", "content", "publishing"] as const;
+export const PROJECT_TABS = [
+  "brand",
+  "voice",
+  "style",
+  "content",
+  "publishing",
+  "automation",
+] as const;
 export type ProjectTab = (typeof PROJECT_TABS)[number];
 
 export function isProjectTab(value: string | null | undefined): value is ProjectTab {

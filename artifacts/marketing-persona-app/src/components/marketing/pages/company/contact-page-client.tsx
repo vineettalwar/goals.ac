@@ -12,27 +12,27 @@ import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 import {
   CONTACT_CTA_LABEL,
   CONTACT_EMAIL,
-  CONTACT_HREF,
   CONTACT_MAILTO,
   PRODUCT_CTA_HREF,
   PRODUCT_CTA_PRIMARY,
 } from "@/lib/marketing/site/marketing-contact";
 import { publicApiUrl } from "@/lib/marketing/site/public-api";
 
-const DEFAULT_CALENDLY_URL = "https://calendly.com/vineetsktalwar";
+/** Event-type URL — profile pages often render blank in embeds behind cookie UI. */
+const DEFAULT_CALENDLY_URL = "https://calendly.com/vineetsktalwar/30min";
 const glassCard = cardSurfaceClass("glass", false);
 
 function calendlyEmbedSrc(url: string) {
   const parsed = new URL(url);
   parsed.searchParams.set("embed", "true");
-  parsed.searchParams.set("hide_event_type_details", "1");
+  parsed.searchParams.set("embed_type", "Inline");
   parsed.searchParams.set("hide_gdpr_banner", "1");
+  parsed.searchParams.set("hide_landing_page_details", "1");
   return parsed.toString();
 }
 
-const CALENDLY_EMBED_SRC = calendlyEmbedSrc(
-  process.env.NEXT_PUBLIC_CALENDLY_URL ?? DEFAULT_CALENDLY_URL,
-);
+const CALENDLY_URL = process.env.NEXT_PUBLIC_CALENDLY_URL ?? DEFAULT_CALENDLY_URL;
+const CALENDLY_EMBED_SRC = calendlyEmbedSrc(CALENDLY_URL);
 
 export function ContactPageClient() {
   const [email, setEmail] = useState("");
@@ -71,7 +71,7 @@ export function ContactPageClient() {
           backgroundImage={HERO_IMAGES.pricing.hero}
           ctas={[
             { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "ghost" },
-            { label: CONTACT_CTA_LABEL, href: "#contact-form", variant: "primary" },
+            { label: CONTACT_CTA_LABEL, href: "#book-demo", variant: "primary" },
           ]}
         />
       }
@@ -79,16 +79,31 @@ export function ContactPageClient() {
       <MarketingSection bordered className="py-16">
         <div className="grid lg:grid-cols-[1fr_280px] gap-10 max-w-5xl mx-auto">
           <div className="space-y-8">
-            <div className={`${glassCard} overflow-hidden`}>
+            <div id="book-demo" className={`${glassCard} overflow-hidden`}>
+              <div className="flex items-start justify-between gap-4 p-6 pb-0">
+                <div className="space-y-1">
+                  <h3 className="font-semibold text-white">Book a demo</h3>
+                  <p className="text-sm text-white/65">
+                    30-minute intro call — pick a time that works for you.
+                  </p>
+                </div>
+                <a
+                  href={CALENDLY_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 text-sm text-white/70 hover:text-white hover:underline"
+                >
+                  Open calendar
+                </a>
+              </div>
               <iframe
                 src={CALENDLY_EMBED_SRC}
                 title="Book a demo with goals.ac"
-                className="w-full min-h-[630px] border-0"
-                sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox"
+                className="w-full h-[720px] border-0"
               />
             </div>
 
-            <form onSubmit={submitMessage} className={`${glassCard} p-6 space-y-4`}>
+            <form id="contact-form" onSubmit={submitMessage} className={`${glassCard} p-6 space-y-4`}>
               <h3 className="font-semibold text-white">Send a message</h3>
               <p className="text-sm text-white/65">
                 Prefer email? Leave your address and we&apos;ll get back to you.

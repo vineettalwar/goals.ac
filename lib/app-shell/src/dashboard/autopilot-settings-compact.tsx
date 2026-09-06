@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState, type ReactNode } from "react";
 import { Save } from "lucide-react";
 import { cn } from "../cn";
@@ -79,8 +81,8 @@ export function AutopilotSettingsCompact({
   }, [settings]);
 
   return (
-    <div className="mb-5 space-y-2 border-b border-border pb-5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div className="mb-5 space-y-2 rounded-xl border border-border bg-secondary/20 px-3 py-3 sm:px-4">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5">
         <label className="flex items-center gap-2.5">
           <Switch
             checked={draft.enabled}
@@ -122,15 +124,15 @@ export function AutopilotSettingsCompact({
 
         <div className="ml-auto flex items-center gap-3">
           {renderLink({
-            href: `/projects/${projectId}?tab=publishing`,
-            className: "text-xs text-muted-foreground hover:text-foreground",
+            href: `/projects/${projectId}?tab=automation`,
+            className: "text-xs font-medium text-muted-foreground transition-colors hover:text-foreground",
             children: "More settings",
           })}
           <button
             type="button"
             onClick={() => void onSave(draft)}
             disabled={saving}
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
+            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-3 text-xs font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
           >
             <Save className="h-3.5 w-3.5" aria-hidden />
             {saving ? "Saving…" : "Save"}

@@ -43,7 +43,7 @@ export function PublishingSettingsMetaCard({
   onSelectMetaPage: (pageId: string) => void;
 }) {
   return (
-    <Card className={embedded ? "border-0 shadow-none" : "border shadow-sm"}>
+    <Card className={embedded ? "rounded-none border-0 bg-transparent shadow-none" : "border shadow-sm"}>
       <CardHeader className={embedded ? "px-0 pt-0" : undefined}>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -157,7 +157,7 @@ export function PublishingSettingsBlueskyCard({
   onBlueskyHandleChange: (v: string) => void;
 }) {
   return (
-    <Card className={embedded ? "border-0 shadow-none" : "border shadow-sm"}>
+    <Card className={embedded ? "rounded-none border-0 bg-transparent shadow-none" : "border shadow-sm"}>
       <CardHeader className={embedded ? "px-0 pt-0" : undefined}>
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -251,7 +251,7 @@ export function PublishingSettingsMastodonCard({
   onMastodonInstanceChange: (v: string) => void;
 }) {
   return (
-    <Card className={embedded ? "border-0 shadow-none" : "border shadow-sm"}>
+    <Card className={embedded ? "rounded-none border-0 bg-transparent shadow-none" : "border shadow-sm"}>
       <CardHeader className={embedded ? "px-0 pt-0" : undefined}>
         <div className="flex items-start justify-between gap-4">
           <div>

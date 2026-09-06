@@ -8,11 +8,20 @@ import {
   ArrowUpDown,
   BarChart3,
   ExternalLink,
+  RefreshCw,
   Search,
 } from "lucide-react";
+import {
+  type GscUrlInspection,
+  buildInspectionUrlMap,
+  buildInspectionPieceMap,
+  fetchGscInspections,
+  triggerGscInspection,
+} from "@/lib/gsc/gsc-inspection-client";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 import {
   Table,
   TableBody,
@@ -55,6 +64,43 @@ function formatDuration(seconds: number): string {
   return `${mins}m ${secs}s`;
 }
 
+/** Maps GSC verdict / coverageState to a compact badge. */
+function GscIndexingBadge({ inspection }: { inspection: GscUrlInspection | null }) {
+  if (!inspection) {
+    return (
+      <span className="inline-flex rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+        Not inspected
+      </span>
+    );
+  }
+  if (!inspection.verdict && !inspection.coverageState) {
+    return (
+      <span className="inline-flex rounded-full bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-300">
+        Pending…
+      </span>
+    );
+  }
+  const label = inspection.coverageState ?? inspection.verdict ?? "—";
+  const isIndexed =
+    inspection.verdict === "PASS" ||
+    (inspection.coverageState?.toLowerCase().includes("submitted") &&
+      inspection.indexingState === "INDEXING_ALLOWED");
+  const isError =
+    inspection.verdict === "FAIL" ||
+    inspection.coverageState?.toLowerCase().includes("error") ||
+    inspection.coverageState?.toLowerCase().includes("excluded");
+  const cls = isIndexed
+    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+    : isError
+      ? "bg-destructive/10 text-destructive"
+      : "bg-amber-500/10 text-amber-800 dark:text-amber-200";
+  return (
+    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] ${cls}`}>
+      {label.replace(/_/g, " ")}
+    </span>
+  );
+}
+
 function isPublished(article: ArticlePerformanceResponse["articles"][number]): boolean {
   return article.status === "published" || Boolean(article.publishedUrl);
 }
@@ -70,6 +116,16 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
   const [data, setData] = useState<ArticlePerformanceResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // GSC URL Inspection state
+  const [inspections, setInspections] = useState<GscUrlInspection[]>([]);
+  const [inspecting, setInspecting] = useState<Set<string>>(new Set());
+
+  const loadInspections = useCallback(async () => {
+    if (!projectId) return;
+    const rows = await fetchGscInspections(projectId);
+    setInspections(rows);
+  }, [projectId]);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -92,9 +148,36 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
     }
   }, [projectId, startDate, endDate]);
 
+  const handleInspect = useCallback(
+    async (url: string, contentPieceId: number) => {
+      if (inspecting.has(url)) return;
+      setInspecting((prev) => new Set(prev).add(url));
+      try {
+        await triggerGscInspection(projectId, { url, contentPieceId });
+        // Brief delay then refresh — the row will exist even if verdict is still null
+        await new Promise((r) => setTimeout(r, 800));
+        await loadInspections();
+      } finally {
+        setInspecting((prev) => {
+          const next = new Set(prev);
+          next.delete(url);
+          return next;
+        });
+      }
+    },
+    [projectId, inspecting, loadInspections],
+  );
+
   useEffect(() => {
     if (projectId) void load();
   }, [projectId, load]);
+
+  useEffect(() => {
+    if (projectId) void loadInspections();
+  }, [projectId, loadInspections]);
+
+  const inspectionByUrl = useMemo(() => buildInspectionUrlMap(inspections), [inspections]);
+  const inspectionByPiece = useMemo(() => buildInspectionPieceMap(inspections), [inspections]);
 
   const publishedArticles = useMemo(
     () => (data?.articles ?? []).filter(isPublished),
@@ -143,7 +226,7 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
   const gscConnected =
     data?.connectionStatus.gsc.connected && data.connectionStatus.gsc.propertyVerified;
 
-  const containerClass = embedded ? "space-y-6" : "px-8 py-8 max-w-6xl space-y-6";
+  const containerClass = embedded ? "space-y-6" : `${APP_SHELL_PAGE_WIDE} space-y-6`;
 
   if (!projectId) {
     return projectLoading ? <PageSkeleton /> : null;
@@ -266,6 +349,7 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
             <TableHeader>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableHead className="font-semibold text-foreground">Totals</TableHead>
+                <TableHead />
                 <TableHead className="text-right font-semibold text-foreground">
                   {formatNumber(totals.clicks)} clicks
                 </TableHead>
@@ -284,6 +368,7 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
               </TableRow>
               <TableRow>
                 <TableHead>Article</TableHead>
+                <TableHead className="text-right">Indexing</TableHead>
                 <TableHead className="text-right">GSC clicks</TableHead>
                 <TableHead className="text-right">Impressions</TableHead>
                 <TableHead className="text-right">Sessions</TableHead>
@@ -303,19 +388,63 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
                         {article.title}
                       </Link>
                       {article.publishedUrl ? (
-                        <a
-                          href={article.publishedUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary truncate max-w-full"
-                        >
-                          <span className="truncate">{article.publishedUrl}</span>
-                          <ExternalLink className="h-3 w-3 shrink-0" />
-                        </a>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <a
+                            href={article.publishedUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary truncate max-w-[240px]"
+                          >
+                            <span className="truncate">{article.publishedUrl}</span>
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                          </a>
+                          <Link
+                            href={`/projects/${projectId}/content-studio?${new URLSearchParams({
+                              optimize: "1",
+                              url: article.publishedUrl,
+                              keyword: (article.targetKeyword || article.title).slice(0, 80),
+                            }).toString()}`}
+                            className="text-xs font-medium text-primary hover:underline"
+                          >
+                            Optimize
+                          </Link>
+                        </div>
                       ) : (
                         <span className="text-xs text-muted-foreground">No published URL</span>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {(() => {
+                      if (!article.publishedUrl) return null;
+                      const insp =
+                        inspectionByUrl.get(article.publishedUrl) ??
+                        inspectionByPiece.get(article.contentPieceId);
+                      const isQueued = inspecting.has(article.publishedUrl);
+                      return (
+                        <div className="flex flex-col items-end gap-1.5">
+                          <GscIndexingBadge inspection={insp ?? null} />
+                          <button
+                            type="button"
+                            disabled={isQueued}
+                            onClick={() =>
+                              void handleInspect(
+                                article.publishedUrl!,
+                                article.contentPieceId,
+                              )
+                            }
+                            className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline disabled:opacity-50 disabled:no-underline"
+                          >
+                            {isQueued ? (
+                              <RefreshCw className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Search className="h-3 w-3" />
+                            )}
+                            {isQueued ? "Queued…" : "Inspect"}
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     {formatNumber(article.gsc.clicks)}

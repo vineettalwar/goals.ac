@@ -1,3 +1,55 @@
+## 2026-09-06 — Editor-side outbound internal links (wrap existing phrases)
+
+**Decision:** Ship Studio quality-panel **Insert** for outbound internal links by wrapping phrases that already appear in the draft (`suggestOutboundInternalLinks` + `applyInternalLinksToMarkdown`). Reuse metadata `internalLinkSuggestions`. Do **not** invent anchors, rebuild the Internal Link Hub, or add a new apply API in this slice.
+
+**Alternatives considered:**
+- AI enhance-only linking — rejected; already unreliable; partners need a deterministic click
+- Hub write UI that edits published posts — deferred; publish-time inbound planner already covers that path
+- Fetch all published pieces for candidates on every editor open — deferred; metadata suggestions cover the generate path first
+
+**Reason:** Closes Surfer gap matrix #2 with the smallest honest surface: suggest + insert in the writing room.
+
+**Implications:** PRD `docs/prd/editor-internal-links.md`; package export `@workspace/content-engine/outbound-internal-links`.
+
+## 2026-09-06 — goals.ac MCP ships with existing gac_ API keys (no dual credential system)
+
+**Decision:** Feature 3 (goals.ac MCP + agent skills) uses existing `gac_…` API keys from Settings → Integrations with scopes `content:read`, `content:generate`, `publish:write`. Do **not** create a separate MCP credential type or dual auth system.
+
+**Alternatives considered:**
+- MCP-specific credentials (separate from API key system) — rejected; introduces a second credential lifecycle and confuses audit/revocation
+- JWT tokens from `/api/auth/login` — rejected; agent workflows need long-lived keys with granular scopes, not user login sessions
+- Service accounts (distinct from user API keys) — deferred; no current need; can be added later if agents require org-level credentials
+
+**Reason:** The existing API key system already supports scoped auth (content:read, content:generate, publish:write) and is used by external clients, CMS plugins, and public API callers. Reusing it means one lifecycle, one audit trail, and one revocation surface.
+
+**Implications:** MCP docs and Cursor skill both reference `/api/mcp` routes; API key scope docs cover the MCP use case; no new migrations.
+
+## 2026-09-06 — Content Refresh Loop packaging over Surfer NLP / Docs sidecar
+
+**Decision:** Close the Surfer demo gap with a **Content Refresh Loop** (URL import → dual score → Fix gaps / Humanize → WP update + project refresh queue over existing decay / rank / AI-visibility signals). Do **not** build live NLP term highlighting, Chrome / Google Docs sidecars, product MCP, Sites crawl, or detector APIs in this tranche.
+
+**Alternatives considered:**
+- Ship Surfer-style live NLP editor first — rejected; still deferred per Waves 4–6 and executive diagnosis (high cost; coverage checklist + Fix gaps remain the answer)
+- Chrome / Docs sidecar or product MCP before refresh — rejected; distribution plays before the “optimize existing page” path is packaged
+- Full Surfer Sites crawl product — rejected; reuse decay sweep + existing Search signals for the queue
+
+**Reason:** Partners love Surfer’s Diagnose → Fix → Stay loop for *existing* pages. goals.ac already has dual score, enhance, decay jobs, and CMS publish; the missing surface is packaging, not a new scoring engine.
+
+**Implications:** PRD `docs/prd/content-refresh-loop.md`; no product code until that PRD is approved; WP-first update MVP; no new cron (reuse decay sweep).
+
+## 2026-09-06 — Hybrid OpenSEO integration (algorithms + patterns, not a product fork)
+
+**Decision:** Port selected capabilities from MIT-licensed [every-app/open-seo](https://github.com/every-app/open-seo) into goals.ac as a sequenced feature set. Integrate only what closes the WordPress blog loop (technical site audit → real AI visibility → MCP for *our* jobs → GSC URL Inspection). Do not fork OpenSEO’s DaisyUI suite, Autumn markup billing, local SEO, ChatGPT Apps packaging, or Ahrefs DR scraper. Attribute substantial algorithm/copy ports to OpenSEO (MIT) in each feature PRD.
+
+**Alternatives considered:**
+- Embed OpenSEO as a submodule / second product UI — rejected; splits design system and doubles ops
+- Ignore OpenSEO and build technical crawl from scratch — rejected; issue registry + reporters are battle-tested and MIT
+- Full Semrush-clone feature parity — rejected; goals.ac’s wedge is content autopilot + CMS, not keyword DB UI
+
+**Reason:** OpenSEO is a research/audit/agent data plane; goals.ac already owns generation, humanize, and publish. The largest proven gap is multi-page technical crawl vs single-URL GEO audit; the largest honesty gap is simulated LLM visibility.
+
+**Implications:** Index `docs/prd/openseo-integration-index.md`; teardown `docs/competitors/open-seo-teardown.md`; Feature 1 PRD `docs/prd/feature-1-technical-site-audit.md`. Go-live Gate 0 remains a separate track.
+
 ## 2026-09-04 — Close the six PRD conformance gaps, measure style rather than describe it
 
 **Decision:** Audit the product PRD against the shipped codebase, then close only what the audit showed missing: a configurable crawl budget with robots.txt compliance, a deterministic style vector plus sufficiency scoring, the conditional style questionnaire, the 11-30 GSC band, and performance-budget instrumentation. Everything else in the PRD was already built and was left alone.

@@ -15,6 +15,7 @@ import { getSupportOrganizationId } from "@/lib/org/project-scope";
 import { resolvePlanProjectQuota } from "@workspace/billing";
 import { TeamManagement } from "./team-management";
 import { ProjectsPageClient } from "./projects-page-client";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 
 export default async function ProjectsPage() {
   const session = await getSession();
@@ -68,7 +69,7 @@ export default async function ProjectsPage() {
   return (
     <>
       {membership && isSiteAdmin(session.user.orgRole) ? (
-        <div className="px-8 pt-8 max-w-5xl">
+        <div className={APP_SHELL_PAGE}>
           <TeamManagement projects={projects} />
         </div>
       ) : null}

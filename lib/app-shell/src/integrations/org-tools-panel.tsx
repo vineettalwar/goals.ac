@@ -6,6 +6,7 @@ import {
   type ProviderKeyDialogConfig,
 } from "../settings/settings-provider-key-dialog";
 import type { SettingsIntegrationsSummary } from "../settings/types";
+import { SimpleDialog } from "./cms-connect-dialogs";
 import { OrgToolIcon } from "./integration-icons";
 import { IntegrationTile } from "./integration-tiles";
 
@@ -70,6 +71,7 @@ export function OrgToolsPanel({
 }: OrgToolsPanelProps) {
   const [semrushDialogOpen, setSemrushDialogOpen] = useState(false);
   const [deeplDialogOpen, setDeeplDialogOpen] = useState(false);
+  const [stockDialogOpen, setStockDialogOpen] = useState(false);
 
   const semrushConnected = Boolean(integrationsSummary?.semrush.hasCredentials);
   const deeplConnected = Boolean(integrationsSummary?.deepl.configured);
@@ -134,7 +136,7 @@ export function OrgToolsPanel({
                 : "Optional org keys"
           }
           onClick={() => {
-            document.getElementById("org-stock-photos")?.scrollIntoView({ behavior: "smooth" });
+            if (onSaveStockCredentials) setStockDialogOpen(true);
           }}
         />
       </div>
@@ -171,14 +173,17 @@ export function OrgToolsPanel({
         />
       ) : null}
 
-      <div id="org-stock-photos" className="space-y-3 rounded-xl border border-border/60 bg-card p-4">
-        <div>
-          <h2 className="text-sm font-medium">Stock photos (Unsplash / Pexels)</h2>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Optional API keys for copyright-free stock search. Platform keys are used when unset.
+      {onSaveStockCredentials && onTestStockCredentials && onDeleteStockCredentials ? (
+        <SimpleDialog
+          open={stockDialogOpen}
+          onClose={() => setStockDialogOpen(false)}
+          title="Stock photos"
+          titleId="org-stock-photos-dialog-title"
+          className="max-w-lg"
+        >
+          <p className="mb-4 text-xs text-muted-foreground">
+            Optional Unsplash / Pexels keys. Platform keys are used when unset.
           </p>
-        </div>
-        {onSaveStockCredentials && onTestStockCredentials && onDeleteStockCredentials ? (
           <SettingsStockByokPanel
             platform={integrationsSummary?.stock.platform}
             orgCredentials={integrationsSummary?.stock.org ?? []}
@@ -190,10 +195,8 @@ export function OrgToolsPanel({
             savingProvider={stockSavingProvider}
             removingProvider={stockRemovingProvider}
           />
-        ) : (
-          <p className="text-sm text-muted-foreground">Stock credential settings unavailable.</p>
-        )}
-      </div>
+        </SimpleDialog>
+      ) : null}
 
       {message ? (
         <p className="text-sm text-muted-foreground">{message}</p>

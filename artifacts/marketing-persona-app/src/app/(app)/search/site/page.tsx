@@ -6,6 +6,16 @@ const InternalLinksPanel = dynamic(
   { loading: () => <PageSkeleton /> },
 );
 
+const SiteAuditPanel = dynamic(
+  () => import("@/components/panels/site-audit-panel").then((m) => m.SiteAuditPanel),
+  { loading: () => <PageSkeleton /> },
+);
+
 export default function SearchSitePage() {
-  return <InternalLinksPanel embedded />;
+  return (
+    <div className="space-y-8">
+      <SiteAuditPanel />
+      <InternalLinksPanel embedded />
+    </div>
+  );
 }

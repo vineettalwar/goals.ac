@@ -18,7 +18,7 @@ export function resolveNavHref(
     return projectId ? `/projects/${projectId}/social` : "/projects";
   }
   if (href === "__autopilot__") {
-    return projectId ? `/projects/${projectId}?tab=publishing` : "/projects";
+    return projectId ? `/projects/${projectId}?tab=automation` : "/projects";
   }
   return href;
 }
@@ -35,7 +35,11 @@ export function isNavItemActive(
     return pathname.includes("/social");
   }
   if (item.label === "Autopilot") {
-    return pathname.includes("tab=publishing") || pathname.startsWith("/autopilot");
+    return (
+      pathname.includes("tab=automation") ||
+      pathname.includes("tab=publishing") ||
+      pathname.startsWith("/autopilot")
+    );
   }
   if (item.matchPrefix) {
     if (item.matchPrefix === "/strategy") {

@@ -9,10 +9,10 @@ import {
   FolderKanban,
   LogOut,
   Menu,
-  Shield,
   X,
   type LucideIcon,
 } from "lucide-react";
+import { GoalsBrandMark } from "@workspace/app-shell/brand-mark";
 import { ADMIN_NAV_ITEMS, isAdminNavActive } from "@/components/admin/layout/admin-nav-config";
 import { cn } from "@/lib/utils";
 
@@ -120,9 +120,7 @@ export function AdminSidebarNav({ userName, userEmail }: AdminSidebarNavProps) {
           <Menu className="h-5 w-5" />
         </button>
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary">
-            <Shield className="h-3.5 w-3.5 text-primary-foreground" />
-          </div>
+          <GoalsBrandMark size={22} className="shrink-0 text-primary" />
           <span className="truncate text-sm font-semibold tracking-tight">goals.ac Admin</span>
         </div>
       </header>
@@ -145,9 +143,7 @@ export function AdminSidebarNav({ userName, userEmail }: AdminSidebarNavProps) {
         )}
       >
         <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
-            <Shield className="h-3.5 w-3.5 text-primary-foreground" />
-          </div>
+          <GoalsBrandMark size={22} className="shrink-0 text-primary" />
           <div className="min-w-0">
             <span className="block text-sm font-semibold tracking-tight">goals.ac</span>
             <span className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
@@ -164,7 +160,7 @@ export function AdminSidebarNav({ userName, userEmail }: AdminSidebarNavProps) {
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-2 py-3">
+        <nav className="flex-1 overflow-y-auto overscroll-contain px-2 py-3 [scrollbar-width:thin]">
           <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
             Administration
           </p>

@@ -1,18 +1,21 @@
 import { Suspense } from "react";
 import { AdminIntegrationsPageClient } from "@/components/admin/integrations/admin-integrations-page-client";
 import { IntegrationCategorySkeleton } from "@/components/integrations/integration-tile";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 
 function AdminIntegrationsPageFallback() {
   return (
-    <div className="px-8 py-8 max-w-5xl space-y-6">
-      <div className="space-y-1">
-        <div className="h-8 w-40 animate-pulse rounded bg-muted" />
+    <div className={`${APP_SHELL_PAGE_WIDE} space-y-8`}>
+      <div className="space-y-2">
+        <div className="h-8 w-56 animate-pulse rounded bg-muted" />
         <div className="h-4 w-full max-w-xl animate-pulse rounded bg-muted/70" />
       </div>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="h-[62px] animate-pulse rounded-xl border border-border/60 bg-muted/20" />
+        <div className="h-[62px] animate-pulse rounded-xl border border-border/60 bg-muted/20" />
+      </div>
       <div className="space-y-6">
-        <IntegrationCategorySkeleton tileCount={1} />
-        <IntegrationCategorySkeleton tileCount={1} />
-        <IntegrationCategorySkeleton tileCount={2} />
+        <IntegrationCategorySkeleton tileCount={1} compact />
       </div>
     </div>
   );

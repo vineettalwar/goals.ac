@@ -91,10 +91,9 @@ export function PartnerWorkspaceView({
       </div>
 
       {projects.length === 0 ? (
-        <div className="paper-card p-12 text-center">
-          <Globe className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
+        <div className="py-12">
           <p className="font-medium">No client projects yet</p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 max-w-md text-sm text-muted-foreground">
             Create a project per client site to track autopilot, visibility, and publish status here.
           </p>
           <SectionLink renderLink={renderLink} href="/projects" className="mt-4 inline-flex text-sm font-medium text-primary hover:underline">

@@ -33,6 +33,7 @@ const PUBLIC_PREFIXES = [
   "/api/public/",
   "/api/tools/",
   "/api/v1/",
+  "/api/mcp",
   "/api/analytics/vitals",
 ];
 
@@ -101,6 +102,9 @@ function isReadPath(path: string, method: string): boolean {
     if (/^\/api\/website-projects\/\d+\/semrush\/status$/.test(path)) return true;
     if (/^\/api\/website-projects\/\d+\/keyword-alerts$/.test(path)) return true;
     if (/^\/api\/website-projects\/\d+\/keyword-opportunities$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/refresh-queue$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/gsc-url-inspections$/.test(path)) return true;
+    if (/^\/api\/website-projects\/\d+\/site-audits(?:\/\d+)?$/.test(path)) return true;
     if (/^\/api\/website-projects\/\d+\/command-center$/.test(path)) return true;
     if (/^\/api\/website-projects\/\d+\/publish-records$/.test(path)) return true;
     if (/^\/api\/website-projects\/\d+\/article-ideas$/.test(path)) return true;
@@ -231,6 +235,15 @@ function isWritePath(path: string, method: string): boolean {
     return true;
   }
   if (/^\/api\/website-projects\/\d+\/content-pieces\/repurpose$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/content-pieces\/refresh$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/gsc-url-inspections$/.test(path) && method === "POST") {
+    return true;
+  }
+  if (/^\/api\/website-projects\/\d+\/site-audits$/.test(path) && method === "POST") {
     return true;
   }
   if (/^\/api\/content-pieces\/\d+\/repurpose\/stream$/.test(path) && method === "POST") return true;

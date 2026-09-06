@@ -231,18 +231,36 @@ function MobileSection({
 export function MarketingNav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const { loginHref } = useAppAuthHrefs();
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   const productPrefixes = PRODUCT_NAV.map((i) => i.href);
   const solutionsPrefixes = [...SOLUTIONS_NAV.map((i) => i.href), "/solutions"];
   const resourcesPrefixes = RESOURCES_NAV.map((i) => i.href);
 
+  const pillClass = scrolled
+    ? "hidden lg:flex absolute left-1/2 -translate-x-1/2 bg-neutral-950/90 backdrop-blur-md border border-white/15 rounded-full px-2 py-2 items-center gap-1 transition-[background-color,border-color] duration-200"
+    : "hidden lg:flex absolute left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-2 py-2 items-center gap-1 transition-[background-color,border-color] duration-200";
+
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-100 isolate flex items-center justify-between p-4 sm:p-5 font-sans">
+      <nav
+        className={
+          scrolled
+            ? "fixed top-0 left-0 right-0 z-100 isolate flex items-center justify-between p-4 sm:p-5 font-sans bg-neutral-950/90 backdrop-blur-md border-b border-white/10 transition-[background-color,border-color] duration-200"
+            : "fixed top-0 left-0 right-0 z-100 isolate flex items-center justify-between p-4 sm:p-5 font-sans transition-[background-color,border-color] duration-200"
+        }
+      >
         <MarketingLogo />
 
-        <div className="hidden lg:flex absolute left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-2 py-2 items-center gap-1">
+        <div className={pillClass}>
           <NavDropdown label="Product" pathname={pathname} activePrefixes={productPrefixes}>
             {(close) =>
               PRODUCT_NAV.map((item) => <DropdownLink key={item.href} item={item} onNavigate={close} />)

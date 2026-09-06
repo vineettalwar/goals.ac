@@ -18,6 +18,7 @@
     "@workspace/connectors": "workspace:*",
     "@workspace/content-engine": "workspace:*",
     "@workspace/db": "workspace:*",
+    "@workspace/mcp-server": "workspace:*",
     "@workspace/jobs": "workspace:*",
     "@workspace/platform-admin": "workspace:*",
     "@workspace/security": "workspace:*",

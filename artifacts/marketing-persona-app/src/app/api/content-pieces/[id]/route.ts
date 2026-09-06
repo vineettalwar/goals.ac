@@ -25,6 +25,8 @@ const PatchBody = z.object({
     .url()
     .nullable()
     .optional(),
+  /** WordPress remote post id for Content Refresh Loop update-in-place. */
+  cmsRemoteId: z.string().trim().min(1).max(40).nullable().optional(),
   evergreenConfig: z
     .object({
       enabled: z.boolean(),
@@ -105,6 +107,22 @@ export async function PATCH(
         delete (prevMeta as { featuredImageUrl?: string }).featuredImageUrl;
       } else {
         (prevMeta as { featuredImageUrl?: string }).featuredImageUrl = parsed.data.featuredImageUrl;
+      }
+      updates.pieceMetadata = prevMeta;
+    }
+    if (parsed.data.cmsRemoteId !== undefined) {
+      const prevMeta =
+        (updates.pieceMetadata as Record<string, unknown> | undefined) ??
+        (piece!.pieceMetadata && typeof piece!.pieceMetadata === "object"
+          ? { ...piece!.pieceMetadata }
+          : {});
+      if (parsed.data.cmsRemoteId === null) {
+        delete (prevMeta as { cmsRemoteId?: string }).cmsRemoteId;
+        delete (prevMeta as { updateConfirmed?: boolean }).updateConfirmed;
+      } else {
+        (prevMeta as { cmsRemoteId?: string }).cmsRemoteId = parsed.data.cmsRemoteId;
+        // Changing the remote target requires a fresh confirm before publish.
+        delete (prevMeta as { updateConfirmed?: boolean }).updateConfirmed;
       }
       updates.pieceMetadata = prevMeta;
     }

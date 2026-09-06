@@ -8,16 +8,20 @@ import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
+  ArrowUpRight,
+  BarChart3,
+  ChevronRight,
   ExternalLink,
+  FileText,
   Globe,
   Layers,
-  FileText,
-  BarChart3,
   Search,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useProjectContent } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
 import {
@@ -35,12 +39,21 @@ const ProjectVoiceTab = dynamic(
   () => import("@/components/projects/project-voice-tab").then((m) => m.ProjectVoiceTab),
   { loading: () => <TabSkeleton /> },
 );
+const ProjectStyleTab = dynamic(
+  () => import("@/components/projects/project-style-tab").then((m) => m.ProjectStyleTab),
+  { loading: () => <TabSkeleton /> },
+);
 const ProjectContentTab = dynamic(
   () => import("@/components/projects/project-content-tab").then((m) => m.ProjectContentTab),
   { loading: () => <TabSkeleton /> },
 );
 const ProjectPublishingTab = dynamic(
   () => import("@/components/projects/project-publishing-tab").then((m) => m.ProjectPublishingTab),
+  { loading: () => <TabSkeleton /> },
+);
+const ProjectAutomationPanel = dynamic(
+  () =>
+    import("@/components/projects/project-automation-panel").then((m) => m.ProjectAutomationPanel),
   { loading: () => <TabSkeleton /> },
 );
 
@@ -56,6 +69,39 @@ async function fetchProject(id: string): Promise<WebsiteProject | null> {
   const res = await fetch(`/api/website-projects/${id}`);
   if (!res.ok) return null;
   return res.json();
+}
+
+function displayHost(url: string): string {
+  return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
+function ScrapeStatusBadge({ status }: { status: string | null | undefined }) {
+  if (status === "pending") {
+    return (
+      <Badge variant="muted" className="gap-1.5 font-normal">
+        <Spinner size="sm" className="h-3 w-3 border-[1.5px]" />
+        Scanning
+      </Badge>
+    );
+  }
+  if (status === "failed") {
+    return (
+      <Badge variant="destructive" className="font-normal">
+        Scan failed
+      </Badge>
+    );
+  }
+  if (status === "done") {
+    return (
+      <Badge
+        variant="outline"
+        className="border-emerald-500/30 bg-emerald-500/10 font-normal text-emerald-700 dark:text-emerald-400"
+      >
+        Profile ready
+      </Badge>
+    );
+  }
+  return null;
 }
 
 interface ProjectDetailClientProps {
@@ -113,7 +159,8 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
     return data;
   }, [projectId]);
 
-  function setTab(tab: ProjectTab) {
+  function setTab(tab: string) {
+    if (!isProjectTab(tab)) return;
     const next = new URLSearchParams(searchParams.toString());
     next.set("tab", tab);
     router.replace(`/projects/${projectId}?${next.toString()}`);
@@ -136,142 +183,183 @@ function ProjectDetailContent({ projectId, initialProject }: ProjectDetailClient
   const isScraping = project.scrapeStatus === "pending";
   const wasAutoFilled = project.scrapeStatus === "done";
   const scrapeFailed = project.scrapeStatus === "failed";
+  const host = displayHost(project.url);
+  const pageCount = project.pageCount != null && project.pageCount > 0 ? project.pageCount : null;
 
   return (
-    <div className="px-8 py-8 max-w-5xl space-y-6">
-      <div className="mb-2">
-        <Link
-          href="/dashboard"
-          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          ← Dashboard
-        </Link>
-      </div>
+    <div className={`${APP_SHELL_PAGE} space-y-8`}>
+      <div className="space-y-5">
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-sm text-muted-foreground">
+          <Link href="/projects" className="transition-colors hover:text-foreground">
+            Projects
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-50" aria-hidden />
+          <span className="truncate text-foreground">{project.name}</span>
+        </nav>
 
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
-          <a
-            href={project.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary mt-1"
-          >
-            <ExternalLink className="w-3 h-3" />
-            {project.url.replace(/^https?:\/\//, "")}
-          </a>
-        </div>
-        {project.pageCount != null && project.pageCount > 0 && (
-          <span className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Globe className="w-4 h-4" />
-            {project.pageCount} pages
-          </span>
-        )}
-      </div>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-2xl font-bold tracking-tight text-balance">{project.name}</h1>
+              <ScrapeStatusBadge status={project.scrapeStatus} />
+            </div>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+              <a
+                href={project.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex max-w-full items-center gap-1.5 transition-colors hover:text-foreground"
+              >
+                <Globe className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                <span className="truncate">{host}</span>
+                <ExternalLink className="h-3 w-3 shrink-0 opacity-60" aria-hidden />
+              </a>
+              {pageCount != null && (
+                <>
+                  <span className="text-border" aria-hidden>
+                    ·
+                  </span>
+                  <span className="tabular-nums">{pageCount} pages scanned</span>
+                </>
+              )}
+            </div>
+          </div>
 
-      <div>
-        <Link href={`/projects/${projectId}/content-studio`}>
-          <Button size="lg">
-            <Layers className="w-4 h-4 mr-2" />
-            Open Content Studio
+          <Button asChild className="shrink-0 self-start">
+            <Link href={`/projects/${projectId}/content-studio`}>
+              <Layers className="mr-2 h-4 w-4" aria-hidden />
+              Content Studio
+            </Link>
           </Button>
-        </Link>
-        <p className="text-xs text-muted-foreground mt-2">
-          Generate blog posts, guides, whitepapers, and more from your brand profile.
-        </p>
+        </div>
       </div>
 
-      <div className="flex gap-1 border-b border-border">
-        {(
-          [
-            { id: "brand" as const, label: "Brand Profile" },
-            { id: "voice" as const, label: "Brand Voice" },
-            { id: "content" as const, label: "Your Content" },
-            { id: "publishing" as const, label: "Publishing" },
-          ] as const
-        ).map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setTab(tab.id)}
-            className={`px-4 py-2 text-sm border-b-2 -mb-px flex items-center gap-2 ${
-              activeTab === tab.id
-                ? "border-primary font-medium text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-            {tab.id === "content" && contentCount > 0 && (
-              <Badge variant="muted" className="text-xs">
+      <Tabs value={activeTab} onValueChange={setTab} className="space-y-6">
+        <TabsList className="h-auto flex-wrap justify-start gap-1 p-1">
+          <TabsTrigger value="brand">Brand</TabsTrigger>
+          <TabsTrigger value="voice">Voice</TabsTrigger>
+          <TabsTrigger value="style">Style</TabsTrigger>
+          <TabsTrigger value="content" className="gap-1.5">
+            Content
+            {contentCount > 0 && (
+              <Badge variant="muted" className="h-5 min-w-5 justify-center px-1.5 text-xs">
                 {contentCount}
               </Badge>
             )}
-          </button>
-        ))}
-      </div>
+          </TabsTrigger>
+          <TabsTrigger value="publishing">Publishing</TabsTrigger>
+          <TabsTrigger value="automation">Automation</TabsTrigger>
+        </TabsList>
 
-      {activeTab === "brand" && (
-        <ProjectBrandTab
-          projectId={projectId}
-          project={project}
-          isScraping={isScraping}
-          wasAutoFilled={wasAutoFilled}
-          scrapeFailed={scrapeFailed}
-          onRescan={handleRescrape}
-          onProjectUpdate={setProject}
-        />
-      )}
+        <TabsContent value="brand" className="mt-0">
+          <ProjectBrandTab
+            projectId={projectId}
+            project={project}
+            isScraping={isScraping}
+            wasAutoFilled={wasAutoFilled}
+            scrapeFailed={scrapeFailed}
+            onRescan={handleRescrape}
+            onProjectUpdate={setProject}
+          />
+        </TabsContent>
 
-      {activeTab === "voice" && (
-        <ProjectVoiceTab
-          projectId={projectId}
-          isScraping={isScraping}
-          wasAutoFilled={wasAutoFilled}
-          scrapeFailed={scrapeFailed}
-          onRescan={handleRescrape}
-        />
-      )}
+        <TabsContent value="voice" className="mt-0">
+          <ProjectVoiceTab
+            projectId={projectId}
+            isScraping={isScraping}
+            wasAutoFilled={wasAutoFilled}
+            scrapeFailed={scrapeFailed}
+            onRescan={handleRescrape}
+          />
+        </TabsContent>
 
-      {activeTab === "content" && (
-        <ProjectContentTab
-          projectId={projectId}
-          initialContent={(projectContent as ProjectContent | undefined) ?? undefined}
-        />
-      )}
+        <TabsContent value="style" className="mt-0">
+          <ProjectStyleTab
+            projectId={projectId}
+            project={project}
+            isScraping={isScraping}
+            onProjectUpdate={setProject}
+          />
+        </TabsContent>
 
-      {activeTab === "publishing" && (
-        <Suspense fallback={<TabSkeleton />}>
-          <ProjectPublishingTab projectId={projectId} layout="grid" />
-        </Suspense>
-      )}
+        <TabsContent value="content" className="mt-0">
+          <ProjectContentTab
+            projectId={projectId}
+            initialContent={(projectContent as ProjectContent | undefined) ?? undefined}
+          />
+        </TabsContent>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-        {[
-          {
-            label: "Content Studio",
-            href: `/projects/${projectId}/content-studio`,
-            icon: <Layers className="h-5 w-5" />,
-          },
-          {
-            label: "SEO Articles",
-            href: `/projects/${projectId}/content-studio#seo`,
-            icon: <FileText className="h-5 w-5" />,
-          },
-          { label: "GEO Audit", href: `/audit`, icon: <Search className="h-5 w-5" /> },
-          {
-            label: "Analytics",
-            href: `/search/performance`,
-            icon: <BarChart3 className="h-5 w-5" />,
-          },
-        ].map((item) => (
-          <Link key={item.label} href={item.href}>
-            <div className="paper-card p-4 flex flex-col items-center gap-2 text-center cursor-pointer hover:bg-muted/40 transition-colors rounded-xl">
-              <span className="text-primary">{item.icon}</span>
-              <span className="text-sm font-medium">{item.label}</span>
-            </div>
-          </Link>
-        ))}
-      </div>
+        <TabsContent value="publishing" className="mt-0">
+          <Suspense fallback={<TabSkeleton />}>
+            <ProjectPublishingTab projectId={projectId} layout="grid" showAutomation={false} />
+          </Suspense>
+        </TabsContent>
+
+        <TabsContent value="automation" className="mt-0">
+          <ProjectAutomationPanel projectId={projectId} />
+        </TabsContent>
+      </Tabs>
+
+      <section
+        aria-labelledby="project-tools-heading"
+        className="border-t border-border pt-6"
+      >
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 id="project-tools-heading" className="text-sm font-medium text-foreground">
+            Related tools
+          </h2>
+          <p className="text-xs text-muted-foreground">Jump into workflows for this project</p>
+        </div>
+        <ul className="divide-y divide-border rounded-xl border border-border bg-card">
+          {(
+            [
+              {
+                label: "Integrations",
+                description: "CMS, social, email, and search connections",
+                href: `/projects/${projectId}/integrations`,
+                icon: Layers,
+              },
+              {
+                label: "SEO Articles",
+                description: "Draft and refine long-form search content",
+                href: `/projects/${projectId}/content-studio#seo`,
+                icon: FileText,
+              },
+              {
+                label: "GEO Audit",
+                description: "Check answer-engine readiness",
+                href: `/audit`,
+                icon: Search,
+              },
+              {
+                label: "Analytics",
+                description: "Track search performance",
+                href: `/search/performance`,
+                icon: BarChart3,
+              },
+            ] as const
+          ).map((item) => (
+            <li key={item.label}>
+              <Link
+                href={item.href}
+                className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-secondary/40"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
+                  <item.icon className="h-4 w-4" aria-hidden />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-medium text-foreground">{item.label}</span>
+                  <span className="block text-xs text-muted-foreground">{item.description}</span>
+                </span>
+                <ArrowUpRight
+                  className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-colors group-hover:text-muted-foreground"
+                  aria-hidden
+                />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </section>
     </div>
   );
 }
@@ -293,14 +381,14 @@ export function ProjectDetailClient({ projectId, initialProject }: ProjectDetail
 export function ProjectNotFound() {
   return (
     <div className="flex flex-col items-center justify-center p-16 text-center">
-      <AlertCircle className="h-10 w-10 text-muted-foreground mb-4" />
-      <h2 className="text-xl font-semibold mb-2">Project not found</h2>
-      <p className="text-muted-foreground mb-6">
+      <AlertCircle className="mb-4 h-10 w-10 text-muted-foreground" />
+      <h2 className="mb-2 text-xl font-semibold">Project not found</h2>
+      <p className="mb-6 text-muted-foreground">
         This project doesn&apos;t exist or you don&apos;t have access to it.
       </p>
-      <Link href="/dashboard">
-        <Button>Back to Dashboard</Button>
-      </Link>
+      <Button asChild>
+        <Link href="/projects">Back to projects</Link>
+      </Button>
     </div>
   );
 }

@@ -196,10 +196,10 @@ export function ProjectVoiceTab({
   }
 
   return (
-    <div className="paper-card p-6 rounded-xl space-y-6">
+    <div className="paper-card space-y-4 rounded-xl p-6">
       <ScrapeStatusHeader
         title="Brand Voice"
-        description="Customize how our AI writes content to match your unique brand voice and style."
+        description="Tune voice and style so drafts match how you write."
         isScraping={isScraping}
         wasAutoFilled={wasAutoFilled}
         scrapeFailed={scrapeFailed}

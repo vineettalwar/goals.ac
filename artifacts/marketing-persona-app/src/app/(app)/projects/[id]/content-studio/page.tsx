@@ -34,34 +34,49 @@ function toUrlSearchParams(
 async function resolveInitialCreateState(
   projectId: string,
   urlParams: URLSearchParams,
-): Promise<{ initialBriefDraft: BriefContentDraft | null; initialCreateOpen: boolean }> {
+): Promise<{
+  initialBriefDraft: BriefContentDraft | null;
+  initialCreateOpen: boolean;
+  initialOptimize: { url: string; keyword: string } | null;
+}> {
+  if (urlParams.get("optimize") === "1") {
+    return {
+      initialBriefDraft: null,
+      initialCreateOpen: true,
+      initialOptimize: {
+        url: urlParams.get("url")?.trim() ?? "",
+        keyword: urlParams.get("keyword")?.trim() ?? "",
+      },
+    };
+  }
+
   const geoDraft = draftFromCreateParams(urlParams);
   if (geoDraft) {
-    return { initialBriefDraft: geoDraft, initialCreateOpen: true };
+    return { initialBriefDraft: geoDraft, initialCreateOpen: true, initialOptimize: null };
   }
 
   const briefIdParam = urlParams.get("briefId");
   if (!briefIdParam) {
-    return { initialBriefDraft: null, initialCreateOpen: false };
+    return { initialBriefDraft: null, initialCreateOpen: false, initialOptimize: null };
   }
 
   const briefId = Number(briefIdParam);
   if (Number.isNaN(briefId)) {
-    return { initialBriefDraft: null, initialCreateOpen: false };
+    return { initialBriefDraft: null, initialCreateOpen: false, initialOptimize: null };
   }
 
   const session = await getSession();
   const userId = session?.user?.id ? Number(session.user.id) : null;
   if (!userId) {
-    return { initialBriefDraft: null, initialCreateOpen: false };
+    return { initialBriefDraft: null, initialCreateOpen: false, initialOptimize: null };
   }
 
   const brief = await loadBriefForProject(briefId, Number(projectId), userId);
   if (!brief) {
-    return { initialBriefDraft: null, initialCreateOpen: false };
+    return { initialBriefDraft: null, initialCreateOpen: false, initialOptimize: null };
   }
 
-  return { initialBriefDraft: briefToDraft(brief), initialCreateOpen: true };
+  return { initialBriefDraft: briefToDraft(brief), initialCreateOpen: true, initialOptimize: null };
 }
 
 export default async function ContentStudioPage({
@@ -74,7 +89,7 @@ export default async function ContentStudioPage({
   const { id } = await params;
   const sp = await searchParams;
   const urlParams = toUrlSearchParams(sp);
-  const { initialBriefDraft, initialCreateOpen } = await resolveInitialCreateState(id, urlParams);
+  const { initialBriefDraft, initialCreateOpen, initialOptimize } = await resolveInitialCreateState(id, urlParams);
 
   return (
     <Suspense fallback={<PageSkeleton />}>
@@ -82,6 +97,7 @@ export default async function ContentStudioPage({
         projectId={id}
         initialBriefDraft={initialBriefDraft}
         initialCreateOpen={initialCreateOpen}
+        initialOptimize={initialOptimize}
       />
     </Suspense>
   );

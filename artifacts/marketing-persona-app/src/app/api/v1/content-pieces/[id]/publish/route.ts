@@ -8,6 +8,7 @@ import { resolveEntitlementsForOrg } from "@workspace/content-engine/support/pub
 import { assertProjectInOrg } from "@workspace/content-engine/support/auth/api-key-auth";
 import { withPublishRecord } from "@workspace/content-engine/support/publishing/publish-records";
 import { assessPublishReadiness } from "@workspace/content-engine/content/publish-readiness";
+import { buildPublishReadinessOptions } from "@workspace/content-engine/support/publishing/readiness-options";
 import { requireApiKeyScope, withPublicApiKey } from "@/lib/public-api/auth";
 
 export async function POST(
@@ -46,11 +47,18 @@ export async function POST(
 
     // Same gate the interactive route applies. A public API key is still a
     // publish path to a customer's live site, so it does not get a free pass.
-    const readiness = assessPublishReadiness({
-      title: piece.title,
-      bodyMarkdown: piece.bodyMarkdown ?? "",
-      pieceMetadata: piece.pieceMetadata,
-    });
+    const readinessOptions = await buildPublishReadinessOptions(
+      { id: piece.id, websiteProjectId: piece.websiteProjectId, targetKeyword: piece.targetKeyword },
+      { unattended: true },
+    );
+    const readiness = assessPublishReadiness(
+      {
+        title: piece.title,
+        bodyMarkdown: piece.bodyMarkdown ?? "",
+        pieceMetadata: piece.pieceMetadata,
+      },
+      readinessOptions,
+    );
 
     if (!readiness.ok && !body.overrideReason) {
       return NextResponse.json(

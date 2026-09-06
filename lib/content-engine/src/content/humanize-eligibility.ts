@@ -1,4 +1,4 @@
-import type { ContentFormatType } from "@workspace/db";
+import type { ContentFormatType } from "@workspace/db/schema";
 import { isSeoLongformFormat } from "./seo-longform-formats";
 
 /** Social studio formats eligible for the humanize pass (alongside SEO longform). */

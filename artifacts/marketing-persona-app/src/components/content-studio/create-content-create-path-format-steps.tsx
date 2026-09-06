@@ -11,6 +11,7 @@ import {
   ExternalLink,
   AlertTriangle,
   Shuffle,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,6 +63,12 @@ export function CreateContentCreatePathFormatSteps({ currentStep, wizard }: { cu
                       title="Repurpose existing"
                       description="Convert an article or post into a different format."
                       onClick={() => selectPath("repurpose")}
+                    />
+                    <OptionCard
+                      icon={<RefreshCw className="w-6 h-6" />}
+                      title="Optimize page"
+                      description="Import a live URL, score it, fix gaps, and update WordPress."
+                      onClick={() => selectPath("optimize")}
                     />
                   </div>
                 </WizardStep>

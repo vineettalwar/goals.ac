@@ -27,7 +27,7 @@ export function BrandProfileEditView({
       <div>
         <h2 className="font-semibold">Brand Profile</h2>
         <p className="mt-0.5 text-sm text-muted-foreground">
-          Used to personalize AI-generated content for this project.
+          Used to personalize drafts for this project.
         </p>
       </div>
 

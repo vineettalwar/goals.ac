@@ -163,7 +163,7 @@ export function GeoAuditDetailView({
   }
 
   return (
-    <div className="max-w-4xl">
+    <div className="w-full">
       <AuditLink
         renderLink={renderLink}
         href="/audit"

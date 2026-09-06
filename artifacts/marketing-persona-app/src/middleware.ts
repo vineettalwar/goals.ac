@@ -69,17 +69,36 @@ function isWriteAppPath(pathname: string) {
   return WRITE_APP_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
+/** Avoid a self-fetch on every nav/API — was the main soft-nav tax. */
+const PLATFORM_STATUS_TTL_MS = 15_000;
+let platformStatusCache: { platformEnabled: boolean; expiresAt: number } | null = null;
+
 async function fetchPlatformStatus(origin: string) {
+  const now = Date.now();
+  if (platformStatusCache && now < platformStatusCache.expiresAt) {
+    return { platformEnabled: platformStatusCache.platformEnabled };
+  }
+
   try {
     const res = await fetch(`${origin}/api/platform/status`, {
       cache: "no-store",
     });
     if (!res.ok) return { platformEnabled: true };
     const body = (await res.json()) as { status?: string };
-    return { platformEnabled: body.status !== "maintenance" };
+    const platformEnabled = body.status !== "maintenance";
+    platformStatusCache = { platformEnabled, expiresAt: now + PLATFORM_STATUS_TTL_MS };
+    return { platformEnabled };
   } catch {
     return { platformEnabled: true };
   }
+}
+
+function isRouterPrefetch(req: Request) {
+  return (
+    req.headers.get("Next-Router-Prefetch") === "1" ||
+    req.headers.get("Purpose") === "prefetch" ||
+    req.headers.get("Sec-Purpose") === "prefetch"
+  );
 }
 
 export default auth(async (req) => {
@@ -110,13 +129,16 @@ export default auth(async (req) => {
     return NextResponse.next();
   }
 
-  const platformStatus = await fetchPlatformStatus(req.nextUrl.origin);
-  if (!platformStatus.platformEnabled && !isSuperAdmin(adminRole)) {
-    if (pathname.startsWith("/api/")) {
-      return NextResponse.json({ error: "Service temporarily unavailable" }, { status: 503 });
-    }
-    if (!pathname.startsWith("/maintenance")) {
-      return NextResponse.redirect(new URL("/maintenance", req.nextUrl.origin));
+  // Super-admins bypass maintenance; prefeches fail open (real nav still checks).
+  if (!isSuperAdmin(adminRole) && !isRouterPrefetch(req)) {
+    const platformStatus = await fetchPlatformStatus(req.nextUrl.origin);
+    if (!platformStatus.platformEnabled) {
+      if (pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Service temporarily unavailable" }, { status: 503 });
+      }
+      if (!pathname.startsWith("/maintenance")) {
+        return NextResponse.redirect(new URL("/maintenance", req.nextUrl.origin));
+      }
     }
   }
 

@@ -23,6 +23,7 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useActiveProject } from "@/context/use-active-project";
 import {
   useKeywordIntelligence,
@@ -166,7 +167,7 @@ export function KeywordTrackingPanel({ embedded = false }: { embedded?: boolean 
   const showInitialLoad =
     projectId && trackedLoading && intelligenceLoading && tracked.length === 0;
 
-  const containerClass = embedded ? "space-y-6" : "px-8 py-8 max-w-5xl space-y-6";
+  const containerClass = embedded ? "space-y-6" : `${APP_SHELL_PAGE} space-y-6`;
 
   return (
     <div className={containerClass}>

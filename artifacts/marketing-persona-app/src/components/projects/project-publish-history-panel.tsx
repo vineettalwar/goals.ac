@@ -7,11 +7,33 @@ import {
   type PublishHistoryRecord,
 } from "@workspace/app-shell/integrations";
 import { contentPiecePath } from "@workspace/app-shell/project-paths";
+import {
+  type GscUrlInspection,
+  buildInspectionUrlMap,
+  fetchGscInspections,
+  triggerGscInspection,
+} from "@/lib/gsc/gsc-inspection-client";
+
+function toSummary(insp: GscUrlInspection): PublishHistoryRecord["gscInspection"] {
+  return {
+    verdict: insp.verdict,
+    coverageState: insp.coverageState,
+    indexingState: insp.indexingState,
+    inspectedAt: insp.inspectedAt,
+  };
+}
 
 export function ProjectPublishHistoryPanel({ projectId }: { projectId: string }) {
   const [records, setRecords] = useState<PublishHistoryRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [inspections, setInspections] = useState<GscUrlInspection[]>([]);
+  const [inspecting, setInspecting] = useState<Set<number>>(new Set());
+
+  const loadInspections = useCallback(async () => {
+    const rows = await fetchGscInspections(projectId);
+    setInspections(rows);
+  }, [projectId]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -34,11 +56,43 @@ export function ProjectPublishHistoryPanel({ projectId }: { projectId: string })
 
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadInspections();
+  }, [load, loadInspections]);
+
+  // Join inspection data onto records by remoteUrl
+  const urlMap = buildInspectionUrlMap(inspections);
+  const enrichedRecords: PublishHistoryRecord[] = records.map((r) => {
+    if (!r.remoteUrl) return r;
+    const insp = urlMap.get(r.remoteUrl);
+    return insp ? { ...r, gscInspection: toSummary(insp) } : r;
+  });
+
+  const handleInspect = useCallback(
+    async (record: PublishHistoryRecord) => {
+      if (!record.remoteUrl || inspecting.has(record.id)) return;
+      setInspecting((prev) => new Set(prev).add(record.id));
+      try {
+        await triggerGscInspection(projectId, {
+          url: record.remoteUrl,
+          contentPieceId: record.contentPieceId,
+          publishRecordId: record.id,
+        });
+        await new Promise((r) => setTimeout(r, 800));
+        await loadInspections();
+      } finally {
+        setInspecting((prev) => {
+          const next = new Set(prev);
+          next.delete(record.id);
+          return next;
+        });
+      }
+    },
+    [projectId, inspecting, loadInspections],
+  );
 
   return (
     <PublishHistoryPanel
-      records={records}
+      records={enrichedRecords}
       loading={loading}
       error={error}
       pieceHref={(record) => contentPiecePath(record.websiteProjectId, record.contentPieceId)}
@@ -47,7 +101,12 @@ export function ProjectPublishHistoryPanel({ projectId }: { projectId: string })
           {children}
         </Link>
       )}
-      onRefresh={() => void load()}
+      onRefresh={() => {
+        void load();
+        void loadInspections();
+      }}
+      onInspect={(record) => void handleInspect(record)}
+      inspecting={inspecting}
     />
   );
 }

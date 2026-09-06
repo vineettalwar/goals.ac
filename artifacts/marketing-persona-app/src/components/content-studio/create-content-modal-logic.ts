@@ -14,6 +14,7 @@ export const STEPS_WITH_ENTER_CONTINUE: WizardStepId[] = [
   "planned-date",
   "review",
   "repurpose-source",
+  "optimize-url",
 ];
 
 export function extractSections(jsonAccumulated: string): string[] {
@@ -40,6 +41,10 @@ export function buildStepSequence(
 ): WizardStepId[] {
   if (flow === "repurpose") {
     return ["repurpose-format", "repurpose-keyword", "repurpose-source", "repurpose-generating"];
+  }
+
+  if (flow === "optimize") {
+    return ["optimize-url", "optimize-importing"];
   }
 
   const steps: WizardStepId[] = [];

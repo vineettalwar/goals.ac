@@ -13,4 +13,35 @@
   --muted: #f5f3ef;
   --muted-foreground: #6b6560;
   --accent-warm: #e8702a;
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e8e5e0;
+  --chart-1: #2d3b2d;
+  --chart-2: #047857;
+  --chart-3: #b45309;
+  --chart-4: #6b6560;
+  --chart-5: #c0392b;
+  --chart-grid: #e8e5e0;
+}
+
+.dark {
+  --background: #121412;
+  --foreground: #f4f1ea;
+  --card: #1a1c1a;
+  --card-foreground: #f4f1ea;
+  --border: #2a2e2a;
+  --primary: #8fa08f;
+  --primary-foreground: #121412;
+  --secondary: #222622;
+  --secondary-foreground: #f4f1ea;
+  --muted: #222622;
+  --muted-foreground: #a8a49c;
+  --accent-warm: #f08a45;
+  --sidebar-bg: #161816;
+  --sidebar-border: #2a2e2a;
+  --chart-1: #a8c0a8;
+  --chart-2: #34d399;
+  --chart-3: #fbbf24;
+  --chart-4: #a8a49c;
+  --chart-5: #f87171;
+  --chart-grid: #2a2e2a;
 }

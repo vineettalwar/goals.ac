@@ -168,6 +168,8 @@ pnpm run cf:migrate:d1:local && pnpm run cf:seed:d1:local && pnpm run cf:preview
 
 **No "ensure" (forbidden)** — never use the word `ensure` in identifiers, filenames, comments, strings, or docs. Prefer `init`, `getOrCreate`, `seed`, `provision`, `verify`, or `require`. See `.cursor/rules/no-ensure.mdc` and `.agents/skills/goals-ac-conventions/SKILL.md`.
 
+**Product page grid (locked)** — use `APP_SHELL_PAGE` / `APP_SHELL_PAGE_WIDE` from `@workspace/app-shell/shell-constants` for product page roots. Left-aligned, shared gutters; never `mx-auto` page shells beside the sidebar. See `.cursor/rules/app-shell-grid.mdc`.
+
 ## Env Variables
 
 | Variable | Required | Purpose |

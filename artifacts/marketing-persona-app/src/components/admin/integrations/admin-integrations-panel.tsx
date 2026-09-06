@@ -5,7 +5,7 @@ import {
   IntegrationIconBox,
   IntegrationTile,
 } from "@/components/integrations/integration-tile";
-import type { PlatformIntegrationStatus } from "@/lib/platform/platform-integration-secrets";
+import type { PlatformIntegrationStatus } from "@/lib/platform/platform-integration-types";
 import {
   type IntegrationEnvStatus,
   type PlatformIntegrationCategoryId,
@@ -40,7 +40,7 @@ function IntegrationTilesGrid({
   onSelect: (id: PlatformIntegrationId) => void;
 }) {
   return (
-    <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+    <div className="grid gap-3 sm:grid-cols-2">
       {definitions.map((definition) => {
         const configured = isIntegrationConfigured(definition, env, status);
         const enabled = isIntegrationEnabled(definition, settings);
@@ -79,7 +79,7 @@ function IntegrationTilesGrid({
 
 function IntegrationsHintBar() {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-5">
       <p className="text-sm text-muted-foreground">
         Click an integration to connect or manage settings.
       </p>

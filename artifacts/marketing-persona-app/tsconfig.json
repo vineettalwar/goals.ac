@@ -21,6 +21,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@workspace/stock-images/attribution": [
+        "../../lib/stock-images/src/attribution.ts"
       ]
     },
     "strict": false,

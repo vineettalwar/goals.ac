@@ -26,8 +26,8 @@ export const WORD_COUNT_PRESETS = [
 ];
 
 export const HUMANIZATION_LEVELS = [
-  { value: "off", label: "Off", description: "Publish the first AI draft as-is." },
-  { value: "light", label: "Light", description: "Polish rhythm and remove AI-tell phrases." },
+  { value: "off", label: "Off", description: "Publish the first draft as-is." },
+  { value: "light", label: "Light", description: "Polish rhythm and remove telltale phrases." },
   { value: "strong", label: "Strong", description: "Full editorial rewrite while preserving SEO structure." },
 ] as const;
 

@@ -16,6 +16,7 @@
     { "path": "../ai-providers" },
     { "path": "../connectors" },
     { "path": "../seo-tools" },
+    { "path": "../serp-provider" },
     { "path": "../keyword-research-provider" },
     { "path": "../stock-images" },
     { "path": "../deepl" },

@@ -1,16 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
-import { ArrowLeft, Calendar, Pin, PinOff, Zap } from "lucide-react";
+import { ArrowLeft, ArrowRight, Pin, PinOff, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { Badge } from "@/components/ui/badge";
 import { RoadmapChat } from "@/components/roadmap/roadmap-chat";
 import { useActiveProject } from "@/context/use-active-project";
 import { useProjectContent } from "@/lib/queries";
+
+const EASE = [0.16, 1, 0.3, 1] as const;
 
 interface Phase {
   title: string;
@@ -23,6 +25,25 @@ interface Phase {
 interface RoadmapContent {
   executiveSummary?: string;
   phases?: Phase[];
+}
+
+type Step =
+  | { kind: "intro" }
+  | { kind: "summary"; text: string }
+  | { kind: "phase"; index: number; phase: Phase }
+  | { kind: "actions" };
+
+function buildSteps(content: RoadmapContent): Step[] {
+  const phases = content.phases ?? [];
+  const steps: Step[] = [{ kind: "intro" }];
+  if (content.executiveSummary?.trim()) {
+    steps.push({ kind: "summary", text: content.executiveSummary.trim() });
+  }
+  for (let i = 0; i < phases.length; i++) {
+    steps.push({ kind: "phase", index: i, phase: phases[i]! });
+  }
+  steps.push({ kind: "actions" });
+  return steps;
 }
 
 type RoadmapDetailAppProps = {
@@ -43,20 +64,63 @@ export function RoadmapDetailApp({
   content,
 }: RoadmapDetailAppProps) {
   const router = useRouter();
+  const reduceMotion = useReducedMotion();
   const { activeProjectId } = useActiveProject();
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
   const { data: projectContent } = useProjectContent(projectId || null);
   const [pinLoading, setPinLoading] = useState(false);
   const [generatingStrategy, setGeneratingStrategy] = useState(false);
   const [pinOverride, setPinOverride] = useState<boolean | null>(null);
+  const [stepIndex, setStepIndex] = useState(0);
+  const [direction, setDirection] = useState<1 | -1>(1);
 
-  const phases = content?.phases ?? [];
+  const steps = useMemo(() => buildSteps(content), [content]);
+  const step = steps[stepIndex] ?? steps[0];
+  const total = steps.length;
+  const progressPct = total > 0 ? Math.round(((stepIndex + 1) / total) * 100) : 0;
+  const isFirst = stepIndex === 0;
+  const isLast = stepIndex >= total - 1;
 
   const isPinnedFromQuery =
     activeProjectId != null
       ? ((projectContent?.roadmaps ?? []) as Array<{ id: number }>).some((r) => r.id === roadmapId)
       : false;
   const isPinned = pinOverride ?? (activeProjectId ? isPinnedFromQuery : false);
+
+  const goNext = useCallback(() => {
+    if (isLast) return;
+    setDirection(1);
+    setStepIndex((i) => Math.min(total - 1, i + 1));
+  }, [isLast, total]);
+
+  const goBack = useCallback(() => {
+    if (isFirst) return;
+    setDirection(-1);
+    setStepIndex((i) => Math.max(0, i - 1));
+  }, [isFirst]);
+
+  const goNextRef = useRef(goNext);
+  const goBackRef = useRef(goBack);
+  useEffect(() => {
+    goNextRef.current = goNext;
+    goBackRef.current = goBack;
+  });
+
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT") return;
+      if (e.key === "Enter" || e.key === "ArrowRight" || e.key === "ArrowDown") {
+        e.preventDefault();
+        goNextRef.current();
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp" || e.key === "Backspace") {
+        e.preventDefault();
+        goBackRef.current();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   async function togglePin() {
     if (!activeProjectId) {
@@ -118,126 +182,248 @@ export function RoadmapDetailApp({
     }
   }
 
+  const variants = reduceMotion
+    ? { enter: { opacity: 1, y: 0 }, center: { opacity: 1, y: 0 }, exit: { opacity: 1, y: 0 } }
+    : {
+        enter: (dir: 1 | -1) => ({ opacity: 0, y: dir === 1 ? 24 : -24 }),
+        center: { opacity: 1, y: 0 },
+        exit: (dir: 1 | -1) => ({ opacity: 0, y: dir === 1 ? -24 : 24 }),
+      };
+
+  const stepKey =
+    step?.kind === "phase"
+      ? `phase-${step.index}`
+      : step?.kind === "summary"
+        ? "summary"
+        : step?.kind ?? "intro";
+
   return (
-    <div className="px-8 py-8 max-w-4xl space-y-6 pb-32">
-      <Link
-        href="/strategy/roadmaps"
-        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-3.5 w-3.5" /> Growth roadmaps
-      </Link>
+    <div className="flex min-h-[calc(100vh-4rem)] flex-col pb-28">
+      <div className="h-1 w-full bg-secondary">
+        <div
+          className="h-full bg-primary transition-[width] duration-300"
+          style={{ width: `${progressPct}%` }}
+          role="progressbar"
+          aria-valuenow={progressPct}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Roadmap progress"
+        />
+      </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div>
-          <Badge variant="muted" className="mb-2 capitalize">
-            {location} · {stage}
-          </Badge>
-          <h1 className="text-2xl font-bold">{industry}</h1>
-          <p className="text-sm text-muted-foreground mt-1">12-month growth roadmap</p>
-        </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <Button
-            onClick={generateContentStrategy}
-            disabled={generatingStrategy || !activeProjectId}
+      <header className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-4 pt-6 sm:px-6">
+        <Link
+          href="/strategy/roadmaps"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Growth roadmaps
+        </Link>
+        <p className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
+          {stepIndex + 1} of {total}
+        </p>
+      </header>
+
+      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+        {!isFirst && (
+          <button
+            type="button"
+            onClick={goBack}
+            className="mb-6 flex w-fit items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
-            {generatingStrategy ? (
-              <Spinner size="sm" />
-            ) : (
-              <>
-                <Zap className="h-4 w-4" />
-                Generate content strategy
-              </>
-            )}
-          </Button>
-          {activeProjectId && isPinned != null && (
-            <Button variant="outline" onClick={togglePin} disabled={pinLoading}>
-              {isPinned ? (
-                <>
-                  <PinOff className="h-4 w-4" />
-                  Unpin
-                </>
-              ) : (
-                <>
-                  <Pin className="h-4 w-4" />
-                  Pin to project
-                </>
-              )}
-            </Button>
-          )}
-        </div>
-      </div>
+            <ArrowLeft className="h-3.5 w-3.5" /> Back
+          </button>
+        )}
 
-      {content.executiveSummary && (
-        <div className="paper-card rounded-xl p-6">
-          <h2 className="font-semibold mb-2 flex items-center gap-2">
-            <Calendar className="h-4 w-4 text-primary" />
-            Executive summary
-          </h2>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            {content.executiveSummary}
-          </p>
-        </div>
-      )}
+        <AnimatePresence mode="wait" custom={direction}>
+          <motion.div
+            key={stepKey}
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.32, ease: EASE }}
+          >
+            {step?.kind === "intro" && (
+              <div className="space-y-6">
+                <p className="text-sm font-medium capitalize text-muted-foreground">
+                  {location} · {stage}
+                </p>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  {industry}
+                </h1>
+                <p className="max-w-prose text-lg text-muted-foreground">
+                  A 12-month growth roadmap — walk through each phase one at a time.
+                </p>
+              </div>
+            )}
 
-      <div className="space-y-4">
-        {phases.map((phase, i) => (
-          <div key={`${phase.title}-${phase.timeframe}`} className="paper-card rounded-xl p-6 space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="step-dot active shrink-0">{i + 1}</div>
-              <div>
-                <h3 className="font-bold text-lg">{phase.title}</h3>
-                <p className="text-sm text-primary font-medium">{phase.timeframe}</p>
-              </div>
-            </div>
-            {phase.objectives?.length > 0 && (
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                  Objectives
-                </h4>
-                <ul className="space-y-1.5">
-                  {phase.objectives.map((o, j) => (
-                    <li key={j} className="text-sm flex gap-2">
-                      <span className="text-primary">•</span>
-                      {o}
-                    </li>
-                  ))}
-                </ul>
+            {step?.kind === "summary" && (
+              <div className="space-y-6">
+                <p className="text-sm font-medium text-muted-foreground">Executive summary</p>
+                <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                  Where this roadmap is headed
+                </h1>
+                <p className="max-w-prose text-base leading-relaxed text-foreground/90 sm:text-lg">
+                  {step.text}
+                </p>
               </div>
             )}
-            {phase.tactics?.length > 0 && (
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                  Tactics
-                </h4>
-                <ul className="space-y-1.5">
-                  {phase.tactics.map((t, j) => (
-                    <li key={j} className="text-sm flex gap-2">
-                      <span className="text-muted-foreground">→</span>
-                      {t}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+
+            {step?.kind === "phase" && (
+              <PhaseStep
+                number={step.index + 1}
+                phaseCount={(content.phases ?? []).length}
+                phase={step.phase}
+              />
             )}
-            {phase.kpis?.length > 0 && (
-              <div>
-                <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-                  KPIs
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {phase.kpis.map((kpi, j) => (
-                    <span key={j} className="text-xs bg-muted rounded-md px-2.5 py-1">
-                      {kpi}
-                    </span>
-                  ))}
+
+            {step?.kind === "actions" && (
+              <div className="space-y-8">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-muted-foreground">Next step</p>
+                  <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+                    Ready to turn this into content?
+                  </h1>
+                  <p className="max-w-prose text-muted-foreground">
+                    Generate a content strategy from this roadmap, or pin it to your active project.
+                  </p>
                 </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+                  <Button
+                    size="lg"
+                    onClick={generateContentStrategy}
+                    disabled={generatingStrategy || !activeProjectId}
+                  >
+                    {generatingStrategy ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4" />
+                        Generate content strategy
+                      </>
+                    )}
+                  </Button>
+                  {activeProjectId && (
+                    <Button
+                      size="lg"
+                      variant="outline"
+                      onClick={togglePin}
+                      disabled={pinLoading}
+                    >
+                      {isPinned ? (
+                        <>
+                          <PinOff className="h-4 w-4" />
+                          Unpin from project
+                        </>
+                      ) : (
+                        <>
+                          <Pin className="h-4 w-4" />
+                          Pin to project
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+                {!activeProjectId && (
+                  <p className="text-sm text-muted-foreground">
+                    Select a project in the sidebar to generate a strategy or pin this roadmap.
+                  </p>
+                )}
               </div>
             )}
-          </div>
-        ))}
-      </div>
+
+            {!isLast && (
+              <div className="mt-10 flex items-center gap-4">
+                <Button size="lg" onClick={goNext}>
+                  Continue <ArrowRight className="h-4 w-4" />
+                </Button>
+                <span className="text-xs text-muted-foreground">press Enter ↵</span>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </main>
 
       <RoadmapChat slug={slug} />
+    </div>
+  );
+}
+
+function PhaseStep({
+  number,
+  phaseCount,
+  phase,
+}: {
+  number: number;
+  phaseCount: number;
+  phase: Phase;
+}) {
+  return (
+    <div className="space-y-8">
+      <div className="space-y-3">
+        <p className="text-sm font-medium text-muted-foreground">
+          Phase {number} of {phaseCount}
+          {phase.timeframe ? ` · ${phase.timeframe}` : ""}
+        </p>
+        <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+          {phase.title}
+        </h1>
+      </div>
+
+      {phase.objectives?.length > 0 && (
+        <Section label="Objectives">
+          <ul className="space-y-3">
+            {phase.objectives.map((o, j) => (
+              <li key={j} className="flex gap-3 text-base leading-relaxed text-foreground/90">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+                {o}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {phase.tactics?.length > 0 && (
+        <Section label="Tactics">
+          <ul className="space-y-3">
+            {phase.tactics.map((t, j) => (
+              <li key={j} className="flex gap-3 text-base leading-relaxed text-foreground/90">
+                <span className="shrink-0 text-muted-foreground" aria-hidden>
+                  →
+                </span>
+                {t}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
+      {phase.kpis?.length > 0 && (
+        <Section label="KPIs">
+          <ul className="space-y-3">
+            {phase.kpis.map((kpi, j) => (
+              <li
+                key={j}
+                className="rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm leading-relaxed text-foreground"
+              >
+                {kpi}
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+    </div>
+  );
+}
+
+function Section({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div>
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+        {label}
+      </h2>
+      {children}
     </div>
   );
 }

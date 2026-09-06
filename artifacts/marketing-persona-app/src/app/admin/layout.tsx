@@ -19,7 +19,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       />
       <div className={`flex min-w-0 flex-1 flex-col overflow-hidden ${APP_SHELL_MAIN_OFFSET}`}>
         <ImpersonationBanner />
-        <main className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
+        <main className="flex-1 overflow-x-hidden overflow-y-auto [scrollbar-gutter:stable]">{children}</main>
       </div>
     </div>
   );

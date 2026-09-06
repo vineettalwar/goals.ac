@@ -56,6 +56,7 @@ export function useCreateContentModal({
   existingPieces,
   onCreated,
   initialDraft,
+  initialOptimize = null,
   cmsConnections = EMPTY_CMS_CONNECTIONS,
   primaryBlogDestination = null,
   activeProvider = "gemini",
@@ -69,6 +70,7 @@ export function useCreateContentModal({
   existingPieces: ContentPieceRow[];
   onCreated: (piece: ContentPieceRow) => void;
   initialDraft?: BriefContentDraft | null;
+  initialOptimize?: { url: string; keyword: string } | null;
   cmsConnections?: CmsConnectionSnapshot;
   primaryBlogDestination?: string | null;
   activeProvider?: AiProviderId;
@@ -108,6 +110,11 @@ const [repurposeContent, setRepurposeContent] = useState("");
 const [sourcePieceId, setSourcePieceId] = useState("");
 const [loadingSourcePiece, setLoadingSourcePiece] = useState(false);
 const [intendedDestination, setIntendedDestination] = useState<PublishDestinationId | "">("");
+const [optimizeUrl, setOptimizeUrl] = useState("");
+const [optimizeKeyword, setOptimizeKeyword] = useState("");
+const [optimizeSecondary, setOptimizeSecondary] = useState("");
+const [optimizePaste, setOptimizePaste] = useState("");
+const [optimizeError, setOptimizeError] = useState<string | null>(null);
 
 const [competitorUrls, setCompetitorUrls] = useState<string[]>([]);
 const savedCompetitorUrlsRef = useRef<string[]>([]);
@@ -124,7 +131,9 @@ const steps = useMemo(
 const currentStep = steps[stepIndex] ?? steps[0];
 const progress = steps.length > 1 ? ((stepIndex + 1) / steps.length) * 100 : 100;
 const isGeneratingStep =
-  currentStep === "generating" || currentStep === "repurpose-generating";
+  currentStep === "generating" ||
+  currentStep === "repurpose-generating" ||
+  currentStep === "optimize-importing";
 
 async function loadSourcePiece(id: string) {
   setSourcePieceId(id);
@@ -183,6 +192,11 @@ function reset() {
   setCompetitorFocusUrl("");
   setNewCompetitorUrl("");
   setProjectIndustry("");
+  setOptimizeUrl("");
+  setOptimizeKeyword("");
+  setOptimizeSecondary("");
+  setOptimizePaste("");
+  setOptimizeError(null);
   setGenerating(false);
   generationStarted.current = false;
 }
@@ -258,6 +272,25 @@ if (draftKey && draftKey !== appliedDraftKey) {
 }
 if (!open && appliedDraftKey) {
   setAppliedDraftKey(null);
+}
+
+const [appliedOptimizeKey, setAppliedOptimizeKey] = useState<string | null>(null);
+const optimizeKey =
+  open && initialOptimize
+    ? `${initialOptimize.url}|${initialOptimize.keyword}`
+    : null;
+
+if (optimizeKey && optimizeKey !== appliedOptimizeKey) {
+  setAppliedOptimizeKey(optimizeKey);
+  setFlow("optimize");
+  setOptimizeUrl(initialOptimize!.url);
+  setOptimizeKeyword(initialOptimize!.keyword);
+  setOptimizePaste("");
+  setOptimizeError(null);
+  setStepIndex(0);
+}
+if (!open && appliedOptimizeKey) {
+  setAppliedOptimizeKey(null);
 }
 
 const goNextStable = useCallback(() => {
@@ -549,6 +582,88 @@ const runRepurpose = useCallback(async () => {
   handleClose,
 ]);
 
+const runOptimizeImport = useCallback(async () => {
+  if (!optimizeUrl.trim() || !optimizeKeyword.trim()) return;
+  setGenerating(true);
+  setOptimizeError(null);
+  try {
+    const post = async (confirmCanonical?: boolean) => {
+      const res = await fetch(`/api/website-projects/${projectId}/content-pieces/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: optimizeUrl.trim(),
+          targetKeyword: optimizeKeyword.trim(),
+          ...(optimizePaste.trim() ? { bodyMarkdown: optimizePaste.trim() } : {}),
+          ...(optimizeSecondary.trim()
+            ? {
+                secondaryKeywords: optimizeSecondary
+                  .split(",")
+                  .map((s) => s.trim())
+                  .filter(Boolean)
+                  .slice(0, 12),
+              }
+            : {}),
+          ...(confirmCanonical ? { confirmCanonical: true } : {}),
+        }),
+      });
+      return res;
+    };
+
+    let res = await post();
+    if (res.status === 422) {
+      const body = (await res.json().catch(() => null)) as {
+        needsCanonicalConfirm?: boolean;
+        enteredUrl?: string;
+        fetchedCanonicalUrl?: string;
+        error?: string;
+        pasteFallback?: boolean;
+      } | null;
+      if (body?.needsCanonicalConfirm && body.fetchedCanonicalUrl) {
+        const ok = confirm(
+          `Canonical URL is ${body.fetchedCanonicalUrl} (you entered ${body.enteredUrl}). Import using the fetched page?`,
+        );
+        if (!ok) {
+          setOptimizeError("Import cancelled");
+          setStepIndex(0);
+          generationStarted.current = false;
+          return;
+        }
+        res = await post(true);
+      } else {
+        setOptimizeError(body?.error ?? "Import failed");
+        setStepIndex(0);
+        generationStarted.current = false;
+        return;
+      }
+    }
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      throw new Error(body?.error ?? "Import failed");
+    }
+    const data = (await res.json()) as { piece: ContentPieceRow };
+    onCreated(data.piece);
+    toast.success("Page imported — score it, Fix gaps, then publish update");
+    handleClose();
+    window.location.assign(`/projects/${projectId}/content-piece/${data.piece.id}`);
+  } catch (err) {
+    setOptimizeError(err instanceof Error ? err.message : "Import failed");
+    toast.error(err instanceof Error ? err.message : "Import failed");
+    setStepIndex(0);
+    generationStarted.current = false;
+  } finally {
+    setGenerating(false);
+  }
+}, [
+  optimizeUrl,
+  optimizeKeyword,
+  optimizeSecondary,
+  optimizePaste,
+  projectId,
+  onCreated,
+  handleClose,
+]);
+
 useEffect(() => {
   if (!open || currentStep !== "generating" || generationStarted.current) return;
   generationStarted.current = true;
@@ -560,6 +675,12 @@ useEffect(() => {
   generationStarted.current = true;
   void runRepurpose();
 }, [open, currentStep, runRepurpose]);
+
+useEffect(() => {
+  if (!open || currentStep !== "optimize-importing" || generationStarted.current) return;
+  generationStarted.current = true;
+  void runOptimizeImport();
+}, [open, currentStep, runOptimizeImport]);
 
 function addCompetitorUrl() {
   const normalized = normalizeCompetitorUrl(newCompetitorUrl);
@@ -632,6 +753,16 @@ const handleContinue = useCallback(() => {
     goNextStable();
     return;
   }
+  if (currentStep === "optimize-url") {
+    if (!optimizeUrl.trim() || !optimizeKeyword.trim()) {
+      toast.error("Enter a page URL and primary keyword");
+      return;
+    }
+    setOptimizeError(null);
+    generationStarted.current = false;
+    goNextStable();
+    return;
+  }
   if (currentStep === "review") {
     if (!selectedFormat || !keyword.trim()) {
       toast.error("Enter a target keyword");
@@ -651,6 +782,8 @@ const handleContinue = useCallback(() => {
   keyword,
   repurposeKeyword,
   repurposeContent,
+  optimizeUrl,
+  optimizeKeyword,
   selectedFormat,
   saveCompetitorsAndContinue,
   goNextStable,
@@ -701,7 +834,7 @@ function selectFormat(type: ContentFormatType) {
 
 function selectPath(nextFlow: Flow) {
   setFlow(nextFlow);
-  if (nextFlow === "repurpose") {
+  if (nextFlow === "repurpose" || nextFlow === "optimize") {
     setStepIndex(0);
     return;
   }
@@ -768,6 +901,15 @@ const wizardProps = {
   saveBedrockModel,
   setSaveBedrockModel,
   canManageBedrockModel,
+  optimizeUrl,
+  setOptimizeUrl,
+  optimizeKeyword,
+  setOptimizeKeyword,
+  optimizeSecondary,
+  setOptimizeSecondary,
+  optimizePaste,
+  setOptimizePaste,
+  optimizeError,
 };
 
   return {

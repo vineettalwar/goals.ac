@@ -3,14 +3,19 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "check:page-chrome": "node ./scripts/check-page-chrome.mjs"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./AppSidebarShell": "./src/AppSidebarShell.tsx",
+    "./brand-mark": "./src/brand-mark.tsx",
     "./nav-routing": "./src/nav-routing.ts",
     "./product-theme.css": "./src/product-theme.css",
     "./shell-constants": "./src/shell-constants.ts",
     "./project-paths": "./src/project-detail/project-paths.ts",
     "./dashboard": "./src/dashboard/index.ts",
+    "./dashboard/types": "./src/dashboard/types.ts",
     "./projects": "./src/projects/index.ts",
     "./settings": "./src/settings/index.ts",
     "./project-detail": "./src/project-detail/index.ts",

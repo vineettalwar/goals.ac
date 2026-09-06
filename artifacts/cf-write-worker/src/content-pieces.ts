@@ -59,6 +59,7 @@ const patchBody = z
     approvalStatus: z
       .enum(["draft", "pending_review", "approved", "rejected"])
       .optional(),
+    cmsRemoteId: z.string().trim().min(1).max(40).nullable().optional(),
     evergreenConfig: z
       .object({
         enabled: z.boolean(),
@@ -254,6 +255,20 @@ async function handleContentPiecePatch(
   }
   if (parsed.data.evergreenConfig !== undefined) {
     updates.evergreenConfig = parsed.data.evergreenConfig;
+  }
+  if (parsed.data.cmsRemoteId !== undefined) {
+    const prevMeta =
+      access.piece!.pieceMetadata && typeof access.piece!.pieceMetadata === "object"
+        ? { ...access.piece!.pieceMetadata }
+        : {};
+    if (parsed.data.cmsRemoteId === null) {
+      delete (prevMeta as { cmsRemoteId?: string }).cmsRemoteId;
+      delete (prevMeta as { updateConfirmed?: boolean }).updateConfirmed;
+    } else {
+      (prevMeta as { cmsRemoteId?: string }).cmsRemoteId = parsed.data.cmsRemoteId;
+      delete (prevMeta as { updateConfirmed?: boolean }).updateConfirmed;
+    }
+    updates.pieceMetadata = prevMeta;
   }
 
   const [updated] = await db

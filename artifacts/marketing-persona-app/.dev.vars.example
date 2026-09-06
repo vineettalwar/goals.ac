@@ -49,3 +49,7 @@ DB_DIALECT=d1
 
 # Email
 # RESEND_API_KEY=
+
+# DataForSEO — rank tracking + live AI visibility (LLM Mentions)
+# DATAFORSEO_LOGIN=
+# DATAFORSEO_PASSWORD=

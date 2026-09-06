@@ -32,10 +32,18 @@ export interface ContentPieceRow {
   plannedDate: string | null;
   createdAt: string;
   publishedUrl?: string | null;
+  pieceMetadata?: { source?: string } | null;
 }
 
 export interface StudioPiece extends ContentPieceRow {
   source: "studio";
+  isRefresh?: boolean;
+}
+
+export function isRefreshPiece(
+  piece: Pick<ContentPieceRow, "pieceMetadata"> & { isRefresh?: boolean },
+): boolean {
+  return Boolean(piece.isRefresh || piece.pieceMetadata?.source === "refresh");
 }
 
 export type SortKey = "newest" | "oldest" | "words_desc" | "words_asc" | "title_asc";

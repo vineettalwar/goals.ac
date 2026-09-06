@@ -118,7 +118,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="paper-card p-6 space-y-5">
+      <div className="paper-card space-y-5 rounded-xl p-6">
         <div className="flex items-center gap-2">
           <Zap className="h-4 w-4 text-amber-500" />
           <h3 className="font-semibold">Content Autopilot</h3>
@@ -253,7 +253,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
         </div>
       </div>
 
-      <div className="paper-card p-6 space-y-4">
+      <div className="paper-card space-y-4 rounded-xl p-6">
         <h3 className="font-semibold">Internal link hub</h3>
         <p className="text-sm text-muted-foreground">
           Review coverage and suggestions from drafts before publish — white-hat internal linking, no exchange schemes.{" "}
@@ -263,7 +263,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
         </p>
       </div>
 
-      <div className="paper-card p-6 space-y-4">
+      <div className="paper-card space-y-4 rounded-xl p-6">
         <h3 className="font-semibold">AI Visibility & GEO</h3>
         <p className="text-sm text-muted-foreground">
           Weekly LLM citation tracking and GEO re-audits.{" "}

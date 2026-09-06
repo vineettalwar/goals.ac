@@ -38,10 +38,19 @@ type SimpleDialogProps = {
   titleId: string;
   onClose: () => void;
   loading?: boolean;
+  className?: string;
   children: ReactNode;
 };
 
-export function SimpleDialog({ open, title, titleId, onClose, loading, children }: SimpleDialogProps) {
+export function SimpleDialog({
+  open,
+  title,
+  titleId,
+  onClose,
+  loading,
+  className,
+  children,
+}: SimpleDialogProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -64,7 +73,10 @@ export function SimpleDialog({ open, title, titleId, onClose, loading, children 
       ref={dialogRef}
       id={titleId}
       aria-labelledby={titleId}
-      className="paper-card fixed left-1/2 top-1/2 z-50 m-0 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border p-6 shadow-lg backdrop:bg-black/20 backdrop:backdrop-blur-sm"
+      className={cn(
+        "paper-card fixed left-1/2 top-1/2 z-50 m-0 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border p-6 shadow-lg backdrop:bg-black/20 backdrop:backdrop-blur-sm",
+        className,
+      )}
       onClose={handleClose}
       onCancel={(event) => {
         if (loading) event.preventDefault();

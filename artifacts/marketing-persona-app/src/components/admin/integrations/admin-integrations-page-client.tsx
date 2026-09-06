@@ -18,6 +18,7 @@ import {
   PLATFORM_INTEGRATION_CATEGORIES,
   type PlatformIntegrationCategoryId,
 } from "@/lib/platform/platform-features";
+import { APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 import { cn } from "@/lib/utils";
 
 const TAB_SKELETONS: Record<PlatformIntegrationCategoryId, number> = {
@@ -51,10 +52,10 @@ export function AdminIntegrationsPageClient() {
   const { loading, loadError, reload, counts } = controller;
 
   return (
-    <div className="px-8 py-8 max-w-5xl space-y-6">
-      <div className="space-y-1">
+    <div className={`${APP_SHELL_PAGE_WIDE} space-y-8`}>
+      <div className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">Platform integrations</h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="max-w-3xl text-sm text-muted-foreground">
           Manage platform-wide{" "}
           <span className="font-medium text-foreground">
             billing, email, stock images, social OAuth, and AI providers
@@ -63,12 +64,12 @@ export function AdminIntegrationsPageClient() {
         </p>
       </div>
 
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         <Link
           href="/integrations/ai"
-          className="group flex items-center gap-3 rounded-xl border border-border/60 bg-card px-3 py-2.5 transition-all hover:border-border hover:bg-muted/20 hover:shadow-sm"
+          className="group flex items-center gap-4 rounded-xl border border-border/60 bg-card px-4 py-3.5 transition-all hover:border-border hover:bg-muted/20 hover:shadow-sm"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[#4285F4] text-xs font-bold text-white">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#4285F4] text-xs font-bold text-white">
             AI
           </span>
           <div className="min-w-0 flex-1">
@@ -79,9 +80,9 @@ export function AdminIntegrationsPageClient() {
         </Link>
         <Link
           href="/projects"
-          className="group flex items-center gap-3 rounded-xl border border-border/60 bg-card px-3 py-2.5 transition-all hover:border-border hover:bg-muted/20 hover:shadow-sm"
+          className="group flex items-center gap-4 rounded-xl border border-border/60 bg-card px-4 py-3.5 transition-all hover:border-border hover:bg-muted/20 hover:shadow-sm"
         >
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-xs font-bold text-white">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-xs font-bold text-white">
             CMS
           </span>
           <div className="min-w-0 flex-1">
@@ -108,11 +109,11 @@ export function AdminIntegrationsPageClient() {
         <Tabs
           value={activeTab}
           onValueChange={(value) => setActiveTab(value as PlatformIntegrationCategoryId)}
-          className="space-y-5"
+          className="space-y-6"
         >
-          <TabsList className="h-auto flex-wrap gap-1 p-1">
+          <TabsList className="h-auto w-full flex-wrap justify-start gap-1 p-1.5">
             {PLATFORM_INTEGRATION_CATEGORIES.map((category) => (
-              <TabsTrigger key={category.id} value={category.id} className="gap-0">
+              <TabsTrigger key={category.id} value={category.id} className="gap-0 px-3.5 py-2">
                 {category.label}
                 <IntegrationTabBadge count={counts[category.id]} loading={loading} />
               </TabsTrigger>

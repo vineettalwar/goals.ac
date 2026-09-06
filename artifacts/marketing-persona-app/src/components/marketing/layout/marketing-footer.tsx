@@ -8,8 +8,8 @@ export function MarketingFooter() {
       <div className="max-w-6xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-8">
         <div className="col-span-2 md:col-span-3 lg:col-span-1">
           <MarketingLogo
-            className="flex items-center gap-2 mb-3"
-            textClassName="text-white text-xl font-playfair italic"
+            className="flex items-center gap-2 mb-3 text-white"
+            textClassName="text-xl font-playfair italic"
             iconSize={22}
           />
           <p className="text-xs text-white/70 leading-relaxed tracking-normal">

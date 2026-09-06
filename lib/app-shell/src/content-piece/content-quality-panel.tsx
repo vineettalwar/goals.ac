@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
 import { scoreTwitterThreadQuality } from "@workspace/content-engine/social-thread-quality";
 import {
   scoreCoverageChecklist,
   type CoverageChecklistItem,
 } from "@workspace/content-engine/coverage-checklist";
+import {
+  applyInternalLinksToMarkdown,
+  suggestOutboundInternalLinks,
+} from "@workspace/content-engine/outbound-internal-links";
 import { ScoreRing } from "../section-panels/shared";
 import type { ContentPieceMetadata } from "./types";
 import { SOCIAL_FORMAT_TYPES } from "../social/types";
@@ -68,6 +72,10 @@ type ArticleQualityPanelProps = {
   editing?: boolean;
   /** Host appends the stub markdown/sentence to the draft body. Only used while `editing`. */
   onInsertMissingTerm?: (snippet: string) => void;
+  /** Host replaces the full draft body (internal-link apply). */
+  onReplaceBody?: (markdown: string) => void;
+  /** Skip linking to the current page's slug when known. */
+  excludeInternalSlug?: string | null;
   /** Called with the current coverage checklist's missing terms (secondary keywords / PAA / rival topics), if any. */
   onEnhance?: (missingTerms?: string[]) => void;
   enhancing?: boolean;
@@ -101,6 +109,8 @@ export function ArticleQualityPanel({
   showScoreDelta = false,
   editing = false,
   onInsertMissingTerm,
+  onReplaceBody,
+  excludeInternalSlug = null,
   onEnhance,
   enhancing = false,
   canEnhance = false,
@@ -230,6 +240,8 @@ export function ArticleQualityPanel({
       showScoreDelta={showScoreDelta}
       editing={editing}
       onInsertMissingTerm={onInsertMissingTerm}
+      onReplaceBody={onReplaceBody}
+      excludeInternalSlug={excludeInternalSlug}
       onEnhance={onEnhance}
       enhancing={enhancing}
       canEnhance={canEnhance}
@@ -254,6 +266,8 @@ function ArticleQualityPanelSeo({
   showScoreDelta = false,
   editing = false,
   onInsertMissingTerm,
+  onReplaceBody,
+  excludeInternalSlug = null,
   onEnhance,
   enhancing = false,
   canEnhance = false,
@@ -383,6 +397,18 @@ function ArticleQualityPanelSeo({
     Boolean(metadata?.ogDescription);
 
   const canInsertMissingTerm = editing && Boolean(onInsertMissingTerm);
+  const canApplyInternalLinks = editing && Boolean(onReplaceBody);
+
+  const insertableLinks = useMemo(
+    () =>
+      suggestOutboundInternalLinks({
+        bodyMarkdown: debouncedBody,
+        candidates: metadata?.internalLinkSuggestions ?? [],
+        excludeSlug: excludeInternalSlug,
+        limit: 3,
+      }),
+    [debouncedBody, metadata?.internalLinkSuggestions, excludeInternalSlug],
+  );
 
   const handleMissingChipClick = async (item: CoverageChecklistItem, key: string) => {
     if (canInsertMissingTerm) {
@@ -577,6 +603,80 @@ function ArticleQualityPanelSeo({
         </div>
       ) : null}
 
+      {insertableLinks.length > 0 ? (
+        <div className="space-y-2 border-t border-border pt-3">
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Internal links
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Phrases already in this draft that match suggested site pages. Insert wraps them —
+            no invented anchors.
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {insertableLinks.map((link) => {
+              const key = `${link.href}-${link.matchedPhrase}`;
+              const actioned = actionedChipKey === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={!canApplyInternalLinks}
+                  onClick={() => {
+                    if (!onReplaceBody) return;
+                    const { markdown, applied } = applyInternalLinksToMarkdown(bodyMarkdown, [
+                      link,
+                    ]);
+                    if (applied === 0) return;
+                    onReplaceBody(markdown);
+                    setActionedChipKey(key);
+                    window.setTimeout(() => {
+                      setActionedChipKey((current) => (current === key ? null : current));
+                    }, 1500);
+                  }}
+                  className={
+                    actioned
+                      ? "rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                      : "rounded-full bg-secondary px-2 py-0.5 text-[11px] text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50"
+                  }
+                  title={
+                    canApplyInternalLinks
+                      ? `Insert [${link.matchedPhrase}](${link.href})`
+                      : `${link.matchedPhrase} → ${link.href} (enter edit mode to insert)`
+                  }
+                >
+                  {actioned ? "✓ " : ""}
+                  {link.matchedPhrase}
+                </button>
+              );
+            })}
+          </div>
+          {canApplyInternalLinks ? (
+            <button
+              type="button"
+              className="text-xs font-medium text-primary underline-offset-2 hover:underline"
+              onClick={() => {
+                const { markdown, applied } = applyInternalLinksToMarkdown(
+                  bodyMarkdown,
+                  insertableLinks,
+                );
+                if (applied === 0) return;
+                onReplaceBody!(markdown);
+                setActionedChipKey("internal-links-all");
+                window.setTimeout(() => {
+                  setActionedChipKey((current) =>
+                    current === "internal-links-all" ? null : current,
+                  );
+                }, 1500);
+              }}
+            >
+              {actionedChipKey === "internal-links-all"
+                ? `Inserted ${insertableLinks.length}`
+                : `Insert all (${insertableLinks.length})`}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {dual?.competitorDiff && dual.competitorDiff.length > 0 ? (
         <div className="space-y-2 border-t border-border pt-3">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -602,7 +702,7 @@ function ArticleQualityPanelSeo({
       ) : null}
 
       {canEnhance && needsEnhance && onEnhance ? (
-        <div className="space-y-2 rounded-lg border border-primary/20 bg-primary/5 p-3">
+        <div className="space-y-2 rounded-lg border border-border bg-muted/30 p-3">
           <p className="text-xs text-muted-foreground">
             {dual?.serp.gaps.length
               ? "Fix gaps runs an enhance pass targeting SERP, FAQ, citations, and internal links."

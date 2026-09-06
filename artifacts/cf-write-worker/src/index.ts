@@ -38,6 +38,8 @@ import { handleBillingCreditsWrite } from "./billing-credits";
 import { handleOrgSecurityWrite, handleMfaRoutes } from "./org-security-routes";
 import { handleInviteAcceptPost } from "./invite-routes";
 import { handleVisibilityWrite } from "./visibility-routes";
+import { handleGscUrlInspectionWrite } from "./gsc-url-inspection-routes";
+import { handleSiteAuditWrite } from "./site-audit-routes";
 import { handleTrackedKeywordsWrite } from "./tracked-keywords-routes";
 import { handleCompetitorAnalysisWrite } from "./competitor-analysis-routes";
 import { handleContentStrategiesWrite } from "./content-strategies-routes";
@@ -80,6 +82,7 @@ const contentGenerateBody = z
 const contentPublishBody = z.object({
   contentPieceId: z.number().int().positive(),
   platform: z.string().min(1).optional(),
+  confirmCmsUpdate: z.boolean().optional(),
 });
 
 const scrapeBody = z.object({
@@ -212,6 +215,12 @@ export default {
       const visibilityHandled = await handleVisibilityWrite(request, path, userId);
       if (visibilityHandled) return visibilityHandled;
 
+      const gscInspectionHandled = await handleGscUrlInspectionWrite(request, path, userId);
+      if (gscInspectionHandled) return gscInspectionHandled;
+
+      const siteAuditHandled = await handleSiteAuditWrite(request, path, userId);
+      if (siteAuditHandled) return siteAuditHandled;
+
       const trackedKeywordsHandled = await handleTrackedKeywordsWrite(
         request,
         path,
@@ -285,14 +294,90 @@ export default {
         const body = (await request.json().catch(() => null)) as {
           contentPieceId?: number;
           platform?: string;
+          confirmCmsUpdate?: boolean;
         } | null;
         const parsed = contentPublishBody.safeParse({
           contentPieceId: Number.parseInt(publishMatch[1]!, 10),
           platform: body?.platform,
+          confirmCmsUpdate: body?.confirmCmsUpdate,
         });
         if (!parsed.success) {
           return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
         }
+
+        const { db } = await import("@workspace/db");
+        const { contentPiecesTable } = await import("@workspace/db/schema-sqlite");
+        const { eq } = await import("drizzle-orm");
+        const [piece] = await db
+          .select()
+          .from(contentPiecesTable)
+          .where(eq(contentPiecesTable.id, parsed.data.contentPieceId))
+          .limit(1);
+        if (!piece) {
+          return withCors(request, Response.json({ error: "Content piece not found" }, { status: 404 }));
+        }
+        const project = await getAccessibleProject(piece.websiteProjectId, userId);
+        if (!project) {
+          return withCors(request, Response.json({ error: "Access denied" }, { status: 403 }));
+        }
+
+        const meta = (piece.pieceMetadata ?? {}) as {
+          source?: string;
+          sourceUrl?: string;
+          cmsRemoteId?: string;
+          cmsRemoteLink?: string;
+          updateConfirmed?: boolean;
+        };
+        const isWordpressTarget =
+          !parsed.data.platform || parsed.data.platform === "wordpress";
+        if (meta.source === "refresh" && isWordpressTarget) {
+          const remoteId = meta.cmsRemoteId?.trim();
+          if (remoteId && !meta.updateConfirmed && !parsed.data.confirmCmsUpdate) {
+            return withCors(
+              request,
+              Response.json(
+                {
+                  error: "Confirm WordPress update target before publishing",
+                  needsConfirm: true,
+                  cmsRemoteId: remoteId,
+                  cmsRemoteLink: meta.cmsRemoteLink ?? null,
+                  sourceUrl: meta.sourceUrl ?? null,
+                },
+                { status: 422 },
+              ),
+            );
+          }
+          if (remoteId && parsed.data.confirmCmsUpdate && !meta.updateConfirmed) {
+            await db
+              .update(contentPiecesTable)
+              .set({
+                pieceMetadata: {
+                  ...(typeof piece.pieceMetadata === "object" && piece.pieceMetadata
+                    ? piece.pieceMetadata
+                    : {}),
+                  updateConfirmed: true,
+                },
+              })
+              .where(eq(contentPiecesTable.id, piece.id));
+          }
+          if (!remoteId && !parsed.data.confirmCmsUpdate) {
+            return withCors(
+              request,
+              Response.json(
+                {
+                  error:
+                    "No WordPress post matched this URL. Set cmsRemoteId on the piece, or confirm creating a new post.",
+                  needsConfirm: true,
+                  cmsRemoteId: null,
+                  sourceUrl: meta.sourceUrl ?? null,
+                  createNew: true,
+                },
+                { status: 422 },
+              ),
+            );
+          }
+        }
+
         const jobId = await sendToCfQueue(QUEUES.contentPublish, {
           contentPieceId: parsed.data.contentPieceId,
           userId,

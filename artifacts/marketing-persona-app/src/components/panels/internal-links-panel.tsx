@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
 import { useActiveProject } from "@/context/use-active-project";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { useInternalLinks } from "@/lib/queries";
 
 type LinkData = {
@@ -33,7 +34,7 @@ export function InternalLinksPanel({ embedded = false }: { embedded?: boolean })
     }
 
     return (
-      <div className={embedded ? "max-w-3xl" : "px-8 py-8 max-w-3xl"}>
+      <div className={embedded ? undefined : APP_SHELL_PAGE}>
         {!embedded ? <h1 className="text-2xl font-bold mb-2">Internal Link Hub</h1> : null}
         <p className="text-muted-foreground mb-4">Select a project to analyze internal linking.</p>
         <Button asChild><Link href="/projects">Go to projects</Link></Button>
@@ -42,7 +43,7 @@ export function InternalLinksPanel({ embedded = false }: { embedded?: boolean })
   }
 
   return (
-    <div className={embedded ? "space-y-6" : "px-8 py-8 max-w-4xl space-y-6"}>
+    <div className={embedded ? "space-y-6" : `${APP_SHELL_PAGE} space-y-6`}>
       {!embedded ? (
         <div className="flex items-center gap-3">
           <Network className="h-6 w-6 text-primary" />

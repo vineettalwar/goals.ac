@@ -91,7 +91,7 @@ export function VoiceStyleEditView({
           className={inputClassName}
         />
         <p className="text-xs text-muted-foreground">
-          Give the AI writer a name and role to adopt when generating content.
+          Name and role for the writing persona.
         </p>
       </div>
 

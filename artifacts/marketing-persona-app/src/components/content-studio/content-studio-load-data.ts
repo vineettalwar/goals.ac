@@ -2,6 +2,7 @@ import type { AiProviderId } from "@workspace/ai-providers/config";
 import type { BrandProfileSummary } from "@workspace/app-shell/studio";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRow } from "./content-studio-utils";
+import { isRefreshPiece } from "./content-studio-utils";
 import {
   parseVoiceGateFromBrandProfile,
   type VoiceGateStatus,
@@ -12,7 +13,7 @@ export type StudioLoadResult = {
   aiReady: boolean | null;
   activeProvider: AiProviderId;
   orgBedrockModel: string | null;
-  pieces: Array<ContentPieceRow & { source: "studio" }>;
+  pieces: Array<ContentPieceRow & { source: "studio"; isRefresh?: boolean }>;
   cmsConnections: CmsConnectionSnapshot;
   primaryBlogDestination: string | null;
   brandProfile: BrandProfileSummary | null;
@@ -48,7 +49,11 @@ export async function loadContentStudioData(projectId: string): Promise<StudioLo
   let pieces: StudioLoadResult["pieces"] = [];
   if (piecesRes.ok) {
     const data = await piecesRes.json();
-    pieces = (data.pieces ?? []).map((p: ContentPieceRow) => ({ ...p, source: "studio" as const }));
+    pieces = (data.pieces ?? []).map((p: ContentPieceRow) => ({
+      ...p,
+      source: "studio" as const,
+      isRefresh: isRefreshPiece(p),
+    }));
   }
 
   let cmsConnections: CmsConnectionSnapshot = {};

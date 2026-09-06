@@ -109,7 +109,7 @@ export function ProjectVoiceForm({
               <div>
                 <p className="text-sm font-medium">Writing Examples</p>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Add 3–5 samples of your best writing so the AI can learn your style.
+                  Add 3–5 samples of your best writing so drafts can match your style.
                 </p>
               </div>
               {form.writingExamples.length > 0 && (
@@ -199,29 +199,31 @@ export function ProjectVoiceForm({
             )}
           </Button>
 
-          <StringListEditor
-            label="Brand Glossary"
-            description="Words and phrases you commonly use in your content."
-            emptyDescription="Add product names, branded terms, or phrases your team uses consistently."
-            placeholder="Enter a term…"
-            addFirstLabel="Add first term"
-            addAnotherLabel="Add another term"
-            maxItems={MAX_VOICE_TERMS}
-            values={form.brandGlossary}
-            onChange={(brandGlossary) => setForm((p) => ({ ...p, brandGlossary }))}
-          />
+          <div className="grid gap-6 md:grid-cols-2">
+            <StringListEditor
+              label="Brand Glossary"
+              description="Words and phrases you commonly use in your content."
+              emptyDescription="Add product names, branded terms, or phrases your team uses consistently."
+              placeholder="Enter a term…"
+              addFirstLabel="Add first term"
+              addAnotherLabel="Add another term"
+              maxItems={MAX_VOICE_TERMS}
+              values={form.brandGlossary}
+              onChange={(brandGlossary) => setForm((p) => ({ ...p, brandGlossary }))}
+            />
 
-          <StringListEditor
-            label="Anti-patterns"
-            description="Words and phrases you never want to appear in your content."
-            emptyDescription="List clichés, buzzwords, or off-brand language to block."
-            placeholder="Enter a term to avoid…"
-            addFirstLabel="Add first term"
-            addAnotherLabel="Add another term"
-            maxItems={MAX_VOICE_TERMS}
-            values={form.antiPatterns}
-            onChange={(antiPatterns) => setForm((p) => ({ ...p, antiPatterns }))}
-          />
+            <StringListEditor
+              label="Anti-patterns"
+              description="Words and phrases you never want to appear in your content."
+              emptyDescription="List clichés, buzzwords, or off-brand language to block."
+              placeholder="Enter a term to avoid…"
+              addFirstLabel="Add first term"
+              addAnotherLabel="Add another term"
+              maxItems={MAX_VOICE_TERMS}
+              values={form.antiPatterns}
+              onChange={(antiPatterns) => setForm((p) => ({ ...p, antiPatterns }))}
+            />
+          </div>
 
           <div className="space-y-2">
             <p className="text-sm font-medium">Typical Structure</p>
@@ -236,29 +238,31 @@ export function ProjectVoiceForm({
             />
           </div>
 
-          <StringListEditor
-            label="Preferred Words"
-            description="Words you like to use in your content."
-            emptyDescription="Add words that match your brand tone and voice."
-            placeholder="Enter a preferred word…"
-            addFirstLabel="Add first word"
-            addAnotherLabel="Add another word"
-            maxItems={MAX_VOICE_TERMS}
-            values={form.doWords}
-            onChange={(doWords) => setForm((p) => ({ ...p, doWords }))}
-          />
+          <div className="grid gap-6 md:grid-cols-2">
+            <StringListEditor
+              label="Preferred Words"
+              description="Words you like to use in your content."
+              emptyDescription="Add words that match your brand tone and voice."
+              placeholder="Enter a preferred word…"
+              addFirstLabel="Add first word"
+              addAnotherLabel="Add another word"
+              maxItems={MAX_VOICE_TERMS}
+              values={form.doWords}
+              onChange={(doWords) => setForm((p) => ({ ...p, doWords }))}
+            />
 
-          <StringListEditor
-            label="Words to Avoid"
-            description="Words you don't want to use in your content."
-            emptyDescription="Add words that feel off-brand or you want the AI to skip."
-            placeholder="Enter a word to avoid…"
-            addFirstLabel="Add first word"
-            addAnotherLabel="Add another word"
-            maxItems={MAX_VOICE_TERMS}
-            values={form.dontWords}
-            onChange={(dontWords) => setForm((p) => ({ ...p, dontWords }))}
-          />
+            <StringListEditor
+              label="Words to Avoid"
+              description="Words you don't want to use in your content."
+              emptyDescription="Add words that feel off-brand or you want drafts to skip."
+              placeholder="Enter a word to avoid…"
+              addFirstLabel="Add first word"
+              addAnotherLabel="Add another word"
+              maxItems={MAX_VOICE_TERMS}
+              values={form.dontWords}
+              onChange={(dontWords) => setForm((p) => ({ ...p, dontWords }))}
+            />
+          </div>
 
           <div className="flex items-center gap-3">
             <Button onClick={onSave} disabled={saving}>

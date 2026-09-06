@@ -1,19 +1,16 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import {
-  ArrowUpDown,
   CalendarDays,
   CheckCircle2,
-  ExternalLink,
-  FileText,
   LayoutGrid,
   List,
-  PenLine,
   Plus,
   RefreshCw,
   Trash2,
 } from "lucide-react";
 import { cn } from "../cn";
+import { APP_SHELL_PAGE_WIDE } from "../shell-constants";
 import { contentPieceCanGenerate } from "../content-piece/types";
 import { BrandAiProfileCard, StudioAiReadinessBanner, type BrandProfileSummary } from "./brand-ai-profile-card";
 import { StudioCalendarView } from "./studio-calendar";
@@ -50,20 +47,11 @@ const STATUS_DOT_COLORS: Record<string, string> = {
 type StudioTab = "hub" | "calendar";
 type HubViewMode = "list" | "grid";
 
-function FormatBadge({ formatType }: { formatType: string }) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
-      <FileText className="h-3 w-3" aria-hidden />
-      {formatTypeLabel(formatType)}
-    </span>
-  );
-}
-
 function StatusBadge({ status }: { status: string }) {
   const dot = STATUS_DOT_COLORS[status] ?? "bg-muted-foreground";
   return (
     <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
-      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dot)} />
+      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", dot)} aria-hidden />
       {statusLabel(status)}
     </span>
   );
@@ -73,38 +61,26 @@ function FilterSelect({
   value,
   onChange,
   options,
-  icon,
   ariaLabel,
 }: {
   value: string;
   onChange: (value: string) => void;
   options: Array<{ value: string; label: string }>;
-  icon?: ReactNode;
   ariaLabel: string;
 }) {
   return (
-    <div className="relative">
-      {icon ? (
-        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground">
-          {icon}
-        </span>
-      ) : null}
-      <select
-        aria-label={ariaLabel}
-        className={cn(
-          "h-8 rounded-lg border border-dashed border-input bg-card px-2 text-xs",
-          icon && "pl-7",
-        )}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
+    <select
+      aria-label={ariaLabel}
+      className="h-8 rounded-md border border-input bg-transparent px-2 text-xs text-foreground"
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>
+          {option.label}
+        </option>
+      ))}
+    </select>
   );
 }
 
@@ -134,78 +110,86 @@ function StudioPieceCard({
   const pieceHref = studioContentPiecePath(projectId, piece.id);
   const extras = renderPieceExtras?.(piece);
 
+  const metaParts = [
+    formatTypeLabel(piece.formatType),
+    piece.isRefresh ? "Refresh" : null,
+    piece.targetKeyword || null,
+    `${piece.wordCount ?? 0} words`,
+    piece.plannedDate || null,
+  ].filter(Boolean);
+
   return (
     <div
       className={cn(
-        "paper-card group flex rounded-xl p-5",
-        viewMode === "grid" ? "h-full flex-col gap-3" : "items-start justify-between gap-4",
+        "flex gap-4",
+        viewMode === "grid"
+          ? "h-full flex-col rounded-lg border border-border bg-card p-4"
+          : "items-start justify-between py-3.5",
       )}
     >
       <div className="min-w-0 flex-1">
         <StudioLink
           renderLink={renderLink}
           href={pieceHref}
-          className="block truncate font-medium hover:text-primary"
+          className="block truncate text-sm font-medium hover:text-primary"
         >
           {piece.title ?? "Untitled"}
         </StudioLink>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2">
-          <FormatBadge formatType={piece.formatType} />
-          {piece.targetKeyword ? (
-            <span className="text-xs text-muted-foreground">{piece.targetKeyword}</span>
-          ) : null}
-          <span className="text-xs text-muted-foreground">{piece.wordCount ?? 0} words</span>
-          {piece.plannedDate ? (
-            <span className="text-xs text-muted-foreground">· {piece.plannedDate}</span>
-          ) : null}
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          {metaParts.map((part, index) => (
+            <span key={`${part}-${index}`} className="inline-flex items-center gap-2">
+              {index > 0 ? <span aria-hidden>·</span> : null}
+              {part}
+            </span>
+          ))}
           {extras}
         </div>
       </div>
-      <div className={cn("flex shrink-0 items-center gap-2", viewMode === "grid" && "justify-between")}>
+      <div
+        className={cn(
+          "flex shrink-0 items-center gap-1",
+          viewMode === "grid" && "w-full justify-between border-t border-border pt-3",
+        )}
+      >
         <StatusBadge status={piece.status} />
-        {piece.status === "draft" && onMarkReady ? (
-          <button
-            type="button"
-            title="Mark ready"
-            disabled={isMarkingReady || isDeleting}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
-            onClick={() => void onMarkReady(piece.id)}
-          >
-            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        ) : null}
-        {contentPieceCanGenerate(piece.status) ? (
-          <StudioLink
-            renderLink={renderLink}
-            href={`${pieceHref}?generate=1`}
-            className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-medium text-primary transition-colors hover:bg-secondary"
-          >
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden />
-            Generate
-          </StudioLink>
-        ) : null}
-        <StudioLink
-          renderLink={renderLink}
-          href={pieceHref}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-        >
-          <ExternalLink className="h-3.5 w-3.5" aria-hidden />
-        </StudioLink>
-        {onDelete ? (
-          <button
-            type="button"
-            title="Delete"
-            disabled={isDeleting || isMarkingReady}
-            className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-red-500/10 hover:text-red-600 disabled:opacity-50"
-            onClick={() => {
-              if (window.confirm(`Delete "${piece.title ?? "Untitled"}"? This cannot be undone.`)) {
-                void onDelete(piece.id);
-              }
-            }}
-          >
-            <Trash2 className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        ) : null}
+        <div className="flex items-center gap-0.5">
+          {piece.status === "draft" && onMarkReady ? (
+            <button
+              type="button"
+              title="Mark ready"
+              disabled={isMarkingReady || isDeleting}
+              className="inline-flex h-8 items-center rounded-md px-2 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground disabled:opacity-50"
+              onClick={() => void onMarkReady(piece.id)}
+            >
+              <CheckCircle2 className="mr-1 h-3.5 w-3.5" aria-hidden />
+              Ready
+            </button>
+          ) : null}
+          {contentPieceCanGenerate(piece.status) ? (
+            <StudioLink
+              renderLink={renderLink}
+              href={`${pieceHref}?generate=1`}
+              className="inline-flex h-8 items-center rounded-md px-2 text-xs font-medium text-primary transition-colors hover:bg-secondary"
+            >
+              Generate
+            </StudioLink>
+          ) : null}
+          {onDelete ? (
+            <button
+              type="button"
+              title="Delete"
+              disabled={isDeleting || isMarkingReady}
+              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-50"
+              onClick={() => {
+                if (window.confirm(`Delete "${piece.title ?? "Untitled"}"? This cannot be undone.`)) {
+                  void onDelete(piece.id);
+                }
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" aria-hidden />
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -239,51 +223,67 @@ function StudioHubFilters({
   const hasActiveFilters = filterFormat !== "all" || filterStatus !== "all";
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <FilterSelect
-          value={filterFormat}
-          onChange={onFilterFormatChange}
-          ariaLabel="Filter by format"
-          options={[
-            { value: "all", label: "All formats" },
-            ...STUDIO_FORMAT_OPTIONS.map((option) => ({
-              value: option.value,
-              label: option.label,
-            })),
-          ]}
-        />
-        <FilterSelect
-          value={filterStatus}
-          onChange={onFilterStatusChange}
-          ariaLabel="Filter by status"
-          options={[
-            { value: "all", label: "All statuses" },
-            { value: "draft", label: "Draft" },
-            { value: "ready", label: "Ready" },
-            { value: "published", label: "Published" },
-            { value: "prepared", label: "Prepared" },
-          ]}
-        />
-        <FilterSelect
-          value={sortKey}
-          onChange={(value) => onSortKeyChange(value as StudioSortKey)}
-          ariaLabel="Sort content"
-          icon={<ArrowUpDown className="h-3 w-3" aria-hidden />}
-          options={[
-            { value: "newest", label: "Newest first" },
-            { value: "oldest", label: "Oldest first" },
-            { value: "words_desc", label: "Most words" },
-            { value: "words_asc", label: "Fewest words" },
-            { value: "title_asc", label: "A → Z" },
-          ]}
-        />
-        <div className="ml-auto flex rounded-lg border border-input p-0.5">
+    <div className="flex flex-wrap items-center gap-2">
+      <FilterSelect
+        value={filterFormat}
+        onChange={onFilterFormatChange}
+        ariaLabel="Filter by format"
+        options={[
+          { value: "all", label: "All formats" },
+          ...STUDIO_FORMAT_OPTIONS.map((option) => ({
+            value: option.value,
+            label: option.label,
+          })),
+        ]}
+      />
+      <FilterSelect
+        value={filterStatus}
+        onChange={onFilterStatusChange}
+        ariaLabel="Filter by status"
+        options={[
+          { value: "all", label: "All statuses" },
+          { value: "draft", label: "Draft" },
+          { value: "ready", label: "Ready" },
+          { value: "published", label: "Published" },
+          { value: "prepared", label: "Prepared" },
+        ]}
+      />
+      <FilterSelect
+        value={sortKey}
+        onChange={(value) => onSortKeyChange(value as StudioSortKey)}
+        ariaLabel="Sort content"
+        options={[
+          { value: "newest", label: "Newest first" },
+          { value: "oldest", label: "Oldest first" },
+          { value: "words_desc", label: "Most words" },
+          { value: "words_asc", label: "Fewest words" },
+          { value: "title_asc", label: "A → Z" },
+        ]}
+      />
+      {totalCount > 0 ? (
+        <p className="text-xs text-muted-foreground">
+          {totalCount} total
+          {statsBreakdown.length > 0
+            ? ` · ${statsBreakdown.map((stat) => `${stat.count} ${stat.label}`).join(" · ")}`
+            : ""}
+        </p>
+      ) : null}
+      <div className="ml-auto flex items-center gap-2">
+        {hasActiveFilters ? (
+          <button
+            type="button"
+            className="h-8 px-1 text-xs text-muted-foreground transition-colors hover:text-foreground"
+            onClick={onClearFilters}
+          >
+            Clear filters
+          </button>
+        ) : null}
+        <div className="flex rounded-md border border-input p-0.5">
           <button
             type="button"
             aria-label="List view"
             className={cn(
-              "inline-flex h-7 w-7 items-center justify-center rounded-md",
+              "inline-flex h-7 w-7 items-center justify-center rounded-sm",
               viewMode === "list" ? "bg-secondary text-foreground" : "text-muted-foreground",
             )}
             onClick={() => onViewModeChange("list")}
@@ -294,7 +294,7 @@ function StudioHubFilters({
             type="button"
             aria-label="Grid view"
             className={cn(
-              "inline-flex h-7 w-7 items-center justify-center rounded-md",
+              "inline-flex h-7 w-7 items-center justify-center rounded-sm",
               viewMode === "grid" ? "bg-secondary text-foreground" : "text-muted-foreground",
             )}
             onClick={() => onViewModeChange("grid")}
@@ -302,30 +302,7 @@ function StudioHubFilters({
             <LayoutGrid className="h-3.5 w-3.5" aria-hidden />
           </button>
         </div>
-        {hasActiveFilters ? (
-          <button
-            type="button"
-            className="inline-flex h-8 items-center rounded-lg px-2 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
-            onClick={onClearFilters}
-          >
-            <RefreshCw className="mr-1 h-3 w-3" aria-hidden />
-            Clear
-          </button>
-        ) : null}
       </div>
-
-      {totalCount > 0 ? (
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-          <span>{totalCount} total</span>
-          {statsBreakdown.map((stat) => (
-            <span key={stat.label} className="flex items-center gap-1.5">
-              <span className="h-3 w-px bg-border" />
-              <span className={cn("font-medium", stat.color)}>{stat.count}</span>
-              <span>{stat.label}</span>
-            </span>
-          ))}
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -404,7 +381,7 @@ export function StudioView({
   }
 
   return (
-    <div className="max-w-6xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+    <div className={`${APP_SHELL_PAGE_WIDE} space-y-6`}>
       <div className="mb-2">
         <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
           <StudioLink
@@ -432,9 +409,9 @@ export function StudioView({
 
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">Content Studio</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Content Studio</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Generate, manage and schedule AI-powered content
+              Draft, manage, and schedule content
               {projectName ? ` for ${projectName}` : ""}.
             </p>
           </div>
@@ -520,22 +497,25 @@ export function StudioView({
               Loading content…
             </div>
           ) : sorted.length === 0 ? (
-            <div className="paper-card flex flex-col items-center justify-center rounded-xl p-16 text-center">
-              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-muted">
-                {pieces.length === 0 ? (
-                  <PenLine className="h-7 w-7 text-primary" aria-hidden />
-                ) : (
-                  <FileText className="h-7 w-7 text-muted-foreground" aria-hidden />
-                )}
-              </div>
+            <div className="py-12">
               {pieces.length === 0 ? (
                 <>
-                  <h2 className="text-lg font-semibold">No content yet</h2>
+                  <h2 className="text-base font-semibold">No content yet</h2>
                   <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                    Generate your first article from a keyword or brief
+                    Start from a keyword, or optimize a live page.
                   </p>
-                  <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <div className="mt-5 flex flex-wrap items-center gap-3">
                     {newContentAction}
+                    {projectId ? (
+                      <StudioLink
+                        renderLink={renderLink}
+                        href={`/projects/${projectId}/content-studio?optimize=1`}
+                        className="inline-flex h-10 items-center gap-1.5 rounded-lg border border-input bg-card px-4 text-sm font-medium transition-colors hover:bg-secondary"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" aria-hidden />
+                        Optimize a page
+                      </StudioLink>
+                    ) : null}
                     {projectId ? (
                       <StudioLink
                         renderLink={renderLink}
@@ -551,7 +531,7 @@ export function StudioView({
                 <>
                   <p className="font-medium">No items match filters</p>
                   <p className="mt-1 max-w-md text-sm text-muted-foreground">
-                    Try clearing filters to see all content.
+                    Clear filters to see all content.
                   </p>
                   <button
                     type="button"
@@ -571,7 +551,7 @@ export function StudioView({
               className={cn(
                 viewMode === "grid"
                   ? "grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
-                  : "space-y-3",
+                  : "divide-y divide-border border-t border-border",
               )}
             >
               {sorted.map((piece) => (

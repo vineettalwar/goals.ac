@@ -1,10 +1,15 @@
 import { memo, useCallback, useEffect, useState, type ReactNode } from "react";
-import { Leaf, LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { ArrowRight, LogOut, Menu, Moon, Sun, X } from "lucide-react";
+import { GoalsBrandMark } from "./brand-mark";
 import { cn } from "./cn";
 import { buildNavModel, type NavItemDef } from "./nav-config";
 import { isNavItemActive, resolveNavHref } from "./nav-routing";
 
-export { APP_SHELL_MAIN_OFFSET } from "./shell-constants";
+export {
+  APP_SHELL_MAIN_OFFSET,
+  APP_SHELL_PAGE,
+  APP_SHELL_PAGE_WIDE,
+} from "./shell-constants";
 
 export type AppShellLinkProps = {
   href: string;
@@ -57,9 +62,9 @@ const NavItemRow = memo(function NavItemRow({
         onMouseEnter: onNavIntent ? () => onNavIntent(resolvedHref) : undefined,
         onFocus: onNavIntent ? () => onNavIntent(resolvedHref) : undefined,
         className: cn(
-          "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
+          "flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors duration-150",
           active
-            ? "bg-secondary font-medium text-foreground"
+            ? "bg-primary/10 font-medium text-primary"
             : "text-muted-foreground hover:bg-secondary hover:text-foreground",
         ),
         children: (
@@ -91,11 +96,11 @@ function NavSection({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="mb-4 last:mb-0">
-      <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+    <div className="mb-5 last:mb-0">
+      <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {title}
       </p>
-      <ul className="space-y-0.5">
+      <ul className="space-y-1">
         {items.map((item) => {
           const resolvedHref = resolveNavHref(pathname, activeProjectId, item.href);
           return (
@@ -153,15 +158,13 @@ function SidebarPanel({
   return (
     <>
       <div className="flex h-14 items-center gap-2.5 border-b border-border px-4">
-        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary">
-          <Leaf className="h-3.5 w-3.5 text-primary-foreground" />
-        </div>
+        <GoalsBrandMark size={24} className="text-primary" />
         <span className="text-sm font-semibold tracking-tight">goals.ac</span>
         {brandExtra}
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-2 py-3">
-        <div className="mb-4 border-b border-border pb-3">{projectSwitcher}</div>
+      <nav className="flex-1 overflow-y-auto overscroll-contain px-2.5 py-4 [scrollbar-width:thin]">
+        <div className="mb-5 border-b border-border pb-4">{projectSwitcher}</div>
         {navSections.map((section) => (
           <NavSection
             key={section.label}
@@ -176,8 +179,8 @@ function SidebarPanel({
         ))}
       </nav>
 
-      <div className="border-t border-border px-2 py-2">
-        <ul className="space-y-0.5">
+      <div className="border-t border-border px-2.5 py-3">
+        <ul className="space-y-1">
           {footerItems.map((item) => {
             const resolvedHref = resolveNavHref(pathname, activeProjectId, item.href);
             return (
@@ -193,30 +196,50 @@ function SidebarPanel({
             );
           })}
         </ul>
+
+        {renderLink({
+          href: "/settings",
+          onClick: onNavigate,
+          onMouseEnter: onNavIntent ? () => onNavIntent("/settings") : undefined,
+          onFocus: onNavIntent ? () => onNavIntent("/settings") : undefined,
+          className:
+            "mt-3 flex items-center justify-between gap-2 rounded-xl border border-border bg-secondary/50 px-3 py-3 text-left transition-colors hover:bg-secondary",
+          children: (
+            <>
+              <span className="min-w-0">
+                <span className="block text-xs font-semibold text-foreground">Workspace</span>
+                <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                  Plan, billing, and team
+                </span>
+              </span>
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            </>
+          ),
+        })}
       </div>
 
       <div className="border-t border-border p-3">
-        <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
+        <div className="flex items-center gap-2.5 rounded-xl bg-secondary/40 px-2.5 py-2.5">
           {userImage ? (
             <img
               src={userImage}
               alt=""
-              className="h-7 w-7 shrink-0 rounded-full object-cover"
+              className="h-8 w-8 shrink-0 rounded-full object-cover"
             />
           ) : (
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-foreground">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card text-xs font-semibold text-foreground shadow-sm">
               {userName.charAt(0).toUpperCase()}
             </div>
           )}
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-medium">{userName}</p>
-            <p className="truncate text-xs text-muted-foreground">{userEmail}</p>
+            <p className="truncate text-[11px] text-muted-foreground">{userEmail}</p>
           </div>
           {onToggleTheme ? (
             <button
               type="button"
               onClick={onToggleTheme}
-              className="flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground lg:h-auto lg:w-auto"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
             >
               {theme === "dark" ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}
@@ -226,7 +249,7 @@ function SidebarPanel({
             <button
               type="button"
               onClick={onSignOut}
-              className="flex h-11 w-11 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground lg:h-auto lg:w-auto"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-card hover:text-foreground"
               title="Sign out"
             >
               <LogOut className="h-3.5 w-3.5" />
@@ -313,7 +336,7 @@ export function AppSidebarShell({
 
   return (
     <>
-      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-3 border-b border-border bg-card px-3 lg:hidden">
+      <header className="fixed inset-x-0 top-0 z-40 flex h-14 items-center gap-3 border-b border-[var(--sidebar-border)] bg-[var(--sidebar-bg)] px-3 lg:hidden">
         <button
           type="button"
           onClick={() => setMobileOpen(true)}
@@ -323,9 +346,7 @@ export function AppSidebarShell({
           <Menu className="h-5 w-5" />
         </button>
         <div className="flex min-w-0 items-center gap-2">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary">
-            <Leaf className="h-3.5 w-3.5 text-primary-foreground" />
-          </div>
+          <GoalsBrandMark size={22} className="shrink-0 text-primary" />
           <span className="truncate text-sm font-semibold tracking-tight">goals.ac</span>
         </div>
       </header>
@@ -341,7 +362,7 @@ export function AppSidebarShell({
 
       <aside
         className={cn(
-          "flex h-full w-[220px] shrink-0 flex-col border-r border-border bg-card",
+          "flex h-full w-[248px] shrink-0 flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]",
           "fixed inset-y-0 left-0 z-50 transition-[translate] duration-200 ease-out",
           mobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none",
           "lg:relative lg:z-auto lg:translate-x-0 lg:pointer-events-auto",

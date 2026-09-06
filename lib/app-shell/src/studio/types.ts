@@ -18,6 +18,8 @@ export type StudioPiece = {
   publishedUrl?: string | null;
   createdAt?: string | number | null;
   updatedAt?: string | number | null;
+  /** Content Refresh Loop piece (imported from a live URL). */
+  isRefresh?: boolean;
 };
 
 /** Pre-studio content surfaced in the hub (SEO articles, strategies, audits, roadmaps). */
@@ -175,9 +177,9 @@ export function studioStatusCounts(pieces: StudioPiece[]): Array<{ label: string
   const ready = pieces.filter((piece) => piece.status === "ready").length;
   const published = pieces.filter((piece) => piece.status === "published").length;
   const rows = [
-    { label: "Drafts", count: draft, color: "text-amber-600" },
-    { label: "Ready", count: ready, color: "text-emerald-600" },
-    { label: "Published", count: published, color: "text-blue-600" },
+    { label: "drafts", count: draft, color: "text-muted-foreground" },
+    { label: "ready", count: ready, color: "text-muted-foreground" },
+    { label: "published", count: published, color: "text-muted-foreground" },
   ];
   return rows.filter((row) => row.count > 0);
 }

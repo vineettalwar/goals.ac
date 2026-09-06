@@ -291,7 +291,7 @@ function ArticleQualityPanelBody({
       ) : null}
 
       {canEnhance && needsEnhance && onEnhance ? (
-        <div className="rounded-lg border border-primary/20 bg-primary/5 p-3 space-y-2">
+        <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
           <p className="text-xs text-muted-foreground">
             {dual?.serp.gaps.length
               ? "Fix gaps runs an enhance pass targeting SERP, FAQ, citations, and internal links."

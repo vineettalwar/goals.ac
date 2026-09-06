@@ -1,5 +1,170 @@
 # Session Handoff
 
+## Gate 0 progress — BLOCK-1 WP packaging (2026-09-06)
+
+**Status:** Packaging script + installable zip path shipped.
+
+| Piece | Where |
+|---|---|
+| Package script | `cms-plugins/wordpress/scripts/package-plugin.sh` (`pnpm --filter @workspace/goals-ac-wp run package`) |
+| Dist zip | `cms-plugins/wordpress/dist/goals-ac.zip` (gitignored) |
+| App download | `artifacts/marketing-persona-app/public/downloads/goals-ac.zip` (gitignored; rebuild before deploy) |
+| UI link | `NEXT_PUBLIC_WORDPRESS_PLUGIN_URL` or default `/downloads/goals-ac.zip` |
+
+**Verify:** unzip → `goals-ac/goals-ac.php` + `vendor/autoload.php`; `NonceStore`/`KeyStore` load; install folder is `goals-ac/`.
+
+**Already closed earlier:** SEC-1 (UUID job ids + auth on `/api/jobs/:id`), SEC-2 (persona `and()` ownership), BLOCK-3 (social draft → `pending_review` + `shouldAutoPublishSocial` + `assertSocialReviewCleared`).
+
+**Still open for Gate 0/1:** live WP staging smoke with this zip; BLOCK-2 app-password idempotency completeness; BLOCK-4 readiness options wired; update channel for the plugin.
+
+---
+
+## Feature 1 CF parity — Technical Site Audit (2026-09-06)
+
+**Status:** CF gateway + read (list/detail) + write (start crawl) wired.
+
+| Piece | Where |
+|---|---|
+| Gateway | GET list/detail → read; POST → write |
+| Read | `cf-read-worker/src/site-audit-routes.ts` |
+| Write | `cf-write-worker/src/site-audit-routes.ts` — insert + queue `siteAuditCrawl` (sync fallback) |
+
+**Verify:** D1 `0011` / PG `0076`; Search → Site → Run audit on CF preview.
+
+**Next:** live staging smokes (WP publish → GSC inspect; site audit crawl) or Gate 0.
+
+---
+
+## Feature 4 CF parity — GSC URL Inspection (2026-09-06)
+
+**Status:** CF gateway + read GET + write POST wired (mirrors Next route).
+
+| Piece | Where |
+|---|---|
+| Gateway | `artifacts/cf-gateway/src/index.ts` — GET read, POST write |
+| Read | `cf-read-worker/.../keyword-routes.ts` — list inspections |
+| Write | `cf-write-worker/src/gsc-url-inspection-routes.ts` — rate limit + queue / inline |
+
+**Next:** live staging smoke (WP publish → GSC inspect; site audit crawl). Gate 0 parallel.
+
+---
+
+## Editor-side internal links (2026-09-06)
+
+**Status:** MVP shipped. PRD: [`docs/prd/editor-internal-links.md`](docs/prd/editor-internal-links.md).
+
+| Piece | Where |
+|---|---|
+| Suggest + apply (pure) | `lib/content-engine/src/content/outbound-internal-links.ts` (+ tests) |
+| Studio UI | Quality panel → Internal links chips + Insert all (edit mode) |
+| Reuse | Metadata `internalLinkSuggestions`; hub stays read-only |
+
+**Try it:** Open a long-form piece with link suggestions → Edit → Quality → Insert / Insert all → Save.
+
+**Next ranked Surfer follow-on:** Shareable editor / agency collab (heavy auth) — or Gate 0 go-live.
+
+---
+
+## Content Refresh Loop packaging (2026-09-06)
+
+**Status:** MVP + entry-point packaging shipped. PRD: [`docs/prd/content-refresh-loop.md`](docs/prd/content-refresh-loop.md).
+
+| Slice | Where |
+|---|---|
+| URL import + WP update confirm | `create-refresh-content-piece`, Studio Optimize wizard, publish `confirmCmsUpdate` |
+| Refresh queue | `/search/refresh`, `refresh-queue-service` |
+| Studio Refresh badge + empty Optimize CTA | `studio-ui.tsx`, `content-studio-load-data.ts` (`isRefresh`) |
+| Performance / dashboard / visibility → Optimize | `article-performance-panel`, `dashboard-ui` (refresh/rank_drop), AI visibility “Not cited” CTAs |
+
+**Next (follow-on, own PRD):** editor-side auto internal links (hub already exists). Not NLP / Docs / Sites.
+
+---
+
+## OpenSEO → goals.ac integration (2026-09-06)
+
+**Status:** Phase 0 docs + Features 1–6 PRDs. **Features 1–5 shipped** in `lib/*` + Next; Feature 6 deferred.
+
+**Start here (next agent):**
+1. [`docs/prd/openseo-integration-index.md`](docs/prd/openseo-integration-index.md)
+2. Live staging smokes (WP publish → GSC inspect; DataForSEO Mentions; MCP with real `gac_` key)
+3. Go-live Gate 0 ([`docs/audits/2026-09-06-production-readiness.md`](docs/audits/2026-09-06-production-readiness.md)) — parallel track
+4. Feature 6 only if product asks for backlinks overview
+
+### Feature 5 shipped (local) — Rank tracking hardening
+
+| Piece | Where |
+|---|---|
+| Richer SERP features | `lib/serp-provider/src/dataforseo.ts` — `featureTypes`, `aiOverview`, `localPack`, `knowledgeGraph` |
+| UI chips | `lib/app-shell/.../keyword-rank-chart.tsx` |
+| 45m debounce guard | `keyword-rank-debounce.ts` + sweep/check in `keywordRankCheck.ts` |
+| Tests | `npx vitest run lib/serp-provider/src/dataforseo-serp-features.test.ts lib/jobs/src/handlers/keyword-rank-debounce.test.ts` |
+
+### Feature 4 shipped (local) — GSC URL Inspection
+
+| Piece | Where |
+|---|---|
+| Client + tests | `lib/seo-tools/src/gscUrlInspection.ts` |
+| Service + rate limit + enqueue helper | `lib/content-engine/src/analytics/gsc-url-inspection-*.ts` |
+| Schema | PG `0078` / D1 `0013` `gsc_url_inspections` |
+| Job | `QUEUES.gscUrlInspection` → `processGscUrlInspection` |
+| API (Next) | `GET/POST …/website-projects/:id/gsc-url-inspections` |
+| API (CF) | Gateway + read GET + write POST (`gsc-url-inspection-routes.ts`) |
+| Post-publish | WordPress-only fire-and-forget after successful publish |
+| UI | Performance Indexing column; Publish History coverage badge + Inspect |
+
+**Verify:** migrate `0078` / D1 `0013`; GSC-connected project → Performance → Inspect; or WP publish → job queued. CF preview: same paths via gateway.
+
+### Feature 3 shipped (local) — goals.ac MCP + Agent Skills
+
+| Piece | Where |
+|---|---|
+| MCP server (JSON-RPC 2.0) | `lib/mcp-server/` — protocol, tools, handlers; tests `npx vitest run lib/mcp-server` |
+| Next.js routes | `POST/GET /api/mcp` — `artifacts/marketing-persona-app/src/app/api/mcp/route.ts` |
+| CF public worker | `artifacts/cf-public-worker/src/mcp-routes.ts`; gateway `PUBLIC_PREFIXES` includes `/api/mcp` |
+| Tools (v0.1) | whoami, list_projects, get_project, get_project_context, run_site_audit, get_audit_issues, list_keyword_opportunities, generate_content_piece, get_publish_readiness |
+| Auth | Reuses `gac_…` API keys (Settings → Integrations); scopes `content:read`, `content:generate` |
+| Cursor skill | `.agents/skills/goals-ac-seo-loop/SKILL.md` |
+
+**Verify:** `curl localhost:3001/api/mcp` (discovery) + `POST` initialize/tools/list with `Authorization: Bearer gac_…`.  
+**Not done (program):** Gate 0 go-live blockers remain parallel; live staging smokes.
+
+### Feature 2 shipped (local) — Real AI visibility
+
+| Piece | Where |
+|---|---|
+| DataForSEO LLM Mentions + SoV | `lib/serp-provider/src/llm-mentions.ts`, `share-of-voice.ts` |
+| Tests (15) | `npx vitest run lib/serp-provider/src/llm-mentions.test.ts lib/content-engine/src/strategy/live-visibility-snapshots.test.ts` |
+| Snapshot `source` column | PG `0077_llm_visibility_source`, D1 `0012_llm_visibility_source` |
+| Dual-path service | `llm-visibility-service.ts` — live when `DATAFORSEO_LOGIN/PASSWORD` set, else simulated |
+| Live row shaping | `live-visibility-snapshots.ts` (pure; unit-tested) |
+| UI | `/search/visibility` — **Live API** vs **Simulated** badges + cost estimate + per-row source |
+| Turbopack | `next.config.ts` resolveAlias for `@workspace/serp-provider` |
+
+**Apply:** `pnpm --filter @workspace/db run migrate` (0076 site audits + 0077 source).  
+**Live smoke:** set DataForSEO env → Run check → expect Live API badge and ChatGPT/Google snapshots only.
+**Creds:** repo `.env` for `next dev`; `artifacts/marketing-persona-app/.dev.vars` for `cf:preview`.
+
+### Feature 1 shipped (local)
+
+| Piece | Where |
+|---|---|
+| Issue registry + crawl + reporters | `lib/seo-tools/src/site-audit/` (`@workspace/seo-tools/site-audit`) |
+| Tests (7) | `npx vitest run lib/seo-tools/src/site-audit` |
+| Schema | `site_audits` / pages / issues — PG `0076`, D1 `0011` |
+| Job | `QUEUES.siteAuditCrawl` → `processSiteAuditCrawl` |
+| API / UI | `…/site-audits`, Search → Site (Next + CF) |
+
+**Not done:** live staging smokes; Gate 0.
+
+**Upstream reference clone:**
+```sh
+git clone --depth 1 git@github.com:every-app/open-seo.git /tmp/open-seo-research
+```
+
+**Next feature:** Live staging smokes + Gate 0. Feature 6 backlinks only if product asks.
+
+---
+
 ## Production readiness audit — go-live blockers for the €500/mo WordPress + LinkedIn autopilot (2026-09-06)
 
 **Status:** Audit only. **No code changed.** Full findings: `docs/audits/2026-09-06-production-readiness.md`. Read that file before touching anything below — it carries file:line evidence for every claim and a "checked and found clean" list so you do not re-audit settled ground.
@@ -74,7 +239,7 @@ Where each agent stopped:
 | Area | Landed | Missing |
 |---|---|---|
 | Content safety | Placeholder blocker in `publish-readiness.ts`; the `"83% of [audience] fail"` template removed from `linkedin-archetypes.ts`; preamble stripping in `core/utils.ts` | The actual BLOCK-4 fix — `existingTitles` / `checkUnattributedClaims` / `targetKeyword` reaching `assessPublishReadiness` via `collectReadinessInputs` — is NOT confirmed wired |
-| WP plugin | `wp_slash()` handling, media size cap, uninstall cleanup, `llms.txt` registration moved to `init`, a 294-line test bootstrap | **The packaging script and distributable zip — the actual BLOCK-1 blocker.** Still uninstallable |
+| WP plugin | `wp_slash()` handling, media size cap, uninstall cleanup, `llms.txt` registration moved to `init`, a 294-line test bootstrap | **Packaging script + zip path shipped** (`scripts/package-plugin.sh` → `public/downloads/goals-ac.zip`). Still needs live install smoke + update channel. |
 | WP connector | Timeout + idempotency work in `wordpress.ts`, new `wordpress.test.ts`, `seo-field-mapper.ts` reworked | Completeness unconfirmed; SEO-meta honesty decision unverified |
 | Plan catalog | `plan_catalog` schema (pg + sqlite mirror), migrations `0075` / d1 `0010`, `docs/prd/dynamic-plan-catalog.md` | All billing code, Stripe VAT, admin UI |
 | BLOCK-3, SEC-2, observability | Scattered partial edits in `social-publish.ts`, `autopilot-scheduler.ts`, `contentGenerate.ts` | Essentially everything |
@@ -84,8 +249,8 @@ Where each agent stopped:
 1. **Do not deploy from `9c5f042`.** Verify or revert per area against `docs/audits/2026-09-06-production-readiness.md`, which carries the finding behind every item.
 2. **Check the new publish-readiness blocker first.** A blocker that fires on good content silently stops a paying customer's autopilot. Confirm it leaves the `__fixtures__/articles/clean.ts` anchor fixture at zero blockers — that fixture exists precisely to catch this.
 3. **Migrations `0075` and d1 `0010` were generated but never applied** to any database. Review the SQL before running it.
-4. **SEC-2 (the cross-tenant IDOR) is still open** and is the most serious defect outstanding: `api/personas/[id]/route.ts:33,41,58,63` uses JS `&&` where Drizzle `and()` was meant, so any user can PATCH/DELETE another tenant's persona. It is a small fix — do it first, and sweep the repo for the same pattern.
-5. **BLOCK-3 is still open**: "Auto-publish as draft" still posts live to LinkedIn.
+4. **SEC-2 (persona IDOR) — closed in tree.** `api/personas/[id]/route.ts` uses Drizzle `and(...)` + company-scoped writes. Re-verify before treating as done if branch history is unclear.
+5. **BLOCK-3 — closed in tree.** Autopilot `publishMode: "draft"` holds social at `pending_review`; `shouldAutoPublishSocial` is live-only; `assertSocialReviewCleared` gates connectors. Confirm with a LinkedIn draft-mode smoke.
 
 ### Lesson for the next orchestrator
 

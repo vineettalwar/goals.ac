@@ -60,6 +60,7 @@ import { handleMastodonAuthCallback, handleMastodonAuthStart } from "./auth-mast
 import { handleStripeWebhook } from "./stripe-webhook";
 import { handlePublicInviteGet } from "./invite-routes";
 import { handleV1Api } from "./v1-api-routes";
+import { handleMcpRoute } from "./mcp-routes";
 import { kvGetJson, kvPutJson } from "@workspace/cf-edge/kv-cache";
 import type { CfEdgeBindings } from "@workspace/cf-edge/bindings";
 import { z } from "zod";
@@ -455,6 +456,9 @@ async function handle(request: Request, env: Env): Promise<Response> {
 
     const inviteHandled = await handlePublicInviteGet(request, path);
     if (inviteHandled) return inviteHandled;
+
+    const mcpHandled = await handleMcpRoute(request, path, env);
+    if (mcpHandled) return mcpHandled;
 
     const v1Handled = await handleV1Api(request, path);
     if (v1Handled) return v1Handled;
