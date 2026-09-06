@@ -42,7 +42,7 @@ export function BacklinksOverviewPanel() {
       const res = await fetch(`/api/website-projects/${activeProjectId}/backlinks`, {
         method: "POST",
       });
-      const data = (await res.json().catch(() => ({}))) as BacklinksOverview & {
+      const data = (await res.json().catch(() => ({}))) as Partial<BacklinksOverview> & {
         error?: string;
         configured?: boolean;
       };

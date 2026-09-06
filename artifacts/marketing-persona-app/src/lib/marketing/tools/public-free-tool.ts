@@ -12,7 +12,7 @@ const Body = z.object({
 export async function runPublicFreeTool(
   req: Request,
   run: (url: string) => Promise<object>,
-): Promise<NextResponse> {
+): Promise<Response> {
   const ip = getClientIp(req);
   const limited = await rateLimitResponse(
     `public-free-tool:ip:${ip}`,
