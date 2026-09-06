@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { companiesTable, marketingPersonasTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { generatePersonas } from "@/lib/ai/persona-generator";
 import { loadUserAiSettings } from "@/lib/content/content-pieces-helpers";
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const [company] = await db
     .select()
     .from(companiesTable)
-    .where(eq(companiesTable.id, parsed.data.companyId) && eq(companiesTable.userId, userId!))
+    .where(and(eq(companiesTable.id, parsed.data.companyId), eq(companiesTable.userId, userId!)))
     .limit(1);
 
   if (!company) return NextResponse.json({ error: "Company not found" }, { status: 404 });

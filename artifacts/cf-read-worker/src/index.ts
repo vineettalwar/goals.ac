@@ -55,15 +55,6 @@ export default {
       return withCors(request, Response.json({ status: "ok", worker: "goals-ac-read" }));
     }
 
-    if (path.match(/^\/api\/jobs\/[^/]+$/) && request.method === "GET") {
-      const jobId = path.split("/").pop()!;
-      const status = await kvGetJson(env.AI_CACHE, `job:status:${jobId}`);
-      return withCors(
-        request,
-        Response.json(status ?? { jobId, status: "pending" }),
-      );
-    }
-
     const session = await requireAuth(request, env);
     if (!session?.id) {
       return withCors(request, Response.json({ error: "Unauthorized" }, { status: 401 }));
@@ -71,6 +62,20 @@ export default {
     const userId = Number.parseInt(session.id, 10);
 
     try {
+      if (path.match(/^\/api\/jobs\/[^/]+$/) && request.method === "GET") {
+        const jobId = path.split("/").pop()!;
+        const status = await kvGetJson<{ jobId: string; status: string; userId?: number }>(
+          env.AI_CACHE,
+          `job:status:${jobId}`,
+        );
+        // No stored job, or a job whose owner does not match the caller: 404 either
+        // way so an anonymous or mismatched caller cannot tell the two cases apart.
+        if (!status || status.userId == null || status.userId !== userId) {
+          return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+        }
+        return withCors(request, Response.json(status));
+      }
+
       const adminHandled = await handleAdminRead(request, path, session.role, userId, env);
       if (adminHandled) return adminHandled;
 

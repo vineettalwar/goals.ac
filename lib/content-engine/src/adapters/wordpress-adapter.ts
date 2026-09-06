@@ -182,9 +182,22 @@ export const wordpressAdapter: CmsAdapter = {
       seo.metaDescription,
       undefined,
       Object.keys(wpMeta).length > 0 ? wpMeta : undefined,
-      { featuredMediaId: opts?.featuredMediaId, htmlContent: payload.content },
+      {
+        featuredMediaId: opts?.featuredMediaId,
+        htmlContent: payload.content,
+        // Create-or-update against the last known remote post for this piece
+        // (populated from publish_records) instead of always creating a new
+        // post — see publishToWordPress for the reliability rationale.
+        existingRemoteId: opts?.existingRemoteId,
+      },
     );
-    return { url: result.url };
+    return {
+      url: result.url,
+      remoteId: result.postId,
+      warnings: result.metaWarning
+        ? [{ code: "seo_meta_not_persisted", message: result.metaWarning }]
+        : undefined,
+    };
   },
 };
 

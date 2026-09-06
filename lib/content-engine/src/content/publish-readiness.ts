@@ -58,6 +58,25 @@ export type PublishReadinessOptions = {
   existingTitles?: string[];
   /** When true, screen the body for statistics and study references that carry no attribution. */
   checkUnattributedClaims?: boolean;
+  /**
+   * True on a publish path with no human reviewing the piece before it goes live
+   * (autopilot, the scheduled sweep, a bare API call). Governs how the ai_tells
+   * signal is treated: on an interactive path a person sees the warning and can
+   * fix it or override, so it stays advisory there regardless of this flag. When
+   * `unattended` is true and the slop score reaches `aiTellsBlockThreshold`,
+   * ai_tells is promoted from a warning to a blocker, because nobody is left to
+   * catch it before it reaches a customer's live site. Omit (or leave false) to
+   * keep ai_tells advisory-only, which matches every interactive caller today.
+   */
+  unattended?: boolean;
+  /**
+   * Slop score (see `countAiSlopSignals`) at or above which ai_tells blocks an
+   * unattended publish. Only consulted when `unattended` is true. Defaults to
+   * `DEFAULT_AI_TELLS_BLOCK_THRESHOLD`; a handful of hard tells (a banned phrase,
+   * an em-dash-adjacent cliche) should not itself hold a publish, but a body
+   * saturated with them should.
+   */
+  aiTellsBlockThreshold?: number;
 };
 
 /**
@@ -79,6 +98,16 @@ export type PublishReadinessPiece = {
 
 const DEFAULT_QUALITY_SCORE_REFERENCE = 70;
 const EXCERPT_RADIUS = 40;
+/**
+ * See `unattended`/`aiTellsBlockThreshold` on `PublishReadinessOptions`. Picked
+ * conservatively: one or two incidental hard tells (a stray "cutting-edge") sit
+ * well under this, so a normally clean piece with a minor slip is not held for
+ * review it does not need. A body that racks up six or more, whether from
+ * several distinct hard tells or a real cluster of buzzword density, reads as
+ * genuinely AI-flavored throughout, which is exactly the unattended-publish
+ * failure mode this option exists to catch.
+ */
+const DEFAULT_AI_TELLS_BLOCK_THRESHOLD = 6;
 
 type ResolvedFields = {
   title: string;

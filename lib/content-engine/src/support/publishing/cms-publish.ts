@@ -27,6 +27,7 @@ import type { ContentPieceMetadata as GeneratedPieceMetadata } from "../../conte
 import type { CmsIntegrationCredentials, CmsPublishPlatform } from "./cms-integrations";
 import { resolveWordPressConnectionType } from "./cms-integrations";
 import { hostFeaturedImageForPublish } from "./host-featured-image";
+import { getLatestPublishedRemoteId } from "./publish-records";
 import {
   mapSeoToJoomlaMeta,
   mapSeoToPluginMeta,
@@ -266,6 +267,11 @@ export async function publishPieceToWordPress(
 
   const seo = resolveSeo({ ...piece, pieceMetadata: updatedMetadata }, hostedOgUrl);
   const wpMeta = mapSeoToWordPressRestMeta(seo);
+  // Legacy Express path (@deprecated re-export in publish-destination.ts) — kept
+  // idempotent the same way the primary adapter path is: reuse a prior remote
+  // post id for this piece rather than always creating a new post.
+  const existingRemoteId =
+    piece.id != null ? ((await getLatestPublishedRemoteId(piece.id, "wordpress")) ?? undefined) : undefined;
   const result = await publishToWordPress(
     wpCreds,
     seo.seoTitle ?? piece.title,
@@ -274,8 +280,11 @@ export async function publishPieceToWordPress(
     seo.metaDescription,
     undefined,
     Object.keys(wpMeta).length > 0 ? wpMeta : undefined,
-    { featuredMediaId },
+    { featuredMediaId, existingRemoteId },
   );
+  if (result.metaWarning) {
+    logger.warn({ pieceId: piece.id, url: result.url }, result.metaWarning);
+  }
   return result.url;
 }
 

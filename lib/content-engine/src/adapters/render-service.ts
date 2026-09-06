@@ -151,7 +151,9 @@ export async function renderAndPublish(
     url: remote.url,
     remoteId: remote.remoteId,
     payload: renderResult.payload,
-    warnings: renderResult.warnings,
+    warnings: remote.warnings?.length
+      ? [...renderResult.warnings, ...remote.warnings]
+      : renderResult.warnings,
     outputMode,
   };
 }

@@ -1,6 +1,12 @@
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@workspace/db";
-import { briefsTable, contentPiecesTable, websiteProjectsTable, type ContentFormatType } from "@workspace/db";
+import {
+  briefsTable,
+  contentPiecesTable,
+  websiteProjectsTable,
+  SOCIAL_FORMAT_TYPES,
+  type ContentFormatType,
+} from "@workspace/db";
 import { QUEUES, enqueue } from "@workspace/jobs";
 import type { ContentGeneratePayload, PgBoss } from "@workspace/jobs";
 import {
@@ -20,6 +26,7 @@ import {
 import {
   parseAutopilotSettings,
   shouldAutoPublish,
+  shouldAutoPublishSocial,
   todayInTimezone,
 } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
 import { isPieceAwaitingReview } from "@workspace/content-engine/verticals/vertical-guardrails";
@@ -35,7 +42,7 @@ function userUsesByok(
   );
 }
 
-async function finalizeGeneratedPieces(params: {
+export async function finalizeGeneratedPieces(params: {
   pieceIds: number[];
   projectId: number;
   userId: number;
@@ -57,6 +64,7 @@ async function finalizeGeneratedPieces(params: {
     const pieces = await db
       .select({
         id: contentPiecesTable.id,
+        formatType: contentPiecesTable.formatType,
         plannedDate: contentPiecesTable.plannedDate,
         approvalStatus: contentPiecesTable.approvalStatus,
         pieceMetadata: contentPiecesTable.pieceMetadata,
@@ -88,10 +96,36 @@ async function finalizeGeneratedPieces(params: {
       );
     }
 
+    const publishSocialNow = shouldAutoPublishSocial(settings);
+    const socialHeld: number[] = [];
+
     for (const piece of releasable) {
-      if (piece.plannedDate && piece.plannedDate <= today) {
-        await enqueue(QUEUES.contentPublish, { contentPieceId: piece.id, userId });
+      if (!piece.plannedDate || piece.plannedDate > today) continue;
+
+      const isSocial = (SOCIAL_FORMAT_TYPES as readonly string[]).includes(piece.formatType);
+      if (isSocial && !publishSocialNow) {
+        // Social platforms have no server-side draft: publishMode "draft" means
+        // hold the piece for human approval, the same review state used for
+        // regulated-vertical content (approvePiece releases it, and the review
+        // gate in social-publish.ts refuses to post a pending_review piece).
+        // Stamp scheduledAt now so the scheduled sweep's listDueSocialPieces
+        // picks it up as soon as it is approved, instead of it staying stranded.
+        await db
+          .update(contentPiecesTable)
+          .set({ approvalStatus: "pending_review", scheduledAt: new Date() })
+          .where(eq(contentPiecesTable.id, piece.id));
+        socialHeld.push(piece.id);
+        continue;
       }
+
+      await enqueue(QUEUES.contentPublish, { contentPieceId: piece.id, userId });
+    }
+
+    if (socialHeld.length > 0) {
+      logger.info(
+        { pieceIds: socialHeld, projectId },
+        "holding social pieces from auto-publish (draft mode) until a human approves them",
+      );
     }
     return;
   }

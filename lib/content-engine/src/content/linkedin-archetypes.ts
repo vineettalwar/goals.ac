@@ -71,7 +71,17 @@ export const LINKEDIN_HOOK_TYPES: ReadonlyArray<{
   {
     id: "surprising-stat",
     label: "Surprising Stat",
-    template: "83% of [audience] fail because of [reason].",
+    // Deliberately carries no number. An earlier version of this template read
+    // "83% of [audience] fail because of [reason]." and was injected verbatim
+    // into the generation prompt as a hook to imitate; the model reliably
+    // copied the 83% figure as though it were real, because the template gave
+    // it a specific, confident-sounding number and no signal that the number
+    // was a placeholder rather than a fact. LinkedIn posts get none of the
+    // citation or claim-attribution screening long-form articles do (see
+    // isSeoLongformFormat), so a fabricated stat here goes straight to a
+    // customer's own LinkedIn profile under their name with nothing to catch
+    // it. Never reintroduce a specific invented number into this template.
+    template: "Most [audience] get [topic] wrong, and the real reason surprised me.",
     strengthScore: 8,
   },
   {

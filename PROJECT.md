@@ -2,7 +2,9 @@
 
 ## What This Is
 
-AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps, SEO content, GEO audits, and CMS publishing — personalized to brand, industry, and stage. Canonical product UI is the Next.js app (`marketing-persona-app` on :3001).
+AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps, SEO content, GEO audits, and CMS publishing — personalized to brand, industry, and stage.
+
+**Two runtimes — know which one you are changing.** `marketing-persona-app` (Next.js, :3001) is canonical for **development** and is where features are written first. It is **not deployed**: root `cf:deploy` errors with "OpenNext monolith is retired". **Production** is `cf-gateway` -> `cf-public-worker` / `cf-read-worker` / `cf-write-worker`, with `goals-app-ui` and `marketing-pages` on Cloudflare Pages. A change is shipped when it reaches the workers, not when it lands in the Next app.
 
 ## Tech Stack (confirmed)
 
@@ -18,7 +20,9 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 
 ## Architecture Map
 
-- `artifacts/marketing-persona-app/` — canonical product (auth, dashboard, studio, admin, APIs)
+- `artifacts/marketing-persona-app/` — reference product implementation (auth, dashboard, studio, admin, APIs); canonical for development, not deployed
+- `artifacts/goals-app-ui/` — **live** product SPA on Cloudflare Pages (`app.goals.ac`, `pnpm run cf:pages:app`); shares `lib/app-shell` with the Next app. Repeatedly mistaken for dead code — it is not.
+- `artifacts/cf-gateway/` + `cf-public-worker` / `cf-read-worker` / `cf-write-worker` — the production API surface
 - `artifacts/marketing-persona-app/src/lib/org-access.ts` — org roles, permissions, suspend checks
 - `artifacts/marketing-persona-app/src/lib/require-auth.ts` — session + org suspend + IP allowlist
 - `artifacts/marketing-persona-app/src/lib/platform-settings.ts` — platform ops singleton (`platform_settings`)
@@ -93,6 +97,9 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 - Redis-backed rate limits for multi-instance deploy
 
 ## Known Issues / Fragile Areas
+
+> **Go-live blockers: see `docs/audits/2026-09-06-production-readiness.md`.** A six-domain audit found 2 critical security defects (an unauthenticated enumerable job-status endpoint, a cross-tenant IDOR from `&&` used where Drizzle `and()` was meant), 10 go-live blockers (the WordPress plugin cannot be installed; the only working WP path has no publish idempotency; "Auto-publish as draft" posts live to LinkedIn; the publish quality gate is passed no options by any production call site; no error tracking anywhere; no EUR plan and no VAT), and confirmed that nothing has ever been run against a real WordPress site, LinkedIn app, or payment. That file carries file:line evidence and a "checked and found clean" list — read it before auditing this codebase again.
+
 
 - **`pnpm run typecheck` is red on `main`**, in packages unrelated to recent work: `artifacts/api-server` (2 errors, `pool` no longer exported from `@workspace/db`), `artifacts/cf-read-worker` (362), `artifacts/cf-write-worker` (622, D1 dialect mismatch). Libs, `marketing-persona-app`, `worker`, and `cf-jobs-worker` are clean — validate against those.
 - `lib/ai-providers/src/bedrock-auth.test.ts` fails wherever `AWS_*` env vars are present; `lib/content-engine/src/support/ai/platform-bedrock.test.ts` contains no test suite.

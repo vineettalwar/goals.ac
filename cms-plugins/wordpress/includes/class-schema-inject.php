@@ -23,6 +23,15 @@ class Schema_Inject {
 	public function init(): void {
 		\add_action( 'wp_head', array( $this, 'inject_json_ld' ), 1 );
 		\add_action( 'wp_footer', array( $this, 'inject_json_ld_footer' ), 1 );
+
+		// Register on every request, exactly like core's own rewrite endpoints
+		// do — a rewrite rule only lives for the process that added it. Adding
+		// it once, from inside the one-off POST /schema handler, meant the
+		// rule (and the template_redirect hook that serves the file) never
+		// existed for a normal front-end page view, so /llms.txt 404d forever.
+		// The rewrite *cache* still only needs flushing on activation/deactivation
+		// (see goals-ac.php) — never here, on every request.
+		$this->register_llms_txt_endpoint();
 	}
 
 	/**
@@ -67,8 +76,6 @@ class Schema_Inject {
 		if ( ! empty( $llms_txt ) ) {
 			\update_option( self::LLMSTXT_OPTION, \sanitize_textarea_field( $llms_txt ), false );
 		}
-
-		$this->register_llms_txt_endpoint();
 
 		return \rest_ensure_response( array( 'ok' => true ) );
 	}

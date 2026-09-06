@@ -43,6 +43,20 @@ class Media_Handler {
 			);
 		}
 
+		$max_bytes = \wp_max_upload_size();
+		if ( $max_bytes > 0 && \strlen( $raw ) > $max_bytes ) {
+			return new \WP_Error(
+				'goals_ac_media_too_large',
+				\sprintf(
+					/* translators: 1: uploaded size in bytes, 2: the site's max upload size in bytes. */
+					\__( 'Image is %1$d bytes, which exceeds this site\'s %2$d byte upload limit.', 'goals-ac' ),
+					\strlen( $raw ),
+					$max_bytes
+				),
+				array( 'status' => 413 )
+			);
+		}
+
 		$upload_dir = \wp_upload_dir();
 		if ( ! empty( $upload_dir['error'] ) ) {
 			return new \WP_Error(

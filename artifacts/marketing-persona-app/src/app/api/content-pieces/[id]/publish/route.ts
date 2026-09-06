@@ -181,6 +181,7 @@ export async function POST(
               ...publishable,
               websiteProjectId: piece!.websiteProjectId,
               featuredImageUrl: imageUrl,
+              approvalStatus: piece!.approvalStatus,
               pieceMetadata: piece!.pieceMetadata,
             },
             userId!,

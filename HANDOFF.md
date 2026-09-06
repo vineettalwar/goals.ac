@@ -1,5 +1,98 @@
 # Session Handoff
 
+## Production readiness audit — go-live blockers for the €500/mo WordPress + LinkedIn autopilot (2026-09-06)
+
+**Status:** Audit only. **No code changed.** Full findings: `docs/audits/2026-09-06-production-readiness.md`. Read that file before touching anything below — it carries file:line evidence for every claim and a "checked and found clean" list so you do not re-audit settled ground.
+
+**Method:** six parallel domain audits (WordPress path, LinkedIn + autopilot, content quality, security/multi-tenancy, UX/marketing, billing/ops) plus a structural pass. Every finding recorded as CONFIRMED was re-verified at the source by a second reader. Findings marked UNVERIFIED need a live run.
+
+**Baseline measured (not read from docs):** 838/839 unit tests pass (the 1 failure is the known Bedrock env-var test). Root typecheck fails only on `api-server` (legacy). `cf-write-worker` **622** type errors, `cf-read-worker` **362**; every other package is 0.
+
+### The one-line summary
+
+The libraries are good and the gap is not capability. The strongest safety features are built, tested, and switched off; the production runtime is a hand-ported copy with no type safety; the WordPress plugin cannot be installed by anyone; and nothing has ever been run against a real WordPress site, a real LinkedIn app, or a real payment.
+
+### Fix first, in this order
+
+| # | Finding | Where |
+|---|---|---|
+| 1 | **SEC-1** Unauthenticated, enumerable job-status endpoint leaks other tenants' `userId`/`projectId`/`publishedUrl`. Job ids are `cf:<queue>:<Date.now()>` and the route sits above `requireAuth` | `lib/jobs/src/cf-queues.ts:37`, `cf-read-worker/src/index.ts:58-65` |
+| 2 | **SEC-2** Cross-tenant IDOR. `.where(eq(a) && eq(b))` — JS `&&` discards the id filter, and the mutation has no ownership binding at all. Any user can PATCH/DELETE any org's persona | `api/personas/[id]/route.ts:33,41,58,63`; same bug own-tenant at `api/companies/route.ts:74`, `api/personas/generate/route.ts:32` |
+| 3 | **BLOCK-3** "Auto-publish as draft" posts **live** to LinkedIn. `publishPieceToSocial()` takes no status param; `lifecycleState` is hardcoded `"PUBLISHED"` | `autopilot-scheduler.ts:86,90`, `social-publish.ts:86`, `connectors/src/linkedin.ts:137`, label at `app-shell/src/autopilot/types.ts:38` |
+| 4 | **BLOCK-1** The WP plugin cannot be installed: install link points at the generic wordpress.org directory, the plugin fatals on activation (Composer path-dep on `../shared`, no `vendor/`, no packaging script, no `.distignore`), and there is no update channel | `connect-wordpress-forms.tsx:92`, `cms-plugins/wordpress/composer.json`, `class-wp-nonce-store.php:17` |
+| 5 | **BLOCK-2** The only working WP path (app password) has no idempotency and no fetch timeout; the 15-min sweep re-publishes `ready` pieces → duplicate posts on a customer's live blog | `connectors/src/wordpress.ts:65-111`, `contentPublish.ts:318-378` |
+| 6 | **BLOCK-4** The publish quality gate is inert. `minQualityScore`, `targetKeyword`, `existingTitles`, `checkUnattributedClaims` are passed by **no** production call site — only tests. Quality floor, keyword stuffing, cannibalization blocking and the fabricated-stat screen are all dead | `contentPublish.ts:106`, `api/content-pieces/[id]/publish/route.ts:91`, `api/v1/.../publish/route.ts:49` |
+| 7 | **BLOCK-7** Nothing pages a human. Zero error-tracking in the repo; health alerts are DB rows + an in-app banner; the one email path is a manual admin POST wired to no cron, in the undeployed app | `integration-health-alerts.ts:81-138`, `api/admin/publish-reliability/alert` |
+
+Also blocking commercially: **BLOCK-6** no €500 plan (only free Starter and $49 Growth) and no VAT/`automatic_tax` anywhere; **BLOCK-10** the pricing page has no prices and `PUBLISHED_STORIES` is an empty array; **BLOCK-9** `signupsEnabled: false` by default.
+
+### Traps — do not repeat these
+
+- **`marketing-persona-app` is not deployed.** Production is `cf-gateway` → `cf-public/read/write-worker` + `goals-app-ui` on Pages. Root `cf:deploy` errors with "OpenNext monolith is retired." The admin dashboard, the only email-alert hook, and the entire e2e suite all live in the undeployed app. `PROJECT.md` calling it "canonical" is true for development only.
+- **`artifacts/goals-app-ui` is live** (`app.goals.ac`). The 2026-07-16 ponytail audit already corrected a proposal to delete it. It is still missing from `PROJECT.md`'s architecture map, which is why this keeps recurring.
+- **The 984 cf-worker type errors are one root cause**, not 984 bugs: SQLite/D1 tables passed into a Drizzle handle typed as Postgres. One central dialect fix should retire nearly all of them.
+- **`docs/design.md` documents a dead app** (the deprecated `goals-ac` Vite shell, dark-glass theme). The real system is `marketing-persona-app/DESIGN.md` (paper/forest-green).
+- **`docs/parity-matrix.md` is stale** (2026-08-19, 222 routes; there are now 236) and only checks that a path exists, never that it behaves the same.
+- **`wp-staging-verification-evidence.md` is a blank template.** `e2e/founder-path.spec.ts` stubs the WordPress plugin contract and never asserts a publish happened.
+- **The correct SSRF redirect pattern already exists in this repo** at `citation-verifier.ts:151-165` (`redirect: "manual"` + per-hop revalidation). `brand-scraper.ts:61-93` and `lib/media/src/index.ts:44` still follow redirects blind — copy the good one, don't invent a third.
+
+### Give credit where due — do not "fix" these
+
+Verified clean, with evidence in the audit doc: `requireAuth`/`org-access` and the `assertPieceOwner` funnel across every content-piece sub-route; public API tenant scoping; AES-256-GCM encryption (fresh IV, tag verified, throws on missing secret); the vertical review gate as a genuine single choke point; the credit ledger's advisory-lock reservation and idempotent replay; Stripe webhook signature verification; the humanizer's enforced structural guards; the onboarding funnel (5 required questions, honest progress, real retry, no fake success); copy quality (zero AI-tells, zero TODO/lorem); 34 loading skeletons; zero div-as-button and zero stripped focus states.
+
+### Next, in order
+
+1. **Nothing is fixed yet.** Gate 0 of the sequencing in the audit doc is SEC-1, SEC-2, BLOCK-3 — three small surgical diffs against a live data leak, a cross-tenant IDOR, and unreviewed posting under a customer's name. Start there.
+2. **Gate 1 is one WordPress customer working end to end**, finishing with a real staging run recorded in `wp-staging-verification-evidence.md`. Done means: an autopilot article on a real WP install with correct SEO meta, twice in a row, no duplicate.
+3. HIGH-4 (LinkedIn `Linkedin-Version: 202401`, ~2.5 years stale, likely 426) is a one-line change that **cannot be validated without a live LinkedIn app**. Bundle it into the first live LinkedIn test rather than shipping it blind.
+4. No decision has been recorded in `docs/DECISIONS.md` yet — the go-live sequencing is a business call (which gates block the first invoice), not an engineering one. Record it there once made.
+
+### Watch out
+
+- The €500 price is a 2-5x premium over this repo's own competitor teardowns (BabyLoveGrowth $99-299, AutoSEO $49-199). It cannot be sold as feature parity; the defensible framing is done-for-you with a human accountable, which is what `pilot-scorecard-and-runbook.md` already assumes. That reframing is what makes BLOCK-3 and BLOCK-5 rank above every feature gap.
+- `minQualityScore` being unset (BLOCK-4) is a **deliberate** deferral documented at `contentPublish.ts:118`, pending real data that `recordReadinessAssessment` is already collecting. Turn on the other three options now; leave that one data-driven.
+- Maintenance mode fails open by design (`middleware.ts:72-83`). Defensible, but undocumented as a tradeoff.
+
+## Execution status — Gate 0-3 halted mid-flight (2026-09-06, later same session)
+
+**Read this before touching the branch.** Eight agents were dispatched against the audit's gated plan. One finished and is committed clean. Seven were killed mid-task when the account hit its monthly spend limit, and their partial work is preserved in wip commit `9c5f042`.
+
+### Landed and verified
+
+| Commit | Work |
+|---|---|
+| `b7cdf54` | The audit itself + PROJECT.md / memory.md corrections |
+| `7aa7e23` | **SEC-1 closed.** `crypto.randomUUID()` job ids; `GET /api/jobs/:jobId` moved below `requireAuth` and returns 404 (not 403) for a non-owner. Reviewed by hand, revert-tested independently (4 of 5 tests fail without the fix), 7/7 pass with it. |
+| `9c5f042` | **wip.** Partial output of the seven halted agents. Do not trust without review. |
+
+### State of the tree at `9c5f042`
+
+Coherent, not finished: `typecheck:libs`, `marketing-persona-app`, `worker` and `cf-jobs-worker` are all 0 errors, and `test:unit` is 855/856 (up from 838/839; the one failure is the pre-existing bedrock env-var test). So nothing is broken — it is unverified and half-wired, which is why it is one wip commit rather than seven clean ones.
+
+Where each agent stopped:
+
+| Area | Landed | Missing |
+|---|---|---|
+| Content safety | Placeholder blocker in `publish-readiness.ts`; the `"83% of [audience] fail"` template removed from `linkedin-archetypes.ts`; preamble stripping in `core/utils.ts` | The actual BLOCK-4 fix — `existingTitles` / `checkUnattributedClaims` / `targetKeyword` reaching `assessPublishReadiness` via `collectReadinessInputs` — is NOT confirmed wired |
+| WP plugin | `wp_slash()` handling, media size cap, uninstall cleanup, `llms.txt` registration moved to `init`, a 294-line test bootstrap | **The packaging script and distributable zip — the actual BLOCK-1 blocker.** Still uninstallable |
+| WP connector | Timeout + idempotency work in `wordpress.ts`, new `wordpress.test.ts`, `seo-field-mapper.ts` reworked | Completeness unconfirmed; SEO-meta honesty decision unverified |
+| Plan catalog | `plan_catalog` schema (pg + sqlite mirror), migrations `0075` / d1 `0010`, `docs/prd/dynamic-plan-catalog.md` | All billing code, Stripe VAT, admin UI |
+| BLOCK-3, SEC-2, observability | Scattered partial edits in `social-publish.ts`, `autopilot-scheduler.ts`, `contentGenerate.ts` | Essentially everything |
+
+### Next session, in order
+
+1. **Do not deploy from `9c5f042`.** Verify or revert per area against `docs/audits/2026-09-06-production-readiness.md`, which carries the finding behind every item.
+2. **Check the new publish-readiness blocker first.** A blocker that fires on good content silently stops a paying customer's autopilot. Confirm it leaves the `__fixtures__/articles/clean.ts` anchor fixture at zero blockers — that fixture exists precisely to catch this.
+3. **Migrations `0075` and d1 `0010` were generated but never applied** to any database. Review the SQL before running it.
+4. **SEC-2 (the cross-tenant IDOR) is still open** and is the most serious defect outstanding: `api/personas/[id]/route.ts:33,41,58,63` uses JS `&&` where Drizzle `and()` was meant, so any user can PATCH/DELETE another tenant's persona. It is a small fix — do it first, and sweep the repo for the same pattern.
+5. **BLOCK-3 is still open**: "Auto-publish as draft" still posts live to LinkedIn.
+
+### Lesson for the next orchestrator
+
+Eight concurrent agents in one shared worktree worked (strict file ownership held; no collisions), but a spend limit kills all of them at once and leaves partial edits with no per-agent boundary in git. Next time, commit each agent's work as it lands rather than batching the review, or give each agent its own worktree. The single wip commit here is a direct cost of batching.
+
+---
+
 ## Public API: generate + image endpoints (2026-09-05)
 
 **Status:** Shipped on `claude/company-api-content-gen-asfhph`. Typechecks clean (`typecheck:libs`, `marketing-persona-app`, `worker`, `cf-jobs-worker`). **Not run against a live database or a real API key.**

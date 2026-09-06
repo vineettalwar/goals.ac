@@ -84,6 +84,52 @@ export function normalizePagePath(url: string): string {
   }
 }
 
+/**
+ * Strips a known family of conversational model preamble and sign-off sentences
+ * ("As an AI language model, I can help with that.", "Certainly! Here's the
+ * article:", "I hope this helps!") from a plain string value.
+ *
+ * `extractJsonBlock` only removes text OUTSIDE the outermost JSON object or
+ * array; a preamble sentence the model wrote INSIDE a string value (most often
+ * `body_markdown`) survives `JSON.parse` completely untouched and ends up
+ * published verbatim. This function is additive and narrow on purpose: it does
+ * not change `extractJsonBlock` or `cleanAndParse`, so every existing consumer
+ * of those two keeps its current behavior exactly. Callers who need this
+ * protection call it themselves on the specific string fields they parsed out.
+ *
+ * Only matches at the very start or very end of the string, never mid-text: a
+ * sentence that happens to mention "as an AI" in the middle of a real article
+ * is left alone. False negatives here (an unusual preamble phrasing this list
+ * does not cover) are far cheaper than a false positive that mangles real,
+ * on-topic prose.
+ */
+export function stripModelPreamble(text: string): string {
+  if (!text) return text;
+  let out = text;
+
+  const leadingPatterns: RegExp[] = [
+    // "Certainly! Here's the article:" / "Sure, here is your post:"
+    /^\s*(?:certainly|sure|of course|absolutely)!?,?\s*(?:here'?s|here is)\s+(?:the|your|a|an)\b[^\n]{0,80}[:\n]\s*/i,
+    // "Here's the article you asked for:" on its own leading line.
+    /^\s*here'?s\s+(?:the|your|a|an)\b[^\n]{0,80}:\s*\n+/i,
+    // "As an AI language model, I ..." / "I'm an AI and ..."
+    /^\s*as an ai(?: language model)?\b[^\n]{0,160}?[.!]\s+/i,
+    /^\s*i'?m an ai\b[^\n]{0,160}?[.!]\s+/i,
+  ];
+  for (const pattern of leadingPatterns) {
+    out = out.replace(pattern, "");
+  }
+
+  const trailingPatterns: RegExp[] = [
+    /\s*(?:i hope (?:this|that) helps!?|let me know if you (?:need|have|want)[^\n]{0,120}[.!]?|feel free to (?:ask|reach out)[^\n]{0,120}[.!]?)\s*$/i,
+  ];
+  for (const pattern of trailingPatterns) {
+    out = out.replace(pattern, "");
+  }
+
+  return out.trim();
+}
+
 export function cleanAndParse<T>(raw: string): T {
   const block = extractJsonBlock(raw);
   try {

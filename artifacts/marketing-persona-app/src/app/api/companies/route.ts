@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
 import { companiesTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getOrCreateOrganizationForUser } from "@/lib/org/org-access";
 import { z } from "zod";
@@ -71,7 +71,7 @@ export async function PATCH(req: Request) {
   const [company] = await db
     .update(companiesTable)
     .set(parsed.data)
-    .where(eq(companiesTable.id, companyId) && eq(companiesTable.userId, userId!))
+    .where(and(eq(companiesTable.id, companyId), eq(companiesTable.userId, userId!)))
     .returning();
 
   if (!company) return NextResponse.json({ error: "Not found" }, { status: 404 });
