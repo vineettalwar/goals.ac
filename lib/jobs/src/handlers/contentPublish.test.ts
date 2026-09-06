@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   selectResults: [] as unknown[][],
   updateCalls: [] as { values: Record<string, unknown> }[],
+  claimResults: [] as unknown[][],
   runPublishMock: vi.fn(async (_args?: unknown) => ({
     publishedUrl: "https://example.com/post",
     publishPlatform: "wordpress",
@@ -29,7 +30,14 @@ vi.mock("@workspace/db", () => ({
     update: vi.fn(() => ({
       set: (values: Record<string, unknown>) => {
         state.updateCalls.push({ values });
-        return { where: async () => undefined };
+        return {
+          where: () => {
+            const claimRow = values.status === "publishing" ? state.claimResults.shift() : undefined;
+            return {
+              returning: async () => claimRow ?? [{ id: 1 }],
+            };
+          },
+        };
       },
     })),
   },
@@ -143,6 +151,7 @@ function queuePieceAndProject(piece: unknown, project: unknown = BASE_PROJECT) {
 beforeEach(() => {
   state.selectResults = [];
   state.updateCalls = [];
+  state.claimResults = [];
   state.runPublishMock.mockClear();
   state.runPublishMock.mockResolvedValue({
     publishedUrl: "https://example.com/post",
@@ -184,8 +193,10 @@ describe("publishPiece readiness gate", () => {
     await publishPiece(1, 5);
 
     expect(state.runPublishMock).not.toHaveBeenCalled();
-    expect(state.updateCalls).toHaveLength(1);
-    const [{ values }] = state.updateCalls;
+    expect(state.updateCalls).toHaveLength(2);
+    const blockUpdate = state.updateCalls.find((c) => c.values.status === "draft")!;
+    expect(blockUpdate).toBeDefined();
+    const { values } = blockUpdate;
     expect(values.status).toBe("draft");
     const meta = values.pieceMetadata as { publishBlocked?: { blockers: unknown[]; attempt?: number } };
     expect(meta.publishBlocked).toBeDefined();
@@ -271,7 +282,9 @@ describe("publishPiece readiness gate", () => {
     await publishPiece(1, 5);
 
     expect(state.runPublishMock).not.toHaveBeenCalled();
-    const [{ values }] = state.updateCalls;
+    const blockUpdate = state.updateCalls.find((c) => c.values.status === "draft")!;
+    expect(blockUpdate).toBeDefined();
+    const { values } = blockUpdate;
     expect(values.status).toBe("draft");
     const meta = values.pieceMetadata as { publishBlocked?: { blockers: { code: string }[] } };
     expect(meta.publishBlocked!.blockers.some((b) => b.code === "dangling_internal_link")).toBe(true);
@@ -284,9 +297,11 @@ describe("publishPiece readiness gate", () => {
     await publishPiece(1, 5);
 
     expect(state.runPublishMock).not.toHaveBeenCalled();
-    const [{ values }] = state.updateCalls;
-    expect(values.status).toBe("draft");
-    const meta = values.pieceMetadata as { publishBlocked?: { blockers: { code: string }[] } };
+    const blockUpdate = state.updateCalls.find((c) => c.values.status === "draft")!;
+    expect(blockUpdate).toBeDefined();
+    const { values: citValues } = blockUpdate;
+    expect(citValues.status).toBe("draft");
+    const meta = citValues.pieceMetadata as { publishBlocked?: { blockers: { code: string }[] } };
     expect(meta.publishBlocked!.blockers.some((b) => b.code === "unreachable_citation")).toBe(true);
   });
 
@@ -362,5 +377,18 @@ describe("publishPiece readiness gate", () => {
 
     const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
     expect(publishUpdate).toBeDefined();
+  });
+
+  it("bails when another worker already claimed the piece (race-loss)", async () => {
+    state.claimResults.push([]); // empty → claim lost
+    queuePieceAndProject(BASE_PIECE);
+
+    await publishPiece(1, 5);
+
+    expect(state.runPublishMock).not.toHaveBeenCalled();
+    const claimUpdate = state.updateCalls.find((c) => c.values.status === "publishing");
+    expect(claimUpdate).toBeDefined();
+    const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
+    expect(publishUpdate).toBeUndefined();
   });
 });

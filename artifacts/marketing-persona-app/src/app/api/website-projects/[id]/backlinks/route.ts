@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db, websiteProjectsTable } from "@workspace/db";
-// NOTE: backlinks.ts is not yet in @workspace/serp-provider; this import will
-// resolve once the parallel feature branch lands. If build fails, the two
-// exports below are the only surface this route needs.
 import {
   isBacklinksConfigured,
   fetchBacklinksOverview,

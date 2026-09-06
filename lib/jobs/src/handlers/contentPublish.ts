@@ -57,6 +57,15 @@ async function publishPiece(
   if (!piece) throw new Error("Content piece not found");
   if (piece.status === "published") return;
 
+  // Atomic claim: prevents duplicate publish when the scheduled sweep and
+  // finalizeGeneratedPieces enqueue the same piece concurrently.
+  const claimed = await db
+    .update(contentPiecesTable)
+    .set({ status: "publishing" })
+    .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.status, "ready")))
+    .returning({ id: contentPiecesTable.id });
+  if (claimed.length === 0) return;
+
   const [project] = await db
     .select({
       cmsIntegrations: websiteProjectsTable.cmsIntegrations,

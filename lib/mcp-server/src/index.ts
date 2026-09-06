@@ -16,6 +16,7 @@ export {
   generateContentPiece,
   getPublishReadiness,
   whoami,
+  inspectUrl,
 } from "./handlers";
 
 export { MCP_TOOLS, dispatchTool } from "./tools";

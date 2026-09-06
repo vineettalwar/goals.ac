@@ -1,21 +1,47 @@
 # Session Handoff
 
-## Gate 0 progress — BLOCK-1 WP packaging (2026-09-06)
+## OpenSEO Feature 6 + MCP inspect_url (2026-09-06)
 
-**Status:** Packaging script + installable zip path shipped.
+**Status:** Feature 6 backlinks overview + Feature 4 MCP `inspect_url` shipped (lib + Next). OpenSEO Features **1–6 complete**.
 
 | Piece | Where |
 |---|---|
-| Package script | `cms-plugins/wordpress/scripts/package-plugin.sh` (`pnpm --filter @workspace/goals-ac-wp run package`) |
-| Dist zip | `cms-plugins/wordpress/dist/goals-ac.zip` (gitignored) |
-| App download | `artifacts/marketing-persona-app/public/downloads/goals-ac.zip` (gitignored; rebuild before deploy) |
-| UI link | `NEXT_PUBLIC_WORDPRESS_PLUGIN_URL` or default `/downloads/goals-ac.zip` |
+| Backlinks client (8 tests) | `lib/serp-provider/src/backlinks.ts` — DataForSEO summary + referring domains |
+| API / UI | `POST …/backlinks`; Search → Site → `BacklinksOverviewPanel` |
+| MCP `inspect_url` | `lib/mcp-server` — GSC URL Inspection (`content:generate`) + 60m rate limit |
+| Skill | `.agents/skills/goals-ac-seo-loop/SKILL.md` |
 
-**Verify:** unzip → `goals-ac/goals-ac.php` + `vendor/autoload.php`; `NonceStore`/`KeyStore` load; install folder is `goals-ac/`.
+**Verify:**
+```sh
+npx vitest run lib/serp-provider/src/backlinks.test.ts lib/mcp-server
+# Live: DataForSEO keys → Search → Site → Refresh backlinks
+# Live: GSC connected → MCP tools/call inspect_url
+```
 
-**Already closed earlier:** SEC-1 (UUID job ids + auth on `/api/jobs/:id`), SEC-2 (persona `and()` ownership), BLOCK-3 (social draft → `pending_review` + `shouldAutoPublishSocial` + `assertSocialReviewCleared`).
+**Next:** live staging smokes + Gate 0 human items (WP zip install, plugin update channel). Optional: MCP backlinks tools; CF parity for backlinks.
 
-**Still open for Gate 0/1:** live WP staging smoke with this zip; BLOCK-2 app-password idempotency completeness; BLOCK-4 readiness options wired; update channel for the plugin.
+---
+
+## Gate 0 progress (2026-09-06)
+
+**Closed in code**
+
+| Finding | Status |
+|---|---|
+| SEC-1 job-status auth + UUID ids | Closed |
+| SEC-2 persona `and()` ownership | Closed |
+| BLOCK-1 WP packaging zip + download link | Closed (`pnpm --filter @workspace/goals-ac-wp run package`) |
+| BLOCK-2 app-password idempotency | Closed — timeout + create-or-update by remote id **+ slug fallback** + stamp `cmsRemoteId` on success |
+| BLOCK-3 LinkedIn draft → pending_review | Closed |
+| BLOCK-4 readiness options | Closed earlier via `buildPublishReadinessOptions` (`minQualityScore` still unset pending telemetry) |
+
+**Still needs a human / live env**
+
+- Live WP staging smoke with packaged zip
+- Plugin update channel (not WP.org)
+- Gate 0 commercial items (plan/VAT/pricing) if charging €500
+
+**Verify BLOCK-2:** `pnpm exec vitest run lib/connectors/src/wordpress.test.ts`
 
 ---
 
@@ -82,13 +108,12 @@
 
 ## OpenSEO → goals.ac integration (2026-09-06)
 
-**Status:** Phase 0 docs + Features 1–6 PRDs. **Features 1–5 shipped** in `lib/*` + Next; Feature 6 deferred.
+**Status:** Phase 0 docs + Features 1–6 PRDs. **Features 1–6 shipped** in `lib/*` + Next; CF parity noted per feature.
 
 **Start here (next agent):**
-1. [`docs/prd/openseo-integration-index.md`](docs/prd/openseo-integration-index.md)
-2. Live staging smokes (WP publish → GSC inspect; DataForSEO Mentions; MCP with real `gac_` key)
-3. Go-live Gate 0 ([`docs/audits/2026-09-06-production-readiness.md`](docs/audits/2026-09-06-production-readiness.md)) — parallel track
-4. Feature 6 only if product asks for backlinks overview
+1. Live staging smokes (WP zip install; GSC inspect; DataForSEO Mentions + backlinks; MCP with real `gac_` key)
+2. Gate 0 leftovers ([`docs/audits/2026-09-06-production-readiness.md`](docs/audits/2026-09-06-production-readiness.md)) — BLOCK-2 idempotency completeness, BLOCK-4 readiness options, plugin update channel
+3. Optional: MCP backlinks tools; CF parity for backlinks route
 
 ### Feature 5 shipped (local) — Rank tracking hardening
 
@@ -121,7 +146,7 @@
 | MCP server (JSON-RPC 2.0) | `lib/mcp-server/` — protocol, tools, handlers; tests `npx vitest run lib/mcp-server` |
 | Next.js routes | `POST/GET /api/mcp` — `artifacts/marketing-persona-app/src/app/api/mcp/route.ts` |
 | CF public worker | `artifacts/cf-public-worker/src/mcp-routes.ts`; gateway `PUBLIC_PREFIXES` includes `/api/mcp` |
-| Tools (v0.1) | whoami, list_projects, get_project, get_project_context, run_site_audit, get_audit_issues, list_keyword_opportunities, generate_content_piece, get_publish_readiness |
+| Tools (v0.1) | whoami, list_projects, get_project, get_project_context, run_site_audit, get_audit_issues, list_keyword_opportunities, generate_content_piece, get_publish_readiness, **inspect_url** |
 | Auth | Reuses `gac_…` API keys (Settings → Integrations); scopes `content:read`, `content:generate` |
 | Cursor skill | `.agents/skills/goals-ac-seo-loop/SKILL.md` |
 
@@ -161,7 +186,17 @@
 git clone --depth 1 git@github.com:every-app/open-seo.git /tmp/open-seo-research
 ```
 
-**Next feature:** Live staging smokes + Gate 0. Feature 6 backlinks only if product asks.
+### Feature 6 shipped (local) — Backlinks overview
+
+| Piece | Where |
+|---|---|
+| Client + tests (8) | `lib/serp-provider/src/backlinks.ts` |
+| API | `POST …/website-projects/:id/backlinks` |
+| UI | Search → Site → `BacklinksOverviewPanel` |
+
+**Creds:** `DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`. No CF parity in v1. No persistent CRM table.
+
+**Next:** Live staging smokes + Gate 0 human items.
 
 ---
 

@@ -9,6 +9,7 @@ import {
   generateContentPiece,
   getPublishReadiness,
   whoami,
+  inspectUrl,
 } from "./handlers";
 
 export const MCP_TOOLS: McpToolDefinition[] = [
@@ -123,6 +124,22 @@ export const MCP_TOOLS: McpToolDefinition[] = [
     },
     annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   },
+  {
+    name: "inspect_url",
+    description:
+      "Request a Google Search Console URL inspection for a published URL. Returns indexing verdict, coverage state, canonical, and last crawl time. Rate-limited to once per URL per 60 minutes. Requires a GSC connection on the project.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        projectId: { type: "number", description: "Website project ID" },
+        inspectionUrl: { type: "string", description: "Fully-qualified URL to inspect (must match GSC property)" },
+        contentPieceId: { type: "number", description: "Optional content piece ID to associate the inspection with" },
+      },
+      required: ["projectId", "inspectionUrl"],
+      additionalProperties: false,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  },
 ];
 
 const toolHandlers: Record<string, (ctx: McpToolContext, args: Record<string, unknown>) => Promise<McpToolResult> | McpToolResult> = {
@@ -161,6 +178,12 @@ const toolHandlers: Record<string, (ctx: McpToolContext, args: Record<string, un
     getPublishReadiness(ctx, {
       projectId: Number(a.projectId),
       contentPieceId: Number(a.contentPieceId),
+    }),
+  inspect_url: (ctx, a) =>
+    inspectUrl(ctx, {
+      projectId: Number(a.projectId),
+      inspectionUrl: a.inspectionUrl as string,
+      contentPieceId: a.contentPieceId != null ? Number(a.contentPieceId) : undefined,
     }),
 };
 

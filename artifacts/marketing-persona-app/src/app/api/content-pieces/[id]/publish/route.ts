@@ -319,6 +319,9 @@ export async function POST(
         ? { lastPublishWarnings: warnings }
         : { lastPublishWarnings: undefined }),
       ...(publishOverride ? { publishOverride } : {}),
+      ...(remotePostId && publishPlatform === "wordpress"
+        ? { cmsRemoteId: remotePostId }
+        : {}),
     };
 
     const [updated] = await db

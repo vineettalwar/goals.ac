@@ -146,7 +146,8 @@ describe("publishToWordPress — idempotent create-or-update (BLOCK-2)", () => {
     const sent = JSON.parse(createInit.body as string) as { slug?: string };
     expect(sent.slug).toBe("fresh-title");
   });
-});
+
+  it("raises a clear duplicate-risk error when the create request times out", async () => {
     const timeoutError = new DOMException("The operation was aborted.", "TimeoutError");
     const fetchMock = vi.fn().mockRejectedValue(timeoutError);
     vi.stubGlobal("fetch", fetchMock);

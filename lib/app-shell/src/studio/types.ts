@@ -99,6 +99,7 @@ const STATUS_LABELS: Record<string, string> = {
   draft: "Draft",
   ready: "Ready",
   published: "Published",
+  publishing: "Publishing",
   prepared: "Prepared",
   generating: "Generating",
   failed: "Failed",

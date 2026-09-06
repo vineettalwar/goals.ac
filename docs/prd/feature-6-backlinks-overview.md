@@ -1,6 +1,6 @@
 # Feature 6 — Backlinks overview
 
-**Status:** Building · **Index:** [openseo-integration-index.md](./openseo-integration-index.md)  
+**Status:** Shipped (lib + Next) · **Index:** [openseo-integration-index.md](./openseo-integration-index.md)  
 **Date:** 2026-09-06 · **Depends on:** DataForSEO platform creds (`DATAFORSEO_LOGIN` / `DATAFORSEO_PASSWORD`)
 
 ## Problem
@@ -19,10 +19,13 @@ As a marketer, on Search → Site I can pull a DataForSEO backlinks overview for
 4. Thin panel on Search → Site.
 5. Unit tests with mocked fetch.
 
-## Scope in
+## Shipped
 
-- `/v3/backlinks/summary/live` + `/v3/backlinks/referring_domains/live`
-- Domain target from project URL
+| Piece | Where |
+|---|---|
+| Client + tests (8) | `lib/serp-provider/src/backlinks.ts` |
+| API | `POST …/website-projects/[id]/backlinks` |
+| UI | Search → Site → `BacklinksOverviewPanel` |
 
 ## Scope out
 

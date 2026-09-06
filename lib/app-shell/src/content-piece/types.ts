@@ -156,7 +156,7 @@ export function contentPieceSupportsStockImages(formatType: string): boolean {
 }
 
 export function contentPieceCanEdit(status: string): boolean {
-  return status !== "generating" && status !== "published";
+  return status !== "generating" && status !== "published" && status !== "publishing";
 }
 
 export function contentPieceCanMarkReady(status: string, bodyMarkdown?: string | null): boolean {
@@ -164,7 +164,7 @@ export function contentPieceCanMarkReady(status: string, bodyMarkdown?: string |
 }
 
 export function contentPieceCanDelete(status: string): boolean {
-  return status !== "generating";
+  return status !== "generating" && status !== "publishing";
 }
 
 /** Non-social piece eligible for LinkedIn+X one-click compose (matches Social Hub parent filter). */

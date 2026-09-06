@@ -11,10 +11,19 @@ const SiteAuditPanel = dynamic(
   { loading: () => <PageSkeleton /> },
 );
 
+const BacklinksOverviewPanel = dynamic(
+  () =>
+    import("@/components/panels/backlinks-overview-panel").then(
+      (m) => m.BacklinksOverviewPanel,
+    ),
+  { loading: () => <PageSkeleton /> },
+);
+
 export default function SearchSitePage() {
   return (
     <div className="space-y-8">
       <SiteAuditPanel />
+      <BacklinksOverviewPanel />
       <InternalLinksPanel embedded />
     </div>
   );

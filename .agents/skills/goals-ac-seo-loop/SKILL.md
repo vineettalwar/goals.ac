@@ -143,6 +143,17 @@ All tools use JSON-RPC 2.0 over `POST /api/mcp` with `Authorization: Bearer gac_
 - Returns: `{ ready: boolean, blockers: [...], scoreExplained: { seo, brand, writing } }`
 - Use for: validate content before publishing to avoid incomplete or low-quality posts
 
+**`inspect_url(projectId, inspectionUrl, contentPieceId?)`** — Request a GSC URL inspection for a published URL
+- Annotations: `openWorld` (calls Google Search Console API)
+- Params:
+  - `projectId` (required)
+  - `inspectionUrl` (required) — fully-qualified URL matching the GSC property
+  - `contentPieceId` (optional) — associate result with a content piece
+- Returns: `{ inspection: { verdict, coverageState, indexingState, robotsTxtState, pageFetchState, googleCanonical, lastCrawlTime, ... } }`
+- Rate-limited to once per URL per 60 minutes. Returns a friendly error if called too soon.
+- Requires GSC connection on the project (Settings → Integrations → Google Search Console)
+- Use for: check if a newly published page has been indexed and verify Google's canonical
+
 ## Recommended Workflow
 
 1. **Authenticate & discover**

@@ -52,7 +52,7 @@ describe("handleMcpJsonRpc", () => {
     expect(res!.result).toEqual({});
   });
 
-  it("tools/list includes all 9 tool names", async () => {
+  it("tools/list includes all 10 tool names", async () => {
     const res = await handleMcpJsonRpc({ jsonrpc: "2.0", id: 3, method: "tools/list" }, fakeCtx);
     expect(res).not.toBeNull();
     const result = res!.result as { tools: Array<{ name: string }> };
@@ -63,6 +63,7 @@ describe("handleMcpJsonRpc", () => {
       "get_project",
       "get_project_context",
       "get_publish_readiness",
+      "inspect_url",
       "list_keyword_opportunities",
       "list_projects",
       "run_site_audit",

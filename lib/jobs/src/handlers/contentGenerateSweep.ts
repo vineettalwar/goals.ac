@@ -120,6 +120,18 @@ export async function runAutopilotForProject(projectId: number): Promise<void> {
     return;
   }
 
+  // Atomic claim: prevents duplicate generation/billing when overlapping
+  // sweeps select the same due item.
+  const claimed = await db
+    .update(contentItemsTable)
+    .set({ status: "queued" })
+    .where(and(eq(contentItemsTable.id, next.itemId), eq(contentItemsTable.status, "draft")))
+    .returning({ id: contentItemsTable.id });
+  if (claimed.length === 0) {
+    logger.info({ projectId, contentItemId: next.itemId }, "Autopilot: item already claimed");
+    return;
+  }
+
   await enqueue(QUEUES.contentGenerate, {
     contentItemId: next.itemId,
     projectId,

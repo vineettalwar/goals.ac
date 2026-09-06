@@ -8,6 +8,8 @@ import {
   keywordOpportunitiesTable,
   contentPiecesTable,
 } from "@workspace/db";
+import { inspectPublishedUrl } from "@workspace/content-engine/analytics/gsc-url-inspection-service";
+import { wasRecentlyInspected } from "@workspace/content-engine/analytics/gsc-url-inspection-rate-limit";
 import {
   assertProjectInOrg,
   requireApiKeyScope,
@@ -354,6 +356,43 @@ export function whoami(ctx: McpToolContext): McpToolResult {
     scopes: ctx.key.scopes,
     rateLimitPerHour: ctx.key.rateLimitPerHour,
   });
+}
+
+export async function inspectUrl(
+  ctx: McpToolContext,
+  args: { projectId: number; inspectionUrl: string; contentPieceId?: number },
+): Promise<McpToolResult> {
+  try {
+    requireApiKeyScope(ctx.key, "content:generate");
+    await assertProjectInOrg(args.projectId, ctx.key.organizationId);
+
+    if (!args.inspectionUrl) {
+      throw new McpToolError("inspectionUrl is required", "invalid_params");
+    }
+
+    const recentlyInspected = await wasRecentlyInspected(args.projectId, args.inspectionUrl);
+    if (recentlyInspected) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: `Rate limit: ${args.inspectionUrl} was already inspected within the last 60 minutes. Try again later.`,
+          },
+        ],
+        isError: true,
+      };
+    }
+
+    const result = await inspectPublishedUrl({
+      projectId: args.projectId,
+      inspectionUrl: args.inspectionUrl,
+      contentPieceId: args.contentPieceId,
+    });
+
+    return okJson({ inspection: result });
+  } catch (err) {
+    return errResult(err);
+  }
 }
 
 export async function getProjectContext(
