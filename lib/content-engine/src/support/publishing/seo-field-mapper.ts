@@ -55,19 +55,69 @@ export function mapSeoToWordPressRestMeta(seo: CanonicalSeoFields): Record<strin
   return meta;
 }
 
-/** Generic plugin meta map — plugin-side Seo_Meta_Mapper handles plugin-specific keys. */
-export function mapSeoToPluginMeta(seo: CanonicalSeoFields): Record<string, string> {
+/**
+ * SEO plugin the goals.ac plugin's `/health` endpoint reported as installed
+ * (`Seo_Meta_Mapper::detect_plugin()` in the WordPress plugin — see
+ * cms-plugins/wordpress/includes/class-seo-meta-mapper.php). `undefined`
+ * means "unknown" — no health check ran, or the connection predates one —
+ * and every plugin's keys are sent as a best-effort fallback so an existing
+ * integration does not regress.
+ */
+export type DetectedSeoPlugin = "yoast" | "rankmath" | "aioseo" | "seopress" | "none";
+
+function aioseoMeta(seo: CanonicalSeoFields): Record<string, string> {
   return {
-    ...mapSeoToWordPressRestMeta(seo),
     _aioseo_title: seo.seoTitle ?? "",
     _aioseo_description: seo.metaDescription ?? "",
     _aioseo_og_title: seo.ogTitle ?? "",
     _aioseo_og_description: seo.ogDescription ?? "",
+  };
+}
+
+function seopressMeta(seo: CanonicalSeoFields): Record<string, string> {
+  return {
     _seopress_titles_title: seo.seoTitle ?? "",
     _seopress_titles_desc: seo.metaDescription ?? "",
     _seopress_social_fb_title: seo.ogTitle ?? "",
     _seopress_social_fb_desc: seo.ogDescription ?? "",
   };
+}
+
+function yoastRankMathMeta(seo: CanonicalSeoFields): Record<string, string> {
+  return mapSeoToWordPressRestMeta(seo);
+}
+
+/**
+ * Plugin-connection meta map — plugin-side Seo_Meta_Mapper writes these into
+ * whichever SEO plugin's real storage the site uses. Every post used to
+ * accumulate keys for all four plugins regardless of which one (if any) is
+ * installed; pass `detectedPlugin` (from the connection health check) to
+ * send only the keys that plugin actually reads, so uninstalled plugins
+ * don't end up with orphaned post meta on every publish.
+ */
+export function mapSeoToPluginMeta(
+  seo: CanonicalSeoFields,
+  detectedPlugin?: DetectedSeoPlugin,
+): Record<string, string> {
+  switch (detectedPlugin) {
+    case "yoast":
+    case "rankmath":
+      return yoastRankMathMeta(seo);
+    case "aioseo":
+      return aioseoMeta(seo);
+    case "seopress":
+      return seopressMeta(seo);
+    case "none":
+      return {};
+    default:
+      // Unknown — no health data yet for this connection. Best-effort: send
+      // every plugin's keys so we don't regress sites already relying on this.
+      return {
+        ...yoastRankMathMeta(seo),
+        ...aioseoMeta(seo),
+        ...seopressMeta(seo),
+      };
+  }
 }
 
 export function mapSeoToJoomlaMeta(seo: CanonicalSeoFields): {

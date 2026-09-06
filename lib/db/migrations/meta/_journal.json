@@ -526,6 +526,13 @@
       "when": 1788595200001,
       "tag": "0074_connection_sync_status",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1788675725473,
+      "tag": "0075_worried_rhino",
+      "breakpoints": true
     }
   ]
 }

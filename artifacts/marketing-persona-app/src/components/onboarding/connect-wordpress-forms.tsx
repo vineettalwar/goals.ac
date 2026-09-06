@@ -9,6 +9,19 @@ import { Spinner } from "@/components/ui/spinner";
 
 type TestResult = { ok: boolean; siteName?: string; error?: string } | null;
 
+/**
+ * The plugin is not published on wordpress.org, so there is no directory
+ * listing to link to — it has to be downloaded straight from goals.ac.
+ *
+ * `NEXT_PUBLIC_WORDPRESS_PLUGIN_URL` lets deployment point this at wherever
+ * the built zip actually lives (a CDN/R2 bucket, a `public/downloads/`
+ * static file served by this app, etc.) without a code change. Until that
+ * hosting decision is made and the env var is set, this falls back to a
+ * same-origin path the app can serve the zip from directly.
+ */
+const WORDPRESS_PLUGIN_DOWNLOAD_URL =
+  process.env.NEXT_PUBLIC_WORDPRESS_PLUGIN_URL || "/downloads/goals-ac.zip";
+
 type PluginFormData = {
   siteUrl: string;
   siteKey: string;
@@ -90,7 +103,7 @@ export function ConnectWordPressForms({
             <div className="flex items-center justify-between">
               <Label htmlFor="siteKey">Site key</Label>
               <a
-                href="https://wordpress.org/plugins/"
+                href={WORDPRESS_PLUGIN_DOWNLOAD_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"

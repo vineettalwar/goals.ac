@@ -201,6 +201,7 @@ async function publishPiece(
           bodyMarkdown: piece.bodyMarkdown,
           websiteProjectId: piece.websiteProjectId,
           featuredImageUrl: imageUrl,
+          approvalStatus: piece.approvalStatus,
           pieceMetadata: piece.pieceMetadata,
         },
         userId,

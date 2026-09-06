@@ -13,6 +13,7 @@ import {
 import { getSocialAccessToken, loadProjectCreds } from "./social-tokens";
 import { featuredImageFromMetadata } from "../../articles/article-image-enricher";
 import { hostFeaturedImageForPublish } from "../publishing/host-featured-image";
+import { isPieceAwaitingReview } from "../../verticals/vertical-guardrails";
 
 export interface PublishablePiece {
   id: number;
@@ -20,11 +21,35 @@ export interface PublishablePiece {
   bodyMarkdown: string;
   websiteProjectId: number;
   featuredImageUrl?: string;
+  /**
+   * The piece's approval state. Social platforms have no server-side draft
+   * concept, so "held for review" is expressed the same way as the regulated-
+   * vertical guardrail: `approvalStatus: "pending_review"` or
+   * `pieceMetadata.requiresReview`. See `assertSocialReviewCleared` below.
+   */
+  approvalStatus?: string | null;
   pieceMetadata?: {
     images?: ContentPieceImageRef[];
     featuredImageUrl?: string;
     ogImageUrl?: string;
+    requiresReview?: boolean;
   } | null;
+}
+
+/**
+ * Social last-mile review gate — the social-publish equivalent of
+ * `assertVerticalReviewCleared` in publish-destination.ts. There is no CMS-style
+ * "publish as draft" for LinkedIn/X/etc., so a social piece held for human review
+ * (autopilot's "draft" publish mode, or a regulated vertical) must never reach a
+ * connector. This is the single choke point every social publish call funnels
+ * through — autopilot and manual publish alike.
+ */
+function assertSocialReviewCleared(piece: PublishablePiece): void {
+  if (isPieceAwaitingReview({ approvalStatus: piece.approvalStatus, pieceMetadata: piece.pieceMetadata })) {
+    throw new Error(
+      "This post is held for human review before it can go out. Approve it first.",
+    );
+  }
 }
 
 export interface SocialPublishResult {
@@ -89,6 +114,7 @@ export async function publishPieceToSocial(
   userId: number,
   creds?: CmsIntegrationCredentials,
 ): Promise<SocialPublishResult> {
+  assertSocialReviewCleared(piece);
   const resolvedCreds = creds ?? (await loadProjectCreds(piece.websiteProjectId, userId));
   const label = PLATFORM_LABELS[platform];
 

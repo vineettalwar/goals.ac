@@ -156,6 +156,8 @@ export interface PublishOpts {
 export interface RemoteRef {
   url: string;
   remoteId?: string | number;
+  /** Publish-time warnings (e.g. SEO meta silently not persisted by the remote CMS). */
+  warnings?: RenderWarning[];
 }
 
 export interface CmsAdapter {

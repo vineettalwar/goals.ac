@@ -88,11 +88,15 @@ add_action( 'rest_api_init', 'goals_ac_register_rest' );
 function goals_ac_activate(): void {
 	Goals_AC\WP_Nonce_Store::create_table();
 	update_option( 'goals_ac_db_version', GOALS_AC_VERSION );
+	goals_ac_site_key(); // Generate now, so viewing the settings page is a plain read.
 
 	if ( ! wp_next_scheduled( 'goals_ac_cleanup_nonces' ) ) {
 		wp_schedule_event( time(), 'daily', 'goals_ac_cleanup_nonces' );
 	}
 
+	// The /llms.txt rule is registered on every request (see Schema_Inject::init()),
+	// but the rewrite rule cache only picks it up after a flush. That flush belongs
+	// here — on activation/deactivation — never on a normal page load.
 	flush_rewrite_rules();
 }
 register_activation_hook( __FILE__, 'goals_ac_activate' );
@@ -182,15 +186,44 @@ function goals_ac_register_settings(): void {
 		'goals-ac'
 	);
 
+	register_setting(
+		'goals_ac',
+		'goals_ac_author_id',
+		array(
+			'type'              => 'integer',
+			'sanitize_callback' => 'absint',
+			'default'           => 0,
+		)
+	);
+
+	add_settings_field(
+		'goals_ac_author_id',
+		__( 'Publish as', 'goals-ac' ),
+		function () {
+			$selected = \intval( get_option( 'goals_ac_author_id', 0 ) );
+			$users    = get_users( array( 'capability' => 'edit_posts', 'orderby' => 'display_name' ) );
+			echo '<select name="goals_ac_author_id">';
+			echo '<option value="0">' . esc_html__( '(default) first administrator', 'goals-ac' ) . '</option>';
+			foreach ( $users as $user ) {
+				printf(
+					'<option value="%d"%s>%s</option>',
+					(int) $user->ID,
+					selected( $selected, (int) $user->ID, false ),
+					esc_html( $user->display_name )
+				);
+			}
+			echo '</select>';
+			echo '<p class="description">' . esc_html__( 'WordPress author assigned to posts published by goals.ac.', 'goals-ac' ) . '</p>';
+		},
+		'goals-ac',
+		'goals_ac_connection'
+	);
+
 	add_settings_field(
 		'goals_ac_site_key',
 		__( 'Site Key', 'goals-ac' ),
 		function () {
-			$key = get_option( 'goals_ac_site_key', '' );
-			if ( empty( $key ) ) {
-				$key = wp_generate_password( 32, false );
-				update_option( 'goals_ac_site_key', $key );
-			}
+			$key = goals_ac_site_key();
 			echo '<code>' . esc_html( $key ) . '</code>';
 			echo '<p class="description">' . esc_html__( 'This key is used to authenticate requests from goals.ac. Keep it secret.', 'goals-ac' ) . '</p>';
 		},
@@ -199,6 +232,23 @@ function goals_ac_register_settings(): void {
 	);
 }
 add_action( 'admin_init', 'goals_ac_register_settings' );
+
+/**
+ * Get the site key, generating one on first use.
+ *
+ * Rendering a settings field is a GET-style admin view — it must not have
+ * the side effect of writing to the database. The key is generated once,
+ * on activation (see `goals_ac_activate()`), and lazily here only as a
+ * fallback for sites that already ran the plugin before that existed.
+ */
+function goals_ac_site_key(): string {
+	$key = get_option( 'goals_ac_site_key', '' );
+	if ( empty( $key ) ) {
+		$key = wp_generate_password( 32, false );
+		update_option( 'goals_ac_site_key', $key );
+	}
+	return $key;
+}
 
 /**
  * Sanitize and generate site key.

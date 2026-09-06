@@ -90,3 +90,15 @@ export function shouldAutoPublish(settings: AutopilotSettings): boolean {
 export function wordpressPublishStatus(settings: AutopilotSettings): "draft" | "publish" {
   return settings.publishMode === "live" ? "publish" : "draft";
 }
+
+/**
+ * Social platforms have no server-side draft concept — there is nothing for
+ * WordPress's `wordpressPublishStatus("draft")` to map to on LinkedIn, X, etc.
+ * So under publishMode "draft", a social piece is held for human approval
+ * instead of being posted (see `finalizeGeneratedPieces` in
+ * lib/jobs/handlers/contentGenerate.ts and the review gate in social-publish.ts).
+ * Only "live" actually posts a social piece automatically.
+ */
+export function shouldAutoPublishSocial(settings: AutopilotSettings): boolean {
+  return settings.publishMode === "live";
+}

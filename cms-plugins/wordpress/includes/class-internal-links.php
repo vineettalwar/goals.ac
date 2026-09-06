@@ -73,10 +73,16 @@ class Internal_Links {
 				continue;
 			}
 
+			// See Publish_Handler for why this needs wp_slash(): wp_update_post()
+			// unslashes text fields on the assumption they came from $_POST, and
+			// $linked did not — a literal backslash in the existing post content
+			// would otherwise lose one level of escaping on every write-back.
 			$result = \wp_update_post(
-				array(
-					'ID'           => $post_id,
-					'post_content' => $linked,
+				\wp_slash(
+					array(
+						'ID'           => $post_id,
+						'post_content' => $linked,
+					)
 				),
 				true
 			);

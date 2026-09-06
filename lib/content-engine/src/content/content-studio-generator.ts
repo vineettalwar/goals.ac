@@ -51,7 +51,7 @@ import {
 } from "../support/integrations/deepl-refinement";
 import { loadDeeplCredentialContextForProject } from "../support/integrations/deepl-credentials";
 import { resolveDeeplApiKey } from "@workspace/deepl";
-import { cleanAndParse } from "../core/utils";
+import { cleanAndParse, stripModelPreamble } from "../core/utils";
 import {
   hostFromUrl,
   normalizeCompetitorUrl,
@@ -507,7 +507,8 @@ Requirements:
 - Write entirely in the brand voice described above
 - Target the keyword "${keyword}" naturally throughout
 - Reference ${brand.companyName} 2-3 times without being promotional
-- Use specific data points, named frameworks, and concrete examples
+- Use specific data points, named frameworks, and concrete examples, but only ones you actually know to be true
+- Never invent a statistic, percentage, survey result, or study finding. If a hook or example calls for a number and you do not have a real, verifiable one, make the point with a concrete qualitative detail instead of a fabricated figure
 - Content must be original, authoritative, and citation-worthy
 - For LinkedIn posts: optimal length is 1300-1800 characters
 - Start with a strong hook that stops scroll
@@ -814,6 +815,20 @@ async function applyVerticalGuardrailsToResult(
   };
 }
 
+/**
+ * Cleans `title` and `body_markdown` in place on a freshly parsed AI response,
+ * before `validateResult` or any downstream processing sees them. See MED-2 in
+ * the production readiness audit: `extractJsonBlock` cannot see inside a JSON
+ * string value, so a conversational preamble the model wrote there ("Certainly!
+ * Here's the article:") would otherwise survive straight through to publish.
+ */
+function stripPreambleFromParsedPiece(parsed: unknown): void {
+  if (!parsed || typeof parsed !== "object") return;
+  const obj = parsed as Record<string, unknown>;
+  if (typeof obj.title === "string") obj.title = stripModelPreamble(obj.title);
+  if (typeof obj.body_markdown === "string") obj.body_markdown = stripModelPreamble(obj.body_markdown);
+}
+
 function validateResult(result: unknown, format: ContentFormatType): asserts result is ContentPieceResult {
   if (typeof result !== "object" || result === null)
     throw new Error("Result must be an object");
@@ -869,6 +884,7 @@ async function generateWithClient(
       if (!rawText) throw new Error("Empty AI response");
 
       const parsed = cleanAndParse(rawText);
+      stripPreambleFromParsedPiece(parsed);
       validateResult(parsed, format);
       const processed = await postProcessGeneratedResult(parsed, format, brand, ai);
       return {
@@ -941,6 +957,7 @@ async function generateWithClientStream(
       }
 
       const parsed = cleanAndParse(accumulated);
+      stripPreambleFromParsedPiece(parsed);
       validateResult(parsed, format);
       const processed = await postProcessGeneratedResult(parsed, format, brand, ai);
       return {
@@ -1144,6 +1161,7 @@ export async function repurposeContentPiece(
         const rawText = response.text;
         if (!rawText) throw new Error("Empty AI response");
         const parsed = cleanAndParse(rawText);
+        stripPreambleFromParsedPiece(parsed);
         validateResult(parsed, targetFormat);
         return postProcessGeneratedResult(parsed, targetFormat, brand, ai);
       } catch (err) {

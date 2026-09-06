@@ -111,13 +111,12 @@ class Publish_Handler {
 		string $slug,
 		array $params
 	): int|\WP_Error {
-		$author_id = \get_current_user_id();
 		$post_data = array(
 			'post_title'   => $title,
 			'post_content' => $content,
 			'post_status'  => $status,
 			'post_type'    => 'post',
-			'post_author'  => $author_id ? $author_id : 1,
+			'post_author'  => $this->resolve_author_id(),
 		);
 
 		if ( ! empty( $slug ) ) {
@@ -134,7 +133,13 @@ class Publish_Handler {
 			$post_data['tags_input'] = $this->resolve_tag_names( $tags );
 		}
 
-		$post_id = \wp_insert_post( $post_data, true );
+		// wp_insert_post() runs its data through sanitize_post(), which
+		// wp_unslash()es every text field on the assumption it is coming in
+		// slashed (like $_POST would be). Our content is not — it comes
+		// straight from JSON — so it must be slashed here or a literal
+		// backslash in AI-generated content (a Windows path, a regex, an
+		// escaped JSON blob in a code sample) loses one level of escaping.
+		$post_id = \wp_insert_post( \wp_slash( $post_data ), true );
 
 		if ( \is_wp_error( $post_id ) ) {
 			return $post_id;
@@ -175,7 +180,7 @@ class Publish_Handler {
 			$post_data['post_name'] = $slug;
 		}
 
-		$result = \wp_update_post( $post_data, true );
+		$result = \wp_update_post( \wp_slash( $post_data ), true );
 
 		if ( \is_wp_error( $result ) ) {
 			return $result;
@@ -239,6 +244,13 @@ class Publish_Handler {
 	/**
 	 * Resolve taxonomy values that may be numeric IDs or human-readable names.
 	 *
+	 * A name with no matching term is created, exactly like
+	 * `resolve_tag_names()` does for tags via `wp_set_post_tags()`'s
+	 * auto-create behaviour — categories and tags are both "labels goals.ac
+	 * asked for", and the health check advertises `categories: true`, so
+	 * silently dropping an unrecognized category (as this used to do) is a
+	 * silent content-loss bug, not a safety feature.
+	 *
 	 * @param array<int|string> $values   Category or tag values from the publish payload.
 	 * @param string            $taxonomy WordPress taxonomy slug.
 	 * @return array<int>
@@ -259,16 +271,60 @@ class Publish_Handler {
 				continue;
 			}
 
-			$term = \get_term_by( 'name', trim( $value ), $taxonomy );
+			$name = trim( $value );
+			$term = \get_term_by( 'name', $name, $taxonomy );
 			if ( ! $term ) {
-				$term = \get_term_by( 'slug', \sanitize_title( $value ), $taxonomy );
+				$term = \get_term_by( 'slug', \sanitize_title( $name ), $taxonomy );
 			}
-			if ( $term && ! \is_wp_error( $term ) ) {
+
+			if ( ! $term ) {
+				$created = \wp_insert_term( $name, $taxonomy );
+				if ( ! \is_wp_error( $created ) ) {
+					$ids[] = (int) $created['term_id'];
+				}
+				continue;
+			}
+
+			if ( ! \is_wp_error( $term ) ) {
 				$ids[] = (int) $term->term_id;
 			}
 		}
 
 		return \array_values( \array_unique( $ids ) );
+	}
+
+	/**
+	 * Resolve the WordPress user a publish request should be authored as.
+	 *
+	 * HMAC-authenticated requests never go through `wp_set_current_user()`
+	 * (there is no logged-in WordPress user behind them), so
+	 * `get_current_user_id()` is always 0. Falling back to a hardcoded
+	 * user ID 1 attributed every AI-published post to whatever account
+	 * happens to occupy that ID. Site owners can pick an explicit author
+	 * in Settings -> goals.ac; absent that, the first user able to edit
+	 * posts is used.
+	 */
+	private function resolve_author_id(): int {
+		$configured = \intval( \get_option( 'goals_ac_author_id', 0 ) );
+		if ( $configured > 0 && \get_userdata( $configured ) ) {
+			return $configured;
+		}
+
+		$current = \get_current_user_id();
+		if ( $current > 0 ) {
+			return $current;
+		}
+
+		$candidates = \get_users(
+			array(
+				'capability' => 'edit_posts',
+				'orderby'    => 'ID',
+				'order'      => 'ASC',
+				'number'     => 1,
+			)
+		);
+
+		return ! empty( $candidates ) ? (int) $candidates[0]->ID : 1;
 	}
 
 	/**
