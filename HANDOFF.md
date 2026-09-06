@@ -53,6 +53,46 @@ Verified clean, with evidence in the audit doc: `requireAuth`/`org-access` and t
 - `minQualityScore` being unset (BLOCK-4) is a **deliberate** deferral documented at `contentPublish.ts:118`, pending real data that `recordReadinessAssessment` is already collecting. Turn on the other three options now; leave that one data-driven.
 - Maintenance mode fails open by design (`middleware.ts:72-83`). Defensible, but undocumented as a tradeoff.
 
+## Execution status — Gate 0-3 halted mid-flight (2026-09-06, later same session)
+
+**Read this before touching the branch.** Eight agents were dispatched against the audit's gated plan. One finished and is committed clean. Seven were killed mid-task when the account hit its monthly spend limit, and their partial work is preserved in wip commit `9c5f042`.
+
+### Landed and verified
+
+| Commit | Work |
+|---|---|
+| `b7cdf54` | The audit itself + PROJECT.md / memory.md corrections |
+| `7aa7e23` | **SEC-1 closed.** `crypto.randomUUID()` job ids; `GET /api/jobs/:jobId` moved below `requireAuth` and returns 404 (not 403) for a non-owner. Reviewed by hand, revert-tested independently (4 of 5 tests fail without the fix), 7/7 pass with it. |
+| `9c5f042` | **wip.** Partial output of the seven halted agents. Do not trust without review. |
+
+### State of the tree at `9c5f042`
+
+Coherent, not finished: `typecheck:libs`, `marketing-persona-app`, `worker` and `cf-jobs-worker` are all 0 errors, and `test:unit` is 855/856 (up from 838/839; the one failure is the pre-existing bedrock env-var test). So nothing is broken — it is unverified and half-wired, which is why it is one wip commit rather than seven clean ones.
+
+Where each agent stopped:
+
+| Area | Landed | Missing |
+|---|---|---|
+| Content safety | Placeholder blocker in `publish-readiness.ts`; the `"83% of [audience] fail"` template removed from `linkedin-archetypes.ts`; preamble stripping in `core/utils.ts` | The actual BLOCK-4 fix — `existingTitles` / `checkUnattributedClaims` / `targetKeyword` reaching `assessPublishReadiness` via `collectReadinessInputs` — is NOT confirmed wired |
+| WP plugin | `wp_slash()` handling, media size cap, uninstall cleanup, `llms.txt` registration moved to `init`, a 294-line test bootstrap | **The packaging script and distributable zip — the actual BLOCK-1 blocker.** Still uninstallable |
+| WP connector | Timeout + idempotency work in `wordpress.ts`, new `wordpress.test.ts`, `seo-field-mapper.ts` reworked | Completeness unconfirmed; SEO-meta honesty decision unverified |
+| Plan catalog | `plan_catalog` schema (pg + sqlite mirror), migrations `0075` / d1 `0010`, `docs/prd/dynamic-plan-catalog.md` | All billing code, Stripe VAT, admin UI |
+| BLOCK-3, SEC-2, observability | Scattered partial edits in `social-publish.ts`, `autopilot-scheduler.ts`, `contentGenerate.ts` | Essentially everything |
+
+### Next session, in order
+
+1. **Do not deploy from `9c5f042`.** Verify or revert per area against `docs/audits/2026-09-06-production-readiness.md`, which carries the finding behind every item.
+2. **Check the new publish-readiness blocker first.** A blocker that fires on good content silently stops a paying customer's autopilot. Confirm it leaves the `__fixtures__/articles/clean.ts` anchor fixture at zero blockers — that fixture exists precisely to catch this.
+3. **Migrations `0075` and d1 `0010` were generated but never applied** to any database. Review the SQL before running it.
+4. **SEC-2 (the cross-tenant IDOR) is still open** and is the most serious defect outstanding: `api/personas/[id]/route.ts:33,41,58,63` uses JS `&&` where Drizzle `and()` was meant, so any user can PATCH/DELETE another tenant's persona. It is a small fix — do it first, and sweep the repo for the same pattern.
+5. **BLOCK-3 is still open**: "Auto-publish as draft" still posts live to LinkedIn.
+
+### Lesson for the next orchestrator
+
+Eight concurrent agents in one shared worktree worked (strict file ownership held; no collisions), but a spend limit kills all of them at once and leaves partial edits with no per-agent boundary in git. Next time, commit each agent's work as it lands rather than batching the review, or give each agent its own worktree. The single wip commit here is a direct cost of batching.
+
+---
+
 ## Public API: generate + image endpoints (2026-09-05)
 
 **Status:** Shipped on `claude/company-api-content-gen-asfhph`. Typechecks clean (`typecheck:libs`, `marketing-persona-app`, `worker`, `cf-jobs-worker`). **Not run against a live database or a real API key.**
