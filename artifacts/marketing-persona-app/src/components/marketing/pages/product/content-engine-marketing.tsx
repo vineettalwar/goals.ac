@@ -154,7 +154,7 @@ export function ContentEngineMarketing() {
             <p className="mt-4 text-xs text-white/55 leading-relaxed">
               Deep plugin / Admin API paths for WordPress, Ghost, and Shopify. Other CMS tiles include Basic publish
               (create wrappers). See{" "}
-              <Link href="/platform-integrations" className="text-white/80 hover:text-white underline-offset-2 hover:underline">
+              <Link href="/integrations" className="text-white/80 hover:text-white underline-offset-2 hover:underline">
                 integrations
               </Link>
               .

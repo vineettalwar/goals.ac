@@ -240,7 +240,7 @@ export function TeamManagement({ projects }: TeamManagementProps) {
                       )
                     }
                   >
-                    <SelectTrigger className="w-[130px]">
+                    <SelectTrigger className="w-32.5">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -258,7 +258,7 @@ export function TeamManagement({ projects }: TeamManagementProps) {
                         void updateMember(member, role, Number.parseInt(projectId, 10))
                       }
                     >
-                      <SelectTrigger className="w-[180px]">
+                      <SelectTrigger className="w-45">
                         <SelectValue placeholder="Assign site" />
                       </SelectTrigger>
                       <SelectContent>

@@ -68,7 +68,7 @@ export const SOLUTIONS_NAV: SolutionNavItem[] = [
   landerSolution("searchAnalytics", "authority"),
   {
     label: "Integrations",
-    href: "/platform-integrations",
+    href: "/integrations",
     description: "CMS, ESP, and social — deep stacks + Basic publish",
     group: "authority",
   },
@@ -108,7 +108,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Autopilot", href: "/content-autopilot" },
       { label: "Social Hub", href: "/social-distribution" },
       { label: "Search Analytics", href: "/search-analytics" },
-      { label: "Integrations", href: "/platform-integrations" },
+      { label: "Integrations", href: "/integrations" },
       { label: "AI Visibility", href: "/llm-visibility" },
       { label: "CMS Publishing", href: "/cms-publishing" },
       { label: "Features", href: "/features" },
@@ -147,6 +147,7 @@ export const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Contact", href: "/contact" },
       { label: "Privacy", href: "/privacy" },
       { label: "Terms", href: "/terms" },
+      { label: "Imprint", href: "/imprint" },
     ],
   },
 ];

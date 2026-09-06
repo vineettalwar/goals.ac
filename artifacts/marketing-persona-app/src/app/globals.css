@@ -352,6 +352,11 @@
     transition: border-color 0.2s ease, background 0.2s ease;
   }
 
+  .marketing-input-dark::placeholder {
+    /* ≥4.5:1 on black for small placeholder text */
+    color: rgba(255, 255, 255, 0.7);
+  }
+
   .marketing-input-dark:focus {
     outline: none;
     border-color: rgba(255, 255, 255, 0.3);
@@ -414,6 +419,26 @@
     padding: 0.15em 0.4em;
     border-radius: 0.25rem;
     font-size: 0.9em;
+  }
+
+  .marketing-prose-dark table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1em 0;
+    font-size: 0.9em;
+  }
+
+  .marketing-prose-dark th,
+  .marketing-prose-dark td {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+
+  .marketing-prose-dark th {
+    color: white;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.06);
   }
 
   .hero-cta-primary {

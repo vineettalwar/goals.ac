@@ -29,21 +29,21 @@ export const FREE_TOOLS: Record<FreeToolSlug, FreeToolDef> = {
     heroLine1: "Meta description",
     heroLine2: "checker",
     heroDescription:
-      "Paste a URL. You get a score on title length, meta length, clarity, and how the snippet reads to Google and AI crawlers.",
+      "Paste a URL. You get a score on title/meta length, spam signals, title–H1 overlap, and Open Graph consistency.",
     kind: "api",
     api: "/api/tools/meta-checker",
   },
   "llms-txt": {
     slug: "llms-txt",
     title: "llms.txt Generator",
-    shortDesc: "Generate an llms.txt template from your site.",
+    shortDesc: "Draft llms.txt from your site, check if one exists, and download it.",
     metaTitle: "Free llms.txt Generator | goals.ac",
     metaDescription:
-      "Generate an llms.txt file for your website so AI crawlers and LLMs understand your content. Free, no account required.",
+      "Generate an llms.txt file from your sitemap and homepage, check whether one already exists, and download a ready-to-publish draft. Free, no account required.",
     heroLine1: "llms.txt",
     heroLine2: "generator",
     heroDescription:
-      "Point the tool at your site and get a ready-to-publish llms.txt template that tells AI crawlers what your site is about and where the important pages live.",
+      "Paste a URL. We pull title, summary, and priority pages from your sitemap (or homepage links), check for an existing /llms.txt, and hand you a draft you can copy or download.",
     kind: "api",
     api: "/api/tools/llms-txt",
   },

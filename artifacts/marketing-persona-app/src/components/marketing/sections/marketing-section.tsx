@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { EditorialHeading } from "./editorial-heading";
 import { HeroPhotoBg } from "../heroes/hero-photo-bg";
 import { MarketingReveal } from "@/components/marketing/motion/marketing-reveal";
+import { cn } from "@/lib/utils";
 
 export type MarketingSectionVariant = "paper" | "image" | "dark";
 
@@ -49,7 +50,7 @@ export function MarketingSection({
   id,
 }: MarketingSectionProps) {
   const isDarkTheme = variant === "image" || variant === "dark";
-  const resolvedClassName = className ?? variantClasses[variant];
+  const resolvedClassName = cn(variantClasses[variant], className);
   const useEditorial = Boolean(titleLine1 || titleLine2);
 
   const header = useEditorial ? (

@@ -362,7 +362,7 @@ export function AppSidebarShell({
 
       <aside
         className={cn(
-          "flex h-full w-[248px] shrink-0 flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]",
+          "flex h-full w-62 shrink-0 flex-col border-r border-[var(--sidebar-border)] bg-[var(--sidebar-bg)]",
           "fixed inset-y-0 left-0 z-50 transition-[translate] duration-200 ease-out",
           mobileOpen ? "translate-x-0" : "-translate-x-full pointer-events-none",
           "lg:relative lg:z-auto lg:translate-x-0 lg:pointer-events-auto",

@@ -1,6 +1,14 @@
 import type { ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { cn } from "../cn";
+import type { SectionLinkProps } from "../section/types";
+
+export function SectionLink({
+  renderLink,
+  ...props
+}: SectionLinkProps & { renderLink: (props: SectionLinkProps) => ReactNode }) {
+  return <>{renderLink(props)}</>;
+}
 
 export function PanelLoading({ label = "Loading…" }: { label?: string }) {
   return (

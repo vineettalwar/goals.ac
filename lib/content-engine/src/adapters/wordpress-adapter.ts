@@ -10,10 +10,11 @@ import { resolveWordPressConnectionType } from "../support/publishing/cms-integr
 import { resolveOutputMode, assertOutputModeAllowed } from "../support/publishing/platform-output-modes";
 import {
   contentTagsFromCanonical,
-  mapSeoToPluginMeta,
+  mapSeoToAioseoRestField,
   mapSeoToWordPressRestMeta,
   resolveSeoFromCanonical,
   seoTitle,
+  type DetectedSeoPlugin,
 } from "./adapter-helpers";
 import { resolveWordPressTaxonomyIds } from "./wordpress-taxonomy";
 import { markdownToDiviShortcodes } from "./divi";
@@ -80,6 +81,8 @@ export const wordpressAdapter: CmsAdapter = {
     warnings.push(...rendered.warnings);
 
     const seo = resolveSeoFromCanonical(content);
+    // Render has no live connection — unknown install maps to Yoast+Rank Math.
+    // Publish re-maps with creds.wordpress.seoPlugin when health has run.
     const meta = mapSeoToWordPressRestMeta(seo);
 
     const payload: PlatformPayload = {
@@ -121,6 +124,7 @@ export const wordpressAdapter: CmsAdapter = {
     const connectionType = resolveWordPressConnectionType(creds.wordpress);
     const canonical = opts?.content ?? { meta: { title: payload.title }, markdown: "", id: "" };
     const seo = resolveSeoFromCanonical(canonical);
+    const detected = creds.wordpress.seoPlugin as DetectedSeoPlugin | undefined;
 
     if (connectionType === "plugin") {
       if (!creds.wordpress.siteKey) {
@@ -142,6 +146,8 @@ export const wordpressAdapter: CmsAdapter = {
         // ponytail: publish without taxonomy if site-graph is unreachable
       }
 
+      // PHP Seo_Meta_Mapper::apply() remaps from `seo` using live detect_plugin().
+      // Do not send a multi-plugin meta bag — it would be stripped server-side.
       const result = await publishToGoalsAcPlugin(
         pluginCreds,
         {
@@ -151,7 +157,6 @@ export const wordpressAdapter: CmsAdapter = {
           categories: categoryIds.length > 0 ? categoryIds : undefined,
           tags: tagIds.length > 0 ? tagIds : payload.tags,
           featured_image_id: opts?.featuredImageId,
-          meta: mapSeoToPluginMeta(seo),
           seo: seo as Record<string, string | undefined>,
           editor_mode: payload.editorMode,
           output_mode: payload.editorMode,
@@ -169,7 +174,11 @@ export const wordpressAdapter: CmsAdapter = {
       throw new Error("WordPress API credentials are incomplete.");
     }
 
-    const wpMeta = payload.meta;
+    const wpMeta = mapSeoToWordPressRestMeta(seo, detected);
+    const aioseoMetaData =
+      detected === "aioseo" || detected === undefined
+        ? mapSeoToAioseoRestField(seo)
+        : undefined;
     const result = await publishToWordPress(
       {
         siteUrl: creds.wordpress.siteUrl,
@@ -190,6 +199,7 @@ export const wordpressAdapter: CmsAdapter = {
         // post — see publishToWordPress for the reliability rationale.
         existingRemoteId: opts?.existingRemoteId,
         slug: wordpressSlugFromTitle(payload.title) ?? undefined,
+        ...(aioseoMetaData ? { aioseoMetaData } : {}),
       },
     );
     return {

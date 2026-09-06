@@ -25,99 +25,115 @@ export function seoFromPieceMetadata(
   };
 }
 
-/** WordPress REST API meta keys (Yoast + RankMath + fallbacks). */
-export function mapSeoToWordPressRestMeta(seo: CanonicalSeoFields): Record<string, string> {
-  const meta: Record<string, string> = {};
-  if (seo.metaDescription) {
-    meta._yoast_wpseo_metadesc = seo.metaDescription;
-    meta.rank_math_description = seo.metaDescription;
-  }
-  if (seo.seoTitle) {
-    meta._yoast_wpseo_title = seo.seoTitle;
-    meta.rank_math_title = seo.seoTitle;
-  }
-  if (seo.focusKeyword) {
-    meta._yoast_wpseo_focuskw = seo.focusKeyword;
-    meta.rank_math_focus_keyword = seo.focusKeyword;
-  }
-  if (seo.ogTitle) {
-    meta["_yoast_wpseo_opengraph-title"] = seo.ogTitle;
-    meta.rank_math_facebook_title = seo.ogTitle;
-  }
-  if (seo.ogDescription) {
-    meta["_yoast_wpseo_opengraph-description"] = seo.ogDescription;
-    meta.rank_math_facebook_description = seo.ogDescription;
-  }
-  if (seo.ogImageUrl) {
-    meta["_yoast_wpseo_opengraph-image"] = seo.ogImageUrl;
-    meta.rank_math_facebook_image = seo.ogImageUrl;
-  }
-  return meta;
-}
-
 /**
  * SEO plugin the goals.ac plugin's `/health` endpoint reported as installed
- * (`Seo_Meta_Mapper::detect_plugin()` in the WordPress plugin — see
- * cms-plugins/wordpress/includes/class-seo-meta-mapper.php). `undefined`
- * means "unknown" — no health check ran, or the connection predates one —
- * and every plugin's keys are sent as a best-effort fallback so an existing
- * integration does not regress.
+ * (`Seo_Meta_Mapper::detect_plugin()` in the WordPress plugin). `undefined`
+ * means unknown — no health check yet. `none` means health ran and nothing
+ * was installed.
  */
 export type DetectedSeoPlugin = "yoast" | "rankmath" | "aioseo" | "seopress" | "none";
 
-function aioseoMeta(seo: CanonicalSeoFields): Record<string, string> {
-  return {
-    _aioseo_title: seo.seoTitle ?? "",
-    _aioseo_description: seo.metaDescription ?? "",
-    _aioseo_og_title: seo.ogTitle ?? "",
-    _aioseo_og_description: seo.ogDescription ?? "",
-  };
+function definedEntries(entries: Record<string, string | undefined>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [key, value] of Object.entries(entries)) {
+    if (value?.trim()) out[key] = value;
+  }
+  return out;
+}
+
+function yoastMeta(seo: CanonicalSeoFields): Record<string, string> {
+  return definedEntries({
+    _yoast_wpseo_title: seo.seoTitle,
+    _yoast_wpseo_metadesc: seo.metaDescription,
+    _yoast_wpseo_focuskw: seo.focusKeyword,
+    "_yoast_wpseo_opengraph-title": seo.ogTitle,
+    "_yoast_wpseo_opengraph-description": seo.ogDescription,
+    "_yoast_wpseo_opengraph-image": seo.ogImageUrl,
+  });
+}
+
+function rankMathMeta(seo: CanonicalSeoFields): Record<string, string> {
+  return definedEntries({
+    rank_math_title: seo.seoTitle,
+    rank_math_description: seo.metaDescription,
+    rank_math_focus_keyword: seo.focusKeyword,
+    rank_math_facebook_title: seo.ogTitle,
+    rank_math_facebook_description: seo.ogDescription,
+    rank_math_facebook_image: seo.ogImageUrl,
+  });
 }
 
 function seopressMeta(seo: CanonicalSeoFields): Record<string, string> {
-  return {
-    _seopress_titles_title: seo.seoTitle ?? "",
-    _seopress_titles_desc: seo.metaDescription ?? "",
-    _seopress_social_fb_title: seo.ogTitle ?? "",
-    _seopress_social_fb_desc: seo.ogDescription ?? "",
-  };
-}
-
-function yoastRankMathMeta(seo: CanonicalSeoFields): Record<string, string> {
-  return mapSeoToWordPressRestMeta(seo);
+  return definedEntries({
+    _seopress_titles_title: seo.seoTitle,
+    _seopress_titles_desc: seo.metaDescription,
+    _seopress_analysis_target_kw: seo.focusKeyword,
+    _seopress_social_fb_title: seo.ogTitle,
+    _seopress_social_fb_desc: seo.ogDescription,
+  });
 }
 
 /**
- * Plugin-connection meta map — plugin-side Seo_Meta_Mapper writes these into
- * whichever SEO plugin's real storage the site uses. Every post used to
- * accumulate keys for all four plugins regardless of which one (if any) is
- * installed; pass `detectedPlugin` (from the connection health check) to
- * send only the keys that plugin actually reads, so uninstalled plugins
- * don't end up with orphaned post meta on every publish.
+ * AIOSEO REST body field (`aioseo_meta_data`). Post-meta `_aioseo_*` keys are
+ * WPML duplicates only — AIOSEO v4 reads `wp_aioseo_posts`.
  */
-export function mapSeoToPluginMeta(
+export function mapSeoToAioseoRestField(
+  seo: CanonicalSeoFields,
+): Record<string, unknown> | undefined {
+  const data: Record<string, unknown> = {};
+  if (seo.seoTitle?.trim()) data.title = seo.seoTitle.trim();
+  if (seo.metaDescription?.trim()) data.description = seo.metaDescription.trim();
+  if (seo.ogTitle?.trim()) data.og_title = seo.ogTitle.trim();
+  if (seo.ogDescription?.trim()) data.og_description = seo.ogDescription.trim();
+  if (seo.ogImageUrl?.trim()) {
+    data.og_image_type = "custom";
+    data.og_image_custom_url = seo.ogImageUrl.trim();
+  }
+  if (seo.focusKeyword?.trim()) {
+    data.keyphrases = {
+      focus: { keyphrase: seo.focusKeyword.trim(), score: 0, analysis: {} },
+      additional: [],
+    };
+  }
+  return Object.keys(data).length > 0 ? data : undefined;
+}
+
+/**
+ * WordPress core REST `meta` bag for Application Password publishes.
+ * Sends only the keys the detected plugin reads — never all four at once.
+ * AIOSEO returns {} here; use mapSeoToAioseoRestField for the REST field.
+ */
+export function mapSeoToWordPressRestMeta(
   seo: CanonicalSeoFields,
   detectedPlugin?: DetectedSeoPlugin,
 ): Record<string, string> {
   switch (detectedPlugin) {
     case "yoast":
+      return yoastMeta(seo);
     case "rankmath":
-      return yoastRankMathMeta(seo);
-    case "aioseo":
-      return aioseoMeta(seo);
+      return rankMathMeta(seo);
     case "seopress":
       return seopressMeta(seo);
+    case "aioseo":
     case "none":
       return {};
     default:
-      // Unknown — no health data yet for this connection. Best-effort: send
-      // every plugin's keys so we don't regress sites already relying on this.
-      return {
-        ...yoastRankMathMeta(seo),
-        ...aioseoMeta(seo),
-        ...seopressMeta(seo),
-      };
+      // Unknown install — Yoast + Rank Math cover most sites without writing
+      // dead AIOSEO/SEOPress keys. Prefer a health check when available.
+      return { ...yoastMeta(seo), ...rankMathMeta(seo) };
   }
+}
+
+/**
+ * Plugin-connection meta map. On the HMAC plugin path the PHP Seo_Meta_Mapper
+ * re-maps from the `seo` object using live detect_plugin(), so this bag is
+ * best-effort / legacy. Prefer sending `seo` and letting PHP apply().
+ */
+export function mapSeoToPluginMeta(
+  seo: CanonicalSeoFields,
+  detectedPlugin?: DetectedSeoPlugin,
+): Record<string, string> {
+  return mapSeoToWordPressRestMeta(seo, detectedPlugin);
 }
 
 export function mapSeoToJoomlaMeta(seo: CanonicalSeoFields): {
@@ -128,4 +144,14 @@ export function mapSeoToJoomlaMeta(seo: CanonicalSeoFields): {
     description: seo.metaDescription,
     keywords: seo.focusKeyword,
   };
+}
+
+/** Coerce a health capability value into DetectedSeoPlugin. */
+export function parseDetectedSeoPlugin(raw: unknown): DetectedSeoPlugin | undefined {
+  if (raw === null || raw === undefined || raw === "") return undefined;
+  if (raw === false || raw === "none") return "none";
+  if (raw === "yoast" || raw === "rankmath" || raw === "aioseo" || raw === "seopress") {
+    return raw;
+  }
+  return undefined;
 }

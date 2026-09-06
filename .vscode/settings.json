@@ -104,6 +104,7 @@
   },
   "intelephense.environment.includePaths": [
     "cms-plugins/wordpress/vendor/php-stubs/wordpress-stubs",
+    "cms-plugins/wordpress/vendor/phpunit/phpunit/src",
     "cms-plugins/shared/src",
     "cms-plugins/drupal/src",
     "cms-plugins/typo3/stubs",
@@ -114,6 +115,7 @@
     "**/vendor/**",
     "**/node_modules/**"
   ],
+  "php.validate.enable": false,
   "phpcs.enable": true,
   "phpcs.standard": "Automatic",
   "phpcs.executablePath": "${workspaceFolder}/cms-plugins/wordpress/vendor/bin/phpcs",

@@ -99,7 +99,7 @@ export function ContactPageClient() {
               <iframe
                 src={CALENDLY_EMBED_SRC}
                 title="Book a demo with goals.ac"
-                className="w-full h-[720px] border-0"
+                className="w-full h-180 border-0"
               />
             </div>
 
@@ -121,7 +121,7 @@ export function ContactPageClient() {
                 onChange={(e) => setMessage(e.target.value)}
                 rows={4}
                 placeholder="Tell us about your team and goals (optional)"
-                className="marketing-input-dark min-h-[100px] py-3 h-auto resize-y"
+                className="marketing-input-dark min-h-25 py-3 h-auto resize-y"
               />
               <Button type="submit" disabled={status === "loading"} className="hero-cta-primary border-0">
                 {status === "loading" ? "Sending…" : "Send message"}

@@ -160,7 +160,7 @@ export function ProjectVoiceForm({
                         }))
                       }
                       placeholder="Paste a writing sample here…"
-                      className="min-h-[120px] resize-y"
+                      className="min-h-30 resize-y"
                       rows={4}
                     />
                   </div>

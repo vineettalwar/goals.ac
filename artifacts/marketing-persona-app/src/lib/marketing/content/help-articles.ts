@@ -45,7 +45,7 @@ Published articles support Gutenberg, Elementor, and Divi output modes per conne
     description: "Publish SEO articles to your Shopify store blog via Admin API or plugin.",
     category: "Getting started",
     audience: "user",
-    cta: { label: "Platform integrations", href: "/platform-integrations" },
+    cta: { label: "Integrations", href: "/integrations" },
     body: `Shopify publishing targets your store's **blog** (Online Store → Blog posts).
 
 **Admin API**

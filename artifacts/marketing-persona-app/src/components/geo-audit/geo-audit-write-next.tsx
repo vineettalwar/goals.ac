@@ -25,8 +25,7 @@ export function GeoAuditWriteNext({ recommendations, projectId }: GeoAuditWriteN
       <div>
         <h2 className="font-semibold">Write next</h2>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Content ideas tied to failed checks — create in Content Studio to fix technical gaps
-          with publish-ready copy.
+          Failed checks from this audit, as drafts you can open in Content Studio.
         </p>
       </div>
 
@@ -34,12 +33,12 @@ export function GeoAuditWriteNext({ recommendations, projectId }: GeoAuditWriteN
         <div className="rounded-xl border border-border bg-background p-4 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-              Top pick
+              Start here
             </span>
             <FormatBadge type={topPick.formatType} />
             {topPick.priority === "high" && (
               <span className="text-[10px] font-semibold uppercase tracking-wide text-red-600">
-                High impact
+                Closes a fail
               </span>
             )}
           </div>
@@ -69,7 +68,7 @@ export function GeoAuditWriteNext({ recommendations, projectId }: GeoAuditWriteN
       {recommendations.length > 1 && (
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            More recommendations
+            Also worth writing
           </p>
           {recommendations.slice(1).map((rec) => (
             <div

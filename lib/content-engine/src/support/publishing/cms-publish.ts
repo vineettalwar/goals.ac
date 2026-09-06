@@ -29,11 +29,13 @@ import { resolveWordPressConnectionType } from "./cms-integrations";
 import { hostFeaturedImageForPublish } from "./host-featured-image";
 import { getLatestPublishedRemoteId } from "./publish-records";
 import {
+  mapSeoToAioseoRestField,
   mapSeoToJoomlaMeta,
   mapSeoToPluginMeta,
   mapSeoToWordPressRestMeta,
   seoFromPieceMetadata,
   type CanonicalSeoFields,
+  type DetectedSeoPlugin,
 } from "./seo-field-mapper";
 
 export interface PublishableContentPiece {
@@ -206,6 +208,7 @@ export async function publishPieceToWordPress(
 
     const seo = resolveSeo({ ...piece, pieceMetadata: updatedMetadata }, hostedOgUrl);
 
+    // PHP Seo_Meta_Mapper::apply() owns SEO storage from the `seo` object.
     const result = await publishToGoalsAcPlugin(
       pluginCreds,
       {
@@ -214,7 +217,6 @@ export async function publishPieceToWordPress(
         status: status === "publish" ? "publish" : "draft",
         tags,
         featured_image_id: featuredImageId,
-        meta: mapSeoToPluginMeta(seo),
         seo: seo as Record<string, string | undefined>,
       },
       {
@@ -266,7 +268,12 @@ export async function publishPieceToWordPress(
   }
 
   const seo = resolveSeo({ ...piece, pieceMetadata: updatedMetadata }, hostedOgUrl);
-  const wpMeta = mapSeoToWordPressRestMeta(seo);
+  const detected = creds.wordpress.seoPlugin as DetectedSeoPlugin | undefined;
+  const wpMeta = mapSeoToWordPressRestMeta(seo, detected);
+  const aioseoMetaData =
+    detected === "aioseo" || detected === undefined
+      ? mapSeoToAioseoRestField(seo)
+      : undefined;
   // Legacy Express path (@deprecated re-export in publish-destination.ts) — kept
   // idempotent the same way the primary adapter path is: reuse a prior remote
   // post id for this piece rather than always creating a new post.
@@ -289,6 +296,7 @@ export async function publishPieceToWordPress(
       featuredMediaId,
       existingRemoteId,
       slug: wordpressSlugFromTitle(seo.seoTitle ?? piece.title) ?? undefined,
+      ...(aioseoMetaData ? { aioseoMetaData } : {}),
     },
   );
   if (result.metaWarning) {

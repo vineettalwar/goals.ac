@@ -1,6 +1,12 @@
 import NextAuth from "next-auth";
 import { authConfig } from "@/auth.config";
 import { NextResponse } from "next/server";
+import {
+  isAppShellPath,
+  isOrgIntegrationsAppPath,
+  isPublicMarketingIntegrationsPath,
+  isPublicPath,
+} from "@/lib/middleware-paths";
 
 /**
  * Edge middleware for auth/RBAC — required by @opennextjs/cloudflare (Node proxy.ts unsupported).
@@ -8,25 +14,6 @@ import { NextResponse } from "next/server";
  */
 
 const { auth } = NextAuth(authConfig);
-
-const PUBLIC_PREFIXES = [
-  "/login",
-  "/signup",
-  "/reset-password",
-  "/accept-invite",
-  "/api/auth",
-  "/api/analytics/vitals",
-  "/api/platform/status",
-  "/api/invites",
-  "/maintenance",
-  "/_next",
-  "/favicon",
-];
-
-function isPublicPath(pathname: string) {
-  if (pathname === "/") return true;
-  return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
-}
 
 function isSuperAdmin(role: string | null | undefined) {
   return role === "super_admin" || role === "admin";
@@ -55,7 +42,6 @@ const WRITE_API_PREFIXES = [
 const WRITE_APP_PREFIXES = [
   "/projects",
   "/settings",
-  "/integrations",
   "/studio",
   "/content-piece",
   "/onboarding",
@@ -66,6 +52,7 @@ function isWriteApiPath(pathname: string) {
 }
 
 function isWriteAppPath(pathname: string) {
+  if (isOrgIntegrationsAppPath(pathname)) return true;
   return WRITE_APP_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 }
 
@@ -110,7 +97,7 @@ export default auth(async (req) => {
   const isImpersonating = Boolean(req.auth?.impersonation);
   const orgRole = normalizeOrgRole(req.auth?.user?.orgRole);
 
-  if (isPublicPath(pathname)) {
+  if (isPublicPath(pathname) || isPublicMarketingIntegrationsPath(pathname)) {
     return NextResponse.next();
   }
 
@@ -142,22 +129,7 @@ export default auth(async (req) => {
     }
   }
 
-  const isAppRoute =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/partner") ||
-    pathname.startsWith("/projects") ||
-    pathname.startsWith("/strategy") ||
-    pathname.startsWith("/search") ||
-    pathname.startsWith("/audit") ||
-    pathname.startsWith("/research") ||
-    pathname.startsWith("/growth-roadmaps") ||
-    pathname.startsWith("/integrations") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/content-piece") ||
-    pathname.startsWith("/studio") ||
-    pathname.startsWith("/onboarding");
-
-  if (isAppRoute && !isLoggedIn) {
+  if (isAppShellPath(pathname) && !isLoggedIn) {
     const loginUrl = new URL("/login", req.nextUrl.origin);
     loginUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(loginUrl);

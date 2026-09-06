@@ -4,6 +4,7 @@ import { seoArticlesTable } from "@workspace/db/schema";
 import { desc } from "drizzle-orm";
 import { LEARN_POSTS } from "@/lib/marketing/content/learn-posts";
 import { HELP_ARTICLES } from "@/lib/marketing/content/help-articles";
+import { listIntegrationLanders } from "@/lib/marketing/content/integration-landers";
 import { getSiteUrl } from "@/lib/marketing/site/site-url";
 
 const STATIC_PATHS = [
@@ -12,6 +13,9 @@ const STATIC_PATHS = [
   "/features",
   "/about",
   "/contact",
+  "/privacy",
+  "/terms",
+  "/imprint",
   "/solutions",
   "/learn",
   "/help",
@@ -38,7 +42,7 @@ const STATIC_PATHS = [
   "/social-distribution",
   "/search-analytics",
   "/brand-voice",
-  "/platform-integrations",
+  "/integrations",
   "/success-stories",
   "/compare/ai-seo-tools",
 ] as const;
@@ -70,6 +74,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.55,
   }));
 
+  const integrationEntries: MetadataRoute.Sitemap = listIntegrationLanders().map((lander) => ({
+    url: `${base}/integrations/${lander.slug}`,
+    lastModified: now,
+    changeFrequency: "monthly" as const,
+    priority: 0.75,
+  }));
+
   let seoArticleEntries: MetadataRoute.Sitemap = [];
   try {
     const articles = await db
@@ -88,5 +99,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // DB unavailable at build time
   }
 
-  return [...staticEntries, ...learnEntries, ...helpEntries, ...seoArticleEntries];
+  return [
+    ...staticEntries,
+    ...learnEntries,
+    ...helpEntries,
+    ...integrationEntries,
+    ...seoArticleEntries,
+  ];
 }

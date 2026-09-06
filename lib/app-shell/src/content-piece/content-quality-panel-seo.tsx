@@ -1,0 +1,622 @@
+/**
+ * ArticleQualityPanelSeo — the full SEO / editorial scoring panel.
+ * Extracted from content-quality-panel.tsx; the parent component
+ * dispatches to this for non-social formats.
+ */
+import { useEffect, useMemo, useState } from "react";
+import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
+import {
+  scoreCoverageChecklist,
+  type CoverageChecklistItem,
+} from "@workspace/content-engine/coverage-checklist";
+import {
+  applyInternalLinksToMarkdown,
+  suggestOutboundInternalLinks,
+} from "@workspace/content-engine/outbound-internal-links";
+import { ScoreRing } from "../section-panels/shared";
+import type { ContentPieceMetadata } from "./types";
+
+/** Missing-term click target: heading-shaped topics get a stub `## …`, keywords get a stub sentence. */
+function buildCoverageInsertSnippet(item: CoverageChecklistItem): string {
+  if (item.type === "secondary") {
+    return `Add a sentence mentioning "${item.term}" here.`;
+  }
+  return `## ${item.term}`;
+}
+
+/** Pause after typing before re-running local editorial score (no server). */
+const EDITORIAL_SCORE_DEBOUNCE_MS = 2000;
+
+export type DualContentScore = {
+  editorial: { total: number; breakdown: Array<{ label: string; score: number; max: number }> };
+  serp: {
+    total: number;
+    breakdown: Array<{ label: string; score: number; max: number; detail: string }>;
+    gaps: string[];
+    h2Coverage?: { covered: number; total: number; percent: number };
+  };
+  combined: number;
+  publishReady: boolean;
+  competitorDiff?: Array<{ title: string; covered: boolean; overlap: number }>;
+  /** Raw SERP snapshot — PAA questions live at `serpFeatures.peopleAlsoAsk`. */
+  serpFeatures?: Record<string, unknown> | null;
+  scoredAt?: string;
+  /** Brand voice context from project — used for local Human voice scoring when props omit them. */
+  writingSample?: string | null;
+  brandGlossary?: string[] | null;
+  brandVoicePassages?: string[] | null;
+};
+
+export type ArticleQualityPanelProps = {
+  bodyMarkdown: string;
+  wordCount?: number;
+  metadata?: ContentPieceMetadata | null;
+  /** Secondary keywords for the coverage checklist (brief/piece meta). */
+  secondaryKeywords?: string[] | null;
+  contentPieceId?: number | null;
+  /** When set, social formats use thread/post scoring instead of article SEO. */
+  formatType?: string | null;
+  /** Host fetches `/api/content-pieces/:id/serp-score` (JWT or cookie). */
+  fetchDualScore?: (contentPieceId: number) => Promise<DualContentScore | null>;
+  /** When parent already loaded dual score (e.g. brief panel), skip internal fetch. */
+  dualScore?: DualContentScore | null;
+  /** Optional brand voice signals for Human voice editorial score. */
+  writingSample?: string | null;
+  brandVoiceExcerpt?: string | null;
+  brandGlossary?: string[];
+  brandVoicePassages?: string[];
+  /** Last saved body — used to compute baseline for delta when `baselineScore` is omitted. */
+  savedBodyMarkdown?: string | null;
+  /** Precomputed score for the last saved body (editorial or combined). Wins over scoring `savedBodyMarkdown`. */
+  baselineScore?: number | null;
+  /** When true (edit mode), show "+N vs saved" if live score differs from baseline. */
+  showScoreDelta?: boolean;
+  /** When true, clicking a missing coverage chip inserts a stub into the draft instead of copying. */
+  editing?: boolean;
+  /** Host appends the stub markdown/sentence to the draft body. Only used while `editing`. */
+  onInsertMissingTerm?: (snippet: string) => void;
+  /** Host replaces the full draft body (internal-link apply). */
+  onReplaceBody?: (markdown: string) => void;
+  /** Skip linking to the current page's slug when known. */
+  excludeInternalSlug?: string | null;
+  /** Called with the current coverage checklist's missing terms (secondary keywords / PAA / rival topics), if any. */
+  onEnhance?: (missingTerms?: string[]) => void;
+  enhancing?: boolean;
+  canEnhance?: boolean;
+};
+
+function formatScoreDelta(delta: number): string {
+  if (delta > 0) return `+${delta} vs saved`;
+  return `−${Math.abs(delta)} vs saved`;
+}
+
+function combineEditorialSerp(editorialTotal: number, serpTotal: number): number {
+  return Math.round(editorialTotal * 0.55 + serpTotal * 0.45);
+}
+
+export function ArticleQualityPanelSeo({
+  bodyMarkdown,
+  wordCount,
+  metadata,
+  secondaryKeywords,
+  contentPieceId,
+  fetchDualScore,
+  dualScore,
+  writingSample,
+  brandVoiceExcerpt,
+  brandGlossary,
+  brandVoicePassages,
+  savedBodyMarkdown,
+  baselineScore,
+  showScoreDelta = false,
+  editing = false,
+  onInsertMissingTerm,
+  onReplaceBody,
+  excludeInternalSlug = null,
+  onEnhance,
+  enhancing = false,
+  canEnhance = false,
+}: Omit<ArticleQualityPanelProps, "formatType">) {
+  const [debouncedBody, setDebouncedBody] = useState(bodyMarkdown);
+  const [debouncedWordCount, setDebouncedWordCount] = useState(wordCount);
+  const [fetchedDual, setFetchedDual] = useState<DualContentScore | null>(null);
+  const [refreshingSerp, setRefreshingSerp] = useState(false);
+  const [actionedChipKey, setActionedChipKey] = useState<string | null>(null);
+  // Refreshed SERP wins over a parent-provided snapshot.
+  const dual = fetchedDual ?? dualScore;
+  const draftDiffersFromSaved =
+    savedBodyMarkdown != null && bodyMarkdown !== savedBodyMarkdown;
+  const canRefreshSerp = Boolean(contentPieceId && fetchDualScore);
+
+  // Format timestamp for display
+  const serpScoredAt = dual?.scoredAt;
+  const serpTimestamp = serpScoredAt
+    ? new Date(serpScoredAt).toLocaleString(undefined, {
+        dateStyle: "short",
+        timeStyle: "short",
+      })
+    : null;
+  const serpIsStale = draftDiffersFromSaved && serpScoredAt;
+
+  useEffect(() => {
+    // Snap to saved baseline immediately on load/cancel/save; debounce live typing only.
+    if (savedBodyMarkdown != null && bodyMarkdown === savedBodyMarkdown) {
+      setDebouncedBody(bodyMarkdown);
+      setDebouncedWordCount(wordCount);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setDebouncedBody(bodyMarkdown);
+      setDebouncedWordCount(wordCount);
+    }, EDITORIAL_SCORE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [bodyMarkdown, wordCount, savedBodyMarkdown]);
+
+  const voiceWritingSample = writingSample ?? dual?.writingSample ?? null;
+  const voiceBrandGlossary = brandGlossary ?? dual?.brandGlossary ?? undefined;
+  const voiceBrandVoicePassages = brandVoicePassages ?? dual?.brandVoicePassages ?? undefined;
+
+  const scoreInput = {
+    bodyMarkdown: debouncedBody,
+    wordCount: debouncedWordCount,
+    metaTitle: metadata?.seoTitle ?? metadata?.metaTitle ?? null,
+    metaDescription: metadata?.metaDescription ?? null,
+    citations: metadata?.citations,
+    faqSection: metadata?.faqSection,
+    jsonLdSchema: metadata?.jsonLdSchema,
+    internalLinkSuggestions: metadata?.internalLinkSuggestions,
+    writingSample: voiceWritingSample,
+    brandVoiceExcerpt,
+    brandGlossary: voiceBrandGlossary?.length ? voiceBrandGlossary : undefined,
+    brandVoicePassages: voiceBrandVoicePassages?.length ? voiceBrandVoicePassages : undefined,
+  };
+  const result = scoreArticleQuality(scoreInput);
+
+  const peopleAlsoAsk = Array.isArray(dual?.serpFeatures?.peopleAlsoAsk)
+    ? (dual!.serpFeatures!.peopleAlsoAsk as unknown[]).filter(
+        (q): q is string => typeof q === "string",
+      )
+    : [];
+  const h2Topics = dual?.competitorDiff?.map((row) => row.title) ?? [];
+  const coverage = scoreCoverageChecklist({
+    bodyMarkdown: debouncedBody,
+    secondaryKeywords,
+    peopleAlsoAsk,
+    h2Topics,
+  });
+  const missingTerms = coverage.items.filter((item) => !item.covered).map((item) => item.term);
+
+  useEffect(() => {
+    setFetchedDual(null);
+  }, [contentPieceId, savedBodyMarkdown]);
+
+  useEffect(() => {
+    if (dualScore != null || !contentPieceId || !fetchDualScore) {
+      return;
+    }
+    let cancelled = false;
+    void fetchDualScore(contentPieceId)
+      .then((data) => {
+        if (!cancelled) setFetchedDual(data);
+      })
+      .catch(() => {
+        if (!cancelled) setFetchedDual(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [contentPieceId, fetchDualScore, dualScore, savedBodyMarkdown]);
+
+  const editorialTotal = result.total;
+  const serpTotal = dual?.serp.total;
+  const displayTotal =
+    dual && serpTotal != null
+      ? combineEditorialSerp(editorialTotal, serpTotal)
+      : editorialTotal;
+  const needsEnhance = displayTotal < 80;
+
+  let baselineTotal: number | null =
+    typeof baselineScore === "number" && Number.isFinite(baselineScore) ? baselineScore : null;
+  if (baselineTotal == null && savedBodyMarkdown != null) {
+    const savedWords = savedBodyMarkdown.split(/\s+/).filter(Boolean).length;
+    const savedEditorial = scoreArticleQuality({
+      ...scoreInput,
+      bodyMarkdown: savedBodyMarkdown,
+      wordCount: savedWords,
+    }).total;
+    baselineTotal =
+      dual && serpTotal != null
+        ? combineEditorialSerp(savedEditorial, serpTotal)
+        : savedEditorial;
+  }
+
+  const scoreDelta =
+    showScoreDelta && baselineTotal != null ? displayTotal - baselineTotal : 0;
+
+  const displaySeoTitle = metadata?.seoTitle ?? metadata?.metaTitle;
+  const displayOgTitle = metadata?.ogTitle ?? displaySeoTitle;
+  const showSeoMetadata =
+    Boolean(displaySeoTitle) ||
+    Boolean(metadata?.metaDescription) ||
+    Boolean(displayOgTitle) ||
+    Boolean(metadata?.ogDescription);
+
+  const canInsertMissingTerm = editing && Boolean(onInsertMissingTerm);
+  const canApplyInternalLinks = editing && Boolean(onReplaceBody);
+
+  const insertableLinks = useMemo(
+    () =>
+      suggestOutboundInternalLinks({
+        bodyMarkdown: debouncedBody,
+        candidates: metadata?.internalLinkSuggestions ?? [],
+        excludeSlug: excludeInternalSlug,
+        limit: 3,
+      }),
+    [debouncedBody, metadata?.internalLinkSuggestions, excludeInternalSlug],
+  );
+
+  const handleMissingChipClick = async (item: CoverageChecklistItem, key: string) => {
+    if (canInsertMissingTerm) {
+      onInsertMissingTerm!(buildCoverageInsertSnippet(item));
+    } else {
+      try {
+        await navigator.clipboard.writeText(item.term);
+      } catch {
+        return;
+      }
+    }
+    setActionedChipKey(key);
+    window.setTimeout(() => {
+      setActionedChipKey((current) => (current === key ? null : current));
+    }, 1500);
+  };
+
+  const refreshSerpScore = () => {
+    if (!contentPieceId || !fetchDualScore || refreshingSerp) return;
+    setRefreshingSerp(true);
+    void fetchDualScore(contentPieceId)
+      .then((data) => setFetchedDual(data))
+      .catch(() => setFetchedDual(null))
+      .finally(() => setRefreshingSerp(false));
+  };
+
+  return (
+    <div className="paper-card space-y-6 rounded-xl p-6">
+      <div className="flex items-center gap-4">
+        <ScoreRing score={displayTotal} size="md" />
+        <div className="min-w-0 space-y-1.5">
+          <h3 className="text-sm font-semibold">Quality breakdown</h3>
+          <p className="text-sm text-muted-foreground">
+            {dual && serpTotal != null && editorialTotal >= 70 && serpTotal >= 65
+              ? "Publish-ready (editorial + SERP)"
+              : displayTotal >= 80
+                ? "Publish-ready"
+                : displayTotal >= 60
+                  ? "Needs polish"
+                  : "Improve before publishing"}
+          </p>
+          {dual ? (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Editorial {editorialTotal} (live draft) · SERP {serpTotal} (last saved) · Combined{" "}
+              {displayTotal}
+              {serpTimestamp ? ` · Scored ${serpTimestamp}` : ""}
+            </p>
+          ) : (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Editorial {editorialTotal} (live draft)
+            </p>
+          )}
+          {dual && serpIsStale ? (
+            <p className="text-xs font-medium leading-relaxed text-amber-700 dark:text-amber-400">
+              SERP score is from last saved version — save or refresh to update.
+            </p>
+          ) : dual && draftDiffersFromSaved ? (
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              SERP and H2 are from the last saved body — save or refresh to update.
+            </p>
+          ) : null}
+          {scoreDelta !== 0 ? (
+            <p className="text-xs font-medium tabular-nums text-muted-foreground">
+              {formatScoreDelta(scoreDelta)}
+            </p>
+          ) : null}
+          {canRefreshSerp ? (
+            <button
+              type="button"
+              className="pt-0.5 text-xs font-medium text-primary underline-offset-2 hover:underline disabled:opacity-50"
+              onClick={refreshSerpScore}
+              disabled={refreshingSerp}
+            >
+              {refreshingSerp ? "Refreshing SERP…" : "Refresh SERP score"}
+            </button>
+          ) : null}
+        </div>
+      </div>
+      <div className="space-y-3.5">
+        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Editorial (live draft)
+        </p>
+        <ul className="space-y-3.5">
+          {result.breakdown.map((item) => (
+            <li key={item.label} className="space-y-1.5">
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-muted-foreground">{item.label}</span>
+                <span
+                  className={
+                    item.score === 0
+                      ? "shrink-0 font-medium tabular-nums text-red-600"
+                      : "shrink-0 font-medium tabular-nums"
+                  }
+                >
+                  {item.score}/{item.max}
+                </span>
+              </div>
+              {item.label === "Human voice" && item.detail ? (
+                <p className="text-xs leading-relaxed text-muted-foreground/80">{item.detail}</p>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {dual?.serp.breakdown?.length ? (
+        <div className="space-y-3.5 border-t border-border pt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            SERP / H2 (last saved)
+          </p>
+          <ul className="space-y-3.5">
+            {dual.serp.breakdown.map((item) => (
+              <li key={item.label} className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="text-muted-foreground" title={item.detail}>
+                  {item.label}
+                </span>
+                <span className="shrink-0 font-medium tabular-nums">
+                  {item.score}/{item.max}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {dual.serp.h2Coverage && dual.serp.h2Coverage.total > 0 ? (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {`H2 coverage: ${dual.serp.h2Coverage.percent}% (${dual.serp.h2Coverage.covered}/${dual.serp.h2Coverage.total} rival topics)`}
+            </p>
+          ) : null}
+          {dual.serp.gaps.length > 0 ? (
+            <ul className="space-y-2 text-sm leading-relaxed text-muted-foreground">
+              {dual.serp.gaps.slice(0, 4).map((gap) => (
+                <li key={gap}>• {gap}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+
+      {coverage.totalCount > 0 ? (
+        <div className="space-y-3.5 border-t border-border pt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Coverage checklist{" "}
+            <span className="font-normal italic tracking-normal text-muted-foreground/70">
+              — not Surfer NLP
+            </span>
+          </p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {coverage.coveredCount}/{coverage.totalCount} secondary keywords, PAA questions, and
+            rival topics mentioned in the draft ({coverage.percent}%)
+          </p>
+          {coverage.coveredCount < coverage.totalCount ? (
+            <p className="text-xs leading-relaxed text-muted-foreground/80">
+              Click a missing term to {canInsertMissingTerm ? "insert it into the draft" : "copy it"}.
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {coverage.items.map((item, index) => {
+              const key = `${item.type}-${item.term}-${index}`;
+              const typeLabel =
+                item.type === "secondary"
+                  ? "Secondary keyword"
+                  : item.type === "paa"
+                    ? "PAA question"
+                    : "Rival topic";
+              if (item.covered) {
+                return (
+                  <span
+                    key={key}
+                    className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                    title={typeLabel}
+                  >
+                    ✓ {item.term}
+                  </span>
+                );
+              }
+              const actioned = actionedChipKey === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => void handleMissingChipClick(item, key)}
+                  className={
+                    actioned
+                      ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs text-emerald-800 transition-colors dark:bg-emerald-900/30 dark:text-emerald-300"
+                      : "rounded-full bg-amber-100 px-2.5 py-1 text-xs text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:hover:bg-amber-900/50"
+                  }
+                  title={
+                    canInsertMissingTerm
+                      ? `${typeLabel} — click to insert into draft`
+                      : `${typeLabel} — click to copy`
+                  }
+                >
+                  {actioned ? "✓" : "○"} {item.term}
+                  {actioned ? (canInsertMissingTerm ? " · inserted" : " · copied") : ""}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
+
+      {insertableLinks.length > 0 ? (
+        <div className="space-y-3.5 border-t border-border pt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Internal links
+          </p>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Phrases already in this draft that match suggested site pages. Insert wraps them —
+            no invented anchors.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {insertableLinks.map((link) => {
+              const key = `${link.href}-${link.matchedPhrase}`;
+              const actioned = actionedChipKey === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  disabled={!canApplyInternalLinks}
+                  onClick={() => {
+                    if (!onReplaceBody) return;
+                    const { markdown, applied } = applyInternalLinksToMarkdown(bodyMarkdown, [
+                      link,
+                    ]);
+                    if (applied === 0) return;
+                    onReplaceBody(markdown);
+                    setActionedChipKey(key);
+                    window.setTimeout(() => {
+                      setActionedChipKey((current) => (current === key ? null : current));
+                    }, 1500);
+                  }}
+                  className={
+                    actioned
+                      ? "rounded-full bg-emerald-100 px-2.5 py-1 text-xs text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+                      : "rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground transition-colors hover:bg-secondary/80 disabled:opacity-50"
+                  }
+                  title={
+                    canApplyInternalLinks
+                      ? `Insert [${link.matchedPhrase}](${link.href})`
+                      : `${link.matchedPhrase} → ${link.href} (enter edit mode to insert)`
+                  }
+                >
+                  {actioned ? "✓ " : ""}
+                  {link.matchedPhrase}
+                </button>
+              );
+            })}
+          </div>
+          {canApplyInternalLinks ? (
+            <button
+              type="button"
+              className="text-sm font-medium text-primary underline-offset-2 hover:underline"
+              onClick={() => {
+                const { markdown, applied } = applyInternalLinksToMarkdown(
+                  bodyMarkdown,
+                  insertableLinks,
+                );
+                if (applied === 0) return;
+                onReplaceBody!(markdown);
+                setActionedChipKey("internal-links-all");
+                window.setTimeout(() => {
+                  setActionedChipKey((current) =>
+                    current === "internal-links-all" ? null : current,
+                  );
+                }, 1500);
+              }}
+            >
+              {actionedChipKey === "internal-links-all"
+                ? `Inserted ${insertableLinks.length}`
+                : `Insert all (${insertableLinks.length})`}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {dual?.competitorDiff && dual.competitorDiff.length > 0 ? (
+        <div className="space-y-3.5 border-t border-border pt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Competitor topics (top SERP)
+          </p>
+          <ul className="space-y-3">
+            {dual.competitorDiff.map((row) => (
+              <li key={row.title} className="flex items-start justify-between gap-3 text-sm">
+                <span className={row.covered ? "leading-relaxed text-muted-foreground" : "leading-relaxed"}>
+                  {row.title}
+                </span>
+                <span
+                  className={
+                    row.covered
+                      ? "shrink-0 font-medium text-emerald-700"
+                      : "shrink-0 font-medium text-amber-700"
+                  }
+                >
+                  {row.covered ? "Covered" : "Missing"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {canEnhance && needsEnhance && onEnhance ? (
+        <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {enhancing
+              ? "Still working — usually under a minute. The draft updates when this finishes."
+              : dual?.serp.gaps.length
+                ? "Fix gaps runs an enhance pass targeting SERP, FAQ, citations, and internal links."
+                : "Missing FAQ, citations, or SERP angles? Enhance adds them without rewriting from scratch."}
+          </p>
+          <button
+            type="button"
+            className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
+            onClick={() => onEnhance(missingTerms.length ? missingTerms : undefined)}
+            disabled={enhancing}
+          >
+            {enhancing
+              ? "Fixing gaps…"
+              : dual?.serp.gaps.length
+                ? "Fix gaps"
+                : "Enhance quality"}
+          </button>
+        </div>
+      ) : null}
+
+      {showSeoMetadata ? (
+        <div className="space-y-4 border-t border-border pt-5">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+            SEO metadata
+          </p>
+          {displaySeoTitle ? (
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">
+                SEO title ({displaySeoTitle.length} chars)
+              </p>
+              <p className="text-sm leading-relaxed">{displaySeoTitle}</p>
+            </div>
+          ) : null}
+          {metadata?.metaDescription ? (
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">
+                Meta description ({metadata.metaDescription.length} chars)
+              </p>
+              <p className="text-sm leading-relaxed">{metadata.metaDescription}</p>
+            </div>
+          ) : null}
+          {displayOgTitle && displayOgTitle !== displaySeoTitle ? (
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">
+                Open Graph title ({displayOgTitle.length} chars)
+              </p>
+              <p className="text-sm leading-relaxed">{displayOgTitle}</p>
+            </div>
+          ) : null}
+          {metadata?.ogDescription && metadata.ogDescription !== metadata.metaDescription ? (
+            <div className="space-y-1.5">
+              <p className="text-xs text-muted-foreground">
+                Open Graph description ({metadata.ogDescription.length} chars)
+              </p>
+              <p className="text-sm leading-relaxed">{metadata.ogDescription}</p>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}

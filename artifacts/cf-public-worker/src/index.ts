@@ -23,7 +23,12 @@ import { buildPublicPlanCatalog } from "@workspace/billing/public-plans";
 import { asc, and, eq, isNull } from "drizzle-orm";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { auditUrl } from "@workspace/seo-tools/geoAuditor";
-import { scoreMetaTags } from "@workspace/seo-tools/freeTools";
+import {
+  checkRobotsTxt,
+  checkSitemap,
+  generateLlmsTxt,
+  scoreMetaTags,
+} from "@workspace/seo-tools/freeTools";
 import { wireCfEdgeEnv } from "@workspace/cf-edge/wire";
 import { corsPreflight, withCors } from "@workspace/cf-edge/cors";
 import {
@@ -211,7 +216,13 @@ const vitalsBody = z.object({
   path: z.string().optional(),
 });
 
-const urlBody = z.object({ url: z.string().url() });
+const urlBody = z.object({
+  url: z
+    .string()
+    .min(1)
+    .transform((u) => (u.startsWith("http") ? u : `https://${u}`))
+    .pipe(z.string().url()),
+});
 
 const geoBody = z.object({
   url: z
@@ -634,15 +645,32 @@ async function handle(request: Request, env: Env): Promise<Response> {
     }
 
     if (path.startsWith("/api/tools/") && request.method === "POST") {
+      const ip = clientIp(request);
+      if (await rateLimitKv(env, `public-tools:${ip}`, 20, 3600)) {
+        return withCors(
+          request,
+          Response.json(
+            {
+              error: "rate_limited",
+              message: "Too many requests. Please slow down and try again shortly.",
+            },
+            { status: 429, headers: { "Retry-After": "3600" } },
+          ),
+        );
+      }
       const parsed = urlBody.safeParse(await request.json().catch(() => null));
       if (!parsed.success) {
         return withCors(request, Response.json({ error: "Valid URL required" }, { status: 400 }));
       }
       try {
         await assertPublicUrl(parsed.data.url);
-        const audit = await auditUrl(parsed.data.url);
         if (path.endsWith("/meta-checker")) {
-          const meta = scoreMetaTags(audit.pageTitle, audit.metaDescription);
+          const audit = await auditUrl(parsed.data.url);
+          const meta = scoreMetaTags(audit.pageTitle, audit.metaDescription, {
+            h1: audit.h1Text,
+            ogTitle: audit.ogTitle,
+            ogDescription: audit.ogDescription,
+          });
           return withCors(
             request,
             Response.json({
@@ -650,24 +678,22 @@ async function handle(request: Request, env: Env): Promise<Response> {
               ...meta,
               pageTitle: audit.pageTitle,
               metaDescription: audit.metaDescription,
+              h1: audit.h1Text,
+              ogTitle: audit.ogTitle,
+              ogDescription: audit.ogDescription,
             }),
           );
         }
         if (path.endsWith("/sitemap")) {
-          return withCors(request, Response.json({ url: parsed.data.url, title: audit.pageTitle }));
+          return withCors(request, Response.json(await checkSitemap(parsed.data.url)));
         }
         if (path.endsWith("/robots")) {
-          return withCors(request, Response.json({ url: parsed.data.url, title: audit.pageTitle }));
+          return withCors(request, Response.json(await checkRobotsTxt(parsed.data.url)));
         }
         if (path.endsWith("/llms-txt")) {
-          return withCors(
-            request,
-            Response.json({
-              url: parsed.data.url,
-              suggestion: `# ${audit.pageTitle ?? parsed.data.url}\n> ${audit.metaDescription ?? ""}`,
-            }),
-          );
+          return withCors(request, Response.json(await generateLlmsTxt(parsed.data.url)));
         }
+        return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
       } catch (err) {
         return withCors(
           request,

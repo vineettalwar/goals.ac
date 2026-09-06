@@ -8,7 +8,7 @@ type ContentMarkdownProps = {
 
 function renderInline(text: string): ReactNode[] {
   const nodes: ReactNode[] = [];
-  const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*|\[[^\]]+\]\([^)]+\))/g;
+  const pattern = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let key = 0;
@@ -20,6 +20,12 @@ function renderInline(text: string): ReactNode[] {
     const token = match[0];
     if (token.startsWith("**")) {
       nodes.push(<strong key={key++}>{token.slice(2, -2)}</strong>);
+    } else if (token.startsWith("`")) {
+      nodes.push(
+        <code key={key++} className="rounded bg-secondary px-1 py-0.5 text-[0.9em]">
+          {token.slice(1, -1)}
+        </code>,
+      );
     } else if (token.startsWith("*")) {
       nodes.push(<em key={key++}>{token.slice(1, -1)}</em>);
     } else {
@@ -52,6 +58,26 @@ function renderInline(text: string): ReactNode[] {
 
 function stripBlockquotePrefix(line: string): string {
   return line.replace(/^>\s?/, "");
+}
+
+function isTableRow(line: string): boolean {
+  const t = line.trim();
+  return t.startsWith("|") && t.includes("|", 1);
+}
+
+function isTableSeparator(line: string): boolean {
+  const t = line.trim();
+  if (!t.includes("|") || !t.includes("-")) return false;
+  return /^[\s|:-]+$/.test(t);
+}
+
+function splitTableCells(line: string): string[] {
+  return line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((c) => c.trim());
 }
 
 export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
@@ -110,6 +136,45 @@ export function ContentMarkdown({ children, className }: ContentMarkdownProps) {
         <h1 key={key++} className="mb-4 text-xl font-bold tracking-tight">
           {renderInline(trimmed.slice(2))}
         </h1>,
+      );
+      continue;
+    }
+
+    if (isTableRow(trimmed) && i + 1 < lines.length && isTableSeparator(lines[i + 1]!)) {
+      flushList();
+      const headerCells = splitTableCells(trimmed);
+      i += 2; // skip header + separator
+      const bodyRows: string[][] = [];
+      while (i < lines.length && isTableRow(lines[i]!)) {
+        bodyRows.push(splitTableCells(lines[i]!));
+        i += 1;
+      }
+      i -= 1;
+      blocks.push(
+        <div key={key++} className="my-4 overflow-x-auto">
+          <table className="w-full border-collapse text-left text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                {headerCells.map((cell, ci) => (
+                  <th key={ci} className="px-3 py-2 font-semibold text-foreground">
+                    {renderInline(cell)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {bodyRows.map((row, ri) => (
+                <tr key={ri} className="border-b border-border/60">
+                  {row.map((cell, ci) => (
+                    <td key={ci} className="px-3 py-2 text-foreground/90">
+                      {renderInline(cell)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
       );
       continue;
     }

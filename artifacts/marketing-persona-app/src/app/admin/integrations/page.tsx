@@ -11,8 +11,8 @@ function AdminIntegrationsPageFallback() {
         <div className="h-4 w-full max-w-xl animate-pulse rounded bg-muted/70" />
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="h-[62px] animate-pulse rounded-xl border border-border/60 bg-muted/20" />
-        <div className="h-[62px] animate-pulse rounded-xl border border-border/60 bg-muted/20" />
+        <div className="h-15.5 animate-pulse rounded-xl border border-border/60 bg-muted/20" />
+        <div className="h-15.5 animate-pulse rounded-xl border border-border/60 bg-muted/20" />
       </div>
       <div className="space-y-6">
         <IntegrationCategorySkeleton tileCount={1} compact />

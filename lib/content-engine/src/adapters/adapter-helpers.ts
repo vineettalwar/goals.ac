@@ -1,9 +1,11 @@
 import type { CanonicalContent } from "../content/canonical-content";
 import {
+  mapSeoToAioseoRestField,
   mapSeoToPluginMeta,
   mapSeoToWordPressRestMeta,
   seoFromPieceMetadata,
   type CanonicalSeoFields,
+  type DetectedSeoPlugin,
 } from "../support/publishing/seo-field-mapper";
 
 export function contentTagsFromCanonical(content: CanonicalContent): string[] {
@@ -32,4 +34,9 @@ export function seoTitle(content: CanonicalContent, seo: CanonicalSeoFields): st
   return seo.seoTitle ?? content.meta.title;
 }
 
-export { mapSeoToPluginMeta, mapSeoToWordPressRestMeta };
+export {
+  mapSeoToAioseoRestField,
+  mapSeoToPluginMeta,
+  mapSeoToWordPressRestMeta,
+  type DetectedSeoPlugin,
+};

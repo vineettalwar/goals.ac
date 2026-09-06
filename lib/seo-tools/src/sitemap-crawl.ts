@@ -1,4 +1,5 @@
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
+import { fetchPublicText } from "./safe-fetch";
 
 export type SitemapCrawlData = {
   sitemapType: "urlset" | "sitemapindex";
@@ -15,15 +16,12 @@ export type SitemapInfoResult = {
 const DEFAULT_SITEMAP_PATHS = ["/sitemap.xml", "/sitemap_index.xml", "/sitemap/sitemap.xml"];
 
 async function fetchXml(url: string): Promise<string | null> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
-    const resp = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-    if (!resp.ok) return null;
-    return await resp.text();
+    return await fetchPublicText(url, {
+      timeoutMs: 8000,
+      accept: "application/xml,text/xml,text/plain,*/*;q=0.8",
+    });
   } catch {
-    clearTimeout(timeout);
     return null;
   }
 }

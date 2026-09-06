@@ -59,7 +59,7 @@ export function AutopilotUrlHero() {
         </Button>
       </div>
       {error && <p className="mt-2 text-sm text-red-400 text-center">{error}</p>}
-      <p className="mt-3 text-center text-xs text-white/50">
+      <p className="mt-3 text-center text-xs text-white/75">
         Free account · We scan your site · First 3 articles queued
       </p>
     </form>

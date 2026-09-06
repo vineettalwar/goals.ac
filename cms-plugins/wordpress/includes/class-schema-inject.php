@@ -82,9 +82,17 @@ class Schema_Inject {
 
 	/**
 	 * Output JSON-LD script tags in the document head.
+	 *
+	 * Skipped when Yoast / Rank Math / AIOSEO / SEOPress is active — those
+	 * plugins own on-page schema. Emitting a second JSON-LD graph duplicates
+	 * Article/WebPage nodes and fails SEO-plugin compliance checks.
 	 */
 	public function inject_json_ld(): void {
 		if ( ! \is_singular() ) {
+			return;
+		}
+
+		if ( \class_exists( '\Goals_AC\Seo_Meta_Mapper' ) && Seo_Meta_Mapper::detect_plugin() ) {
 			return;
 		}
 

@@ -1,3 +1,13 @@
+import type { ContentFormatType } from "./content-studio-format-data";
+
+export type BriefContentDraft = {
+  briefId?: number;
+  keyword: string;
+  angleHint?: string;
+  formatType: ContentFormatType;
+  workingTitle?: string;
+};
+
 export type WizardStepId =
   | "path"
   | "format"

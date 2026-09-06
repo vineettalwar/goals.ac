@@ -154,6 +154,11 @@ export async function publishToWordPress(
     existingRemoteId?: string;
     /** When set and no usable existingRemoteId, look up by slug before creating. */
     slug?: string;
+    /**
+     * AIOSEO v4 REST field — written to `wp_aioseo_posts`, not post meta.
+     * See https://aioseo.com/docs/fetching-updating-aioseo-data-via-the-wordpress-rest-api/
+     */
+    aioseoMetaData?: Record<string, unknown>;
   },
 ): Promise<WordPressPostResult> {
   const apiBase = credentials.siteUrl.replace(/\/$/, "") + "/wp-json/wp/v2";
@@ -171,10 +176,13 @@ export async function publishToWordPress(
   const sentMeta =
     meta && Object.keys(meta).length > 0
       ? meta
-      : metaDescription
+      : metaDescription && !options?.aioseoMetaData
         ? { _yoast_wpseo_metadesc: metaDescription }
         : undefined;
   if (sentMeta) body.meta = sentMeta;
+  if (options?.aioseoMetaData && Object.keys(options.aioseoMetaData).length > 0) {
+    body.aioseo_meta_data = options.aioseoMetaData;
+  }
 
   const excerpt = pickExcerpt(metaDescription, meta);
   if (excerpt) body.excerpt = excerpt;

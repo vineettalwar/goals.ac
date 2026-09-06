@@ -1,5 +1,6 @@
 import { parse } from "node-html-parser";
 import type { GeoIssue } from "@workspace/db";
+import { fetchPublicText } from "./safe-fetch";
 
 export type AuditResult = {
   url: string;
@@ -10,41 +11,15 @@ export type AuditResult = {
   hasSchemaOrg: boolean;
   schemaTypes: string[];
   h1Count: number;
+  h1Text: string | null;
+  ogTitle: string | null;
+  ogDescription: string | null;
   imageCount: number;
   imagesMissingAlt: number;
 };
 
 export async function auditUrl(url: string): Promise<AuditResult> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
-  let html: string;
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; GEO-Auditor/1.0; +https://goals.ac)",
-        Accept: "text/html,application/xhtml+xml",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    html = await response.text();
-  } catch (err) {
-    if (err instanceof Error && err.name === "AbortError") {
-      throw new Error("Request timed out after 10 seconds");
-    }
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(message.includes("fetch failed") ? `Could not reach ${url}` : message);
-  } finally {
-    clearTimeout(timeout);
-  }
-
+  const html = await fetchPublicText(url);
   const root = parse(html);
   const issues: GeoIssue[] = [];
 
@@ -173,6 +148,7 @@ export async function auditUrl(url: string): Promise<AuditResult> {
 
   const h1Tags = root.querySelectorAll("h1");
   const h1Count = h1Tags.length;
+  const h1Text = h1Tags[0]?.text?.trim() || null;
   if (h1Count === 0) {
     issues.push({
       check: "H1 Tag",
@@ -320,6 +296,9 @@ export async function auditUrl(url: string): Promise<AuditResult> {
     hasSchemaOrg,
     schemaTypes,
     h1Count,
+    h1Text,
+    ogTitle: ogTitle?.getAttribute("content")?.trim() || null,
+    ogDescription: ogDescription?.getAttribute("content")?.trim() || null,
     imageCount,
     imagesMissingAlt,
   };

@@ -109,6 +109,12 @@ const nextConfig: NextConfig = {
       { source: "/reddit-discovery", destination: "/research/reddit", permanent: true },
       { source: "/search/geo-audit", destination: "/audit", permanent: true },
       { source: "/search/geo-audit/:id", destination: "/audit/:id", permanent: true },
+      { source: "/platform-integrations", destination: "/integrations", permanent: true },
+      {
+        source: "/platform-integrations/:slug",
+        destination: "/integrations/:slug",
+        permanent: true,
+      },
     ];
   },
   async headers() {

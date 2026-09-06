@@ -112,11 +112,12 @@ class Site_Graph {
 			);
 			$batch_count = \count( $batch );
 			$all         = \array_merge( $all, $batch );
+			$all_count   = \count( $all );
 			++$page;
-		} while ( $batch_count === $per_page && \count( $all ) < self::SITE_GRAPH_POST_LIMIT );
+		} while ( $batch_count === $per_page && $all_count < self::SITE_GRAPH_POST_LIMIT );
 
 		// Trim to cap (safety: last batch could push count slightly past the limit).
-		if ( \count( $all ) > self::SITE_GRAPH_POST_LIMIT ) {
+		if ( $all_count > self::SITE_GRAPH_POST_LIMIT ) {
 			$all = \array_slice( $all, 0, self::SITE_GRAPH_POST_LIMIT );
 		}
 

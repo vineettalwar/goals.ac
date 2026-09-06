@@ -5,6 +5,13 @@ import {
 import type { ContentFormatType } from "./content-studio-format-data";
 import type { Flow, WizardStepId } from "./create-content-modal-types";
 
+export function parseSourceUrls(raw: string): string[] {
+  return raw
+    .split(/\r?\n|,/)
+    .map((part) => part.trim())
+    .filter((part) => /^https?:\/\//i.test(part));
+}
+
 export const STEPS_WITH_ENTER_CONTINUE: WizardStepId[] = [
   "competitors",
   "destination",

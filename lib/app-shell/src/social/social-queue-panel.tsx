@@ -344,7 +344,7 @@ export function SocialQueuePanel({
                             : "Go-live time"
                       }
                       disabled={actionsBlocked}
-                      className="h-9 max-w-[220px] rounded-lg border border-input bg-card px-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                      className="h-9 max-w-55 rounded-lg border border-input bg-card px-2.5 text-sm disabled:cursor-not-allowed disabled:opacity-50"
                       defaultValue={item.scheduledAt ? item.scheduledAt.slice(0, 16) : ""}
                       onBlur={(event) => {
                         if (actionsBlocked) return;

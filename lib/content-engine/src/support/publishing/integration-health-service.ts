@@ -18,6 +18,8 @@ export type PlatformHealthStatus = {
   themeSnippetRequiredFor?: string[];
   /** TYPO3 plugin: supports POST /media for image upload. */
   mediaUploadCapable?: boolean;
+  /** WordPress plugin: detected Yoast / Rank Math / AIOSEO / SEOPress. */
+  seoPlugin?: "yoast" | "rankmath" | "aioseo" | "seopress" | "none";
   lastCheckedAt: string;
 };
 
@@ -30,6 +32,7 @@ async function testPlatform(
   siteName?: string;
   themeSnippetRequiredFor?: string[];
   mediaUploadCapable?: boolean;
+  seoPlugin?: "yoast" | "rankmath" | "aioseo" | "seopress" | "none";
 } | null> {
   switch (key) {
     case "notion": {
@@ -69,14 +72,17 @@ async function testPlatform(
       if (!creds.wordpress) return null;
       if (resolveWordPressConnectionType(creds.wordpress) === "plugin") {
         const { testGoalsAcPluginConnection } = await import("@workspace/connectors/goals-ac-plugin");
+        const { parseDetectedSeoPlugin } = await import("./seo-field-mapper");
         const result = await testGoalsAcPluginConnection({
           siteUrl: creds.wordpress.siteUrl,
           siteKey: creds.wordpress.siteKey!,
           platform: "wordpress",
         });
-        return result.ok
-          ? { ok: true, siteName: result.health?.version }
-          : { ok: false, error: result.error };
+        if (!result.ok) {
+          return { ok: false, error: result.error };
+        }
+        const seoPlugin = parseDetectedSeoPlugin(result.health?.capabilities?.seo_plugin) ?? "none";
+        return { ok: true, siteName: result.health?.version, seoPlugin };
       }
       const { testWordPressConnection } = await import("@workspace/connectors/wordpress");
       const result = await testWordPressConnection({
@@ -405,6 +411,7 @@ export async function runProjectIntegrationHealth(
         siteName: result.siteName,
         themeSnippetRequiredFor: result.themeSnippetRequiredFor,
         mediaUploadCapable: result.mediaUploadCapable,
+        seoPlugin: result.seoPlugin,
         lastCheckedAt: checkedAt,
       });
     } catch (err) {
@@ -441,6 +448,9 @@ export async function runProjectIntegrationHealth(
         : {}),
       ...(status.mediaUploadCapable !== undefined
         ? { lastHealthMediaUploadCapable: status.mediaUploadCapable }
+        : {}),
+      ...(status.seoPlugin !== undefined
+        ? { lastHealthSeoPlugin: status.seoPlugin, seoPlugin: status.seoPlugin }
         : {}),
     };
   }

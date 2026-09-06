@@ -103,16 +103,15 @@ export function GeoAuditResultClient({
 
         <div className={`${glassCard} p-6 space-y-4`}>
           <div>
-            <p className="text-sm font-semibold text-white">Get the full fix plan</p>
+            <p className="text-sm font-semibold text-white">Email yourself a fix checklist</p>
             <p className="mt-1 text-xs text-white/60">
-              Optional — results stay visible either way. Join the waitlist or start free and book a
-              demo.
+              Optional. The audit above stays on this page either way.
             </p>
           </div>
           <WaitlistForm
             featureKey="geo-audit-lead"
             variant="dark"
-            buttonLabel="Email me tips"
+            buttonLabel="Send checklist"
             placeholder="you@company.com"
           />
           <div className="flex flex-wrap gap-2 pt-1">
@@ -135,7 +134,7 @@ export function GeoAuditResultClient({
               <p className="text-sm text-white/65 ml-6">{issue.detail}</p>
               {issue.fix && issue.status !== "pass" && (
                 <div className="ml-6 mt-1 bg-white/5 rounded-lg px-3 py-2">
-                  <p className="text-xs font-semibold text-white/50 mb-0.5">Fix</p>
+                  <p className="text-xs font-semibold text-white/70 mb-0.5">Fix</p>
                   <p className="text-xs text-white/80">{issue.fix}</p>
                 </div>
               )}
@@ -146,8 +145,8 @@ export function GeoAuditResultClient({
 
       <DarkCTABand
         titleLine1="Want to fix these"
-        titleLine2="issues automatically?"
-        description="Sign up free and fix these issues with research-driven drafts, schema, and cross-platform publishing."
+        titleLine2="issues in Content Studio?"
+        description="Create an account, draft the missing pieces, and publish to your CMS."
         primaryCta={{ label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF }}
         secondaryCta={{ label: CONTACT_CTA_LABEL, href: CONTACT_HREF }}
       />

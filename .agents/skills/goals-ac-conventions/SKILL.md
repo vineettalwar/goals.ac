@@ -64,6 +64,16 @@ Check: `node lib/app-shell/scripts/check-page-chrome.mjs`
 
 **Enforced in:** `.cursor/rules/app-shell-grid.mdc`, `docs/memory.md`.
 
+## Tailwind canonical spacing classes
+
+Prefer spacing-scale utilities over equivalent `-[Npx]` arbitrary values (`tailwindcss(suggestCanonicalClasses)`).
+
+- Unit = `px / 4` → `left-[15px]` → `left-3.75`, `max-h-[320px]` → `max-h-80`, `min-w-[640px]` → `min-w-160`.
+- Keep arbitrary for hairlines (`1px`–`3px`), font sizes (`text-[11px]`), tracking, shadows, and CSS variables.
+- Fix on touch / new UI; no drive-by churn of legacy decorative orbs.
+
+**Enforced in:** `docs/memory.md`.
+
 ## Build artifacts — do not commit
 
 These are generated locally or in CI/Workers Builds and are **gitignored**. Never add them to git:

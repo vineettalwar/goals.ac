@@ -106,14 +106,14 @@ export function DashboardActivityChart({
         </div>
       </div>
       {!hasSignal ? (
-        <div className="flex min-h-[180px] flex-1 flex-col justify-center px-1 py-6">
+        <div className="flex min-h-45 flex-1 flex-col justify-center px-1 py-6">
           <p className="text-sm font-medium text-foreground">No publishes in recent history</p>
           <p className="mt-1 max-w-xs text-xs text-muted-foreground text-pretty">
             Successful CMS publishes will plot here as they land.
           </p>
         </div>
       ) : (
-        <div className="min-h-[180px] flex-1">
+        <div className="min-h-45 flex-1">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
               <defs>
@@ -165,7 +165,7 @@ export function DashboardPipelineDonut({ slices }: { slices: PipelineSlice[] }) 
 
   if (total === 0) {
     return (
-      <div className="flex h-full min-h-[220px] flex-col items-center justify-center text-center">
+      <div className="flex h-full min-h-55 flex-col items-center justify-center text-center">
         <p className="text-sm font-medium text-foreground">No pipeline yet</p>
         <p className="mt-1 max-w-[16rem] text-xs text-muted-foreground text-pretty">
           Drafts and publishes will show up here once content is in motion.
@@ -177,7 +177,7 @@ export function DashboardPipelineDonut({ slices }: { slices: PipelineSlice[] }) 
   return (
     <div className="flex h-full flex-col">
       <p className="text-sm text-muted-foreground">Pipeline mix</p>
-      <div className="relative mx-auto mt-2 h-[160px] w-full max-w-[200px]">
+      <div className="relative mx-auto mt-2 h-40 w-full max-w-50">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie

@@ -6,6 +6,10 @@
  * Without this, core REST silently drops unregistered meta keys —
  * see detectMetaWarning() in the TypeScript connector.
  *
+ * AIOSEO v4 stores SEO in `wp_aioseo_posts` and exposes `aioseo_meta_data` on
+ * REST itself — these post-meta keys are only for Yoast / Rank Math / SEOPress
+ * (and AIOSEO's WPML duplicate copies when AIOSEO also writes them).
+ *
  * @package goals-ac
  */
 
@@ -13,39 +17,17 @@ namespace Goals_AC;
 
 defined( 'ABSPATH' ) || exit;
 
+/**
+ * Registers SEO post meta keys with show_in_rest for core REST publishes.
+ */
 class Seo_Rest_Meta {
 
 	/**
-	 * Every meta key the Seo_Meta_Mapper may produce, across all supported
-	 * SEO plugins. Kept as a flat list — register_post_meta is a no-op for
-	 * keys that were already registered by the SEO plugin itself.
+	 * Post types that receive SEO meta registration.
+	 *
+	 * @var array<int, string>
 	 */
-	private const KEYS = array(
-		// Yoast.
-		'_yoast_wpseo_title',
-		'_yoast_wpseo_metadesc',
-		'_yoast_wpseo_focuskw',
-		'_yoast_wpseo_opengraph-title',
-		'_yoast_wpseo_opengraph-description',
-		'_yoast_wpseo_opengraph-image',
-		// Rank Math.
-		'rank_math_title',
-		'rank_math_description',
-		'rank_math_focus_keyword',
-		'rank_math_facebook_title',
-		'rank_math_facebook_description',
-		'rank_math_facebook_image',
-		// AIOSEO.
-		'_aioseo_title',
-		'_aioseo_description',
-		'_aioseo_og_title',
-		'_aioseo_og_description',
-		// SEOPress.
-		'_seopress_titles_title',
-		'_seopress_titles_desc',
-		'_seopress_social_fb_title',
-		'_seopress_social_fb_desc',
-	);
+	private const POST_TYPES = array( 'post', 'page' );
 
 	/**
 	 * Hook into init to register meta before any REST request fires.
@@ -55,22 +37,24 @@ class Seo_Rest_Meta {
 	}
 
 	/**
-	 * Register every known SEO meta key for posts with show_in_rest = true.
+	 * Register every known SEO meta key with show_in_rest = true.
 	 */
 	public function register(): void {
-		foreach ( self::KEYS as $key ) {
-			\register_post_meta(
-				'post',
-				$key,
-				array(
-					'show_in_rest'  => true,
-					'single'        => true,
-					'type'          => 'string',
-					'auth_callback' => function ( $allowed, $meta_key, $object_id ) {
-						return \current_user_can( 'edit_post', $object_id );
-					},
-				)
-			);
+		foreach ( self::POST_TYPES as $post_type ) {
+			foreach ( Seo_Meta_Mapper::ALL_META_KEYS as $key ) {
+				\register_post_meta(
+					$post_type,
+					$key,
+					array(
+						'show_in_rest'  => true,
+						'single'        => true,
+						'type'          => 'string',
+						'auth_callback' => function ( $allowed, $meta_key, $object_id ) {
+							return \current_user_can( 'edit_post', $object_id );
+						},
+					)
+				);
+			}
 		}
 	}
 }

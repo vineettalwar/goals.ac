@@ -2,14 +2,13 @@
 
 import type { ReactNode } from "react";
 import dynamic from "next/dynamic";
-import { MarketingPageSkeleton } from "@/components/skeletons/marketing-page-skeleton";
 import type { LanderConfigKey } from "./feature-lander-page";
 
 const FeatureLanderByKey = dynamic(
   () => import("./feature-lander-page").then((m) => m.FeatureLanderByKey),
-  { loading: () => <MarketingPageSkeleton /> },
 );
 
+/** Code-split lander body without a soft-nav skeleton blank. */
 export function FeatureLanderDynamic({
   configKey,
   middleContent,

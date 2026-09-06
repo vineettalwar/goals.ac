@@ -85,7 +85,9 @@ export function FeatureLanderPage({
           titleLine2="Join the waitlist"
           description="We're building this next. Leave your email and we'll notify you at launch."
         >
-          <WaitlistForm featureKey={waitlistKey} variant="dark" />
+          <div className="flex justify-center">
+            <WaitlistForm featureKey={waitlistKey} variant="dark" />
+          </div>
         </MarketingSection>
       )}
 

@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode, RefObject } from "react";
-import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 import { MarketingReveal } from "@/components/marketing/motion/marketing-reveal";
 
 type HeroOverlapShellProps = {
@@ -10,19 +9,16 @@ type HeroOverlapShellProps = {
   sectionRef?: RefObject<HTMLElement | null>;
 };
 
+/** Flush form band under the hero — no floating glass card. */
 export function HeroOverlapShell({ id, children, sectionRef }: HeroOverlapShellProps) {
   return (
     <section
       ref={sectionRef}
       id={id}
-      className="py-0 bg-transparent relative z-20 -mt-4 sm:-mt-8"
+      className="relative z-20 scroll-mt-24 bg-black"
     >
-      <div className="max-w-3xl mx-auto px-6">
-        <MarketingReveal
-          mode="mount"
-          delayMs={150}
-          className={`${cardSurfaceClass("glass")} overflow-hidden shadow-2xl shadow-black/40`}
-        >
+      <div className="mx-auto max-w-3xl px-6 py-12 sm:py-16">
+        <MarketingReveal mode="mount" delayMs={150}>
           {children}
         </MarketingReveal>
       </div>

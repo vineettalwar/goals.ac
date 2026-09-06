@@ -1,4 +1,6 @@
-import type { FormEvent, ReactNode } from "react";
+"use client";
+
+import { useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { GoalsBrandMark } from "../brand-mark";
 
 export type AuthMode = "login" | "signup";
@@ -14,6 +16,15 @@ const INPUT_CLASS =
 
 const OUTLINE_BUTTON_CLASS =
   "inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium hover:bg-muted/50";
+
+function subscribeNoop() {
+  return () => {};
+}
+
+/** False on SSR + first client paint; true after hydrate — avoids PW-manager DOM injection mismatches. */
+function useHydrated() {
+  return useSyncExternalStore(subscribeNoop, () => true, () => false);
+}
 
 function GoogleIcon() {
   return (
@@ -100,6 +111,8 @@ export function AuthView({
   renderForgotPasswordLink?: (props: AuthLinkProps) => ReactNode;
 }) {
   const copy = MODE_COPY[mode];
+  // Password managers inject attrs/nodes before hydrate; mount fields after.
+  const hydrated = useHydrated();
 
   return (
     <div className="paper-card p-8">
@@ -137,16 +150,20 @@ export function AuthView({
             <label htmlFor="auth-name" className="text-sm font-medium">
               Full name
             </label>
-            <input
-              id="auth-name"
-              type="text"
-              required
-              autoComplete="name"
-              placeholder="Alex Johnson"
-              value={name}
-              onChange={(event) => onNameChange(event.target.value)}
-              className={INPUT_CLASS}
-            />
+            {hydrated ? (
+              <input
+                id="auth-name"
+                type="text"
+                required
+                autoComplete="name"
+                placeholder="Alex Johnson"
+                value={name}
+                onChange={(event) => onNameChange(event.target.value)}
+                className={INPUT_CLASS}
+              />
+            ) : (
+              <div className={`${INPUT_CLASS} h-10`} aria-hidden />
+            )}
           </div>
         ) : null}
 
@@ -154,16 +171,20 @@ export function AuthView({
           <label htmlFor="auth-email" className="text-sm font-medium">
             Email
           </label>
-          <input
-            id="auth-email"
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="you@company.com"
-            value={email}
-            onChange={(event) => onEmailChange(event.target.value)}
-            className={INPUT_CLASS}
-          />
+          {hydrated ? (
+            <input
+              id="auth-email"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="you@company.com"
+              value={email}
+              onChange={(event) => onEmailChange(event.target.value)}
+              className={INPUT_CLASS}
+            />
+          ) : (
+            <div className={`${INPUT_CLASS} h-10`} aria-hidden />
+          )}
         </div>
 
         <div className="space-y-1.5">
@@ -188,22 +209,26 @@ export function AuthView({
               )
             ) : null}
           </div>
-          <input
-            id="auth-password"
-            type="password"
-            required
-            minLength={mode === "signup" ? 8 : 1}
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            placeholder={mode === "signup" ? "Min. 8 characters" : "••••••••"}
-            value={password}
-            onChange={(event) => onPasswordChange(event.target.value)}
-            className={INPUT_CLASS}
-          />
+          {hydrated ? (
+            <input
+              id="auth-password"
+              type="password"
+              required
+              minLength={mode === "signup" ? 8 : 1}
+              autoComplete={mode === "signup" ? "new-password" : "current-password"}
+              placeholder={mode === "signup" ? "Min. 8 characters" : "••••••••"}
+              value={password}
+              onChange={(event) => onPasswordChange(event.target.value)}
+              className={INPUT_CLASS}
+            />
+          ) : (
+            <div className={`${INPUT_CLASS} h-10`} aria-hidden />
+          )}
         </div>
 
         <button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !hydrated}
           aria-busy={submitting}
           className="inline-flex h-10 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50"
         >

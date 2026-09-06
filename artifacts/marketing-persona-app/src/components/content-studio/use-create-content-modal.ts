@@ -24,30 +24,15 @@ import {
   buildStepSequence,
   extractSections,
   EMPTY_CMS_CONNECTIONS,
+  parseSourceUrls,
 } from "./create-content-modal-logic";
-
-export type BriefContentDraft = {
-  briefId?: number;
-  keyword: string;
-  angleHint?: string;
-  formatType: ContentFormatType;
-  workingTitle?: string;
-};
-
-function parseSourceUrls(raw: string): string[] {
-  return raw
-    .split(/\r?\n|,/)
-    .map((part) => part.trim())
-    .filter((part) => /^https?:\/\//i.test(part));
-}
-
-type CompetitorAnalysisRow = {
-  competitorUrl: string;
-  competitorName: string;
-  contentGaps: string[];
-  quickWins: string[];
-  threatLevel: "low" | "medium" | "high";
-};
+import {
+  runGeneration as runGenerationFn,
+  runRepurpose as runRepurseFn,
+  runOptimizeImport as runOptimizeImportFn,
+} from "./create-content-modal-runners";
+export type { BriefContentDraft } from "./create-content-modal-types";
+import type { BriefContentDraft } from "./create-content-modal-types";
 
 export function useCreateContentModal({
   open,
@@ -118,7 +103,10 @@ const [optimizeError, setOptimizeError] = useState<string | null>(null);
 
 const [competitorUrls, setCompetitorUrls] = useState<string[]>([]);
 const savedCompetitorUrlsRef = useRef<string[]>([]);
-const [competitorAnalyses, setCompetitorAnalyses] = useState<CompetitorAnalysisRow[]>([]);
+const [competitorAnalyses, setCompetitorAnalyses] = useState<Array<{
+  competitorUrl: string; competitorName: string; contentGaps: string[]; quickWins: string[];
+  threatLevel: "low" | "medium" | "high";
+}>>([]);
 const [competitorFocusUrl, setCompetitorFocusUrl] = useState("");
 const [newCompetitorUrl, setNewCompetitorUrl] = useState("");
 const [projectIndustry, setProjectIndustry] = useState("");
@@ -138,21 +126,14 @@ const isGeneratingStep =
 async function loadSourcePiece(id: string) {
   setSourcePieceId(id);
   const summary = existingPieces.find((p) => String(p.id) === id);
-  if (summary) {
-    setRepurposeKeyword(summary.targetKeyword);
-  }
-  if (!id) {
-    setRepurposeContent("");
-    return;
-  }
+  if (summary) setRepurposeKeyword(summary.targetKeyword);
+  if (!id) { setRepurposeContent(""); return; }
   setLoadingSourcePiece(true);
   try {
     const res = await fetch(`/api/content-pieces/${id}`);
     if (res.ok) {
       const full = (await res.json()) as {
-        bodyMarkdown?: string;
-        title?: string;
-        targetKeyword?: string;
+        bodyMarkdown?: string; title?: string; targetKeyword?: string;
       };
       setRepurposeContent(full.bodyMarkdown ?? "");
       if (full.targetKeyword) setRepurposeKeyword(full.targetKeyword);
@@ -219,7 +200,7 @@ if (open && competitorContext && competitorContextApplied !== projectId) {
   setCompetitorContextApplied(projectId);
   setCompetitorUrls(urls);
   setProjectIndustry(competitorContext.industry ?? "");
-  setCompetitorAnalyses((competitorContext.analyses ?? []) as CompetitorAnalysisRow[]);
+  setCompetitorAnalyses((competitorContext.analyses ?? []) as typeof competitorAnalyses);
   setCompetitorFocusUrl((prev) => {
     if (!prev) return "";
     const normalized = normalizeCompetitorUrl(prev);
@@ -239,19 +220,12 @@ useLayoutEffect(() => {
 
 useEffect(() => {
   if (!selectedFormat) return;
-  const suggested = resolveSuggestedDestination(
-    selectedFormat,
-    cmsConnections,
-    primaryBlogDestination,
-  );
+  const suggested = resolveSuggestedDestination(selectedFormat, cmsConnections, primaryBlogDestination);
   setIntendedDestination(suggested ?? "");
 }, [selectedFormat, cmsConnections, primaryBlogDestination]);
 
 useEffect(() => {
-  if (!open) {
-    setSaveBedrockModel(false);
-    return;
-  }
+  if (!open) { setSaveBedrockModel(false); return; }
   setBedrockModel(orgBedrockModel ?? "");
 }, [open, orgBedrockModel]);
 
@@ -270,15 +244,11 @@ if (draftKey && draftKey !== appliedDraftKey) {
   setBriefId(initialDraft!.briefId ?? null);
   setStepIndex(0);
 }
-if (!open && appliedDraftKey) {
-  setAppliedDraftKey(null);
-}
+if (!open && appliedDraftKey) setAppliedDraftKey(null);
 
 const [appliedOptimizeKey, setAppliedOptimizeKey] = useState<string | null>(null);
 const optimizeKey =
-  open && initialOptimize
-    ? `${initialOptimize.url}|${initialOptimize.keyword}`
-    : null;
+  open && initialOptimize ? `${initialOptimize.url}|${initialOptimize.keyword}` : null;
 
 if (optimizeKey && optimizeKey !== appliedOptimizeKey) {
   setAppliedOptimizeKey(optimizeKey);
@@ -289,9 +259,7 @@ if (optimizeKey && optimizeKey !== appliedOptimizeKey) {
   setOptimizeError(null);
   setStepIndex(0);
 }
-if (!open && appliedOptimizeKey) {
-  setAppliedOptimizeKey(null);
-}
+if (!open && appliedOptimizeKey) setAppliedOptimizeKey(null);
 
 const goNextStable = useCallback(() => {
   setStepIndex((i) => (i < steps.length - 1 ? i + 1 : i));
@@ -316,353 +284,81 @@ const buildAngleHint = useCallback((format: ContentFormatType): string | undefin
   return parts.join("|").trim() || undefined;
 }, [linkedinArchetype, linkedinHook, contentSection, editorNotes, sourceUrlsInput, angleHint]);
 
-const resolvedCompetitorFocusUrl = useCallback((): string | undefined => {
-  if (!competitorFocusUrl) return undefined;
-  return normalizeCompetitorUrl(competitorFocusUrl) ?? undefined;
-}, [competitorFocusUrl]);
-
-const resolvedCompetitorUrls = useCallback((): string[] | undefined => {
-  const urls = normalizeCompetitorUrlList(competitorUrls);
-  return urls.length > 0 ? urls : undefined;
-}, [competitorUrls]);
-
 const competitorGenerateFields = useCallback(() => {
-  const focus = resolvedCompetitorFocusUrl();
-  const urls = resolvedCompetitorUrls();
+  const focus = competitorFocusUrl
+    ? normalizeCompetitorUrl(competitorFocusUrl) ?? undefined
+    : undefined;
+  const urls = normalizeCompetitorUrlList(competitorUrls);
+  const resolvedUrls = urls.length > 0 ? urls : undefined;
   return {
-    ...(focus ? { competitorFocusUrl: focus } : urls?.[0] ? { competitorFocusUrl: urls[0] } : {}),
-    ...(urls ? { competitorUrls: urls } : {}),
+    ...(focus ? { competitorFocusUrl: focus } : resolvedUrls?.[0] ? { competitorFocusUrl: resolvedUrls[0] } : {}),
+    ...(resolvedUrls ? { competitorUrls: resolvedUrls } : {}),
   };
-}, [resolvedCompetitorFocusUrl, resolvedCompetitorUrls]);
+}, [competitorFocusUrl, competitorUrls]);
 
-const handleGenerateFallback = useCallback(async (): Promise<ContentPieceRow> => {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (bypassCache) headers["x-bypass-cache"] = "true";
-
-  const trimmedSection = contentSection.trim();
-  const res = await fetch(`/api/website-projects/${projectId}/content-pieces`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      formatType: selectedFormat,
-      targetKeyword: keyword.trim(),
-      angleHint: buildAngleHint(selectedFormat!),
-      plannedDate: plannedDate || undefined,
-      briefId: briefId ?? undefined,
-      cmsCategories: trimmedSection ? [trimmedSection] : undefined,
-      cmsTags: undefined,
-      ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
-      ...competitorGenerateFields(),
-      ...(showBedrockModelPicker && bedrockModel.trim()
-        ? {
-            bedrockModel: bedrockModel.trim(),
-            ...(canManageBedrockModel && saveBedrockModel ? { saveBedrockModel: true } : {}),
-          }
-        : {}),
-    }),
-  });
-
-  if (!res.ok) {
-    const data = await res.json().catch(() => null);
-    if (res.status === 409 && data?.code === "voice_required") {
-      onVoiceRequired?.();
-      throw new Error(data?.error ?? "Brand voice required");
-    }
-    throw new Error(data?.error ?? "Generation failed");
-  }
-
-  return (await res.json()) as ContentPieceRow;
-}, [
-  bypassCache,
-  briefId,
-  competitorGenerateFields,
-  intendedDestination,
-  keyword,
-  plannedDate,
-  projectId,
+const sharedGenerateParams = useCallback(() => ({
   selectedFormat,
-  buildAngleHint,
+  keyword,
+  bypassCache,
+  plannedDate,
+  briefId,
+  intendedDestination,
+  projectId,
+  contentSection,
   showBedrockModelPicker,
   bedrockModel,
   canManageBedrockModel,
   saveBedrockModel,
+  buildAngleHint,
+  competitorGenerateFields,
   onVoiceRequired,
-  sourceUrlsInput,
-  contentSection,
+}), [
+  selectedFormat, keyword, bypassCache, plannedDate, briefId, intendedDestination,
+  projectId, contentSection, showBedrockModelPicker, bedrockModel, canManageBedrockModel,
+  saveBedrockModel, buildAngleHint, competitorGenerateFields, onVoiceRequired,
 ]);
 
 const runGeneration = useCallback(async () => {
-  if (!selectedFormat || !keyword.trim()) return;
-  setGenerating(true);
-  setDetectedSections([]);
-
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  if (bypassCache) headers["x-bypass-cache"] = "true";
-
-  const payload = {
-    cmsCategories: contentSection.trim() ? [contentSection.trim()] : undefined,
-    cmsTags: undefined,
-    formatType: selectedFormat,
-    targetKeyword: keyword.trim(),
-    angleHint: buildAngleHint(selectedFormat),
-    plannedDate: plannedDate || undefined,
-    briefId: briefId ?? undefined,
-    ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
-    ...competitorGenerateFields(),
-    ...(showBedrockModelPicker && bedrockModel.trim()
-      ? {
-          bedrockModel: bedrockModel.trim(),
-          ...(canManageBedrockModel && saveBedrockModel ? { saveBedrockModel: true } : {}),
-        }
-      : {}),
-  };
-
-  try {
-    let res: Response;
-    try {
-      res = await fetch(`/api/website-projects/${projectId}/content-pieces/generate/stream`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-      });
-    } catch {
-      const piece = await handleGenerateFallback();
-      onCreated(piece);
-      toast.success("Content generated");
-      handleClose();
-      return;
-    }
-
-    if (!res.ok || !res.body) {
-      if (res.status === 409) {
-        const data = await res.json().catch(() => null);
-        if (data?.code === "voice_required") {
-          onVoiceRequired?.();
-          throw new Error(data?.error ?? "Brand voice required");
-        }
-      }
-      const piece = await handleGenerateFallback();
-      onCreated(piece);
-      toast.success("Content generated");
-      handleClose();
-      return;
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
-    let jsonAccumulated = "";
-    let finalPiece: ContentPieceRow | null = null;
-    let fromCache = false;
-    let pendingEvent: string | null = null;
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        if (line.startsWith("event: ")) {
-          pendingEvent = line.slice(7).trim();
-          continue;
-        }
-        if (!line.startsWith("data: ")) continue;
-
-        const eventPayload = line.slice(6);
-        if (pendingEvent === "cached") {
-          fromCache = true;
-          try {
-            const cached = JSON.parse(eventPayload) as ContentPieceRow;
-            if ("id" in cached) finalPiece = cached;
-          } catch {
-            // ignore malformed cached payload
-          }
-          pendingEvent = null;
-          continue;
-        }
-        if (pendingEvent === "error") {
-          let message = "Generation failed";
-          try {
-            const errData = JSON.parse(eventPayload) as { error?: string };
-            if (errData.error) message = errData.error;
-          } catch {
-            // keep default
-          }
-          throw new Error(message);
-        }
-        pendingEvent = null;
-
-        try {
-          const parsed = JSON.parse(eventPayload) as { text?: string } | ContentPieceRow;
-          if ("text" in parsed && parsed.text) {
-            jsonAccumulated += parsed.text;
-            const sections = extractSections(jsonAccumulated);
-            if (sections.length > 0) {
-              setDetectedSections(sections);
-            } else if (jsonAccumulated.length > 30) {
-              setDetectedSections(["Crafting title\u2026"]);
-            }
-          } else if ("id" in parsed) {
-            finalPiece = parsed as ContentPieceRow;
-          }
-        } catch {
-          // partial JSON during streaming
-        }
-      }
-    }
-
-    if (finalPiece) {
-      onCreated(finalPiece);
-      toast.success(fromCache ? "Loaded cached content" : "Content generated");
-      handleClose();
-      return;
-    }
-
-    throw new Error("Generation completed without a result");
-  } catch (err) {
-    toast.error(err instanceof Error ? err.message : "Generation failed");
-    setStepIndex((i) => Math.max(0, i - 1));
-    generationStarted.current = false;
-  } finally {
-    setGenerating(false);
-  }
-}, [
-  selectedFormat,
-  keyword,
-  bypassCache,
-  plannedDate,
-  briefId,
-  intendedDestination,
-  projectId,
-  onCreated,
-  handleClose,
-  handleGenerateFallback,
-  competitorGenerateFields,
-  buildAngleHint,
-  showBedrockModelPicker,
-  bedrockModel,
-  canManageBedrockModel,
-  saveBedrockModel,
-  onVoiceRequired,
-]);
+  await runGenerationFn({
+    ...sharedGenerateParams(),
+    onCreated,
+    handleClose,
+    setGenerating,
+    setDetectedSections,
+    setStepIndex,
+    generationStarted,
+  });
+}, [sharedGenerateParams, onCreated, handleClose]);
 
 const runRepurpose = useCallback(async () => {
-  if (!repurposeKeyword.trim() || repurposeContent.trim().length < 50) return;
-  setGenerating(true);
-  try {
-    const res = await fetch(`/api/website-projects/${projectId}/content-pieces/repurpose`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        targetFormat: repurposeFormat,
-        targetKeyword: repurposeKeyword.trim(),
-        existingContent: repurposeContent.trim(),
-      }),
-    });
-    if (!res.ok) throw new Error("Repurpose failed");
-    const piece = await res.json();
-    onCreated(piece);
-    toast.success("Repurposed content created");
-    handleClose();
-  } catch {
-    toast.error("Repurpose failed");
-    setStepIndex((i) => Math.max(0, i - 1));
-    generationStarted.current = false;
-  } finally {
-    setGenerating(false);
-  }
-}, [
-  repurposeFormat,
-  repurposeKeyword,
-  repurposeContent,
-  projectId,
-  onCreated,
-  handleClose,
-]);
+  await runRepurseFn({
+    repurposeFormat,
+    repurposeKeyword,
+    repurposeContent,
+    projectId,
+    onCreated,
+    handleClose,
+    setGenerating,
+    setStepIndex,
+    generationStarted,
+  });
+}, [repurposeFormat, repurposeKeyword, repurposeContent, projectId, onCreated, handleClose]);
 
 const runOptimizeImport = useCallback(async () => {
-  if (!optimizeUrl.trim() || !optimizeKeyword.trim()) return;
-  setGenerating(true);
-  setOptimizeError(null);
-  try {
-    const post = async (confirmCanonical?: boolean) => {
-      const res = await fetch(`/api/website-projects/${projectId}/content-pieces/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: optimizeUrl.trim(),
-          targetKeyword: optimizeKeyword.trim(),
-          ...(optimizePaste.trim() ? { bodyMarkdown: optimizePaste.trim() } : {}),
-          ...(optimizeSecondary.trim()
-            ? {
-                secondaryKeywords: optimizeSecondary
-                  .split(",")
-                  .map((s) => s.trim())
-                  .filter(Boolean)
-                  .slice(0, 12),
-              }
-            : {}),
-          ...(confirmCanonical ? { confirmCanonical: true } : {}),
-        }),
-      });
-      return res;
-    };
-
-    let res = await post();
-    if (res.status === 422) {
-      const body = (await res.json().catch(() => null)) as {
-        needsCanonicalConfirm?: boolean;
-        enteredUrl?: string;
-        fetchedCanonicalUrl?: string;
-        error?: string;
-        pasteFallback?: boolean;
-      } | null;
-      if (body?.needsCanonicalConfirm && body.fetchedCanonicalUrl) {
-        const ok = confirm(
-          `Canonical URL is ${body.fetchedCanonicalUrl} (you entered ${body.enteredUrl}). Import using the fetched page?`,
-        );
-        if (!ok) {
-          setOptimizeError("Import cancelled");
-          setStepIndex(0);
-          generationStarted.current = false;
-          return;
-        }
-        res = await post(true);
-      } else {
-        setOptimizeError(body?.error ?? "Import failed");
-        setStepIndex(0);
-        generationStarted.current = false;
-        return;
-      }
-    }
-    if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as { error?: string } | null;
-      throw new Error(body?.error ?? "Import failed");
-    }
-    const data = (await res.json()) as { piece: ContentPieceRow };
-    onCreated(data.piece);
-    toast.success("Page imported — score it, Fix gaps, then publish update");
-    handleClose();
-    window.location.assign(`/projects/${projectId}/content-piece/${data.piece.id}`);
-  } catch (err) {
-    setOptimizeError(err instanceof Error ? err.message : "Import failed");
-    toast.error(err instanceof Error ? err.message : "Import failed");
-    setStepIndex(0);
-    generationStarted.current = false;
-  } finally {
-    setGenerating(false);
-  }
-}, [
-  optimizeUrl,
-  optimizeKeyword,
-  optimizeSecondary,
-  optimizePaste,
-  projectId,
-  onCreated,
-  handleClose,
-]);
+  await runOptimizeImportFn({
+    optimizeUrl,
+    optimizeKeyword,
+    optimizeSecondary,
+    optimizePaste,
+    projectId,
+    onCreated,
+    handleClose,
+    setGenerating,
+    setOptimizeError,
+    setStepIndex,
+    generationStarted,
+  });
+}, [optimizeUrl, optimizeKeyword, optimizeSecondary, optimizePaste, projectId, onCreated, handleClose]);
 
 useEffect(() => {
   if (!open || currentStep !== "generating" || generationStarted.current) return;
@@ -684,31 +380,22 @@ useEffect(() => {
 
 function addCompetitorUrl() {
   const normalized = normalizeCompetitorUrl(newCompetitorUrl);
-  if (!normalized) {
-    toast.error("Enter a valid competitor URL");
-    return;
-  }
+  if (!normalized) { toast.error("Enter a valid competitor URL"); return; }
   if (competitorUrls.some((u) => hostFromUrl(u) === hostFromUrl(normalized))) {
     toast.error("That competitor is already listed");
     return;
   }
-  if (competitorUrls.length >= 5) {
-    toast.error("Maximum 5 competitors");
-    return;
-  }
+  if (competitorUrls.length >= 5) { toast.error("Maximum 5 competitors"); return; }
   setCompetitorUrls((prev) => [...prev, normalized]);
   setNewCompetitorUrl("");
 }
 
-
 const saveCompetitorsAndContinue = useCallback(async () => {
   const normalized = normalizeCompetitorUrlList(competitorUrls);
-
   if (normalized.length !== competitorUrls.length) {
     toast.error("Remove or fix invalid competitor URLs");
     return;
   }
-
   const dirty =
     JSON.stringify([...normalized].sort()) !==
     JSON.stringify([...savedCompetitorUrlsRef.current].sort());
@@ -727,47 +414,28 @@ const saveCompetitorsAndContinue = useCallback(async () => {
       return;
     }
   }
-
   goNextStable();
 }, [competitorUrls, projectId, goNextStable]);
 
 const handleContinue = useCallback(() => {
-  if (currentStep === "competitors") {
-    void saveCompetitorsAndContinue();
-    return;
-  }
-  if (currentStep === "keyword" && !keyword.trim()) {
-    toast.error("Enter a target keyword");
-    return;
-  }
-  if (currentStep === "repurpose-keyword" && !repurposeKeyword.trim()) {
-    toast.error("Enter a target keyword");
-    return;
-  }
+  if (currentStep === "competitors") { void saveCompetitorsAndContinue(); return; }
+  if (currentStep === "keyword" && !keyword.trim()) { toast.error("Enter a target keyword"); return; }
+  if (currentStep === "repurpose-keyword" && !repurposeKeyword.trim()) { toast.error("Enter a target keyword"); return; }
   if (currentStep === "repurpose-source") {
-    if (repurposeContent.trim().length < 50) {
-      toast.error("Paste at least 50 characters of source content");
-      return;
-    }
+    if (repurposeContent.trim().length < 50) { toast.error("Paste at least 50 characters of source content"); return; }
     generationStarted.current = false;
     goNextStable();
     return;
   }
   if (currentStep === "optimize-url") {
-    if (!optimizeUrl.trim() || !optimizeKeyword.trim()) {
-      toast.error("Enter a page URL and primary keyword");
-      return;
-    }
+    if (!optimizeUrl.trim() || !optimizeKeyword.trim()) { toast.error("Enter a page URL and primary keyword"); return; }
     setOptimizeError(null);
     generationStarted.current = false;
     goNextStable();
     return;
   }
   if (currentStep === "review") {
-    if (!selectedFormat || !keyword.trim()) {
-      toast.error("Enter a target keyword");
-      return;
-    }
+    if (!selectedFormat || !keyword.trim()) { toast.error("Enter a target keyword"); return; }
     if (contentSection.trim().toLowerCase() === "news" && parseSourceUrls(sourceUrlsInput).length === 0) {
       toast.error("Add at least one source URL for News");
       return;
@@ -778,15 +446,8 @@ const handleContinue = useCallback(() => {
   }
   goNextStable();
 }, [
-  currentStep,
-  keyword,
-  repurposeKeyword,
-  repurposeContent,
-  optimizeUrl,
-  optimizeKeyword,
-  selectedFormat,
-  saveCompetitorsAndContinue,
-  goNextStable,
+  currentStep, keyword, repurposeKeyword, repurposeContent, optimizeUrl, optimizeKeyword,
+  selectedFormat, saveCompetitorsAndContinue, goNextStable, contentSection, sourceUrlsInput,
 ]);
 
 useEffect(() => {
@@ -794,50 +455,31 @@ useEffect(() => {
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === "Escape" && !generating) handleClose();
     if (e.key !== "Enter" || e.shiftKey || generating || isGeneratingStep) return;
-
     const target = e.target as HTMLElement | null;
     const tag = target?.tagName?.toLowerCase();
     if (tag === "textarea" || tag === "select" || target?.closest("[role='combobox']")) return;
-
     if (currentStep === "keyword" && !keyword.trim()) return;
     if (currentStep === "repurpose-keyword" && !repurposeKeyword.trim()) return;
     if (currentStep === "repurpose-source" && repurposeContent.trim().length < 50) return;
     if (currentStep === "review" && (!selectedFormat || !keyword.trim())) return;
-
-    if (STEPS_WITH_ENTER_CONTINUE.includes(currentStep)) {
+    if (STEPS_WITH_ENTER_CONTINUE.includes(currentStep as WizardStepId)) {
       e.preventDefault();
       handleContinue();
     }
   }
   window.addEventListener("keydown", onKeyDown);
   return () => window.removeEventListener("keydown", onKeyDown);
-}, [
-  open,
-  generating,
-  isGeneratingStep,
-  handleClose,
-  handleContinue,
-  currentStep,
-  keyword,
-  repurposeKeyword,
-  repurposeContent,
-  selectedFormat,
-]);
+}, [open, generating, isGeneratingStep, handleClose, handleContinue, currentStep, keyword, repurposeKeyword, repurposeContent, selectedFormat]);
 
 function selectFormat(type: ContentFormatType) {
   setSelectedFormat(type);
   const idx = steps.indexOf("format");
-  if (idx >= 0 && idx < steps.length - 1) {
-    setStepIndex(idx + 1);
-  }
+  if (idx >= 0 && idx < steps.length - 1) setStepIndex(idx + 1);
 }
 
 function selectPath(nextFlow: Flow) {
   setFlow(nextFlow);
-  if (nextFlow === "repurpose" || nextFlow === "optimize") {
-    setStepIndex(0);
-    return;
-  }
+  if (nextFlow === "repurpose" || nextFlow === "optimize") { setStepIndex(0); return; }
   setStepIndex(1);
 }
 

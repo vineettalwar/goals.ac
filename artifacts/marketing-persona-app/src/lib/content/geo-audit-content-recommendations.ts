@@ -97,9 +97,9 @@ export function geoAuditContentRecommendations(
       formatType: "faq_article",
       keyword: `${topic} FAQ`.slice(0, 80),
       angleHint:
-        `Write a FAQ article for ${host} covering the top buyer questions about ${topic}. ` +
-        "Include FAQPage JSON-LD so AI engines can cite direct answers.",
-      reason: "FAQ schema helps ChatGPT, Perplexity, and Google AI surface direct answers.",
+        `Write the FAQ buyers ask about ${topic} on ${host}. ` +
+        "Add FAQPage JSON-LD so crawlers and answer engines can cite the Q&A.",
+      reason: "No FAQPage markup — answer engines have nothing concrete to quote.",
       relatedCheck: faqIssue?.check ?? "Schema.org Markup",
       priority: "high",
     });
@@ -109,12 +109,12 @@ export function geoAuditContentRecommendations(
   if (metaIssue && metaIssue.status !== "pass") {
     push({
       id: "meta-description",
-      title: `${topic} — landing page copy refresh`,
+      title: `${topic} — landing page copy`,
       formatType: "landing_page_copy",
       keyword: topic,
       angleHint:
         `Rewrite hero, value props, and meta description for ${url}. ` +
-        "Target 50–160 characters for the meta description and align H1 with primary intent.",
+        "Keep the meta description between 50 and 160 characters; match the H1 to the main query.",
       reason: metaIssue.detail,
       relatedCheck: "Meta Description",
       priority: metaIssue.status === "fail" ? "high" : "medium",
@@ -125,12 +125,12 @@ export function geoAuditContentRecommendations(
   if (titleIssue && titleIssue.status !== "pass") {
     push({
       id: "page-title",
-      title: `${topic} — SEO title & positioning page`,
+      title: `${topic} — title and pillar rewrite`,
       formatType: "pillar_page",
       keyword: topic,
       angleHint:
-        `Create a pillar page for ${topic} with an optimized title tag (30–60 chars), ` +
-        "clear H1, and a strong above-the-fold summary for AI retrieval.",
+        `Build a pillar page for ${topic} with a title tag of 30–60 characters, ` +
+        "one clear H1, and a short summary above the fold.",
       reason: titleIssue.detail,
       relatedCheck: "Page Title",
       priority: titleIssue.status === "fail" ? "high" : "medium",
@@ -140,12 +140,12 @@ export function geoAuditContentRecommendations(
   if (schemaIssue && schemaIssue.status === "fail") {
     push({
       id: "schema-org",
-      title: `${topic} — authority pillar with structured data`,
+      title: `${topic} — guide with schema markup`,
       formatType: "guide",
       keyword: `${topic} guide`.slice(0, 80),
       angleHint:
-        `Comprehensive guide on ${topic} with Organization, WebSite, and Article JSON-LD. ` +
-        "Use clear headings so crawlers and LLMs can parse sections.",
+        `Long-form guide on ${topic} with Organization, WebSite, and Article JSON-LD. ` +
+        "Use real section headings so crawlers can parse the page.",
       reason: schemaIssue.detail,
       relatedCheck: "Schema.org Markup",
       priority: "high",
@@ -160,8 +160,8 @@ export function geoAuditContentRecommendations(
       formatType: "landing_page_copy",
       keyword: topic,
       angleHint:
-        `Restructure ${url} with exactly one H1, descriptive H2 sections, and scannable intro copy ` +
-        "that states who it's for and what outcome they get.",
+        `Restructure ${url} with exactly one H1, descriptive H2s, and an intro that names ` +
+        "who the page is for and what they get.",
       reason: h1Issue.detail,
       relatedCheck: "H1 Tag",
       priority: "high",
@@ -172,12 +172,12 @@ export function geoAuditContentRecommendations(
   if (h2Issue && h2Issue.status !== "pass") {
     push({
       id: "h2-depth",
-      title: `Complete guide to ${topic}`,
+      title: `Guide: ${topic}`,
       formatType: "guide",
       keyword: `how ${topic.toLowerCase()} works`.slice(0, 80),
       angleHint:
-        `Expand thin page content into a guide with 5+ H2 sections, examples, and a summary ` +
-        "AI engines can quote. Link back to the audited URL as the primary service page.",
+        `Expand thin copy into a guide with 5+ H2 sections, examples, and a short summary. ` +
+        "Link back to the audited URL as the main service page.",
       reason: h2Issue.detail,
       relatedCheck: "H2 Structure",
       priority: "medium",
@@ -188,12 +188,12 @@ export function geoAuditContentRecommendations(
   if (altIssue && altIssue.status !== "pass") {
     push({
       id: "image-alt",
-      title: `${topic} — visual explainer article`,
+      title: `${topic} — visual explainer`,
       formatType: "blog_post",
       keyword: `${topic} explained`.slice(0, 80),
       angleHint:
-        "Publish a visual blog post with annotated screenshots or diagrams. " +
-        "Every image needs descriptive alt text for accessibility and AI indexing.",
+        "Blog post with annotated screenshots or diagrams. " +
+        "Every image needs descriptive alt text.",
       reason: altIssue.detail,
       relatedCheck: "Image Alt Text",
       priority: "medium",
@@ -204,12 +204,12 @@ export function geoAuditContentRecommendations(
   if (ogIssue && ogIssue.status !== "pass") {
     push({
       id: "open-graph",
-      title: `${topic} — social & AI snippet pack`,
+      title: `${topic} — LinkedIn post + Open Graph`,
       formatType: "linkedin_post",
       keyword: topic,
       angleHint:
-        `Draft a LinkedIn post summarizing ${topic} with a hook, 3 insights, and CTA. ` +
-        "Reuse the hook for og:description on the audited page.",
+        `LinkedIn post on ${topic}: hook, three points, CTA. ` +
+        "Reuse the hook as og:description on the audited page.",
       reason: ogIssue.detail,
       relatedCheck: "Open Graph Tags",
       priority: "medium",
@@ -220,12 +220,12 @@ export function geoAuditContentRecommendations(
   if (twitterIssue && twitterIssue.status !== "pass") {
     push({
       id: "twitter-card",
-      title: `${topic} — X thread for distribution`,
+      title: `${topic} — X thread`,
       formatType: "twitter_thread",
       keyword: topic,
       angleHint:
-        `Thread breaking down ${topic} into 5–7 tweets with a strong opener. ` +
-        "Pair with twitter:card meta on the landing page.",
+        `5–7 tweets on ${topic} with a clear opener. ` +
+        "Add twitter:card meta on the landing page to match.",
       reason: twitterIssue.detail,
       relatedCheck: "Twitter Card Tags",
       priority: "medium",
@@ -236,12 +236,12 @@ export function geoAuditContentRecommendations(
   if (canonicalIssue && canonicalIssue.status !== "pass") {
     push({
       id: "canonical-hub",
-      title: `${topic} — canonical hub page`,
+      title: `${topic} — hub page`,
       formatType: "pillar_page",
       keyword: topic,
       angleHint:
-        `Create the definitive ${topic} hub page with a canonical URL and internal links ` +
-        "from related blog posts to consolidate authority.",
+        `Hub page for ${topic} with one canonical URL and links from related posts ` +
+        "pointing at it.",
       reason: canonicalIssue.detail,
       relatedCheck: "Canonical Tag",
       priority: "medium",

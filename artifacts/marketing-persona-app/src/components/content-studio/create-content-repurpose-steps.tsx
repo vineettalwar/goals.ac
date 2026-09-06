@@ -152,7 +152,7 @@ export function CreateContentRepurposeSteps({
                     placeholder="Paste existing content here…"
                     value={repurposeContent}
                     onChange={(e) => setRepurposeContent(e.target.value)}
-                    className="mt-6 text-base min-h-[200px]"
+                    className="mt-6 text-base min-h-50"
                   />
                   <StepActions
                     onContinue={handleContinue}

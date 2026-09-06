@@ -48,7 +48,7 @@ export function IntegrationHealthAlertBannerContainer() {
   return (
     <IntegrationHealthAlertBannerView
       alerts={alerts}
-      reconnectHref="/integrations"
+      reconnectHref="/integrations/ai"
       onDismiss={(id) => void handleDismiss(id)}
       dismissingId={dismissingId}
     />

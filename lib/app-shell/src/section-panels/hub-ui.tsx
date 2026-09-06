@@ -178,7 +178,7 @@ export function HubCardSkeleton({ count = 4 }: { count?: number }) {
   return (
     <div className="grid gap-2 sm:grid-cols-2">
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className={cn("paper-card flex h-[72px] animate-pulse items-center gap-3 p-4")}>
+        <div key={i} className={cn("paper-card flex h-18 animate-pulse items-center gap-3 p-4")}>
           <div className="h-10 w-10 rounded-lg bg-muted" />
           <div className="flex-1 space-y-2">
             <div className="h-3.5 w-24 rounded bg-muted" />

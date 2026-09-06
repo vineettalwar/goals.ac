@@ -95,6 +95,29 @@ Every feature is therefore written twice, and the copy serving customers is the 
 
 ---
 
+## Tailwind canonical spacing classes (2026-09-06)
+
+**Policy:** Prefer Tailwind spacing-scale utilities over equivalent arbitrary `-[Npx]` values. The IDE warns via `tailwindcss(suggestCanonicalClasses)`.
+
+Spacing unit = `Npx / 4` (0.25rem steps). Examples:
+
+| Avoid | Prefer |
+|---|---|
+| `left-[15px]` | `left-3.75` |
+| `max-h-[320px]` | `max-h-80` |
+| `max-h-[640px]` | `max-h-160` |
+| `max-w-[240px]` | `max-w-60` |
+| `min-w-[640px]` | `min-w-160` |
+| `w-[248px]` | `w-62` |
+
+**Keep arbitrary values when** there is no scale match: hairlines (`w-[1px]`, `p-[1px]`), non-spacing tokens (`text-[11px]`, `tracking-[0.08em]`), complex shadows/grids, or CSS variables.
+
+**Scope:** New UI and files you touch. Do not churn legacy Vite/`goals-ac` decorative orbs unless editing those files.
+
+**Enforced in:** `.agents/skills/goals-ac-conventions/SKILL.md` (this section).
+
+---
+
 ## Product page grid — locked
 
 **Policy (2026-09-06):** Product app pages use shared chrome from `lib/app-shell/src/shell-constants.ts` only.

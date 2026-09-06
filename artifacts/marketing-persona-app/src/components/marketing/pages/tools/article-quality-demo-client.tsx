@@ -1,5 +1,6 @@
 "use client";
 
+import { marked } from "marked";
 import { ArticleQualityPanel } from "@/components/content/article-quality-panel";
 import { ScoreRing } from "@/components/content/score-ring";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
@@ -17,20 +18,14 @@ import {
   ARTICLE_QUALITY_DEMO,
   HUMANIZE_DEMO_METRICS,
 } from "@/lib/marketing/content/article-quality-demo";
+import { sanitizeHtml } from "@/lib/security/sanitize-html";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
 const glassCard = cardSurfaceClass("glass", false);
 
 function demoMarkdownToHtml(markdown: string): string {
-  return markdown
-    .replace(/^# (.+)$/m, "<h2>$1</h2>")
-    .replace(/^## (.+)$/gm, "<h3>$1</h3>")
-    .replace(/^### (.+)$/gm, "<h4>$1</h4>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-primary">$1</a>')
-    .replace(/^> (.+)$/gm, "<blockquote><p>$1</p></blockquote>")
-    .replace(/\n\n/g, "</p><p>")
-    .replace(/^(.+)$/gm, (line) => (line.startsWith("<") ? line : `<p>${line}</p>`));
+  // marked handles GFM tables / code; the old regex path left pipe tables as raw text.
+  return sanitizeHtml(marked.parse(markdown, { async: false }) as string);
 }
 
 type HumanizeColumnProps = {
@@ -79,17 +74,17 @@ function HumanizeColumn({
           >
             {tellLabel}
           </p>
-          <p className="text-xs text-white/55 mt-1">
+          <p className="text-xs text-white/70 mt-1">
             Human voice {humanVoiceScore}/{humanVoiceMax}
             {humanVoiceDetail ? ` · ${humanVoiceDetail}` : ""}
           </p>
         </div>
-        <div className="shrink-0 [&_span]:text-white [&_.text-muted-foreground]:text-white/50 [&_.text-secondary]:text-white/20">
+        <div className="shrink-0 [&_span]:text-white [&_.text-muted-foreground]:text-white/70 [&_.text-secondary]:text-white/40">
           <ScoreRing score={qualityTotal} size={72} label="Quality" />
         </div>
       </div>
 
-      <div className="max-h-[320px] overflow-y-auto marketing-prose-dark text-sm leading-relaxed border-t border-white/10 pt-4">
+      <div className="max-h-80 overflow-y-auto marketing-prose-dark text-sm leading-relaxed border-t border-white/10 pt-4">
         <div dangerouslySetInnerHTML={{ __html: demoMarkdownToHtml(markdown) }} />
       </div>
     </div>
@@ -130,7 +125,7 @@ export function ArticleQualityDemoClient() {
                 How we tailored this for {demo.brandName}
               </p>
               <div>
-                <p className="text-xs text-white/50 mb-2">Brand colors</p>
+                <p className="text-xs text-white/70 mb-2">Brand colors</p>
                 <div className="flex gap-2">
                   {demo.brandColors.map((color) => (
                     <span
@@ -143,7 +138,7 @@ export function ArticleQualityDemoClient() {
                 </div>
               </div>
               <div>
-                <p className="text-xs text-white/50 mb-2">Voice & tone</p>
+                <p className="text-xs text-white/70 mb-2">Voice & tone</p>
                 <div className="flex flex-wrap gap-2">
                   {demo.voiceTags.map((tag) => (
                     <span key={tag} className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs font-medium text-white/80">
@@ -153,7 +148,7 @@ export function ArticleQualityDemoClient() {
                 </div>
               </div>
               <div>
-                <p className="text-xs text-white/50 mb-2">Cross-linked offerings</p>
+                <p className="text-xs text-white/70 mb-2">Cross-linked offerings</p>
                 <div className="flex flex-wrap gap-2">
                   {demo.offerings.map((item) => (
                     <span key={item} className="rounded-full border border-white/10 px-2.5 py-0.5 text-xs text-white/80">
@@ -176,8 +171,8 @@ export function ArticleQualityDemoClient() {
             />
           </div>
 
-          <div className={`${glassCard} p-5 max-h-[640px] overflow-y-auto marketing-prose-dark`}>
-            <p className="text-xs text-white/50 mb-4 not-prose">
+          <div className={`${glassCard} p-5 max-h-160 overflow-y-auto marketing-prose-dark`}>
+            <p className="text-xs text-white/70 mb-4 not-prose">
               {demo.metaTitle} · {demo.wordCount.toLocaleString()} words
             </p>
             <div dangerouslySetInnerHTML={{ __html: demoMarkdownToHtml(demo.bodyMarkdown) }} />

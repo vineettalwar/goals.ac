@@ -2,9 +2,9 @@
 
 ## Leftovers (2026-09-06) — start here
 
-**Done in code this arc:** OpenSEO Features 1–6 · Gate 0 (SEC/BLOCK except live evidence) · HIGH-1/8/10/13/16 · MED-1 · CF `d1Db` typing.  
+**Done in code this arc:** OpenSEO Features 1–6 · Gate 0 (SEC/BLOCK except live evidence) · HIGH-1/8/10/13/16 · MED-1 · MED-6 (WP SEO plugin storage) · CF `d1Db` typing.  
 **Source audit:** [`docs/audits/2026-09-06-production-readiness.md`](docs/audits/2026-09-06-production-readiness.md) (remediation notes at top; body text is historical).  
-**Do not restart:** Gate 0 packaging, LinkedIn draft honesty, readiness options wiring, SEO REST meta registration, publish dead-letter, site-graph caps, placeholder scanner.
+**Do not restart:** Gate 0 packaging, LinkedIn draft honesty, readiness options wiring, SEO REST meta registration, publish dead-letter, site-graph caps, placeholder scanner, SEO-plugin meta mapping (Yoast/Rank Math/AIOSEO/SEOPress).
 
 ### P0 — human / live env (blocks “one WP customer works”)
 
@@ -26,7 +26,7 @@
 | **HIGH-11** | `viewer` can write via routes outside middleware allowlist | Next `middleware.ts` `WRITE_API_PREFIXES` + handlers that only `requireAuth()` | Add missing prefixes **or** `requireOrgPermission` on `/api/goals`, `/briefs`, `/companies`, `/personas`, `/tracked-keywords`, `/competitor-analysis`, `/keyword-analysis`, `/roadmaps` |
 | **HIGH-12** | Coverage/cannibalization verdict computed but not enforced upstream | `content-coverage.ts`, `content-strategy-generator.ts` | `existingTitles` now reaches publish gate (BLOCK-4); strategy generator still parallel batches with no cross-batch dedup — drop or re-rank overlapped briefs |
 | **HIGH-17** | Dark mode toggle with no `.dark` token block | `globals.css`, `lib/app-shell/src/product-theme.css` | Either ship real dark tokens or remove the toggle |
-| **HIGH-18** | No Impressum / cookie consent (EU B2B) | Marketing `(public)` pages | Counsel before EU charge; privacy/terms exist |
+| **HIGH-18** | Cookie consent still missing (EU B2B); Impressum now at `/imprint` | Marketing `(public)` pages | Counsel before EU charge; privacy/terms/imprint exist |
 | **BLOCK-4 residual** | `minQualityScore` still unset | `contentPublish.ts` + admin publish-quality distribution | **Intentional** until someone reads score histogram — see `docs/DECISIONS.md` 2026-09-04 |
 
 ### P2 — medium / lower (pick when P0–P1 clear)
@@ -37,7 +37,7 @@
 | MED-3 | Citation “verify” = reachability only | `citation-verifier.ts` |
 | MED-4 | Unknown WP category silently dropped (tags auto-create) | `class-publish-handler.php` |
 | MED-5 | `wp_insert_post` without `wp_slash()` | `class-publish-handler.php`, `class-internal-links.php` |
-| MED-6 | AIOSEO v4 table vs post-meta; multi-plugin key spam | `class-seo-meta-mapper.php` / `mapSeoToPluginMeta` (partially improved via detected plugin) |
+| MED-6 | AIOSEO v4 table + per-plugin keys | **Fixed** — `Seo_Meta_Mapper::apply()` uses AIOSEO `Models\Post::savePost`; REST sends `aioseo_meta_data`; TS mapper sends only the detected plugin’s keys; JSON-LD inject skipped when an SEO plugin owns schema |
 | MED-7/8 | CMS save without test gate; test route may leak ciphertext | WP test/save routes |
 | MED-9 | Media upload no size cap | `class-media-handler.php` |
 | MED-10 | HMAC publish author falls back to user 1 | `class-publish-handler.php` + settings `goals_ac_author_id` (UI exists — wire into insert) |
@@ -48,7 +48,7 @@
 
 ### Already closed — do not re-implement
 
-SEC-1/2 · BLOCK-1–4 · BLOCK-6–10 (BLOCK-9 = invite-only **decision**) · HIGH-1/2/3/6/7/8/10/13/16 · MED-1 · OpenSEO 1–6 code · CF read/write `d1Db` · publish reliability digest + health-flip email.
+SEC-1/2 · BLOCK-1–4 · BLOCK-6–10 (BLOCK-9 = invite-only **decision**) · HIGH-1/2/3/6/7/8/10/13/16 · MED-1 · MED-6 · OpenSEO 1–6 code · CF read/write `d1Db` · publish reliability digest + health-flip email.
 
 **Verify sample:**
 ```sh

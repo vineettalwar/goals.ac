@@ -158,7 +158,7 @@ export function IntegrationTilesSkeleton({ count = 6 }: { count?: number }) {
       {Array.from({ length: count }, (_, index) => (
         <div
           key={index}
-          className="flex h-[62px] animate-pulse items-center gap-3 rounded-xl border border-border/60 bg-muted/20 px-4"
+          className="flex h-15.5 animate-pulse items-center gap-3 rounded-xl border border-border/60 bg-muted/20 px-4"
         >
           <div className="h-9 w-9 shrink-0 rounded-lg bg-muted" />
           <div className="min-w-0 flex-1 space-y-1.5">

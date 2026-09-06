@@ -145,7 +145,7 @@ export function RoadmapChat({ slug }: RoadmapChatProps) {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKey}
                 placeholder="Ask about tactics, priorities, KPIs…"
-                className="resize-none text-sm min-h-[40px] max-h-[120px] py-2.5"
+                className="resize-none text-sm min-h-10 max-h-30 py-2.5"
                 rows={1}
               />
               <Button

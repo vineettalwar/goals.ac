@@ -52,7 +52,7 @@ export function ArticleExampleSection({ article }: ArticleExampleSectionProps) {
           <div className="flex flex-col sm:flex-row gap-8">
             <div className="flex flex-col items-center justify-center shrink-0">
               <Link href={qualityHref} className="group flex flex-col items-center">
-                <div className="relative h-[100px] w-[100px] flex items-center justify-center">
+                <div className="relative h-25 w-25 flex items-center justify-center">
                   <svg width={100} height={100} viewBox="0 0 100 100" className="-rotate-90 absolute">
                     <circle cx={50} cy={50} r={40} fill="none" stroke="rgba(255, 255, 255, 0.15)" strokeWidth={7} />
                     <circle

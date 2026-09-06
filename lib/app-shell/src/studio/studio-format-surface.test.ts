@@ -40,7 +40,7 @@ describe("studioFormatOptionsForSurface", () => {
       "product_description",
       "press_release",
       "infographic_outline",
-    ]) {
+    ] as const) {
       expect(values.has(hidden)).toBe(false);
     }
   });

@@ -19,7 +19,7 @@ import { useAppAuthHrefs } from "@/lib/marketing/site/use-app-auth-hrefs";
 import { MarketingLogo } from "@/components/marketing/layout/marketing-logo";
 
 const DEFAULT_PANEL_CLASS =
-  "absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-[240px] max-w-[320px] rounded-xl bg-neutral-950 border border-white/15 shadow-xl shadow-black/50 p-2 z-200";
+  "absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-60 max-w-80 rounded-xl bg-neutral-950 border border-white/15 shadow-xl shadow-black/50 p-2 z-200";
 
 const MEGA_PANEL_CLASS =
   "absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[min(560px,calc(100vw-2rem))] rounded-xl bg-neutral-950 border border-white/15 shadow-xl shadow-black/50 z-200 overflow-hidden";
@@ -305,42 +305,44 @@ export function MarketingNav() {
           </Link>
         </div>
 
-        <div className="hidden md:flex items-center gap-3">
-          {loginHref.startsWith("http") ? (
-            <a href={loginHref} className="text-sm text-white/80 hover:text-white transition-colors">
-              Sign in
-            </a>
-          ) : (
-            <Link href={loginHref} className="text-sm text-white/80 hover:text-white transition-colors">
-              Sign in
-            </Link>
-          )}
-          {PRODUCT_CTA_HREF.startsWith("http") ? (
-            <a
-              href={PRODUCT_CTA_HREF}
-              className="bg-white text-gray-900 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              {PRODUCT_CTA_PRIMARY}
-            </a>
-          ) : (
-            <Link
-              href={PRODUCT_CTA_HREF}
-              className="bg-white text-gray-900 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-gray-100 transition-colors"
-            >
-              {PRODUCT_CTA_PRIMARY}
-            </Link>
-          )}
-        </div>
+        <div className="flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-3">
+            {loginHref.startsWith("http") ? (
+              <a href={loginHref} className="text-sm text-white/80 hover:text-white transition-colors">
+                Sign in
+              </a>
+            ) : (
+              <Link href={loginHref} className="text-sm text-white/80 hover:text-white transition-colors">
+                Sign in
+              </Link>
+            )}
+            {PRODUCT_CTA_HREF.startsWith("http") ? (
+              <a
+                href={PRODUCT_CTA_HREF}
+                className="bg-white text-gray-900 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                {PRODUCT_CTA_PRIMARY}
+              </a>
+            ) : (
+              <Link
+                href={PRODUCT_CTA_HREF}
+                className="bg-white text-gray-900 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-gray-100 transition-colors"
+              >
+                {PRODUCT_CTA_PRIMARY}
+              </Link>
+            )}
+          </div>
 
-        <button
-          type="button"
-          className="lg:hidden text-white p-2 -mr-2"
-          onClick={() => setMobileOpen((open) => !open)}
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-          aria-expanded={mobileOpen}
-        >
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+          <button
+            type="button"
+            className="lg:hidden text-white p-2 -mr-2"
+            onClick={() => setMobileOpen((open) => !open)}
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+          >
+            {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </nav>
 
       {mobileOpen && (

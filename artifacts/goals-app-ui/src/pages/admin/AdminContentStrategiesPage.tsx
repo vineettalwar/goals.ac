@@ -64,7 +64,7 @@ export function AdminContentStrategiesPage() {
       {error ? <p className="text-destructive">{error}</p> : null}
       <div className="overflow-hidden rounded-xl border border-border">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
+          <table className="w-full min-w-160 text-left text-sm">
             <thead className="bg-muted/40 text-muted-foreground">
               <tr>
                 <th className="px-4 py-3 font-medium">Strategy</th>

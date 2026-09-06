@@ -219,7 +219,7 @@ export function SocialCalendarPanel({
               </div>
             ))}
             {Array.from({ length: firstDayOfWeek }).map((_, index) => (
-              <div key={`empty-${index}`} className="min-h-[88px] bg-background" />
+              <div key={`empty-${index}`} className="min-h-22 bg-background" />
             ))}
             {days.map((day) => {
               const key = formatYmd(day);
@@ -264,7 +264,7 @@ export function SocialCalendarPanel({
         <CalendarDay dateKey="Unscheduled">
           <p className="mb-2 text-xs font-medium text-muted-foreground">Unscheduled</p>
           <p className="mb-2 text-[10px] text-muted-foreground">Drop here to unschedule</p>
-          <div className="flex min-h-[40px] flex-wrap gap-1">
+          <div className="flex min-h-10 flex-wrap gap-1">
             {unscheduled.map((item) => (
               <DraggablePost
                 key={item.id}
@@ -285,7 +285,7 @@ export function SocialCalendarPanel({
             return (
               <div
                 className={cn(
-                  "paper-card max-w-[140px] truncate rounded bg-card px-2 py-1 text-xs opacity-95 shadow-lg",
+                  "paper-card max-w-35 truncate rounded bg-card px-2 py-1 text-xs opacity-95 shadow-lg",
                   platformCardClass(platformId),
                 )}
               >
@@ -316,7 +316,7 @@ function CalendarDay({
     <div
       ref={setNodeRef}
       className={cn(
-        "relative min-h-[88px] bg-background p-1",
+        "relative min-h-22 bg-background p-1",
         isOver && "bg-primary/5 ring-1 ring-primary/30",
         className,
       )}

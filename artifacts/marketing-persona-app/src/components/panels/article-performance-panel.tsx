@@ -380,7 +380,7 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
               {sortedArticles.map((article) => (
                 <TableRow key={article.contentPieceId}>
                   <TableCell>
-                    <div className="space-y-0.5 min-w-[200px] max-w-[360px]">
+                    <div className="space-y-0.5 min-w-50 max-w-90">
                       <Link
                         href={contentPiecePath(projectId, article.contentPieceId)}
                         className="font-medium hover:text-primary line-clamp-2"
@@ -393,7 +393,7 @@ export function ArticlePerformancePanel({ embedded = false }: { embedded?: boole
                             href={article.publishedUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary truncate max-w-[240px]"
+                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-primary truncate max-w-60"
                           >
                             <span className="truncate">{article.publishedUrl}</span>
                             <ExternalLink className="h-3 w-3 shrink-0" />

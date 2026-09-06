@@ -1,18 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Plug } from "lucide-react";
+import { PublishBrandIcon, type PublishBrandIconId } from "@workspace/app-shell/integrations";
 import { MarketingPageShell } from "@/components/marketing/layout/marketing-page-shell";
 import { PageHero } from "@/components/marketing/heroes/page-hero";
 import { MarketingSection } from "@/components/marketing/sections/marketing-section";
 import { DarkCTABand } from "@/components/marketing/sections/dark-cta-band";
 import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
-import { CONTACT_CTA_LABEL, CONTACT_HREF, PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
+import {
+  CONTACT_HREF,
+  PRODUCT_CTA_HREF,
+  PRODUCT_CTA_PRIMARY,
+} from "@/lib/marketing/site/marketing-contact";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
+import { cn } from "@/lib/utils";
+import {
+  hasIntegrationLander,
+  integrationLanderPath,
+} from "@/lib/marketing/content/integration-landers";
 import {
   getCmsDestinations,
   getEspDestinations,
-  getSocialDestinations,
   PUBLISHING_DESTINATIONS,
 } from "@/lib/projects/publishing-destinations";
 
@@ -23,13 +32,28 @@ const CATEGORY_LABELS = {
   export: "Export formats",
 } as const;
 
+type CategoryKey = keyof typeof CATEGORY_LABELS;
+type FilterKey = "all" | CategoryKey;
+
+const FILTERS: { key: FilterKey; label: string }[] = [
+  { key: "all", label: "All" },
+  ...(Object.entries(CATEGORY_LABELS) as [CategoryKey, string][]).map(([key, label]) => ({
+    key,
+    label,
+  })),
+];
+
 const glassCard = cardSurfaceClass("glass", false);
 
 function groupDestinations() {
   return [
     { key: "cms" as const, items: getCmsDestinations() },
     { key: "esp" as const, items: getEspDestinations() },
-    { key: "social" as const, items: getSocialDestinations() },
+    {
+      key: "social" as const,
+      // Marketing hub shows every social publish target (incl. IG/FB/Bluesky).
+      items: PUBLISHING_DESTINATIONS.filter((d) => d.category === "social"),
+    },
     {
       key: "export" as const,
       items: PUBLISHING_DESTINATIONS.filter((d) => d.category === "export"),
@@ -39,6 +63,8 @@ function groupDestinations() {
 
 export function IntegrationsDirectoryPageClient() {
   const groups = groupDestinations();
+  const [filter, setFilter] = useState<FilterKey>("all");
+  const visible = filter === "all" ? groups : groups.filter((g) => g.key === filter);
 
   return (
     <MarketingPageShell
@@ -57,28 +83,87 @@ export function IntegrationsDirectoryPageClient() {
       }
     >
       <MarketingSection bordered className="py-16">
+        <div
+          className="mb-8 flex flex-wrap gap-2"
+          role="tablist"
+          aria-label="Integration categories"
+        >
+          {FILTERS.map((f) => {
+            const count =
+              f.key === "all"
+                ? groups.reduce((n, g) => n + g.items.length, 0)
+                : (groups.find((g) => g.key === f.key)?.items.length ?? 0);
+            const active = filter === f.key;
+            return (
+              <button
+                key={f.key}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setFilter(f.key)}
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5 text-sm font-medium transition-colors",
+                  active
+                    ? "border-white/30 bg-white text-black"
+                    : "border-white/15 bg-white/5 text-white/75 hover:border-white/25 hover:bg-white/10 hover:text-white",
+                )}
+              >
+                {f.label}
+                <span className={cn("ml-1.5 tabular-nums", active ? "text-black/50" : "text-white/40")}>
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
         <div className="space-y-10">
-          {groups.map((group) => (
+          {visible.map((group) => (
             <div key={group.key}>
-              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2 text-white">
-                <Plug className="h-4 w-4 text-primary" />
-                {CATEGORY_LABELS[group.key]}
-              </h2>
+              {filter === "all" ? (
+                <h2 className="text-lg font-semibold mb-4 text-white">
+                  {CATEGORY_LABELS[group.key]}
+                </h2>
+              ) : null}
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {group.items.map((dest) => (
-                  <div
-                    key={dest.id}
-                    className={`${glassCard} p-4 flex items-start gap-3`}
-                  >
-                    <span
-                      className={`mt-0.5 h-2.5 w-2.5 rounded-full shrink-0 ${dest.listColorClassName ?? "bg-primary"}`}
-                    />
-                    <div>
-                      <p className="font-medium text-sm text-white">{dest.label}</p>
-                      <p className="text-xs text-white/65 mt-1">{dest.description}</p>
+                {group.items.map((dest) => {
+                  const landerHref = hasIntegrationLander(dest.id)
+                    ? integrationLanderPath(dest.id)
+                    : null;
+                  const body = (
+                    <>
+                      <PublishBrandIcon
+                        id={dest.id as PublishBrandIconId}
+                        className="mt-0.5 h-8 w-8"
+                      />
+                      <div>
+                        <p className="font-medium text-sm text-white">
+                          {dest.label}
+                          {landerHref ? (
+                            <span className="ml-2 text-xs font-normal text-white/40">→</span>
+                          ) : null}
+                        </p>
+                        <p className="text-xs text-white/65 mt-1">{dest.description}</p>
+                      </div>
+                    </>
+                  );
+                  return landerHref ? (
+                    <Link
+                      key={dest.id}
+                      href={landerHref}
+                      className={`${glassCard} p-4 flex items-start gap-3 transition-colors hover:bg-white/10`}
+                    >
+                      {body}
+                    </Link>
+                  ) : (
+                    <div
+                      key={dest.id}
+                      className={`${glassCard} p-4 flex items-start gap-3`}
+                    >
+                      {body}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}

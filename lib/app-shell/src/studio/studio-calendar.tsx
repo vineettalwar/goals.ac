@@ -28,7 +28,7 @@ function CalendarDay({
     <div
       ref={setNodeRef}
       className={cn(
-        "min-h-[88px] bg-background p-1.5",
+        "min-h-22 bg-background p-1.5",
         isOver && "bg-primary/5 ring-1 ring-primary/30",
         className,
       )}
@@ -199,7 +199,7 @@ export function StudioCalendarView({
               </div>
             ))}
             {Array.from({ length: firstDayOfWeek }).map((_, index) => (
-              <div key={`empty-${index}`} className="min-h-[88px] bg-background" />
+              <div key={`empty-${index}`} className="min-h-22 bg-background" />
             ))}
             {days.map((day) => {
               const key = formatYmd(day);
@@ -238,7 +238,7 @@ export function StudioCalendarView({
         <CalendarDay dateKey="Unscheduled">
           <p className="mb-2 text-xs font-medium text-muted-foreground">Unscheduled</p>
           <p className="mb-2 text-[10px] text-muted-foreground">Drop here to remove from calendar</p>
-          <div className="flex min-h-[40px] flex-wrap gap-1">
+          <div className="flex min-h-10 flex-wrap gap-1">
             {unscheduledPieces.map((piece) => (
               <CalendarDraggablePiece
                 key={piece.id}
@@ -254,7 +254,7 @@ export function StudioCalendarView({
 
         <DragOverlay>
           {activeDragId ? (
-            <div className="paper-card max-w-[140px] truncate rounded px-2 py-1 text-xs opacity-95 shadow-lg">
+            <div className="paper-card max-w-35 truncate rounded px-2 py-1 text-xs opacity-95 shadow-lg">
               {pieces.find((piece) => piece.id === activeDragId)?.title}
             </div>
           ) : null}

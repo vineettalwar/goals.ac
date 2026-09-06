@@ -3,7 +3,6 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { useSpotlightCursor } from "@/hooks/use-spotlight-cursor";
 import { RevealLayer } from "./reveal-layer";
 
 const SPOTLIGHT_R = 260;
@@ -53,6 +52,8 @@ export type HeroCta = {
 
 export type PageHeroProps = {
   badge?: string;
+  /** Renders above the title (e.g. brand mark). */
+  lead?: ReactNode;
   titleLine1: string;
   titleLine2?: string;
   description?: string;
@@ -69,6 +70,7 @@ export type PageHeroProps = {
 
 export function PageHero({
   badge,
+  lead,
   titleLine1,
   titleLine2,
   description,
@@ -84,7 +86,10 @@ export function PageHero({
 }: PageHeroProps) {
   const sectionRef = useRef<HTMLElement>(null);
   const [heroScrolled, setHeroScrolled] = useState(false);
-  const spotlightEnabled = enableSpotlight ?? Boolean(backgroundImage);
+  // Opt-in only — defaulting on for every hero ran a full-viewport RAF + second image load.
+  const spotlightEnabled = enableSpotlight === true;
+  const resolvedSpotlightImage = spotlightImage ?? backgroundImage;
+  const useEnhance = Boolean(backgroundImage && !spotlightImage);
 
   useEffect(() => {
     const onScroll = () => setHeroScrolled(window.scrollY > 24);
@@ -92,9 +97,6 @@ export function PageHero({
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
-  const resolvedSpotlightImage = spotlightImage ?? backgroundImage;
-  const useEnhance = Boolean(backgroundImage && !spotlightImage);
-  const { cursorPos, enabled: spotlightActive } = useSpotlightCursor(sectionRef, spotlightEnabled);
 
   return (
     <section
@@ -115,11 +117,9 @@ export function PageHero({
         />
       )}
 
-      {spotlightActive && resolvedSpotlightImage && (
+      {spotlightEnabled && resolvedSpotlightImage && (
         <RevealLayer
           image={resolvedSpotlightImage}
-          cursorX={cursorPos.x}
-          cursorY={cursorPos.y}
           radius={SPOTLIGHT_R}
           enhance={useEnhance}
           containerRef={sectionRef}
@@ -130,18 +130,19 @@ export function PageHero({
 
       {layout === "home" ? (
         <>
-          <div className="absolute top-[14%] left-0 right-0 flex flex-col items-center text-center px-5 pointer-events-none z-50">
-            <h1 className="text-white leading-[0.95]">
+          {/* Title vertically centered; pb clears the bottom CTA band below lg. */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-5 pointer-events-none z-50 pb-44 sm:pb-48 lg:pb-0">
+            <h1 className="text-white leading-[1.08] w-full max-w-5xl">
               <span
-                className="block font-playfair italic font-normal text-5xl sm:text-7xl md:text-8xl hero-anim hero-reveal"
-                style={{ letterSpacing: "-0.05em", animationDelay: "0.25s" }}
+                className="block font-playfair italic font-normal text-[clamp(2.25rem,5.5vw+1rem,5.25rem)] tracking-tight hero-anim hero-reveal"
+                style={{ animationDelay: "0.25s" }}
               >
                 {titleLine1}
               </span>
               {titleLine2 && (
                 <span
-                  className="block font-normal text-5xl sm:text-7xl md:text-8xl -mt-1 hero-anim hero-reveal"
-                  style={{ letterSpacing: "-0.08em", animationDelay: "0.42s" }}
+                  className="block font-normal text-[clamp(2.25rem,5.5vw+1rem,5.25rem)] tracking-tight hero-anim hero-reveal"
+                  style={{ animationDelay: "0.42s" }}
                 >
                   {titleLine2}
                 </span>
@@ -149,23 +150,24 @@ export function PageHero({
             </h1>
           </div>
 
+          {/* Corner copy only when the viewport has room for the split layout. */}
           {leftDescription && (
             <div
-              className="hidden sm:block absolute bottom-14 left-10 md:left-14 max-w-[260px] z-50 pointer-events-none hero-anim hero-fade"
+              className="hidden lg:block absolute bottom-14 left-10 xl:left-14 max-w-65 z-50 pointer-events-none hero-anim hero-fade"
               style={{ animationDelay: "0.7s" }}
             >
-              <p className="text-sm text-white/80 leading-relaxed">{leftDescription}</p>
+              <p className="text-sm text-white/90 leading-relaxed">{leftDescription}</p>
             </div>
           )}
 
           <div
-            className={`absolute bottom-10 sm:bottom-24 left-5 right-5 sm:left-auto sm:right-10 md:right-14 max-w-full sm:max-w-[260px] flex flex-col items-start gap-4 sm:gap-5 z-50 hero-anim hero-fade transition-opacity duration-300 ${
+            className={`absolute bottom-10 left-5 right-5 max-w-md lg:bottom-24 lg:left-auto lg:right-10 xl:right-14 lg:max-w-65 flex flex-col items-start gap-4 z-50 hero-anim hero-fade transition-opacity duration-300 ${
               heroScrolled && !persistCtas ? "opacity-0 pointer-events-none" : "opacity-100"
             }`}
             style={{ animationDelay: "0.85s" }}
           >
             {description && (
-              <p className="text-xs sm:text-sm text-white/80 leading-relaxed pointer-events-none">
+              <p className="text-sm text-white/90 leading-relaxed pointer-events-none">
                 {description}
               </p>
             )}
@@ -174,6 +176,11 @@ export function PageHero({
         </>
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6 z-50 pt-16">
+          {lead ? (
+            <div className="mb-6 hero-anim hero-fade" style={{ animationDelay: "0.1s" }}>
+              {lead}
+            </div>
+          ) : null}
           {badge && (
             <div
               className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-semibold text-white/80 mb-6 tracking-wide uppercase hero-anim hero-fade"
@@ -182,17 +189,17 @@ export function PageHero({
               {badge}
             </div>
           )}
-          <h1 className="text-white leading-[0.95] max-w-4xl">
+          <h1 className="text-white leading-[1.08] max-w-4xl w-full">
             <span
-              className="block font-playfair italic font-normal text-4xl sm:text-6xl md:text-7xl hero-anim hero-reveal"
-              style={{ letterSpacing: "-0.05em", animationDelay: "0.25s" }}
+              className="block font-playfair italic font-normal text-[clamp(1.75rem,3.5vw+0.85rem,3.75rem)] tracking-tight hero-anim hero-reveal"
+              style={{ animationDelay: "0.25s" }}
             >
               {titleLine1}
             </span>
             {titleLine2 && (
               <span
-                className="block font-normal text-4xl sm:text-6xl md:text-7xl -mt-1 hero-anim hero-reveal"
-                style={{ letterSpacing: "-0.06em", animationDelay: "0.38s" }}
+                className="block font-normal text-[clamp(1.75rem,3.5vw+0.85rem,3.75rem)] tracking-tight hero-anim hero-reveal"
+                style={{ animationDelay: "0.38s" }}
               >
                 {titleLine2}
               </span>
@@ -200,7 +207,7 @@ export function PageHero({
           </h1>
           {description && (
             <p
-              className="mt-6 text-base sm:text-lg text-white/75 max-w-2xl leading-relaxed hero-anim hero-fade"
+              className="mt-6 text-base sm:text-lg text-white/90 max-w-2xl leading-relaxed hero-anim hero-fade"
               style={{ animationDelay: "0.5s" }}
             >
               {description}

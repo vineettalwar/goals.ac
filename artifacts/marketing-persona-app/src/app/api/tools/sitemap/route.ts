@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import { assertPublicUrl } from "@workspace/security/ssrf-guard";
 import { checkSitemap } from "@workspace/seo-tools/freeTools";
+import { normalizeHttpUrl } from "@/lib/utils/normalize-url";
 import { z } from "zod";
 
-const Body = z.object({ url: z.string().url() });
+const Body = z.object({
+  url: z.string().min(1).transform(normalizeHttpUrl).pipe(z.string().url()),
+});
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);

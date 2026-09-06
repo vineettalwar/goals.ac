@@ -73,7 +73,7 @@ function FieldSelect({
         disabled={disabled}
         className={cn(
           "rounded-lg border border-input bg-card px-2.5 text-sm",
-          compact ? "h-8 w-[130px]" : "h-9 w-full",
+          compact ? "h-8 w-32.5" : "h-9 w-full",
           disabled && "cursor-not-allowed opacity-60",
         )}
         value={value}
