@@ -34,7 +34,7 @@ export async function sendToCfQueue<Q extends QueueName>(
     );
   }
 
-  const jobId = `cf:${queue}:${Date.now()}`;
+  const jobId = `cf:${queue}:${crypto.randomUUID()}`;
   const envelope: JobEnvelope<Q> = { queue, payload, jobId };
   await producer.send(envelope, options?.delaySeconds ? { delaySeconds: options.delaySeconds } : undefined);
   return jobId;

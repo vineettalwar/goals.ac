@@ -17,7 +17,7 @@ import { generateApiKey } from "@workspace/content-engine/support/auth/api-key-a
 import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
 import { resolveAiClientForUser } from "@workspace/content-engine/support/ai/resolve-ai-client-for-user";
 import { encryptSecret } from "@workspace/security/encryption";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { cancelAiBilling, completeAiBilling, prepareAiBilling } from "./ai-billing";
 import { getAccessibleProject } from "./project-access";
@@ -368,11 +368,25 @@ export async function handleLegacyWrite(
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
     }
 
+    // Defense in depth: the write itself is re-scoped to companies owned by
+    // the caller, independent of the ownership check above.
     const [updated] = await db
       .update(marketingPersonasTable)
       .set(parsed.data)
-      .where(eq(marketingPersonasTable.id, personaId))
+      .where(
+        and(
+          eq(marketingPersonasTable.id, personaId),
+          inArray(
+            marketingPersonasTable.companyId,
+            db.select({ id: companiesTable.id }).from(companiesTable).where(eq(companiesTable.userId, userId)),
+          ),
+        ),
+      )
       .returning();
+
+    if (!updated) {
+      return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+    }
 
     return withCors(request, Response.json({ persona: updated }));
   }
@@ -390,7 +404,25 @@ export async function handleLegacyWrite(
       return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
     }
 
-    await db.delete(marketingPersonasTable).where(eq(marketingPersonasTable.id, personaId));
+    // Defense in depth: the write itself is re-scoped to companies owned by
+    // the caller, independent of the ownership check above.
+    const deleted = await db
+      .delete(marketingPersonasTable)
+      .where(
+        and(
+          eq(marketingPersonasTable.id, personaId),
+          inArray(
+            marketingPersonasTable.companyId,
+            db.select({ id: companiesTable.id }).from(companiesTable).where(eq(companiesTable.userId, userId)),
+          ),
+        ),
+      )
+      .returning({ id: marketingPersonasTable.id });
+
+    if (deleted.length === 0) {
+      return withCors(request, Response.json({ error: "Not found" }, { status: 404 }));
+    }
+
     return withCors(request, Response.json({ ok: true }));
   }
 
