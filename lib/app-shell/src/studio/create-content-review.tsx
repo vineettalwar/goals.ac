@@ -9,7 +9,7 @@ import type { CreateFlow } from "./create-content-types";
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 px-4 py-2.5 text-sm">
+    <div className="flex items-start justify-between gap-4 px-5 py-3.5 text-sm">
       <span className="shrink-0 text-muted-foreground">{label}</span>
       <span className="min-w-0 text-right font-medium text-foreground break-words">{value}</span>
     </div>
@@ -58,9 +58,9 @@ export function ReviewStep({
   onChangeAgentFastMode?: (value: boolean) => void;
 }) {
   return (
-    <div className="mt-4 space-y-4">
+    <div className="mt-6 space-y-6">
       {flow === "create" ? (
-        <label className="block space-y-1.5">
+        <label className="block space-y-2">
           <span className="text-sm font-medium">
             Planned date{" "}
             <span className="font-normal text-muted-foreground">(optional)</span>
@@ -70,14 +70,14 @@ export function ReviewStep({
             autoFocus
             value={plannedDate}
             onChange={(event) => onChangePlannedDate(event.target.value)}
-            className="h-9 w-full max-w-xs rounded-lg border border-input bg-card px-3 text-sm"
+            className="h-10 w-full max-w-xs rounded-lg border border-input bg-card px-3 text-sm"
           />
         </label>
       ) : null}
 
       {showAgentTeamToggle && flow === "create" && onChangeUseAgentTeam ? (
-        <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
-          <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
+        <div className="space-y-3 rounded-xl border border-border bg-muted/20 px-4 py-4">
+          <label className="flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-muted-foreground">
             <input
               type="checkbox"
               checked={useAgentTeam}

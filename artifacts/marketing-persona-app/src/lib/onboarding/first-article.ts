@@ -158,6 +158,8 @@ export async function dispatchFirstArticleGeneration(params: {
       projectId,
       userId,
       generateVariants: false,
+      useAgentTeam: true,
+      agentFastMode: true,
     });
 
     return { dispatched: true, contentItemId };

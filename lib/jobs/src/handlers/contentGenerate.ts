@@ -14,6 +14,7 @@ import {
   type GenerateFromItemResult,
 } from "@workspace/content-engine/strategy/autopilot-orchestrator";
 import { generateContentPiece, generateContentPieceWithAgents } from "@workspace/content-engine/content/content-studio-generator";
+import { patchPieceAgentTeamProgress } from "@workspace/content-engine/agents/agent-team-progress-persist";
 import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
@@ -179,6 +180,19 @@ async function generateExistingContentPiece(
             fastMode: options.agentFastMode,
             userApiKey: options.userApiKey,
             aiProviderOptions: options.aiProviderOptions,
+            onAgentProgress: (event) => {
+              void patchPieceAgentTeamProgress(contentPieceId, event);
+            },
+            onAgentEvent: (sseData) => {
+              try {
+                const parsed = JSON.parse(sseData) as { type: string; [key: string]: unknown };
+                if (parsed.type === "pipeline_start" || parsed.type === "pipeline_complete") {
+                  void patchPieceAgentTeamProgress(contentPieceId, parsed);
+                }
+              } catch {
+                // ignore malformed SSE meta
+              }
+            },
           },
         )
       : await generateContentPiece(
@@ -193,6 +207,23 @@ async function generateExistingContentPiece(
 
     const wordCount = generated.body_markdown.split(/\s+/).filter(Boolean).length;
 
+    const [latest] = await db
+      .select({ pieceMetadata: contentPiecesTable.pieceMetadata })
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.id, contentPieceId))
+      .limit(1);
+    const latestMeta = latest?.pieceMetadata ?? {};
+    const finalMeta = {
+      ...latestMeta,
+      ...(generated.pieceMetadata ?? {}),
+      agentTeamProgress: {
+        agents: latestMeta.agentTeamProgress?.agents ?? {},
+        isRunning: false,
+        totalElapsedMs: generated.pieceMetadata?.agentPipelineDurationMs,
+        updatedAt: new Date().toISOString(),
+      },
+    };
+
     await db
       .update(contentPiecesTable)
       .set({
@@ -200,7 +231,7 @@ async function generateExistingContentPiece(
         bodyMarkdown: generated.body_markdown,
         wordCount,
         status: "draft",
-        pieceMetadata: generated.pieceMetadata ?? null,
+        pieceMetadata: finalMeta,
       })
       .where(eq(contentPiecesTable.id, contentPieceId));
 
@@ -289,6 +320,8 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
           userApiKey,
           aiProviderOptions,
           generateVariants: generateVariants !== false,
+          useAgentTeam,
+          agentFastMode,
         });
 
     const [project] = await db

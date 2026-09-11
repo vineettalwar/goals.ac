@@ -106,13 +106,49 @@ export function applyAgentTeamEvent(
 }
 
 function StatusIcon({ status }: { status: AgentStatus }) {
-  if (status === "completed") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />;
+  if (status === "completed") return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
   if (status === "working" || status === "starting") {
-    return <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />;
+    return <Loader2 className="h-4 w-4 animate-spin text-primary" />;
   }
-  if (status === "failed") return <XCircle className="h-3.5 w-3.5 text-red-600" />;
-  if (status === "skipped") return <SkipForward className="h-3.5 w-3.5 text-muted-foreground" />;
-  return <Clock className="h-3.5 w-3.5 text-muted-foreground" />;
+  if (status === "failed") return <XCircle className="h-4 w-4 text-red-600" />;
+  if (status === "skipped") return <SkipForward className="h-4 w-4 text-muted-foreground" />;
+  return <Clock className="h-4 w-4 text-muted-foreground" />;
+}
+
+/** Current focus agent: active → first pending → last finished. */
+export function focusAgentId(agentState: AgentTeamState, isRunning: boolean): AgentId | null {
+  const active = AGENT_PIPELINE_ORDER.find((id) => {
+    const s = agentState[id]?.status;
+    return s === "working" || s === "starting";
+  });
+  if (active) return active;
+  if (isRunning) {
+    return (
+      AGENT_PIPELINE_ORDER.find((id) => {
+        const s = agentState[id]?.status;
+        return !s || s === "pending";
+      }) ?? null
+    );
+  }
+  for (let i = AGENT_PIPELINE_ORDER.length - 1; i >= 0; i--) {
+    const id = AGENT_PIPELINE_ORDER[i]!;
+    const s = agentState[id]?.status;
+    if (s === "completed" || s === "failed" || s === "skipped") return id;
+  }
+  return AGENT_PIPELINE_ORDER[0] ?? null;
+}
+
+/** Next pipeline step after `current` that still has work left. */
+export function nextAgentId(agentState: AgentTeamState, current: AgentId | null): AgentId | null {
+  if (!current) return null;
+  const idx = AGENT_PIPELINE_ORDER.indexOf(current);
+  if (idx < 0) return null;
+  for (let i = idx + 1; i < AGENT_PIPELINE_ORDER.length; i++) {
+    const id = AGENT_PIPELINE_ORDER[i]!;
+    const s = agentState[id]?.status;
+    if (!s || s === "pending") return id;
+  }
+  return null;
 }
 
 export function AgentTeamProgress({
@@ -125,14 +161,20 @@ export function AgentTeamProgress({
   totalElapsedMs?: number;
 }) {
   const completedCount = AGENT_PIPELINE_ORDER.filter(
-    (id) => agentState[id]?.status === "completed",
+    (id) => agentState[id]?.status === "completed" || agentState[id]?.status === "skipped",
   ).length;
-  const activeAgent = AGENT_PIPELINE_ORDER.find(
-    (id) => agentState[id]?.status === "working" || agentState[id]?.status === "starting",
-  );
+  const focusId = focusAgentId(agentState, isRunning);
+  const nextId = nextAgentId(agentState, focusId);
+  const focusDef = focusId ? AGENT_DEFINITIONS[focusId] : null;
+  const focusState = focusId
+    ? (agentState[focusId] ?? { status: "pending" as AgentStatus })
+    : null;
+  const FocusIcon = focusId ? AGENT_ICONS[focusId] : null;
+  const nextDef = nextId ? AGENT_DEFINITIONS[nextId] : null;
+  const focusIndex = focusId ? AGENT_PIPELINE_ORDER.indexOf(focusId) : -1;
 
   return (
-    <div className="mt-6 space-y-3" aria-live="polite" aria-busy={isRunning}>
+    <div className="mt-6 space-y-4" aria-live="polite" aria-busy={isRunning}>
       <div className="flex items-center justify-between gap-2 text-sm">
         <span className="font-medium text-foreground">Agent team</span>
         <span className="text-muted-foreground">
@@ -140,33 +182,60 @@ export function AgentTeamProgress({
           {totalElapsedMs !== undefined ? ` · ${formatDuration(totalElapsedMs)}` : ""}
         </span>
       </div>
-      {activeAgent ? (
-        <p className="text-sm text-muted-foreground">
-          {agentState[activeAgent]?.message ||
-            `${AGENT_DEFINITIONS[activeAgent].name} is working…`}
-        </p>
+
+      {focusDef && focusState && FocusIcon ? (
+        <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+          <div className="flex items-center gap-3">
+            <FocusIcon className="h-5 w-5 shrink-0 text-primary" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">
+                {focusDef.name}
+                <span className="font-normal text-muted-foreground"> · {focusDef.role}</span>
+              </p>
+              <p className="mt-0.5 text-sm text-muted-foreground">
+                {focusState.message ||
+                  (focusState.status === "pending"
+                    ? "Waiting to start…"
+                    : focusState.status === "completed"
+                      ? "Done"
+                      : `${focusDef.name} is working…`)}
+              </p>
+            </div>
+            <StatusIcon status={focusState.status} />
+          </div>
+        </div>
       ) : isRunning ? (
         <p className="text-sm text-muted-foreground">Assembling the team…</p>
       ) : null}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        {AGENT_PIPELINE_ORDER.map((agentId) => {
-          const def = AGENT_DEFINITIONS[agentId];
-          const state = agentState[agentId] ?? { status: "pending" as AgentStatus };
-          const Icon = AGENT_ICONS[agentId];
-          const active = state.status === "working" || state.status === "starting";
+
+      {nextDef ? (
+        <p className="text-sm text-muted-foreground">
+          Next:{" "}
+          <span className="font-medium text-foreground">
+            {nextDef.name}
+            <span className="font-normal text-muted-foreground"> · {nextDef.role}</span>
+          </span>
+        </p>
+      ) : isRunning && focusId ? (
+        <p className="text-sm text-muted-foreground">Next: finishing up…</p>
+      ) : null}
+
+      <div className="flex items-center gap-1.5" aria-hidden="true">
+        {AGENT_PIPELINE_ORDER.map((id, i) => {
+          const s = agentState[id]?.status ?? "pending";
+          const done = s === "completed" || s === "skipped";
+          const active = i === focusIndex;
           return (
-            <div
-              key={agentId}
+            <span
+              key={id}
               className={
                 active
-                  ? "flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-2.5 py-2"
-                  : "flex items-center gap-2 rounded-lg border border-border px-2.5 py-2"
+                  ? "h-1.5 flex-1 rounded-full bg-primary"
+                  : done
+                    ? "h-1.5 flex-1 rounded-full bg-emerald-500/70"
+                    : "h-1.5 flex-1 rounded-full bg-border"
               }
-            >
-              <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-              <span className="min-w-0 flex-1 truncate text-xs font-medium">{def.name}</span>
-              <StatusIcon status={state.status} />
-            </div>
+            />
           );
         })}
       </div>
@@ -210,11 +279,33 @@ export function useAgentTeamState() {
     setTotalElapsedMs(undefined);
   }, []);
 
+  const hydrate = useCallback(
+    (snapshot: {
+      agents: AgentTeamState;
+      isRunning: boolean;
+      totalElapsedMs?: number;
+    }) => {
+      const next: AgentTeamState = {};
+      for (const id of AGENT_PIPELINE_ORDER) {
+        next[id] = snapshot.agents[id] ?? { status: "pending" };
+      }
+      setState(next);
+      setIsRunning(snapshot.isRunning);
+      if (snapshot.totalElapsedMs !== undefined) setTotalElapsedMs(snapshot.totalElapsedMs);
+      if (snapshot.isRunning) {
+        setStartTime((prev) => prev ?? Date.now() - (snapshot.totalElapsedMs ?? 0));
+      } else {
+        setStartTime(null);
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!isRunning || !startTime) return;
     const interval = setInterval(() => setTotalElapsedMs(Date.now() - startTime), 200);
     return () => clearInterval(interval);
   }, [isRunning, startTime]);
 
-  return { state, isRunning, totalElapsedMs, handleEvent, reset };
+  return { state, isRunning, totalElapsedMs, handleEvent, reset, hydrate };
 }

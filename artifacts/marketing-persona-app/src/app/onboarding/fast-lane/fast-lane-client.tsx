@@ -9,6 +9,11 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { StepIndicator } from "@/components/onboarding/step-indicator";
 import { PartnerDemoChecklist } from "@/components/onboarding/partner-demo-checklist";
+import {
+  AgentTeamProgress,
+  useAgentTeamState,
+  type AgentTeamState,
+} from "@/components/content/agents";
 import { setActiveProjectCookie } from "@/lib/active-project/cookie";
 import { clearAutopilotIntent } from "@/lib/projects/autopilot-intent";
 
@@ -33,11 +38,24 @@ type FastLaneStatus = {
   };
 };
 
+type PieceRow = {
+  id: number;
+  status: string;
+  wordCount: number;
+  bodyMarkdown?: string;
+  pieceMetadata?: {
+    agentTeamProgress?: {
+      agents: AgentTeamState;
+      isRunning: boolean;
+      totalElapsedMs?: number;
+    };
+  } | null;
+};
+
 /** Brand scan is scrapeStatus; crawlStatus alone can stay pending if sitemap fails. */
 function brandScanSettled(data: FastLaneStatus): boolean {
   const scrape = data.scrapeStatus;
   if (scrape === "done" || scrape === "failed") return true;
-  // Fallback when scrapeStatus unset: accept crawl terminal so we don't hang forever.
   if (!scrape) {
     return data.crawlStatus === "done" || data.crawlStatus === "failed";
   }
@@ -61,6 +79,8 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
   const [readyCount, setReadyCount] = useState(0);
   const [firstPieceId, setFirstPieceId] = useState<number | null>(null);
   const [visibilitySnapshot, setVisibilitySnapshot] = useState<FastLaneStatus["visibility"] | null>(null);
+  const agentTeam = useAgentTeamState();
+  const { hydrate, reset, handleEvent } = agentTeam;
 
   const applyStatus = useCallback((data: FastLaneStatus) => {
     const progress = data.articleProgress;
@@ -71,26 +91,49 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
     return { ready, progress };
   }, []);
 
-  const pollProgress = useCallback(async (expected: number) => {
-    const maxAttempts = 40;
-    for (let i = 0; i < maxAttempts; i++) {
-      const statusRes = await fetch(`/api/onboarding/fast-lane?projectId=${projectId}`);
-      if (statusRes.ok) {
-        const data = (await statusRes.json()) as FastLaneStatus;
-        const { ready, progress } = applyStatus(data);
-
-        if (ready >= expected || (progress?.failed ?? 0) > 0) {
-          return true;
-        }
-      }
-      await new Promise((r) => setTimeout(r, 3000));
+  const hydrateAgentFromPieces = useCallback(async () => {
+    const res = await fetch(`/api/content-pieces?websiteProjectId=${projectId}`);
+    if (!res.ok) return;
+    const { pieces } = (await res.json()) as { pieces: PieceRow[] };
+    const generating =
+      pieces.find((p) => p.status === "generating") ??
+      pieces.find((p) => p.pieceMetadata?.agentTeamProgress?.isRunning) ??
+      pieces[0];
+    const progress = generating?.pieceMetadata?.agentTeamProgress;
+    if (progress?.agents) {
+      hydrate({
+        agents: progress.agents,
+        isRunning: progress.isRunning,
+        totalElapsedMs: progress.totalElapsedMs,
+      });
     }
-    return false;
-  }, [projectId, applyStatus]);
+  }, [projectId, hydrate]);
+
+  const pollProgress = useCallback(
+    async (expected: number) => {
+      const maxAttempts = 60;
+      for (let i = 0; i < maxAttempts; i++) {
+        const statusRes = await fetch(`/api/onboarding/fast-lane?projectId=${projectId}`);
+        if (statusRes.ok) {
+          const data = (await statusRes.json()) as FastLaneStatus;
+          const { ready, progress } = applyStatus(data);
+          await hydrateAgentFromPieces();
+
+          if (ready >= expected || (progress?.failed ?? 0) > 0) {
+            return true;
+          }
+        }
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+      return false;
+    },
+    [projectId, applyStatus, hydrateAgentFromPieces],
+  );
 
   const runFastLane = useCallback(async () => {
     setPhase("scan");
     setMessage("Scanning your website…");
+    reset();
 
     let attempts = 0;
     while (attempts < 30) {
@@ -123,7 +166,8 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
     const articleCount = data.articleCount ?? 3;
     setQueuedCount(articleCount);
     setPhase("generate");
-    setMessage(`Generating your first ${articleCount} expert articles…`);
+    setMessage(`Agent team writing your first ${articleCount} articles…`);
+    handleEvent({ type: "pipeline_start", totalAgents: 8 });
 
     await pollProgress(articleCount);
 
@@ -134,7 +178,7 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
 
     setPhase("done");
     clearAutopilotIntent();
-  }, [projectId, pollProgress, applyStatus]);
+  }, [projectId, pollProgress, applyStatus, reset, handleEvent]);
 
   useEffect(() => {
     setActiveProjectCookie(Number(projectId));
@@ -230,14 +274,18 @@ export function FastLaneClient({ projectId }: { projectId: string }) {
               </div>
               <PartnerDemoChecklist projectId={projectId} firstPieceId={firstPieceId} />
             </>
+          ) : phase === "generate" ? (
+            <AgentTeamProgress
+              agentState={agentTeam.state}
+              isRunning={agentTeam.isRunning || readyCount < queuedCount}
+              totalElapsedMs={agentTeam.totalElapsedMs}
+            />
           ) : (
             <div className="flex flex-col items-center py-6 gap-3">
               <Spinner size="lg" />
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                {phase === "generate" && readyCount > 0
-                  ? `${readyCount} of ${queuedCount} articles ready…`
-                  : "This usually takes 1–3 minutes"}
+                This usually takes 1–3 minutes
               </p>
             </div>
           )}

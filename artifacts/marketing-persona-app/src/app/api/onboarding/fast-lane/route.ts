@@ -229,6 +229,8 @@ export async function POST(req: Request) {
         projectId,
         userId: userId!,
         generateVariants: false,
+        useAgentTeam: true,
+        agentFastMode: true,
       });
       return contentItemId;
     }),

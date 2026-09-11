@@ -401,7 +401,7 @@ export function CreateContentDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="create-content-title"
-        className="paper-card relative z-10 flex max-h-[min(85vh,640px)] w-full max-w-lg flex-col overflow-hidden shadow-lg"
+        className="paper-card relative z-10 flex max-h-[min(90vh,720px)] w-full max-w-xl flex-col overflow-hidden shadow-lg"
       >
         <div className="h-1 w-full shrink-0 bg-muted">
           <div
@@ -410,7 +410,7 @@ export function CreateContentDialog({
           />
         </div>
 
-        <header className="flex items-center justify-between gap-2 border-b border-border px-5 py-3">
+        <header className="flex items-center justify-between gap-2 border-b border-border px-6 py-4">
           <div className="min-w-18 items-center flex">
             {stepIndex > 0 && !showGenerating ? (
               <button
@@ -430,11 +430,11 @@ export function CreateContentDialog({
           <div className="min-w-18" />
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          <h2 id="create-content-title" className="text-lg font-semibold">
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+          <h2 id="create-content-title" className="text-xl font-semibold tracking-tight">
             {stepTitle}
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground">{stepSubtitle}</p>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{stepSubtitle}</p>
 
           {showGenerating ? (
             <GeneratingView
@@ -555,12 +555,12 @@ export function CreateContentDialog({
           ) : null}
         </div>
 
-        <footer className="flex shrink-0 justify-end gap-2 border-t border-border px-5 py-3.5">
+        <footer className="flex shrink-0 justify-end gap-3 border-t border-border px-6 py-4">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary disabled:opacity-50"
+            className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium hover:bg-secondary disabled:opacity-50"
           >
             Cancel
           </button>
@@ -568,7 +568,7 @@ export function CreateContentDialog({
             <button
               type="button"
               disabled
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground opacity-50"
             >
               <Loader2 className="h-4 w-4 animate-spin" />
               Generating…
@@ -582,7 +582,7 @@ export function CreateContentDialog({
                 !targetKeyword.trim() ||
                 (flow === "repurpose" && sourceContent.trim().length < MIN_REPURPOSE_CHARS)
               }
-              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               <FileText className="h-4 w-4" />
               {flow === "repurpose"
@@ -594,7 +594,7 @@ export function CreateContentDialog({
               type="button"
               onClick={() => setStepIndex(1)}
               disabled={submitting}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               Next
             </button>
@@ -607,7 +607,7 @@ export function CreateContentDialog({
                 (currentStep === "keyword" && !targetKeyword.trim()) ||
                 (currentStep === "source" && sourceContent.trim().length < MIN_REPURPOSE_CHARS)
               }
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              className="rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground disabled:opacity-50"
             >
               {currentStep === "competitors" ||
               currentStep === "destination" ||

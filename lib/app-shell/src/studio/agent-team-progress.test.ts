@@ -2,7 +2,12 @@
  * Run: pnpm exec vitest run lib/app-shell/src/studio/agent-team-progress.test.ts
  */
 import { describe, expect, it } from "vitest";
-import { applyAgentTeamEvent, type AgentTeamState } from "./agent-team-progress";
+import {
+  applyAgentTeamEvent,
+  focusAgentId,
+  nextAgentId,
+  type AgentTeamState,
+} from "./agent-team-progress";
 
 function empty(): AgentTeamState {
   return {};
@@ -27,5 +32,30 @@ describe("applyAgentTeamEvent", () => {
     }).state;
     expect(state.owl?.status).toBe("working");
     expect(state.owl?.message).toBe("planning");
+  });
+});
+
+describe("focusAgentId / nextAgentId", () => {
+  it("focuses active agent and names the next step", () => {
+    let state = applyAgentTeamEvent(empty(), { type: "pipeline_start", totalAgents: 8 }).state;
+    state = applyAgentTeamEvent(state, {
+      type: "agent",
+      agent: "owl",
+      status: "completed",
+    }).state;
+    state = applyAgentTeamEvent(state, {
+      type: "agent",
+      agent: "ferret",
+      status: "working",
+      message: "digging",
+    }).state;
+    expect(focusAgentId(state, true)).toBe("ferret");
+    expect(nextAgentId(state, "ferret")).toBe("hummingbird");
+  });
+
+  it("while assembling, focuses first pending and next is ferret", () => {
+    const state = applyAgentTeamEvent(empty(), { type: "pipeline_start", totalAgents: 8 }).state;
+    expect(focusAgentId(state, true)).toBe("owl");
+    expect(nextAgentId(state, "owl")).toBe("ferret");
   });
 });

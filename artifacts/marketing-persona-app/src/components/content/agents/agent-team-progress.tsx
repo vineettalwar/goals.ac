@@ -1,19 +1,17 @@
 "use client";
 
 /**
- * AgentTeamProgress Component
- *
- * Live progress view showing the agent team pipeline.
- * Displays all agents with their current status and progress messages.
+ * AgentTeamProgress — one agent at a time + next step (readable names).
  */
 
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AgentCard } from "./agent-card";
+import { CheckCircle2, Clock, Loader2, SkipForward, XCircle } from "lucide-react";
 import type { AgentId, AgentStatus, AgentProgressEvent } from "@workspace/content-engine";
 import { AGENT_PIPELINE_ORDER, AGENT_DEFINITIONS } from "@workspace/content-engine";
+import { getAgentIcon } from "./agent-icons";
 
 export interface AgentTeamState {
   [agentId: string]: {
@@ -27,6 +25,7 @@ interface AgentTeamProgressProps {
   agentState: AgentTeamState;
   isRunning: boolean;
   totalElapsedMs?: number;
+  /** @deprecated unused — kept for call-site compat */
   compact?: boolean;
   className?: string;
 }
@@ -88,22 +87,71 @@ export function applyAgentTeamEvent(
   return { state: prev };
 }
 
+export function focusAgentId(agentState: AgentTeamState, isRunning: boolean): AgentId | null {
+  const active = AGENT_PIPELINE_ORDER.find((id) => {
+    const s = agentState[id]?.status;
+    return s === "working" || s === "starting";
+  });
+  if (active) return active;
+  if (isRunning) {
+    return (
+      AGENT_PIPELINE_ORDER.find((id) => {
+        const s = agentState[id]?.status;
+        return !s || s === "pending";
+      }) ?? null
+    );
+  }
+  for (let i = AGENT_PIPELINE_ORDER.length - 1; i >= 0; i--) {
+    const id = AGENT_PIPELINE_ORDER[i]!;
+    const s = agentState[id]?.status;
+    if (s === "completed" || s === "failed" || s === "skipped") return id;
+  }
+  return AGENT_PIPELINE_ORDER[0] ?? null;
+}
+
+export function nextAgentId(agentState: AgentTeamState, current: AgentId | null): AgentId | null {
+  if (!current) return null;
+  const idx = AGENT_PIPELINE_ORDER.indexOf(current);
+  if (idx < 0) return null;
+  for (let i = idx + 1; i < AGENT_PIPELINE_ORDER.length; i++) {
+    const id = AGENT_PIPELINE_ORDER[i]!;
+    const s = agentState[id]?.status;
+    if (!s || s === "pending") return id;
+  }
+  return null;
+}
+
+function StatusIcon({ status }: { status: AgentStatus }) {
+  if (status === "completed") return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
+  if (status === "working" || status === "starting") {
+    return <Loader2 className="h-4 w-4 animate-spin text-primary" />;
+  }
+  if (status === "failed") return <XCircle className="h-4 w-4 text-red-600" />;
+  if (status === "skipped") return <SkipForward className="h-4 w-4 text-muted-foreground" />;
+  return <Clock className="h-4 w-4 text-muted-foreground" />;
+}
+
 export function AgentTeamProgress({
   agentState,
   isRunning,
   totalElapsedMs,
-  compact = false,
   className,
 }: AgentTeamProgressProps) {
   const completedCount = AGENT_PIPELINE_ORDER.filter(
-    (id) => agentState[id]?.status === "completed",
+    (id) => agentState[id]?.status === "completed" || agentState[id]?.status === "skipped",
   ).length;
   const failedCount = AGENT_PIPELINE_ORDER.filter(
     (id) => agentState[id]?.status === "failed",
   ).length;
-  const activeAgent = AGENT_PIPELINE_ORDER.find(
-    (id) => agentState[id]?.status === "working" || agentState[id]?.status === "starting",
-  );
+  const focusId = focusAgentId(agentState, isRunning);
+  const nextId = nextAgentId(agentState, focusId);
+  const focusDef = focusId ? AGENT_DEFINITIONS[focusId] : null;
+  const focusState = focusId
+    ? (agentState[focusId] ?? { status: "pending" as AgentStatus })
+    : null;
+  const FocusIcon = focusId ? getAgentIcon(focusId) : null;
+  const nextDef = nextId ? AGENT_DEFINITIONS[nextId] : null;
+  const focusIndex = focusId ? AGENT_PIPELINE_ORDER.indexOf(focusId) : -1;
 
   return (
     <Card className={cn("overflow-hidden", className)}>
@@ -129,25 +177,61 @@ export function AgentTeamProgress({
             )}
           </div>
         </div>
-        {activeAgent && (
-          <p className="text-sm text-muted-foreground">
-            {agentState[activeAgent]?.message || `${AGENT_DEFINITIONS[activeAgent].name} is working...`}
-          </p>
-        )}
       </CardHeader>
 
-      <CardContent className="pt-0">
-        <div className={cn("grid gap-2", compact ? "grid-cols-4" : "grid-cols-2 lg:grid-cols-4")}>
-          {AGENT_PIPELINE_ORDER.map((agentId) => {
-            const state = agentState[agentId] || { status: "pending" as AgentStatus };
+      <CardContent className="space-y-4 pt-0" aria-live="polite" aria-busy={isRunning}>
+        {focusDef && focusState && FocusIcon ? (
+          <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+            <div className="flex items-center gap-3">
+              <FocusIcon className="h-5 w-5 shrink-0 text-primary" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-foreground">
+                  {focusDef.name}
+                  <span className="font-normal text-muted-foreground"> · {focusDef.role}</span>
+                </p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  {focusState.message ||
+                    (focusState.status === "pending"
+                      ? "Waiting to start…"
+                      : focusState.status === "completed"
+                        ? "Done"
+                        : `${focusDef.name} is working…`)}
+                </p>
+              </div>
+              <StatusIcon status={focusState.status} />
+            </div>
+          </div>
+        ) : isRunning ? (
+          <p className="text-sm text-muted-foreground">Assembling the team…</p>
+        ) : null}
+
+        {nextDef ? (
+          <p className="text-sm text-muted-foreground">
+            Next:{" "}
+            <span className="font-medium text-foreground">
+              {nextDef.name}
+              <span className="font-normal text-muted-foreground"> · {nextDef.role}</span>
+            </span>
+          </p>
+        ) : isRunning && focusId ? (
+          <p className="text-sm text-muted-foreground">Next: finishing up…</p>
+        ) : null}
+
+        <div className="flex items-center gap-1.5" aria-hidden="true">
+          {AGENT_PIPELINE_ORDER.map((id, i) => {
+            const s = agentState[id]?.status ?? "pending";
+            const done = s === "completed" || s === "skipped";
+            const active = i === focusIndex;
             return (
-              <AgentCard
-                key={agentId}
-                agentId={agentId}
-                status={state.status}
-                message={compact ? undefined : state.message}
-                durationMs={state.durationMs}
-                compact={compact}
+              <span
+                key={id}
+                className={
+                  active
+                    ? "h-1.5 flex-1 rounded-full bg-primary"
+                    : done
+                      ? "h-1.5 flex-1 rounded-full bg-emerald-500/70"
+                      : "h-1.5 flex-1 rounded-full bg-border"
+                }
               />
             );
           })}
@@ -201,6 +285,30 @@ export function useAgentTeamState() {
     setTotalElapsedMs(undefined);
   }, []);
 
+  const hydrate = useCallback(
+    (snapshot: {
+      agents: AgentTeamState;
+      isRunning: boolean;
+      totalElapsedMs?: number;
+    }) => {
+      const next: AgentTeamState = {};
+      for (const id of AGENT_PIPELINE_ORDER) {
+        next[id] = snapshot.agents[id] ?? { status: "pending" };
+      }
+      setState(next);
+      setIsRunning(snapshot.isRunning);
+      if (snapshot.totalElapsedMs !== undefined) {
+        setTotalElapsedMs(snapshot.totalElapsedMs);
+      }
+      if (snapshot.isRunning) {
+        setStartTime((prev) => prev ?? Date.now() - (snapshot.totalElapsedMs ?? 0));
+      } else {
+        setStartTime(null);
+      }
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!isRunning || !startTime) return;
     const interval = setInterval(() => {
@@ -215,5 +323,6 @@ export function useAgentTeamState() {
     totalElapsedMs,
     handleEvent,
     reset,
+    hydrate,
   };
 }

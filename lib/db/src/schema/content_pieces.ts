@@ -162,6 +162,26 @@ export type ContentPieceMetadata = {
   publishFailCount?: number;
   /** True once publishFailCount reaches PUBLISH_MAX_ATTEMPTS — sweep skips this piece. */
   publishDeadLettered?: boolean;
+  /** True when generated using the agent team pipeline. */
+  generatedWithAgents?: boolean;
+  /** Total time for agent pipeline in ms. */
+  agentPipelineDurationMs?: number;
+  /** Agents that failed or were skipped during pipeline. */
+  degradedAgents?: string[];
+  /** Live agent-team snapshot while a background job is generating (pollable). */
+  agentTeamProgress?: {
+    agents: Record<
+      string,
+      {
+        status: "pending" | "starting" | "working" | "completed" | "failed" | "skipped";
+        message?: string;
+        durationMs?: number;
+      }
+    >;
+    isRunning: boolean;
+    totalElapsedMs?: number;
+    updatedAt: string;
+  };
 };
 
 export const contentPiecesTable = pgTable("content_pieces", {

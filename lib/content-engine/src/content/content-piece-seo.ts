@@ -90,6 +90,20 @@ export type ContentPieceMetadata = {
   agentPipelineDurationMs?: number;
   /** Agents that failed or were skipped during pipeline. */
   degradedAgents?: string[];
+  /** Live agent-team snapshot while a background job is generating (pollable). */
+  agentTeamProgress?: {
+    agents: Record<
+      string,
+      {
+        status: "pending" | "starting" | "working" | "completed" | "failed" | "skipped";
+        message?: string;
+        durationMs?: number;
+      }
+    >;
+    isRunning: boolean;
+    totalElapsedMs?: number;
+    updatedAt: string;
+  };
 };
 
 export type RichContentPieceFields = ContentPieceMetadata & {

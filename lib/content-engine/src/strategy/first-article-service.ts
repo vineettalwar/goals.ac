@@ -74,6 +74,8 @@ export async function startFirstArticleGeneration(
       // inside generateFromContentItem itself.
       schedulePublish: false,
       triggeredByAutopilot: false,
+      useAgentTeam: true,
+      agentFastMode: true,
     };
     jobId = await enqueue(QUEUES.contentGenerate, payload);
   } catch (err) {
@@ -135,6 +137,11 @@ export interface FirstArticleProgress {
   forbiddenClaimHitCount: number;
   publishedUrl: string | null;
   publishError: string | null;
+  agentTeamProgress?: GeneratedPieceMetadata["agentTeamProgress"] | null;
+  pieceStatus?: string | null;
+  wordCount?: number;
+  title?: string | null;
+  hasBody?: boolean;
 }
 
 /**
@@ -166,6 +173,10 @@ export async function getFirstArticleProgress(
       pieceMetadata: contentPiecesTable.pieceMetadata,
       publishedUrl: contentPiecesTable.publishedUrl,
       publishError: contentPiecesTable.publishError,
+      status: contentPiecesTable.status,
+      wordCount: contentPiecesTable.wordCount,
+      title: contentPiecesTable.title,
+      bodyMarkdown: contentPiecesTable.bodyMarkdown,
     })
     .from(contentPiecesTable)
     .where(eq(contentPiecesTable.contentItemId, contentItemId))
@@ -181,6 +192,11 @@ export async function getFirstArticleProgress(
     forbiddenClaimHitCount: metadata?.forbiddenClaimHits?.length ?? 0,
     publishedUrl: piece?.publishedUrl ?? null,
     publishError: piece?.publishError ?? null,
+    agentTeamProgress: metadata?.agentTeamProgress ?? null,
+    pieceStatus: piece?.status ?? null,
+    wordCount: piece?.wordCount ?? 0,
+    title: piece?.title ?? null,
+    hasBody: Boolean(piece?.bodyMarkdown && piece.bodyMarkdown.trim().length > 0),
   };
 }
 

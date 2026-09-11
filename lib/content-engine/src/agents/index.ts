@@ -16,6 +16,13 @@ export * from "./agent-prompts";
 // Events
 export * from "./agent-events";
 
+// Job progress persistence (onboarding poll)
+export {
+  foldAgentProgressEvent,
+  patchPieceAgentTeamProgress,
+  type AgentTeamProgressSnapshot,
+} from "./agent-team-progress-persist";
+
 // Orchestrator
 export {
   runAgentPipeline,
