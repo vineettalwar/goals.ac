@@ -9,6 +9,7 @@ import {
   StudioNewContentButton,
   StudioView,
   studioContentPiecePath,
+  useAgentTeamState,
   type BriefDraftSource,
   type CreateCompetitorOption,
   type CreateContentInitialValues,
@@ -108,6 +109,7 @@ export function StudioPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [streamProgress, setStreamProgress] = useState<CreateStreamProgress | null>(null);
+  const agentTeam = useAgentTeamState();
   const [createInitialValues, setCreateInitialValues] =
     useState<CreateContentInitialValues | null>(null);
 
@@ -241,6 +243,9 @@ export function StudioPage() {
         competitorsLoading={competitorQuery.isPending && !competitorQuery.data}
         generatingPhase={creating ? (streamProgress?.phase ?? "analyzing") : null}
         generatingHeadings={creating ? (streamProgress?.sections ?? null) : null}
+        agentTeamState={creating ? agentTeam.state : null}
+        agentTeamRunning={creating && agentTeam.isRunning}
+        agentTeamElapsedMs={creating ? agentTeam.totalElapsedMs : undefined}
         existingPieces={pieces.map((piece) => ({
           id: piece.id,
           title: piece.title,
@@ -261,6 +266,7 @@ export function StudioPage() {
           setCreateOpen(false);
           setCreateInitialValues(null);
           setStreamProgress(null);
+          agentTeam.reset();
         }}
         submitting={creating}
         error={createError}
@@ -273,6 +279,7 @@ export function StudioPage() {
             setCreateOpen(false);
             setCreateInitialValues(null);
             setStreamProgress(null);
+            agentTeam.reset();
             if (projectId && piece?.id) {
               navigate(studioContentPiecePath(projectId, piece.id));
             }
@@ -287,13 +294,21 @@ export function StudioPage() {
           setCreating(true);
           setCreateError(null);
           setStreamProgress({ phase: "analyzing" });
+          agentTeam.reset();
+          if (input.useAgentTeam) {
+            agentTeam.handleEvent({ type: "pipeline_start", totalAgents: 8 });
+          }
           try {
             const piece = await createPiece(input, {
-              onProgress: (progress) => setStreamProgress(progress),
+              onProgress: (progress) => {
+                setStreamProgress(progress);
+                if (progress.agentEvent) agentTeam.handleEvent(progress.agentEvent);
+              },
             });
             setCreateOpen(false);
             setCreateInitialValues(null);
             setStreamProgress(null);
+            agentTeam.reset();
             if (projectId && piece?.id) {
               navigate(studioContentPiecePath(projectId, piece.id));
             }

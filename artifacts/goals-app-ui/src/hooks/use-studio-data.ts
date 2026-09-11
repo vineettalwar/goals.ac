@@ -12,6 +12,17 @@ import type { ContentPiece } from "@/types/api";
 
 const STUDIO_POLL_MS = 3000;
 
+/** Stream lifecycle mapped onto CreateContentDialog Analyzing → Drafting → Finishing. */
+export type CreateStreamPhase = "analyzing" | "drafting" | "finishing";
+
+export type CreateStreamProgress = {
+  phase: CreateStreamPhase;
+  /** Headings parsed from streamed body_markdown chunks (optional detail under Drafting). */
+  sections?: string[];
+  /** Agent-team SSE payload (pipeline_start / type:agent / pipeline_complete). */
+  agentEvent?: { type: string; [key: string]: unknown };
+};
+
 type CreateGeneratePayload = {
   formatType: string;
   targetKeyword: string;
@@ -21,6 +32,8 @@ type CreateGeneratePayload = {
   competitorFocusUrl?: string;
   competitorUrls?: string[];
   briefId?: number;
+  useAgentTeam?: boolean;
+  agentFastMode?: boolean;
 };
 
 function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGeneratePayload {
@@ -42,17 +55,12 @@ function buildCreateGeneratePayload(input: CreateContentDraftInput): CreateGener
     if (!payload.competitorFocusUrl) payload.competitorFocusUrl = competitorUrls[0];
   }
   if (input.briefId) payload.briefId = input.briefId;
+  if (input.useAgentTeam) {
+    payload.useAgentTeam = true;
+    if (input.agentFastMode) payload.agentFastMode = true;
+  }
   return payload;
 }
-
-/** Stream lifecycle mapped onto CreateContentDialog Analyzing → Drafting → Finishing. */
-export type CreateStreamPhase = "analyzing" | "drafting" | "finishing";
-
-export type CreateStreamProgress = {
-  phase: CreateStreamPhase;
-  /** Headings parsed from streamed body_markdown chunks (optional detail under Drafting). */
-  sections?: string[];
-};
 
 /** Mirror Next extractSections: headings from streamed body_markdown JSON. */
 export function extractStreamingSections(jsonAccumulated: string): string[] {
@@ -132,6 +140,23 @@ async function createPieceViaStream(
         }
         throw new Error(message);
       }
+      if (pendingEvent === "agent") {
+        try {
+          const agentEvent = JSON.parse(eventPayload) as {
+            type: string;
+            [key: string]: unknown;
+          };
+          onProgress?.({
+            phase: "drafting",
+            sections: lastSections.length > 0 ? lastSections : undefined,
+            agentEvent,
+          });
+        } catch {
+          // ignore malformed agent payload
+        }
+        pendingEvent = null;
+        continue;
+      }
       if (pendingEvent === "done" || pendingEvent === "cached") {
         onProgress?.({
           phase: "finishing",
@@ -170,6 +195,122 @@ async function createPieceViaStream(
   }
 
   return finalPiece;
+}
+
+const AGENT_ORDER = [
+  "owl",
+  "ferret",
+  "hummingbird",
+  "spider",
+  "fox",
+  "mockingbird",
+  "hawk",
+  "chameleon",
+] as const;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function pollPieceUntilReady(pieceId: number): Promise<ContentPiece> {
+  const started = Date.now();
+  while (Date.now() - started < 10 * 60_000) {
+    await sleep(2000);
+    const piece = await apiFetch<ContentPiece>(`/api/content-pieces/${pieceId}`);
+    if (piece.status === "failed") {
+      throw new Error("Generation failed");
+    }
+    if (piece.status !== "generating" && (piece.bodyMarkdown?.trim() || piece.wordCount)) {
+      return piece;
+    }
+  }
+  throw new Error("Generation timed out");
+}
+
+/** When SSE is unavailable on edge: draft → queue generate → poll, with synthetic agent ticks. */
+async function createPieceViaQueuedAgents(
+  projectId: string,
+  input: CreateContentDraftInput,
+  payload: CreateGeneratePayload,
+  onProgress?: (progress: CreateStreamProgress) => void,
+): Promise<ContentPiece | null> {
+  try {
+    const title = input.title?.trim() || payload.targetKeyword;
+    const draft = await apiFetch<ContentPiece>(`/api/website-projects/${projectId}/content-pieces`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title,
+        targetKeyword: payload.targetKeyword,
+        formatType: payload.formatType,
+        ...(payload.briefId ? { briefId: payload.briefId } : {}),
+      }),
+    });
+
+    onProgress?.({
+      phase: "analyzing",
+      agentEvent: { type: "pipeline_start", totalAgents: AGENT_ORDER.length },
+    });
+
+    await apiFetch(`/api/content-pieces/${draft.id}/generate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        useAgentTeam: true,
+        ...(payload.agentFastMode ? { agentFastMode: true } : {}),
+      }),
+      timeoutMs: API_FETCH_AI_TIMEOUT_MS,
+    });
+
+    const started = Date.now();
+    let tick = 0;
+    while (Date.now() - started < 10 * 60_000) {
+      await sleep(2500);
+      if (tick < AGENT_ORDER.length) {
+        const agent = AGENT_ORDER[tick]!;
+        onProgress?.({
+          phase: "drafting",
+          agentEvent: {
+            type: "agent",
+            agent,
+            status: "working",
+            message: `${agent} working…`,
+          },
+        });
+        if (tick > 0) {
+          const prev = AGENT_ORDER[tick - 1]!;
+          onProgress?.({
+            phase: "drafting",
+            agentEvent: {
+              type: "agent",
+              agent: prev,
+              status: "completed",
+              message: `${prev} done`,
+            },
+          });
+        }
+        tick += 1;
+      }
+
+      const piece = await apiFetch<ContentPiece>(`/api/content-pieces/${draft.id}`);
+      if (piece.status === "failed") {
+        throw new Error("Agent team generation failed");
+      }
+      if (piece.status !== "generating" && (piece.bodyMarkdown?.trim() || piece.wordCount)) {
+        onProgress?.({
+          phase: "finishing",
+          agentEvent: {
+            type: "pipeline_complete",
+            totalDurationMs: Date.now() - started,
+          },
+        });
+        return piece;
+      }
+    }
+    throw new Error("Agent team generation timed out");
+  } catch {
+    return null;
+  }
 }
 
 function asContentPieceRows(payload: unknown): ContentPiece[] {
@@ -255,17 +396,35 @@ export function useStudioData(projectId: string | null) {
 
       options?.onProgress?.({ phase: "analyzing" });
       let piece = await createPieceViaStream(projectId, payload, options?.onProgress);
+      if (!piece && payload.useAgentTeam) {
+        piece = await createPieceViaQueuedAgents(projectId, input, payload, options?.onProgress);
+      }
       if (!piece) {
         options?.onProgress?.({ phase: "finishing" });
+        const title = input.title?.trim() || payload.targetKeyword;
         piece = await apiFetch<ContentPiece>(
           `/api/website-projects/${projectId}/content-pieces`,
           {
             method: "POST",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({
+              title,
+              targetKeyword: payload.targetKeyword,
+              formatType: payload.formatType,
+              ...(payload.briefId ? { briefId: payload.briefId } : {}),
+            }),
             timeoutMs: API_FETCH_AI_TIMEOUT_MS,
           },
         );
+        if (!piece.bodyMarkdown) {
+          await apiFetch(`/api/content-pieces/${piece.id}/generate`, {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({}),
+            timeoutMs: API_FETCH_AI_TIMEOUT_MS,
+          });
+          piece = await pollPieceUntilReady(piece.id);
+        }
       }
 
       const preferredTitle = input.title?.trim();

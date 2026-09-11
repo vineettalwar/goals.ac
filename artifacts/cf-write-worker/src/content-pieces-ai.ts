@@ -23,6 +23,7 @@ import {
   handleProjectRepurpose,
   handleProjectRefresh,
 } from "./content-pieces-ai-repurpose";
+import { handleProjectGenerateStream } from "./content-pieces-ai-stream";
 
 export function wordCountFromMarkdown(body: string): number {
   return body.split(/\s+/).filter(Boolean).length;
@@ -64,6 +65,17 @@ export async function handleContentPiecesAiWrite(
   path: string,
   userId: number,
 ): Promise<Response | null> {
+  const projectGenerateStreamMatch = path.match(
+    /^\/api\/website-projects\/(\d+)\/content-pieces\/generate\/stream$/,
+  );
+  if (projectGenerateStreamMatch && request.method === "POST") {
+    return handleProjectGenerateStream(
+      request,
+      Number.parseInt(projectGenerateStreamMatch[1]!, 10),
+      userId,
+    );
+  }
+
   const regenerateMatch = path.match(/^\/api\/content-pieces\/(\d+)\/regenerate$/);
   if (regenerateMatch && request.method === "POST") {
     return handleRegenerate(request, Number.parseInt(regenerateMatch[1]!, 10), userId);

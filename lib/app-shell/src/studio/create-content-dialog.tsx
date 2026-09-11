@@ -59,6 +59,7 @@ import {
   PathStep,
   SourceStep,
 } from "./create-content-steps";
+import { AgentTeamProgress, type AgentTeamState } from "./agent-team-progress";
 
 /**
  * Compact create/repurpose wizard shared by Vite Studio.
@@ -80,6 +81,9 @@ export function CreateContentDialog({
   competitorsLoading = false,
   generatingPhase = null,
   generatingHeadings = null,
+  agentTeamState = null,
+  agentTeamRunning = false,
+  agentTeamElapsedMs,
   existingPieces = null,
   onLoadSourcePiece,
   surface = "blog_wordpress",
@@ -99,6 +103,10 @@ export function CreateContentDialog({
   generatingPhase?: CreateGeneratingPhase | null;
   /** Headings parsed from stream chunks while drafting. */
   generatingHeadings?: string[] | null;
+  /** Live agent-team progress while generating (host owns SSE/queue updates). */
+  agentTeamState?: AgentTeamState | null;
+  agentTeamRunning?: boolean;
+  agentTeamElapsedMs?: number;
   existingPieces?: CreateSourcePieceOption[] | null;
   onLoadSourcePiece?: (
     pieceId: number,
@@ -124,6 +132,8 @@ export function CreateContentDialog({
   const [sourceContent, setSourceContent] = useState("");
   const [loadingSourcePiece, setLoadingSourcePiece] = useState(false);
   const [briefId, setBriefId] = useState<number | undefined>(undefined);
+  const [useAgentTeam, setUseAgentTeam] = useState(true);
+  const [agentFastMode, setAgentFastMode] = useState(false);
 
   const formatOptions = useMemo(() => studioFormatOptionsForSurface(surface), [surface]);
   const contentFormat = asContentFormat(formatType);
@@ -161,6 +171,8 @@ export function CreateContentDialog({
       setSourceContent("");
       setLoadingSourcePiece(false);
       setBriefId(undefined);
+      setUseAgentTeam(true);
+      setAgentFastMode(false);
       return;
     }
 
@@ -190,6 +202,8 @@ export function CreateContentDialog({
     setSourceContent("");
     setLoadingSourcePiece(false);
     setBriefId(initialValues?.briefId);
+    setUseAgentTeam(isSeoLongform(nextFormat));
+    setAgentFastMode(false);
   }, [open, initialValues]);
 
   // Merge project competitors once they arrive (async host fetch).
@@ -254,6 +268,7 @@ export function CreateContentDialog({
 
   function handleFormatSelect(value: string) {
     setFormatType(value);
+    setUseAgentTeam(isSeoLongform(value));
     if (value !== "linkedin_post") {
       setLinkedinArchetype("");
       setLinkedinHook("");
@@ -318,13 +333,18 @@ export function CreateContentDialog({
       competitorFocusUrl: focus || undefined,
       competitorUrls: urls.length > 0 ? urls : undefined,
       briefId,
+      ...(isSeoLongform(formatType) && useAgentTeam
+        ? { useAgentTeam: true, ...(agentFastMode ? { agentFastMode: true } : {}) }
+        : {}),
     });
   }
 
   const stepTitle = showGenerating
     ? flow === "repurpose"
       ? `Repurposing into ${formatTypeLabel(formatType)}…`
-      : `Writing your ${formatTypeLabel(formatType)}…`
+      : useAgentTeam
+        ? `Agent team writing your ${formatTypeLabel(formatType)}…`
+        : `Writing your ${formatTypeLabel(formatType)}…`
     : currentStep === "path"
       ? "How do you want to start?"
       : currentStep === "format"
@@ -420,6 +440,15 @@ export function CreateContentDialog({
             <GeneratingView
               generatingLabelIndex={generatingLabelIndex}
               generatingHeadings={generatingHeadings}
+              agentTeamSlot={
+                useAgentTeam && agentTeamState ? (
+                  <AgentTeamProgress
+                    agentState={agentTeamState}
+                    isRunning={agentTeamRunning || submitting}
+                    totalElapsedMs={agentTeamElapsedMs}
+                  />
+                ) : undefined
+              }
             />
           ) : null}
 
@@ -513,6 +542,11 @@ export function CreateContentDialog({
               selectedDestinationLabel={selectedDestinationLabel}
               plannedDate={plannedDate}
               onChangePlannedDate={setPlannedDate}
+              showAgentTeamToggle={flow === "create" && isSeoLongform(formatType)}
+              useAgentTeam={useAgentTeam}
+              onChangeUseAgentTeam={setUseAgentTeam}
+              agentFastMode={agentFastMode}
+              onChangeAgentFastMode={setAgentFastMode}
             />
           ) : null}
 

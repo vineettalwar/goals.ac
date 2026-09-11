@@ -313,7 +313,7 @@ The `cms_integrations` JSONB column stores an object like:
 The monorepo uses pnpm workspaces with TypeScript project references:
 
 - `lib/db` — Drizzle schema + migrations; exports `.d.ts` declaration files from `dist/`
-- `lib/api-spec` — OpenAPI YAML; source of truth for API contracts
+- `lib/api-spec` — OpenAPI sources (`openapi.yaml` + `paths/<tag>/`); `codegen` bundles then Orval-generates clients
 - `lib/api-zod` — Generated Zod schemas from OpenAPI spec (via Orval)
 - `lib/api-hooks` — Generated React Query hooks from OpenAPI spec (via Orval)
 

@@ -10,6 +10,12 @@ export {
   type RepurposeContentInput,
 } from "./create-content-dialog";
 export {
+  AgentTeamProgress,
+  applyAgentTeamEvent,
+  useAgentTeamState,
+  type AgentTeamState,
+} from "./agent-team-progress";
+export {
   StudioNewContentButton,
   StudioView,
 } from "./studio-ui";

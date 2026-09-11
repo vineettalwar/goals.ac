@@ -1,4 +1,5 @@
 import { CheckCircle2, FileText, Loader2, RefreshCw } from "lucide-react";
+import type { ReactNode } from "react";
 import type { PublishDestinationDefinition } from "../content-piece/publish-destinations";
 import {
   LINKEDIN_ARCHETYPES,
@@ -21,10 +22,21 @@ import {
 export function GeneratingView({
   generatingLabelIndex,
   generatingHeadings,
+  agentTeamSlot,
 }: {
   generatingLabelIndex: number;
   generatingHeadings?: string[] | null;
+  /** When set, replaces the Analyzing/Drafting/Finishing labels (agent team UI). */
+  agentTeamSlot?: ReactNode;
 }) {
+  if (agentTeamSlot) {
+    return (
+      <div aria-live="polite" aria-busy="true">
+        {agentTeamSlot}
+      </div>
+    );
+  }
+
   return (
     <div className="mt-8 space-y-3" aria-live="polite" aria-busy="true">
       {GENERATING_LABELS.map((label, index) => {

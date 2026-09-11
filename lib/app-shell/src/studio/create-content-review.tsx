@@ -31,6 +31,11 @@ export function ReviewStep({
   selectedDestinationLabel,
   plannedDate,
   onChangePlannedDate,
+  showAgentTeamToggle = false,
+  useAgentTeam = false,
+  onChangeUseAgentTeam,
+  agentFastMode = false,
+  onChangeAgentFastMode,
 }: {
   flow: CreateFlow;
   formatType: string;
@@ -46,6 +51,11 @@ export function ReviewStep({
   selectedDestinationLabel: string | null;
   plannedDate: string;
   onChangePlannedDate: (value: string) => void;
+  showAgentTeamToggle?: boolean;
+  useAgentTeam?: boolean;
+  onChangeUseAgentTeam?: (value: boolean) => void;
+  agentFastMode?: boolean;
+  onChangeAgentFastMode?: (value: boolean) => void;
 }) {
   return (
     <div className="mt-4 space-y-4">
@@ -63,6 +73,34 @@ export function ReviewStep({
             className="h-9 w-full max-w-xs rounded-lg border border-input bg-card px-3 text-sm"
           />
         </label>
+      ) : null}
+
+      {showAgentTeamToggle && flow === "create" && onChangeUseAgentTeam ? (
+        <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+          <label className="flex cursor-pointer items-start gap-3 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={useAgentTeam}
+              onChange={(e) => onChangeUseAgentTeam(e.target.checked)}
+              className="mt-0.5 rounded"
+            />
+            <span>
+              <span className="font-medium text-foreground">Agent team</span>
+              {" — "}specialists (Owl, Ferret, Hummingbird…) draft and polish. Slower, higher quality.
+            </span>
+          </label>
+          {useAgentTeam && onChangeAgentFastMode ? (
+            <label className="ml-7 flex cursor-pointer items-center gap-3 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={agentFastMode}
+                onChange={(e) => onChangeAgentFastMode(e.target.checked)}
+                className="rounded"
+              />
+              Fast mode (skip marketing + linguist)
+            </label>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-muted/30">
@@ -114,6 +152,14 @@ export function ReviewStep({
           ) : (
             <ReviewRow label="Planned date" value="Not scheduled" />
           )
+        ) : null}
+        {showAgentTeamToggle && flow === "create" ? (
+          <ReviewRow
+            label="Generation"
+            value={
+              useAgentTeam ? (agentFastMode ? "Agent team (fast)" : "Agent team") : "Standard"
+            }
+          />
         ) : null}
       </div>
     </div>

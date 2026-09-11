@@ -20,6 +20,10 @@ export type CreateContentDraftInput = {
   competitorUrls?: string[];
   /** Source brief this piece was created from (deep-linked via ?briefId=). */
   briefId?: number;
+  /** Run Owl→Chameleon agent team instead of single-pass generation. */
+  useAgentTeam?: boolean;
+  /** Skip marketing + linguist agents when useAgentTeam is on. */
+  agentFastMode?: boolean;
 };
 
 export type CreateContentInitialValues = Partial<CreateContentDraftInput>;
