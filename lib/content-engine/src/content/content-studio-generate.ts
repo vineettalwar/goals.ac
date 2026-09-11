@@ -407,6 +407,139 @@ async function generateWithClientStream(
 }
 
 // ---------------------------------------------------------------------------
+// Agent Team Generation
+// ---------------------------------------------------------------------------
+
+import {
+  runAgentPipeline,
+  runFastAgentPipeline,
+  AgentPipelineError,
+  type AgentOrchestratorInput,
+} from "../agents/agent-orchestrator";
+import type { AgentProgressEvent, AgentPipelineOptions } from "../agents/agent-types";
+import { serializeAgentEvent, createPipelineStartEvent, createPipelineCompleteEvent } from "../agents/agent-events";
+
+// Re-export for consumers
+export { AgentPipelineError } from "../agents/agent-orchestrator";
+
+export interface AgentTeamGenerationOptions {
+  /** Callback for agent progress events */
+  onAgentProgress?: (event: AgentProgressEvent) => void;
+  /** Callback for SSE-formatted agent events */
+  onAgentEvent?: (sseData: string) => void;
+  /** Use fast mode (skip marketing and linguist agents) */
+  fastMode?: boolean;
+  /** User's API key for BYOK */
+  userApiKey?: string | null;
+  /** AI provider options */
+  aiProviderOptions?: AiProviderOptions;
+}
+
+/**
+ * Generate content using the full agent team pipeline.
+ *
+ * This runs all 8 agents in sequence:
+ * owl → ferret → hummingbird → spider → fox → mockingbird → hawk → chameleon
+ *
+ * Progress events are emitted for each agent stage.
+ */
+export async function generateContentPieceWithAgents(
+  format: ContentFormatType,
+  brand: BrandContext,
+  keyword: string,
+  angleHint?: string,
+  options: AgentTeamGenerationOptions = {},
+  context: ContentGenerationContext = {},
+): Promise<ContentPieceResult> {
+  await assertAiGenerationEnabled();
+
+  const input: AgentOrchestratorInput = {
+    format,
+    brand,
+    keyword,
+    angleHint,
+    existingPieceTitles: context.existingPieceTitles,
+    competitorContext: context.competitorPromptBlock,
+    userApiKey: options.userApiKey,
+    aiProviderOptions: options.aiProviderOptions,
+  };
+
+  const pipelineOptions: AgentPipelineOptions = {
+    onProgress: (event) => {
+      // Call raw event callback
+      options.onAgentProgress?.(event);
+      // Call SSE-formatted callback
+      options.onAgentEvent?.(serializeAgentEvent(event));
+    },
+  };
+
+  // Emit pipeline start
+  options.onAgentEvent?.(createPipelineStartEvent(8));
+
+  // Run the pipeline
+  const runPipeline = options.fastMode ? runFastAgentPipeline : runAgentPipeline;
+  const pipelineResult = await runPipeline(input, pipelineOptions);
+
+  // Emit pipeline complete
+  options.onAgentEvent?.(
+    createPipelineCompleteEvent(
+      pipelineResult.totalDurationMs,
+      pipelineResult.stages.filter((s) => s.success).length,
+      pipelineResult.degradedAgents.length,
+    ),
+  );
+
+  // Build ContentPieceResult from pipeline output
+  const result: ContentPieceResult = {
+    title: pipelineResult.content.title,
+    target_keyword: keyword,
+    body_markdown: pipelineResult.content.body_markdown,
+    meta_description: pipelineResult.content.meta_description,
+    secondary_keywords: pipelineResult.content.secondary_keywords,
+    faq_section: pipelineResult.content.faq_section,
+    citations: pipelineResult.content.citations,
+    internal_link_suggestions: pipelineResult.content.internal_link_suggestions,
+    json_ld_schema: pipelineResult.content.json_ld_schema,
+    pieceMetadata: {
+      generatedWithAgents: true,
+      agentPipelineDurationMs: pipelineResult.totalDurationMs,
+      degradedAgents: pipelineResult.degradedAgents.length > 0 ? pipelineResult.degradedAgents : undefined,
+    },
+  };
+
+  // Run post-processing (humanize, images, guardrails) for SEO formats
+  if (isSeoLongformFormat(format)) {
+    const ai = await resolveAiClient(options.userApiKey, options.aiProviderOptions);
+    return postProcessGeneratedResult(result, format, brand, ai);
+  }
+
+  return result;
+}
+
+/**
+ * Stream content generation with agent team progress events.
+ *
+ * Combines agent progress events with content chunk streaming.
+ */
+export async function generateContentPieceWithAgentsStream(
+  format: ContentFormatType,
+  brand: BrandContext,
+  keyword: string,
+  onEvent: (event: { type: "agent" | "chunk" | "pipeline_start" | "pipeline_complete"; data: string }) => void,
+  angleHint?: string,
+  options: Omit<AgentTeamGenerationOptions, "onAgentEvent" | "onAgentProgress"> = {},
+  context: ContentGenerationContext = {},
+): Promise<ContentPieceResult> {
+  return generateContentPieceWithAgents(format, brand, keyword, angleHint, {
+    ...options,
+    onAgentEvent: (sseData) => {
+      const parsed = JSON.parse(sseData);
+      onEvent({ type: parsed.type ?? "agent", data: sseData });
+    },
+  }, context);
+}
+
+// ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
 

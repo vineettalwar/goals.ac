@@ -7,6 +7,8 @@ import {
   cacheGet,
   cacheSet,
   generateContentPieceStream,
+  generateContentPieceWithAgents,
+  AgentPipelineError,
 } from "@workspace/content-engine/content/content-studio-generator";
 import {
   GenerateBody,
@@ -84,6 +86,8 @@ export async function POST(
     cmsTags,
     bedrockModel,
     saveBedrockModel,
+    useAgentTeam,
+    agentFastMode,
   } = parsed.data;
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) {
@@ -211,13 +215,17 @@ export async function POST(
     }
   }
 
+  // Agent team uses multiple AI calls, charge at planning tier
+  const billingTier = useAgentTeam ? "planning" : "execution";
+
   const [{ userApiKey, aiProviderOptions: baseAiOptions }, billingPrep] = await Promise.all([
     loadUserAiSettings(userId!),
     prepareAiBilling({
-    userId: userId!,
-    tier: "execution",
-    quotaKind: "article",
-  }),  ]);
+      userId: userId!,
+      tier: billingTier,
+      quotaKind: "article",
+    }),
+  ]);
   if (!billingPrep.ok) return billingDeniedResponse(billingPrep);
   const aiProviderOptions = withBedrockModelOverride(baseAiOptions, bedrockModel);
 
@@ -230,29 +238,56 @@ export async function POST(
 
         try {
           let result;
-          try {
-            result = await generateContentPieceStream(
-              formatType,
-              ctx.brand,
-              targetKeyword,
-              (chunk) => send("chunk", { text: chunk }),
-              angleHint,
-              userApiKey,
-              aiProviderOptions,
-              generationContext,
-            );
-          } catch (streamErr) {
-            logger.warn({ err: streamErr, projectId, formatType }, "Stream generation failed, falling back");
-            result = await generateContentPiece(
+
+          if (useAgentTeam) {
+            // Agent team pipeline with progress events
+            result = await generateContentPieceWithAgents(
               formatType,
               ctx.brand,
               targetKeyword,
               angleHint,
-              true,
-              userApiKey,
-              aiProviderOptions,
+              {
+                fastMode: agentFastMode,
+                userApiKey,
+                aiProviderOptions,
+                onAgentEvent: (sseData: string) => {
+                  // Parse the agent event and send as SSE
+                  try {
+                    const parsed = JSON.parse(sseData);
+                    send("agent", parsed);
+                  } catch {
+                    send("agent", { raw: sseData });
+                  }
+                },
+              },
               generationContext,
             );
+          } else {
+            // Standard generation with streaming chunks
+            try {
+              result = await generateContentPieceStream(
+                formatType,
+                ctx.brand,
+                targetKeyword,
+                (chunk: string) => send("chunk", { text: chunk }),
+                angleHint,
+                userApiKey,
+                aiProviderOptions,
+                generationContext,
+              );
+            } catch (streamErr) {
+              logger.warn({ err: streamErr, projectId, formatType }, "Stream generation failed, falling back");
+              result = await generateContentPiece(
+                formatType,
+                ctx.brand,
+                targetKeyword,
+                angleHint,
+                true,
+                userApiKey,
+                aiProviderOptions,
+                generationContext,
+              );
+            }
           }
 
           await cacheSet(cacheKeyStr, result);
@@ -276,7 +311,7 @@ export async function POST(
             userId: userId!,
             eventType: "content_generation",
             usedByok: billingPrep.usedByok,
-            tier: "execution",
+            tier: billingTier,
             companyId: projectId,
             promptTokens: result.generationUsage?.promptTokens,
             outputTokens: result.generationUsage?.outputTokens,
@@ -287,11 +322,21 @@ export async function POST(
         } catch (err) {
           await cancelAiBilling(billingPrep.ctx);
           logger.error({ err, projectId, formatType, targetKeyword }, "Content piece generation failed");
-          const message =
-            err instanceof Error && err.message
-              ? err.message
-              : "Generation failed. Please try again.";
-          send("error", { error: message });
+
+          if (err instanceof AgentPipelineError) {
+            send("error", {
+              error: err.message,
+              code: err.code,
+              agentId: err.agentId,
+              retryable: err.retryable,
+            });
+          } else {
+            const message =
+              err instanceof Error && err.message
+                ? err.message
+                : "Generation failed. Please try again.";
+            send("error", { error: message });
+          }
         } finally {
           controller.close();
         }

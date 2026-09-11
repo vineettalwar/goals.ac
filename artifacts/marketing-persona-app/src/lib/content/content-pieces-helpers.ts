@@ -70,6 +70,10 @@ export const GenerateBody = z
       }),
     cmsCategories: z.array(z.string().trim().min(1)).max(20).optional(),
     cmsTags: z.array(z.string().trim().min(1)).max(40).optional(),
+    /** Use the AI agent team pipeline (Owl, Ferret, Hummingbird, Spider, Fox, Mockingbird, Hawk, Chameleon) */
+    useAgentTeam: z.boolean().optional(),
+    /** When using agent team, skip Marketing (Fox) and Linguist (Mockingbird) agents for faster generation */
+    agentFastMode: z.boolean().optional(),
   })
   .transform((data) => {
     const competitorUrls = data.competitorUrls;
@@ -367,7 +371,8 @@ export async function insertGeneratedContentPiece(params: {
   briefId?: number;
   formatType: ContentFormatType;
   result: GeneratedPieceResult;
-  cacheKey: string;
+  /** Optional cache key for deduplication. Omit for agent-generated content. */
+  cacheKey?: string;
   plannedDate?: string | null;
   intendedPublishPlatform?: string;
   intendedOutputMode?: ContentPieceMetadata["intendedOutputMode"];

@@ -84,6 +84,12 @@ export type ContentPieceMetadata = {
   verticalGuardrailRegenerated?: boolean;
   /** True for orgs whose vertical requires human review before any publish. */
   requiresReview?: boolean;
+  /** True when generated using the agent team pipeline. */
+  generatedWithAgents?: boolean;
+  /** Total time for agent pipeline in ms. */
+  agentPipelineDurationMs?: number;
+  /** Agents that failed or were skipped during pipeline. */
+  degradedAgents?: string[];
 };
 
 export type RichContentPieceFields = ContentPieceMetadata & {

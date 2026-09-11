@@ -54,3 +54,6 @@ export * from "./support/publishing/resolve-publish-entitlements";
 export * from "./support/auth/api-key-auth";
 export * from "./support/publishing/publishing-settings";
 export * from "./support/publishing/intended-destination";
+
+// Agent Team
+export * from "./agents";
