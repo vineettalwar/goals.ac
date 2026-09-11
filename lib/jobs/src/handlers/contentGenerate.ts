@@ -13,7 +13,7 @@ import {
   generateFromContentItem,
   type GenerateFromItemResult,
 } from "@workspace/content-engine/strategy/autopilot-orchestrator";
-import { generateContentPiece } from "@workspace/content-engine/content/content-studio-generator";
+import { generateContentPiece, generateContentPieceWithAgents } from "@workspace/content-engine/content/content-studio-generator";
 import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
@@ -140,6 +140,8 @@ async function generateExistingContentPiece(
   options: {
     userApiKey?: string | null;
     aiProviderOptions?: Awaited<ReturnType<typeof getUserAiProviderOptions>>;
+    useAgentTeam?: boolean;
+    agentFastMode?: boolean;
   },
 ): Promise<GenerateFromItemResult> {
   const [piece] = await db
@@ -167,15 +169,27 @@ async function generateExistingContentPiece(
     const brand = await loadBrandContextForProject(projectId);
     if (!brand) throw new Error("Project not found");
 
-    const generated = await generateContentPiece(
-      piece.formatType as ContentFormatType,
-      brand,
-      piece.targetKeyword ?? "",
-      undefined,
-      true,
-      options.userApiKey,
-      options.aiProviderOptions,
-    );
+    const generated = options.useAgentTeam
+      ? await generateContentPieceWithAgents(
+          piece.formatType as ContentFormatType,
+          brand,
+          piece.targetKeyword ?? "",
+          undefined,
+          {
+            fastMode: options.agentFastMode,
+            userApiKey: options.userApiKey,
+            aiProviderOptions: options.aiProviderOptions,
+          },
+        )
+      : await generateContentPiece(
+          piece.formatType as ContentFormatType,
+          brand,
+          piece.targetKeyword ?? "",
+          undefined,
+          true,
+          options.userApiKey,
+          options.aiProviderOptions,
+        );
 
     const wordCount = generated.body_markdown.split(/\s+/).filter(Boolean).length;
 
@@ -231,6 +245,8 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
     generateVariants,
     schedulePublish,
     triggeredByAutopilot,
+    useAgentTeam,
+    agentFastMode,
   } = payload;
   if (!contentItemId && !contentPieceId) {
     throw new Error("contentItemId or contentPieceId required");
@@ -245,7 +261,7 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
 
     const billingPrep = await prepareAiBillingSession({
       userId,
-      tier: "execution",
+      tier: useAgentTeam ? "planning" : "execution",
       usedByok: usesByok,
       quotaKind: usesByok ? undefined : "article",
     });
@@ -264,11 +280,14 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
     const genOptions = {
       userApiKey,
       aiProviderOptions,
+      useAgentTeam,
+      agentFastMode,
     };
     const result = contentPieceId
       ? await generateExistingContentPiece(contentPieceId, projectId, userId, genOptions)
       : await generateFromContentItem(contentItemId!, projectId, userId, {
-          ...genOptions,
+          userApiKey,
+          aiProviderOptions,
           generateVariants: generateVariants !== false,
         });
 

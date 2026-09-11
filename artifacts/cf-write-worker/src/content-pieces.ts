@@ -474,6 +474,13 @@ async function handleContentPieceGenerate(
     return withCors(request, Response.json({ error: aiReady.message }, { status: 503 }));
   }
 
+  const rawBody = (await request.json().catch(() => null)) as {
+    useAgentTeam?: boolean;
+    agentFastMode?: boolean;
+  } | null;
+  const useAgentTeam = rawBody?.useAgentTeam === true;
+  const agentFastMode = rawBody?.agentFastMode === true;
+
   const [piece] = await db
     .select({
       id: contentPiecesTable.id,
@@ -505,6 +512,8 @@ async function handleContentPieceGenerate(
     projectId: piece.websiteProjectId,
     userId,
     generateVariants: false,
+    ...(useAgentTeam ? { useAgentTeam: true as const } : {}),
+    ...(agentFastMode ? { agentFastMode: true as const } : {}),
   };
 
   const jobId = await sendToCfQueue(QUEUES.contentGenerate, queuePayload);

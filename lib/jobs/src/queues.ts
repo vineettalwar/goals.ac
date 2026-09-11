@@ -78,6 +78,9 @@ export interface ContentGeneratePayload {
   generateVariants?: boolean;
   schedulePublish?: boolean;
   triggeredByAutopilot?: boolean;
+  /** Run Owl→Chameleon agent pipeline when filling an existing piece. */
+  useAgentTeam?: boolean;
+  agentFastMode?: boolean;
 }
 
 export interface ContentPublishPayload {
