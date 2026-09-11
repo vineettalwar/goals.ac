@@ -78,6 +78,9 @@ cloudflare-env.d.ts
 **/.wrangler/
 .cursor/skills/
 
+# OpenAPI bundle (assembled by lib/api-spec/bundle.py for Orval)
+lib/api-spec/openapi.bundle.yaml
+
 # Agent worktree scratch space
 .claude/worktrees/
 artifacts/marketing-persona-app/public/downloads/*.zip

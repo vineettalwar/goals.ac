@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "codegen": "orval --config ./orval.config.ts"
+    "bundle": "python3 ./bundle.py",
+    "codegen": "python3 ./bundle.py && orval --config ./orval.config.ts && node ./pin-api-zod-index.mjs"
   },
   "devDependencies": {
     "orval": "^8.5.2"

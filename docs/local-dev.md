@@ -232,12 +232,12 @@ Add `http://localhost:3001/api/auth/callback/google` to your Google OAuth app's 
 
 ### Regenerating API Types
 
-After changing `lib/api-spec/openapi.yaml`:
+After changing OpenAPI sources under `lib/api-spec/` (`paths/<tag>/` or schemas in `openapi.yaml`):
 ```sh
 pnpm --filter @workspace/api-spec run codegen
 ```
 
-This regenerates Zod schemas in `lib/api-zod/` and React Query hooks in `lib/api-hooks/`.
+This bundles the modular path files into `openapi.bundle.yaml` (gitignored), then regenerates Zod schemas in `lib/api-zod/` and React Query hooks in `lib/api-client-react/`.
 
 ### TypeScript Check
 

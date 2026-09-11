@@ -1,0 +1,46 @@
+get:
+  operationId: listTrackedKeywords
+  tags: [seo-tools]
+  summary: List tracked keywords for a project
+  parameters:
+    - name: projectId
+      in: query
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Tracked keywords with latest snapshots
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TrackedKeywordListResponse"
+    "400":
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+post:
+  operationId: createTrackedKeyword
+  tags: [seo-tools]
+  summary: Add a keyword to rank tracking
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/CreateTrackedKeywordRequest"
+  responses:
+    "201":
+      description: Tracked keyword created
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TrackedKeyword"
+    "503":
+      description: SERP provider not configured
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

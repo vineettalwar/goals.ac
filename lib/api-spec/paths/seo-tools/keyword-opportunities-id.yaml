@@ -1,0 +1,28 @@
+post:
+  operationId: queueKeywordOpportunity
+  tags: [seo-tools]
+  summary: Queue an opportunity into the content strategy
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Queued
+    "400":
+      description: No content strategy
+patch:
+  operationId: updateKeywordOpportunity
+  tags: [seo-tools]
+  summary: Update opportunity status (e.g. dismissed)
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Updated

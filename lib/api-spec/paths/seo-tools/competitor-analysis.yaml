@@ -1,0 +1,29 @@
+post:
+  operationId: createCompetitorAnalysis
+  tags: [seo-tools]
+  summary: Analyze a competitor URL
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/CreateCompetitorAnalysisRequest"
+  responses:
+    "201":
+      description: Competitor analysis result
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CompetitorAnalysisResponse"
+    "400":
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    "503":
+      description: AI unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

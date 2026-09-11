@@ -1,0 +1,23 @@
+get:
+  operationId: getContentStrategy
+  tags: [content-strategies]
+  summary: Get a content strategy with all items
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Content strategy with items
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ContentStrategyWithItems"
+    "404":
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

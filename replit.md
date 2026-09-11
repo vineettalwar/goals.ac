@@ -13,7 +13,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec in `lib/api-spec/openapi.yaml`)
+- **API codegen**: Orval (from modular OpenAPI under `lib/api-spec/`; bundles then generates)
 - **Build**: esbuild (via `build.mjs` in api-server)
 - **Frontend build**: Vite 7 + Tailwind CSS 4
 
@@ -68,7 +68,7 @@ The workspace `pnpm-workspace.yaml` overrides trim unused platform binaries for 
 - `pnpm --filter @workspace/db run seed` — seed reference data (industries + locations)
 
 ### API Codegen
-- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks (`lib/api-hooks/`) and Zod schemas (`lib/api-zod/`) from `lib/api-spec/openapi.yaml`
+- `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks (`lib/api-client-react/`) and Zod schemas (`lib/api-zod/`) from modular OpenAPI sources
 
 ### Running Services
 - `pnpm --filter @workspace/api-server run dev` — start API server (builds then starts; auto-runs migrations)
@@ -203,16 +203,16 @@ The full snapshot chain (0000–0019) is intact. Running `drizzle-kit generate` 
 
 ## API Codegen Workflow
 
-The OpenAPI spec (`lib/api-spec/openapi.yaml`) is the source of truth for the API contract:
+Modular OpenAPI under `lib/api-spec/` is the source of truth (`paths/<tag>/` + schemas in `openapi.yaml`):
 
 ```sh
-# After editing openapi.yaml:
+# After editing path modules or schemas:
 pnpm --filter @workspace/api-spec run codegen
 ```
 
 This regenerates:
 - `lib/api-zod/` — Zod request/response schemas
-- `lib/api-hooks/` — React Query hooks
+- `lib/api-client-react/` — React Query hooks
 
 ---
 

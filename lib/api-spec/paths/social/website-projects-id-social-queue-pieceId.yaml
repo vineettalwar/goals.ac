@@ -1,0 +1,18 @@
+patch:
+  operationId: scheduleSocialQueuePiece
+  tags: [social]
+  summary: Schedule or unschedule a social queue item
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    - name: pieceId
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Updated content piece

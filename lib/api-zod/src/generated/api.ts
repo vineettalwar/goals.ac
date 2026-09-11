@@ -599,3 +599,106 @@ export const QueueKeywordOpportunityParams = zod.object({
 export const UpdateKeywordOpportunityParams = zod.object({
   id: zod.coerce.number(),
 });
+
+/**
+ * @summary List connected publish destinations for a project
+ */
+export const ListPublishConnectionsQueryParams = zod.object({
+  projectId: zod.coerce.number(),
+});
+
+/**
+ * Runs the same brand-voice / style-vector / research-grounded generator as the interactive Studio and persists the result as a draft content piece. Requires scope content:generate. Feed the returned id into /v1/content/render for a platform-shaped payload (Gutenberg, Elementor, LinkedIn, Twitter thread, ...) or into /v1/content-pieces/{id}/publish. Served by both the Next.js app (Postgres) and the Cloudflare cf-public-worker (D1) deploy targets.
+ * @summary Generate a personalized content draft from the project's brand/dataset
+ */
+export const GenerateContentPiecePublicBody = zod.object({
+  projectId: zod.number(),
+  formatType: zod.string(),
+  targetKeyword: zod.string(),
+  angleHint: zod.string().optional(),
+  intendedPublishPlatform: zod.string().optional(),
+  intendedOutputMode: zod.string().optional(),
+  intendedEditorMode: zod
+    .enum(["classic", "gutenberg", "elementor", "divi"])
+    .optional(),
+  competitorFocusUrl: zod.string().optional(),
+  competitorUrls: zod.array(zod.string()).optional(),
+  cmsCategories: zod.array(zod.string()).optional(),
+  cmsTags: zod.array(zod.string()).optional(),
+  plannedDate: zod.string().optional(),
+  bypassCache: zod.boolean().optional(),
+});
+
+/**
+ * Runs the specialist agent pipeline (Owl → Ferret → Hummingbird → Spider → Fox → Mockingbird → Hawk → Chameleon) instead of single-pass generation. Requires scope content:generate. Uses planning-tier billing (multiple AI calls). Set stream=true for SSE progress events (event: agent) including pipeline_start, per-agent status, and pipeline_complete; otherwise returns JSON 201 with the saved draft. Served by the Next.js app (Postgres). Prefer this when you want agent-visible progress; use /v1/content-pieces/generate for faster single-pass drafts.
+ * @summary Generate a draft via the visible AI agent team pipeline
+ */
+export const GenerateContentPieceWithAgentsPublicBody = zod.object({
+  projectId: zod.number(),
+  formatType: zod.string(),
+  targetKeyword: zod.string(),
+  angleHint: zod.string().optional(),
+  intendedPublishPlatform: zod.string().optional(),
+  competitorFocusUrl: zod.string().optional(),
+  competitorUrls: zod.array(zod.string()).optional(),
+  plannedDate: zod.string().optional(),
+  fastMode: zod
+    .boolean()
+    .optional()
+    .describe(
+      "Skip Fox (marketing) and Mockingbird (linguist) for lower latency",
+    ),
+  stream: zod
+    .boolean()
+    .optional()
+    .describe(
+      "When true, respond with text\/event-stream agent progress + result",
+    ),
+});
+
+/**
+ * Sources a stock photo (Unsplash/Pexels, whichever the project has credentials for) matched to the piece's keyword/headings. Requires scope image:generate. There is no AI image-generation provider wired into goals.ac yet — this is stock search, not text-to-image. Served by both the Next.js app (Postgres) and the Cloudflare cf-public-worker (D1) deploy targets.
+ * @summary Attach a licensed stock photo to a piece as its featured image
+ */
+export const AttachContentPieceImagePublicParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const AttachContentPieceImagePublicBody = zod.object({
+  projectId: zod.number(),
+});
+
+/**
+ * @summary Render content for a destination without publishing
+ */
+export const RenderContentForPlatformBody = zod.object({
+  projectId: zod.number(),
+  platform: zod.string(),
+  title: zod.string(),
+  markdown: zod.string(),
+  editorMode: zod
+    .enum(["classic", "gutenberg", "elementor", "divi"])
+    .optional(),
+});
+
+/**
+ * @summary Publish a content piece to a connected destination
+ */
+export const PublishContentPiecePublicParams = zod.object({
+  id: zod.coerce.number(),
+});
+
+export const PublishContentPiecePublicBody = zod.object({
+  projectId: zod.number(),
+  platform: zod.string(),
+});
+
+/**
+ * @summary Validate and return canonical content from external markdown
+ */
+export const IngestContentDraftBody = zod.object({
+  projectId: zod.number(),
+  title: zod.string(),
+  markdown: zod.string(),
+  formatType: zod.string().optional(),
+});

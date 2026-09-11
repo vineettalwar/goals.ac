@@ -1,0 +1,15 @@
+get:
+  operationId: listPublishConnections
+  tags: [publish]
+  summary: List connected publish destinations for a project
+  security:
+    - ApiKeyAuth: []
+  parameters:
+    - name: projectId
+      in: query
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Connected platforms with adapter capabilities

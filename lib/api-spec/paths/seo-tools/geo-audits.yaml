@@ -1,0 +1,29 @@
+post:
+  operationId: createGeoAudit
+  tags: [seo-tools]
+  summary: Run a GEO audit on a URL
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/CreateGeoAuditRequest"
+  responses:
+    "201":
+      description: GEO audit created
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GeoAudit"
+    "400":
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    "422":
+      description: URL fetch failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

@@ -35,7 +35,7 @@ goals.ac/
 │   └── marketing-persona-app/   # Next.js marketing site + autopilot app (port 3001)
 ├── lib/
 │   ├── db/                      # Drizzle schema (20 tables), migrations, seeding
-│   ├── api-spec/                # OpenAPI spec — source of truth for API contracts
+│   ├── api-spec/                # OpenAPI sources (paths by tag; schemas in openapi.yaml)
 │   ├── api-zod/                 # Generated Zod schemas (from OpenAPI via Orval)
 │   ├── api-client-react/        # Generated React Query hooks (from OpenAPI via Orval)
 │   ├── ai-providers/            # Provider abstraction (Gemini, Bedrock, Ollama), tier routing
@@ -161,7 +161,7 @@ pnpm run cf:migrate:d1:local && pnpm run cf:seed:d1:local && pnpm run cf:preview
 
 1. Schema changes: edit `lib/db/src/schema/`, run `pnpm --filter @workspace/db run generate`, review SQL, run `pnpm --filter @workspace/db run migrate`, then `cd lib/db && npx tsc --build` to refresh types
 2. **D1 prep:** after schema edits, `pnpm --filter @workspace/db run generate:d1`; apply `pnpm run cf:migrate:d1:local`; seed `pnpm run cf:seed:d1:local`. Use `countAsInt`, `ilikeCompat`, `jsonTextAt` from `@workspace/db` in shared query code.
-3. API spec changes: edit `lib/api-spec/openapi.yaml`, run `pnpm --filter @workspace/api-spec run codegen`
+3. API spec changes: edit path modules under `lib/api-spec/paths/<tag>/` (or schemas in `openapi.yaml`), then run `pnpm --filter @workspace/api-spec run codegen` (bundles into `openapi.bundle.yaml` for Orval)
 4. Always run `pnpm run typecheck` locally before pushing
 
 **No GitHub Actions (forbidden)** — zero `.github/workflows/` in this repo. Never create, restore, or suggest GitHub Actions / GitHub CI unless the user explicitly asks. Deploy via Cloudflare Workers Builds, not Actions. Validate locally (`pnpm run typecheck`, package builds, `docker compose config`) instead.

@@ -1,0 +1,23 @@
+get:
+  operationId: getRoadmap
+  tags: [roadmaps]
+  summary: Get a roadmap by slug
+  parameters:
+    - name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+  responses:
+    "200":
+      description: Roadmap found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Roadmap"
+    "404":
+      description: Roadmap not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

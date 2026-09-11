@@ -1,0 +1,28 @@
+post:
+  operationId: renderContentForPlatform
+  tags: [publish]
+  summary: Render content for a destination without publishing
+  security:
+    - ApiKeyAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [projectId, platform, title, markdown]
+          properties:
+            projectId:
+              type: integer
+            platform:
+              type: string
+            title:
+              type: string
+            markdown:
+              type: string
+            editorMode:
+              type: string
+              enum: [classic, gutenberg, elementor, divi]
+  responses:
+    "200":
+      description: Render preview payload

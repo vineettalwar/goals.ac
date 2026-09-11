@@ -17,6 +17,7 @@ import type {
 } from "@tanstack/react-query";
 
 import type {
+  AttachContentPieceImagePublicBody,
   CaptureLeadRequest,
   CaptureLeadResponse,
   CompetitorAnalysisResponse,
@@ -29,16 +30,23 @@ import type {
   CreateTrackedKeywordRequest,
   DeleteArticleIdeaSourceParams,
   ErrorResponse,
+  GenerateContentPiecePublicBody,
+  GenerateContentPieceWithAgentsPublic201,
+  GenerateContentPieceWithAgentsPublicBody,
   GenerateContentStrategyRequest,
   GenerateRoadmapRequest,
   GeoAudit,
   GetSocialMetricsParams,
   HealthStatus,
   Industry,
+  IngestContentDraftBody,
   KeywordAnalysisResponse,
+  ListPublishConnectionsParams,
   ListRoadmapsParams,
   ListTrackedKeywordsParams,
   Location,
+  PublishContentPiecePublicBody,
+  RenderContentForPlatformBody,
   Roadmap,
   RoadmapListResponse,
   SyncSocialHistoryParams,
@@ -3487,4 +3495,635 @@ export const useUpdateKeywordOpportunity = <
   TContext
 > => {
   return useMutation(getUpdateKeywordOpportunityMutationOptions(options));
+};
+
+/**
+ * @summary List connected publish destinations for a project
+ */
+export const getListPublishConnectionsUrl = (
+  params: ListPublishConnectionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/connections?${stringifiedParams}`
+    : `/api/v1/connections`;
+};
+
+export const listPublishConnections = async (
+  params: ListPublishConnectionsParams,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getListPublishConnectionsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getListPublishConnectionsQueryKey = (
+  params?: ListPublishConnectionsParams,
+) => {
+  return [`/api/v1/connections`, ...(params ? [params] : [])] as const;
+};
+
+export const getListPublishConnectionsQueryOptions = <
+  TData = Awaited<ReturnType<typeof listPublishConnections>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPublishConnectionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPublishConnections>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey =
+    queryOptions?.queryKey ?? getListPublishConnectionsQueryKey(params);
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<typeof listPublishConnections>>
+  > = ({ signal }) =>
+    listPublishConnections(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof listPublishConnections>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type ListPublishConnectionsQueryResult = NonNullable<
+  Awaited<ReturnType<typeof listPublishConnections>>
+>;
+export type ListPublishConnectionsQueryError = ErrorType<unknown>;
+
+/**
+ * @summary List connected publish destinations for a project
+ */
+
+export function useListPublishConnections<
+  TData = Awaited<ReturnType<typeof listPublishConnections>>,
+  TError = ErrorType<unknown>,
+>(
+  params: ListPublishConnectionsParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof listPublishConnections>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getListPublishConnectionsQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Runs the same brand-voice / style-vector / research-grounded generator as the interactive Studio and persists the result as a draft content piece. Requires scope content:generate. Feed the returned id into /v1/content/render for a platform-shaped payload (Gutenberg, Elementor, LinkedIn, Twitter thread, ...) or into /v1/content-pieces/{id}/publish. Served by both the Next.js app (Postgres) and the Cloudflare cf-public-worker (D1) deploy targets.
+ * @summary Generate a personalized content draft from the project's brand/dataset
+ */
+export const getGenerateContentPiecePublicUrl = () => {
+  return `/api/v1/content-pieces/generate`;
+};
+
+export const generateContentPiecePublic = async (
+  generateContentPiecePublicBody: GenerateContentPiecePublicBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getGenerateContentPiecePublicUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(generateContentPiecePublicBody),
+  });
+};
+
+export const getGenerateContentPiecePublicMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateContentPiecePublic>>,
+    TError,
+    { data: BodyType<GenerateContentPiecePublicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateContentPiecePublic>>,
+  TError,
+  { data: BodyType<GenerateContentPiecePublicBody> },
+  TContext
+> => {
+  const mutationKey = ["generateContentPiecePublic"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateContentPiecePublic>>,
+    { data: BodyType<GenerateContentPiecePublicBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateContentPiecePublic(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateContentPiecePublicMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateContentPiecePublic>>
+>;
+export type GenerateContentPiecePublicMutationBody =
+  BodyType<GenerateContentPiecePublicBody>;
+export type GenerateContentPiecePublicMutationError = ErrorType<void>;
+
+/**
+ * @summary Generate a personalized content draft from the project's brand/dataset
+ */
+export const useGenerateContentPiecePublic = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateContentPiecePublic>>,
+    TError,
+    { data: BodyType<GenerateContentPiecePublicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateContentPiecePublic>>,
+  TError,
+  { data: BodyType<GenerateContentPiecePublicBody> },
+  TContext
+> => {
+  return useMutation(getGenerateContentPiecePublicMutationOptions(options));
+};
+
+/**
+ * Runs the specialist agent pipeline (Owl → Ferret → Hummingbird → Spider → Fox → Mockingbird → Hawk → Chameleon) instead of single-pass generation. Requires scope content:generate. Uses planning-tier billing (multiple AI calls). Set stream=true for SSE progress events (event: agent) including pipeline_start, per-agent status, and pipeline_complete; otherwise returns JSON 201 with the saved draft. Served by the Next.js app (Postgres). Prefer this when you want agent-visible progress; use /v1/content-pieces/generate for faster single-pass drafts.
+ * @summary Generate a draft via the visible AI agent team pipeline
+ */
+export const getGenerateContentPieceWithAgentsPublicUrl = () => {
+  return `/api/v1/content-pieces/generate-with-agents`;
+};
+
+export const generateContentPieceWithAgentsPublic = async (
+  generateContentPieceWithAgentsPublicBody: GenerateContentPieceWithAgentsPublicBody,
+  options?: RequestInit,
+): Promise<void | GenerateContentPieceWithAgentsPublic201> => {
+  return customFetch<void | GenerateContentPieceWithAgentsPublic201>(
+    getGenerateContentPieceWithAgentsPublicUrl(),
+    {
+      ...options,
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...options?.headers },
+      body: JSON.stringify(generateContentPieceWithAgentsPublicBody),
+    },
+  );
+};
+
+export const getGenerateContentPieceWithAgentsPublicMutationOptions = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateContentPieceWithAgentsPublic>>,
+    TError,
+    { data: BodyType<GenerateContentPieceWithAgentsPublicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof generateContentPieceWithAgentsPublic>>,
+  TError,
+  { data: BodyType<GenerateContentPieceWithAgentsPublicBody> },
+  TContext
+> => {
+  const mutationKey = ["generateContentPieceWithAgentsPublic"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof generateContentPieceWithAgentsPublic>>,
+    { data: BodyType<GenerateContentPieceWithAgentsPublicBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return generateContentPieceWithAgentsPublic(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GenerateContentPieceWithAgentsPublicMutationResult = NonNullable<
+  Awaited<ReturnType<typeof generateContentPieceWithAgentsPublic>>
+>;
+export type GenerateContentPieceWithAgentsPublicMutationBody =
+  BodyType<GenerateContentPieceWithAgentsPublicBody>;
+export type GenerateContentPieceWithAgentsPublicMutationError = ErrorType<void>;
+
+/**
+ * @summary Generate a draft via the visible AI agent team pipeline
+ */
+export const useGenerateContentPieceWithAgentsPublic = <
+  TError = ErrorType<void>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof generateContentPieceWithAgentsPublic>>,
+    TError,
+    { data: BodyType<GenerateContentPieceWithAgentsPublicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof generateContentPieceWithAgentsPublic>>,
+  TError,
+  { data: BodyType<GenerateContentPieceWithAgentsPublicBody> },
+  TContext
+> => {
+  return useMutation(
+    getGenerateContentPieceWithAgentsPublicMutationOptions(options),
+  );
+};
+
+/**
+ * Sources a stock photo (Unsplash/Pexels, whichever the project has credentials for) matched to the piece's keyword/headings. Requires scope image:generate. There is no AI image-generation provider wired into goals.ac yet — this is stock search, not text-to-image. Served by both the Next.js app (Postgres) and the Cloudflare cf-public-worker (D1) deploy targets.
+ * @summary Attach a licensed stock photo to a piece as its featured image
+ */
+export const getAttachContentPieceImagePublicUrl = (id: number) => {
+  return `/api/v1/content-pieces/${id}/image`;
+};
+
+export const attachContentPieceImagePublic = async (
+  id: number,
+  attachContentPieceImagePublicBody: AttachContentPieceImagePublicBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getAttachContentPieceImagePublicUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(attachContentPieceImagePublicBody),
+  });
+};
+
+export const getAttachContentPieceImagePublicMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof attachContentPieceImagePublic>>,
+    TError,
+    { id: number; data: BodyType<AttachContentPieceImagePublicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof attachContentPieceImagePublic>>,
+  TError,
+  { id: number; data: BodyType<AttachContentPieceImagePublicBody> },
+  TContext
+> => {
+  const mutationKey = ["attachContentPieceImagePublic"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof attachContentPieceImagePublic>>,
+    { id: number; data: BodyType<AttachContentPieceImagePublicBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return attachContentPieceImagePublic(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type AttachContentPieceImagePublicMutationResult = NonNullable<
+  Awaited<ReturnType<typeof attachContentPieceImagePublic>>
+>;
+export type AttachContentPieceImagePublicMutationBody =
+  BodyType<AttachContentPieceImagePublicBody>;
+export type AttachContentPieceImagePublicMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Attach a licensed stock photo to a piece as its featured image
+ */
+export const useAttachContentPieceImagePublic = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof attachContentPieceImagePublic>>,
+    TError,
+    { id: number; data: BodyType<AttachContentPieceImagePublicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof attachContentPieceImagePublic>>,
+  TError,
+  { id: number; data: BodyType<AttachContentPieceImagePublicBody> },
+  TContext
+> => {
+  return useMutation(getAttachContentPieceImagePublicMutationOptions(options));
+};
+
+/**
+ * @summary Render content for a destination without publishing
+ */
+export const getRenderContentForPlatformUrl = () => {
+  return `/api/v1/content/render`;
+};
+
+export const renderContentForPlatform = async (
+  renderContentForPlatformBody: RenderContentForPlatformBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getRenderContentForPlatformUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(renderContentForPlatformBody),
+  });
+};
+
+export const getRenderContentForPlatformMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renderContentForPlatform>>,
+    TError,
+    { data: BodyType<RenderContentForPlatformBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof renderContentForPlatform>>,
+  TError,
+  { data: BodyType<RenderContentForPlatformBody> },
+  TContext
+> => {
+  const mutationKey = ["renderContentForPlatform"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof renderContentForPlatform>>,
+    { data: BodyType<RenderContentForPlatformBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return renderContentForPlatform(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type RenderContentForPlatformMutationResult = NonNullable<
+  Awaited<ReturnType<typeof renderContentForPlatform>>
+>;
+export type RenderContentForPlatformMutationBody =
+  BodyType<RenderContentForPlatformBody>;
+export type RenderContentForPlatformMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Render content for a destination without publishing
+ */
+export const useRenderContentForPlatform = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof renderContentForPlatform>>,
+    TError,
+    { data: BodyType<RenderContentForPlatformBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof renderContentForPlatform>>,
+  TError,
+  { data: BodyType<RenderContentForPlatformBody> },
+  TContext
+> => {
+  return useMutation(getRenderContentForPlatformMutationOptions(options));
+};
+
+/**
+ * @summary Publish a content piece to a connected destination
+ */
+export const getPublishContentPiecePublicUrl = (id: number) => {
+  return `/api/v1/content-pieces/${id}/publish`;
+};
+
+export const publishContentPiecePublic = async (
+  id: number,
+  publishContentPiecePublicBody: PublishContentPiecePublicBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getPublishContentPiecePublicUrl(id), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(publishContentPiecePublicBody),
+  });
+};
+
+export const getPublishContentPiecePublicMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishContentPiecePublic>>,
+    TError,
+    { id: number; data: BodyType<PublishContentPiecePublicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof publishContentPiecePublic>>,
+  TError,
+  { id: number; data: BodyType<PublishContentPiecePublicBody> },
+  TContext
+> => {
+  const mutationKey = ["publishContentPiecePublic"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof publishContentPiecePublic>>,
+    { id: number; data: BodyType<PublishContentPiecePublicBody> }
+  > = (props) => {
+    const { id, data } = props ?? {};
+
+    return publishContentPiecePublic(id, data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PublishContentPiecePublicMutationResult = NonNullable<
+  Awaited<ReturnType<typeof publishContentPiecePublic>>
+>;
+export type PublishContentPiecePublicMutationBody =
+  BodyType<PublishContentPiecePublicBody>;
+export type PublishContentPiecePublicMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Publish a content piece to a connected destination
+ */
+export const usePublishContentPiecePublic = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof publishContentPiecePublic>>,
+    TError,
+    { id: number; data: BodyType<PublishContentPiecePublicBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof publishContentPiecePublic>>,
+  TError,
+  { id: number; data: BodyType<PublishContentPiecePublicBody> },
+  TContext
+> => {
+  return useMutation(getPublishContentPiecePublicMutationOptions(options));
+};
+
+/**
+ * @summary Validate and return canonical content from external markdown
+ */
+export const getIngestContentDraftUrl = () => {
+  return `/api/v1/content-pieces`;
+};
+
+export const ingestContentDraft = async (
+  ingestContentDraftBody: IngestContentDraftBody,
+  options?: RequestInit,
+): Promise<void> => {
+  return customFetch<void>(getIngestContentDraftUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(ingestContentDraftBody),
+  });
+};
+
+export const getIngestContentDraftMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ingestContentDraft>>,
+    TError,
+    { data: BodyType<IngestContentDraftBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof ingestContentDraft>>,
+  TError,
+  { data: BodyType<IngestContentDraftBody> },
+  TContext
+> => {
+  const mutationKey = ["ingestContentDraft"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof ingestContentDraft>>,
+    { data: BodyType<IngestContentDraftBody> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return ingestContentDraft(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type IngestContentDraftMutationResult = NonNullable<
+  Awaited<ReturnType<typeof ingestContentDraft>>
+>;
+export type IngestContentDraftMutationBody = BodyType<IngestContentDraftBody>;
+export type IngestContentDraftMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Validate and return canonical content from external markdown
+ */
+export const useIngestContentDraft = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof ingestContentDraft>>,
+    TError,
+    { data: BodyType<IngestContentDraftBody> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof ingestContentDraft>>,
+  TError,
+  { data: BodyType<IngestContentDraftBody> },
+  TContext
+> => {
+  return useMutation(getIngestContentDraftMutationOptions(options));
 };

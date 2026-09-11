@@ -1,0 +1,13 @@
+post:
+  operationId: syncArticleIdeaSource
+  tags: [seo-tools]
+  summary: Sync a Google Sheets article idea source now
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Sync result

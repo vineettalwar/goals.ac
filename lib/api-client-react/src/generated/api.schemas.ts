@@ -338,3 +338,93 @@ export type SyncSocialMetricsParams = {
 export type DeleteArticleIdeaSourceParams = {
   sourceId: number;
 };
+
+export type ListPublishConnectionsParams = {
+  projectId: number;
+};
+
+export type GenerateContentPiecePublicBodyIntendedEditorMode =
+  (typeof GenerateContentPiecePublicBodyIntendedEditorMode)[keyof typeof GenerateContentPiecePublicBodyIntendedEditorMode];
+
+export const GenerateContentPiecePublicBodyIntendedEditorMode = {
+  classic: "classic",
+  gutenberg: "gutenberg",
+  elementor: "elementor",
+  divi: "divi",
+} as const;
+
+export type GenerateContentPiecePublicBody = {
+  projectId: number;
+  formatType: string;
+  targetKeyword: string;
+  angleHint?: string;
+  intendedPublishPlatform?: string;
+  intendedOutputMode?: string;
+  intendedEditorMode?: GenerateContentPiecePublicBodyIntendedEditorMode;
+  competitorFocusUrl?: string;
+  competitorUrls?: string[];
+  cmsCategories?: string[];
+  cmsTags?: string[];
+  plannedDate?: string;
+  bypassCache?: boolean;
+};
+
+export type GenerateContentPieceWithAgentsPublicBody = {
+  projectId: number;
+  formatType: string;
+  targetKeyword: string;
+  angleHint?: string;
+  intendedPublishPlatform?: string;
+  competitorFocusUrl?: string;
+  competitorUrls?: string[];
+  plannedDate?: string;
+  /** Skip Fox (marketing) and Mockingbird (linguist) for lower latency */
+  fastMode?: boolean;
+  /** When true, respond with text/event-stream agent progress + result */
+  stream?: boolean;
+};
+
+export type GenerateContentPieceWithAgentsPublic201AgentPipeline = {
+  generatedWithAgents?: boolean;
+  durationMs?: number;
+  degradedAgents?: string[];
+};
+
+export type GenerateContentPieceWithAgentsPublic201 = {
+  id?: number;
+  agentPipeline?: GenerateContentPieceWithAgentsPublic201AgentPipeline;
+};
+
+export type AttachContentPieceImagePublicBody = {
+  projectId: number;
+};
+
+export type RenderContentForPlatformBodyEditorMode =
+  (typeof RenderContentForPlatformBodyEditorMode)[keyof typeof RenderContentForPlatformBodyEditorMode];
+
+export const RenderContentForPlatformBodyEditorMode = {
+  classic: "classic",
+  gutenberg: "gutenberg",
+  elementor: "elementor",
+  divi: "divi",
+} as const;
+
+export type RenderContentForPlatformBody = {
+  projectId: number;
+  platform: string;
+  title: string;
+  markdown: string;
+  editorMode?: RenderContentForPlatformBodyEditorMode;
+};
+
+export type PublishContentPiecePublicBody = {
+  projectId: number;
+  platform: string;
+};
+
+export type IngestContentDraftBody = {
+  projectId: number;
+  title: string;
+  markdown: string;
+  formatType?: string;
+};

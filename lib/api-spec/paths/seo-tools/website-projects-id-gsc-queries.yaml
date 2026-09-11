@@ -1,0 +1,13 @@
+get:
+  operationId: listGscQueries
+  tags: [seo-tools]
+  summary: Aggregated GSC queries for a project
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Query rollup list

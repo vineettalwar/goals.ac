@@ -1,0 +1,14 @@
+get:
+  operationId: listContentStrategies
+  tags: [content-strategies]
+  summary: List all content strategies
+  description: Returns all generated content strategies (admin use)
+  responses:
+    "200":
+      description: List of content strategies
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/ContentStrategy"

@@ -1,0 +1,13 @@
+post:
+  operationId: discoverKeywordOpportunities
+  tags: [seo-tools]
+  summary: Run keyword opportunity discovery (gsc, semrush, or ai)
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Discovery result

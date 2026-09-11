@@ -1,0 +1,19 @@
+delete:
+  operationId: deleteTrackedKeyword
+  tags: [seo-tools]
+  summary: Deactivate a tracked keyword
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "204":
+      description: Deactivated
+    "404":
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

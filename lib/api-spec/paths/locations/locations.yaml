@@ -1,0 +1,14 @@
+get:
+  operationId: listLocations
+  tags: [locations]
+  summary: List all locations
+  description: Returns all available locations for the roadmap generator form
+  responses:
+    "200":
+      description: List of locations
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Location"

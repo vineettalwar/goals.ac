@@ -1,0 +1,23 @@
+get:
+  operationId: getTrackedKeywordSnapshots
+  tags: [seo-tools]
+  summary: Get rank history for a tracked keyword
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Rank snapshots
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/TrackedKeywordSnapshotsResponse"
+    "404":
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

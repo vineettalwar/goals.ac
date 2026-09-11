@@ -1,0 +1,36 @@
+post:
+  operationId: captureLeadForRoadmap
+  tags: [leads]
+  summary: Capture a lead for a roadmap
+  description: Records a lead's contact details tied to a specific roadmap
+  parameters:
+    - name: slug
+      in: path
+      required: true
+      schema:
+        type: string
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/CaptureLeadRequest"
+  responses:
+    "201":
+      description: Lead captured successfully
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/CaptureLeadResponse"
+    "400":
+      description: Invalid input (validation error)
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    "404":
+      description: Roadmap not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

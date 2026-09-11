@@ -6,6 +6,7 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./attachContentPieceImagePublicBody";
 export * from "./captureLeadRequest";
 export * from "./captureLeadResponse";
 export * from "./competitorAnalysisResponse";
@@ -20,6 +21,11 @@ export * from "./createTrackedKeywordRequest";
 export * from "./createTrackedKeywordRequestDevice";
 export * from "./deleteArticleIdeaSourceParams";
 export * from "./errorResponse";
+export * from "./generateContentPiecePublicBody";
+export * from "./generateContentPiecePublicBodyIntendedEditorMode";
+export * from "./generateContentPieceWithAgentsPublic201";
+export * from "./generateContentPieceWithAgentsPublic201AgentPipeline";
+export * from "./generateContentPieceWithAgentsPublicBody";
 export * from "./generateContentStrategyRequest";
 export * from "./generateRoadmapRequest";
 export * from "./generateRoadmapRequestStage";
@@ -29,14 +35,19 @@ export * from "./geoIssueStatus";
 export * from "./getSocialMetricsParams";
 export * from "./healthStatus";
 export * from "./industry";
+export * from "./ingestContentDraftBody";
 export * from "./keywordAnalysisResponse";
 export * from "./keywordRankSnapshot";
 export * from "./keywordRankSnapshotSerpFeatures";
 export * from "./keywordResult";
 export * from "./keywordResultDifficulty";
+export * from "./listPublishConnectionsParams";
 export * from "./listRoadmapsParams";
 export * from "./listTrackedKeywordsParams";
 export * from "./location";
+export * from "./publishContentPiecePublicBody";
+export * from "./renderContentForPlatformBody";
+export * from "./renderContentForPlatformBodyEditorMode";
 export * from "./roadmap";
 export * from "./roadmapContent";
 export * from "./roadmapListResponse";

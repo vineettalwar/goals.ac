@@ -1,0 +1,13 @@
+post:
+  operationId: createArticleIdeas
+  tags: [seo-tools]
+  summary: Create manual article ideas (site admin)
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Created

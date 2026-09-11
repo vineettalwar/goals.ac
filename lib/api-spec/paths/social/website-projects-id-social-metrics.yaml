@@ -1,0 +1,21 @@
+get:
+  operationId: getSocialMetrics
+  tags: [social]
+  summary: Social post performance metrics for a project
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    - name: platform
+      in: query
+      schema:
+        type: string
+    - name: days
+      in: query
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Metrics rows and totals

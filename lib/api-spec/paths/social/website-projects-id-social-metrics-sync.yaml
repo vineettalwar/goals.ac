@@ -1,0 +1,32 @@
+post:
+  operationId: syncSocialMetrics
+  tags: [social]
+  summary: Sync engagement metrics for published social posts
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    - name: background
+      in: query
+      schema:
+        type: boolean
+  responses:
+    "200":
+      description: Sync completed
+    "202":
+      description: Queued
+get:
+  operationId: getSocialMetricsSyncStatus
+  tags: [social]
+  summary: Social metrics sync status
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Status

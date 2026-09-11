@@ -1,0 +1,36 @@
+post:
+  operationId: syncSocialHistory
+  tags: [social]
+  summary: Pull historical posts via OAuth into brand + platform voice
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    - name: platform
+      in: query
+      schema:
+        type: string
+    - name: background
+      in: query
+      schema:
+        type: boolean
+  responses:
+    "200":
+      description: Sync completed
+    "202":
+      description: Queued
+get:
+  operationId: getSocialHistorySyncStatus
+  tags: [social]
+  summary: Per-platform OAuth history sync status
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Status

@@ -107,7 +107,7 @@ goals.ac/
 │   └── goals-ac/                # Legacy Vite frontend (port 5173, redirect shell)
 ├── lib/
 │   ├── db/                      # Drizzle schema, migrations, seeding
-│   ├── api-spec/                # OpenAPI spec — source of truth for API contracts
+│   ├── api-spec/                # OpenAPI sources (paths by tag; schemas in openapi.yaml)
 │   ├── api-zod/                 # Generated Zod schemas (Orval)
 │   ├── api-client-react/        # Generated React Query hooks (Orval)
 │   ├── ai-providers/            # Provider abstraction and tier routing

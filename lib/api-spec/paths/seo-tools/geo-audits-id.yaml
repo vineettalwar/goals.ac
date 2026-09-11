@@ -1,0 +1,23 @@
+get:
+  operationId: getGeoAudit
+  tags: [seo-tools]
+  summary: Get a GEO audit by id
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: GEO audit
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/GeoAudit"
+    "404":
+      description: Not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

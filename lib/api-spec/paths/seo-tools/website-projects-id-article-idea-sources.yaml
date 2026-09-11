@@ -1,0 +1,46 @@
+get:
+  operationId: listArticleIdeaSources
+  tags: [seo-tools]
+  summary: List Google Sheets article idea sources
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Source list
+post:
+  operationId: createArticleIdeaSource
+  tags: [seo-tools]
+  summary: Connect a Google Sheets source (site admin)
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  responses:
+    "201":
+      description: Source created
+    "403":
+      description: Forbidden
+delete:
+  operationId: deleteArticleIdeaSource
+  tags: [seo-tools]
+  summary: Remove a Google Sheets source
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+    - name: sourceId
+      in: query
+      required: true
+      schema:
+        type: integer
+  responses:
+    "200":
+      description: Deleted

@@ -1,0 +1,27 @@
+post:
+  operationId: publishContentPiecePublic
+  tags: [publish]
+  summary: Publish a content piece to a connected destination
+  security:
+    - ApiKeyAuth: []
+  parameters:
+    - name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [projectId, platform]
+          properties:
+            projectId:
+              type: integer
+            platform:
+              type: string
+  responses:
+    "200":
+      description: Published

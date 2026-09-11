@@ -1,0 +1,30 @@
+post:
+  operationId: generateRoadmap
+  tags: [roadmaps]
+  summary: Generate or retrieve a roadmap
+  description: Generates a new roadmap using AI for the given parameters, or returns cached if exists
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/GenerateRoadmapRequest"
+  responses:
+    "200":
+      description: Roadmap generated or retrieved from cache
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Roadmap"
+    "400":
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    "503":
+      description: AI generation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"

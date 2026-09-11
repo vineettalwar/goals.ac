@@ -1,0 +1,25 @@
+post:
+  operationId: ingestContentDraft
+  tags: [publish]
+  summary: Validate and return canonical content from external markdown
+  security:
+    - ApiKeyAuth: []
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          type: object
+          required: [projectId, title, markdown]
+          properties:
+            projectId:
+              type: integer
+            title:
+              type: string
+            markdown:
+              type: string
+            formatType:
+              type: string
+  responses:
+    "201":
+      description: Canonical content accepted

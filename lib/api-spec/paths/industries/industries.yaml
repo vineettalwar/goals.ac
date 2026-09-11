@@ -1,0 +1,14 @@
+get:
+  operationId: listIndustries
+  tags: [industries]
+  summary: List all industries
+  description: Returns all available industries for the roadmap generator form
+  responses:
+    "200":
+      description: List of industries
+      content:
+        application/json:
+          schema:
+            type: array
+            items:
+              $ref: "#/components/schemas/Industry"

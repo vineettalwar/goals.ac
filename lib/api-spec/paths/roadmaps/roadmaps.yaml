@@ -1,0 +1,31 @@
+get:
+  operationId: listRoadmaps
+  tags: [roadmaps]
+  summary: List all roadmaps
+  description: Returns all generated roadmaps for browsing and SEO directory
+  parameters:
+    - name: limit
+      in: query
+      schema:
+        type: integer
+        default: 50
+    - name: offset
+      in: query
+      schema:
+        type: integer
+        default: 0
+    - name: industry
+      in: query
+      schema:
+        type: string
+    - name: location
+      in: query
+      schema:
+        type: string
+  responses:
+    "200":
+      description: List of roadmaps
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/RoadmapListResponse"

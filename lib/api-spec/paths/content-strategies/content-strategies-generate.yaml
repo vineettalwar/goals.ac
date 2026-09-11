@@ -1,0 +1,36 @@
+post:
+  operationId: generateContentStrategy
+  tags: [content-strategies]
+  summary: Generate a 30-day content strategy
+  description: Generates a new 30-day content strategy using AI for the given roadmap parameters
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: "#/components/schemas/GenerateContentStrategyRequest"
+  responses:
+    "200":
+      description: Content strategy generated successfully
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ContentStrategyWithItems"
+    "400":
+      description: Invalid input
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    "404":
+      description: Roadmap not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    "503":
+      description: AI generation failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
