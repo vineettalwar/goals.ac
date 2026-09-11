@@ -119,7 +119,7 @@ const FEATURE_PILLARS = [
       {
         icon: Wallet,
         title: "BYOK and platform AI",
-        desc: "Bring your Gemini, OpenAI, or Bedrock key on scoped programs for unlimited generations.",
+        desc: "Bring your Gemini, OpenAI, or Bedrock key for platform AI cost control when your plan allows BYOK.",
       },
     ],
   },
@@ -312,13 +312,13 @@ export function FeaturesPageClient() {
     <MarketingPageShell
       hero={
         <PageHero
-          titleLine1="The content studio"
-          titleLine2="behind scoped programs"
-          description="Research, drafts, cross-platform publishing, and AI visibility. One workspace — you sign off before anything goes live."
+          titleLine1="The Content Studio"
+          titleLine2="for research to publish"
+          description="Research, drafts, cross-platform publishing, and AI visibility. One workspace — you sign off before anything goes live. Hands-on GEO programs are optional."
           backgroundImage={HERO_IMAGES.features.hero}
           ctas={[
             { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "primary" },
-            { label: "Compare tools", href: "/compare/ai-seo-tools", variant: "ghost" },
+            { label: "See Content Studio", href: "/content-engine", variant: "ghost" },
           ]}
         />
       }
@@ -366,7 +366,7 @@ export function FeaturesPageClient() {
       <MarketingCTA
         titleLine1="Compare with"
         titleLine2="autopilot SEO tools"
-        description="See how a consulting-led program stacks up on strategy, control, and editorial oversight."
+        description="See how Content Studio stacks up on strategy, control, and editorial oversight versus volume-only autopilot tools."
         variant="dark"
         secondaryHref="/compare/ai-seo-tools"
         secondaryLabel="View comparison →"

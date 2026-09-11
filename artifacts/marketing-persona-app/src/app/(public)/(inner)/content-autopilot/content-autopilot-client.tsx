@@ -9,7 +9,7 @@ import { DarkCTABand } from "@/components/marketing/sections/dark-cta-band";
 import { MarketingCTA } from "@/components/marketing/sections/marketing-cta";
 import { AutopilotUrlHero } from "@/components/marketing/heroes/autopilot-url-hero";
 import { LANDER_CONFIG } from "@/lib/marketing/site/marketing-feature-data";
-import { CONTACT_CTA_LABEL, PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
+import { PRODUCT_CTA_HREF, PRODUCT_CTA_PRIMARY } from "@/lib/marketing/site/marketing-contact";
 
 const config = LANDER_CONFIG.autopilot;
 
@@ -25,7 +25,11 @@ export function ContentAutopilotClient() {
           backgroundImage={config.heroImage}
           ctas={[
             { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "primary" },
-            { label: "Compare tools", href: "/compare/ai-seo-tools", variant: "ghost" },
+            {
+              label: config.secondaryCta?.label ?? "See Content Studio",
+              href: config.secondaryCta?.href ?? "/content-engine",
+              variant: "ghost",
+            },
           ]}
         >
           <AutopilotUrlHero />
@@ -42,7 +46,7 @@ export function ContentAutopilotClient() {
         titleLine2="GEO help?"
         description="Autopilot works self-serve inside Content Studio. Scoped GEO programs add strategy, editorial review, and AI visibility tracking when you want a team alongside the product."
         primaryCta={{ label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF }}
-        secondaryCta={{ label: "View engagements", href: "/pricing" }}
+        secondaryCta={{ label: "See Content Studio", href: "/content-engine" }}
       />
 
       <FAQAccordion titleLine1="Common" titleLine2="questions" items={config.faq} />
@@ -52,8 +56,8 @@ export function ContentAutopilotClient() {
         titleLine2="your team"
         description="Sign up free and turn on autopilot when you're ready. Choose your cadence, CMS, and review workflow."
         variant="dark"
-        secondaryHref="/geo-audit"
-        secondaryLabel="Run free GEO audit →"
+        secondaryHref="/content-engine"
+        secondaryLabel="See Content Studio →"
       />
     </MarketingPageShell>
   );

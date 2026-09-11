@@ -65,7 +65,7 @@ export function ContentStrategyClient({
           backgroundImage={HERO_IMAGES.contentStrategy.hero}
           ctas={[
             { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF, variant: "primary" },
-            { label: "Content engine", href: "/content-engine", variant: "ghost" },
+            { label: "Content Studio", href: "/content-engine", variant: "ghost" },
           ]}
         />
       }

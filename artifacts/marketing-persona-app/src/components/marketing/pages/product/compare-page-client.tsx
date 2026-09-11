@@ -21,14 +21,13 @@ const ROWS = [
   { feature: "GEO technical audit + weekly re-audit", goals: true, autopilot: "partial" as const },
   { feature: "CMS publish (WordPress, Ghost, Shopify + Basic publish)", goals: true, autopilot: true },
   { feature: "30-day content calendar", goals: true, autopilot: true },
-  { feature: "Managed GEO/AEO program", goals: true, autopilot: false },
-  { feature: "Consulting-led GEO program", goals: true, autopilot: false },
+  { feature: "Optional hands-on GEO program", goals: true, autopilot: false },
   { feature: "Self-serve Growth plan ($49/mo in-app when Stripe is configured)", goals: true, autopilot: true },
   { feature: "Backlink exchange network", goals: false, autopilot: true },
   { feature: "Internal link hub (white-hat)", goals: true, autopilot: false },
   { feature: "Humanization pipeline", goals: true, autopilot: false },
   { feature: "BYOK cost transparency", goals: true, autopilot: false },
-  { feature: "18 content formats + repurposing", goals: true, autopilot: false },
+  { feature: "SEO formats in Studio (incl. comparison, listicle, case study) + repurposing", goals: true, autopilot: false },
   { feature: "Dedicated strategist", goals: true, autopilot: false },
 ];
 

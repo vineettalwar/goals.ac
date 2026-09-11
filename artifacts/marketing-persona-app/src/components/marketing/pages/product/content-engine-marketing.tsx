@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import {
+  BarChart3,
   BookOpen,
   Briefcase,
   CheckCircle2,
@@ -67,6 +68,12 @@ const PIPELINE_STEPS = [
     icon: Send,
     title: "Review & publish",
     desc: "Readiness gates, then publish to your CMS. You approve before live.",
+  },
+  {
+    step: "05",
+    icon: BarChart3,
+    title: "Measure & refresh",
+    desc: "Track GEO and search signals, then refresh pages that are slipping.",
   },
 ] as const;
 

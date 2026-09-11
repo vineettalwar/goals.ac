@@ -21,7 +21,7 @@ export const PRODUCT_CTA_PRIMARY = "Start creating";
 export const PRODUCT_CTA_HREF = SIGNUP_HREF;
 
 /** Default secondary CTA — product tour without signup */
-export const PRODUCT_CTA_SECONDARY = "See the content studio";
+export const PRODUCT_CTA_SECONDARY = "See Content Studio";
 export const PRODUCT_CTA_SECONDARY_HREF = CONTENT_STUDIO_HREF;
 
 /** Contact / enterprise — use on the contact page and as a tertiary link */

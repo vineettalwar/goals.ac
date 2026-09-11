@@ -359,7 +359,7 @@ export const LANDER_CONFIG = {
       { icon: Zap, title: "Repurpose from articles", description: "Turn long-form drafts into social variants in one click." },
     ],
     faq: [
-      { question: "Is this included in engagements?", answer: "Yes. Social Hub is part of the goals.ac platform in scoped programs." },
+      { question: "Is this included in engagements?", answer: "Yes. Social Hub ships with the platform. Connect accounts on the Publishing tab; hands-on programs are optional if you want us running distribution with you." },
     ],
   },
   searchAnalytics: {

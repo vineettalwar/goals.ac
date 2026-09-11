@@ -35,12 +35,22 @@ const FORMAT_MAP: Record<string, ContentFormatType> = {
   "news article": "news_article",
   "tutorial": "tutorial",
   "guide": "guide",
-  "case study": "blog_post",
+  "case study": "case_study",
+  "comparison": "comparison",
+  "alternatives": "comparison",
+  "vs": "comparison",
+  "listicle": "listicle",
+  "list": "listicle",
   "newsletter": "email_sequence",
   "video script": "tutorial",
   "podcast outline": "tutorial",
   "whitepaper": "whitepaper",
   "press release": "press_release",
+  "faq": "faq_article",
+  "faq article": "faq_article",
+  "pillar": "pillar_page",
+  "pillar page": "pillar_page",
+  "location page": "location_page",
 };
 
 const PLATFORM_FORMAT: Record<SocialPlatform, ContentFormatType> = {

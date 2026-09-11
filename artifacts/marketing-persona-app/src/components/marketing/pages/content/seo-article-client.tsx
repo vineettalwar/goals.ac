@@ -62,7 +62,7 @@ export function SeoArticleClient({
         description="Set your voice once, then draft SEO-optimised content tailored to your audience."
         variant="dark"
         secondaryHref="/content-engine"
-        secondaryLabel="Explore content engine →"
+        secondaryLabel="See Content Studio →"
       />
     </MarketingPageShell>
   );

@@ -3,7 +3,7 @@ import { ComparePageDynamic } from "@/components/marketing/layout/marketing-clie
 
 export const metadata: Metadata = {
   title: "Compare AI SEO Tools | goals.ac",
-  description: "How a consulting-led GEO program compares to autopilot SEO tools on strategy, control, and editorial oversight.",
+  description: "How goals.ac Content Studio compares to autopilot SEO tools on strategy, control, and editorial oversight.",
 };
 
 export default function Page() {
