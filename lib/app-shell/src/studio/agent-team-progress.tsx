@@ -22,10 +22,12 @@ import {
 import {
   AGENT_DEFINITIONS,
   AGENT_PIPELINE_ORDER,
-  type AgentId,
-  type AgentProgressEvent,
-  type AgentStatus,
-} from "@workspace/content-engine";
+} from "@workspace/content-engine/agents/definitions";
+import type {
+  AgentId,
+  AgentProgressEvent,
+  AgentStatus,
+} from "@workspace/content-engine/agents/types";
 
 export type AgentTeamState = {
   [agentId: string]: {

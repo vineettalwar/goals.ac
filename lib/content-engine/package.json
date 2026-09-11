@@ -8,6 +8,8 @@
     "./adapters/registry": "./src/adapters/registry.ts",
     "./adapters/render-service": "./src/adapters/render-service.ts",
     "./adapters/types": "./src/adapters/types.ts",
+    "./agents/definitions": "./src/agents/agent-definitions.ts",
+    "./agents/types": "./src/agents/agent-types.ts",
     "./analytics/article-performance": "./src/analytics/article-performance.ts",
     "./analytics/command-center-service": "./src/analytics/command-center-service.ts",
     "./analytics/internal-links-summary": "./src/analytics/internal-links-summary.ts",
