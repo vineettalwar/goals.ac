@@ -2,13 +2,38 @@ import { getAiProviderClient, wrapGeminiClient, type AiProviderClient } from "./
 import { createUserGeminiClient, isUserKeyError } from "./gemini";
 import { isAnthropicUserKeyError } from "./anthropic";
 import { isOpenAIUserKeyError } from "./openai";
-import { resolveProviderId, type AiProviderOptions } from "./config";
+import {
+  resolveOllamaBaseUrl,
+  resolveProviderId,
+  type AiProviderOptions,
+} from "./config";
+
+/** Laptop Ollama URLs are unreachable from Cloudflare Workers / remote jobs. */
+export function isLoopbackOllamaUrl(baseUrl: string): boolean {
+  try {
+    const host = new URL(baseUrl).hostname.toLowerCase();
+    return (
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host === "0.0.0.0" ||
+      host.endsWith(".local")
+    );
+  } catch {
+    return true;
+  }
+}
 
 export async function resolveAiClient(
   userApiKey?: string | null,
   aiProviderOptions?: AiProviderOptions,
 ): Promise<AiProviderClient> {
-  const providerId = resolveProviderId(aiProviderOptions);
+  let providerId = resolveProviderId(aiProviderOptions);
+
+  // Workers cannot dial the operator's laptop Ollama — use platform Gemini.
+  if (providerId === "ollama" && isLoopbackOllamaUrl(resolveOllamaBaseUrl(aiProviderOptions))) {
+    providerId = "gemini";
+  }
 
   if (userApiKey && providerId === "gemini") {
     try {
@@ -43,6 +68,10 @@ export async function resolveAiClient(
         throw err;
       }
     }
+  }
+
+  if (providerId === "gemini") {
+    return getAiProviderClient({ ...aiProviderOptions, providerId: "gemini" });
   }
 
   return getAiProviderClient(aiProviderOptions);

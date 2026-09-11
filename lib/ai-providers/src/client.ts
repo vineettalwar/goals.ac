@@ -2,6 +2,7 @@ import type { GoogleGenAI } from "@google/genai";
 import {
   buildAiProviderCacheKey,
   resolveProviderId,
+  resolveOllamaBaseUrl,
   resolveOllamaConfigAsync,
   type AiProviderId,
   type AiProviderOptions,
@@ -159,9 +160,25 @@ async function buildClient(
 /**
  * Get or create an AI provider client.
  * Resolution order: in-app options → AI_PROVIDER env → auto-detect.
+ * Loopback Ollama (localhost) falls back to Gemini on remote Workers.
  */
 export async function getAiProviderClient(options?: AiProviderOptions): Promise<AiProviderClient> {
-  const id = resolveProviderId(options);
+  let id = resolveProviderId(options);
+  if (id === "ollama") {
+    const base = resolveOllamaBaseUrl(options);
+    try {
+      const host = new URL(base).hostname.toLowerCase();
+      const loopback =
+        host === "localhost" ||
+        host === "127.0.0.1" ||
+        host === "::1" ||
+        host === "0.0.0.0" ||
+        host.endsWith(".local");
+      if (loopback) id = "gemini";
+    } catch {
+      id = "gemini";
+    }
+  }
   const resolvedOllama = id === "ollama" ? await resolveOllamaConfigAsync(options) : undefined;
   const cacheKey =
     id === "ollama" && resolvedOllama
@@ -172,7 +189,7 @@ export async function getAiProviderClient(options?: AiProviderOptions): Promise<
           ? `openai:${options.openai.apiKey.slice(-8)}`
           : id === "anthropic" && options?.anthropic?.apiKey
             ? `anthropic:${options.anthropic.apiKey.slice(-8)}`
-            : buildAiProviderCacheKey(options);
+            : buildAiProviderCacheKey({ ...options, providerId: id });
 
   const cached = _cache.get(cacheKey);
   if (cached) return cached;
