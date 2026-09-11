@@ -20,6 +20,9 @@ describe("studioFormatOptionsForSurface", () => {
       "whitepaper",
       "pillar_page",
       "location_page",
+      "comparison",
+      "listicle",
+      "case_study",
       "faq_article",
     ]);
   });

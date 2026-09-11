@@ -171,6 +171,37 @@ const FORMAT_CONFIGS: Record<
 - Local CTA close (~100 words)
 - Weave landmarks, regulations, or market nuance throughout`,
   },
+  comparison: {
+    label: "Comparison / Alternatives",
+    wordRange: "1400-2000",
+    structure: `- Open on the decision the reader is making (who this comparison is for)
+- Criteria H2: how you evaluate options (3–6 named criteria)
+- Side-by-side H2s or a comparison table for 2–4 named alternatives
+- One H2 per option with honest strengths and limits (~200 words each)
+- Verdict H2: who should pick what, with clear conditions
+- FAQ: 3–5 decision questions
+- Close on the next step for the reader (not generic "choose wisely")`,
+  },
+  listicle: {
+    label: "Listicle",
+    wordRange: "1200-1800",
+    structure: `- Open with the list promise and who it helps (2–3 sentences)
+- Numbered H2s for each item (5–10 items); each item: what it is, why it matters, one concrete tip
+- Vary item length; do not pad weak entries
+- Optional "How to choose" H2 after the list
+- Close on the last useful pick, not a summary restatement`,
+  },
+  case_study: {
+    label: "Case Study",
+    wordRange: "1200-1800",
+    structure: `- Context H2: company/situation, goal, constraints
+- Challenge H2: what was broken or blocked (specific, not vague pain)
+- Approach H2: what was done, in order, with named tactics
+- Results H2: numbers or qualitative outcomes; label estimates honestly
+- Lessons H2: what others can reuse
+- Optional FAQ on applicability
+- Proof-first tone; do not invent metrics`,
+  },
   infographic_outline: {
     label: "Infographic Outline",
     wordRange: "400-600",

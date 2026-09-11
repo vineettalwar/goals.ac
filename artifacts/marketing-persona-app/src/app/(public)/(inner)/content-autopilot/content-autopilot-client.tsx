@@ -37,10 +37,10 @@ export function ContentAutopilotClient() {
       </MarketingSection>
 
       <DarkCTABand
-        badge="Consulting program"
-        titleLine1="Ready for a full"
-        titleLine2="GEO program?"
-        description="Autopilot is one piece of a scoped engagement: strategy, editorial review, CMS setup, and AI visibility tracking included."
+        badge="Optional programs"
+        titleLine1="Need hands-on"
+        titleLine2="GEO help?"
+        description="Autopilot works self-serve inside Content Studio. Scoped GEO programs add strategy, editorial review, and AI visibility tracking when you want a team alongside the product."
         primaryCta={{ label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF }}
         secondaryCta={{ label: "View engagements", href: "/pricing" }}
       />

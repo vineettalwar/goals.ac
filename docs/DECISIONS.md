@@ -1,3 +1,16 @@
+## 2026-09-11 — Content Studio naming, Express create, MOFU SEO formats
+
+**Decision:** Canonical product name is **Content Studio** (URL remains `/content-engine`). Autopilot is a Studio feature (cadence + review), not a rival SKU. Ship Studio **Express** create (`format → keyword → review → generate`) alongside Full. Add first-class SEO formats `comparison`, `listicle`, `case_study` to schema + `SEO_LONGFORM_FORMATS` + default picker. Marketing lists only formats the default `blog_wordpress` surface ships.
+
+**Alternatives considered:**
+- Rename URL to `/content-studio` — rejected; breaks links and llms.txt for little gain
+- Keep “18 formats” marketing hero — rejected; oversells vs default picker
+- Angle-only MOFU (no schema types) — rejected; buyers and picker need first-class types
+
+**Reason:** Engine-rich/experience-thin diagnosis; SEO buyers need an honest pipeline story and MOFU formats for weekly publish.
+
+**Implications:** PRD `docs/prd/content-engine-awesome.md`.
+
 ## 2026-09-06 — Editor-side outbound internal links (wrap existing phrases)
 
 **Decision:** Ship Studio quality-panel **Insert** for outbound internal links by wrapping phrases that already appear in the draft (`suggestOutboundInternalLinks` + `applyInternalLinksToMarkdown`). Reuse metadata `internalLinkSuggestions`. Do **not** invent anchors, rebuild the Internal Link Hub, or add a new apply API in this slice.

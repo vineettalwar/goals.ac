@@ -503,7 +503,7 @@ export function StudioView({
                 <>
                   <h2 className="text-base font-semibold">No content yet</h2>
                   <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-                    Start from a keyword, or optimize a live page.
+                    Start This week&apos;s queue, or Express-create from a keyword.
                   </p>
                   <div className="mt-6 flex flex-wrap items-center gap-3">
                     {newContentAction}

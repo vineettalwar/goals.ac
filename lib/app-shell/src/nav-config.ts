@@ -52,7 +52,7 @@ export const NAV_SECTIONS: Array<{ label: string; items: NavItemDef[] }> = [
     items: [
       { label: "Content Studio", href: "__content_studio__", icon: Layers },
       { label: "Social Hub", href: "__social_hub__", icon: Share2 },
-      { label: "Autopilot", href: "__autopilot__", icon: Zap },
+      { label: "Content Autopilot", href: "__autopilot__", icon: Zap },
     ],
   },
   {

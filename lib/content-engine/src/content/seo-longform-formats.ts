@@ -10,6 +10,9 @@ export const SEO_LONGFORM_FORMATS: ContentFormatType[] = [
   "faq_article",
   "news_article",
   "location_page",
+  "comparison",
+  "listicle",
+  "case_study",
 ];
 
 export function isSeoLongformFormat(format: ContentFormatType): boolean {

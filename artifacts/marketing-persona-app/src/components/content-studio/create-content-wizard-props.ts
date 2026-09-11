@@ -6,6 +6,7 @@ import type { BriefContentDraft } from "./use-create-content-modal";
 
 export type CreateContentWizardProps = {
   selectPath: (flow: "create" | "repurpose" | "optimize") => void;
+  selectCreatePace: (pace: "express" | "full") => void;
   selectFormat: (type: ContentFormatType) => void;
   loadingCompetitors: boolean;
   competitorUrls: string[];

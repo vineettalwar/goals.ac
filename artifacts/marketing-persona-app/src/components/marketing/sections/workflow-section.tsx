@@ -1,36 +1,41 @@
 "use client";
 
 import { useRef } from "react";
-import { Bookmark, GitBranch, Key, LayoutGrid, Pencil } from "lucide-react";
+import { BarChart3, FileSearch, PenLine, RefreshCw, Send } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
 import { useMarketingScrollReveal } from "@/hooks/use-marketing-scroll";
 import { cardSurfaceClass } from "@/lib/marketing/site/marketing-surfaces";
 
-const WORKFLOW_ITEMS = [
+const WORKFLOW_STEPS = [
   {
-    icon: Pencil,
-    title: "Draft from a real brief",
-    desc: "Set audience, search intent, angle, evidence, and brand voice before a draft is written.",
+    step: "01",
+    icon: FileSearch,
+    title: "Research & brief",
+    desc: "Pull keywords, competitors, and search intent into a brief before anything is drafted.",
   },
   {
-    icon: LayoutGrid,
-    title: "Plan the next 30 days",
-    desc: "Prioritize topics using your site, competitors, and tracked queries.",
+    step: "02",
+    icon: PenLine,
+    title: "Draft in your brand voice",
+    desc: "Generate long-form SEO articles from the brief, grounded in your brand profile.",
   },
   {
-    icon: Bookmark,
-    title: "Controlled publishing",
-    desc: "Connect your CMS once. Keep one review process across every destination.",
+    step: "03",
+    icon: RefreshCw,
+    title: "Humanize & score",
+    desc: "Run a humanize pass and dual editorial + SERP quality scores before you approve.",
   },
   {
-    icon: GitBranch,
-    title: "Use your existing CMS",
-    desc: "WordPress, Shopify, Notion, Ghost, and more via native APIs or goals.ac plugins.",
+    step: "04",
+    icon: Send,
+    title: "Review & publish",
+    desc: "Approve the piece, then publish to your connected CMS with readiness gates.",
   },
   {
-    icon: Key,
-    title: "Technical visibility audit",
-    desc: "Find missing schema, weak metadata, and page structure that hurts citation.",
+    step: "05",
+    icon: BarChart3,
+    title: "Measure & refresh",
+    desc: "Track GEO and search signals, then refresh pages that are slipping.",
   },
 ] as const;
 
@@ -50,17 +55,20 @@ export function WorkflowSection() {
           <EditorialHeading
             line1="One workflow"
             line2="end to end"
-            description="Turn research into briefs and drafts, keep review in the loop, then publish and measure the result."
+            description="Research to publish with human review in the loop. Autopilot is an optional cadence on this same path."
             theme="dark"
           />
         </div>
 
-        <ul className="space-y-4">
-          {WORKFLOW_ITEMS.map(({ icon: Icon, title, desc }) => (
+        <ol className="space-y-4">
+          {WORKFLOW_STEPS.map(({ step, icon: Icon, title, desc }) => (
             <li key={title} className={`scroll-reveal ${glassCard} p-5`}>
               <div className="flex gap-5">
-                <div className="shrink-0 mt-0.5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white/80">
-                  <Icon className="h-5 w-5" />
+                <div className="shrink-0 flex flex-col items-center gap-2">
+                  <span className="text-xs font-semibold tracking-wider text-white/45">{step}</span>
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 text-white/80">
+                    <Icon className="h-5 w-5" />
+                  </div>
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-1.5">{title}</h3>
@@ -69,7 +77,7 @@ export function WorkflowSection() {
               </div>
             </li>
           ))}
-        </ul>
+        </ol>
 
         <p className="scroll-reveal mt-12 text-sm text-white/50 text-center max-w-3xl mx-auto leading-relaxed">
           Works with {CMS_PLATFORMS}.

@@ -45,6 +45,9 @@ export const STUDIO_FORMAT_OPTIONS = [
   { value: "whitepaper", label: "Whitepaper" },
   { value: "pillar_page", label: "Pillar Page" },
   { value: "location_page", label: "Location Page" },
+  { value: "comparison", label: "Comparison" },
+  { value: "listicle", label: "Listicle" },
+  { value: "case_study", label: "Case Study" },
   { value: "infographic_outline", label: "Infographic Outline" },
   { value: "linkedin_post", label: "LinkedIn Post" },
   { value: "twitter_thread", label: "Twitter Thread" },
@@ -77,6 +80,9 @@ const BLOG_SURFACE_FORMATS = new Set<string>([
   "faq_article",
   "news_article",
   "location_page",
+  "comparison",
+  "listicle",
+  "case_study",
 ]);
 
 /**

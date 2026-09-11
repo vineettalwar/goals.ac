@@ -1,5 +1,13 @@
 # Session Handoff
 
+## Latest (2026-09-11) — Content Studio awesome (marketing → product)
+
+**Shipped:** Marketing honesty (Content Studio naming, numbered pipeline on `/` + `/content-engine`, Autopilot = cadence + review). Studio Express create (`format → keyword → review → generate`). This week’s queue CTA. MOFU formats `comparison` / `listicle` / `case_study` in schema + SEO pipeline + picker. PRD: `docs/prd/content-engine-awesome.md`.
+
+**Verify:** `pnpm run typecheck`; vitest `create-content-modal-logic.test.ts` + `studio-format-surface.test.ts` + `nav-config.test.ts`.
+
+**Not done:** Surfer NLP, hosted blog, fake case stories, URL rename from `/content-engine`.
+
 ## Leftovers (2026-09-06) — start here
 
 **Done in code this arc:** OpenSEO Features 1–6 · Gate 0 (SEC/BLOCK except live evidence) · HIGH-1/8/10/13/16 · MED-1 · MED-6 (WP SEO plugin storage) · CF `d1Db` typing.  

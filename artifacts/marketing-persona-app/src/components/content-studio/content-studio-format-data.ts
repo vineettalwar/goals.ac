@@ -19,6 +19,9 @@ import {
   HelpCircle,
   Cloud,
   AtSign,
+  Scale,
+  ListOrdered,
+  Briefcase,
 } from "lucide-react";
 
 export type ContentFormatType =
@@ -30,6 +33,9 @@ export type ContentFormatType =
   | "pillar_page"
   | "location_page"
   | "infographic_outline"
+  | "comparison"
+  | "listicle"
+  | "case_study"
   | "linkedin_post"
   | "twitter_thread"
   | "instagram_post"
@@ -101,6 +107,27 @@ export const FORMAT_META: Record<
     color: "bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400",
     description: "Location-specific pages to capture local search intent.",
     wordRange: "800–1,200 words",
+  },
+  comparison: {
+    label: "Comparison",
+    icon: Scale,
+    color: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400",
+    description: "Alternatives / vs pieces that help buyers pick with clear criteria.",
+    wordRange: "1,400–2,000 words",
+  },
+  listicle: {
+    label: "Listicle",
+    icon: ListOrdered,
+    color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400",
+    description: "Numbered “best of” or curated lists with concrete picks.",
+    wordRange: "1,200–1,800 words",
+  },
+  case_study: {
+    label: "Case Study",
+    icon: Briefcase,
+    color: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+    description: "Proof-led stories: challenge, approach, results, lessons.",
+    wordRange: "1,200–1,800 words",
   },
   infographic_outline: {
     label: "Infographic Outline",
@@ -206,6 +233,9 @@ export const FORMAT_CATEGORIES: { label: string; formats: ContentFormatType[] }[
       "whitepaper",
       "pillar_page",
       "location_page",
+      "comparison",
+      "listicle",
+      "case_study",
       "infographic_outline",
     ],
   },
@@ -250,6 +280,9 @@ const BLOG_SURFACE_CATEGORIES: { label: string; formats: ContentFormatType[] }[]
       "news_article",
       "whitepaper",
       "location_page",
+      "comparison",
+      "listicle",
+      "case_study",
     ],
   },
 ];

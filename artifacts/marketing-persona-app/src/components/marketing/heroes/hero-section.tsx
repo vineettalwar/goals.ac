@@ -18,7 +18,7 @@ export function HeroSection() {
       enableSpotlight
       ctas={[
         { label: "Start creating", href: SIGNUP_HREF, variant: "primary" },
-        { label: "Run free GEO audit", href: "/geo-audit", variant: "ghost" },
+        { label: "See Content Studio", href: "/content-engine", variant: "ghost" },
       ]}
     />
   );

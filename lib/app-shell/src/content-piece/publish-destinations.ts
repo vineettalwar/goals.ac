@@ -40,6 +40,9 @@ export type ContentFormatType =
   | "pillar_page"
   | "location_page"
   | "infographic_outline"
+  | "comparison"
+  | "listicle"
+  | "case_study"
   | "linkedin_post"
   | "twitter_thread"
   | "instagram_post"
@@ -122,6 +125,9 @@ const LONG_FORM_FORMATS: ContentFormatType[] = [
   "pillar_page",
   "location_page",
   "infographic_outline",
+  "comparison",
+  "listicle",
+  "case_study",
   "ad_copy",
   "landing_page_copy",
   "product_description",

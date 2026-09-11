@@ -127,7 +127,7 @@ export function ProjectAutomationPanel({ projectId }: Props) {
           )}
         </div>
         <p className="text-sm text-muted-foreground">
-          Automatically generate the next due article from your content strategy on a daily or weekly schedule.
+          Cadence + review queue — not unattended spam. Generate the next due article from your content strategy on a daily or weekly schedule.
         </p>
 
         {autopilotSaved && (

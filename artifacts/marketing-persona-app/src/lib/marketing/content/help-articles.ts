@@ -66,7 +66,7 @@ Articles publish as HTML with optional meta description and tags.`,
     description: "Map fields and publish canonical HTML to your headless content model.",
     category: "Getting started",
     audience: "user",
-    cta: { label: "Content Engine", href: "/content-engine" },
+    cta: { label: "Content Studio", href: "/content-engine" },
     body: `Headless CMS connections use management tokens and field mapping.
 
 **Contentful**

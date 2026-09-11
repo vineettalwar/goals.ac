@@ -6,6 +6,9 @@ export const FORMAT_OPTIONS = [
   { value: "whitepaper", label: "Whitepaper", category: "Long-form" },
   { value: "pillar_page", label: "Pillar Page", category: "Long-form" },
   { value: "location_page", label: "Location Page", category: "Long-form" },
+  { value: "comparison", label: "Comparison", category: "Long-form" },
+  { value: "listicle", label: "Listicle", category: "Long-form" },
+  { value: "case_study", label: "Case Study", category: "Long-form" },
   { value: "infographic_outline", label: "Infographic Outline", category: "Long-form" },
   { value: "linkedin_post", label: "LinkedIn Post", category: "Social" },
   { value: "twitter_thread", label: "Twitter Thread", category: "Social" },
@@ -41,6 +44,9 @@ const BLOG_SURFACE_FORMATS = new Set<string>([
   "faq_article",
   "news_article",
   "location_page",
+  "comparison",
+  "listicle",
+  "case_study",
 ]);
 
 /**

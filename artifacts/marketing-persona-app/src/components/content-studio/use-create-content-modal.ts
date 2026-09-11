@@ -13,7 +13,7 @@ import {
   type PublishDestinationId,
 } from "@/lib/projects/publishing-destinations";
 import type { ContentPieceRow } from "./content-studio-utils";
-import type { Flow, WizardStepId } from "./create-content-modal-types";
+import type { CreatePace, Flow, WizardStepId } from "./create-content-modal-types";
 import {
   hostFromUrl,
   normalizeCompetitorUrl,
@@ -73,6 +73,7 @@ const showBedrockModelPicker = activeProvider === "bedrock";
 const [bedrockModel, setBedrockModel] = useState(orgBedrockModel ?? "");
 const [saveBedrockModel, setSaveBedrockModel] = useState(false);
 const [flow, setFlow] = useState<Flow>("create");
+const [createPace, setCreatePace] = useState<CreatePace>("express");
 const [stepIndex, setStepIndex] = useState(0);
 const [selectedFormat, setSelectedFormat] = useState<ContentFormatType | null>(null);
 const [keyword, setKeyword] = useState("");
@@ -113,8 +114,8 @@ const [projectIndustry, setProjectIndustry] = useState("");
 
 const skipPathAndFormat = Boolean(initialDraft);
 const steps = useMemo(
-  () => buildStepSequence(flow, selectedFormat, cmsConnections, skipPathAndFormat),
-  [flow, selectedFormat, cmsConnections, skipPathAndFormat],
+  () => buildStepSequence(flow, selectedFormat, cmsConnections, skipPathAndFormat, createPace),
+  [flow, selectedFormat, cmsConnections, skipPathAndFormat, createPace],
 );
 const currentStep = steps[stepIndex] ?? steps[0];
 const progress = steps.length > 1 ? ((stepIndex + 1) / steps.length) * 100 : 100;
@@ -149,6 +150,7 @@ async function loadSourcePiece(id: string) {
 
 function reset() {
   setFlow("create");
+  setCreatePace("express");
   setStepIndex(0);
   setSelectedFormat(null);
   setKeyword("");
@@ -477,14 +479,24 @@ function selectFormat(type: ContentFormatType) {
   if (idx >= 0 && idx < steps.length - 1) setStepIndex(idx + 1);
 }
 
-function selectPath(nextFlow: Flow) {
-  setFlow(nextFlow);
-  if (nextFlow === "repurpose" || nextFlow === "optimize") { setStepIndex(0); return; }
+function selectCreatePace(pace: CreatePace) {
+  setFlow("create");
+  setCreatePace(pace);
   setStepIndex(1);
+}
+
+function selectPath(nextFlow: Flow) {
+  if (nextFlow === "create") {
+    selectCreatePace("express");
+    return;
+  }
+  setFlow(nextFlow);
+  setStepIndex(0);
 }
 
 const wizardProps = {
   selectPath,
+  selectCreatePace,
   selectFormat,
   loadingCompetitors,
   competitorUrls,

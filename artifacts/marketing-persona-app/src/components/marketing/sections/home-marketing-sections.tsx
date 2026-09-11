@@ -46,7 +46,7 @@ export function HomeMarketingSections({ showcaseArticle }: HomeMarketingSections
           {
             question: "How is this different from autopilot SEO tools?",
             answer:
-              "Autopilot tools ship volume with little research. We start with keyword and competitor research, you review every draft, and we publish across your CMS and social channels from one studio.",
+              "Volume-only tools ship drafts with little research. Content Studio starts with keyword and competitor research, humanizes and scores every draft, and you approve before publish. Content Autopilot is an optional scheduled queue on that same path, with review gates by default.",
           },
           {
             question: "Do you use backlink exchange networks?",
@@ -56,12 +56,12 @@ export function HomeMarketingSections({ showcaseArticle }: HomeMarketingSections
           {
             question: "How do I get started?",
             answer:
-              "Sign up free, connect your CMS and analytics, and create your first brief in the content studio. You sign off on every publish.",
+              "Sign up free, connect your CMS, and create your first article in Content Studio. You sign off on every publish. Turn on Autopilot later if you want a daily or weekly queue.",
           },
           {
             question: "Where can you publish?",
             answer:
-              "WordPress, Shopify, Notion, Ghost, Webflow, LinkedIn, X, Meta, Bluesky, Mastodon, and more via native integrations or webhooks.",
+              "WordPress, Ghost, and Shopify have deep publish paths. Other CMS tiles support Basic publish. Social and webhook destinations are available for distribution after the article is ready.",
           },
           {
             question: "What's a GEO audit?",

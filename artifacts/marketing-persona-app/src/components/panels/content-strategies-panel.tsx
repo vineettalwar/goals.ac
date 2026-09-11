@@ -95,7 +95,7 @@ export function ContentStrategiesPanel({ embedded = false }: { embedded?: boolea
       {!embedded ? (
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold">Content Engine</h1>
+            <h1 className="text-2xl font-bold">Content Studio</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {activeProject
                 ? `30-day content calendars from ${activeProject.name}'s roadmaps`

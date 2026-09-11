@@ -203,13 +203,13 @@ export const LANDER_CONFIG = {
   },
   autopilot: {
     badge: "Content Autopilot",
-    titleLine1: "The autopilot engine",
-    titleLine2: "inside our programs",
+    titleLine1: "Scheduled queue",
+    titleLine2: "with review gates",
     description:
-      "Daily or weekly content generation with manual, draft, or live publish. Included in scoped goals.ac programs, with editorial review before anything goes live.",
+      "Daily or weekly generation inside Content Studio. You pick cadence, CMS, and review mode. Live auto-publish is optional. Hands-on GEO programs are available when you want strategy help.",
     heroImage: HERO_IMAGES.features.hero,
     primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
-    secondaryCta: { label: "Run free GEO audit", href: "/geo-audit" },
+    secondaryCta: { label: "See Content Studio", href: "/content-engine" },
     features: [
       { icon: Zap, title: "Flexible cadence", description: "Daily or weekly runs in your timezone." },
       { icon: Shield, title: "Review queue", description: "Inspect every draft before it goes live." },
@@ -219,11 +219,13 @@ export const LANDER_CONFIG = {
     faq: [
       {
         question: "Can I review before publishing?",
-        answer: "Yes. Publish mode is manual or draft by default. Live auto-publish is optional and scoped with your strategist.",
+        answer:
+          "Yes. Autopilot is a scheduled queue with review gates. Manual or draft publish is the default. Live auto-publish is optional.",
       },
       {
-        question: "How do I get access?",
-        answer: "Sign up, connect your CMS, and turn on autopilot when you're ready. You choose manual review or draft publish by default.",
+        question: "Is Autopilot only in consulting programs?",
+        answer:
+          "No. Sign up, connect your CMS, and turn on Autopilot when you're ready. Scoped GEO programs are optional if you want hands-on strategy and editorial help.",
       },
     ],
   },
@@ -235,7 +237,7 @@ export const LANDER_CONFIG = {
       "Publish to WordPress, Ghost, Shopify, and other CMS/social destinations. Deep plugin and Admin API paths for primary stacks; Basic publish for headless and site builders.",
     heroImage: HERO_IMAGES.contentEngine.hero,
     primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
-    secondaryCta: { label: "Content Engine", href: "/content-engine" },
+    secondaryCta: { label: "Content Studio", href: "/content-engine" },
     features: [
       { icon: Globe, title: "Deep + Basic publish", description: "WordPress, Ghost, Shopify depth; Basic publish on headless and site builders." },
       { icon: Link2, title: "Site graph sync", description: "Plugins export internal links for smarter suggestions." },
@@ -349,7 +351,7 @@ export const LANDER_CONFIG = {
       "Compose, queue, and publish to LinkedIn, X, Facebook, Instagram, Bluesky, and Mastodon. Per-platform voice presets and character limits in the composer.",
     heroImage: HERO_IMAGES.roadmaps.hero,
     primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
-    secondaryCta: { label: "Content Engine", href: "/content-engine" },
+    secondaryCta: { label: "Content Studio", href: "/content-engine" },
     features: [
       { icon: Share2, title: "6 platforms", description: "OAuth connections per project for LinkedIn, X, Meta, Bluesky, and Mastodon." },
       { icon: PenLine, title: "Composer + calendar", description: "Draft posts, schedule queues, and recycle evergreen content." },
@@ -387,7 +389,7 @@ export const LANDER_CONFIG = {
       "Scrape your site, ingest CMS posts, and build a RAG-backed voice skill doc. Every draft inherits your tone, glossary, and positioning.",
     heroImage: HERO_IMAGES.contentEngine.hero,
     primaryCta: { label: PRODUCT_CTA_PRIMARY, href: PRODUCT_CTA_HREF },
-    secondaryCta: { label: "Content Engine", href: "/content-engine" },
+    secondaryCta: { label: "Content Studio", href: "/content-engine" },
     features: [
       { icon: PenLine, title: "Editable skill doc", description: "Non-technical reviewers can edit the voice guide in markdown." },
       { icon: BookOpen, title: "Topic-aware RAG", description: "Retrieve relevant passages per keyword and format at generation." },

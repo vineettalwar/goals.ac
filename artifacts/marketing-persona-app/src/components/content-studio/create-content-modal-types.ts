@@ -28,3 +28,6 @@ export type WizardStepId =
   | "optimize-importing";
 
 export type Flow = "create" | "repurpose" | "optimize";
+
+/** Create wizard depth — Express skips competitors/angle/schedule/destination. */
+export type CreatePace = "express" | "full";

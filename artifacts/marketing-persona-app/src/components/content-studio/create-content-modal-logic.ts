@@ -3,7 +3,7 @@ import {
   type CmsConnectionSnapshot,
 } from "@/lib/projects/publishing-destinations";
 import type { ContentFormatType } from "./content-studio-format-data";
-import type { Flow, WizardStepId } from "./create-content-modal-types";
+import type { CreatePace, Flow, WizardStepId } from "./create-content-modal-types";
 
 export function parseSourceUrls(raw: string): string[] {
   return raw
@@ -45,6 +45,7 @@ export function buildStepSequence(
   selectedFormat: ContentFormatType | null,
   cmsConnections: CmsConnectionSnapshot,
   skipPathAndFormat: boolean,
+  createPace: CreatePace = "full",
 ): WizardStepId[] {
   if (flow === "repurpose") {
     return ["repurpose-format", "repurpose-keyword", "repurpose-source", "repurpose-generating"];
@@ -56,6 +57,12 @@ export function buildStepSequence(
 
   const steps: WizardStepId[] = [];
   if (!skipPathAndFormat) steps.push("path", "format");
+
+  if (createPace === "express") {
+    steps.push("keyword", "review", "generating");
+    return steps;
+  }
+
   steps.push("competitors", "keyword");
 
   if (selectedFormat) {

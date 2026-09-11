@@ -98,6 +98,9 @@ const SEO_LONGFORM_FORMATS = new Set([
   "faq_article",
   "news_article",
   "location_page",
+  "comparison",
+  "listicle",
+  "case_study",
 ]);
 
 /** Progress labels — index driven by SSE stream phase when the host feeds generatingPhase. */

@@ -271,6 +271,12 @@ export function ContentStudioClient({
   const voiceReady = voiceGate.voiceReady;
   const newContentAction = (
     <div className="flex flex-wrap items-center gap-3">
+      <Link
+        href={`/projects/${projectId}/daily-five`}
+        className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+      >
+        This week&apos;s queue
+      </Link>
       <StudioNewContentButton
         onClick={() => {
           if (!voiceReady) {
@@ -281,12 +287,6 @@ export function ContentStudioClient({
           setCreateOpen(true);
         }}
       />
-      <Link
-        href={`/projects/${projectId}/daily-five`}
-        className="inline-flex h-10 items-center rounded-md border border-border px-4 text-sm font-medium hover:bg-muted"
-      >
-        Daily Five
-      </Link>
     </div>
   );
 

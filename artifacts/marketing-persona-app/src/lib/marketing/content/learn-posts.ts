@@ -260,7 +260,7 @@ Endpoints live at \`/api/v1/\` for connections, content render, and content-piec
     title: "Editorial Review Before Publish",
     description: "Manual, draft, and live publish modes.",
     category: "Content strategy",
-    cta: { label: "Content Engine", href: "/content-engine" },
+    cta: { label: "Content Studio", href: "/content-engine" },
     body: `goals.ac never auto-publishes without your configuration. Set project autopilot to manual review, WordPress draft, or live publish.
 
 Every scoped program includes editorial oversight. Quality scores, citations, and schema are visible before you approve.`,

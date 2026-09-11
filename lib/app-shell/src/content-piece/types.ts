@@ -147,6 +147,9 @@ export function contentPieceCanEnhance(formatType: string): boolean {
     "faq_article",
     "news_article",
     "location_page",
+    "comparison",
+    "listicle",
+    "case_study",
   ]);
   return longform.has(formatType) || isHumanizableSocialFormat(formatType);
 }
