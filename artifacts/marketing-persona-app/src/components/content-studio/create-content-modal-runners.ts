@@ -8,6 +8,7 @@ import type { ContentFormatType } from "./content-studio-format-data";
 import type { ContentPieceRow } from "./content-studio-utils";
 import { extractSections } from "./create-content-modal-logic";
 import type React from "react";
+import type { AgentProgressEvent } from "@workspace/content-engine";
 
 export type FallbackParams = {
   selectedFormat: ContentFormatType | null;
@@ -22,9 +23,12 @@ export type FallbackParams = {
   bedrockModel: string;
   canManageBedrockModel: boolean;
   saveBedrockModel: boolean;
+  useAgentTeam: boolean;
+  agentFastMode: boolean;
   buildAngleHint: (format: ContentFormatType) => string | undefined;
   competitorGenerateFields: () => Record<string, unknown>;
   onVoiceRequired?: () => void;
+  onAgentEvent?: (event: AgentProgressEvent | { type: string; [key: string]: unknown }) => void;
 };
 
 export async function handleGenerateFallback(params: FallbackParams): Promise<ContentPieceRow> {
@@ -41,6 +45,8 @@ export async function handleGenerateFallback(params: FallbackParams): Promise<Co
     bedrockModel,
     canManageBedrockModel,
     saveBedrockModel,
+    useAgentTeam,
+    agentFastMode,
     buildAngleHint,
     competitorGenerateFields,
     onVoiceRequired,
@@ -61,6 +67,7 @@ export async function handleGenerateFallback(params: FallbackParams): Promise<Co
       briefId: briefId ?? undefined,
       cmsCategories: trimmedSection ? [trimmedSection] : undefined,
       cmsTags: undefined,
+      ...(useAgentTeam ? { useAgentTeam: true, agentFastMode: agentFastMode || undefined } : {}),
       ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
       ...competitorGenerateFields(),
       ...(showBedrockModelPicker && bedrockModel.trim()
@@ -107,9 +114,12 @@ export async function runGeneration(params: RunGenerationParams): Promise<void> 
     bedrockModel,
     canManageBedrockModel,
     saveBedrockModel,
+    useAgentTeam,
+    agentFastMode,
     buildAngleHint,
     competitorGenerateFields,
     onVoiceRequired,
+    onAgentEvent,
     onCreated,
     handleClose,
     setGenerating,
@@ -121,6 +131,9 @@ export async function runGeneration(params: RunGenerationParams): Promise<void> 
   if (!selectedFormat || !keyword.trim()) return;
   setGenerating(true);
   setDetectedSections([]);
+  if (useAgentTeam) {
+    onAgentEvent?.({ type: "pipeline_start", totalAgents: 8 });
+  }
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (bypassCache) headers["x-bypass-cache"] = "true";
@@ -138,9 +151,12 @@ export async function runGeneration(params: RunGenerationParams): Promise<void> 
     bedrockModel,
     canManageBedrockModel,
     saveBedrockModel,
+    useAgentTeam,
+    agentFastMode,
     buildAngleHint,
     competitorGenerateFields,
     onVoiceRequired,
+    onAgentEvent,
   };
 
   const payload = {
@@ -151,6 +167,7 @@ export async function runGeneration(params: RunGenerationParams): Promise<void> 
     angleHint: buildAngleHint(selectedFormat),
     plannedDate: plannedDate || undefined,
     briefId: briefId ?? undefined,
+    ...(useAgentTeam ? { useAgentTeam: true, ...(agentFastMode ? { agentFastMode: true } : {}) } : {}),
     ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
     ...competitorGenerateFields(),
     ...(showBedrockModelPicker && bedrockModel.trim()
@@ -235,6 +252,18 @@ export async function runGeneration(params: RunGenerationParams): Promise<void> 
             // keep default
           }
           throw new Error(message);
+        }
+        if (pendingEvent === "agent") {
+          try {
+            const agentData = JSON.parse(eventPayload) as
+              | AgentProgressEvent
+              | { type: string; [key: string]: unknown };
+            onAgentEvent?.(agentData);
+          } catch {
+            // ignore malformed agent payload
+          }
+          pendingEvent = null;
+          continue;
         }
         pendingEvent = null;
 

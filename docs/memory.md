@@ -217,9 +217,23 @@ Check: `node lib/app-shell/scripts/check-page-chrome.mjs`
 7. Otherwise: call Gemini with the full prompt, stream chunks as SSE `event: chunk`, save to DB, set AI cache
 8. Frontend streams chunks into a live section detector (detects H2/H3 headings to show progress)
 
+**Agent team (opt-in / default for SEO longform):**
+1. Studio review step sends `useAgentTeam: true` (default on for SEO longform formats; off for social/short)
+2. Stream route runs `generateContentPieceWithAgents` and emits SSE `event: agent` payloads (`pipeline_start`, per-agent status, `pipeline_complete`)
+3. UI renders `AgentTeamProgress` (Owl → Ferret → Hummingbird → Spider → Fox → Mockingbird → Hawk → Chameleon)
+4. Public API: `POST /api/v1/content-pieces/generate-with-agents` (scope `content:generate`; `stream` / `fastMode` flags). OpenAPI: `/v1/content-pieces/generate-with-agents`
+5. Billing: planning tier (multiple AI calls). Metadata: `generatedWithAgents`, `agentPipelineDurationMs`, `degradedAgents`
+
 **Repurpose flow**: Separate endpoint `POST /api/content-pieces/:id/repurpose/stream` — takes existing content, calls Gemini to convert it to a new format, streams SSE events with phase-by-phase progress (analyzing → generating → saving).
 
 **Files**: 
+- `lib/content-engine/src/agents/` — roster, prompts, orchestrator, events
+- `artifacts/marketing-persona-app/src/components/content/agents/` — AgentTeamProgress UI
+- `artifacts/marketing-persona-app/src/app/api/v1/content-pieces/generate-with-agents/route.ts` — public API
+- `artifacts/marketing-persona-app/src/app/api/website-projects/[id]/content-pieces/generate/stream/route.ts` — Studio stream
+- Legacy Vite paths below remain historical references only for the Express era
+
+**Legacy Files** (historical): 
 - `artifacts/api-server/src/services/contentStudioGenerator.ts` — AI generation, cache
 - `artifacts/api-server/src/routes/contentPieces.ts` — all content piece routes
 - `artifacts/goals-ac/src/pages/content-studio.tsx` — frontend

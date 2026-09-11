@@ -23,6 +23,8 @@ import {
   useCreateContentContinue,
   useCreateContentKeyboard,
 } from "./create-content-modal-navigation";
+import { useAgentTeamState } from "@/components/content/agents";
+import { isSeoLongformFormat } from "@workspace/content-engine/content/seo-longform-formats";
 
 export function useCreateContentModal({
   open,
@@ -85,13 +87,17 @@ export function useCreateContentModal({
     currentStep === "repurpose-generating" ||
     currentStep === "optimize-importing";
 
+  const agentTeam = useAgentTeamState();
+  const { reset: resetAgentTeam, handleEvent: onAgentEvent } = agentTeam;
+
   const handleClose = useCallback(() => {
     if (form.generating) return;
     form.resetFormFields();
     competitors.resetCompetitors();
+    resetAgentTeam();
     generationStarted.current = false;
     onClose();
-  }, [form.generating, form.resetFormFields, competitors.resetCompetitors, onClose]);
+  }, [form.generating, form.resetFormFields, competitors.resetCompetitors, resetAgentTeam, onClose]);
 
   useEffect(() => {
     if (!form.selectedFormat) return;
@@ -121,6 +127,8 @@ export function useCreateContentModal({
     setAppliedDraftKey(draftKey);
     form.setFlow("create");
     form.setSelectedFormat(initialDraft!.formatType);
+    form.setUseAgentTeam(isSeoLongformFormat(initialDraft!.formatType));
+    form.setAgentFastMode(false);
     form.setKeyword(initialDraft!.keyword);
     form.setAngleHint(initialDraft!.angleHint ?? "");
     form.setBriefId(initialDraft!.briefId ?? null);
@@ -187,9 +195,12 @@ export function useCreateContentModal({
       bedrockModel,
       canManageBedrockModel,
       saveBedrockModel,
+      useAgentTeam: form.useAgentTeam,
+      agentFastMode: form.agentFastMode,
       buildAngleHint,
       competitorGenerateFields: competitors.competitorGenerateFields,
       onVoiceRequired,
+      onAgentEvent,
     }),
     [
       form.selectedFormat,
@@ -204,9 +215,12 @@ export function useCreateContentModal({
       bedrockModel,
       canManageBedrockModel,
       saveBedrockModel,
+      form.useAgentTeam,
+      form.agentFastMode,
       buildAngleHint,
       competitors.competitorGenerateFields,
       onVoiceRequired,
+      onAgentEvent,
     ],
   );
 
@@ -262,6 +276,9 @@ export function useCreateContentModal({
 
   function selectFormat(type: ContentFormatType) {
     form.setSelectedFormat(type);
+    // Default agent team on for SEO longform; social/short stays single-pass
+    form.setUseAgentTeam(isSeoLongformFormat(type));
+    form.setAgentFastMode(false);
     const idx = steps.indexOf("format");
     if (idx >= 0 && idx < steps.length - 1) form.setStepIndex(idx + 1);
   }
@@ -316,6 +333,13 @@ export function useCreateContentModal({
     setPlannedDate: form.setPlannedDate,
     generating: form.generating,
     detectedSections: form.detectedSections,
+    useAgentTeam: form.useAgentTeam,
+    setUseAgentTeam: form.setUseAgentTeam,
+    agentFastMode: form.agentFastMode,
+    setAgentFastMode: form.setAgentFastMode,
+    agentTeamState: agentTeam.state,
+    agentTeamRunning: agentTeam.isRunning,
+    agentTeamElapsedMs: agentTeam.totalElapsedMs,
     repurposeFormat: form.repurposeFormat,
     setRepurposeFormat: form.setRepurposeFormat,
     repurposeKeyword: form.repurposeKeyword,

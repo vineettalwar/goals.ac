@@ -37,6 +37,7 @@ import {
 import { getConnectedDestinationsForFormat } from "@/lib/projects/publishing-destinations";
 import { cn } from "@/lib/utils";
 import { hostFromUrl } from "@workspace/content-engine/support/competitor/competitor-url";
+import { AgentTeamProgress } from "@/components/content/agents";
 import type { WizardStepId } from "./create-content-modal-types";
 import type { CreateContentWizardProps } from "./create-content-wizard-props";
 export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentStep: WizardStepId; wizard: CreateContentWizardProps }) {
@@ -47,6 +48,8 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
     cmsConnections, linkedinArchetype, setLinkedinArchetype, linkedinHook, setLinkedinHook,
     angleHint, setAngleHint, contentSection, setContentSection, editorNotes, setEditorNotes,
     sourceUrlsInput, setSourceUrlsInput, suggestedSections, plannedDate, setPlannedDate, generating, detectedSections,
+    useAgentTeam, setUseAgentTeam, agentFastMode, setAgentFastMode,
+    agentTeamState, agentTeamRunning, agentTeamElapsedMs,
     handleContinue, bypassCache, setBypassCache, competitorFocusUrl, setCompetitorFocusUrl,
     showBedrockModelPicker, bedrockModel, setBedrockModel, saveBedrockModel, setSaveBedrockModel,
     canManageBedrockModel,
@@ -211,6 +214,31 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
                     Bypass cache (force fresh generation)
                   </label>
 
+                  <label className="flex items-start gap-3 mt-4 text-sm text-muted-foreground cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={useAgentTeam}
+                      onChange={(e) => setUseAgentTeam(e.target.checked)}
+                      className="rounded mt-0.5"
+                    />
+                    <span>
+                      <span className="text-foreground font-medium">Agent team</span>
+                      {" — "}specialists (Owl, Ferret, Hummingbird…) draft and polish. Slower, higher quality.
+                    </span>
+                  </label>
+
+                  {useAgentTeam ? (
+                    <label className="flex items-center gap-3 mt-3 ml-7 text-sm text-muted-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={agentFastMode}
+                        onChange={(e) => setAgentFastMode(e.target.checked)}
+                        className="rounded"
+                      />
+                      Fast mode (skip marketing + linguist)
+                    </label>
+                  ) : null}
+
                   <div className="mt-8">
                     <Button size="lg" onClick={handleContinue} disabled={!keyword.trim()} className="gap-2">
                       <FileText className="w-4 h-4" />
@@ -222,37 +250,52 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
 
               {currentStep === "generating" && selectedFormat && (
                 <WizardStep
-                  title={`Writing your ${FORMAT_META[selectedFormat].label}…`}
+                  title={
+                    useAgentTeam
+                      ? `Agent team writing your ${FORMAT_META[selectedFormat].label}…`
+                      : `Writing your ${FORMAT_META[selectedFormat].label}…`
+                  }
                   subtitle={`Target: ${keyword.trim()} · ${FORMAT_META[selectedFormat].wordRange}`}
                 >
-                  <div className="mt-10 space-y-3">
-                    {detectedSections.length === 0 ? (
-                      <div className="flex items-center gap-3 text-muted-foreground">
-                        <Loader2 className="w-5 h-5 animate-spin shrink-0" />
-                        <span className="text-lg">Starting generation…</span>
-                      </div>
-                    ) : (
-                      detectedSections.map((sec) => {
-                        const isLast = sec === detectedSections[detectedSections.length - 1];
-                        return (
-                          <div
-                            key={sec}
-                            className={cn(
-                              "flex items-center gap-3 text-lg",
-                              isLast ? "text-foreground font-medium" : "text-muted-foreground",
-                            )}
-                          >
-                            {isLast ? (
-                              <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" />
-                            ) : (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                            )}
-                            {sec}
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
+                  {useAgentTeam ? (
+                    <div className="mt-8">
+                      <AgentTeamProgress
+                        agentState={agentTeamState}
+                        isRunning={agentTeamRunning || generating}
+                        totalElapsedMs={agentTeamElapsedMs}
+                        compact
+                      />
+                    </div>
+                  ) : (
+                    <div className="mt-10 space-y-3">
+                      {detectedSections.length === 0 ? (
+                        <div className="flex items-center gap-3 text-muted-foreground">
+                          <Loader2 className="w-5 h-5 animate-spin shrink-0" />
+                          <span className="text-lg">Starting generation…</span>
+                        </div>
+                      ) : (
+                        detectedSections.map((sec) => {
+                          const isLast = sec === detectedSections[detectedSections.length - 1];
+                          return (
+                            <div
+                              key={sec}
+                              className={cn(
+                                "flex items-center gap-3 text-lg",
+                                isLast ? "text-foreground font-medium" : "text-muted-foreground",
+                              )}
+                            >
+                              {isLast ? (
+                                <Loader2 className="w-5 h-5 animate-spin text-primary shrink-0" />
+                              ) : (
+                                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
+                              )}
+                              {sec}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  )}
                 </WizardStep>
               )}
 

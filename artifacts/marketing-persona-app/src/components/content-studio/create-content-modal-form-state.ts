@@ -23,6 +23,10 @@ export function useCreateContentFormState() {
   const [linkedinArchetype, setLinkedinArchetype] = useState<LinkedInArchetypeId | "">("");
   const [linkedinHook, setLinkedinHook] = useState<LinkedInHookId | "">("");
   const [bypassCache, setBypassCache] = useState(false);
+  /** Agent team: default on for SEO longform (set when format is chosen). */
+  const [useAgentTeam, setUseAgentTeam] = useState(true);
+  /** Skip Fox + Mockingbird when agent team is on. */
+  const [agentFastMode, setAgentFastMode] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [detectedSections, setDetectedSections] = useState<string[]>([]);
 
@@ -52,6 +56,8 @@ export function useCreateContentFormState() {
     setLinkedinArchetype("");
     setLinkedinHook("");
     setBypassCache(false);
+    setUseAgentTeam(true);
+    setAgentFastMode(false);
     setDetectedSections([]);
     setRepurposeFormat("linkedin_post");
     setRepurposeKeyword("");
@@ -125,6 +131,10 @@ export function useCreateContentFormState() {
     setLinkedinHook,
     bypassCache,
     setBypassCache,
+    useAgentTeam,
+    setUseAgentTeam,
+    agentFastMode,
+    setAgentFastMode,
     generating,
     setGenerating,
     detectedSections,

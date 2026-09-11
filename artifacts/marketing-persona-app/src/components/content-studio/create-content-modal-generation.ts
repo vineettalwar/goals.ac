@@ -11,6 +11,7 @@ import {
   runOptimizeImport as runOptimizeImportFn,
 } from "./create-content-modal-runners";
 import type { ContentPieceRow } from "./content-studio-utils";
+import type { AgentProgressEvent } from "@workspace/content-engine";
 
 type GenerationShared = {
   selectedFormat: ContentFormatType | null;
@@ -25,9 +26,12 @@ type GenerationShared = {
   bedrockModel: string;
   canManageBedrockModel: boolean;
   saveBedrockModel: boolean;
+  useAgentTeam: boolean;
+  agentFastMode: boolean;
   buildAngleHint: (format: ContentFormatType) => string | undefined;
   competitorGenerateFields: () => Record<string, unknown>;
   onVoiceRequired?: () => void;
+  onAgentEvent?: (event: AgentProgressEvent | { type: string; [key: string]: unknown }) => void;
 };
 
 export function buildAngleHintFromFields(opts: {

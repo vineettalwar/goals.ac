@@ -5,6 +5,6 @@
  */
 
 export { AgentCard } from "./agent-card";
-export { AgentTeamProgress, useAgentTeamState, type AgentTeamState } from "./agent-team-progress";
+export { AgentTeamProgress, useAgentTeamState, applyAgentTeamEvent, type AgentTeamState } from "./agent-team-progress";
 export { AgentTimeline } from "./agent-timeline";
 export { getAgentIcon, AGENT_ICONS } from "./agent-icons";

@@ -24,13 +24,9 @@ export interface AgentTeamState {
 }
 
 interface AgentTeamProgressProps {
-  /** Current state of all agents */
   agentState: AgentTeamState;
-  /** Whether the pipeline is currently running */
   isRunning: boolean;
-  /** Total elapsed time in ms */
   totalElapsedMs?: number;
-  /** Show compact view */
   compact?: boolean;
   className?: string;
 }
@@ -39,6 +35,57 @@ function formatDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
   return `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`;
+}
+
+export function applyAgentTeamEvent(
+  prev: AgentTeamState,
+  event: AgentProgressEvent | { type: string; [key: string]: unknown },
+): { state: AgentTeamState; isRunning?: boolean; totalElapsedMs?: number; resetStart?: boolean } {
+  if ("type" in event && typeof event.type === "string") {
+    if (event.type === "pipeline_start") {
+      const reset: AgentTeamState = {};
+      for (const id of AGENT_PIPELINE_ORDER) {
+        reset[id] = { status: "pending" };
+      }
+      return { state: reset, isRunning: true, resetStart: true };
+    }
+    if (event.type === "pipeline_complete") {
+      return {
+        state: prev,
+        isRunning: false,
+        totalElapsedMs: event.totalDurationMs as number,
+      };
+    }
+    if (event.type === "agent" && event.agent && event.status) {
+      const agentId = event.agent as AgentId;
+      return {
+        state: {
+          ...prev,
+          [agentId]: {
+            status: event.status as AgentStatus,
+            message: (event.message as string) ?? "",
+            durationMs: event.durationMs as number | undefined,
+          },
+        },
+      };
+    }
+  }
+
+  if ("agent" in event && "status" in event) {
+    const e = event as AgentProgressEvent;
+    return {
+      state: {
+        ...prev,
+        [e.agent]: {
+          status: e.status,
+          message: e.message,
+          durationMs: e.durationMs,
+        },
+      },
+    };
+  }
+
+  return { state: prev };
 }
 
 export function AgentTeamProgress({
@@ -110,9 +157,6 @@ export function AgentTeamProgress({
   );
 }
 
-/**
- * Hook for managing agent team state from SSE events
- */
 export function useAgentTeamState() {
   const [state, setState] = useState<AgentTeamState>(() => {
     const initial: AgentTeamState = {};
@@ -125,36 +169,26 @@ export function useAgentTeamState() {
   const [startTime, setStartTime] = useState<number | null>(null);
   const [totalElapsedMs, setTotalElapsedMs] = useState<number | undefined>();
 
-  const handleEvent = useCallback((event: AgentProgressEvent | { type: string; [key: string]: unknown }) => {
-    if ("type" in event) {
-      if (event.type === "pipeline_start") {
-        setIsRunning(true);
-        setStartTime(Date.now());
-        // Reset all agents to pending
-        setState(() => {
-          const reset: AgentTeamState = {};
-          for (const id of AGENT_PIPELINE_ORDER) {
-            reset[id] = { status: "pending" };
-          }
-          return reset;
-        });
-      } else if (event.type === "pipeline_complete") {
-        setIsRunning(false);
-        setTotalElapsedMs(event.totalDurationMs as number);
-      }
-      return;
-    }
-
-    // Regular agent event
-    setState((prev) => ({
-      ...prev,
-      [event.agent]: {
-        status: event.status,
-        message: event.message,
-        durationMs: event.durationMs,
-      },
-    }));
-  }, []);
+  const handleEvent = useCallback(
+    (event: AgentProgressEvent | { type: string; [key: string]: unknown }) => {
+      setState((prev) => {
+        const next = applyAgentTeamEvent(prev, event);
+        if (next.resetStart) {
+          setIsRunning(true);
+          setStartTime(Date.now());
+          setTotalElapsedMs(undefined);
+        }
+        if (next.isRunning === false) {
+          setIsRunning(false);
+        }
+        if (next.totalElapsedMs !== undefined) {
+          setTotalElapsedMs(next.totalElapsedMs);
+        }
+        return next.state;
+      });
+    },
+    [],
+  );
 
   const reset = useCallback(() => {
     const initial: AgentTeamState = {};
@@ -167,7 +201,6 @@ export function useAgentTeamState() {
     setTotalElapsedMs(undefined);
   }, []);
 
-  // Update elapsed time while running
   useEffect(() => {
     if (!isRunning || !startTime) return;
     const interval = setInterval(() => {

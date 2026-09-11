@@ -966,6 +966,84 @@ paths:
         "409":
           description: Project has no brand voice yet (voice_required)
 
+  /v1/content-pieces/generate-with-agents:
+    post:
+      operationId: generateContentPieceWithAgentsPublic
+      tags: [publish]
+      summary: Generate a draft via the visible AI agent team pipeline
+      description: >-
+        Runs the specialist agent pipeline (Owl → Ferret → Hummingbird → Spider →
+        Fox → Mockingbird → Hawk → Chameleon) instead of single-pass generation.
+        Requires scope content:generate. Uses planning-tier billing (multiple AI
+        calls). Set stream=true for SSE progress events (event: agent) including
+        pipeline_start, per-agent status, and pipeline_complete; otherwise returns
+        JSON 201 with the saved draft. Served by the Next.js app (Postgres).
+        Prefer this when you want agent-visible progress; use /v1/content-pieces/generate
+        for faster single-pass drafts.
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [projectId, formatType, targetKeyword]
+              properties:
+                projectId:
+                  type: integer
+                formatType:
+                  type: string
+                targetKeyword:
+                  type: string
+                angleHint:
+                  type: string
+                intendedPublishPlatform:
+                  type: string
+                competitorFocusUrl:
+                  type: string
+                competitorUrls:
+                  type: array
+                  items:
+                    type: string
+                plannedDate:
+                  type: string
+                fastMode:
+                  type: boolean
+                  description: Skip Fox (marketing) and Mockingbird (linguist) for lower latency
+                stream:
+                  type: boolean
+                  description: When true, respond with text/event-stream agent progress + result
+      responses:
+        "201":
+          description: Generated draft (non-streaming)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  agentPipeline:
+                    type: object
+                    properties:
+                      generatedWithAgents:
+                        type: boolean
+                      durationMs:
+                        type: number
+                      degradedAgents:
+                        type: array
+                        items:
+                          type: string
+        "200":
+          description: SSE stream when stream=true (text/event-stream)
+        "400":
+          description: Validation or non-retryable agent pipeline error
+        "409":
+          description: Project has no brand voice yet (voice_required)
+        "503":
+          description: Transient / retryable agent pipeline failure
+
   /v1/content-pieces/{id}/image:
     post:
       operationId: attachContentPieceImagePublic

@@ -45,6 +45,13 @@ export type CreateContentWizardProps = {
   setPlannedDate: (v: string) => void;
   generating: boolean;
   detectedSections: string[];
+  useAgentTeam: boolean;
+  setUseAgentTeam: (v: boolean) => void;
+  agentFastMode: boolean;
+  setAgentFastMode: (v: boolean) => void;
+  agentTeamState: import("@/components/content/agents").AgentTeamState;
+  agentTeamRunning: boolean;
+  agentTeamElapsedMs?: number;
   handleContinue: () => void;
   bypassCache: boolean;
   setBypassCache: (v: boolean) => void;
