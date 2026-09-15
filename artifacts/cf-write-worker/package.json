@@ -19,6 +19,7 @@
     "@workspace/deepl": "workspace:*",
     "@workspace/jobs": "workspace:*",
     "@workspace/keyword-research-provider": "workspace:*",
+    "@workspace/media": "workspace:*",
     "@workspace/platform-admin": "workspace:*",
     "@workspace/security": "workspace:*",
     "@workspace/seo-tools": "workspace:*",

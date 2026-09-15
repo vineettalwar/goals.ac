@@ -20,6 +20,12 @@
   "kv_namespaces": [
     { "binding": "AI_CACHE", "id": "d986e00b3e7d43f5a6e5e68ab7b48ea7" }
   ],
+  "r2_buckets": [
+    {
+      "binding": "CONTENT_MEDIA_R2",
+      "bucket_name": "goals-ac-content-media"
+    }
+  ],
   "queues": {
     "producers": [{ "binding": "JOBS_QUEUE", "queue": "goals-ac-jobs" }]
   },
@@ -27,6 +33,7 @@
     "DB_DIALECT": "d1",
     "CF_EDGE_HTTP": "1",
     "FORCE_QUEUE_WRITES": "1",
-    "APP_URL": "https://app.goals.ac"
+    "APP_URL": "https://app.goals.ac",
+    "CONTENT_MEDIA_PUBLIC_BASE_URL": "https://media.goals.ac"
   }
 }

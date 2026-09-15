@@ -13,11 +13,14 @@
     "./enqueue": "./src/enqueue-http.ts",
     "./jwt": "./src/jwt.ts",
     "./session-cookie": "./src/session-cookie.ts",
+    "./org-security": "./src/org-security.ts",
+    "./session": "./src/session.ts",
     "./wire": "./src/wire.ts",
     "./project-access": "./src/project-access.ts",
     "./edge-not-implemented": "./src/edge-not-implemented.ts",
     "./search-property-client": "./src/search-property-client.ts",
-    "./analytics-property-client": "./src/analytics-property-client.ts"
+    "./analytics-property-client": "./src/analytics-property-client.ts",
+    "./oauth-return-url": "./src/oauth-return-url.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

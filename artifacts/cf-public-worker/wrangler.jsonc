@@ -26,6 +26,7 @@
   },
   "vars": {
     "DB_DIALECT": "d1",
-    "CF_EDGE_HTTP": "1"
+    "CF_EDGE_HTTP": "1",
+    "APP_URL": "https://app.goals.ac"
   }
 }

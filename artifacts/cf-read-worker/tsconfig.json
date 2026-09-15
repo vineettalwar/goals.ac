@@ -7,5 +7,5 @@
     "noEmit": true,
     "types": ["@cloudflare/workers-types"]
   },
-  "include": ["src"]
+  "include": ["src", "../../lib/cf-edge/worker-node-compat.d.ts"]
 }

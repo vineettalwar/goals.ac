@@ -9,5 +9,6 @@
     "types": ["@cloudflare/workers-types"]
   },
   "include": ["src"],
+  "exclude": ["src/**/*.test.ts"],
   "references": [{ "path": "../db" }, { "path": "../jobs" }]
 }
