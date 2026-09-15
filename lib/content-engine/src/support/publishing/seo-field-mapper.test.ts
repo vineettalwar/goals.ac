@@ -29,6 +29,21 @@ describe("mapSeoToWordPressRestMeta", () => {
     expect(meta._yoast_wpseo_metadesc).toBeUndefined();
   });
 
+  it("sends SEOPress title, description, keyword, and social image keys", () => {
+    const meta = mapSeoToWordPressRestMeta(seo, "seopress");
+    expect(meta).toEqual({
+      _seopress_titles_title: "Title",
+      _seopress_titles_desc: "Desc",
+      _seopress_analysis_target_kw: "kw",
+      _seopress_social_fb_title: "OG Title",
+      _seopress_social_fb_desc: "OG Desc",
+      _seopress_social_fb_img: "https://example.com/og.png",
+      _seopress_social_twitter_title: "OG Title",
+      _seopress_social_twitter_desc: "OG Desc",
+      _seopress_social_twitter_img: "https://example.com/og.png",
+    });
+  });
+
   it("returns empty meta for AIOSEO (uses aioseo_meta_data instead)", () => {
     expect(mapSeoToWordPressRestMeta(seo, "aioseo")).toEqual({});
   });

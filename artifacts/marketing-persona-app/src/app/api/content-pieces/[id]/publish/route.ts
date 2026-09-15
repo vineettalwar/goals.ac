@@ -52,6 +52,7 @@ const PublishBody = z.object({
   platform: z.enum(ALL_PUBLISH_PLATFORMS as unknown as [string, ...string[]]).optional(),
   wordpressConnectionId: z.number().int().positive().optional(),
   async: z.boolean().optional(),
+  cmsStatus: z.enum(["draft", "publish"]).optional(),
   /** Required to publish despite blockers from assessPublishReadiness. Persisted for audit. */
   overrideReason: z.string().min(10).max(500).optional(),
   /**
@@ -200,7 +201,7 @@ export async function POST(
       contentPieceId: id,
       userId: userId!,
       platform: parsed.data.platform,
-      cmsStatus: "publish",
+      cmsStatus: parsed.data.cmsStatus ?? "draft",
     });
     return NextResponse.json({ queued: true, warnings: readiness.warnings });
   }
@@ -288,6 +289,7 @@ export async function POST(
             featuredImageUrl: imageUrl,
             entitlements,
             idempotencyKey: `piece-${id}`,
+            status: parsed.data.cmsStatus ?? "draft",
           });
           publishedUrl = result.publishedUrl;
           publishPlatform = result.publishPlatform;

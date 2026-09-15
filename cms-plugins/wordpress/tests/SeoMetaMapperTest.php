@@ -60,4 +60,22 @@ class SeoMetaMapperTest extends TestCase {
 		$__goals_ac_active_plugins['wordpress-seo/wp-seo.php'] = true;
 		$this->assertSame( 'yoast', \Goals_AC\Seo_Meta_Mapper::detect_plugin() );
 	}
+
+	/**
+	 * Rank Math is detected when its plugin basename is active.
+	 */
+	public function test_detect_rankmath(): void {
+		global $__goals_ac_active_plugins;
+		$__goals_ac_active_plugins['seo-by-rank-math/rank-math.php'] = true;
+		$this->assertSame( 'rankmath', \Goals_AC\Seo_Meta_Mapper::detect_plugin() );
+	}
+
+	/**
+	 * SEOPress is detected when its plugin basename is active.
+	 */
+	public function test_detect_seopress(): void {
+		global $__goals_ac_active_plugins;
+		$__goals_ac_active_plugins['wp-seopress/seopress.php'] = true;
+		$this->assertSame( 'seopress', \Goals_AC\Seo_Meta_Mapper::detect_plugin() );
+	}
 }

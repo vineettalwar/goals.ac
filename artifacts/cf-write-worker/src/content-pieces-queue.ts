@@ -195,7 +195,7 @@ export async function handleContentPiecesQueueWrite(
       contentPieceId: parsed.data.contentPieceId,
       userId,
       platform: parsed.data.platform,
-      cmsStatus: parsed.data.cmsStatus ?? "publish",
+      cmsStatus: parsed.data.cmsStatus ?? "draft",
     });
     const id = jobId ?? `cf:${QUEUES.contentPublish}:${Date.now()}`;
     if (trackJob) {

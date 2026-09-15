@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { finalizeSeoContentPiece } from "@workspace/content-engine/content/content-piece-seo";
+import { finalizeSeoContentPiece, stripVisualSummarySection } from "@workspace/content-engine/content/content-piece-seo";
 
 /**
  * finalizeSeoContentPiece rebuilds pieceMetadata from the raw model fields and
@@ -48,5 +48,30 @@ describe("finalizeSeoContentPiece carries the vertical review gate", () => {
   it("preserves an explicit false rather than dropping the decision", () => {
     const out = finalizeSeoContentPiece({ ...base, pieceMetadata: { requiresReview: false } });
     expect(out.pieceMetadata.requiresReview).toBe(false);
+  });
+
+  it("keeps visual summary in metadata, not in the article body", () => {
+    const out = finalizeSeoContentPiece({ ...base });
+    expect(out.body_markdown).not.toMatch(/##\s*Visual Summary/i);
+    expect(out.pieceMetadata.visualSummaryMarkdown).toMatch(/Visual Summary/);
+  });
+});
+
+describe("stripVisualSummarySection", () => {
+  it("drops the studio callout and keeps FAQ", () => {
+    const body = `Intro.
+
+## Visual Summary
+
+> **Title**
+>
+> 12 words · 0 citations
+
+## Frequently Asked Questions
+
+### What?
+
+An answer.`;
+    expect(stripVisualSummarySection(body)).toBe("Intro.\n\n## Frequently Asked Questions\n\n### What?\n\nAn answer.");
   });
 });

@@ -1,5 +1,5 @@
 import {
-  isRasterFeaturedDataUri,
+  needsWordPressImagePrep,
   prepareWordPressImages,
 } from "@workspace/connectors/wordpress-images";
 import { publishToWordPress, wordpressSlugFromTitle } from "@workspace/connectors/wordpress";
@@ -125,7 +125,7 @@ export const wordpressAdapter: CmsAdapter = {
       throw new Error("Invalid payload for WordPress adapter.");
     }
 
-    const status = opts?.status === "draft" ? "draft" : "publish";
+    const status = opts?.status === "publish" || opts?.status === "published" ? "publish" : "draft";
     const connectionType = resolveWordPressConnectionType(creds.wordpress);
     const canonical = opts?.content ?? { meta: { title: payload.title }, markdown: "", id: "" };
     const seo = resolveSeoFromCanonical(canonical);
@@ -223,9 +223,10 @@ export async function prepareWordPressPayload(
   const render = await wordpressAdapter.render(content, renderOpts);
   if (render.payload.kind !== "wordpress") return { render };
 
-  const needsImagePrep =
-    (content.pieceMetadata?.images?.length ?? 0) > 0 ||
-    isRasterFeaturedDataUri(content.pieceMetadata?.featuredImageUrl);
+  const needsImagePrep = needsWordPressImagePrep({
+    images: content.pieceMetadata?.images,
+    featuredImageUrl: content.pieceMetadata?.featuredImageUrl,
+  });
   if (!needsImagePrep || !creds.wordpress) return { render };
 
   const keyword = content.targetKeyword ?? content.meta.title;

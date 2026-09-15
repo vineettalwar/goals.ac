@@ -684,7 +684,6 @@ export function ContentPieceClient({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   platform,
-                  cmsStatus: "publish",
                   ...(confirmCmsUpdate ? { confirmCmsUpdate: true } : {}),
                   ...(opts?.overrideReason ? { overrideReason: opts.overrideReason } : {}),
                 }),

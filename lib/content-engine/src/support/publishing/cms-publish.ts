@@ -1,6 +1,6 @@
 import { marked } from "marked";
 import {
-  isRasterFeaturedDataUri,
+  needsWordPressImagePrep,
   prepareWordPressImages,
 } from "@workspace/connectors/wordpress-images";
 import { publishToGhost } from "@workspace/connectors/ghost";
@@ -24,6 +24,7 @@ import type { ContentPieceMetadata } from "@workspace/db";
 // column type predates the vertical guardrail fields, so reading requiresReview
 // back needs content-engine's own wider ContentPieceMetadata.
 import type { ContentPieceMetadata as GeneratedPieceMetadata } from "../../content/content-piece-seo";
+import { stripVisualSummarySection } from "../../content/content-piece-seo";
 import type { CmsIntegrationCredentials, CmsPublishPlatform } from "./cms-integrations";
 import { resolveWordPressConnectionType } from "./cms-integrations";
 import { hostFeaturedImageForPublish } from "./host-featured-image";
@@ -160,14 +161,16 @@ export async function publishPieceToWordPress(
     throw new Error("WordPress is not connected. Configure it in Project Settings → Publishing.");
   }
 
-  const status = options?.status ?? "publish";
+  const status = options?.status === "publish" ? "publish" : "draft";
   const tags = contentTags(piece);
   const connectionType = resolveWordPressConnectionType(creds.wordpress);
   const keyword = piece.targetKeyword ?? piece.title;
+  const bodyForCms = stripVisualSummarySection(piece.bodyMarkdown);
 
-  const needsImagePrep =
-    (piece.pieceMetadata?.images?.length ?? 0) > 0 ||
-    isRasterFeaturedDataUri(piece.pieceMetadata?.featuredImageUrl);
+  const needsImagePrep = needsWordPressImagePrep({
+    images: piece.pieceMetadata?.images,
+    featuredImageUrl: piece.pieceMetadata?.featuredImageUrl,
+  });
 
   if (connectionType === "plugin") {
     if (!creds.wordpress.siteKey) {
@@ -180,14 +183,14 @@ export async function publishPieceToWordPress(
       platform: "wordpress" as const,
     };
 
-    let bodyMarkdown = piece.bodyMarkdown;
+    let bodyMarkdown = bodyForCms;
     let featuredImageId: number | undefined;
     let hostedOgUrl: string | undefined;
     let updatedMetadata = piece.pieceMetadata;
 
     if (needsImagePrep) {
       const prepared = await prepareWordPressImages({
-        bodyMarkdown: piece.bodyMarkdown,
+        bodyMarkdown: bodyForCms,
         targetKeyword: keyword,
         images: piece.pieceMetadata?.images,
         featuredImageUrl: piece.pieceMetadata?.featuredImageUrl,
@@ -241,14 +244,14 @@ export async function publishPieceToWordPress(
     appPassword: creds.wordpress.appPassword,
   };
 
-  let bodyMarkdown = piece.bodyMarkdown;
+  let bodyMarkdown = bodyForCms;
   let featuredMediaId: number | undefined;
   let hostedOgUrl: string | undefined;
   let updatedMetadata = piece.pieceMetadata;
 
   if (needsImagePrep) {
     const prepared = await prepareWordPressImages({
-      bodyMarkdown: piece.bodyMarkdown,
+      bodyMarkdown: bodyForCms,
       targetKeyword: keyword,
       images: piece.pieceMetadata?.images,
       featuredImageUrl: piece.pieceMetadata?.featuredImageUrl,
@@ -355,10 +358,11 @@ export async function publishPieceToCms(
       if (!creds.webhook) {
         throw new Error("Webhook is not connected. Configure it in Project Settings → Publishing.");
       }
-      const bodyHtml = await marked(piece.bodyMarkdown);
+      const bodyMarkdown = stripVisualSummarySection(piece.bodyMarkdown);
+      const bodyHtml = await marked(bodyMarkdown);
       const payload: WebhookArticlePayload = {
         title: piece.title,
-        bodyMarkdown: piece.bodyMarkdown,
+        bodyMarkdown,
         bodyHtml,
         publishedStatus: status === "published" ? "publish" : "draft",
         keywords: tags,

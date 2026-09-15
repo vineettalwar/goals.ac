@@ -121,7 +121,7 @@ export async function renderAndPublish(
   }
 
   const wpStatus =
-    input.status === "draft" ? "draft" : input.status === "published" ? "published" : "publish";
+    input.status === "publish" || input.status === "published" ? "publish" : "draft";
 
   // Refresh pieces stash cmsRemoteId at import; prefer that over publish_records
   // so optimize-existing-page updates the live WP post, not a new draft.

@@ -1,4 +1,5 @@
 import type { ContentPieceMetadata } from "@workspace/db";
+import { stripVisualSummarySection } from "./content-piece-seo";
 import type { PublishableContentPiece } from "../support/publishing/cms-publish";
 
 export interface OutlineNode {
@@ -71,10 +72,11 @@ export function buildCanonicalContent(piece: PublishableContentPiece): Canonical
   const keywords: string[] = [];
   if (piece.targetKeyword) keywords.push(piece.targetKeyword);
   if (piece.formatType) keywords.push(piece.formatType.replace(/_/g, " "));
+  const markdown = stripVisualSummarySection(piece.bodyMarkdown);
 
   return {
     id: piece.id != null ? String(piece.id) : "draft",
-    markdown: piece.bodyMarkdown,
+    markdown,
     formatType: piece.formatType ?? undefined,
     targetKeyword: piece.targetKeyword ?? undefined,
     pieceMetadata: piece.pieceMetadata,
@@ -83,7 +85,7 @@ export function buildCanonicalContent(piece: PublishableContentPiece): Canonical
       slug: slugify(piece.title),
       description: piece.pieceMetadata?.metaDescription,
       keywords: keywords.length > 0 ? keywords : undefined,
-      headings: extractHeadings(piece.bodyMarkdown),
+      headings: extractHeadings(markdown),
       schemaOrg:
         piece.pieceMetadata?.jsonLdSchema && typeof piece.pieceMetadata.jsonLdSchema === "object"
           ? (piece.pieceMetadata.jsonLdSchema as object)

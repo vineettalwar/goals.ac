@@ -1,6 +1,18 @@
 # Session Handoff
 
-## Latest (2026-09-15) — Modularized `lib/app-shell/src/content-piece`
+## Latest (2026-09-15) — WP publish: draft default, no visual summary, SEO + featured
+
+Live post [Command Line Secrets…](https://technicaltip.com/2026/09/15/command-line-secrets-for-wordpress-performance-and-integration/) showed a studio **Visual Summary** callout, empty Rank Math title/description, no featured image, and went **Published**.
+
+**Fixes:**
+- Visual summary stays in `pieceMetadata` (studio aside); stripped from CMS markdown. Existing bodies still stripped on publish.
+- WordPress CMS status defaults to **draft** (adapter, destination, Next, CF write/public workers). Pass `cmsStatus: "publish"` only for an explicit live push.
+- HTTPS `featuredImageUrl` is uploaded as `featured_media` even when `images[]` is empty.
+- Plugin writes `post_excerpt` from meta description; Rank Math detection includes constants/Pro basename.
+
+**Verify:** `npx vitest run lib/content-engine/src/content/content-piece-seo-guardrails.test.ts lib/connectors/src/wordpress-images.test.ts lib/jobs/src/handlers/contentPublish.test.ts` · After deploy, republish that piece — WP should be Draft, no Visual Summary block, Rank Math fields filled, featured set when the piece has an image URL.
+
+## Prior (2026-09-15) — Modularized `lib/app-shell/src/content-piece`
 
 Flat folder split by domain: `chrome/`, `publish/` (+ existing `publish-destinations/`), `editor/`, `media/`, `quality/`, `brief/`, `view/`. Public barrels unchanged (`@workspace/app-shell/content-piece`, `content-piece-actions`, `publish-destinations`). Publish dialog split into preflights/preview; quality types extracted.
 

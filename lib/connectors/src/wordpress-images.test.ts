@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decodeRasterFeaturedDataUri,
   isRasterFeaturedDataUri,
+  needsWordPressImagePrep,
 } from "./wordpress-images";
 
 describe("featured data URI helpers", () => {
@@ -25,5 +26,20 @@ describe("featured data URI helpers", () => {
     expect(decodedJpeg?.mimeHint).toBe("image/jpeg");
 
     expect(decodeRasterFeaturedDataUri(svg)).toBeNull();
+  });
+});
+
+describe("needsWordPressImagePrep", () => {
+  it("is true for an HTTPS featured URL even with no images array", () => {
+    expect(
+      needsWordPressImagePrep({ featuredImageUrl: "https://images.example/photo.jpg" }),
+    ).toBe(true);
+  });
+
+  it("is false when there is nothing to upload", () => {
+    expect(needsWordPressImagePrep({})).toBe(false);
+    expect(needsWordPressImagePrep({ featuredImageUrl: "data:image/svg+xml;base64,PHN2Zy8+" })).toBe(
+      false,
+    );
   });
 });

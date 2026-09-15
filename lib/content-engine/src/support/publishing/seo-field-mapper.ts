@@ -70,6 +70,10 @@ function seopressMeta(seo: CanonicalSeoFields): Record<string, string> {
     _seopress_analysis_target_kw: seo.focusKeyword,
     _seopress_social_fb_title: seo.ogTitle,
     _seopress_social_fb_desc: seo.ogDescription,
+    _seopress_social_fb_img: seo.ogImageUrl,
+    _seopress_social_twitter_title: seo.ogTitle,
+    _seopress_social_twitter_desc: seo.ogDescription,
+    _seopress_social_twitter_img: seo.ogImageUrl,
   });
 }
 

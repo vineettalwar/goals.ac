@@ -204,15 +204,15 @@ export function buildVisualSummaryMarkdown(input: {
 `;
 }
 
-function appendVisualSummary(body: string, summary: string): string {
-  if (/##\s*Visual Summary/i.test(body)) return body;
-
-  const faqMatch = body.match(/\n##\s*(?:FAQ|Frequently Asked Questions)/i);
-  if (faqMatch?.index != null) {
-    return `${body.slice(0, faqMatch.index).trim()}\n\n${summary.trim()}\n\n${body.slice(faqMatch.index).trim()}`;
-  }
-
-  return `${body.trim()}\n\n${summary.trim()}`;
+/**
+ * Studio-only callout. Do not leave it in CMS-bound markdown — it is not
+ * article copy (word counts, citation tallies, focus keyword).
+ */
+export function stripVisualSummarySection(body: string): string {
+  return body
+    .replace(/\n*##\s*Visual Summary\s*\n[\s\S]*?(?=\n##\s+|\s*$)/i, "\n\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 /**
@@ -276,7 +276,6 @@ export function finalizeSeoContentPiece<
     body,
     faqs: metadata.faqSection,
   });
-  body = appendVisualSummary(body, visualSummary);
 
   return {
     ...result,

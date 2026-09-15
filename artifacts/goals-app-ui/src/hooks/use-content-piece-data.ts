@@ -621,7 +621,6 @@ export function useContentPieceData(pieceId: string | undefined) {
             body: JSON.stringify({
               contentPieceId: piece.id,
               platform,
-              cmsStatus: "publish",
               ...(opts?.overrideReason ? { overrideReason: opts.overrideReason } : {}),
             }),
           },

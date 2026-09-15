@@ -38,6 +38,20 @@ type ImageUploadMap = Map<string, { attachmentId: number; sourceUrl: string }>;
 
 export { isRasterFeaturedDataUri, decodeRasterFeaturedDataUri };
 
+export function isHttpFeaturedUrl(url?: string | null): boolean {
+  return /^https?:\/\//i.test(url?.trim() ?? "");
+}
+
+export function needsWordPressImagePrep(params: {
+  images?: { length: number } | null;
+  featuredImageUrl?: string | null;
+}): boolean {
+  if ((params.images?.length ?? 0) > 0) return true;
+  const featured = params.featuredImageUrl?.trim();
+  if (!featured) return false;
+  return isRasterFeaturedDataUri(featured) || isHttpFeaturedUrl(featured);
+}
+
 async function pushOptimizedMedia(
   optimized: OptimizedImage,
   meta: { alt: string; title: string; caption?: string },
@@ -93,6 +107,24 @@ async function uploadOptimizedImage(
   return pushOptimizedMedia(
     optimized,
     { alt: image.alt, title: image.title, caption },
+    wpCreds,
+    pluginCreds,
+  );
+}
+
+async function uploadFeaturedRemoteUrl(
+  remoteUrl: string,
+  filenameBase: string,
+  wpCreds: WordPressCredentials | null,
+  pluginCreds: GoalsAcPluginCredentials | null,
+): Promise<{ attachmentId: number; sourceUrl: string }> {
+  const optimized = await downloadAndOptimizeImage(remoteUrl, filenameBase, {
+    maxWidth: 1920,
+    quality: 85,
+  });
+  return pushOptimizedMedia(
+    optimized,
+    { alt: "Featured image", title: filenameBase },
     wpCreds,
     pluginCreds,
   );
@@ -167,7 +199,12 @@ export async function prepareWordPressImages(params: {
       ? params.featuredImageUrl!.trim()
       : null;
 
-  if (images.length === 0 && !featuredDataUri) {
+  const featuredHttp =
+    !featuredDataUri && !images.some((img) => img.role === "featured") && isHttpFeaturedUrl(params.featuredImageUrl)
+      ? params.featuredImageUrl!.trim()
+      : null;
+
+  if (images.length === 0 && !featuredDataUri && !featuredHttp) {
     return { bodyMarkdown: params.bodyMarkdown };
   }
 
@@ -233,6 +270,17 @@ export async function prepareWordPressImages(params: {
       featuredImageId = fromDataUri.attachmentId;
       featuredHostedUrl = fromDataUri.sourceUrl;
     }
+  }
+
+  if (!featuredImageId && featuredHttp) {
+    const fromUrl = await uploadFeaturedRemoteUrl(
+      featuredHttp,
+      `${params.targetKeyword}-featured`,
+      params.wpCreds ?? null,
+      params.pluginCreds ?? null,
+    );
+    featuredImageId = fromUrl.attachmentId;
+    featuredHostedUrl = fromUrl.sourceUrl;
   }
 
   return {

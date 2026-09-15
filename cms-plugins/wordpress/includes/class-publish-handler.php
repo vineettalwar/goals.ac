@@ -123,6 +123,11 @@ class Publish_Handler {
 			$post_data['post_name'] = $slug;
 		}
 
+		$excerpt = self::excerpt_from_params( $params );
+		if ( '' !== $excerpt ) {
+			$post_data['post_excerpt'] = $excerpt;
+		}
+
 		$categories = $params['categories'] ?? array();
 		if ( ! empty( $categories ) ) {
 			$post_data['post_category'] = Taxonomy::resolve_term_ids( $categories, 'category' );
@@ -180,6 +185,11 @@ class Publish_Handler {
 			$post_data['post_name'] = $slug;
 		}
 
+		$excerpt = self::excerpt_from_params( $params );
+		if ( '' !== $excerpt ) {
+			$post_data['post_excerpt'] = $excerpt;
+		}
+
 		$result = \wp_update_post( \wp_slash( $post_data ), true );
 
 		if ( \is_wp_error( $result ) ) {
@@ -199,6 +209,21 @@ class Publish_Handler {
 		$this->set_post_meta( $post_id, $params );
 
 		return $post_id;
+	}
+
+	/**
+	 * Pull a post excerpt from canonical SEO fields.
+	 *
+	 * @param array<string, mixed> $params Publish payload.
+	 * @return string
+	 */
+	private static function excerpt_from_params( array $params ): string {
+		$seo = $params['seo'] ?? array();
+		if ( ! \is_array( $seo ) ) {
+			return '';
+		}
+		$excerpt = \sanitize_text_field( $seo['metaDescription'] ?? $seo['meta_description'] ?? '' );
+		return \is_string( $excerpt ) ? $excerpt : '';
 	}
 
 	/**

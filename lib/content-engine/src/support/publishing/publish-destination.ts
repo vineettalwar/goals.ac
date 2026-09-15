@@ -62,9 +62,9 @@ export interface PublishDestinationResult {
 function mapCmsStatus(
   status: PublishDestinationOptions["status"],
 ): "draft" | "published" | "publish" {
-  if (status === "draft") return "draft";
+  if (status === "published") return "published";
   if (status === "publish") return "publish";
-  return "published";
+  return "draft";
 }
 
 async function maybeInjectSchema(
@@ -124,10 +124,21 @@ export async function publishPieceToDestination(
 ): Promise<PublishDestinationResult> {
   assertVerticalReviewCleared(piece);
   const cmsStatus = mapCmsStatus(options?.status);
+  const featuredOverride = options?.featuredImageUrl?.trim();
+  const publishPiece =
+    featuredOverride && !piece.pieceMetadata?.featuredImageUrl?.trim()
+      ? {
+          ...piece,
+          pieceMetadata: {
+            ...piece.pieceMetadata,
+            featuredImageUrl: featuredOverride,
+          },
+        }
+      : piece;
 
   if (ADAPTER_PLATFORMS.has(platform) && getAdapter(platform)) {
     const result = await renderAndPublish({
-      piece,
+      piece: publishPiece,
       platform,
       creds,
       entitlements: options?.entitlements,

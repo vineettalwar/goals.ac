@@ -43,6 +43,10 @@ class Seo_Meta_Mapper {
 		'_seopress_titles_desc',
 		'_seopress_social_fb_title',
 		'_seopress_social_fb_desc',
+		'_seopress_social_fb_img',
+		'_seopress_social_twitter_title',
+		'_seopress_social_twitter_desc',
+		'_seopress_social_twitter_img',
 		'_seopress_analysis_target_kw',
 	);
 
@@ -50,6 +54,19 @@ class Seo_Meta_Mapper {
 	 * Detect the active SEO plugin slug.
 	 */
 	public static function detect_plugin(): ?string {
+		if ( \defined( 'WPSEO_VERSION' ) || \class_exists( '\WPSEO_Meta' ) ) {
+			return 'yoast';
+		}
+		if ( \defined( 'RANK_MATH_VERSION' ) || \class_exists( '\RankMath' ) ) {
+			return 'rankmath';
+		}
+		if ( \defined( 'AIOSEO_VERSION' ) || \class_exists( '\AIOSEO\Plugin\Common\Models\Post' ) ) {
+			return 'aioseo';
+		}
+		if ( \defined( 'SEOPRESS_VERSION' ) || \function_exists( 'seopress_get_service' ) ) {
+			return 'seopress';
+		}
+
 		if ( ! \function_exists( 'is_plugin_active' ) ) {
 			include_once ABSPATH . 'wp-admin/includes/plugin.php';
 		}
@@ -57,10 +74,12 @@ class Seo_Meta_Mapper {
 		$candidates = array(
 			'wordpress-seo/wp-seo.php'                    => 'yoast',
 			'seo-by-rank-math/rank-math.php'              => 'rankmath',
+			'seo-by-rank-math-pro/rank-math-pro.php'      => 'rankmath',
 			'all-in-one-seo-pack/all_in_one_seo_pack.php' => 'aioseo',
 			'all-in-one-seo-pack-pro/all_in_one_seo_pack.php' => 'aioseo',
 			'wp-seopress/seopress.php'                    => 'seopress',
 			'wp-seopress-pro/seopress.php'                => 'seopress',
+			'wp-seopress-pro/seopress-pro.php'            => 'seopress',
 		);
 
 		foreach ( $candidates as $file => $slug ) {
@@ -203,9 +222,15 @@ class Seo_Meta_Mapper {
 				}
 				if ( $og_title ) {
 					$meta['_seopress_social_fb_title'] = $og_title;
+					$meta['_seopress_social_twitter_title'] = $og_title;
 				}
 				if ( $og_desc ) {
 					$meta['_seopress_social_fb_desc'] = $og_desc;
+					$meta['_seopress_social_twitter_desc'] = $og_desc;
+				}
+				if ( $og_image ) {
+					$meta['_seopress_social_fb_img'] = $og_image;
+					$meta['_seopress_social_twitter_img'] = $og_image;
 				}
 				break;
 		}
