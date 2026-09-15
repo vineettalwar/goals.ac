@@ -1,6 +1,6 @@
 // Client-safe types — no server-only imports, no process.env references.
 
-export type PlatformIntegrationCategoryId = "billing" | "email" | "media" | "social" | "ai";
+export type PlatformIntegrationCategoryId = "billing" | "email" | "media" | "social" | "ai" | "search";
 
 export type PlatformIntegrationId =
   | "stripe"
@@ -11,14 +11,20 @@ export type PlatformIntegrationId =
   | "twitter"
   | "meta"
   | "bluesky"
-  | "bedrock";
+  | "mastodon"
+  | "bedrock"
+  | "gemini"
+  | "bing"
+  | "google";
 
 export type PlatformIntegrationSettingsKey =
   | "stripeBillingEnabled"
   | "emailEnabled"
-  | "socialPublishingEnabled";
+  | "socialPublishingEnabled"
+  | "bingWebmasterEnabled"
+  | "googleIntegrationsEnabled";
 
-export type PlatformIntegrationKind = "credentials" | "env";
+export type PlatformIntegrationKind = "credentials" | "env" | "info";
 
 export type PlatformIntegrationEnvVar = {
   name: string;
@@ -55,7 +61,7 @@ export const PLATFORM_INTEGRATION_CATEGORIES: {
   {
     id: "media",
     label: "Stock Images",
-    description: "Free platform-wide API keys for keyword-matched article featured images.",
+    description: "Unsplash and Pexels keys for featured images.",
   },
   {
     id: "social",
@@ -65,7 +71,12 @@ export const PLATFORM_INTEGRATION_CATEGORIES: {
   {
     id: "ai",
     label: "AI providers",
-    description: "Platform AI credentials shared with selected organizations.",
+    description: "Platform Gemini key and Bedrock credentials for organizations without BYOK.",
+  },
+  {
+    id: "search",
+    label: "Search",
+    description: "Google OAuth for login and Search Console. Bing Webmaster has its own client.",
   },
 ];
 
@@ -144,6 +155,12 @@ export type PlatformIntegrationStatus = {
     clientName: { configured: boolean; value: string | null; source: "db" | "env" | null };
     privateKeyJwk: IntegrationFieldStatus;
   };
+  bing: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    clientSecret: IntegrationFieldStatus;
+  };
   bedrock: PlatformBedrockStatus;
 };
 
@@ -165,6 +182,8 @@ export type PlatformSettingsResponse = {
   stripeBillingEnabled: boolean;
   emailEnabled: boolean;
   socialPublishingEnabled: boolean;
+  bingWebmasterEnabled: boolean;
+  googleIntegrationsEnabled: boolean;
   env: IntegrationEnvStatus;
   integrations: PlatformIntegrationDefinition[];
 };

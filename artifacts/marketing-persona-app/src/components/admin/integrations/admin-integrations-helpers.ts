@@ -11,6 +11,8 @@ export interface PlatformSettingsResponse {
   stripeBillingEnabled: boolean;
   emailEnabled: boolean;
   socialPublishingEnabled: boolean;
+  bingWebmasterEnabled: boolean;
+  googleIntegrationsEnabled: boolean;
 }
 
 export type ToggleKey = PlatformIntegrationSettingsKey;
@@ -23,6 +25,7 @@ export type AdminIntegrationsCounts = {
   media: number;
   social: number;
   ai: number;
+  search: number;
 };
 
 export function integrationSummary(
@@ -80,6 +83,12 @@ export function isIntegrationConfigured(
   if (definition.id === "bluesky") {
     return status.bluesky.privateKeyJwk.configured;
   }
+  if (definition.id === "bing") {
+    return status.bing.clientId.configured && status.bing.clientSecret.configured;
+  }
+  if (definition.id === "dataforseo") {
+    return status.dataforseo.login.configured && status.dataforseo.password.configured;
+  }
   if (definition.id === "bedrock") {
     return status.bedrock.configured;
   }
@@ -100,6 +109,7 @@ export function isIntegrationActive(
   env: IntegrationEnvStatus,
   status: PlatformIntegrationStatus,
 ): boolean {
+  if (definition.kind === "info") return false;
   const configured = isIntegrationConfigured(definition, env, status);
   if (!definition.settingsKey) {
     return configured;
@@ -134,6 +144,8 @@ export function getIntegrationLastFour(
   if (definition.id === "twitter") return status.twitter.clientSecret.lastFour;
   if (definition.id === "meta") return status.meta.appSecret.lastFour;
   if (definition.id === "bluesky") return status.bluesky.privateKeyJwk.lastFour;
+  if (definition.id === "bing") return status.bing.clientSecret.lastFour;
+  if (definition.id === "dataforseo") return status.dataforseo.password.lastFour;
   if (definition.id === "bedrock") {
     return status.bedrock.secretAccessKey.lastFour ?? status.bedrock.accessKeyId.lastFour;
   }
@@ -152,6 +164,8 @@ export function isIntegrationManagedByEnv(
   if (definition.id === "twitter") return status.twitter.managedByEnv;
   if (definition.id === "meta") return status.meta.managedByEnv;
   if (definition.id === "bluesky") return status.bluesky.managedByEnv;
+  if (definition.id === "bing") return status.bing.managedByEnv;
+  if (definition.id === "dataforseo") return status.dataforseo.managedByEnv;
   if (definition.id === "bedrock") return status.bedrock.managedByEnv;
   return definition.kind === "env";
 }

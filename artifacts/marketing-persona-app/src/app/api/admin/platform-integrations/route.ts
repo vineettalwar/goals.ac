@@ -11,6 +11,8 @@ import {
   clearStoredStripeCredentials,
   clearStoredTwitterCredentials,
   clearStoredUnsplashCredentials,
+  clearStoredBingWebmasterCredentials,
+  clearStoredDataForSeoCredentials,
   disconnectStripeConnect,
   getPlatformIntegrationStatus,
   saveBlueskyCredentials,
@@ -22,6 +24,8 @@ import {
   saveStripeCredentials,
   saveTwitterCredentials,
   saveUnsplashCredentials,
+  saveBingWebmasterCredentials,
+  saveDataForSeoCredentials,
   setPlatformBedrockOrgGrants,
 } from "@/lib/platform/platform-integration-secrets";
 
@@ -73,6 +77,18 @@ const blueskyBodySchema = z.object({
   privateKeyJwk: z.string().min(8).optional(),
 });
 
+const bingBodySchema = z.object({
+  integration: z.literal("bing"),
+  clientId: z.string().trim().min(4).optional().nullable(),
+  clientSecret: z.string().min(8).optional(),
+});
+
+const dataforseoBodySchema = z.object({
+  integration: z.literal("dataforseo"),
+  login: z.string().trim().min(3).optional().nullable(),
+  password: z.string().min(8).optional(),
+});
+
 const bedrockBodySchema = z.object({
   integration: z.literal("bedrock"),
   apiKey: z.string().min(16).optional(),
@@ -93,6 +109,8 @@ const patchSchema = z.discriminatedUnion("integration", [
   twitterBodySchema,
   metaBodySchema,
   blueskyBodySchema,
+  bingBodySchema,
+  dataforseoBodySchema,
   bedrockBodySchema,
 ]);
 
@@ -107,6 +125,8 @@ const deleteSchema = z.object({
     "twitter",
     "meta",
     "bluesky",
+    "bing",
+    "dataforseo",
     "bedrock",
   ]),
 });
@@ -217,6 +237,26 @@ export async function PATCH(req: Request) {
         privateKeyJwk: data.privateKeyJwk,
         updatedBy: admin.userId!,
       });
+    } else if (data.integration === "bing") {
+      if (data.clientId === undefined && data.clientSecret === undefined) {
+        return NextResponse.json({ error: "No Bing Webmaster fields to update" }, { status: 400 });
+      }
+
+      await saveBingWebmasterCredentials({
+        clientId: data.clientId,
+        clientSecret: data.clientSecret,
+        updatedBy: admin.userId!,
+      });
+    } else if (data.integration === "dataforseo") {
+      if (data.login === undefined && data.password === undefined) {
+        return NextResponse.json({ error: "No DataForSEO fields to update" }, { status: 400 });
+      }
+
+      await saveDataForSeoCredentials({
+        login: data.login,
+        password: data.password,
+        updatedBy: admin.userId!,
+      });
     } else {
       const hasCredFields =
         data.apiKey !== undefined ||
@@ -293,6 +333,12 @@ export async function DELETE(req: Request) {
         break;
       case "bluesky":
         await clearStoredBlueskyCredentials(admin.userId!);
+        break;
+      case "bing":
+        await clearStoredBingWebmasterCredentials(admin.userId!);
+        break;
+      case "dataforseo":
+        await clearStoredDataForSeoCredentials(admin.userId!);
         break;
       case "bedrock":
         await clearStoredPlatformBedrockCredentials(admin.userId!);

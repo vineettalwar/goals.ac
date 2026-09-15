@@ -31,7 +31,7 @@ export function UnsplashDialog({ controller }: { controller: AdminIntegrationsCo
         </IntegrationIconBox>
         <div>
           <p className="font-medium">Unsplash</p>
-          <p className="text-sm text-muted-foreground">Free stock photos for article featured images.</p>
+          <p className="text-sm text-muted-foreground">Unsplash API key for featured images.</p>
         </div>
       </div>
 
@@ -118,7 +118,7 @@ export function PexelsDialog({ controller }: { controller: AdminIntegrationsCont
         </IntegrationIconBox>
         <div>
           <p className="font-medium">Pexels</p>
-          <p className="text-sm text-muted-foreground">Free stock photos for article featured images.</p>
+          <p className="text-sm text-muted-foreground">Pexels API key for featured images.</p>
         </div>
       </div>
 

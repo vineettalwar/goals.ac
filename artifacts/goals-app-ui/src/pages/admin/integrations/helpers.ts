@@ -17,6 +17,7 @@ export type AdminIntegrationsCounts = {
   media: number;
   social: number;
   ai: number;
+  search: number;
 };
 
 export function integrationEnvReady(definition: PlatformIntegrationDefinition): boolean {
@@ -51,6 +52,7 @@ export function isIntegrationConfigured(
   env: IntegrationEnvStatus,
   status: PlatformIntegrationStatus,
 ): boolean {
+  if (definition.kind === "info") return true;
   if (definition.kind === "env") return integrationEnvReady(definition);
   if (definition.id === "stripe") {
     return (
@@ -73,13 +75,19 @@ export function isIntegrationConfigured(
     return status.meta.appId.configured && status.meta.appSecret.configured;
   }
   if (definition.id === "bluesky") return status.bluesky.privateKeyJwk.configured;
+  if (definition.id === "bing") {
+    return status.bing.clientId.configured && status.bing.clientSecret.configured;
+  }
   if (definition.id === "bedrock") return status.bedrock.configured;
   return false;
 }
 
 export function isIntegrationEnabled(
   definition: PlatformIntegrationDefinition,
-  settings: Pick<PlatformSettingsResponse, "stripeBillingEnabled" | "emailEnabled" | "socialPublishingEnabled">,
+  settings: Pick<
+    PlatformSettingsResponse,
+    "stripeBillingEnabled" | "emailEnabled" | "socialPublishingEnabled" | "bingWebmasterEnabled" | "googleIntegrationsEnabled"
+  >,
 ): boolean | undefined {
   if (!definition.settingsKey) return undefined;
   return settings[definition.settingsKey];
@@ -87,10 +95,14 @@ export function isIntegrationEnabled(
 
 export function isIntegrationActive(
   definition: PlatformIntegrationDefinition,
-  settings: Pick<PlatformSettingsResponse, "stripeBillingEnabled" | "emailEnabled" | "socialPublishingEnabled">,
+  settings: Pick<
+    PlatformSettingsResponse,
+    "stripeBillingEnabled" | "emailEnabled" | "socialPublishingEnabled" | "bingWebmasterEnabled" | "googleIntegrationsEnabled"
+  >,
   env: IntegrationEnvStatus,
   status: PlatformIntegrationStatus,
 ): boolean {
+  if (definition.kind === "info") return false;
   const configured = isIntegrationConfigured(definition, env, status);
   if (!definition.settingsKey) return configured;
   const enabled = isIntegrationEnabled(definition, settings);
@@ -99,7 +111,10 @@ export function isIntegrationActive(
 
 export function isIntegrationPending(
   definition: PlatformIntegrationDefinition,
-  settings: Pick<PlatformSettingsResponse, "stripeBillingEnabled" | "emailEnabled" | "socialPublishingEnabled">,
+  settings: Pick<
+    PlatformSettingsResponse,
+    "stripeBillingEnabled" | "emailEnabled" | "socialPublishingEnabled" | "bingWebmasterEnabled" | "googleIntegrationsEnabled"
+  >,
   env: IntegrationEnvStatus,
   status: PlatformIntegrationStatus,
 ): boolean {
@@ -123,6 +138,7 @@ export function getIntegrationLastFour(
   if (definition.id === "twitter") return status.twitter.clientSecret.lastFour;
   if (definition.id === "meta") return status.meta.appSecret.lastFour;
   if (definition.id === "bluesky") return status.bluesky.privateKeyJwk.lastFour;
+  if (definition.id === "bing") return status.bing.clientSecret.lastFour;
   if (definition.id === "bedrock") return status.bedrock.accessKeyId.lastFour;
   return null;
 }
@@ -139,6 +155,8 @@ export function isIntegrationManagedByEnv(
   if (definition.id === "twitter") return status.twitter.managedByEnv;
   if (definition.id === "meta") return status.meta.managedByEnv;
   if (definition.id === "bluesky") return status.bluesky.managedByEnv;
+  if (definition.id === "bing") return status.bing.managedByEnv;
   if (definition.id === "bedrock") return status.bedrock.managedByEnv;
-  return definition.kind === "env";
+  if (definition.kind === "env" || definition.kind === "info") return definition.kind === "env";
+  return false;
 }

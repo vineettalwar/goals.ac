@@ -27,7 +27,7 @@ export function AdminUnsplashDialog({ controller }: { controller: AdminIntegrati
           <div>
             <DialogTitle>Unsplash</DialogTitle>
             <DialogDescription className="mt-1">
-              Free stock photos for article featured images.
+              Unsplash API key for featured images.
             </DialogDescription>
           </div>
         </div>

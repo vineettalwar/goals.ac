@@ -5,6 +5,11 @@ import {
   loadPlatformBedrockCredentials,
   savePlatformBedrockCredentials,
   setPlatformBedrockOrgGrants,
+  saveBingWebmasterCredentials,
+  clearStoredBingWebmasterCredentials,
+  saveDataForSeoCredentials,
+  clearStoredDataForSeoCredentials,
+  getPlatformIntegrationStatus,
 } from "@workspace/platform-admin";
 import { invalidateStripeClientCache } from "@workspace/billing";
 import { encryptSecret } from "@workspace/security/encryption";
@@ -35,6 +40,16 @@ const patchIntegrationSchema = z.discriminatedUnion("integration", [
     apiKey: z.string().min(8).optional(),
   }),
   z.object({
+    integration: z.literal("bing"),
+    clientId: z.string().trim().min(4).optional().nullable(),
+    clientSecret: z.string().min(8).optional(),
+  }),
+  z.object({
+    integration: z.literal("dataforseo"),
+    login: z.string().trim().min(3).optional().nullable(),
+    password: z.string().min(8).optional(),
+  }),
+  z.object({
     integration: z.literal("bedrock"),
     apiKey: z.string().min(16).optional(),
     accessKeyId: z.string().min(16).optional(),
@@ -47,7 +62,7 @@ const patchIntegrationSchema = z.discriminatedUnion("integration", [
 ]);
 
 const deleteIntegrationSchema = z.object({
-  integration: z.enum(["stripe", "stripe_connect", "resend", "unsplash", "pexels", "bedrock"]),
+  integration: z.enum(["stripe", "stripe_connect", "resend", "unsplash", "pexels", "bing", "dataforseo", "bedrock"]),
 });
 
 // ── Handler ───────────────────────────────────────────────────────────────────
@@ -126,6 +141,24 @@ export async function handleAdminIntegrationRoutes(
           updatedBy: userId,
           encryptedPexelsApiKey: data.apiKey ? encryptSecret(data.apiKey.trim()) : null,
         });
+      } else if (data.integration === "bing") {
+        if (data.clientId === undefined && data.clientSecret === undefined) {
+          return badRequest(request, "No Bing Webmaster fields to update");
+        }
+        await saveBingWebmasterCredentials({
+          clientId: data.clientId,
+          clientSecret: data.clientSecret,
+          updatedBy: userId,
+        });
+      } else if (data.integration === "dataforseo") {
+        if (data.login === undefined && data.password === undefined) {
+          return badRequest(request, "No DataForSEO fields to update");
+        }
+        await saveDataForSeoCredentials({
+          login: data.login,
+          password: data.password,
+          updatedBy: userId,
+        });
       } else {
         const hasCredFields =
           data.apiKey !== undefined ||
@@ -168,7 +201,7 @@ export async function handleAdminIntegrationRoutes(
       return withCors(request, Response.json({ error: message }, { status }));
     }
 
-    return withCors(request, Response.json({ ok: true }));
+    return withCors(request, Response.json({ ok: true, status: await getPlatformIntegrationStatus() }));
   }
 
   // ── DELETE /api/admin/platform-integrations ─────────────────────────────
@@ -216,6 +249,12 @@ export async function handleAdminIntegrationRoutes(
         case "pexels":
           await upsertPlatformSettingsPatch({ updatedBy: userId, encryptedPexelsApiKey: null });
           break;
+        case "bing":
+          await clearStoredBingWebmasterCredentials(userId);
+          break;
+        case "dataforseo":
+          await clearStoredDataForSeoCredentials(userId);
+          break;
         case "bedrock":
           await clearStoredPlatformBedrockCredentials(userId);
           break;
@@ -226,7 +265,7 @@ export async function handleAdminIntegrationRoutes(
       return withCors(request, Response.json({ error: message }, { status }));
     }
 
-    return withCors(request, Response.json({ ok: true }));
+    return withCors(request, Response.json({ ok: true, status: await getPlatformIntegrationStatus() }));
   }
 
   // ── DELETE /api/admin/stripe-connect ────────────────────────────────────

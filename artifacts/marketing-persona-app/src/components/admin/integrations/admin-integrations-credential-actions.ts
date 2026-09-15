@@ -217,6 +217,8 @@ export function useAdminIntegrationsCredentialActions(deps: {
       | "twitter"
       | "meta"
       | "bluesky"
+      | "bing"
+      | "dataforseo"
       | "bedrock",
   ) {
     try {
@@ -248,6 +250,12 @@ export function useAdminIntegrationsCredentialActions(deps: {
       } else if (integration === "bluesky") {
         form.setBlueskyClientName("");
         form.setBlueskyPrivateKeyJwk("");
+      } else if (integration === "bing") {
+        form.setBingClientId("");
+        form.setBingClientSecret("");
+      } else if (integration === "dataforseo") {
+        form.setDataforseoLogin("");
+        form.setDataforseoPassword("");
       } else if (integration === "bedrock") {
         form.setBedrockApiKey("");
       }

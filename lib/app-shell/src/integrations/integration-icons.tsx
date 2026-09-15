@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { Search } from "lucide-react";
 import { cn } from "../cn";
 import type { AiProviderChoice } from "../settings/types";
 import type { CmsPlatform } from "./types";
@@ -66,30 +65,12 @@ export function DestinationBadge({
   return <PublishBrandIcon id="webhook" className="h-8 w-8" />;
 }
 
-const AI_PROVIDER_BADGES: Record<AiProviderChoice, { letter: string; className: string }> = {
-  gemini: { letter: "G", className: "bg-[#4285F4]" },
-  openai: { letter: "AI", className: "bg-neutral-900" },
-  anthropic: { letter: "A", className: "bg-[#D97757]" },
-  bedrock: { letter: "B", className: "bg-[#232F3E] text-[#FF9900]" },
-  ollama: { letter: "O", className: "bg-emerald-700" },
-};
-
 export function AiProviderIcon({ provider }: { provider: AiProviderChoice }) {
-  const badge = AI_PROVIDER_BADGES[provider];
-  return <BrandBadge letter={badge.letter} className={badge.className} />;
+  return <PublishBrandIcon id={provider} className="h-8 w-8" />;
 }
 
 export function OrgToolIcon({ tool }: { tool: "semrush" | "deepl" | "unsplash" | "pexels" }) {
-  switch (tool) {
-    case "semrush":
-      return <BrandBadge letter="S" className="bg-[#FF622D]" />;
-    case "deepl":
-      return <BrandBadge letter="D" className="bg-[#0F2B46]" />;
-    case "unsplash":
-      return <BrandBadge letter="U" className="bg-neutral-900" />;
-    case "pexels":
-      return <BrandBadge letter="P" className="bg-[#05A081]" />;
-  }
+  return <PublishBrandIcon id={tool} className="h-8 w-8" />;
 }
 
 export function CmsPlatformIcon({ platform }: { platform: CmsPlatform }) {
@@ -105,10 +86,12 @@ export function SocialDestinationIcon({ destination }: { destination: SocialDest
 }
 
 export function SearchProviderIcon({ provider }: { provider: "google_search_console" | "bing_webmaster" }) {
-  if (provider === "google_search_console") {
-    return <Search className="h-4 w-4 text-blue-600" />;
-  }
-  return <Search className="h-4 w-4 text-teal-600" />;
+  return (
+    <PublishBrandIcon
+      id={provider === "google_search_console" ? "google_search_console" : "bing"}
+      className="h-8 w-8"
+    />
+  );
 }
 
 export { PublishBrandIcon, type PublishBrandIconId } from "./brand-logos";

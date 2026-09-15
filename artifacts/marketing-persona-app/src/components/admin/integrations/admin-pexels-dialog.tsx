@@ -21,12 +21,12 @@ export function AdminPexelsDialog({ controller }: { controller: AdminIntegration
       <DialogHeader>
         <div className="flex items-start gap-3">
           <IntegrationIconBox className="border-0 bg-transparent p-0">
-            <PlatformIntegrationBrandIcon id="unsplash" />
+            <PlatformIntegrationBrandIcon id="pexels" />
           </IntegrationIconBox>
           <div>
             <DialogTitle>Pexels</DialogTitle>
             <DialogDescription className="mt-1">
-              Free stock photos for article featured images.
+              Pexels API key for featured images.
             </DialogDescription>
           </div>
         </div>

@@ -18,6 +18,8 @@ export function useAdminIntegrationsOauthActions(deps: {
   const [savingTwitter, setSavingTwitter] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
   const [savingBluesky, setSavingBluesky] = useState(false);
+  const [savingBing, setSavingBing] = useState(false);
+  const [savingDataforseo, setSavingDataforseo] = useState(false);
   const [savingBedrock, setSavingBedrock] = useState(false);
   const [testingBedrock, setTestingBedrock] = useState(false);
 
@@ -191,6 +193,92 @@ export function useAdminIntegrationsOauthActions(deps: {
     }
   }
 
+  async function saveBing() {
+    const payload: Record<string, string> = {};
+    if (form.bingClientId.trim()) payload.clientId = form.bingClientId.trim();
+    if (form.bingClientSecret.trim()) payload.clientSecret = form.bingClientSecret.trim();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("Enter a Client ID or Client Secret to save");
+      return;
+    }
+
+    const alreadyConfigured =
+      status?.bing.clientId.configured && status.bing.clientSecret.configured;
+    if (!alreadyConfigured && (!payload.clientId || !payload.clientSecret)) {
+      toast.error("Enter both Client ID and Client Secret for the first save");
+      return;
+    }
+
+    setSavingBing(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          integration: "bing",
+          ...payload,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed");
+      }
+      const data = (await res.json()) as { status: PlatformIntegrationStatus };
+      setStatus(data.status);
+      form.setBingClientId(data.status.bing.clientId.value ?? "");
+      form.setBingClientSecret("");
+      toast.success("Bing Webmaster credentials saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save Bing Webmaster credentials");
+    } finally {
+      setSavingBing(false);
+    }
+  }
+
+  async function saveDataforseo() {
+    const payload: Record<string, string> = {};
+    if (form.dataforseoLogin.trim()) payload.login = form.dataforseoLogin.trim();
+    if (form.dataforseoPassword.trim()) payload.password = form.dataforseoPassword.trim();
+
+    if (Object.keys(payload).length === 0) {
+      toast.error("Enter a login or API password to save");
+      return;
+    }
+
+    const alreadyConfigured =
+      status?.dataforseo.login.configured && status.dataforseo.password.configured;
+    if (!alreadyConfigured && (!payload.login || !payload.password)) {
+      toast.error("Enter both login and API password for the first save");
+      return;
+    }
+
+    setSavingDataforseo(true);
+    try {
+      const res = await fetch("/api/admin/platform-integrations", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          integration: "dataforseo",
+          ...payload,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Save failed");
+      }
+      const data = (await res.json()) as { status: PlatformIntegrationStatus };
+      setStatus(data.status);
+      form.setDataforseoLogin("");
+      form.setDataforseoPassword("");
+      toast.success("DataForSEO credentials saved");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save DataForSEO credentials");
+    } finally {
+      setSavingDataforseo(false);
+    }
+  }
+
   function toggleBedrockGrantedOrg(organizationId: number) {
     form.setBedrockGrantedOrgIds((prev) => {
       const next = new Set(prev);
@@ -285,6 +373,8 @@ export function useAdminIntegrationsOauthActions(deps: {
     saveTwitter,
     saveMeta,
     saveBluesky,
+    saveBing,
+    saveDataforseo,
     saveBedrock,
     testBedrock,
     toggleBedrockGrantedOrg,
@@ -292,6 +382,8 @@ export function useAdminIntegrationsOauthActions(deps: {
     savingTwitter,
     savingMeta,
     savingBluesky,
+    savingBing,
+    savingDataforseo,
     savingBedrock,
     testingBedrock,
   };

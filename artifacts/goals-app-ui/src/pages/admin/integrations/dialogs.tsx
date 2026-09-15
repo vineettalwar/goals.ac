@@ -5,8 +5,9 @@ import type { AdminIntegrationsController } from "./use-controller";
 import { AdminDialog } from "./dialogs-shared";
 import { StripeDialog, ResendDialog } from "./dialogs-payments";
 import { UnsplashDialog, PexelsDialog } from "./dialogs-stock";
-import { LinkedInDialog, TwitterDialog, MetaDialog, BlueskyDialog } from "./dialogs-social";
+import { LinkedInDialog, TwitterDialog, MetaDialog, BlueskyDialog, BingDialog } from "./dialogs-social";
 import { BedrockDialog } from "./dialogs-bedrock";
+import { GoogleDialog, GeminiDialog, MastodonDialog } from "./dialogs-env";
 
 const DIALOG_TITLES: Record<string, string> = {
   stripe: "Stripe",
@@ -17,6 +18,10 @@ const DIALOG_TITLES: Record<string, string> = {
   twitter: "X",
   meta: "Meta",
   bluesky: "Bluesky",
+  mastodon: "Mastodon",
+  bing: "Bing Webmaster",
+  google: "Google",
+  gemini: "Google Gemini",
   bedrock: "AWS Bedrock",
 };
 
@@ -41,6 +46,10 @@ export function AdminIntegrationsDialogs({
       {activeDialog === "twitter" && <TwitterDialog controller={controller} />}
       {activeDialog === "meta" && <MetaDialog controller={controller} />}
       {activeDialog === "bluesky" && <BlueskyDialog controller={controller} />}
+      {activeDialog === "bing" && <BingDialog controller={controller} />}
+      {activeDialog === "google" && <GoogleDialog controller={controller} />}
+      {activeDialog === "gemini" && <GeminiDialog controller={controller} />}
+      {activeDialog === "mastodon" && <MastodonDialog controller={controller} />}
       {activeDialog === "bedrock" && <BedrockDialog controller={controller} />}
     </AdminDialog>
   );

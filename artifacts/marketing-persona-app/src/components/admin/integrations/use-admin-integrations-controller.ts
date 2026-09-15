@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import type { PlatformIntegrationStatus } from "@/lib/platform/platform-integration-types";
 import {
-  getPlatformIntegrationsByCategory,
+  PLATFORM_INTEGRATION_CATEGORIES,
   type IntegrationEnvStatus,
   type PlatformIntegrationCategoryId,
   type PlatformIntegrationDefinition,
@@ -31,7 +31,14 @@ export function useAdminIntegrationsController() {
   const searchParams = useSearchParams();
 
   const form = useAdminIntegrationsFormState();
-  const groupedIntegrations = useMemo(() => getPlatformIntegrationsByCategory(), []);
+  const groupedIntegrations = useMemo(
+    () =>
+      PLATFORM_INTEGRATION_CATEGORIES.map((category) => ({
+        category,
+        integrations: definitions.filter((d) => d.category === category.id),
+      })).filter((g) => g.integrations.length > 0),
+    [definitions],
+  );
 
   const activeDefinition = useMemo(
     () => definitions.find((definition) => definition.id === activeDialog) ?? null,
@@ -69,6 +76,7 @@ export function useAdminIntegrationsController() {
       form.setTwitterClientId(statusData.twitter.clientId.value ?? "");
       form.setMetaAppId(statusData.meta.appId.value ?? "");
       form.setBlueskyClientName(statusData.bluesky.clientName.value ?? "");
+      form.setBingClientId(statusData.bing.clientId.value ?? "");
       form.setBedrockGrantedOrgIds(
         new Set(statusData.bedrock.grantedOrganizations.map((org) => org.id)),
       );
@@ -121,7 +129,7 @@ export function useAdminIntegrationsController() {
 
   const counts = useMemo<AdminIntegrationsCounts>(() => {
     if (!settings || !env || !status) {
-      return { total: 0, billing: 0, email: 0, media: 0, social: 0, ai: 0 };
+      return { total: 0, billing: 0, email: 0, media: 0, social: 0, ai: 0, search: 0 };
     }
 
     const countActive = (defs: PlatformIntegrationDefinition[]) =>
@@ -140,6 +148,7 @@ export function useAdminIntegrationsController() {
       media: countsByCategory.media ?? 0,
       social: countsByCategory.social ?? 0,
       ai: countsByCategory.ai ?? 0,
+      search: countsByCategory.search ?? 0,
       total: groupedIntegrations.reduce(
         (sum, group) => sum + countActive(group.integrations),
         0,
@@ -170,6 +179,8 @@ export function useAdminIntegrationsController() {
     saveTwitter: oauth.saveTwitter,
     saveMeta: oauth.saveMeta,
     saveBluesky: oauth.saveBluesky,
+    saveBing: oauth.saveBing,
+    saveDataforseo: oauth.saveDataforseo,
     saveBedrock: oauth.saveBedrock,
     testBedrock: oauth.testBedrock,
     toggleBedrockGrantedOrg: oauth.toggleBedrockGrantedOrg,
@@ -184,6 +195,8 @@ export function useAdminIntegrationsController() {
     savingTwitter: oauth.savingTwitter,
     savingMeta: oauth.savingMeta,
     savingBluesky: oauth.savingBluesky,
+    savingBing: oauth.savingBing,
+    savingDataforseo: oauth.savingDataforseo,
     savingBedrock: oauth.savingBedrock,
     testingBedrock: oauth.testingBedrock,
     stripeSecretKey: form.stripeSecretKey,
@@ -221,6 +234,14 @@ export function useAdminIntegrationsController() {
     setBlueskyClientName: form.setBlueskyClientName,
     blueskyPrivateKeyJwk: form.blueskyPrivateKeyJwk,
     setBlueskyPrivateKeyJwk: form.setBlueskyPrivateKeyJwk,
+    bingClientId: form.bingClientId,
+    setBingClientId: form.setBingClientId,
+    bingClientSecret: form.bingClientSecret,
+    setBingClientSecret: form.setBingClientSecret,
+    dataforseoLogin: form.dataforseoLogin,
+    setDataforseoLogin: form.setDataforseoLogin,
+    dataforseoPassword: form.dataforseoPassword,
+    setDataforseoPassword: form.setDataforseoPassword,
     bedrockApiKey: form.bedrockApiKey,
     setBedrockApiKey: form.setBedrockApiKey,
     bedrockModel: form.bedrockModel,

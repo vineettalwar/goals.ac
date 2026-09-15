@@ -1,7 +1,5 @@
-"use client";
-
 import { useCallback, useState } from "react";
-import type { ActiveDialog } from "./admin-integrations-helpers";
+import type { ActiveDialog } from "./helpers";
 
 /** Form field state for admin integration credential dialogs. */
 export function useAdminIntegrationsFormState() {
@@ -25,9 +23,10 @@ export function useAdminIntegrationsFormState() {
   const [blueskyPrivateKeyJwk, setBlueskyPrivateKeyJwk] = useState("");
   const [bingClientId, setBingClientId] = useState("");
   const [bingClientSecret, setBingClientSecret] = useState("");
-  const [dataforseoLogin, setDataforseoLogin] = useState("");
-  const [dataforseoPassword, setDataforseoPassword] = useState("");
-  const [bedrockApiKey, setBedrockApiKey] = useState("");
+  const [bedrockAccessKeyId, setBedrockAccessKeyId] = useState("");
+  const [bedrockSecretAccessKey, setBedrockSecretAccessKey] = useState("");
+  const [bedrockSessionToken, setBedrockSessionToken] = useState("");
+  const [bedrockRegion, setBedrockRegion] = useState("");
   const [bedrockModel, setBedrockModel] = useState("");
   const [bedrockOrgSearch, setBedrockOrgSearch] = useState("");
   const [bedrockOrgOptions, setBedrockOrgOptions] = useState<Array<{ id: number; name: string }>>(
@@ -55,11 +54,10 @@ export function useAdminIntegrationsFormState() {
       setBlueskyPrivateKeyJwk("");
     } else if (dialog === "bing") {
       setBingClientSecret("");
-    } else if (dialog === "dataforseo") {
-      setDataforseoPassword("");
     } else if (dialog === "bedrock") {
-      setBedrockApiKey("");
-      setBedrockModel("");
+      setBedrockAccessKeyId("");
+      setBedrockSecretAccessKey("");
+      setBedrockSessionToken("");
     }
   }, []);
 
@@ -102,12 +100,14 @@ export function useAdminIntegrationsFormState() {
     setBingClientId,
     bingClientSecret,
     setBingClientSecret,
-    dataforseoLogin,
-    setDataforseoLogin,
-    dataforseoPassword,
-    setDataforseoPassword,
-    bedrockApiKey,
-    setBedrockApiKey,
+    bedrockAccessKeyId,
+    setBedrockAccessKeyId,
+    bedrockSecretAccessKey,
+    setBedrockSecretAccessKey,
+    bedrockSessionToken,
+    setBedrockSessionToken,
+    bedrockRegion,
+    setBedrockRegion,
     bedrockModel,
     setBedrockModel,
     bedrockOrgSearch,
