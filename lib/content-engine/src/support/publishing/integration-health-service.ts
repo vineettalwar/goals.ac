@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { websiteProjectsTable } from "@workspace/db/schema";
 import {
   decryptCmsCredentials,
+  parseCmsIntegrationCredentials,
   resolveWordPressConnectionType,
   type CmsIntegrationCredentials,
 } from "./cms-integrations";
@@ -426,8 +427,8 @@ export async function runProjectIntegrationHealth(
   }
 
   const nextIntegrations = {
-    ...((project.cmsIntegrations as Record<string, unknown> | null) ?? {}),
-  };
+    ...parseCmsIntegrationCredentials(project.cmsIntegrations),
+  } as Record<string, unknown>;
   const healthTransitions: Array<{ platform: string; previousOk: boolean | null | undefined; currentOk: boolean | null; error?: string }> = [];
   for (const status of platforms) {
     if (!status.connected) continue;

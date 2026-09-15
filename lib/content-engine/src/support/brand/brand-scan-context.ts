@@ -104,9 +104,9 @@ export async function loadCmsSiteGraph(
   body?: string;
   contentMarkdown?: string;
 }[]> {
-  if (!cmsIntegrations || typeof cmsIntegrations !== "object") return [];
+  if (!cmsIntegrations) return [];
 
-  const creds = decryptCmsCredentials(cmsIntegrations as CmsIntegrationCredentials);
+  const creds = decryptCmsCredentials(cmsIntegrations);
   const pluginCreds = pluginCredentialsFromCms(creds);
   if (!pluginCreds) return [];
 

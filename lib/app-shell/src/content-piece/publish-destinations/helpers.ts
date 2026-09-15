@@ -114,12 +114,29 @@ export function getDestinationsForFormat(
   return PUBLISHING_DESTINATIONS.filter((d) => d.matchesFormat(format));
 }
 
+function snapshotForConnectedCheck(connections: CmsConnectionSnapshot): CmsConnectionSnapshot {
+  if (typeof connections === "string") {
+    try {
+      return JSON.parse(connections) as CmsConnectionSnapshot;
+    } catch {
+      return {};
+    }
+  }
+  const nested = connections.cmsIntegrations;
+  if (nested && typeof nested === "object" && !connections.wordpress && !connections.ghost) {
+    return nested as CmsConnectionSnapshot;
+  }
+  return connections;
+}
+
 export function getConnectedDestinationsForFormat(
   format: ContentFormatType,
   connections: CmsConnectionSnapshot,
 ): PublishDestinationDefinition[] {
-  return getDestinationsForFormat(format).filter(
-    (d) => !d.exportOnly && d.isConnected(connections),
+  const snapshot = snapshotForConnectedCheck(connections);
+  const resolvedFormat = format || "blog_post";
+  return getDestinationsForFormat(resolvedFormat).filter(
+    (d) => !d.exportOnly && d.isConnected(snapshot),
   );
 }
 

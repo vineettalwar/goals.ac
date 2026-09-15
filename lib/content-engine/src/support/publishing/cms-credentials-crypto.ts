@@ -9,6 +9,23 @@ function tryDecrypt(value: string): string {
   }
 }
 
+/**
+ * D1 stores `cms_integrations` as TEXT. Some read paths return a JSON string
+ * instead of an object; spreading/decrypting that string drops `wordpress`.
+ */
+export function parseCmsIntegrationCredentials(stored: unknown): CmsIntegrationCredentials {
+  if (stored == null || stored === "") return {};
+  if (typeof stored === "string") {
+    try {
+      return parseCmsIntegrationCredentials(JSON.parse(stored) as unknown);
+    } catch {
+      return {};
+    }
+  }
+  if (typeof stored !== "object" || Array.isArray(stored)) return {};
+  return stored as CmsIntegrationCredentials;
+}
+
 export function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsIntegrationCredentials {
   const result: CmsIntegrationCredentials = {};
   if (creds.notion) {
@@ -243,7 +260,8 @@ export function encryptCmsCredentials(creds: CmsIntegrationCredentials): CmsInte
   return result;
 }
 
-export function decryptCmsCredentials(stored: CmsIntegrationCredentials): CmsIntegrationCredentials {
+export function decryptCmsCredentials(raw: unknown): CmsIntegrationCredentials {
+  const stored = parseCmsIntegrationCredentials(raw);
   const result: CmsIntegrationCredentials = {};
   if (stored.notion) {
     result.notion = {
