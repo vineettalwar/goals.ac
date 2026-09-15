@@ -200,6 +200,7 @@ export async function POST(
       contentPieceId: id,
       userId: userId!,
       platform: parsed.data.platform,
+      cmsStatus: "publish",
     });
     return NextResponse.json({ queued: true, warnings: readiness.warnings });
   }

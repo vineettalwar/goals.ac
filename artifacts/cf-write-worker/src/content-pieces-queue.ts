@@ -27,6 +27,7 @@ const contentPublishBody = z.object({
   platform: z.string().min(1).optional(),
   confirmCmsUpdate: z.boolean().optional(),
   overrideReason: z.string().min(10).max(500).optional(),
+  cmsStatus: z.enum(["draft", "publish"]).optional(),
 });
 
 type TrackJob = (jobId: string, queue: string, meta: Record<string, unknown>) => Promise<void>;
@@ -60,12 +61,14 @@ export async function handleContentPiecesQueueWrite(
       platform?: string;
       confirmCmsUpdate?: boolean;
       overrideReason?: string;
+      cmsStatus?: "draft" | "publish";
     } | null;
     const parsed = contentPublishBody.safeParse({
       contentPieceId: Number.parseInt(publishMatch[1]!, 10),
       platform: body?.platform,
       confirmCmsUpdate: body?.confirmCmsUpdate,
       overrideReason: body?.overrideReason,
+      cmsStatus: body?.cmsStatus,
     });
     if (!parsed.success) {
       return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
@@ -192,6 +195,7 @@ export async function handleContentPiecesQueueWrite(
       contentPieceId: parsed.data.contentPieceId,
       userId,
       platform: parsed.data.platform,
+      cmsStatus: parsed.data.cmsStatus ?? "publish",
     });
     const id = jobId ?? `cf:${QUEUES.contentPublish}:${Date.now()}`;
     if (trackJob) {

@@ -1,9 +1,14 @@
-import { eq, and, lte, notInArray } from "drizzle-orm";
+import { eq, and, inArray, lte, notInArray } from "drizzle-orm";
 import { db } from "@workspace/db";
 import { contentPiecesTable, websiteProjectsTable, SOCIAL_FORMAT_TYPES } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
-import { QUEUES, enqueue } from "@workspace/jobs";
-import type { ContentPublishPayload, ScheduledPublishSweepPayload, PgBoss } from "@workspace/jobs";
+import { enqueue } from "../boss";
+import {
+  QUEUES,
+  type ContentPublishPayload,
+  type ScheduledPublishSweepPayload,
+} from "../queues";
+import type PgBoss from "pg-boss";
 import { decryptCmsCredentials, type CmsIntegrationCredentials } from "@workspace/content-engine/support/publishing/cms-integrations";
 import { sendPlatformEmail, resolveAppOrigin } from "@workspace/content-engine/support/email/send-platform-email";
 import { parseAutopilotSettings, wordpressPublishStatus } from "@workspace/content-engine/support/autopilot/autopilot-scheduler";
@@ -52,6 +57,7 @@ async function publishPiece(
   pieceId: number,
   userId: number,
   platformOverride?: string,
+  cmsStatus?: "draft" | "publish",
 ): Promise<void> {
   const [piece] = await db
     .select()
@@ -64,10 +70,17 @@ async function publishPiece(
 
   // Atomic claim: prevents duplicate publish when the scheduled sweep and
   // finalizeGeneratedPieces enqueue the same piece concurrently.
+  // Draft is included: the editor Publish button is allowed on draft (Mark Ready
+  // is optional). Claiming only `ready` made those jobs no-op with no error.
   const claimed = await db
     .update(contentPiecesTable)
     .set({ status: "publishing" })
-    .where(and(eq(contentPiecesTable.id, pieceId), eq(contentPiecesTable.status, "ready")))
+    .where(
+      and(
+        eq(contentPiecesTable.id, pieceId),
+        inArray(contentPiecesTable.status, ["ready", "draft"]),
+      ),
+    )
     .returning({ id: contentPiecesTable.id });
   if (claimed.length === 0) return;
 
@@ -82,7 +95,7 @@ async function publishPiece(
   if (!project) throw new Error("Project not found");
 
   const autopilot = parseAutopilotSettings(project.autopilotSettings);
-  const wpStatus = wordpressPublishStatus(autopilot);
+  const wpStatus = cmsStatus ?? wordpressPublishStatus(autopilot);
   const creds = decryptCmsCredentials((project.cmsIntegrations ?? {}) as CmsIntegrationCredentials);
   const platform = platformOverride ?? piece.publishPlatform ?? FORMAT_TO_PLATFORM[piece.formatType];
 
@@ -181,13 +194,9 @@ async function publishPiece(
     const rawIntegrations = (project.cmsIntegrations ?? {}) as Record<string, { lastHealthOk?: boolean }>;
     const raw = rawIntegrations[platform];
     if (raw && raw.lastHealthOk === false) {
-      const message = `Skipped publish: ${platform} integration health is failing. Reconnect or fix credentials.`;
-      await db
-        .update(contentPiecesTable)
-        .set({ publishError: message })
-        .where(eq(contentPiecesTable.id, pieceId));
-      logger.warn({ pieceId, platform }, message);
-      return;
+      throw new Error(
+        `Skipped publish: ${platform} integration health is failing. Reconnect or fix credentials.`,
+      );
     }
   }
 
@@ -351,9 +360,9 @@ async function publishPiece(
 }
 
 export async function processContentPublish(payload: ContentPublishPayload): Promise<void> {
-  const { contentPieceId, userId, platform } = payload;
+  const { contentPieceId, userId, platform, cmsStatus } = payload;
   try {
-    await publishPiece(contentPieceId, userId, platform);
+    await publishPiece(contentPieceId, userId, platform, cmsStatus);
     logger.info({ contentPieceId }, "Content publish job completed");
   } catch (err) {
     const message = err instanceof Error ? err.message : "Publish failed";

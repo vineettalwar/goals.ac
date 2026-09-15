@@ -1,6 +1,20 @@
 # Session Handoff
 
-## Latest (2026-09-15) — Content Studio "too short" after ~2 min
+## Latest (2026-09-15) — Publish button silent / not in WordPress
+
+Editor **Publish to WordPress** queued a job then exited. The job only claimed `status=ready` (dialog allows **draft**), so it no-op'd. Autopilot default also sent WP `draft`, not live. Next UI used `async: true` with no toast.
+
+**Fix:** claim `draft|ready`; manual/API jobs pass `cmsStatus: "publish"`; Next publishes in-request and toasts success/error.
+
+**Verify:** `npx vitest run lib/jobs/src/handlers/contentPublish.test.ts` · Publish from a **draft** piece; post should appear as Published in WP, toast with URL.
+
+## Prior (2026-09-15) — Publish gate vs ###-first body
+
+The publish dialog blocked "Heading levels skip" when the body opened at H3 (CMS title is already H1). Gate now treats a ###-only outline as shifted H2, and classic/Gutenberg/Elementor/Divi render the same shift.
+
+**Verify:** `npx vitest run lib/content-engine/src/content/heading-outline.test.ts lib/content-engine/src/content/publish-readiness.test.ts lib/content-engine/src/adapters/markdown-html.test.ts lib/content-engine/src/adapters/gutenberg.test.ts lib/content-engine/src/adapters/markdown-blocks.test.ts` · publish the Hook System piece without an override.
+
+## Prior (2026-09-15) — Content Studio "too short" after ~2 min
 
 Agent team is on by default. Later agents returned a truncated JSON `body_markdown` that overwrote Hummingbird's draft; the 700-word gate then threw `Generated SEO article too short` / `body_markdown too short` after the full pipeline.
 

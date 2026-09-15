@@ -225,11 +225,15 @@ export function useContentPieceData(pieceId: string | undefined) {
       const platform = publishPlatformRef.current;
       setPublishJobId(null);
       const refreshed = await loadPiece({ silent: true });
-      if (status.status === "completed" || refreshed?.status === "published") {
+      if (refreshed?.status === "published") {
         setPublishMessage(platform ? `Published to ${platform}.` : "Published.");
         setPublishingState(null);
       } else {
-        setPublishMessage(status.error ?? status.message ?? "Publish failed.");
+        setPublishMessage(
+          status.error ??
+            status.message ??
+            "Publish did not finish. The piece is not live yet — try again or check Integrations.",
+        );
         setPublishingState(null);
       }
       publishPlatformRef.current = null;
@@ -617,6 +621,7 @@ export function useContentPieceData(pieceId: string | undefined) {
             body: JSON.stringify({
               contentPieceId: piece.id,
               platform,
+              cmsStatus: "publish",
               ...(opts?.overrideReason ? { overrideReason: opts.overrideReason } : {}),
             }),
           },

@@ -88,6 +88,8 @@ export interface ContentPublishPayload {
   contentPieceId: number;
   userId: number;
   platform?: string;
+  /** Manual Publish button: go live. Omit for autopilot/sweep (uses project publishMode). */
+  cmsStatus?: "draft" | "publish";
 }
 
 export type ScheduledPublishSweepPayload = Record<string, never>;

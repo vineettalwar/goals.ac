@@ -109,6 +109,7 @@ export async function handleV1PublishAndImage(
         contentPieceId: pieceId,
         userId: billingUserId,
         platform: body.platform,
+        cmsStatus: "publish",
       });
       const id = jobId ?? `cf:${QUEUES.contentPublish}:${crypto.randomUUID()}`;
       await kvPutJson(

@@ -683,7 +683,7 @@ export function ContentPieceClient({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   platform,
-                  async: true,
+                  cmsStatus: "publish",
                   ...(confirmCmsUpdate ? { confirmCmsUpdate: true } : {}),
                   ...(opts?.overrideReason ? { overrideReason: opts.overrideReason } : {}),
                 }),
@@ -726,14 +726,35 @@ export function ContentPieceClient({
               const blocked = publishBlockedErrorFromBody(fail);
               throw blocked ?? new Error(fail?.error ?? "Failed to publish");
             }
-            const updated = await res.json();
-            if (updated.queued) {
-              setPublishMessage(`Publishing to ${platform} — running in the background`);
+            const updated = (await res.json()) as {
+              queued?: boolean;
+              accepted?: boolean;
+              status?: string;
+              publishedUrl?: string | null;
+              error?: string;
+            };
+            const queued = Boolean(
+              updated.queued || updated.accepted || updated.status === "queued",
+            );
+            if (queued) {
+              const msg = `Publishing to ${platform} — running in the background`;
+              setPublishMessage(msg);
+              toast.success(msg);
             } else {
               setPieceRecord((prev) => mergePieceJson(updated, prev));
-              setPublishMessage(`Published to ${platform}.`);
+              const url = updated.publishedUrl?.trim();
+              const msg = url
+                ? `Published to ${platform}: ${url}`
+                : `Published to ${platform}.`;
+              setPublishMessage(msg);
+              toast.success(msg);
             }
             setPublishDialogOpen(false);
+          } catch (err) {
+            if (!isPublishBlockedError(err)) {
+              toast.error(err instanceof Error ? err.message : "Failed to publish");
+            }
+            throw err;
           } finally {
             setPublishing(false);
           }

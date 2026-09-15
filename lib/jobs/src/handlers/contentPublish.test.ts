@@ -55,7 +55,7 @@ vi.mock("@workspace/content-engine/support/publishing/cms-integrations", () => (
 
 vi.mock("@workspace/content-engine/support/autopilot/autopilot-scheduler", () => ({
   parseAutopilotSettings: () => ({}),
-  wordpressPublishStatus: () => "publish",
+  wordpressPublishStatus: () => "draft",
 }));
 
 vi.mock("@workspace/content-engine/support/social/social-publish", () => ({
@@ -106,6 +106,10 @@ vi.mock("@workspace/connectors/goals-ac-plugin", () => ({
 vi.mock("@workspace/content-engine/support/email/send-platform-email", () => ({
   sendPlatformEmail: vi.fn(async () => ({ sent: true })),
   resolveAppOrigin: () => "https://app.goals.ac",
+}));
+
+vi.mock("@workspace/content-engine/analytics/enqueue-gsc-url-inspection", () => ({
+  enqueueGscUrlInspectionAfterPublish: vi.fn(() => Promise.resolve()),
 }));
 
 vi.mock("@workspace/db/schema", () => ({
@@ -398,6 +402,35 @@ describe("publishPiece readiness gate", () => {
 
     const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
     expect(publishUpdate).toBeDefined();
+  });
+
+  it("publishes a draft piece from the editor Publish button", async () => {
+    queuePieceAndProject({ ...BASE_PIECE, status: "draft" });
+
+    await publishPiece(1, 5, undefined, "publish");
+
+    expect(state.runPublishMock).toHaveBeenCalledOnce();
+    const publishUpdate = state.updateCalls.find((c) => c.values.status === "published");
+    expect(publishUpdate).toBeDefined();
+  });
+
+  it("sends live CMS status when cmsStatus is publish (ignores autopilot draft mode)", async () => {
+    queuePieceAndProject(BASE_PIECE);
+
+    await publishPiece(1, 5, undefined, "publish");
+
+    expect(state.runPublishMock).toHaveBeenCalledOnce();
+    const args = state.runPublishMock.mock.calls[0]![0] as unknown[];
+    expect((args[2] as { status?: string }).status).toBe("publish");
+  });
+
+  it("uses autopilot draft status when cmsStatus is omitted", async () => {
+    queuePieceAndProject(BASE_PIECE);
+
+    await publishPiece(1, 5);
+
+    const args = state.runPublishMock.mock.calls[0]![0] as unknown[];
+    expect((args[2] as { status?: string }).status).toBe("draft");
   });
 
   it("bails when another worker already claimed the piece (race-loss)", async () => {
