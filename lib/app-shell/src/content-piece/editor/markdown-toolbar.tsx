@@ -1,6 +1,6 @@
 import { type RefObject } from "react";
 import { Bold, Heading2, Heading3, Italic, Link2, List } from "lucide-react";
-import { cn } from "../cn";
+import { cn } from "../../cn";
 
 type MarkdownToolbarProps = {
   textareaRef: RefObject<HTMLTextAreaElement | null>;

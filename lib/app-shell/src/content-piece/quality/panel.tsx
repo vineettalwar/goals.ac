@@ -1,12 +1,12 @@
 import { scoreArticleQuality } from "@workspace/content-engine/article-quality-score";
 import { scoreTwitterThreadQuality } from "@workspace/content-engine/social-thread-quality";
-import { ScoreRing } from "../section-panels/shared";
-import { SOCIAL_FORMAT_TYPES } from "../social/types";
+import { ScoreRing } from "../../section-panels/shared";
+import { SOCIAL_FORMAT_TYPES } from "../../social/types";
 import {
   ArticleQualityPanelSeo,
   type ArticleQualityPanelProps,
   type DualContentScore,
-} from "./content-quality-panel-seo";
+} from "./panel-seo";
 
 // Re-export types so existing importers don't need to change path.
 export type { DualContentScore, ArticleQualityPanelProps };

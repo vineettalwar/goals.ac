@@ -1,5 +1,5 @@
-import { cn } from "../cn";
-import { splitTwitterThread } from "../social/twitter-thread-parse";
+import { cn } from "../../cn";
+import { splitTwitterThread } from "../../social/twitter-thread-parse";
 
 const TWEET_LIMIT = 280;
 

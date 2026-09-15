@@ -1,17 +1,17 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { CheckCircle2, Loader2, PenLine, Share2, Upload } from "lucide-react";
 import { countAiSlopSignals } from "@workspace/content-engine/ai-writing-rules";
-import { cn } from "../cn";
-import { SOCIAL_FORMAT_TYPES } from "../social/types";
-import { ContentBriefPanel, type ContentBriefSummary } from "./content-brief-panel";
-import { ArticleQualityPanel, type DualContentScore } from "./content-quality-panel";
+import { cn } from "../../cn";
+import { SOCIAL_FORMAT_TYPES } from "../../social/types";
+import { ContentBriefPanel, type ContentBriefSummary } from "../brief/panel";
+import { ArticleQualityPanel, type DualContentScore } from "../quality/panel";
 import {
   buildPublishReadyChecklist,
   nextContentPiecePublishAction,
   publishReadyChecklistBlocks,
   type ContentPieceDetail,
-} from "./types";
-import type { ContentPieceLinkProps } from "./content-piece-chrome";
+} from "../types";
+import type { ContentPieceLinkProps } from "../chrome";
 
 export function ContentPieceAside({
   editing,

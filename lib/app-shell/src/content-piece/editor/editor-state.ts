@@ -1,4 +1,4 @@
-import type { ContentPieceDetail } from "./types";
+import type { ContentPieceDetail } from "../types";
 
 // ---------------------------------------------------------------------------
 // Save payload (public — re-exported via content-piece-ui → index)

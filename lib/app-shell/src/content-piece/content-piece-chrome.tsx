@@ -7,4 +7,4 @@ export {
   PieceLink,
   StatusBadge,
   type ContentPieceLinkProps,
-} from "./content-piece-chrome/index";
+} from "./chrome";

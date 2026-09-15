@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ImageIcon, Loader2, Search, X } from "lucide-react";
-import { cn } from "../cn";
+import { cn } from "../../cn";
 
 export type StockPickerPhoto = {
   provider: "unsplash" | "pexels";

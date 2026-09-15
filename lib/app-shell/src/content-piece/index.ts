@@ -3,40 +3,40 @@ export {
   ContentPieceView,
   type ContentPieceLinkProps,
   type ContentPieceSavePayload,
-} from "./content-piece-ui";
+} from "./view/content-piece-view";
 export {
   ContentBriefPanel,
   normalizeBriefOutline,
   type ContentBriefPanelProps,
   type ContentBriefSerpTopic,
   type ContentBriefSummary,
-} from "./content-brief-panel";
-export { ContentPiecePublishDialog, type RenderPreviewResult } from "./publish-dialog";
+} from "./brief/panel";
+export { ContentPiecePublishDialog, type RenderPreviewResult } from "./publish/dialog";
 export {
   PublishBlockedError,
   isPublishBlockedError,
   publishBlockedErrorFromBody,
   type PublishReadinessIssueView,
-} from "./publish-blocked-error";
+} from "./publish/blocked-error";
 export {
   ShopifyThemeSnippetPreflight,
   shopifyOutputModeNeedsThemeSnippet,
   readShopifyThemeSnippetRequiredFor,
   SHOPIFY_THEME_SNIPPET_REQUIRED_FALLBACK,
-} from "./shopify-theme-snippet-preflight";
+} from "./publish/shopify-theme-snippet-preflight";
 export {
   Typo3MediaPreflight,
   hasRasterDataImage,
   readTypo3MediaUploadCapable,
-} from "./typo3-media-preflight";
-export { ContentExportPanel, type ContentExportPlatform } from "./content-export-panel";
-export { ContentPieceRepurposeDialog } from "./repurpose-dialog";
-export { ContentPieceFeaturedImage } from "./content-featured-image";
+} from "./publish/typo3-media-preflight";
+export { ContentExportPanel, type ContentExportPlatform } from "./publish/export-panel";
+export { ContentPieceRepurposeDialog } from "./publish/repurpose-dialog";
+export { ContentPieceFeaturedImage } from "./media/featured-image";
 export {
   StockImagePickerDialog,
   type StockImagePickerRole,
   type StockPickerPhoto,
-} from "./stock-image-picker";
+} from "./media/stock-image-picker";
 export {
   countCmsConnections,
   countPublishingConnections,
@@ -107,5 +107,5 @@ export {
   type ContentPiecePublishNextAction,
   type PublishReadyItem,
 } from "./types";
-export { sanitizePreviewHtml } from "./sanitize-preview-html";
-export { ContentMarkdown } from "./content-markdown";
+export { sanitizePreviewHtml } from "./editor/sanitize-preview-html";
+export { ContentMarkdown } from "./editor/markdown";

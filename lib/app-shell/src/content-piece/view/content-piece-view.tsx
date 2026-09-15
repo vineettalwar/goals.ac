@@ -1,9 +1,9 @@
 import { useEffect, useReducer, useState, type ReactNode } from "react";
-import { APP_SHELL_PAGE_WIDE } from "../shell-constants";
-import { ContentPieceFeaturedImage } from "./content-featured-image";
-import { StockImagePickerDialog, type StockPickerPhoto } from "./stock-image-picker";
-import type { ContentBriefSummary } from "./content-brief-panel";
-import type { DualContentScore } from "./content-quality-panel";
+import { APP_SHELL_PAGE_WIDE } from "../../shell-constants";
+import { ContentPieceFeaturedImage } from "../media/featured-image";
+import { StockImagePickerDialog, type StockPickerPhoto } from "../media/stock-image-picker";
+import type { ContentBriefSummary } from "../brief/panel";
+import type { DualContentScore } from "../quality/panel";
 import {
   contentPieceCanDelete,
   contentPieceCanEdit,
@@ -18,13 +18,13 @@ import {
   type ContentPieceDetail,
   type ContentPieceGeneratingState,
   type ContentPiecePublishingState,
-} from "./types";
+} from "../types";
 import {
   createEditorState,
   editorReducer,
   pieceDraftKey,
   type ContentPieceSavePayload,
-} from "./content-piece-editor-state";
+} from "../editor/editor-state";
 import {
   ContentPieceHeader,
   ContentPieceStatusBanners,
@@ -32,9 +32,9 @@ import {
   HumanizeSnapshotBar,
   PieceLink,
   type ContentPieceLinkProps,
-} from "./content-piece-chrome";
-import { ContentPieceBodyEditor } from "./content-piece-body-editor";
-import { ContentPieceAside } from "./content-piece-aside";
+} from "../chrome";
+import { ContentPieceBodyEditor } from "../editor/body-editor";
+import { ContentPieceAside } from "./aside";
 
 // Re-export public types so index.ts keeps pointing here unchanged.
 export type { ContentPieceLinkProps, ContentPieceSavePayload };

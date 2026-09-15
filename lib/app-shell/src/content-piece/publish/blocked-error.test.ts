@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPublishBlockedError, publishBlockedErrorFromBody } from "./publish-blocked-error";
+import { isPublishBlockedError, publishBlockedErrorFromBody } from "./blocked-error";
 
 describe("publishBlockedErrorFromBody", () => {
   it("builds an error from the publish 422 payload", () => {

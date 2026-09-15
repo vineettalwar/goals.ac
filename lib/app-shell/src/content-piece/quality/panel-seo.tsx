@@ -13,8 +13,8 @@ import {
   applyInternalLinksToMarkdown,
   suggestOutboundInternalLinks,
 } from "@workspace/content-engine/outbound-internal-links";
-import { ScoreRing } from "../section-panels/shared";
-import type { ContentPieceMetadata } from "./types";
+import { ScoreRing } from "../../section-panels/shared";
+import type { ContentPieceMetadata } from "../types";
 
 /** Missing-term click target: heading-shaped topics get a stub `## …`, keywords get a stub sentence. */
 function buildCoverageInsertSnippet(item: CoverageChecklistItem): string {

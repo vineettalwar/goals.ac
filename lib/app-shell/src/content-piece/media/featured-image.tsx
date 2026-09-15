@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ImageIcon, RefreshCw, Search } from "lucide-react";
-import { cn } from "../cn";
-import type { ContentPieceImageRef } from "./types";
+import { cn } from "../../cn";
+import type { ContentPieceImageRef } from "../types";
 
 function isHttpsImageUrl(url: string): boolean {
   return /^https:\/\//i.test(url.trim());

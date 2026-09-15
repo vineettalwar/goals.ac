@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { ContentMarkdown } from "./content-markdown";
+import { ContentMarkdown } from "./markdown";
 import { MarkdownToolbar } from "./markdown-toolbar";
 import { TwitterThreadPreview } from "./twitter-thread-preview";
 

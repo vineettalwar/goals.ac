@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPublishReadyChecklist,
-  contentPieceCanPublish,
   nextContentPiecePublishAction,
   publishReadyChecklistBlocks,
-} from "./types";
+} from "./publish-ready-checklist";
+import { contentPieceCanPublish } from "../types";
 
 describe("buildPublishReadyChecklist", () => {
   it("soft-blocks when humanize is missing", () => {

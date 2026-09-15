@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AlertCircle, CheckCircle2, Circle, Loader2, Shuffle, X } from "lucide-react";
-import { STUDIO_FORMAT_OPTIONS, studioFormatOptionsForSurface } from "../studio/types";
+import { STUDIO_FORMAT_OPTIONS, studioFormatOptionsForSurface } from "../../studio/types";
 
 type RepurposeStep = "analyzing" | "generating" | "saving";
 
