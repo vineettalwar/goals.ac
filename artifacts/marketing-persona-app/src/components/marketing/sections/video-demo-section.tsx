@@ -50,14 +50,13 @@ export function VideoDemoSection() {
   useMarketingScrollReveal(sectionRef);
 
   return (
-    <section ref={sectionRef} className="py-20 bg-black border-t border-white/10">
-      <div className="max-w-5xl mx-auto px-6">
+    <section ref={sectionRef} className="border-t border-border bg-background py-20">
+      <div className="mx-auto max-w-5xl px-6">
         <div className="mb-12">
           <EditorialHeading
-            line1="See it"
-            line2="live"
+            line1="See it live"
             description="Skip the placeholder walkthrough. Try the article quality demo, tour the content studio, or start creating in your account."
-            theme="dark"
+            theme="light"
           />
         </div>
 
@@ -85,9 +84,9 @@ export function VideoDemoSection() {
             ))}
           </div>
 
-          <div className="grid sm:grid-cols-4 gap-px bg-white/10">
+          <div className="grid gap-px border border-border bg-border sm:grid-cols-4">
             {TOUR_STEPS.map((step) => (
-              <div key={step} className="bg-white/5 p-4 text-center text-sm font-medium text-white/65">
+              <div key={step} className="bg-background p-4 text-center text-sm font-medium text-foreground">
                 {step}
               </div>
             ))}
@@ -100,13 +99,13 @@ export function VideoDemoSection() {
           </Link>
           <Link
             href={PRODUCT_CTA_HREF}
-            className="border border-white/30 bg-white/10 text-white hover:bg-white/20 text-sm font-medium px-7 py-3 rounded-full transition-all inline-flex items-center"
+            className="inline-flex items-center text-sm font-medium text-foreground underline-offset-4 hover:underline"
           >
             {PRODUCT_CTA_PRIMARY}
           </Link>
           <Link
             href={PRODUCT_CTA_SECONDARY_HREF}
-            className="text-sm font-medium text-white/70 hover:text-white transition-colors inline-flex items-center px-2 py-3"
+            className="inline-flex items-center px-2 py-3 text-sm font-medium text-muted-foreground hover:text-foreground"
           >
             {PRODUCT_CTA_SECONDARY} <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
           </Link>

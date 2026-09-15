@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { EditorialHeading } from "./editorial-heading";
-import { HeroPhotoBg } from "../heroes/hero-photo-bg";
 import { MarketingReveal } from "@/components/marketing/motion/marketing-reveal";
 import {
   PRODUCT_CTA_HREF,
@@ -30,37 +29,28 @@ export function MarketingCTA({
   titleLine1,
   titleLine2,
   description,
-  variant = "dark",
-  backgroundImage,
   primaryHref = PRODUCT_CTA_HREF,
   primaryLabel = PRODUCT_CTA_PRIMARY,
   secondaryHref,
   secondaryLabel,
 }: MarketingCTAProps) {
   const line1 = titleLine1 ?? title ?? "Put the next decision in writing";
-  const isDark = variant === "dark";
 
   return (
-    <section
-      className={`py-28 relative overflow-hidden border-t ${
-        isDark ? "text-white bg-black border-white/10" : "bg-background text-foreground border-border"
-      }`}
-    >
-      {isDark && backgroundImage && <HeroPhotoBg image={backgroundImage} />}
-
-      <div className="relative z-20 max-w-4xl mx-auto px-6 text-center">
+    <section className="relative overflow-hidden border-t border-border bg-background py-24 text-foreground">
+      <div className="relative mx-auto max-w-4xl px-6 text-center">
         <MarketingReveal>
           <EditorialHeading
             line1={line1}
             line2={titleLine2}
             description={description}
             badge={badge}
-            theme={isDark ? "dark" : "light"}
+            theme="light"
             animate={false}
             className="mb-10"
           />
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-10">
+          <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
             {primaryHref.startsWith("http") ? (
               <a href={primaryHref} className="hero-cta-primary inline-flex items-center">
                 {primaryLabel} <ArrowRight className="ml-2 h-4 w-4" />
@@ -70,18 +60,14 @@ export function MarketingCTA({
                 {primaryLabel} <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             )}
-            {secondaryHref && secondaryLabel && (
+            {secondaryHref && secondaryLabel ? (
               <Link
                 href={secondaryHref}
-                className={`text-sm font-medium px-7 py-3 rounded-full transition-all inline-flex items-center ${
-                  isDark
-                    ? "border border-white/30 bg-white/10 text-white hover:bg-white/20"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className="inline-flex items-center text-sm font-medium text-foreground underline-offset-4 hover:underline"
               >
                 {secondaryLabel}
               </Link>
-            )}
+            ) : null}
           </div>
         </MarketingReveal>
       </div>

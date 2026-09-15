@@ -16,11 +16,11 @@ const STATUS_BADGE_STYLES: Record<string, string> = {
 };
 
 export const TOOLBAR_BTN =
-  "inline-flex h-8 items-center gap-1.5 rounded-lg border border-input bg-card px-2.5 text-sm font-medium hover:bg-secondary disabled:opacity-50";
+  "inline-flex h-8 items-center gap-1.5 rounded-sm border border-border bg-transparent px-2.5 text-sm font-medium hover:bg-secondary disabled:opacity-50";
 export const TOOLBAR_BTN_PRIMARY =
-  "inline-flex h-8 items-center gap-1.5 rounded-lg bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50";
+  "inline-flex h-8 items-center gap-1.5 rounded-sm bg-primary px-2.5 text-sm font-medium text-primary-foreground hover:opacity-90 disabled:opacity-50";
 export const TOOLBAR_BTN_GHOST =
-  "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary disabled:opacity-50";
+  "inline-flex h-8 items-center gap-1.5 rounded-sm px-2.5 text-sm font-medium text-muted-foreground hover:bg-secondary disabled:opacity-50";
 
 export function PieceLink({
   renderLink,
@@ -35,7 +35,7 @@ export function StatusBadge({ status }: { status: string }) {
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize",
+        "inline-flex shrink-0 rounded-sm px-2 py-0.5 font-mono text-[11px] font-medium capitalize",
         STATUS_BADGE_STYLES[status] ?? "bg-muted text-muted-foreground",
       )}
     >
@@ -46,7 +46,7 @@ export function StatusBadge({ status }: { status: string }) {
 
 export function MetaBadge({ children }: { children: ReactNode }) {
   return (
-    <span className="inline-flex rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium capitalize text-muted-foreground">
+    <span className="inline-flex rounded-sm bg-muted px-2 py-0.5 font-mono text-[11px] font-medium capitalize text-muted-foreground">
       {children}
     </span>
   );

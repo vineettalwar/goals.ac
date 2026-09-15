@@ -95,6 +95,16 @@ Every feature is therefore written twice, and the copy serving customers is the 
 
 ---
 
+## P1 editorial visual system (2026-09-15)
+
+**Decision:** Live costume (green-black `#121412` + cinematic hero + Plus Jakarta + Playfair italic + orange CTA) is retired. Brand is newsprint `#F3EFE6` + ink `#0A0A0B`, IBM Plex Sans chrome, Source Serif 4 body (~65ch), IBM Plex Mono for scores/URLs, amber `#D97706` as the only signal. Studio: ink chrome + newsprint article column + copy-desk bar.
+
+**Do not:** forest green, Plus Jakarta, Playfair italic display, second blue accent, soft card shadows, full-bleed nature hero.
+
+**Source of truth:** `artifacts/marketing-persona-app/DESIGN.md`, tokens in `lib/app-shell/src/product-theme.css`. Production surfaces: `artifacts/marketing-pages` (export) and `artifacts/goals-app-ui`.
+
+---
+
 ## Tailwind canonical spacing classes (2026-09-06)
 
 **Policy:** Prefer Tailwind spacing-scale utilities over equivalent arbitrary `-[Npx]` values. The IDE warns via `tailwindcss(suggestCanonicalClasses)`.

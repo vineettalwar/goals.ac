@@ -29,10 +29,15 @@ import {
   ContentPieceHeader,
   ContentPieceStatusBanners,
   ContentPieceToolbar,
+  CopyDeskBar,
   HumanizeSnapshotBar,
   PieceLink,
   type ContentPieceLinkProps,
 } from "../chrome";
+import { SOCIAL_FORMAT_TYPES } from "../../social/types";
+import { TOOLBAR_BTN_PRIMARY } from "../chrome/badges";
+import { ContentPieceBodyEditor } from "../editor/body-editor";
+import { ContentPieceAside } from "./aside";
 import { ContentPieceBodyEditor } from "../editor/body-editor";
 import { ContentPieceAside } from "./aside";
 
@@ -156,6 +161,7 @@ export function ContentPieceView({
   const [stockSearchQuery, setStockSearchQuery] = useState("");
   const [stockSearching, setStockSearching] = useState(false);
   const [stockPickerError, setStockPickerError] = useState<string | null>(null);
+  const [deskScore, setDeskScore] = useState<number | null>(null);
 
   const nextDraftKey = pieceDraftKey(piece);
   if (!editor.editing && editor.draftKey !== nextDraftKey) {
@@ -172,6 +178,24 @@ export function ContentPieceView({
   useEffect(() => {
     if (!hasHumanizeSnapshot || editor.editing) setSnapshotView("after");
   }, [hasHumanizeSnapshot, editor.editing, piece.id]);
+
+  useEffect(() => {
+    if (!piece.id || !fetchDualScore || SOCIAL_FORMAT_TYPES.has(piece.formatType)) {
+      setDeskScore(null);
+      return;
+    }
+    let cancelled = false;
+    void fetchDualScore(piece.id)
+      .then((data: DualContentScore | null) => {
+        if (!cancelled) setDeskScore(data?.combined ?? data?.editorial.total ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setDeskScore(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [piece.id, piece.bodyMarkdown, piece.formatType, fetchDualScore]);
 
   const formatLabel = formatContentFormatType(piece.formatType);
   const displayBody = editor.editing ? editor.bodyDraft : (piece.bodyMarkdown ?? "");
@@ -318,7 +342,24 @@ export function ContentPieceView({
         publishingState={publishingState}
       />
 
-      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <CopyDeskBar
+        status={piece.status}
+        score={deskScore}
+        approveSlot={
+          showMarkReady ? (
+            <button
+              type="button"
+              onClick={() => void onMarkReady?.()}
+              disabled={busy || editor.editing}
+              className={TOOLBAR_BTN_PRIMARY}
+            >
+              {markingReady ? "Approving…" : "Approve"}
+            </button>
+          ) : null
+        }
+      />
+
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
         <div className="min-w-0 space-y-4">
           <ContentPieceFeaturedImage
             featuredImage={featuredImage}
@@ -333,7 +374,7 @@ export function ContentPieceView({
               canBrowseStock ? () => void openStockPicker("featured") : undefined
             }
           />
-          <div className="overflow-hidden rounded-xl">
+          <div className="overflow-hidden border border-border">
             <ContentPieceToolbar
               pieceTitle={piece.title}
               editing={editor.editing}
@@ -392,21 +433,23 @@ export function ContentPieceView({
                 disabled={busy || !onRevertHumanize}
               />
             ) : null}
-            <ContentPieceBodyEditor
-              editing={editor.editing}
-              previewMode={editor.previewMode}
-              canEdit={showEdit}
-              bodyDraft={editor.bodyDraft}
-              displayBody={displayBody}
-              body={body}
-              formatType={piece.formatType}
-              onBodyChange={(value) => dispatch({ type: "set_body", value })}
-              previewOverrideBody={
-                snapshotView === "before" && hasHumanizeSnapshot
-                  ? preHumanizeBody ?? undefined
-                  : undefined
-              }
-            />
+            <div className="flex justify-center bg-[var(--newsprint)]">
+              <ContentPieceBodyEditor
+                editing={editor.editing}
+                previewMode={editor.previewMode}
+                canEdit={showEdit}
+                bodyDraft={editor.bodyDraft}
+                displayBody={displayBody}
+                body={body}
+                formatType={piece.formatType}
+                onBodyChange={(value) => dispatch({ type: "set_body", value })}
+                previewOverrideBody={
+                  snapshotView === "before" && hasHumanizeSnapshot
+                    ? preHumanizeBody ?? undefined
+                    : undefined
+                }
+              />
+            </div>
           </div>
         </div>
 

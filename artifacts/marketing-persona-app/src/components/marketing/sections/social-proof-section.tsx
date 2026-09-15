@@ -28,22 +28,21 @@ const PROOF_LINKS = [
 
 export function SocialProofSection() {
   return (
-    <section className="relative z-20 border-t border-white/10 bg-black py-24">
+    <section className="relative z-20 border-t border-border bg-background py-24">
       <div className="mx-auto max-w-5xl px-6">
         <div className="mb-14 text-center">
           <EditorialHeading
-            line1="See the product"
-            line2="in action"
+            line1="See the product in action"
             description="Try a live GEO audit or the article quality demo — same tooling used in the studio."
-            theme="dark"
+            theme="light"
           />
         </div>
 
-        <p className="mb-10 text-center text-sm text-white/65">
+        <p className="mb-10 text-center text-sm text-muted-foreground">
           Customer stories live on{" "}
           <Link
             href="/success-stories"
-            className="text-white/80 underline-offset-2 hover:text-white hover:underline"
+            className="text-foreground underline-offset-2 hover:underline"
           >
             /success-stories
           </Link>{" "}
@@ -54,9 +53,9 @@ export function SocialProofSection() {
           {PROOF_LINKS.map((item) => (
             <li key={item.href}>
               <Link href={item.href} className="group block">
-                <h3 className="font-medium text-white">{item.label}</h3>
-                <p className="mt-1 text-sm leading-relaxed text-white/65">{item.description}</p>
-                <span className="mt-2 inline-flex items-center gap-1 text-sm text-white/80 group-hover:text-white">
+                <h3 className="font-medium text-foreground">{item.label}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+                <span className="mt-2 inline-flex items-center gap-1 text-sm text-foreground">
                   Try it <ArrowRight className="h-3.5 w-3.5" />
                 </span>
               </Link>
@@ -67,7 +66,7 @@ export function SocialProofSection() {
         <p className="mt-10 text-center">
           <Link
             href={CONTACT_HREF}
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 transition-colors hover:text-white"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground underline-offset-4 hover:underline"
           >
             {CONTACT_CTA_LABEL} <ArrowRight className="h-4 w-4" />
           </Link>

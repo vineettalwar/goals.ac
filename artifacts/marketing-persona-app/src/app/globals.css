@@ -3,6 +3,7 @@
 @source "../../../../lib/app-shell/src";
 @plugin "@tailwindcss/typography";
 @import "tw-animate-css";
+@import "@workspace/app-shell/product-theme.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -24,101 +25,18 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --font-sans: var(--font-jakarta), 'Plus Jakarta Sans', sans-serif;
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
+  --font-sans: var(--font-sans-face), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif-face), "Source Serif 4", Georgia, serif;
+  --font-mono: var(--font-mono-face), "IBM Plex Mono", ui-monospace, monospace;
+  --radius-sm: var(--radius);
+  --radius-md: var(--radius);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --radius-xl: 0.25rem;
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-}
-
-:root {
-  --radius: 0.75rem;
-
-  /* Paper palette */
-  --background:              #FAFAF8;
-  --foreground:              #1A1A1A;
-  --card:                    #FFFFFF;
-  --card-foreground:         #1A1A1A;
-  --border:                  #E8E5E0;
-  --input:                   #E8E5E0;
-  --ring:                    #2D3B2D;
-
-  --primary:                 #2D3B2D;
-  --primary-foreground:      #FFFFFF;
-
-  --secondary:               #F5F3EF;
-  --secondary-foreground:    #1A1A1A;
-
-  --muted:                   #F5F3EF;
-  --muted-foreground:        #6B6560;
-
-  --accent:                  #F5F3EF;
-  --accent-foreground:       #1A1A1A;
-
-  --destructive:             #C0392B;
-  --destructive-foreground:  #FFFFFF;
-
-  --accent-warm:             #e8702a;
-  --accent-warm-hover:       #d2611f;
-  --accent-warm-foreground:  #1A1A1A;
-  --surface-dark:            #1A1A1A;
-
-  --sidebar-bg:              #FFFFFF;
-  --sidebar-border:          #E8E5E0;
-
-  /* Chart series — forest-forward, readable on paper */
-  --chart-1:                 #2D3B2D;
-  --chart-2:                 #047857;
-  --chart-3:                 #B45309;
-  --chart-4:                 #6B6560;
-  --chart-5:                 #C0392B;
-  --chart-grid:              #E8E5E0;
-}
-
-.dark {
-  color-scheme: dark;
-  --background:              #121412;
-  --foreground:              #F4F1EA;
-  --card:                    #1A1C1A;
-  --card-foreground:         #F4F1EA;
-  --border:                  #2A2E2A;
-  --input:                   #2A2E2A;
-  --ring:                    #8FA08F;
-
-  --primary:                 #8FA08F;
-  --primary-foreground:      #121412;
-
-  --secondary:               #222622;
-  --secondary-foreground:    #F4F1EA;
-
-  --muted:                   #222622;
-  --muted-foreground:        #A8A49C;
-
-  --accent:                  #222622;
-  --accent-foreground:       #F4F1EA;
-
-  --destructive:             #E5736A;
-  --destructive-foreground:  #121412;
-
-  --accent-warm:             #f08a45;
-  --accent-warm-hover:       #e8702a;
-  --accent-warm-foreground:  #121412;
-  --surface-dark:            #0C0E0C;
-
-  --sidebar-bg:              #161816;
-  --sidebar-border:          #2A2E2A;
-
-  --chart-1:                 #A8C0A8;
-  --chart-2:                 #34D399;
-  --chart-3:                 #FBBF24;
-  --chart-4:                 #A8A49C;
-  --chart-5:                 #F87171;
-  --chart-grid:              #2A2E2A;
 }
 
 @layer base {
@@ -134,7 +52,7 @@
   /* Dark-friendly scrollbars — system default tracks read as a bright seam on sidebar */
   .dark * {
     scrollbar-width: thin;
-    scrollbar-color: #3a3f3a transparent;
+    scrollbar-color: #2e2c28 transparent;
   }
   .dark *::-webkit-scrollbar {
     width: 8px;
@@ -144,11 +62,15 @@
     background: transparent;
   }
   .dark *::-webkit-scrollbar-thumb {
-    background: #3a3f3a;
-    border-radius: 4px;
+    background: #2e2c28;
+    border-radius: 2px;
   }
   .dark *::-webkit-scrollbar-thumb:hover {
-    background: #4a504a;
+    background: #3a3834;
+  }
+  ::selection {
+    background: color-mix(in srgb, var(--signal) 35%, transparent);
+    color: var(--ink);
   }
   body {
     @apply bg-background text-foreground font-sans antialiased tracking-normal;
@@ -168,15 +90,11 @@
 }
 
 @layer utilities {
-  /* Core paper card surface */
   .paper-card {
     background: var(--card);
     border: 1px solid var(--border);
-    border-radius: calc(var(--radius) + 2px);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
-  }
-  .dark .paper-card {
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.25);
+    border-radius: var(--radius);
+    box-shadow: none;
   }
 
   /* Step indicator dots */
@@ -199,7 +117,7 @@
     background: var(--primary);
     border-color: var(--primary);
     color: var(--primary-foreground);
-    box-shadow: 0 0 0 3px rgba(45, 59, 45, 0.12);
+    box-shadow: none;
   }
   .step-dot.complete {
     background: var(--primary);
@@ -208,7 +126,8 @@
   }
 
   .font-playfair {
-    font-family: var(--font-playfair), 'Playfair Display', serif;
+    font-family: var(--font-serif), "Source Serif 4", Georgia, serif;
+    font-style: normal;
   }
 
   /* Uppercase section labels — pairs with site-wide .uppercase spacing rules */
@@ -276,35 +195,33 @@
   }
 
   .paper-card-hover {
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+    transition: border-color 0.2s ease;
   }
 
   .paper-card-hover:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+    border-color: var(--foreground);
   }
 
   .glass-card {
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(8px);
+    border: 1px solid var(--border);
+    background: var(--card);
+    backdrop-filter: none;
     border-radius: var(--radius);
+    box-shadow: none;
   }
 
   .glass-card-hover {
-    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.25s ease, border-color 0.25s ease;
+    transition: border-color 0.2s ease;
   }
 
   .glass-card-hover:hover {
-    transform: translateY(-3px);
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.18);
+    border-color: var(--foreground);
   }
 
   .editorial-badge-light {
-    border: 1px solid rgba(45, 59, 45, 0.2);
-    background: rgba(45, 59, 45, 0.05);
-    color: var(--primary);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--foreground);
   }
 
   .editorial-badge-dark {
@@ -446,19 +363,14 @@
     color: var(--accent-warm-foreground);
     font-size: 0.875rem;
     font-weight: 500;
-    padding: 0.75rem 1.75rem;
-    border-radius: 9999px;
-    transition: all 0.2s ease;
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius);
+    box-shadow: none;
+    transition: background 0.15s ease;
   }
 
   .hero-cta-primary:hover {
     background: var(--accent-warm-hover);
-    transform: scale(1.03);
-    box-shadow: 0 10px 25px rgba(232, 112, 42, 0.3);
-  }
-
-  .hero-cta-primary:active {
-    transform: scale(0.95);
   }
 
   /*

@@ -19,10 +19,10 @@ import { useAppAuthHrefs } from "@/lib/marketing/site/use-app-auth-hrefs";
 import { MarketingLogo } from "@/components/marketing/layout/marketing-logo";
 
 const DEFAULT_PANEL_CLASS =
-  "absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-60 max-w-80 rounded-xl bg-neutral-950 border border-white/15 shadow-xl shadow-black/50 p-2 z-200";
+  "absolute top-full left-1/2 -translate-x-1/2 mt-2 min-w-60 max-w-80 rounded-sm border border-border bg-background p-2 z-200";
 
 const MEGA_PANEL_CLASS =
-  "absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[min(560px,calc(100vw-2rem))] rounded-xl bg-neutral-950 border border-white/15 shadow-xl shadow-black/50 z-200 overflow-hidden";
+  "absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[min(560px,calc(100vw-2rem))] rounded-sm border border-border bg-background z-200 overflow-hidden";
 
 const MEGA_GRID_GROUPS: SolutionGroup[] = ["ai-search", "content", "authority"];
 
@@ -65,8 +65,8 @@ function NavDropdown({ label, children, pathname, activePrefixes, panelClassName
         onClick={() => setOpen((v) => !v)}
         className={
           active
-            ? "px-3 py-1.5 rounded-full text-sm font-medium text-white bg-white/20 inline-flex items-center gap-1"
-            : "px-3 py-1.5 rounded-full text-sm font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors inline-flex items-center gap-1"
+            ? "px-3 py-1.5 text-sm font-medium text-foreground underline underline-offset-4 inline-flex items-center gap-1"
+            : "px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-1"
         }
         aria-expanded={open}
         aria-haspopup="true"
@@ -98,13 +98,13 @@ function DropdownLink({
       onClick={onNavigate}
       className={
         compact
-          ? "block rounded-md px-2 py-1 hover:bg-white/10 transition-colors"
-          : "block rounded-lg px-3 py-2 hover:bg-white/10 transition-colors"
+          ? "block rounded-sm px-2 py-1 hover:bg-secondary transition-colors"
+          : "block rounded-sm px-3 py-2 hover:bg-secondary transition-colors"
       }
     >
-      <span className={compact ? "text-sm text-white/90" : "text-sm font-medium text-white"}>{item.label}</span>
+      <span className={compact ? "text-sm text-foreground" : "text-sm font-medium text-foreground"}>{item.label}</span>
       {!compact && item.description && (
-        <span className="block text-xs text-white/50 mt-0.5 leading-snug">{item.description}</span>
+        <span className="block text-xs text-muted-foreground mt-0.5 leading-snug">{item.description}</span>
       )}
     </Link>
   );
@@ -122,7 +122,7 @@ function SolutionsMegaPanel({ onNavigate }: { onNavigate?: () => void }) {
           if (!items?.length) return null;
           return (
             <div key={group} className="min-w-0">
-              <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-white/45">
+              <p className="px-2 pb-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                 {SOLUTION_GROUP_LABELS[group]}
               </p>
               <div>
@@ -135,13 +135,13 @@ function SolutionsMegaPanel({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </div>
 
-      <div className="border-t border-white/10 px-3 py-2 flex items-center gap-4">
+      <div className="border-t border-border px-3 py-2 flex items-center gap-4">
         {teamItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className="text-sm text-white/70 hover:text-white transition-colors"
+            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             {item.label}
           </Link>
@@ -149,7 +149,7 @@ function SolutionsMegaPanel({ onNavigate }: { onNavigate?: () => void }) {
         <Link
           href="/solutions"
           onClick={onNavigate}
-          className="text-sm text-white/50 hover:text-white transition-colors ml-auto"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors ml-auto"
         >
           View all →
         </Link>
@@ -163,14 +163,14 @@ function MobileSolutionsSection({ onNavigate }: { onNavigate: () => void }) {
 
   return (
     <div>
-      <p className="marketing-section-label text-white/70 mb-3">Solutions</p>
+      <p className="marketing-section-label mb-3">Solutions</p>
       <div className="space-y-4">
         {(Object.keys(SOLUTION_GROUP_LABELS) as SolutionGroup[]).map((group) => {
           const items = grouped[group];
           if (!items?.length) return null;
           return (
             <div key={group}>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-white/50 mb-1">
+              <p className="mb-1 font-mono text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
                 {SOLUTION_GROUP_LABELS[group]}
               </p>
               <div className="flex flex-col gap-1">
@@ -179,7 +179,7 @@ function MobileSolutionsSection({ onNavigate }: { onNavigate: () => void }) {
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    className="text-white text-lg py-2 border-b border-white/10"
+                    className="text-foreground text-lg py-2 border-b border-border"
                   >
                     {item.label}
                   </Link>
@@ -191,7 +191,7 @@ function MobileSolutionsSection({ onNavigate }: { onNavigate: () => void }) {
         <Link
           href="/solutions"
           onClick={onNavigate}
-          className="text-white/80 text-base py-2 inline-block"
+          className="text-muted-foreground text-base py-2 inline-block"
         >
           View all solutions →
         </Link>
@@ -211,14 +211,14 @@ function MobileSection({
 }) {
   return (
     <div>
-      <p className="marketing-section-label text-white/70 mb-2">{title}</p>
+      <p className="marketing-section-label mb-2">{title}</p>
       <div className="flex flex-col gap-1">
         {items.map((item) => (
           <Link
             key={item.href}
             href={item.href}
             onClick={onNavigate}
-            className="text-white text-lg py-2 border-b border-white/10"
+            className="text-foreground text-lg py-2 border-b border-border"
           >
             {item.label}
           </Link>
@@ -231,33 +231,18 @@ function MobileSection({
 export function MarketingNav() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [scrolled, setScrolled] = useState(false);
   const { loginHref } = useAppAuthHrefs();
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 40);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
 
   const productPrefixes = PRODUCT_NAV.map((i) => i.href);
   const solutionsPrefixes = [...SOLUTIONS_NAV.map((i) => i.href), "/solutions"];
   const resourcesPrefixes = RESOURCES_NAV.map((i) => i.href);
 
-  const pillClass = scrolled
-    ? "hidden lg:flex absolute left-1/2 -translate-x-1/2 bg-neutral-950/90 backdrop-blur-md border border-white/15 rounded-full px-2 py-2 items-center gap-1 transition-[background-color,border-color] duration-200"
-    : "hidden lg:flex absolute left-1/2 -translate-x-1/2 bg-white/20 backdrop-blur-md border border-white/30 rounded-full px-2 py-2 items-center gap-1 transition-[background-color,border-color] duration-200";
+  const pillClass =
+    "hidden lg:flex absolute left-1/2 -translate-x-1/2 items-center gap-1 px-1 py-1";
 
   return (
     <>
-      <nav
-        className={
-          scrolled
-            ? "fixed top-0 left-0 right-0 z-100 isolate flex items-center justify-between p-4 sm:p-5 font-sans bg-neutral-950/90 backdrop-blur-md border-b border-white/10 transition-[background-color,border-color] duration-200"
-            : "fixed top-0 left-0 right-0 z-100 isolate flex items-center justify-between p-4 sm:p-5 font-sans transition-[background-color,border-color] duration-200"
-        }
-      >
+      <nav className="fixed top-0 left-0 right-0 z-100 isolate flex items-center justify-between border-b border-border bg-background p-4 font-sans sm:p-5">
         <MarketingLogo />
 
         <div className={pillClass}>
@@ -280,8 +265,8 @@ export function MarketingNav() {
             href="/pricing"
             className={
               isNavActive(pathname, "/pricing")
-                ? "px-3 py-1.5 rounded-full text-sm font-medium text-white bg-white/20"
-                : "px-3 py-1.5 rounded-full text-sm font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+                ? "px-3 py-1.5 text-sm font-medium text-foreground underline underline-offset-4"
+                : "px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             }
           >
             Plans
@@ -297,8 +282,8 @@ export function MarketingNav() {
             href="/contact"
             className={
               isNavActive(pathname, "/contact")
-                ? "px-3 py-1.5 rounded-full text-sm font-medium text-white bg-white/20"
-                : "px-3 py-1.5 rounded-full text-sm font-medium text-white/80 hover:bg-white/20 hover:text-white transition-colors"
+                ? "px-3 py-1.5 text-sm font-medium text-foreground underline underline-offset-4"
+                : "px-3 py-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             }
           >
             Contact
@@ -308,25 +293,25 @@ export function MarketingNav() {
         <div className="flex items-center gap-3">
           <div className="hidden md:flex items-center gap-3">
             {loginHref.startsWith("http") ? (
-              <a href={loginHref} className="text-sm text-white/80 hover:text-white transition-colors">
+              <a href={loginHref} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Sign in
               </a>
             ) : (
-              <Link href={loginHref} className="text-sm text-white/80 hover:text-white transition-colors">
+              <Link href={loginHref} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                 Sign in
               </Link>
             )}
             {PRODUCT_CTA_HREF.startsWith("http") ? (
               <a
                 href={PRODUCT_CTA_HREF}
-                className="bg-white text-gray-900 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-gray-100 transition-colors"
+                className="hero-cta-primary text-sm font-medium"
               >
                 {PRODUCT_CTA_PRIMARY}
               </a>
             ) : (
               <Link
                 href={PRODUCT_CTA_HREF}
-                className="bg-white text-gray-900 text-sm font-semibold px-6 py-2.5 rounded-full hover:bg-gray-100 transition-colors"
+                className="hero-cta-primary text-sm font-medium"
               >
                 {PRODUCT_CTA_PRIMARY}
               </Link>
@@ -335,7 +320,7 @@ export function MarketingNav() {
 
           <button
             type="button"
-            className="lg:hidden text-white p-2 -mr-2"
+            className="lg:hidden text-foreground p-2 -mr-2"
             onClick={() => setMobileOpen((open) => !open)}
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             aria-expanded={mobileOpen}
@@ -346,18 +331,18 @@ export function MarketingNav() {
       </nav>
 
       {mobileOpen && (
-        <div className="fixed inset-0 z-90 bg-black/80 backdrop-blur-sm lg:hidden pt-20 px-6 pb-8 overflow-y-auto">
+        <div className="fixed inset-0 z-90 overflow-y-auto bg-background px-6 pb-8 pt-20 lg:hidden">
           <div className="space-y-6">
             <MobileSection title="Product" items={PRODUCT_NAV} onNavigate={() => setMobileOpen(false)} />
             <MobileSolutionsSection onNavigate={() => setMobileOpen(false)} />
             <MobileSection title="Resources" items={RESOURCES_NAV} onNavigate={() => setMobileOpen(false)} />
             <div>
-              <p className="marketing-section-label text-white/70 mb-2">More</p>
+              <p className="marketing-section-label mb-2">More</p>
               <div className="flex flex-col gap-1">
-                <Link href="/pricing" onClick={() => setMobileOpen(false)} className="text-white text-lg py-2 border-b border-white/10">
+                <Link href="/pricing" onClick={() => setMobileOpen(false)} className="text-foreground text-lg py-2 border-b border-border">
                   Plans
                 </Link>
-                <Link href="/contact" onClick={() => setMobileOpen(false)} className="text-white text-lg py-2 border-b border-white/10">
+                <Link href="/contact" onClick={() => setMobileOpen(false)} className="text-foreground text-lg py-2 border-b border-border">
                   Contact
                 </Link>
               </div>
@@ -367,7 +352,7 @@ export function MarketingNav() {
                 <a
                   href={PRODUCT_CTA_HREF}
                   onClick={() => setMobileOpen(false)}
-                  className="bg-white text-gray-900 text-center font-semibold py-3 rounded-full"
+                  className="hero-cta-primary text-center font-medium py-3"
                 >
                   {PRODUCT_CTA_PRIMARY}
                 </a>
@@ -375,7 +360,7 @@ export function MarketingNav() {
                 <Link
                   href={PRODUCT_CTA_HREF}
                   onClick={() => setMobileOpen(false)}
-                  className="bg-white text-gray-900 text-center font-semibold py-3 rounded-full"
+                  className="hero-cta-primary text-center font-medium py-3"
                 >
                   {PRODUCT_CTA_PRIMARY}
                 </Link>
@@ -384,12 +369,12 @@ export function MarketingNav() {
                 <a
                   href={loginHref}
                   onClick={() => setMobileOpen(false)}
-                  className="text-white/80 text-center py-2"
+                  className="text-muted-foreground text-center py-2"
                 >
                   Sign in
                 </a>
               ) : (
-                <Link href={loginHref} onClick={() => setMobileOpen(false)} className="text-white/80 text-center py-2">
+                <Link href={loginHref} onClick={() => setMobileOpen(false)} className="text-muted-foreground text-center py-2">
                   Sign in
                 </Link>
               )}

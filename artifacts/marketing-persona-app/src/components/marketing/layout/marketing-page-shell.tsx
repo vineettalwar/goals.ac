@@ -9,14 +9,12 @@ type MarketingPageShellProps = {
   overlap?: boolean;
 };
 
-export function MarketingPageShell({ hero, children, overlap = true }: MarketingPageShellProps) {
+export function MarketingPageShell({ hero, children }: MarketingPageShellProps) {
   return (
     <MarketingThemeProvider>
-      <div className="min-h-screen bg-black">
+      <div className="min-h-screen bg-background text-foreground">
         {hero}
-        <div className={`relative bg-black ${overlap ? "-mt-8 sm:-mt-12" : ""}`}>
-          {children}
-        </div>
+        <div className="relative bg-background">{children}</div>
       </div>
     </MarketingThemeProvider>
   );

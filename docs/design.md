@@ -1,5 +1,9 @@
 # Design System
 
+Canonical product + marketing visual system: [`artifacts/marketing-persona-app/DESIGN.md`](../artifacts/marketing-persona-app/DESIGN.md) (newsprint + ink, IBM Plex / Source Serif 4, amber signal). Tokens live in `lib/app-shell/src/product-theme.css`.
+
+The notes below describe the **deprecated** Vite shell (`artifacts/goals-ac`) and must not be copied into new work.
+
 ## Overview
 
 goals.ac uses **Tailwind CSS 4** with a custom design token layer built on CSS custom properties. The design has two modes — a dark "glass" aesthetic for the main app pages and a clean light mode with subtle borders and shadows for forms and dashboards.

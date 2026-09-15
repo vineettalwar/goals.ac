@@ -31,27 +31,27 @@ export function WorkflowSection() {
   useMarketingScrollReveal(sectionRef);
 
   return (
-    <section ref={sectionRef} className="border-t border-white/10 bg-black py-24">
+    <section ref={sectionRef} className="border-t border-border bg-background py-24">
       <div className="mx-auto max-w-5xl px-6">
         <div className="mb-14">
           <EditorialHeading
-            line1="One workflow"
-            line2="end to end"
+            line1="One workflow, end to end"
             description="Research to publish with human review. Autopilot is an optional cadence on this same path."
-            theme="dark"
+            theme="light"
+            align="left"
           />
         </div>
 
         <ol className="max-w-2xl space-y-8">
           {WORKFLOW_STEPS.map(({ title, desc }) => (
             <li key={title} className="scroll-reveal">
-              <h3 className="text-lg font-semibold text-white">{title}</h3>
-              <p className="mt-1.5 text-base leading-relaxed text-white/65">{desc}</p>
+              <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+              <p className="mt-1.5 text-base leading-relaxed text-muted-foreground">{desc}</p>
             </li>
           ))}
         </ol>
 
-        <p className="scroll-reveal mx-auto mt-12 max-w-3xl text-sm leading-relaxed text-white/50">
+        <p className="scroll-reveal mt-12 max-w-3xl text-sm leading-relaxed text-muted-foreground">
           Works with {CMS_PLATFORMS}.
         </p>
       </div>
