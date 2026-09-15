@@ -2,6 +2,8 @@
 
 **AI-powered programmatic SEO platform** for B2B startup growth roadmaps. Generates tailored 12-month roadmaps, SEO content, GEO audits, and repurposable content — personalized to brand/industry/stage.
 
+**Navigation:** [`docs/CODEBASE.md`](docs/CODEBASE.md) (runtime + package map) → [`PROJECT.md`](PROJECT.md) / [`HANDOFF.md`](HANDOFF.md). Auth: [`docs/auth.md`](docs/auth.md).
+
 ## Tech Stack
 
 | Layer | Technology |

@@ -38,14 +38,16 @@ Generate tailored 12-month growth roadmaps, SEO content strategies, article draf
 
 | Layer | Technology |
 |---|---|
-| Frontend (product) | Next.js 14+ (App Router), React 19, Tailwind CSS 4, shadcn/ui |
-| Frontend (legacy) | React 19, Vite 7 — redirect shell only |
-| Backend | Next.js Route Handlers (canonical); Express 5 (legacy, opt-in) |
-| Database | PostgreSQL 17 + Drizzle ORM + Zod validation |
-| AI | Google Gemini 2.5 Flash (streaming); tiered provider abstraction (Bedrock, Ollama, BYOK) |
-| Auth | NextAuth (Next.js app); JWT (legacy Express) |
-| Jobs | pg-boss (Postgres-backed queue) |
-| Caching | Redis (AI output, 24h TTL), in-memory LRU, DB-level content caching |
+| Frontend (production) | `goals-app-ui` Vite SPA on Cloudflare Pages (`app.goals.ac`) |
+| Frontend (dev / reference) | Next.js App Router (`marketing-persona-app`, `:3001`) — not CF production |
+| Frontend (legacy) | Vite redirect shell (`goals-ac`) — opt-in only |
+| API (production) | Cloudflare Workers: `cf-gateway` → public / read / write (+ jobs worker) |
+| API (dev) | Next.js Route Handlers; Express 5 opt-in legacy |
+| Database | PostgreSQL 17 (local) **or** Cloudflare D1 (production); Drizzle + Zod |
+| AI | Google Gemini 2.5 Flash (streaming); tiered providers (Bedrock, Ollama, BYOK) |
+| Auth | Edge Mesh: session JWT cookie; Next: Auth.js — see [docs/auth.md](docs/auth.md) |
+| Jobs | CF Queues (`cf-jobs-worker`) on D1; pg-boss locally on Postgres |
+| Caching | Redis (optional), KV on CF, in-memory LRU, DB-level content caching |
 | CMS | WordPress, Shopify, Joomla, Drupal, Notion, Webflow, Ghost, Webhook |
 | Monorepo | pnpm workspaces |
 
@@ -87,39 +89,40 @@ pnpm --filter @workspace/worker run dev                  # Background jobs
 
 | Document | Description |
 |---|---|
+| **[docs/CODEBASE.md](docs/CODEBASE.md)** | **Start here** — runtime map + package index |
+| [docs/auth.md](docs/auth.md) | Login, Google OAuth, avatars (Edge Mesh + Next) |
 | [docs/local-dev.md](docs/local-dev.md) | Full local development setup guide |
-| [docs/design.md](docs/design.md) | Design system: tokens, dark/light mode, glass cards, typography |
-| [docs/roadmap.md](docs/roadmap.md) | Product roadmap: shipped phases and upcoming work |
+| [docs/deploy-cloudflare.md](docs/deploy-cloudflare.md) | Production Edge Mesh deploy |
+| [PROJECT.md](PROJECT.md) | Living project memory (stack, status, fragile areas) |
+| [HANDOFF.md](HANDOFF.md) | Latest session handoff |
 | [docs/DECISIONS.md](docs/DECISIONS.md) | Architecture decision records |
-| [docs/memory.md](docs/memory.md) | Architectural decisions, gotchas, and historical context |
-| [docs/admin.md](docs/admin.md) | Admin panel guide: super-admin role, user promotion, quota |
-| [AGENTS.md](AGENTS.md) | Agent and contributor reference (stack, structure, workflows) |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Database migration workflow and contribution guidelines |
+| [docs/memory.md](docs/memory.md) | Lessons and historical context |
+| [docs/admin.md](docs/admin.md) | Admin panel guide |
+| [AGENTS.md](AGENTS.md) | Agent/contributor reference |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Migration workflow and contribution guidelines |
 
 ## Project Structure
 
 ```
 goals.ac/
 ├── artifacts/
-│   ├── marketing-persona-app/   # Next.js product app (port 3001) — canonical
-│   ├── worker/                  # pg-boss background job consumer
-│   ├── api-server/              # Legacy Express REST API (port 8080, opt-in)
-│   └── goals-ac/                # Legacy Vite frontend (port 5173, redirect shell)
-├── lib/
-│   ├── db/                      # Drizzle schema, migrations, seeding
-│   ├── api-spec/                # OpenAPI sources (paths by tag; schemas in openapi.yaml)
-│   ├── api-zod/                 # Generated Zod schemas (Orval)
-│   ├── api-client-react/        # Generated React Query hooks (Orval)
-│   ├── ai-providers/            # Provider abstraction and tier routing
-│   ├── connectors/              # CMS adapter clients (WordPress, Shopify, etc.)
-│   ├── content-engine/          # Brand scrape, keyword opportunities, platform voice
-│   ├── jobs/                    # pg-boss queue contracts
-│   └── seo-tools/               # GEO auditor, competitor/keyword analyzers
-├── cms-plugins/                 # Server-side CMS plugins (WordPress, Joomla, Drupal, Shopify, …)
-├── docs/                        # Project documentation
-├── docker-compose.yml           # Default stack: Next app + worker + Postgres
-├── .env.example                 # Required environment variables
-└── CONTRIBUTING.md              # Migration workflow
+│   ├── goals-app-ui/            # Production product SPA (Pages → app.goals.ac)
+│   ├── marketing-pages/         # Production marketing static (Pages → goals.ac)
+│   ├── cf-gateway/              # api.goals.ac router
+│   ├── cf-public-worker/        # Auth / OAuth / public API shard
+│   ├── cf-read-worker/          # Authenticated reads
+│   ├── cf-write-worker/         # Authenticated writes
+│   ├── cf-jobs-worker/          # Queues + crons (D1)
+│   ├── marketing-persona-app/   # Next reference app (dev :3001, not CF prod)
+│   ├── worker/                  # pg-boss (local Postgres)
+│   ├── api-server/              # Legacy Express (opt-in)
+│   └── goals-ac/                # Legacy Vite redirect (opt-in)
+├── lib/                         # Shared packages (each has README.md)
+├── cms-plugins/                 # On-site CMS plugins
+├── docs/                        # CODEBASE.md, auth.md, deploy, PRDs, …
+├── docker-compose.yml           # Default: Next + worker + Postgres
+├── PROJECT.md / HANDOFF.md      # Agent/human project memory
+└── CONTRIBUTING.md
 ```
 
 ## Contributing

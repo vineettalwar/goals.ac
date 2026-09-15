@@ -4,6 +4,8 @@
 
 AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps, SEO content, GEO audits, and CMS publishing — personalized to brand, industry, and stage.
 
+**Start here for navigation:** [`docs/CODEBASE.md`](docs/CODEBASE.md). Auth/avatars: [`docs/auth.md`](docs/auth.md).
+
 **Two runtimes — know which one you are changing.** `marketing-persona-app` (Next.js, :3001) is canonical for **development** and is where features are written first. It is **not deployed**: root `cf:deploy` errors with "OpenNext monolith is retired". **Production** is `cf-gateway` -> `cf-public-worker` / `cf-read-worker` / `cf-write-worker`, with `goals-app-ui` and `marketing-pages` on Cloudflare Pages. A change is shipped when it reaches the workers, not when it lands in the Next app.
 
 ## Tech Stack (confirmed)
@@ -20,15 +22,20 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 
 ## Architecture Map
 
+Full package index: [`docs/CODEBASE.md`](docs/CODEBASE.md). Each `artifacts/*` and `lib/*` package has a short `README.md`.
+
 - `artifacts/marketing-persona-app/` — reference product implementation (auth, dashboard, studio, admin, APIs); canonical for development, not deployed
 - `artifacts/goals-app-ui/` — **live** product SPA on Cloudflare Pages (`app.goals.ac`, `pnpm run cf:pages:app`); shares `lib/app-shell` with the Next app. Repeatedly mistaken for dead code — it is not.
 - `artifacts/cf-gateway/` + `cf-public-worker` / `cf-read-worker` / `cf-write-worker` — the production API surface
+- `artifacts/cf-public-worker/src/auth-google.ts` — production Google login (invite-only); see [`docs/auth.md`](docs/auth.md)
 - `artifacts/marketing-persona-app/src/lib/org-access.ts` — org roles, permissions, suspend checks
 - `artifacts/marketing-persona-app/src/lib/require-auth.ts` — session + org suspend + IP allowlist
 - `artifacts/marketing-persona-app/src/lib/platform-settings.ts` — platform ops singleton (`platform_settings`)
 - `lib/content-engine/` — content pipeline, brand scraper, CMS publish, AI guards
 - `lib/ai-providers/` — provider abstraction + Bedrock BYOK
 - `lib/db/` — schema, migrations (`0040+` platform/org security, brand memory, MFA); D1 mirror at `schema-sqlite/`, `migrations-d1/`
+- `lib/app-shell/` — shared product chrome (nav, auth/settings UI, page grid)
+- `lib/cf-edge/` — Worker session cookies + env wiring
 - `cms-plugins/` — WordPress/Joomla/Drupal/Shopify server-side plugins
 - `lib/keyword-research-provider/` — GSC/Sheets keyword hub (separate feature track)
 
@@ -92,10 +99,11 @@ AI-powered programmatic SEO platform for B2B startup growth. Generates roadmaps,
 - `GET /api/billing/credits` balance endpoint
 
 **In progress / scaffolded:**
+- Google sign-in + avatar upload parity across Edge Mesh and Next — see [`docs/auth.md`](docs/auth.md) and `HANDOFF.md`
 - MFA TOTP (schema + settings UI; verification not enforced yet)
 - SSO/OIDC (not started)
 - Redis-backed rate limits for multi-instance deploy
-- OpenSEO hybrid integration: Features 1–2 shipped in lib + Next (migrate `0076`–`0077`); Feature 3 MCP is next — see `docs/prd/openseo-integration-index.md`
+- OpenSEO hybrid integration: Features 1–6 shipped in lib + Next + CF/MCP; live staging smokes still open — see `docs/prd/openseo-integration-index.md`
 
 ## Known Issues / Fragile Areas
 
