@@ -42,6 +42,8 @@ describe("competitor-url", () => {
       urls: ["https://syde.gmbh/", "https://rival.com/"],
     });
     expect(replaceCompetitorUrl(listed, listed[0]!, "not a url").ok).toBe(false);
-    expect(replaceCompetitorUrl(listed, listed[0]!, "https://rival.com").reason).toBe("duplicate");
+    const duplicate = replaceCompetitorUrl(listed, listed[0]!, "https://rival.com");
+    expect(duplicate.ok).toBe(false);
+    if (!duplicate.ok) expect(duplicate.reason).toBe("duplicate");
   });
 });
