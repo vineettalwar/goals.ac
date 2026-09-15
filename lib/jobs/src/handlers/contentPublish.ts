@@ -29,7 +29,7 @@ import { resolveWordPressConnectionType } from "@workspace/content-engine/suppor
 import { fetchGoalsAcSiteGraph } from "@workspace/connectors/goals-ac-plugin";
 import { logger } from "../logger";
 import { seedSocialPostMetrics } from "@workspace/content-engine/social/social-metrics-service";
-import { enqueueGscUrlInspectionAfterPublish } from "@workspace/content-engine/analytics/enqueue-gsc-url-inspection";
+import { scheduleMeasureAfterPublish } from "@workspace/content-engine/agent-loop";
 
 const PUBLISH_MAX_ATTEMPTS = 5;
 
@@ -354,11 +354,12 @@ async function publishPiece(
   });
 
   if (publishedUrl && publishPlatform) {
-    enqueueGscUrlInspectionAfterPublish({
+    scheduleMeasureAfterPublish({
       projectId: piece.websiteProjectId,
+      userId,
+      contentPieceId: pieceId,
       publishedUrl,
       publishPlatform,
-      contentPieceId: pieceId,
     }).catch(() => {});
   }
 }

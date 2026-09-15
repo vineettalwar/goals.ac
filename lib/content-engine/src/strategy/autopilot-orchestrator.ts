@@ -9,7 +9,6 @@ import {
 import { eq, and } from "drizzle-orm";
 import {
   generateContentPiece,
-  generateContentPieceWithAgents,
   repurposeContentPiece,
   type BrandContext,
 } from "../content/content-studio-generator";
@@ -23,8 +22,12 @@ import {
 } from "../support/publishing/cms-integrations";
 import { verticalRequiresReview } from "../verticals/vertical-presets";
 import type { ContentPieceApprovalStatus } from "@workspace/db/schema";
-import { patchPieceAgentTeamProgress } from "../agents/agent-team-progress-persist";
-import type { ContentPieceMetadata } from "../content/content-piece-seo";
+import {
+  loopMetaFromRun,
+  runResearchThenDraftLoop,
+  studioDraftFromKeyword,
+  UNATTENDED_AGENT_LOOP_CAPS,
+} from "../agent-loop";
 
 const FORMAT_MAP: Record<string, ContentFormatType> = {
   "linkedin post": "linkedin_post",
@@ -97,8 +100,6 @@ export type GenerateFromContentItemOptions = {
   generateVariants?: boolean;
   userApiKey?: string | null;
   aiProviderOptions?: Awaited<ReturnType<typeof getUserAiProviderOptions>>;
-  useAgentTeam?: boolean;
-  agentFastMode?: boolean;
 };
 
 export async function generateFromContentItem(
@@ -137,28 +138,30 @@ export async function generateFromContentItem(
   const requiresReview = verticalRequiresReview(brand.vertical) || !brand.vertical;
   const approvalStatus: ContentPieceApprovalStatus = requiresReview ? "pending_review" : "draft";
 
-  if (options?.useAgentTeam) {
-    return generateFromContentItemWithAgents({
-      item,
-      brand,
-      primaryFormat,
-      plannedDate,
-      approvalStatus,
-      resolvedProjectId,
-      project,
-      options,
-    });
-  }
-
-  const generated = await generateContentPiece(
-    primaryFormat,
-    brand,
-    item.primaryKeyword,
-    item.topicAngle,
-    false,
-    options?.userApiKey,
-    options?.aiProviderOptions,
-  );
+  const generatedHolder: { value?: Awaited<ReturnType<typeof generateContentPiece>> } = {};
+  const loop = await runResearchThenDraftLoop({
+    projectId: resolvedProjectId,
+    userId,
+    keyword: item.primaryKeyword,
+    caps: UNATTENDED_AGENT_LOOP_CAPS,
+    generateDraft: async () => {
+      const out = await studioDraftFromKeyword({
+        projectId: resolvedProjectId,
+        userId,
+        format: primaryFormat,
+        keyword: item.primaryKeyword,
+        angleHint: item.topicAngle,
+        bypassCache: false,
+        userApiKey: options?.userApiKey,
+        aiProviderOptions: options?.aiProviderOptions,
+        brand,
+      });
+      generatedHolder.value = out.generated;
+      return out.tool;
+    },
+  });
+  const generated = generatedHolder.value;
+  if (!generated) throw new Error(loop.stopReason ?? "Agent loop did not produce a draft");
 
   const [primary] = await db
     .insert(contentPiecesTable)
@@ -174,7 +177,10 @@ export async function generateFromContentItem(
       wordCount: generated.body_markdown.split(/\s+/).filter(Boolean).length,
       plannedDate,
       publishPlatform: null,
-      pieceMetadata: generated.pieceMetadata ?? null,
+      pieceMetadata: {
+        ...(generated.pieceMetadata ?? {}),
+        ...loopMetaFromRun(loop),
+      },
     })
     .returning();
 
@@ -203,155 +209,6 @@ export async function generateFromContentItem(
     variantPieceIds,
     generationUsage: generated.generationUsage,
   };
-}
-
-async function generateFromContentItemWithAgents(params: {
-  item: typeof contentItemsTable.$inferSelect;
-  brand: BrandContext;
-  primaryFormat: ContentFormatType;
-  plannedDate: string;
-  approvalStatus: ContentPieceApprovalStatus;
-  resolvedProjectId: number;
-  project: { cmsIntegrations: unknown; userId: number };
-  options?: GenerateFromContentItemOptions;
-}): Promise<GenerateFromItemResult> {
-  const {
-    item,
-    brand,
-    primaryFormat,
-    plannedDate,
-    approvalStatus,
-    resolvedProjectId,
-    project,
-    options,
-  } = params;
-
-  await db
-    .update(contentItemsTable)
-    .set({ status: "generating" })
-    .where(eq(contentItemsTable.id, item.id));
-
-  // Stub row so pollers see agent progress before the draft exists.
-  const [stub] = await db
-    .insert(contentPiecesTable)
-    .values({
-      websiteProjectId: resolvedProjectId,
-      contentItemId: item.id,
-      formatType: primaryFormat,
-      title: item.title,
-      targetKeyword: item.primaryKeyword,
-      bodyMarkdown: "",
-      status: "generating",
-      approvalStatus,
-      wordCount: 0,
-      plannedDate,
-      publishPlatform: null,
-      pieceMetadata: {
-        agentTeamProgress: {
-          agents: {},
-          isRunning: true,
-          updatedAt: new Date().toISOString(),
-        },
-      } satisfies ContentPieceMetadata,
-    })
-    .returning();
-
-  try {
-    const generated = await generateContentPieceWithAgents(
-      primaryFormat,
-      brand,
-      item.primaryKeyword,
-      item.topicAngle,
-      {
-        fastMode: options?.agentFastMode,
-        userApiKey: options?.userApiKey,
-        aiProviderOptions: options?.aiProviderOptions,
-        projectId: resolvedProjectId,
-        onAgentProgress: (event) => {
-          void patchPieceAgentTeamProgress(stub.id, event);
-        },
-        onAgentEvent: (sseData) => {
-          try {
-            const parsed = JSON.parse(sseData) as { type: string; [key: string]: unknown };
-            if (parsed.type === "pipeline_start" || parsed.type === "pipeline_complete") {
-              void patchPieceAgentTeamProgress(stub.id, parsed);
-            }
-          } catch {
-            // ignore malformed SSE meta
-          }
-        },
-      },
-    );
-
-    const wordCount = generated.body_markdown.split(/\s+/).filter(Boolean).length;
-
-    // Keep last polled agent snapshot; mark pipeline finished.
-    const [latest] = await db
-      .select({ pieceMetadata: contentPiecesTable.pieceMetadata })
-      .from(contentPiecesTable)
-      .where(eq(contentPiecesTable.id, stub.id))
-      .limit(1);
-    const latestMeta = (latest?.pieceMetadata ?? {}) as ContentPieceMetadata;
-    const finalMeta: ContentPieceMetadata = {
-      ...latestMeta,
-      ...generated.pieceMetadata,
-      agentTeamProgress: {
-        agents: latestMeta.agentTeamProgress?.agents ?? {},
-        isRunning: false,
-        totalElapsedMs:
-          generated.pieceMetadata?.agentPipelineDurationMs ??
-          latestMeta.agentTeamProgress?.totalElapsedMs,
-        updatedAt: new Date().toISOString(),
-      },
-    };
-
-    await db
-      .update(contentPiecesTable)
-      .set({
-        title: generated.title || item.title,
-        bodyMarkdown: generated.body_markdown,
-        wordCount,
-        status: "draft",
-        pieceMetadata: finalMeta,
-      })
-      .where(eq(contentPiecesTable.id, stub.id));
-
-    const variantPieceIds = await maybeGenerateVariants({
-      generateVariants: options?.generateVariants,
-      connectedCreds: (project.cmsIntegrations ?? {}) as CmsIntegrationCredentials,
-      primary: stub,
-      primaryFormat,
-      brand,
-      item,
-      plannedDate,
-      approvalStatus,
-      resolvedProjectId,
-      userApiKey: options?.userApiKey,
-      aiProviderOptions: options?.aiProviderOptions,
-      bodyMarkdown: generated.body_markdown,
-    });
-
-    await db
-      .update(contentItemsTable)
-      .set({ status: "prepared" })
-      .where(eq(contentItemsTable.id, item.id));
-
-    return {
-      primaryPieceId: stub.id,
-      variantPieceIds,
-      generationUsage: generated.generationUsage,
-    };
-  } catch (err) {
-    await db
-      .update(contentPiecesTable)
-      .set({ status: "failed" })
-      .where(eq(contentPiecesTable.id, stub.id));
-    await db
-      .update(contentItemsTable)
-      .set({ status: "failed" })
-      .where(eq(contentItemsTable.id, item.id));
-    throw err;
-  }
 }
 
 async function maybeGenerateVariants(params: {

@@ -128,6 +128,12 @@ export async function runAgentLoop(input: RunAgentLoopInput): Promise<RunAgentLo
     });
     await persist();
 
+    const pieceId = contentPieceIdFromToolData(result.data);
+    if (pieceId) {
+      run.contentPieceId = pieceId;
+      await persist();
+    }
+
     if (!result.ok && tool.risk !== "read") {
       run.status = "failed";
       run.stopReason = result.error ?? result.summary;
@@ -146,6 +152,13 @@ export async function runAgentLoop(input: RunAgentLoopInput): Promise<RunAgentLo
   });
   await persist();
   return run;
+}
+
+function contentPieceIdFromToolData(data: unknown): number | undefined {
+  if (!data || typeof data !== "object") return undefined;
+  const raw = (data as { contentPieceId?: unknown }).contentPieceId;
+  const id = typeof raw === "number" ? raw : Number(raw);
+  return Number.isInteger(id) && id > 0 ? id : undefined;
 }
 
 export function memoryTrajectorySink(): TrajectorySink & { runs: AgentRunRecord[] } {

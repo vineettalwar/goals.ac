@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { runAgentLoop, memoryTrajectorySink } from "./loop";
 import { sanitizeVerifiedFlags, type AgentTool } from "./types";
-import { draftsFromGsc, actionTypeFromGscPattern } from "./action-queue";
+import { draftsFromGsc, actionTypeFromGscPattern, draftsFromPositionSlip } from "./action-queue";
 import type { GscScoredOpportunity } from "@workspace/seo-tools/gscOpportunityScorer";
 
 function tool(name: string, result: Parameters<AgentTool["execute"]> extends never ? never : Awaited<ReturnType<AgentTool["execute"]>>, risk: AgentTool["risk"] = "read"): AgentTool {
@@ -88,6 +88,43 @@ describe("runAgentLoop", () => {
     expect(result.status).toBe("completed");
   });
 
+  it("drafts via research_then_draft even when research tools return no evidence", async () => {
+    let drafted = 0;
+    const blank = tool("gsc_query", {
+      ok: true,
+      summary: "Search Console is not connected",
+      evidenceRefs: [{ source: "invented", verified: true }],
+      hasToolEvidence: false,
+    });
+    const generate: AgentTool = {
+      name: "generate_draft",
+      description: "draft",
+      risk: "write",
+      creditCost: 1,
+      async execute() {
+        drafted += 1;
+        return {
+          ok: true,
+          summary: "drafted",
+          evidenceRefs: [],
+          hasToolEvidence: false,
+          data: { contentPieceId: 42 },
+        };
+      },
+    };
+    const result = await runAgentLoop({
+      goal: { kind: "research_then_draft", text: "draft", projectId: 1, keyword: "x" },
+      tools: [blank, generate],
+      stepBudget: 6,
+      policy: { maxCredits: 12, allowLivePublish: false },
+    });
+    expect(drafted).toBe(1);
+    expect(result.status).toBe("completed");
+    expect(result.contentPieceId).toBe(42);
+    const gscStep = result.trajectory.find((step) => step.tool === "gsc_query");
+    expect(gscStep?.evidenceRefs?.every((ref) => ref.verified === false)).toBe(true);
+  });
+
   it("stops with no_evidence instead of fake verification when tools find nothing", async () => {
     const blank: AgentTool = tool("gsc_query", {
       ok: true,
@@ -103,6 +140,39 @@ describe("runAgentLoop", () => {
     expect(result.status).toBe("no_evidence");
     const gscStep = result.trajectory.find((step) => step.tool === "gsc_query");
     expect(gscStep?.evidenceRefs?.every((ref) => ref.verified === false)).toBe(true);
+  });
+
+  it("execute_action still requires verified evidence before generate_draft", async () => {
+    let drafted = 0;
+    const blank = tool("gsc_query", {
+      ok: true,
+      summary: "not connected",
+      evidenceRefs: [],
+      hasToolEvidence: false,
+    });
+    const generate: AgentTool = {
+      name: "generate_draft",
+      description: "draft",
+      risk: "write",
+      creditCost: 1,
+      async execute() {
+        drafted += 1;
+        return { ok: true, summary: "drafted", evidenceRefs: [], hasToolEvidence: false };
+      },
+    };
+    const result = await runAgentLoop({
+      goal: {
+        kind: "execute_action",
+        text: "run",
+        projectId: 1,
+        keyword: "x",
+        actionType: "new_content",
+      },
+      tools: [blank, generate],
+      stepBudget: 6,
+    });
+    expect(drafted).toBe(0);
+    expect(result.status).toBe("no_evidence");
   });
 
   it("gates live publish for approval", async () => {
@@ -166,5 +236,33 @@ describe("action queue scoring", () => {
     expect(drafts[0]?.actionType).toBe("refresh");
     expect(drafts[1]?.actionType).toBe("ctr_title");
     expect(drafts[0]?.evidence[0]?.source).toBe("gsc_query");
+  });
+
+  it("upserts refresh drafts when GSC position slips", () => {
+    const drafts = draftsFromPositionSlip(
+      [
+        {
+          query: "old winner",
+          impressions: 200,
+          clicks: 10,
+          ctr: 0.05,
+          position: 18,
+          pages: ["https://example.com/post"],
+        },
+      ],
+      [
+        {
+          query: "old winner",
+          impressions: 220,
+          clicks: 40,
+          ctr: 0.18,
+          position: 8,
+          pages: ["https://example.com/post"],
+        },
+      ],
+    );
+    expect(drafts).toHaveLength(1);
+    expect(drafts[0]?.actionType).toBe("refresh");
+    expect(drafts[0]?.evidence[0]?.source).toBe("gsc_position_slip");
   });
 });

@@ -138,19 +138,14 @@ export const defaultEmployeePlanner: AgentPlanner = (ctx, tools): PlannerDecisio
       reason: "Load competitor analyses",
     };
   }
-  if (!trajectoryHasVerifiedEvidence(ctx.trajectory)) {
-    return {
-      type: "stop",
-      reason: "no_evidence",
-      detail: "No connected research evidence; refusing to mark claims verified",
-    };
-  }
+  // Studio / Autopilot / Daily Five: same generator after research *attempts*.
+  // Missing GSC/keywords does not skip draft; it also does not mark claims verified.
   if (hasTool(tools, "generate_draft") && !called(ctx, "generate_draft") && goal.keyword) {
     return {
       type: "call_tool",
       tool: "generate_draft",
       args: { projectId: goal.projectId, keyword: goal.keyword },
-      reason: "Draft after evidence",
+      reason: "Draft after research tools (verified evidence optional)",
     };
   }
   if (hasTool(tools, "publish_readiness") && !called(ctx, "publish_readiness") && goal.contentPieceId) {
@@ -159,6 +154,16 @@ export const defaultEmployeePlanner: AgentPlanner = (ctx, tools): PlannerDecisio
       tool: "publish_readiness",
       args: { projectId: goal.projectId, contentPieceId: goal.contentPieceId },
       reason: "Readiness gate before any live publish",
+    };
+  }
+  if (called(ctx, "generate_draft")) {
+    return { type: "stop", reason: "done", detail: "Research + draft loop finished" };
+  }
+  if (!trajectoryHasVerifiedEvidence(ctx.trajectory)) {
+    return {
+      type: "stop",
+      reason: "no_evidence",
+      detail: "No connected research evidence; refusing to mark claims verified",
     };
   }
   return { type: "stop", reason: "done", detail: "Research + draft loop finished" };

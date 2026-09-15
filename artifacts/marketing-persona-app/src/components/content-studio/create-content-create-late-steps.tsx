@@ -38,7 +38,6 @@ import {
 import { getConnectedDestinationsForFormat } from "@/lib/projects/publishing-destinations";
 import { cn } from "@/lib/utils";
 import { hostFromUrl } from "@workspace/content-engine/support/competitor/competitor-url";
-import { AgentTeamProgress } from "@/components/content/agents";
 import { newsNeedsSourceUrl } from "./create-content-modal-logic";
 import type { WizardStepId } from "./create-content-modal-types";
 import type { CreateContentWizardProps } from "./create-content-wizard-props";
@@ -253,8 +252,9 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
                       className="rounded mt-0.5"
                     />
                     <span>
-                      <span className="text-foreground font-medium">Agent team</span>
-                      {" — "}specialists (Owl, Ferret, Hummingbird…) draft and polish. Slower, higher quality.
+                      <span className="text-foreground font-medium">Research loop</span>
+                      {" — "}
+                      Generate always uses the employee loop + shared studio generator. This checkbox is ignored (legacy).
                     </span>
                   </label>
 
@@ -281,24 +281,10 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
 
               {currentStep === "generating" && selectedFormat && (
                 <WizardStep
-                  title={
-                    useAgentTeam
-                      ? `Agent team writing your ${FORMAT_META[selectedFormat].label}…`
-                      : `Writing your ${FORMAT_META[selectedFormat].label}…`
-                  }
-                  subtitle={`Target: ${keyword.trim()} · ${FORMAT_META[selectedFormat].wordRange}`}
+                  title={`Writing your ${FORMAT_META[selectedFormat].label}…`}
+                  subtitle={`Target: ${keyword.trim()} · ${FORMAT_META[selectedFormat].wordRange} · employee loop`}
                 >
-                  {useAgentTeam ? (
-                    <div className="mt-8">
-                      <AgentTeamProgress
-                        agentState={agentTeamState}
-                        isRunning={agentTeamRunning || generating}
-                        totalElapsedMs={agentTeamElapsedMs}
-                        compact
-                      />
-                    </div>
-                  ) : (
-                    <div className="mt-10 space-y-3">
+                  <div className="mt-10 space-y-3">
                       {detectedSections.length === 0 ? (
                         <div className="flex items-center gap-3 text-muted-foreground">
                           <Loader2 className="w-5 h-5 animate-spin shrink-0" />
@@ -326,7 +312,6 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
                         })
                       )}
                     </div>
-                  )}
                 </WizardStep>
               )}
 

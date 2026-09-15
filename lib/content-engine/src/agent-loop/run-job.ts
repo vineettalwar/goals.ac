@@ -1,49 +1,15 @@
 import { eq } from "drizzle-orm";
 import { db } from "@workspace/db";
-import {
-  agentActionItemsTable,
-  competitorAnalysesTable,
-  contentPiecesTable,
-  keywordOpportunitiesTable,
-  trackedKeywordsTable,
-} from "@workspace/db/schema";
-import { getGscSyncStatus } from "../analytics/gsc-search-analytics-service";
-import { loadBrandContextForProject } from "../support/brand/brand-context-loader";
+import { agentActionItemsTable, contentPiecesTable } from "@workspace/db/schema";
 import { generateContentPiece } from "../content/content-studio-generator";
+import { loadBrandContextForProject } from "../support/brand/brand-context-loader";
 import { getDecryptedUserGeminiKey } from "../support/ai/user-api-key";
 import { getUserAiProviderOptions } from "../support/ai/user-ai-provider";
-import { isBacklinksConfigured } from "@workspace/serp-provider";
 import { runAgentLoop } from "./loop";
 import { createFirstPartyTools } from "./tools";
 import { dbTrajectorySink, loadAgentRun } from "./persist";
-import type { AgentGoal, AgentLoopCredentials, AgentToolResult, RunAgentLoopResult } from "./types";
-
-async function detectCredentials(projectId: number): Promise<AgentLoopCredentials> {
-  const [gsc, opp, tracked, competitors] = await Promise.all([
-    getGscSyncStatus(projectId),
-    db
-      .select({ id: keywordOpportunitiesTable.id })
-      .from(keywordOpportunitiesTable)
-      .where(eq(keywordOpportunitiesTable.websiteProjectId, projectId))
-      .limit(1),
-    db
-      .select({ id: trackedKeywordsTable.id })
-      .from(trackedKeywordsTable)
-      .where(eq(trackedKeywordsTable.websiteProjectId, projectId))
-      .limit(1),
-    db
-      .select({ id: competitorAnalysesTable.id })
-      .from(competitorAnalysesTable)
-      .where(eq(competitorAnalysesTable.websiteProjectId, projectId))
-      .limit(1),
-  ]);
-  return {
-    gsc: gsc.connected,
-    keywords: opp.length > 0 || tracked.length > 0,
-    competitors: competitors.length > 0,
-    serp: isBacklinksConfigured(),
-  };
-}
+import { detectLoopCredentials, loopMetaFromRun } from "./generate-via-loop";
+import type { AgentGoal, AgentToolResult, RunAgentLoopResult } from "./types";
 
 async function generateDraftForLoop(args: {
   projectId: number;
@@ -109,7 +75,7 @@ export async function executeStoredAgentRun(input: {
   stepBudget?: number;
   actionItemId?: number;
 }): Promise<RunAgentLoopResult> {
-  const credentials = await detectCredentials(input.projectId);
+  const credentials = await detectLoopCredentials(input.projectId);
   const sink = dbTrajectorySink();
   const tools = createFirstPartyTools({
     generateDraft: (args) =>
@@ -126,9 +92,29 @@ export async function executeStoredAgentRun(input: {
     tools,
     credentials,
     stepBudget: input.stepBudget ?? 10,
+    policy: { allowLivePublish: false, approveFirstForLivePublish: true },
     sink,
     userId: input.userId,
   });
+
+  if (result.contentPieceId) {
+    const [row] = await db
+      .select({ pieceMetadata: contentPiecesTable.pieceMetadata })
+      .from(contentPiecesTable)
+      .where(eq(contentPiecesTable.id, result.contentPieceId))
+      .limit(1);
+    if (row) {
+      await db
+        .update(contentPiecesTable)
+        .set({
+          pieceMetadata: {
+            ...(row.pieceMetadata ?? {}),
+            ...loopMetaFromRun(result),
+          },
+        })
+        .where(eq(contentPiecesTable.id, result.contentPieceId));
+    }
+  }
 
   if (input.actionItemId && result.id) {
     await db

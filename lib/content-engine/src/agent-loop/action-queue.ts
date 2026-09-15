@@ -4,7 +4,12 @@ import { agentActionItemsTable, type AgentActionEffort, type AgentActionType } f
 import { getGscQueryRowsForProject, getGscSyncStatus } from "../analytics/gsc-search-analytics-service";
 import { defaultSyncDateRange } from "@workspace/seo-tools/analyticsDateRange";
 import { priorPeriodRange } from "@workspace/seo-tools/gscSearchAnalytics";
-import { rollupGscQueries, scoreGscQueries, type GscScoredOpportunity } from "@workspace/seo-tools/gscOpportunityScorer";
+import {
+  rollupGscQueries,
+  scoreGscQueries,
+  type GscQueryRollup,
+  type GscScoredOpportunity,
+} from "@workspace/seo-tools/gscOpportunityScorer";
 import { listRefreshQueueItems } from "../strategy/refresh-queue-service";
 
 export type ActionQueueEvidence = {
@@ -60,6 +65,40 @@ export function draftsFromGsc(scored: GscScoredOpportunity[]): ScoredActionDraft
       opportunityScore: row.opportunityScore,
     };
   });
+}
+
+/** Rank/traffic slip vs prior GSC window → refresh the loop can run. */
+export function draftsFromPositionSlip(current: GscQueryRollup[], previous: GscQueryRollup[]): ScoredActionDraft[] {
+  const prevBy = new Map(previous.map((row) => [row.query.toLowerCase(), row]));
+  const drafts: ScoredActionDraft[] = [];
+  for (const row of current) {
+    const prev = prevBy.get(row.query.toLowerCase());
+    if (!prev) continue;
+    const slip = row.position - prev.position;
+    if (slip < 3) continue;
+    if (row.impressions < 20) continue;
+    const url = row.pages[0] ?? null;
+    const actionType = "refresh" as const;
+    drafts.push({
+      fingerprint: fingerprintAction(actionType, row.query, url),
+      actionType,
+      title: `refresh: ${row.query} (position slip)`,
+      keyword: row.query,
+      url,
+      evidence: [
+        {
+          source: "gsc_position_slip",
+          detail: `pos ${prev.position.toFixed(1)} → ${row.position.toFixed(1)}; ${row.impressions} imp`,
+          url: url ?? undefined,
+        },
+      ],
+      estimatedImpact: Math.min(100, Math.round(row.impressions / 15 + slip * 8)),
+      confidence: Math.min(100, Math.round(40 + Math.min(slip, 10) * 5)),
+      effort: "medium",
+      opportunityScore: Math.min(100, Math.round(50 + slip * 4)),
+    });
+  }
+  return drafts;
 }
 
 export function draftsFromRefreshQueue(
@@ -119,8 +158,11 @@ export async function syncActionQueueFromSignals(projectId: number): Promise<{
       getGscQueryRowsForProject(projectId, dateRange.startDate, dateRange.endDate),
       getGscQueryRowsForProject(projectId, priorRange.startDate, priorRange.endDate),
     ]);
-    const scored = scoreGscQueries(rollupGscQueries(currentRows), rollupGscQueries(priorRows));
+    const current = rollupGscQueries(currentRows);
+    const prior = rollupGscQueries(priorRows);
+    const scored = scoreGscQueries(current, prior);
     drafts.push(...draftsFromGsc(scored));
+    drafts.push(...draftsFromPositionSlip(current, prior));
   }
 
   const refresh = await listRefreshQueueItems(projectId);

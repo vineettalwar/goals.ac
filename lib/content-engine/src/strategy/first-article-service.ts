@@ -74,8 +74,6 @@ export async function startFirstArticleGeneration(
       // inside generateFromContentItem itself.
       schedulePublish: false,
       triggeredByAutopilot: false,
-      useAgentTeam: true,
-      agentFastMode: true,
     };
     jobId = await enqueue(QUEUES.contentGenerate, payload);
   } catch (err) {

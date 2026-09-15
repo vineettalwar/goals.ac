@@ -13,8 +13,13 @@ import {
   generateFromContentItem,
   type GenerateFromItemResult,
 } from "@workspace/content-engine/strategy/autopilot-orchestrator";
-import { generateContentPiece, generateContentPieceWithAgents } from "@workspace/content-engine/content/content-studio-generator";
-import { patchPieceAgentTeamProgress } from "@workspace/content-engine/agents/agent-team-progress-persist";
+import { generateContentPiece } from "@workspace/content-engine/content/content-studio-generator";
+import {
+  loopMetaFromRun,
+  runResearchThenDraftLoop,
+  studioDraftFromKeyword,
+  UNATTENDED_AGENT_LOOP_CAPS,
+} from "@workspace/content-engine/agent-loop";
 import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
 import { getDecryptedUserGeminiKey } from "@workspace/content-engine/support/ai/user-api-key";
 import { getUserAiProviderOptions } from "@workspace/content-engine/support/ai/user-ai-provider";
@@ -75,8 +80,8 @@ export async function finalizeGeneratedPieces(params: {
       .where(inArray(contentPiecesTable.id, pieceIds));
 
     /**
-     * Live autopilot publish needs grounded research. Pieces that ran Ferret
-     * with no connected data stay at ready instead of hitting the CMS.
+     * Live autopilot publish needs grounded research. Pieces whose loop found
+     * no verified GSC/keyword/competitor rows stay at ready instead of hitting the CMS.
      */
     const missingResearch = livePublish
       ? pieces.filter((piece) => piece.pieceMetadata?.researchConnected === false)
@@ -159,8 +164,6 @@ async function generateExistingContentPiece(
   options: {
     userApiKey?: string | null;
     aiProviderOptions?: Awaited<ReturnType<typeof getUserAiProviderOptions>>;
-    useAgentTeam?: boolean;
-    agentFastMode?: boolean;
   },
 ): Promise<GenerateFromItemResult> {
   const [piece] = await db
@@ -191,41 +194,36 @@ async function generateExistingContentPiece(
     const angleHint =
       typeof piece.pieceMetadata?.contentAngle === "string" ? piece.pieceMetadata.contentAngle : undefined;
 
-    const generated = options.useAgentTeam
-      ? await generateContentPieceWithAgents(
-          piece.formatType as ContentFormatType,
-          brand,
-          piece.targetKeyword ?? "",
+    const generatedHolder: { value?: Awaited<ReturnType<typeof generateContentPiece>> } = {};
+    const loop = await runResearchThenDraftLoop({
+      projectId,
+      userId,
+      keyword: piece.targetKeyword ?? "",
+      contentPieceId,
+      caps: UNATTENDED_AGENT_LOOP_CAPS,
+      generateDraft: async () => {
+        const out = await studioDraftFromKeyword({
+          projectId,
+          userId,
+          format: piece.formatType as ContentFormatType,
+          keyword: piece.targetKeyword ?? "",
           angleHint,
-          {
-            fastMode: options.agentFastMode,
-            userApiKey: options.userApiKey,
-            aiProviderOptions: options.aiProviderOptions,
-            projectId,
-            onAgentProgress: (event) => {
-              void patchPieceAgentTeamProgress(contentPieceId, event);
-            },
-            onAgentEvent: (sseData) => {
-              try {
-                const parsed = JSON.parse(sseData) as { type: string; [key: string]: unknown };
-                if (parsed.type === "pipeline_start" || parsed.type === "pipeline_complete") {
-                  void patchPieceAgentTeamProgress(contentPieceId, parsed);
-                }
-              } catch {
-                // ignore malformed SSE meta
-              }
-            },
-          },
-        )
-      : await generateContentPiece(
-          piece.formatType as ContentFormatType,
-          brand,
-          piece.targetKeyword ?? "",
-          undefined,
-          true,
-          options.userApiKey,
-          options.aiProviderOptions,
-        );
+          bypassCache: true,
+          userApiKey: options.userApiKey,
+          aiProviderOptions: options.aiProviderOptions,
+        });
+        generatedHolder.value = out.generated;
+        return {
+          ...out.tool,
+          data: { ...(typeof out.tool.data === "object" && out.tool.data ? out.tool.data : {}), contentPieceId },
+        };
+      },
+    });
+
+    const generated = generatedHolder.value;
+    if (!generated) {
+      throw new Error(loop.stopReason ?? "Agent loop did not produce a draft");
+    }
 
     const wordCount = generated.body_markdown.split(/\s+/).filter(Boolean).length;
 
@@ -238,12 +236,7 @@ async function generateExistingContentPiece(
     const finalMeta = {
       ...latestMeta,
       ...(generated.pieceMetadata ?? {}),
-      agentTeamProgress: {
-        agents: latestMeta.agentTeamProgress?.agents ?? {},
-        isRunning: false,
-        totalElapsedMs: generated.pieceMetadata?.agentPipelineDurationMs,
-        updatedAt: new Date().toISOString(),
-      },
+      ...loopMetaFromRun(loop),
     };
 
     await db
@@ -290,8 +283,7 @@ async function failStuckContentPiece(contentPieceId: number | undefined): Promis
 }
 
 export async function processContentGenerate(payload: ContentGeneratePayload): Promise<void> {
-    const { contentItemId, contentPieceId, projectId, userId, generateVariants, schedulePublish, triggeredByAutopilot, agentFastMode } = payload;
-    const useAgentTeam = payload.useAgentTeam === true || triggeredByAutopilot === true;
+    const { contentItemId, contentPieceId, projectId, userId, generateVariants, schedulePublish, triggeredByAutopilot } = payload;
     if (!contentItemId && !contentPieceId) {
       throw new Error("contentItemId or contentPieceId required");
     }
@@ -305,7 +297,7 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
 
     const billingPrep = await prepareAiBillingSession({
       userId,
-      tier: useAgentTeam ? "planning" : "execution",
+      tier: "execution",
       usedByok: usesByok,
       quotaKind: usesByok ? undefined : "article",
     });
@@ -324,8 +316,6 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
     const genOptions = {
       userApiKey,
       aiProviderOptions,
-      useAgentTeam,
-      agentFastMode,
     };
     const result = contentPieceId
       ? await generateExistingContentPiece(contentPieceId, projectId, userId, genOptions)
@@ -333,8 +323,6 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
           userApiKey,
           aiProviderOptions,
           generateVariants: generateVariants !== false,
-          useAgentTeam,
-          agentFastMode,
         });
 
     const [project] = await db
