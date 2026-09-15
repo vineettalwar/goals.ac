@@ -54,7 +54,7 @@ const BLOG_SURFACE_FORMATS = new Set<string>([
  * and generatable through the API — this only decides what the picker offers.
  */
 export function formatOptionsForSurface(
-  surface: ProductSurface = "blog_wordpress",
+  surface: ProductSurface = "full",
 ): readonly ContentFormatOption[] {
   if (surface === "full") return FORMAT_OPTIONS;
   return FORMAT_OPTIONS.filter((option) => BLOG_SURFACE_FORMATS.has(option.value));

@@ -473,6 +473,8 @@ export interface AgentTeamGenerationOptions {
   userApiKey?: string | null;
   /** AI provider options */
   aiProviderOptions?: AiProviderOptions;
+  /** Project whose GSC / keyword hub / competitor rows Ferret should read. */
+  projectId?: number;
 }
 
 /**
@@ -502,6 +504,7 @@ export async function generateContentPieceWithAgents(
     competitorContext: context.competitorPromptBlock,
     userApiKey: options.userApiKey,
     aiProviderOptions: options.aiProviderOptions,
+    projectId: options.projectId,
   };
 
   const pipelineOptions: AgentPipelineOptions = {
@@ -544,6 +547,8 @@ export async function generateContentPieceWithAgents(
       generatedWithAgents: true,
       agentPipelineDurationMs: pipelineResult.totalDurationMs,
       degradedAgents: pipelineResult.degradedAgents.length > 0 ? pipelineResult.degradedAgents : undefined,
+      researchConnected: pipelineResult.researchConnected,
+      researchNote: pipelineResult.researchNote,
     },
   };
 

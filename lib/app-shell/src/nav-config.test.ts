@@ -6,12 +6,12 @@ function labels(model: ReturnType<typeof buildNavModel>): string[] {
 }
 
 describe("buildNavModel product surface", () => {
-  it("defaults to the blog surface and hides social, GEO, and research", () => {
+  it("defaults to the full surface so GEO, research, and social stay reachable", () => {
     const shown = labels(buildNavModel({}));
 
-    expect(shown).not.toContain("Social Hub");
-    expect(shown).not.toContain("GEO Audit");
-    expect(shown).not.toContain("Research");
+    expect(shown).toEqual(
+      expect.arrayContaining(["Social Hub", "GEO Audit", "Research", "Content Studio"]),
+    );
   });
 
   it("keeps the blog path intact on the default surface", () => {
@@ -23,10 +23,18 @@ describe("buildNavModel product surface", () => {
   });
 
   it("drops sections left empty by the filter", () => {
-    const model = buildNavModel({});
+    const model = buildNavModel({ surface: "blog_wordpress" });
 
     expect(model.navSections.every((section) => section.items.length > 0)).toBe(true);
     expect(model.navSections.map((section) => section.label)).not.toContain("Research");
+  });
+
+  it("hides social, GEO, and research on the blog surface", () => {
+    const shown = labels(buildNavModel({ surface: "blog_wordpress" }));
+
+    expect(shown).not.toContain("Social Hub");
+    expect(shown).not.toContain("GEO Audit");
+    expect(shown).not.toContain("Research");
   });
 
   it("reveals every surface when set to full", () => {

@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { STUDIO_FORMAT_OPTIONS, studioFormatOptionsForSurface } from "./types";
 
 describe("studioFormatOptionsForSurface", () => {
-  it("defaults to the blog surface", () => {
+  it("defaults to the full surface", () => {
     const values = studioFormatOptionsForSurface().map((option) => option.value);
 
     expect(values).toContain("blog_post");
-    expect(values).not.toContain("linkedin_post");
+    expect(values).toContain("linkedin_post");
   });
 
   it("offers only article formats on the blog surface", () => {

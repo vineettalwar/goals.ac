@@ -11,6 +11,7 @@ import { validateAgentConfiguration, AgentPipelineError, shouldReplaceBody } fro
 import { AGENT_PIPELINE_ORDER, AGENT_DEFINITIONS, getAgentDefinition } from "./agent-definitions";
 import { buildAgentSystemPrompt, buildAgentTaskPrompt, AGENT_PERSONALITY_PROMPTS } from "./agent-prompts";
 import type { AgentId } from "./agent-types";
+import { emptyResearchEvidence, researchPromptBlock, NO_RESEARCH_DATA_NOTE } from "./research-evidence";
 
 describe("Agent Configuration", () => {
   it("validates all agents are configured correctly", () => {
@@ -180,6 +181,19 @@ describe("shouldReplaceBody", () => {
   it("rejects a later truncated body so the hummingbird draft is kept", () => {
     const draft = "# Article\n\n" + "paragraph ".repeat(400);
     expect(shouldReplaceBody(draft, draft.slice(0, 80))).toBe(false);
+  });
+});
+
+describe("ferret research prompt", () => {
+  it("forbids verified:true when no research data is connected", () => {
+    const prompt = buildAgentTaskPrompt("ferret", {
+      keyword: "content marketing strategy",
+      format: "blog_post",
+      brandName: "Acme Corp",
+      researchBlock: researchPromptBlock(emptyResearchEvidence()),
+    });
+    expect(prompt).toContain(NO_RESEARCH_DATA_NOTE);
+    expect(prompt).toMatch(/must NOT set verified: true/i);
   });
 });
 

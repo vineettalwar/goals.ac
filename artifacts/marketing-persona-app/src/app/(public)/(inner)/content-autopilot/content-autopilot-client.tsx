@@ -54,7 +54,7 @@ export function ContentAutopilotClient() {
       <MarketingCTA
         titleLine1="See what fits"
         titleLine2="your team"
-        description="Sign up free and turn on autopilot when you're ready. Choose your cadence, CMS, and review workflow."
+        description="Request access and turn on autopilot when you're ready. Choose your cadence, CMS, and review workflow."
         variant="dark"
         secondaryHref="/content-engine"
         secondaryLabel="See Content Studio →"

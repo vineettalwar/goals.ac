@@ -166,9 +166,14 @@ export async function POST(
     return NextResponse.json({ seeded: count });
   }
 
-  if (action === "check") {
+    if (action === "check") {
     const result = await runVisibilityCheckForProject(projectId);
-    return NextResponse.json(result);
+    const dataMode = await getVisibilityDataMode();
+    return NextResponse.json({
+      inserted: result,
+      dataMode,
+      label: dataMode === "live" ? "Live" : "Demo / Simulated",
+    });
   }
 
   if (action === "enqueue" || action === "check-async") {

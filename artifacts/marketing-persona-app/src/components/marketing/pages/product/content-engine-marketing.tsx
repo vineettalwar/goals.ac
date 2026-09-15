@@ -153,7 +153,7 @@ export function ContentEngineMarketing() {
       <MarketingCTA
         titleLine1="Draft, humanize, score,"
         titleLine2="then publish"
-        description="Sign up free and run the Content Studio loop on your first keyword."
+        description="Request access and run the Content Studio loop on your first keyword."
         variant="dark"
         primaryHref={appCta}
         primaryLabel={appLabel}

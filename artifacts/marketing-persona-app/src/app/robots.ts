@@ -4,12 +4,6 @@ import { getSiteUrl } from "@/lib/marketing/site/site-url";
 export const dynamic = "force-static";
 
 export default function robots(): MetadataRoute.Robots {
-  if (process.env.MARKETING_STATIC === "1") {
-    return {
-      rules: [{ userAgent: "*", disallow: "/" }],
-    };
-  }
-
   const base = getSiteUrl();
 
   return {

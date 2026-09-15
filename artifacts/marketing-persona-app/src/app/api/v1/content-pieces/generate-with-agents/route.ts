@@ -119,6 +119,7 @@ export async function POST(req: Request) {
               {
                 fastMode: body.fastMode,
                 onAgentEvent: sendEvent,
+                projectId: body.projectId,
               },
               generationContext,
             );
@@ -189,7 +190,7 @@ export async function POST(req: Request) {
         brand,
         body.targetKeyword,
         body.angleHint,
-        { fastMode: body.fastMode },
+        { fastMode: body.fastMode, projectId: body.projectId },
         generationContext,
       );
 

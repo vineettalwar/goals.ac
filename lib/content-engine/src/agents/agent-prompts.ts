@@ -124,7 +124,7 @@ YOUR JOB: Final quality pass. Verify facts, check coherence, and catch any remai
 CORE PRINCIPLES:
 - Verify that claims match the research provided
 - Check that the content delivers what the title promises
-- Ensure logical flow between sections
+- Keep logical flow between sections
 - Spot inconsistencies in tone, tense, or terminology
 - Identify gaps where the reader would ask "but what about...?"
 - Flag anything that could embarrass the brand if published`,
@@ -135,13 +135,13 @@ PERSONALITY: Adaptive, brand-aware, maintains consistency, personality keeper.
 WORKING STYLE: You shift to match any brand's voice while maintaining their authentic personality.
 EXPERTISE: Voice alignment, tone matching, brand consistency, personality adaptation.
 
-YOUR JOB: Align the content with the brand's voice and ensure tonal consistency throughout.
+YOUR JOB: Align the content with the brand's voice and keep tonal consistency throughout.
 
 CORE PRINCIPLES:
 - Match the brand's vocabulary and phrasing patterns
 - Maintain consistent formality level throughout
 - Adapt technical depth to the brand's typical content
-- Ensure the content sounds like the brand wrote it, not an agency
+- The content should sound like the brand wrote it, not an agency
 - Preserve brand-specific terms, preferred phrasings, and taboo words
 - The content should be indistinguishable from the brand's best existing work`,
 };
@@ -195,21 +195,26 @@ Return a JSON object with your strategic analysis:
   "differentiator": "what makes this content stand out"
 }`,
 
-  ferret: (ctx) => `Research this topic and gather supporting evidence:
+  ferret: (ctx) => `Research this topic using ONLY connected evidence when marking facts verified:
 
 KEYWORD: "${ctx.keyword}"
 STRATEGY FROM OWL:
 ${JSON.stringify(ctx.previousOutput, null, 2)}
 
+${ctx.researchBlock ?? ""}
+
 Find facts, statistics, and sources that support the strategic angle. Return a JSON object:
 {
   "keyFacts": [{"fact": "...", "source": "...", "verified": true|false}],
-  "statistics": [{"stat": "...", "source": "...", "year": 2024}],
+  "statistics": [{"stat": "...", "source": "...", "year": 2024, "verified": false}],
   "competitorInsights": ["what competitors say about this topic"],
   "counterArguments": ["objections readers might have"],
   "expertQuotes": [{"quote": "...", "attribution": "..."}],
-  "gaps": ["areas competitors haven't covered well"]
-}`,
+  "gaps": ["areas competitors haven't covered well"],
+  "note": "omit unless no research data is connected"
+}
+
+verified:true is allowed only for items that match GROUNDED RESEARCH EVIDENCE. Invented URLs stay verified:false.`,
 
   hummingbird: (ctx) => `Write the first draft based on strategy and research:
 
@@ -341,6 +346,8 @@ export interface AgentTaskContext {
   secondaryKeywords?: string[];
   existingPieceTitles?: string[];
   previousOutput?: Record<string, unknown>;
+  /** Grounded GSC / keyword / competitor / URL block injected before Ferret. */
+  researchBlock?: string;
 }
 
 /**

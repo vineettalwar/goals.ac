@@ -72,6 +72,11 @@ export type PublishReadinessOptions = {
    */
   unattended?: boolean;
   /**
+   * When true, a piece that ran Ferret with no connected research data cannot
+   * go live. Omitted on interactive publish so a human can still ship a draft.
+   */
+  requireGroundedResearch?: boolean;
+  /**
    * Slop score (see `countAiSlopSignals`) at or above which ai_tells blocks an
    * unattended publish. Only consulted when `unattended` is true. Defaults to
    * `DEFAULT_AI_TELLS_BLOCK_THRESHOLD`; a handful of hard tells (a banned phrase,
@@ -419,6 +424,15 @@ export function assessPublishReadiness(
     } else {
       warnings.push(placeholderIssue);
     }
+  }
+
+  if (options.requireGroundedResearch && piece.pieceMetadata?.researchConnected === false) {
+    blockers.push({
+      code: "no_research_data",
+      severity: "blocker",
+      message: "no research data connected",
+      detail: piece.pieceMetadata.researchNote,
+    });
   }
 
   for (const issue of [

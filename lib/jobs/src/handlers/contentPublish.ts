@@ -142,7 +142,11 @@ async function publishPiece(
         bodyMarkdown: piece.bodyMarkdown ?? "",
         pieceMetadata: piece.pieceMetadata,
       },
-      { ...readinessInputs, ...readinessOptions },
+      {
+        ...readinessInputs,
+        ...readinessOptions,
+        ...(wpStatus === "publish" ? { requireGroundedResearch: true } : {}),
+      },
     );
     for (const warning of readiness.warnings) {
       logger.warn({ pieceId, code: warning.code, message: warning.message }, "Publish readiness warning");
