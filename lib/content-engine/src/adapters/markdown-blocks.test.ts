@@ -3,14 +3,21 @@ import { parseMarkdownBlocks } from "./markdown-blocks";
 
 describe("parseMarkdownBlocks", () => {
   it("recognizes a heading with its level", () => {
-    expect(parseMarkdownBlocks("### Third level")).toEqual([
-      { type: "heading", level: 3, text: "Third level" },
+    expect(parseMarkdownBlocks("## Second level")).toEqual([
+      { type: "heading", level: 2, text: "Second level" },
     ]);
   });
 
   it("caps heading level at 6 for a 6-hash heading", () => {
-    expect(parseMarkdownBlocks("###### Sixth level")).toEqual([
+    expect(parseMarkdownBlocks("## Top\n\n###### Sixth level")).toEqual([
+      { type: "heading", level: 2, text: "Top" },
       { type: "heading", level: 6, text: "Sixth level" },
+    ]);
+  });
+
+  it("promotes a ###-only body to H2", () => {
+    expect(parseMarkdownBlocks("### Third level")).toEqual([
+      { type: "heading", level: 2, text: "Third level" },
     ]);
   });
 

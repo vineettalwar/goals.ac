@@ -1,3 +1,4 @@
+import { shiftMarkdownHeadingsTowardH2 } from "../content/heading-outline";
 import type { Typo3ContentElement } from "./types";
 
 function escapeHtml(text: string): string {
@@ -86,7 +87,7 @@ export function prependTypo3FeaturedBase64(
  * Convert markdown into TYPO3 content elements (header, text, textmedia).
  */
 export function markdownToTypo3ContentElements(markdown: string): Typo3ContentElement[] {
-  const lines = markdown.split("\n");
+  const lines = shiftMarkdownHeadingsTowardH2(markdown).split("\n");
   const elements: Typo3ContentElement[] = [];
   let sorting = 256;
   let inCode = false;

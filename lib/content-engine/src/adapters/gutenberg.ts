@@ -1,3 +1,4 @@
+import { shiftMarkdownHeadingsTowardH2 } from "../content/heading-outline";
 import { markdownToHtml } from "./markdown-html";
 import { escapeHtml, inlineToHtml } from "./markdown-inline";
 
@@ -25,7 +26,7 @@ function block(
  * Convert markdown to Gutenberg block comment markup for WordPress post_content.
  */
 export function markdownToGutenbergBlocks(markdown: string): string {
-  const lines = markdown.split("\n");
+  const lines = shiftMarkdownHeadingsTowardH2(markdown).split("\n");
   const blocks: string[] = [];
   let inCode = false;
   let codeLines: string[] = [];

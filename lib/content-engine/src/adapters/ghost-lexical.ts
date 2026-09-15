@@ -1,5 +1,7 @@
 /** Ghost 5 Lexical JSON — native Admin API editor state. */
 
+import { shiftMarkdownHeadingsTowardH2 } from "../content/heading-outline";
+
 const FORMAT_BOLD = 1;
 const FORMAT_ITALIC = 2;
 const FORMAT_CODE = 16;
@@ -215,7 +217,7 @@ function appendParagraphWithImages(children: LexicalBlockNode[], line: string): 
  * Convert markdown to a Ghost 5 Lexical document tree for the Admin API `lexical` field.
  */
 export function markdownToGhostLexical(markdown: string): GhostLexicalDocument {
-  const lines = markdown.split("\n");
+  const lines = shiftMarkdownHeadingsTowardH2(markdown).split("\n");
   const children: LexicalBlockNode[] = [];
   let listType: "bullet" | "number" | null = null;
   let listItems: string[] = [];

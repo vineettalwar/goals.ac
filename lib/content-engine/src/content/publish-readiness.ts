@@ -29,6 +29,7 @@ import {
   findSimilarTitles,
 } from "./seo-guardrails";
 import { findPublishPlaceholders } from "./publish-placeholders";
+import { shiftMarkdownHeadingsTowardH2 } from "./heading-outline";
 
 export type PublishReadinessSeverity = "blocker" | "warning";
 
@@ -162,7 +163,8 @@ function checkEmDash(fields: ResolvedFields): PublishReadinessIssue | null {
 }
 
 function checkHeadingHierarchy(body: string): PublishReadinessIssue | null {
-  const headingLines = body.match(/^#{1,6}\s+.+$/gm) ?? [];
+  // Title is H1 at the CMS. A body that only uses ### is a shifted outline, not a skip.
+  const headingLines = shiftMarkdownHeadingsTowardH2(body).match(/^#{1,6}\s+.+$/gm) ?? [];
   const skips: string[] = [];
   let prevLevel: number | null = null;
 
@@ -171,11 +173,7 @@ function checkHeadingHierarchy(body: string): PublishReadinessIssue | null {
     const level = levelMatch![1]!.length;
     const text = line.replace(/^#{1,6}\s+/, "").trim();
 
-    if (prevLevel === null) {
-      if (level > 2) {
-        skips.push(`First heading is H${level} ("${text}"), expected H2 or higher up the tree`);
-      }
-    } else if (level > prevLevel + 1) {
+    if (prevLevel !== null && level > prevLevel + 1) {
       skips.push(`H${prevLevel} is followed by H${level} ("${text}") with no H${prevLevel + 1} between`);
     }
     prevLevel = level;

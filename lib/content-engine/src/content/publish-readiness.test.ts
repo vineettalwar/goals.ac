@@ -99,10 +99,10 @@ describe("assessPublishReadiness - heading_hierarchy", () => {
     expect(result.blockers.map((b) => b.code)).toContain("heading_hierarchy");
   });
 
-  it("fires when the first heading is deeper than H2", () => {
-    const body = "### Starts Too Deep\n\nSome real prose here that is long enough to read.";
+  it("does not fire when every body heading is H3-or-deeper (title is the H1)", () => {
+    const body = "### Starts at H3\n\nSome real prose here that is long enough to read.\n\n#### Nested\n\nMore prose.";
     const result = assessPublishReadiness(withBody(body));
-    expect(result.blockers.map((b) => b.code)).toContain("heading_hierarchy");
+    expect(result.blockers.map((b) => b.code)).not.toContain("heading_hierarchy");
   });
 
   it("does not fire on a well-formed outline", () => {

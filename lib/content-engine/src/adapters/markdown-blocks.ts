@@ -14,6 +14,7 @@
  * module, a block comment) and escaping is a serialization concern, not a
  * parsing one.
  */
+import { shiftMarkdownHeadingsTowardH2 } from "../content/heading-outline";
 
 export type MarkdownBlock =
   | { type: "heading"; level: number; text: string }
@@ -25,7 +26,7 @@ export type MarkdownBlock =
 const IMAGE_RE = /^!\[([^\]]*)\]\(([^)]+)\)/;
 
 export function parseMarkdownBlocks(markdown: string): MarkdownBlock[] {
-  const lines = markdown.split("\n");
+  const lines = shiftMarkdownHeadingsTowardH2(markdown).split("\n");
   const blocks: MarkdownBlock[] = [];
 
   let inCode = false;

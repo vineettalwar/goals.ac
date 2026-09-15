@@ -54,3 +54,11 @@ describe("markdownToGhostLexical images", () => {
     expect(prose.map((n) => n.text).join("")).toBe("then prose.");
   });
 });
+
+describe("markdownToGhostLexical headings", () => {
+  it("accepts a ###-only body after promoting the outline toward H2", () => {
+    const children = rootChildren("### The Hook System");
+    expect(children).toHaveLength(1);
+    expect(children[0]).toMatchObject({ type: "extended-heading" });
+  });
+});

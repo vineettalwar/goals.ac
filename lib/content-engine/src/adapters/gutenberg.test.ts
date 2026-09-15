@@ -17,7 +17,7 @@ describe("markdownToGutenbergBlocks", () => {
   });
 
   it("writes the heading level as a number, not a string", () => {
-    const markup = markdownToGutenbergBlocks("### Third level");
+    const markup = markdownToGutenbergBlocks("## Two\n\n### Third level");
 
     expect(markup).toContain('<!-- wp:heading {"level":3} -->');
     expect(blockAttributes(markup)).toContainEqual({ level: 3 });
@@ -25,7 +25,13 @@ describe("markdownToGutenbergBlocks", () => {
 
   it("wraps the heading in the matching tag", () => {
     expect(markdownToGutenbergBlocks("## Two")).toContain("<h2>Two</h2>");
-    expect(markdownToGutenbergBlocks("#### Four")).toContain("<h4>Four</h4>");
+    expect(markdownToGutenbergBlocks("## Two\n\n#### Four")).toContain("<h4>Four</h4>");
+  });
+
+  it("promotes a body that never uses H2 so the CMS title remains the H1", () => {
+    const markup = markdownToGutenbergBlocks("### Hook");
+    expect(markup).toContain('<!-- wp:heading {"level":2} -->');
+    expect(markup).toContain("<h2>Hook</h2>");
   });
 
   it("marks an ordered list as ordered so numbering survives editing", () => {

@@ -38,7 +38,7 @@ describe("markdownToElementorData", () => {
 
     expect(heading!.widgetType).toBe("heading");
     expect(heading!.settings.title).toBe("Third level");
-    expect(heading!.settings.header_size).toBe("h3");
+    expect(heading!.settings.header_size).toBe("h2");
   });
 
   it("renders a paragraph as a text-editor widget with real markup", async () => {

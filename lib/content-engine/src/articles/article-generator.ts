@@ -7,6 +7,7 @@ import {
 } from "../brand/brand-voice";
 import { loadBrandVoiceGenerationContext } from "../support/brand/brand-voice-generation";
 import { AI_WRITING_RULES_PROMPT } from "../content/ai-writing-rules";
+import { BODY_HEADING_OUTLINE_PROMPT } from "../content/heading-outline";
 
 export interface ArticleInput {
   company: {
@@ -77,6 +78,7 @@ Writing principles:
 - Write naturally for humans. No AI-sounding filler.
 - Structure with H2/H3 headings, short paragraphs, and scannable bullet lists
 ${AI_WRITING_RULES_PROMPT}
+${BODY_HEADING_OUTLINE_PROMPT}
 - Every claim that can be cited MUST be cited with a real, authoritative source (gov, university, industry research, named publications)
 - Include a 4-6 item FAQ section targeting long-tail and "People Also Ask" queries
 - The article must be worth bookmarking and sharing

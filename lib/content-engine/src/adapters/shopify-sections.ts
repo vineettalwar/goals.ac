@@ -1,3 +1,4 @@
+import { shiftMarkdownHeadingsTowardH2 } from "../content/heading-outline";
 import { markdownToHtml } from "./markdown-html";
 import type { ShopifySectionBlock } from "./types";
 
@@ -10,7 +11,7 @@ const HEADING_RE = /^(#{2,3})\s+(.+)$/;
  */
 export async function markdownToShopifySections(markdown: string): Promise<ShopifySectionBlock[]> {
   const sections: ShopifySectionBlock[] = [];
-  const lines = markdown.split("\n");
+  const lines = shiftMarkdownHeadingsTowardH2(markdown).split("\n");
   let paragraphLines: string[] = [];
   let currentHeading: string | undefined;
 

@@ -3,6 +3,7 @@ import {
   AI_WRITING_RULES_PROMPT,
   sanitizeAiProse,
 } from "./ai-writing-rules";
+import { BODY_HEADING_OUTLINE_PROMPT } from "./heading-outline";
 import {
   buildFunnelStagePrompt,
   buildProofAssetPrompt,
@@ -323,6 +324,7 @@ Writing principles:
 - Structure with H2/H3 headings, short paragraphs, and scannable bullet lists
 ${AI_WRITING_FROM_SCRATCH_PROMPT}
 ${AI_WRITING_RULES_PROMPT}
+${BODY_HEADING_OUTLINE_PROMPT}
 - Outline templates are flexible guidance, not a fixed heading script: vary section names, order, and shape while keeping required FAQ, citations, and schema.
 - Every statistical or factual claim MUST have an inline citation: [Publisher Name](https://real-url)
 - Include ## Frequently Asked Questions with 4-6 ### questions ending in ?

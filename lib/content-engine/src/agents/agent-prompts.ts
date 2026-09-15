@@ -8,6 +8,7 @@
 
 import type { AgentId } from "./agent-types";
 import { AI_WRITING_RULES_PROMPT } from "../content/ai-writing-rules";
+import { BODY_HEADING_OUTLINE_PROMPT } from "../content/heading-outline";
 
 /**
  * Core personality prompts for each agent.
@@ -58,6 +59,7 @@ CORE PRINCIPLES:
 - Use concrete examples over abstract claims
 - Write for a real person, not "the audience"
 - Every paragraph earns its place or gets cut
+${BODY_HEADING_OUTLINE_PROMPT}
 
 ${AI_WRITING_RULES_PROMPT}`,
 

@@ -4,6 +4,7 @@ import type { AiProviderClient } from "@workspace/ai-providers/client";
 import { resolveAiClient } from "../support/ai/resolve-ai-client";
 import type { ContentStyle } from "@workspace/db";
 import { AI_WRITING_FROM_SCRATCH_PROMPT, AI_WRITING_RULES_PROMPT } from "./ai-writing-rules";
+import { BODY_HEADING_OUTLINE_PROMPT } from "./heading-outline";
 import { loadBrandVoiceGenerationContext } from "../support/brand/brand-voice-generation";
 import {
   resolveHumanizationLevel,
@@ -31,6 +32,7 @@ Your articles are brand-aligned, industry-specific, and location-aware. They com
 
 ${AI_WRITING_FROM_SCRATCH_PROMPT}
 ${AI_WRITING_RULES_PROMPT}
+${BODY_HEADING_OUTLINE_PROMPT}
 
 You MUST respond with a single valid JSON object and nothing else. No markdown, no code blocks, no explanation; only raw JSON.`;
 
