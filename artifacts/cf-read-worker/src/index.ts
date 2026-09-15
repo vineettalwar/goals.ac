@@ -14,6 +14,7 @@ import { handlePartnerRead } from "./partner-routes";
 import { handleVisibilityRead } from "./visibility-routes";
 import { handleGscSyncStatusGet } from "./search-properties";
 import { handleKeywordRead } from "./keyword-routes";
+import { handleAgentLoopRead } from "./agent-loop-routes";
 import { handleSiteAuditRead } from "./site-audit-routes";
 import { handleOnboardingFastLaneRead } from "./onboarding-fast-lane-routes";
 import { handleResearchRead } from "./research-routes";
@@ -108,6 +109,9 @@ export default {
 
       const keywordHandled = await handleKeywordRead(request, path, userId);
       if (keywordHandled) return keywordHandled;
+
+      const agentLoopHandled = await handleAgentLoopRead(request, path, userId);
+      if (agentLoopHandled) return agentLoopHandled;
 
       const siteAuditHandled = await handleSiteAuditRead(request, path, userId);
       if (siteAuditHandled) return siteAuditHandled;

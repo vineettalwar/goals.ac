@@ -3,6 +3,16 @@ import { websiteProjectsTable } from "./website_projects";
 
 export type SiteAuditStatus = "pending" | "running" | "done" | "failed";
 
+export type SiteAuditIssueRow = {
+  issueType: string;
+  pageUrl: string;
+  severity: string;
+  title: string;
+  explanation: string;
+  howToFix: string;
+  details?: Record<string, unknown>;
+};
+
 export const siteAuditsTable = sqliteTable(
   "site_audits",
   {
@@ -16,9 +26,7 @@ export const siteAuditsTable = sqliteTable(
     pagesCrawled: integer("pages_crawled").notNull().default(0),
     crawlComplete: integer("crawl_complete", { mode: "boolean" }).notNull().default(false),
     errorMessage: text("error_message"),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
-      .notNull()
-      .$defaultFn(() => new Date()),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     completedAt: integer("completed_at", { mode: "timestamp_ms" }),
   },
   (t) => [index("site_audits_project_idx").on(t.websiteProjectId)],

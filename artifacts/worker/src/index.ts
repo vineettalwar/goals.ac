@@ -43,6 +43,7 @@ import {
   registerSiteAuditCrawlHandler,
   registerGscUrlInspectionHandler,
   registerPublishReliabilityAlertHandler,
+  registerAgentLoopHandler,
 } from "@workspace/jobs";
 import pino from "pino";
 import { startHealthServer, stopHealthServer } from "./health-server";
@@ -92,6 +93,7 @@ async function main(): Promise<void> {
   await registerSiteAuditCrawlHandler(boss);
   await registerGscUrlInspectionHandler(boss);
   await registerPublishReliabilityAlertHandler(boss);
+  await registerAgentLoopHandler(boss);
 
   await scheduleCron(QUEUES.connectionHealthCheck, CONNECTION_HEALTH_CHECK_CRON, {});
   await scheduleCron(QUEUES.keywordRankCheck, KEYWORD_RANK_SWEEP_CRON, {});

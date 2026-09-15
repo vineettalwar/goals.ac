@@ -33,6 +33,7 @@ import { handleAnalyticsPropertiesWrite } from "./analytics-properties";
 import { handleCmsIntegrationsWrite } from "./cms-integrations";
 import { handleStudioWrite } from "./studio-routes";
 import { handleKeywordWrite } from "./keyword-routes";
+import { handleAgentLoopWrite } from "./agent-loop-routes";
 import { handleSocialWrite } from "./social-routes";
 import { handleBillingCreditsWrite } from "./billing-credits";
 import { handleOrgSecurityWrite, handleMfaRoutes } from "./org-security-routes";
@@ -192,6 +193,14 @@ export default {
 
       const keywordHandled = await handleKeywordWrite(request, path, userId);
       if (keywordHandled) return keywordHandled;
+
+      const agentLoopHandled = await handleAgentLoopWrite(
+        request,
+        path,
+        userId,
+        (jobId, queue, meta) => trackJob(env, jobId, queue, meta),
+      );
+      if (agentLoopHandled) return agentLoopHandled;
 
       const socialHandled = await handleSocialWrite(request, path, userId, env);
       if (socialHandled) return socialHandled;

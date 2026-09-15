@@ -205,7 +205,8 @@
     "./verticals/vertical-guardrails": "./src/verticals/vertical-guardrails.ts",
     "./vertical-guardrails": "./src/verticals/vertical-guardrails.ts",
     "./strategy/first-article-service": "./src/strategy/first-article-service.ts",
-    "./first-article-service": "./src/strategy/first-article-service.ts"
+    "./first-article-service": "./src/strategy/first-article-service.ts",
+    "./agent-loop": "./src/agent-loop/index.ts"
   },
   "dependencies": {
     "@google/genai": "^1.44.0",

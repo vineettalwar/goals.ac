@@ -23,6 +23,8 @@ export async function processContentDecaySweep(data: ContentDecaySweepJobData): 
   if (isProjectPayload(data)) {
     const inserted = await discoverContentDecay(data.projectId);
     logger.info({ projectId: data.projectId, inserted }, "Content decay sweep for project");
+    const { syncActionQueueFromSignals } = await import("@workspace/content-engine/agent-loop");
+    await syncActionQueueFromSignals(data.projectId);
     return;
   }
 

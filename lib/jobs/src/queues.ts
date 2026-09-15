@@ -35,6 +35,7 @@ export const QUEUES = {
   siteAuditCrawl: "site-audit-crawl",
   gscUrlInspection: "gsc-url-inspection",
   publishReliabilityAlert: "publish-reliability-alert",
+  agentLoop: "agent-loop",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
@@ -211,6 +212,19 @@ export interface GscUrlInspectionPayload {
 
 export type PublishReliabilityAlertPayload = Record<string, never>;
 
+export interface AgentLoopPayload {
+  projectId: number;
+  userId?: number;
+  runId?: number;
+  actionItemId?: number;
+  goalKind?: "research_then_draft" | "opportunity_scan" | "execute_action" | "publish_check";
+  keyword?: string;
+  contentPieceId?: number;
+  actionType?: string;
+  targetUrl?: string;
+  text?: string;
+}
+
 /** Maps each queue name to the payload shape(s) it accepts. */
 export interface QueuePayloadMap {
   [QUEUES.connectionHealthCheck]: ConnectionHealthCheckJobData;
@@ -237,6 +251,7 @@ export interface QueuePayloadMap {
   [QUEUES.siteAuditCrawl]: SiteAuditCrawlPayload;
   [QUEUES.gscUrlInspection]: GscUrlInspectionPayload;
   [QUEUES.publishReliabilityAlert]: PublishReliabilityAlertPayload;
+  [QUEUES.agentLoop]: AgentLoopPayload;
 }
 
 export type QueuePayloadFor<Q extends QueueName> = QueuePayloadMap[Q];
