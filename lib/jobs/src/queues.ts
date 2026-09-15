@@ -217,7 +217,7 @@ export interface AgentLoopPayload {
   userId?: number;
   runId?: number;
   actionItemId?: number;
-  goalKind?: "research_then_draft" | "opportunity_scan" | "execute_action" | "publish_check";
+  goalKind?: "research_then_draft" | "opportunity_scan" | "execute_action" | "publish_check" | "chat_turn";
   keyword?: string;
   contentPieceId?: number;
   actionType?: string;

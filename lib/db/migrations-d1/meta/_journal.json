@@ -120,6 +120,13 @@
       "when": 1789501255477,
       "tag": "0016_high_wolfpack",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1789509900000,
+      "tag": "0017_seo_chat",
+      "breakpoints": true
     }
   ]
 }

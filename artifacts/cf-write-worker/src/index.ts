@@ -34,6 +34,7 @@ import { handleCmsIntegrationsWrite } from "./cms-integrations";
 import { handleStudioWrite } from "./studio-routes";
 import { handleKeywordWrite } from "./keyword-routes";
 import { handleAgentLoopWrite } from "./agent-loop-routes";
+import { handleSeoChatWrite } from "./seo-chat-routes";
 import { handleSocialWrite } from "./social-routes";
 import { handleBillingCreditsWrite } from "./billing-credits";
 import { handleOrgSecurityWrite, handleMfaRoutes } from "./org-security-routes";
@@ -201,6 +202,9 @@ export default {
         (jobId, queue, meta) => trackJob(env, jobId, queue, meta),
       );
       if (agentLoopHandled) return agentLoopHandled;
+
+      const seoChatHandled = await handleSeoChatWrite(request, path, userId);
+      if (seoChatHandled) return seoChatHandled;
 
       const socialHandled = await handleSocialWrite(request, path, userId, env);
       if (socialHandled) return socialHandled;

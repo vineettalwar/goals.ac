@@ -12,6 +12,7 @@ import {
   Shield,
   Users,
   Zap,
+  MessageSquare,
   type LucideIcon,
 } from "lucide-react";
 import { isSuperAdmin, showPartnerNav } from "./nav-roles";
@@ -70,6 +71,7 @@ export const NAV_SECTIONS: Array<{ label: string; items: NavItemDef[] }> = [
     label: "Overview",
     items: [
       { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+      { label: "Chat", href: "/chat", icon: MessageSquare },
       { label: "Projects", href: "/projects", icon: FolderOpen },
     ],
   },
@@ -134,6 +136,7 @@ export function buildNavModel(options: {
 
   const overviewItems: NavItemDef[] = [
     { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { label: "Chat", href: "/chat", icon: MessageSquare },
     { label: "Projects", href: "/projects", icon: FolderOpen },
     ...(partner ? [{ label: "Clients", href: "/clients", icon: Briefcase }] : []),
   ];
