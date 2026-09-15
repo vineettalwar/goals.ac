@@ -134,7 +134,7 @@ export function DailyFiveClient({ projectId }: { projectId: string }) {
       </div>
 
       {step === "setup" ? (
-        <div className="paper-card space-y-4 rounded-xl p-4 sm:p-6">
+        <div className="space-y-4 rounded-xl p-4 sm:p-6">
           <div className="space-y-2">
             <Label htmlFor="daily-five-default-section">Default section</Label>
             <p className="text-sm text-muted-foreground">
@@ -219,7 +219,7 @@ export function DailyFiveClient({ projectId }: { projectId: string }) {
           {created.map((piece, idx) => (
             <div
               key={piece.id}
-              className="paper-card flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between"
+              className="flex flex-col gap-3 rounded-xl p-4 sm:flex-row sm:items-center sm:justify-between"
             >
               <div className="min-w-0">
                 <p className="font-medium">

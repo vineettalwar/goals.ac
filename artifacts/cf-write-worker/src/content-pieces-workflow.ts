@@ -178,30 +178,35 @@ async function handleRenderPreview(
   const creds = decryptCmsCredentials((project?.cmsIntegrations ?? {}) as Record<string, unknown>);
   const entitlements = await resolveEntitlementsForProject(piece.websiteProjectId, userId);
 
-  const preview = await renderContentForPlatform({
-    piece: {
-      id: piece.id,
-      title: piece.title,
-      bodyMarkdown: piece.bodyMarkdown,
-      targetKeyword: piece.targetKeyword,
-      formatType: piece.formatType,
-      pieceMetadata: piece.pieceMetadata,
-    },
-    platform: parsed.data.platform,
-    creds,
-    outputMode: parsed.data.outputMode,
-    editorMode: parsed.data.editorMode,
-    entitlements,
-  });
+  try {
+    const preview = await renderContentForPlatform({
+      piece: {
+        id: piece.id,
+        title: piece.title,
+        bodyMarkdown: piece.bodyMarkdown ?? "",
+        targetKeyword: piece.targetKeyword,
+        formatType: piece.formatType,
+        pieceMetadata: piece.pieceMetadata,
+      },
+      platform: parsed.data.platform,
+      creds,
+      outputMode: parsed.data.outputMode,
+      editorMode: parsed.data.editorMode,
+      entitlements,
+    });
 
-  return withCors(
-    request,
-    Response.json({
-      payloadKind: preview.payloadKind,
-      previewHtml: preview.previewHtml,
-      previewJson: preview.previewJson,
-      warnings: preview.warnings,
-      capabilities: preview.capabilities,
-    }),
-  );
+    return withCors(
+      request,
+      Response.json({
+        payloadKind: preview.payloadKind,
+        previewHtml: preview.previewHtml,
+        previewJson: preview.previewJson,
+        warnings: preview.warnings,
+        capabilities: preview.capabilities,
+      }),
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to render preview";
+    return withCors(request, Response.json({ error: message }, { status: 500 }));
+  }
 }

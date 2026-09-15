@@ -13,7 +13,9 @@ describe("daily-five validation", () => {
   it("requires source URLs for News section", () => {
     expect(requiresSources("News")).toBe(true);
     expect(isDailyFiveItemValid({ section: "News", sourceUrls: "" })).toBe(false);
-    expect(isDailyFiveItemValid({ section: "News", sourceUrls: "https://vegnews.com/story" })).toBe(true);
+    expect(isDailyFiveItemValid({ section: "News", sourceUrls: "https://vegnews.com/story" })).toBe(
+      true,
+    );
   });
 
   it("does not require source URLs for non-news sections", () => {
