@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Plus, Trash2, Search, TrendingUp, Lightbulb, BarChart3, Map } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,44 +71,56 @@ export function KeywordRankTrackingTab({
   snapshots: RankSnapshot[];
 }) {
   return (
-    <div className="p-6 rounded-xl space-y-4">
-      <h2 className="font-semibold flex items-center gap-2">
-        <TrendingUp className="h-4 w-4" /> Rank tracking
-      </h2>
-      <div className="flex gap-2">
+    <div className="space-y-6">
+      <form
+        className="flex max-w-xl gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onTrackKeyword();
+        }}
+      >
         <Input
           placeholder="Keyword to track"
           value={trackInput}
           onChange={(e) => onTrackInputChange(e.target.value)}
+          aria-label="Keyword to track"
         />
-        <Button onClick={onTrackKeyword}>
-          <Plus className="h-4 w-4" />
-        </Button>
-      </div>
-      <div className="space-y-2">
-        {tracked.map((kw) => (
-          <div
-            key={kw.id}
-            className="flex items-center justify-between gap-2 p-3 rounded-lg border border-border"
-          >
-            <button
-              type="button"
-              className="text-left flex-1"
-              onClick={() => onSelectTracked(kw.id)}
-            >
-              <span className="font-medium">{kw.keyword}</span>
-              <span className="text-xs text-muted-foreground ml-2">
-                {kw.latestSnapshot?.position != null ? `#${kw.latestSnapshot.position}` : "—"}
-              </span>
-            </button>
-            <Button variant="ghost" size="icon" onClick={() => onDeleteTracked(kw.id)}>
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        ))}
-      </div>
+        <Button type="submit">Track</Button>
+      </form>
+
+      {tracked.length === 0 ? (
+        <p className="max-w-prose text-sm text-muted-foreground">
+          No keywords tracked yet. Add a query to watch its SERP position over time.
+        </p>
+      ) : (
+        <ul className="divide-y divide-border border-t border-border">
+          {tracked.map((kw) => (
+            <li key={kw.id} className="flex items-center justify-between gap-2 py-3">
+              <button
+                type="button"
+                className="min-w-0 flex-1 text-left"
+                onClick={() => onSelectTracked(kw.id)}
+              >
+                <span className="font-medium">{kw.keyword}</span>
+                <span className="ml-2 text-xs tabular-nums text-muted-foreground">
+                  {kw.latestSnapshot?.position != null ? `#${kw.latestSnapshot.position}` : "—"}
+                </span>
+              </button>
+              <Button
+                variant="ghost"
+                size="sm"
+                aria-label={`Stop tracking ${kw.keyword}`}
+                onClick={() => onDeleteTracked(kw.id)}
+              >
+                Remove
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
       {selectedTrackedId != null ? (
-        <>
+        <div className="space-y-4">
           <KeywordRankChart snapshots={snapshots} />
           <SerpFeaturesPanel
             features={parseSerpFeatures(
@@ -117,7 +128,7 @@ export function KeywordRankTrackingTab({
                 tracked.find((kw) => kw.id === selectedTrackedId)?.latestSnapshot?.serpFeatures,
             )}
           />
-        </>
+        </div>
       ) : null}
     </div>
   );
@@ -182,38 +193,45 @@ export function KeywordAnalyzerTab({
 
   return (
     <>
-      <div className="p-6 rounded-xl space-y-4">
-        <h2 className="font-semibold flex items-center gap-2">
-          <Search className="h-4 w-4" /> Keyword analysis
-        </h2>
+      <form
+        className="max-w-xl space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onAnalyze();
+        }}
+      >
         <div className="space-y-1.5">
-          <Label>Keywords (comma-separated)</Label>
+          <Label htmlFor="keyword-analysis-input">Keywords</Label>
           <Input
+            id="keyword-analysis-input"
             placeholder="B2B lead generation, SaaS marketing"
             value={keywordInput}
             onChange={(e) => onKeywordInputChange(e.target.value)}
           />
+          <p className="text-xs text-muted-foreground">Comma-separated. Analysis and clusters share this list.</p>
         </div>
         <div className="space-y-1.5">
-          <Label>Website URL (optional)</Label>
+          <Label htmlFor="keyword-analysis-url">Website URL</Label>
           <Input
+            id="keyword-analysis-url"
             placeholder="https://yoursite.com"
             value={websiteUrl}
             onChange={(e) => onWebsiteUrlChange(e.target.value)}
           />
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button onClick={onAnalyze} disabled={loading}>
+          <Button type="submit" disabled={loading}>
             {loading ? (
               <>
                 <Spinner size="sm" /> Analyzing…
               </>
             ) : (
-              "Analyze keywords"
+              "Analyze"
             )}
           </Button>
           {projectId ? (
             <Button
+              type="button"
               variant="outline"
               onClick={() => void handleCluster()}
               disabled={clustering || loading}
@@ -223,53 +241,48 @@ export function KeywordAnalyzerTab({
                   <Spinner size="sm" /> Clustering…
                 </>
               ) : (
-                <>
-                  <Map className="h-4 w-4" />
-                  Seed → clusters
-                </>
+                "Build clusters"
               )}
             </Button>
           ) : null}
         </div>
-      </div>
+      </form>
 
       {clusters ? (
-        <div className="p-6 rounded-xl space-y-4">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <h2 className="font-semibold flex items-center gap-2">
-              <Map className="h-4 w-4" /> Topical clusters
-            </h2>
-            <p className="text-xs text-muted-foreground">
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="font-semibold tracking-tight">Clusters</h2>
+            <p className="text-xs tabular-nums text-muted-foreground">
               Authority {clusters.topicalAuthority}/100
-              {clusters.semrushUsed ? " · Semrush volumes" : " · AI estimates"}
+              {clusters.semrushUsed ? " · Semrush volumes" : " · estimated volumes"}
             </p>
           </div>
           <p className="text-sm text-muted-foreground">
             Next article: {clusters.recommendedNextArticle}
           </p>
-          <div className="space-y-3">
+          <ul className="divide-y divide-border border-t border-border">
             {clusters.clusters.map((cluster) => (
-              <div key={cluster.pillarKeyword} className="rounded-lg border border-border p-3">
+              <li key={cluster.pillarKeyword} className="py-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-medium">{cluster.pillarTopic}</p>
                   <Badge variant="secondary">{cluster.searchVolume}</Badge>
                   <Badge variant="outline">{cluster.difficulty}</Badge>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{cluster.pillarKeyword}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{cluster.pillarKeyword}</p>
                 <ul className="mt-2 space-y-1 text-xs text-muted-foreground">
                   {cluster.supportingTopics.slice(0, 4).map((topic) => (
-                    <li key={topic.keyword}>→ {topic.title}</li>
+                    <li key={topic.keyword}>{topic.title}</li>
                   ))}
                 </ul>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
           {clusters.quickWinKeywords.length > 0 ? (
             <p className="text-xs text-muted-foreground">
               Quick wins: {clusters.quickWinKeywords.join(" · ")}
             </p>
           ) : null}
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" asChild>
               <Link
                 href={`/search/keywords?keyword=${encodeURIComponent(clusters.recommendedNextArticle)}`}
@@ -278,41 +291,42 @@ export function KeywordAnalyzerTab({
               </Link>
             </Button>
             <Button variant="outline" size="sm" asChild>
-              <Link href="/search/keywords">Promote clusters in Ideas</Link>
+              <Link href="/search/keywords">Back to ideas</Link>
             </Button>
           </div>
         </div>
       ) : null}
 
-      {analysis && (
-        <div className="space-y-4">
-          <div className="rounded-xl p-5">
-            <h2 className="font-semibold flex items-center gap-2 mb-2">
-              <Lightbulb className="h-4 w-4 text-primary" /> Top opportunity
-            </h2>
-            <p className="text-sm text-muted-foreground">{analysis.topOpportunity}</p>
-            <p className="text-sm mt-2">{analysis.summary}</p>
+      {analysis ? (
+        <div className="space-y-6">
+          <div>
+            <h2 className="font-semibold tracking-tight">Top opportunity</h2>
+            <p className="mt-2 text-sm text-muted-foreground">{analysis.topOpportunity}</p>
+            <p className="mt-2 max-w-prose text-sm">{analysis.summary}</p>
           </div>
-          {analysis.keywords.map((kw, i) => (
-            <div key={i} className="rounded-xl p-5 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <h3 className="font-semibold">{kw.keyword}</h3>
-                <Badge variant={DIFFICULTY_COLORS[kw.difficulty]}>{kw.difficulty}</Badge>
-              </div>
-              <div className="flex items-center gap-3">
-                <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary rounded-full"
-                    style={{ width: `${kw.aiVisibility}%` }}
-                  />
+          <ul className="divide-y divide-border border-t border-border">
+            {analysis.keywords.map((kw) => (
+              <li key={kw.keyword} className="space-y-3 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h3 className="font-medium">{kw.keyword}</h3>
+                  <Badge variant={DIFFICULTY_COLORS[kw.difficulty]}>{kw.difficulty}</Badge>
                 </div>
-                <span className="text-xs font-medium">AI: {kw.aiVisibility}%</span>
-              </div>
-            </div>
-          ))}
+                <div className="flex items-center gap-3">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${kw.aiVisibility}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-medium tabular-nums">
+                    Visibility {kw.aiVisibility}%
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
         </div>
-      )}
+      ) : null}
     </>
   );
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
-import { FileText, PenLine, RefreshCw, TrendingUp, X } from "lucide-react";
+import { X } from "lucide-react";
 import { explainOpportunityScore } from "@workspace/seo-tools/keywordGapAnalyzer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -93,7 +93,7 @@ export function ArticleIdeasOpportunityList({
   }
 
   return (
-    <div className="space-y-2">
+    <div className="divide-y divide-border border-t border-border">
       {opportunities.map((opp) => {
         const metrics = queryMetrics.get(opp.keyword.toLowerCase());
         const scoreFactors = explainOpportunityScore({
@@ -112,7 +112,7 @@ export function ArticleIdeasOpportunityList({
         return (
           <div
             key={opp.id}
-            className="flex items-start justify-between gap-3 p-3 rounded-lg border border-border"
+            className="flex flex-col gap-3 py-4 sm:flex-row sm:items-start sm:justify-between"
           >
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -132,35 +132,32 @@ export function ArticleIdeasOpportunityList({
                   </Badge>
                 )}
                 <span
-                  className="text-xs text-muted-foreground flex items-center gap-1 cursor-help"
+                  className="flex items-center gap-1 text-xs tabular-nums text-muted-foreground"
                   title={scoreTitle}
                 >
-                  <TrendingUp className="h-3 w-3" />
                   {opp.opportunityScore}
                 </span>
               </div>
-              <p className="text-sm mt-1">{opp.suggestedTitle}</p>
-              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{opp.suggestedAngle}</p>
+              <p className="mt-1 text-sm">{opp.suggestedTitle}</p>
+              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{opp.suggestedAngle}</p>
               {(metrics || opp.estimatedVolume) && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="mt-1 text-xs tabular-nums text-muted-foreground">
                   {metrics
                     ? `${metrics.impressions.toLocaleString()} imp · pos ${metrics.position.toFixed(1)} · CTR ${(metrics.ctr * 100).toFixed(1)}%`
                     : opp.estimatedVolume}
                 </p>
               )}
             </div>
-            <div className="flex flex-col gap-1 shrink-0">
+            <div className="flex flex-wrap items-center gap-1 shrink-0">
               {opp.linkedContentPieceId && activeProjectId != null ? (
                 <Button asChild size="sm">
                   <Link href={contentPiecePath(activeProjectId, opp.linkedContentPieceId)}>
-                    <RefreshCw className="h-3.5 w-3.5 mr-1" />
                     Refresh article
                   </Link>
                 </Button>
               ) : null}
               {onQueueAndGenerate && !opp.linkedContentPieceId ? (
                 <Button size="sm" onClick={() => onQueueAndGenerate(opp.id)}>
-                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
                   Add & generate
                 </Button>
               ) : null}
@@ -173,20 +170,23 @@ export function ArticleIdeasOpportunityList({
                 disabled={briefLoadingId === opp.id}
                 onClick={() => void openBrief(opp)}
               >
-                <FileText className="h-3.5 w-3.5 mr-1" />
                 Brief
               </Button>
               {activeProjectId != null ? (
                 <Button asChild size="sm" variant="ghost">
                   <Link href={contentStudioHref(activeProjectId, opp)}>
-                    <PenLine className="h-3.5 w-3.5 mr-1" />
                     {opp.source === "content_refresh" || opp.source === "rank_drop"
                       ? "Optimize"
                       : "Studio"}
                   </Link>
                 </Button>
               ) : null}
-              <Button size="sm" variant="ghost" onClick={() => onDismiss(opp.id)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                aria-label={`Dismiss ${opp.keyword}`}
+                onClick={() => onDismiss(opp.id)}
+              >
                 <X className="h-4 w-4" />
               </Button>
             </div>

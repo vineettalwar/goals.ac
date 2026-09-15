@@ -4,19 +4,10 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import {
-  BarChart3,
-  Lightbulb,
-  ListPlus,
-  RefreshCw,
-  Target,
-  TrendingUp,
-  X,
-  PenLine,
-} from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 import { useActiveProject } from "@/context/use-active-project";
 import { queryKeys, useGscQueries, useGscSyncStatus, useKeywordIntelligence, useSemrushStatus } from "@/lib/queries";
 import { queueOpportunityErrorMessage } from "@/lib/seo/keyword-opportunity-ui";
@@ -25,7 +16,6 @@ import {
   contentLanguageLabel,
   semrushDatabaseLabel,
 } from "@workspace/content-engine/support/content/content-language";
-import type { KeywordOpportunity } from "@/lib/queries/types";
 import { ArticleIdeasOpportunityList } from "./article-ideas-opportunity-list";
 import { notifyGscSyncResult } from "@/lib/integrations/search/gsc-sync-result";
 
@@ -46,13 +36,10 @@ const IMPORT_SOURCES = new Set(["csv_import", "google_sheets", "manual"]);
 
 const FILTER_CHIPS: { id: SourceFilter; label: string }[] = [
   { id: "all", label: "All" },
-  { id: "semrush", label: "Semrush" },
   { id: "gsc_query", label: "Search Console" },
+  { id: "semrush", label: "Semrush" },
   { id: "imports", label: "Imports" },
-  { id: "csv_import", label: "CSV" },
-  { id: "google_sheets", label: "Sheets" },
-  { id: "manual", label: "Manual" },
-  { id: "ai_analysis", label: "AI" },
+  { id: "ai_analysis", label: "Analysis" },
   { id: "competitor_gap", label: "Competitor" },
   { id: "rank_drop", label: "Rank drop" },
   { id: "content_refresh", label: "Needs refresh" },
@@ -231,153 +218,142 @@ export function ArticleIdeasHub({
     onRefetch?.();
   }
 
+  const gscReady = Boolean(gscStatus?.connected && gscStatus.propertyVerified);
+  const semrushReady = Boolean(semrushStatus?.configured);
+
   return (
-    <div className="space-y-6">
-      {semrushStatus?.databaseMismatch && semrushStatus.configured && (
-        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm">
-          <p>
-            Project language is {semrushStatus.primaryLanguageLabel ?? contentLanguageLabel(semrushStatus.primaryLanguage)} but
-            Semrush is set to {semrushDatabaseLabel(semrushStatus.database ?? "us")}.
-            {" "}
-            <Link href="/integrations/tools" className="font-medium text-primary hover:underline">
-              Update in Integrations → Tools
-            </Link>
-          </p>
-        </div>
-      )}
+    <div className="space-y-8">
+      {semrushStatus?.databaseMismatch && semrushStatus.configured ? (
+        <p className="text-sm text-muted-foreground">
+          Project language is{" "}
+          {semrushStatus.primaryLanguageLabel ?? contentLanguageLabel(semrushStatus.primaryLanguage)}{" "}
+          but Semrush is set to {semrushDatabaseLabel(semrushStatus.database ?? "us")}.{" "}
+          <Link href="/integrations/tools" className="font-medium text-foreground hover:underline">
+            Update the database
+          </Link>
+        </p>
+      ) : null}
 
-      {!semrushStatus?.configured && (
-        <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 text-sm">
-          <p className="font-medium">Working without Semrush</p>
-          <p className="mt-1 text-muted-foreground">
-            Use <span className="font-medium text-foreground">From GSC</span> for ideas backed by real
-            Search Console impressions, or <span className="font-medium text-foreground">AI gaps</span> for
-            AI-estimated clusters — their volume and difficulty are educated guesses, not measured search
-            data, until you{" "}
-            <Link href="/integrations/tools" className="font-medium text-primary hover:underline">
-              connect Semrush
-            </Link>
-            .
-          </p>
-        </div>
-      )}
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="p-4 rounded-xl flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-orange-500" />
-            <div>
-              <p className="text-sm font-medium">Semrush</p>
-              <p className="text-xs text-muted-foreground">
-                {semrushStatus?.configured
-                  ? `Connected · ${semrushDatabaseLabel(semrushStatus.database ?? "us")}`
-                  : "Not configured"}
-              </p>
+      <div className="space-y-4 border-b border-border pb-5">
+        <dl className="grid gap-4 text-sm sm:grid-cols-2 sm:gap-x-10">
+          <div>
+            <dt className="font-medium">Search Console</dt>
+            <dd className="mt-0.5 text-muted-foreground">
+              {gscReady
+                ? `${gscStatus?.queryCount.toLocaleString() ?? 0} queries${
+                    gscStatus?.lastSyncedAt
+                      ? ` · ${new Date(gscStatus.lastSyncedAt).toLocaleDateString("en-US", { timeZone: "UTC" })}`
+                      : ""
+                  }`
+                : "Not connected"}
+            </dd>
+            <div className="mt-2">
+              {gscReady ? (
+                <Button variant="outline" size="sm" onClick={handleGscSync} disabled={syncingGsc}>
+                  {syncingGsc ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
+                  Sync queries
+                </Button>
+              ) : (
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/projects/${projectId}/integrations/search`}>Connect</Link>
+                </Button>
+              )}
             </div>
           </div>
-          {!semrushStatus?.configured && (
-            <Button asChild variant="outline" size="sm">
-              <Link href="/integrations/tools">Connect</Link>
-            </Button>
-          )}
-        </div>
-        <div className="p-4 rounded-xl flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4 text-primary" />
-            <div>
-              <p className="text-sm font-medium">Search Console</p>
-              <p className="text-xs text-muted-foreground">
-                {gscStatus?.connected && gscStatus.propertyVerified
-                  ? `${gscStatus.queryCount.toLocaleString()} queries${
-                      gscStatus.lastSyncedAt
-                        ? ` · synced ${new Date(gscStatus.lastSyncedAt).toLocaleDateString("en-US", { timeZone: "UTC" })}`
-                        : ""
-                    }`
-                  : "Not connected"}
-              </p>
+          <div>
+            <dt className="font-medium">Semrush</dt>
+            <dd className="mt-0.5 text-muted-foreground">
+              {semrushReady
+                ? `Connected · ${semrushDatabaseLabel(semrushStatus?.database ?? "us")}`
+                : "Not configured — volumes from analysis are estimates"}
+            </dd>
+            <div className="mt-2">
+              {semrushReady ? null : (
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/integrations/tools">Connect</Link>
+                </Button>
+              )}
             </div>
           </div>
-          {gscStatus?.connected && gscStatus.propertyVerified ? (
-            <Button variant="outline" size="sm" onClick={handleGscSync} disabled={syncingGsc}>
-              {syncingGsc ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
-              Sync
-            </Button>
-          ) : (
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/projects/${projectId}/integrations/search`}>Connect</Link>
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!semrushStatus?.configured || discovering !== null}
-          title="Uses cached Semrush data when available (24h). Shift+click to force a fresh API scan."
-          onClick={(e) => runDiscovery("semrush", e.shiftKey)}
-        >
-          {discovering === "semrush" ? <Spinner size="sm" /> : <ListPlus className="h-4 w-4" />}
-          Semrush gaps
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => runDiscovery("gsc")}
-          disabled={discovering !== null}
-        >
-          {discovering === "gsc" ? <Spinner size="sm" /> : <ListPlus className="h-4 w-4" />}
-          From GSC
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => runDiscovery("ai")}
-          disabled={discovering !== null}
-        >
-          {discovering === "ai" ? <Spinner size="sm" /> : <Target className="h-4 w-4" />}
-          AI gaps
-        </Button>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {FILTER_CHIPS.map((chip) => (
-          <Button
-            key={chip.id}
-            variant={sourceFilter === chip.id ? "default" : "outline"}
-            size="sm"
-            onClick={() => setSourceFilter(chip.id)}
-          >
-            {chip.label}
+        </dl>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" onClick={() => runDiscovery("gsc")} disabled={discovering !== null}>
+            {discovering === "gsc" ? <Spinner size="sm" /> : null}
+            From Search Console
           </Button>
-        ))}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => runDiscovery("ai")}
+            disabled={discovering !== null}
+          >
+            {discovering === "ai" ? <Spinner size="sm" /> : null}
+            Find gaps
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!semrushReady || discovering !== null}
+            title="Uses cached Semrush data when available (24h). Shift+click to force a fresh API scan."
+            onClick={(e) => runDiscovery("semrush", e.shiftKey)}
+          >
+            {discovering === "semrush" ? <Spinner size="sm" /> : null}
+            Semrush gaps
+          </Button>
+        </div>
       </div>
 
-      <div className="p-6 rounded-xl space-y-4">
-        <h2 className="font-semibold flex items-center gap-2">
-          <Lightbulb className="h-4 w-4 text-primary" />
-          Article ideas
-          <span className="text-sm font-normal text-muted-foreground">({filtered.length})</span>
-        </h2>
+      <div>
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold tracking-tight">
+            Ideas
+            <span className="ml-2 text-sm font-normal tabular-nums text-muted-foreground">
+              {filtered.length}
+            </span>
+          </h2>
+          <div className="flex flex-wrap gap-1" aria-label="Filter ideas by source">
+            {FILTER_CHIPS.map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                aria-pressed={sourceFilter === chip.id}
+                className={cn(
+                  "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                  sourceFilter === chip.id
+                    ? "bg-secondary text-foreground"
+                    : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
+                )}
+                onClick={() => setSourceFilter(chip.id)}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {statusLoading || oppsLoading ? (
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center py-12">
             <Spinner />
           </div>
         ) : filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-4">
-            No ideas yet. Sync Search Console, run discovery above, or import keywords.
+          <p className="mt-6 max-w-prose text-sm text-muted-foreground">
+            Nothing queued yet. Pull queries from Search Console, find topical gaps, or{" "}
+            <Link href="/search/keywords?tab=import" className="font-medium text-foreground hover:underline">
+              import a list
+            </Link>
+            .
           </p>
         ) : (
-          <ArticleIdeasOpportunityList
-            opportunities={filtered}
-            queryMetrics={queryMetrics}
-            activeProjectId={activeProjectId}
-            onQueue={handleQueue}
-            onQueueAndGenerate={handleQueueAndGenerate}
-            onDismiss={handleDismiss}
-          />
+          <div className="mt-4">
+            <ArticleIdeasOpportunityList
+              opportunities={filtered}
+              queryMetrics={queryMetrics}
+              activeProjectId={activeProjectId}
+              onQueue={handleQueue}
+              onQueueAndGenerate={handleQueueAndGenerate}
+              onDismiss={handleDismiss}
+            />
+          </div>
         )}
       </div>
     </div>

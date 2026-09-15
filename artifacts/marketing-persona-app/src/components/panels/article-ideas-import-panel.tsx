@@ -3,18 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
-import {
-  Upload,
-  FileSpreadsheet,
-  Plus,
-  Download,
-  RefreshCw,
-  Link2,
-  Trash2,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { isSiteAdmin } from "@/lib/org/org-access-shared";
 import {
@@ -84,9 +72,9 @@ export function ArticleIdeasImportPanel({
 
   if (!canImport) {
     return (
-      <div className="paper-card p-6 rounded-xl text-sm text-muted-foreground">
-        Article idea imports are available to site admins. Ask your org admin to upload a CSV,
-        connect Google Sheets, or add ideas manually.
+      <div className="paper-card rounded-xl p-6 text-sm text-muted-foreground">
+        Imports are limited to site admins. Ask an org admin to upload a CSV, connect Google
+        Sheets, or add ideas by hand.
       </div>
     );
   }
@@ -218,14 +206,14 @@ export function ArticleIdeasImportPanel({
 
   if (loading) {
     return (
-      <div className="paper-card p-6 rounded-xl flex justify-center">
+      <div className="paper-card flex justify-center rounded-xl p-6">
         <Spinner />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="paper-card divide-y divide-border rounded-xl">
       <ArticleIdeasCsvImportSection
         fileInputRef={fileInputRef}
         preview={preview}
