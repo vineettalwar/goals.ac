@@ -50,10 +50,15 @@ export function ActionQueuePanel() {
           className="border px-3 py-1 text-sm"
           disabled={busy}
           onClick={() => {
-            setBusy(true);
-            void fetch(`/api/website-projects/${projectId}/agent-actions/sync`, { method: "POST" })
-              .then(load)
-              .finally(() => setBusy(false));
+            void (async () => {
+              setBusy(true);
+              try {
+                await fetch(`/api/website-projects/${projectId}/agent-actions/sync`, { method: "POST" });
+                await load();
+              } finally {
+                setBusy(false);
+              }
+            })();
           }}
         >
           Score from GSC

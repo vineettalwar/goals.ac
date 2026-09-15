@@ -26,6 +26,7 @@ type AgentRun = {
   status: string;
   stopReason: string | null;
   trajectory: Array<{
+    at?: string;
     tool?: string;
     decision?: string;
     summary?: string;
@@ -160,8 +161,8 @@ export function ActionQueuePage() {
                       {item.confidence} · effort {item.effort}
                     </p>
                     <ul className="mt-2 list-disc pl-5 text-muted-foreground">
-                      {(item.evidence ?? []).slice(0, 4).map((ev, idx) => (
-                        <li key={idx}>
+                      {(item.evidence ?? []).slice(0, 4).map((ev) => (
+                        <li key={`${ev.source ?? ""}:${ev.detail ?? ""}`}>
                           {ev.source}: {ev.detail}
                         </li>
                       ))}
@@ -213,8 +214,8 @@ export function ActionQueuePage() {
                 </div>
                 {openRun.stopReason ? <p className="mb-2">{openRun.stopReason}</p> : null}
                 <ol className="list-decimal space-y-1 pl-5">
-                  {openRun.trajectory.map((step, idx) => (
-                    <li key={idx}>
+                  {openRun.trajectory.map((step) => (
+                    <li key={`${step.at ?? ""}:${step.tool ?? "stop"}:${step.decision ?? ""}`}>
                       {step.tool ?? "stop"} — {step.decision}
                       {step.summary ? ` (${step.summary})` : ""}
                       {step.evidenceRefs?.some((ref) => ref.verified)
