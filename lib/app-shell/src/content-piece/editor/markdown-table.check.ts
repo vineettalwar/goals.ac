@@ -1,6 +1,6 @@
 /**
  * Runnable check: GFM table lines must not fall through as plain paragraphs.
- * Run: npx tsx lib/app-shell/src/content-piece/content-markdown-table.check.ts
+ * Run: npx tsx lib/app-shell/src/content-piece/editor/markdown-table.check.ts
  */
 import assert from "node:assert/strict";
 
