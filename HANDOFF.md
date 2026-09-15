@@ -1,6 +1,12 @@
 # Session Handoff
 
-## Latest (2026-09-15) — Publish button silent / not in WordPress
+## Latest (2026-09-15) — Modularized `lib/app-shell/src/content-piece`
+
+Flat folder split by domain: `chrome/`, `publish/` (+ existing `publish-destinations/`), `editor/`, `media/`, `quality/`, `brief/`, `view/`. Public barrels unchanged (`@workspace/app-shell/content-piece`, `content-piece-actions`, `publish-destinations`). Publish dialog split into preflights/preview; quality types extracted.
+
+**Verify:** `npx vitest run lib/app-shell/src/content-piece` · `npx tsc --noEmit -p lib/app-shell/tsconfig.json`
+
+## Prior (2026-09-15) — Publish button silent / not in WordPress
 
 Editor **Publish to WordPress** queued a job then exited. The job only claimed `status=ready` (dialog allows **draft**), so it no-op'd. Autopilot default also sent WP `draft`, not live. Next UI used `async: true` with no toast.
 

@@ -31,6 +31,7 @@ import {
   formatQueueSocialSuccessMessage,
   humanizeAuditFromResponse,
   isMetaCmsConnected,
+  isPublishBlockedError,
   publishBlockedErrorFromBody,
   QUEUE_SOCIAL_INSTAGRAM_SKIPPED_MESSAGE,
   queueSocialComposerPayload,
