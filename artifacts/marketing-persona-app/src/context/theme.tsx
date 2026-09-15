@@ -2,12 +2,20 @@
 
 import { useEffect, useState, useCallback, useMemo } from "react";
 import { ThemeContext } from "./theme-context";
+import { isProductAppPath } from "@/lib/theme-path";
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">("light");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    const path = window.location.pathname;
+    if (!isProductAppPath(path)) {
+      document.documentElement.classList.remove("dark");
+      setTheme("light");
+      setMounted(true);
+      return;
+    }
     try {
       const stored = localStorage.getItem("theme");
       if (stored === "light" || stored === "dark") {
@@ -23,6 +31,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!mounted) return;
+    if (!isProductAppPath(window.location.pathname)) {
+      document.documentElement.classList.remove("dark");
+      return;
+    }
     const root = document.documentElement;
     if (theme === "dark") {
       root.classList.add("dark");
