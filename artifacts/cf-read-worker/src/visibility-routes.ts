@@ -8,6 +8,7 @@ import {
 import { and, desc, eq, gte } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
 import { parseVisibilitySettings } from "@workspace/content-engine/support/settings/visibility-settings";
+import { getVisibilityDataMode } from "@workspace/content-engine/strategy/llm-visibility-service";
 import { getAccessibleProject, requireProjectAccess } from "./project-access";
 
 function computeVisibilityScore(citedCount: number, totalCount: number): number {
@@ -157,6 +158,8 @@ export async function handleVisibilityRead(
         cited: llmVisibilitySnapshotsTable.cited,
         checkedAt: llmVisibilitySnapshotsTable.checkedAt,
         competitorsMentioned: llmVisibilitySnapshotsTable.competitorsMentioned,
+        prompt: llmVisibilitySnapshotsTable.prompt,
+        source: llmVisibilitySnapshotsTable.source,
       })
       .from(llmVisibilitySnapshotsTable)
       .where(
@@ -189,6 +192,12 @@ export async function handleVisibilityRead(
   const latestBatch = snapshots.slice(0, prompts.length * 4);
   const citedLatest = latestBatch.filter((s) => s.cited).length;
   const visibilityScore = computeVisibilityScore(citedLatest, latestBatch.length || 1);
+  const configuredMode = await getVisibilityDataMode();
+  const dataMode = latestBatch.some((s) => s.source === "live")
+    ? "live"
+    : latestBatch.length > 0
+      ? "simulated"
+      : configuredMode;
 
   const byEngine = ["chatgpt", "perplexity", "claude", "gemini"].map((engine) => {
     const engineSnaps = latestBatch.filter((s) => s.engine === engine);
@@ -220,6 +229,8 @@ export async function handleVisibilityRead(
       settings: parseVisibilitySettings(projectRow?.visibilitySettings),
       visibilityScore,
       promptCount: prompts.filter((p) => p.isActive).length,
+      dataMode,
+      llmMentionsConfigured: configuredMode === "live",
       trend: aggregateSnapshotsByDate(snapshots),
       byEngine,
       competitorMentions: [...competitorHeatmap.entries()]

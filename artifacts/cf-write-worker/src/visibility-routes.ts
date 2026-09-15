@@ -11,6 +11,7 @@ import { parseVisibilitySettings } from "@workspace/content-engine/support/setti
 import {
   seedPromptsForProject,
   runVisibilityCheckForProject,
+  getVisibilityDataMode,
 } from "@workspace/content-engine/strategy/llm-visibility-service";
 import { getAccessibleProject } from "./project-access";
 
@@ -95,8 +96,16 @@ export async function handleVisibilityWrite(
 
     if (action === "check") {
       try {
-        const result = await runVisibilityCheckForProject(projectId);
-        return withCors(request, Response.json(result));
+        const inserted = await runVisibilityCheckForProject(projectId);
+        const dataMode = await getVisibilityDataMode();
+        return withCors(
+          request,
+          Response.json({
+            inserted,
+            dataMode,
+            label: dataMode === "live" ? "Live" : "Demo / Simulated",
+          }),
+        );
       } catch (err) {
         return withCors(
           request,

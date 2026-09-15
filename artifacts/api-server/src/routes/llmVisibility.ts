@@ -14,6 +14,7 @@ import { parseVisibilitySettings } from "../lib/visibilitySettings";
 import {
   seedPromptsForProject,
   runVisibilityCheckForProject,
+  getVisibilityDataMode,
 } from "../services/llmVisibilityService";
 import {
   computeVisibilityScore,
@@ -151,6 +152,12 @@ router.get("/website-projects/:id/visibility", requireAuth, async (req, res) => 
     const latestBatch = snapshots.slice(0, prompts.length * 4);
     const citedLatest = latestBatch.filter((s) => s.cited).length;
     const visibilityScore = computeVisibilityScore(citedLatest, latestBatch.length || 1);
+    const configuredMode = await getVisibilityDataMode();
+    const dataMode = latestBatch.some((s) => s.source === "live")
+      ? "live"
+      : latestBatch.length > 0
+        ? "simulated"
+        : configuredMode;
 
     const byEngine = ["chatgpt", "perplexity", "claude", "gemini"].map((engine) => {
       const engineSnaps = latestBatch.filter((s) => s.engine === engine);
@@ -174,6 +181,8 @@ router.get("/website-projects/:id/visibility", requireAuth, async (req, res) => 
       settings: parseVisibilitySettings(project.visibilitySettings),
       visibilityScore,
       promptCount: prompts.filter((p) => p.isActive).length,
+      dataMode,
+      llmMentionsConfigured: configuredMode === "live",
       trend: aggregateSnapshotsByDate(snapshots),
       byEngine,
       competitorMentions: [...competitorHeatmap.entries()]
@@ -256,7 +265,8 @@ router.post("/website-projects/:id/visibility/check-now", requireAuth, async (re
     }
 
     const inserted = await runVisibilityCheckForProject(id);
-    res.json({ inserted });
+    const dataMode = await getVisibilityDataMode();
+    res.json({ inserted, dataMode, label: dataMode === "live" ? "Live" : "Demo / Simulated" });
   } catch (err) {
     req.log.error(err, "Failed to run visibility check");
     res.status(502).json({ error: err instanceof Error ? err.message : "Check failed" });
