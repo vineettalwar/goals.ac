@@ -266,6 +266,7 @@ async function generateFromContentItemWithAgents(params: {
         fastMode: options?.agentFastMode,
         userApiKey: options?.userApiKey,
         aiProviderOptions: options?.aiProviderOptions,
+        projectId: resolvedProjectId,
         onAgentProgress: (event) => {
           void patchPieceAgentTeamProgress(stub.id, event);
         },

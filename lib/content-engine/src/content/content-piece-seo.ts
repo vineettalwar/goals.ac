@@ -87,6 +87,9 @@ export type ContentPieceMetadata = {
   requiresReview?: boolean;
   /** True when generated using the agent team pipeline. */
   generatedWithAgents?: boolean;
+  /** Ferret had at least one connected data source (GSC, keywords, competitors, editor URLs). */
+  researchConnected?: boolean;
+  researchNote?: string;
   /** Total time for agent pipeline in ms. */
   agentPipelineDurationMs?: number;
   /** Agents that failed or were skipped during pipeline. */

@@ -400,6 +400,22 @@ describe("assessPublishReadiness - placeholder_token", () => {
   });
 });
 
+describe("assessPublishReadiness - grounded research", () => {
+  it("blocks unattended live publish when Ferret had no connected research", () => {
+    const result = assessPublishReadiness(
+      { ...CLEAN_META, pieceMetadata: { researchConnected: false, researchNote: "no research data connected" } },
+      { requireGroundedResearch: true },
+    );
+    expect(result.ok).toBe(false);
+    expect(result.blockers.map((b) => b.code)).toContain("no_research_data");
+  });
+
+  it("does not block older pieces that never recorded researchConnected", () => {
+    const result = assessPublishReadiness(CLEAN_META, { requireGroundedResearch: true });
+    expect(result.blockers.map((b) => b.code)).not.toContain("no_research_data");
+  });
+});
+
 describe("assessPublishReadiness - structural input shapes", () => {
   it("reads fields folded into pieceMetadata, matching a raw DB row shape", () => {
     const raw: PublishReadinessPiece = {

@@ -124,6 +124,9 @@ export type ContentPieceMetadata = {
   visualSummarySvgDataUri?: string;
   /** Generation angle / editor notes (includes section: and source URLs for news). */
   contentAngle?: string;
+  /** Ferret had a connected data source. Explicit false blocks live auto-publish. */
+  researchConnected?: boolean;
+  researchNote?: string;
   /** WordPress category names to resolve via site-graph at publish. */
   cmsCategories?: string[];
   /** WordPress tag names (falls back to keyword + format when omitted). */
