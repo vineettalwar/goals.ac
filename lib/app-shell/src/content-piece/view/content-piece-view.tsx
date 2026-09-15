@@ -38,8 +38,6 @@ import { SOCIAL_FORMAT_TYPES } from "../../social/types";
 import { TOOLBAR_BTN_PRIMARY } from "../chrome/badges";
 import { ContentPieceBodyEditor } from "../editor/body-editor";
 import { ContentPieceAside } from "./aside";
-import { ContentPieceBodyEditor } from "../editor/body-editor";
-import { ContentPieceAside } from "./aside";
 
 // Re-export public types so index.ts keeps pointing here unchanged.
 export type { ContentPieceLinkProps, ContentPieceSavePayload };
