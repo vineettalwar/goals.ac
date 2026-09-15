@@ -290,6 +290,44 @@ describe("publishToWordPress — excerpt is set from meta description (HIGH-1)",
 
     const sent = JSON.parse(fetchMock.mock.calls[0]![1].body as string) as Record<string, unknown>;
     expect(sent.excerpt).toBe("My desc");
+    expect(sent.meta).toBeUndefined();
+  });
+});
+
+describe("publishToWordPress — unregistered REST fields (REST API connection)", () => {
+  it("retries without meta / aioseo_meta_data when WordPress returns rest_invalid_param", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse(
+          { code: "rest_invalid_param", message: "Invalid parameter(s): meta" },
+          { ok: false, status: 400 },
+        ),
+      )
+      .mockResolvedValueOnce(jsonResponse({ id: 8, link: "https://example.test/?p=8" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await publishToWordPress(
+      credentials,
+      "Title",
+      "body",
+      "publish",
+      "desc",
+      undefined,
+      { _yoast_wpseo_metadesc: "desc" },
+      { aioseoMetaData: { title: "Title" } },
+    );
+
+    expect(result.postId).toBe(8);
+    expect(result.metaWarning).toMatch(/rejected/i);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const first = JSON.parse(fetchMock.mock.calls[0]![1].body as string) as Record<string, unknown>;
+    const second = JSON.parse(fetchMock.mock.calls[1]![1].body as string) as Record<string, unknown>;
+    expect(first.meta).toEqual({ _yoast_wpseo_metadesc: "desc" });
+    expect(first.aioseo_meta_data).toEqual({ title: "Title" });
+    expect(second.meta).toBeUndefined();
+    expect(second.aioseo_meta_data).toBeUndefined();
+    expect(second.excerpt).toBe("desc");
   });
 });
 

@@ -48,8 +48,8 @@ export function ProjectDetailPublishingTab({ ctx }: { ctx: ProjectDetailCtx }) {
                           )}
                         </CardTitle>
                         <CardDescription>
-                          Automatically generate the next due article from your content strategy on a daily or weekly schedule.
-                          Connect a CMS below to publish drafts or go live.
+                          Writes the next due calendar topic, or queues one keyword / cold-start topic for today when the calendar is empty.
+                          Connect a CMS below to publish drafts or go live. Review gates still apply.
                         </CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-5">
@@ -69,7 +69,7 @@ export function ProjectDetailPublishingTab({ ctx }: { ctx: ProjectDetailCtx }) {
                           <div>
                             <p className="text-sm font-medium">Enable autopilot</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              Picks the next due topic from your content strategy calendar
+                              Picks the next due calendar topic, or one auto-queued topic for today
                             </p>
                           </div>
                           <Switch
@@ -115,6 +115,15 @@ export function ProjectDetailPublishingTab({ ctx }: { ctx: ProjectDetailCtx }) {
                               </SelectContent>
                             </Select>
                           </div>
+                          {autopilotSettings.publishMode === "live" &&
+                            !cmsIntegrations?.wordpress &&
+                            !cmsIntegrations?.shopify &&
+                            !cmsIntegrations?.webflow &&
+                            !cmsIntegrations?.wix && (
+                            <p className="text-sm text-amber-800 dark:text-amber-200 sm:col-span-2">
+                              Connect WordPress, Shopify, Webflow, or Wix before live auto-publish. You can still save these settings.
+                            </p>
+                          )}
                           <div className="space-y-2">
                             <Label>Timezone</Label>
                             <Select
@@ -163,7 +172,7 @@ export function ProjectDetailPublishingTab({ ctx }: { ctx: ProjectDetailCtx }) {
                           <div>
                             <p className="text-sm font-medium">Auto-queue keyword opportunities</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                              High-score keyword gaps added to your content strategy calendar
+                              When the calendar has nothing due, queue one high-score keyword for today
                             </p>
                           </div>
                           <Switch

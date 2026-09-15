@@ -57,25 +57,15 @@ export async function renderContentForPlatform(input: RenderContentInput): Promi
   const outputMode = resolveRenderOutputMode(input, entitlements);
   const editorMode = (input.platform === "wordpress" ? outputMode : input.editorMode) as WordPressEditorMode | undefined;
 
-  let renderResult: RenderResult;
-
-  if (input.platform === "wordpress" && input.creds) {
-    const prepared = await prepareWordPressPayload(content, input.creds, {
-      outputMode,
-      editorMode,
-      entitlements,
-      status: input.status,
-    });
-    renderResult = prepared.render;
-  } else {
-    renderResult = await adapter.render(content, {
-      outputMode,
-      editorMode,
-      entitlements,
-      status: input.status,
-      creds: input.creds,
-    });
-  }
+  // Preview is local-only. prepareWordPressPayload uploads media to the live
+  // site — that belongs on publish, not on "Preview CMS output".
+  const renderResult = await adapter.render(content, {
+    outputMode,
+    editorMode,
+    entitlements,
+    status: input.status,
+    creds: input.creds,
+  });
 
   return {
     platform: input.platform,

@@ -1,5 +1,5 @@
-import { resolvePrimaryBlogDestination } from "./publish-destination";
-import type { CmsIntegrationCredentials } from "./cms-integrations";
+import type { CmsIntegrationCredentials } from "./cms-integration-types";
+import { resolvePrimaryBlogDestination } from "./cms-platform-keys";
 
 const SOCIAL_FORMAT_TO_PLATFORM: Record<string, string> = {
   linkedin_post: "linkedin",

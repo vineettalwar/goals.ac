@@ -37,12 +37,8 @@ describe("mapSeoToWordPressRestMeta", () => {
     expect(mapSeoToWordPressRestMeta(seo, "none")).toEqual({});
   });
 
-  it("falls back to Yoast + Rank Math when detection is unknown", () => {
-    const meta = mapSeoToWordPressRestMeta(seo);
-    expect(meta._yoast_wpseo_title).toBe("Title");
-    expect(meta.rank_math_title).toBe("Title");
-    expect(meta._aioseo_title).toBeUndefined();
-    expect(meta._seopress_titles_title).toBeUndefined();
+  it("sends no plugin meta when detection is unknown (REST rejects unregistered keys)", () => {
+    expect(mapSeoToWordPressRestMeta(seo)).toEqual({});
   });
 });
 

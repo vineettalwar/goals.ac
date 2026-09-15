@@ -5,7 +5,14 @@ import {
   type CmsIntegrationCredentials,
   type EspPublishPlatform,
   ESP_PUBLISH_PLATFORMS,
-} from "./cms-integrations";
+  resolvePrimaryBlogDestination,
+} from "./cms-platform-keys";
+
+export {
+  type BlogDestinationId,
+  resolvePrimaryBlogDestination,
+  resolvePrimaryEspDestination,
+} from "./cms-platform-keys";
 import {
   type PublishableContentPiece,
 } from "./cms-publish";
@@ -16,43 +23,6 @@ import type { PublishEntitlements } from "./publish-entitlements";
 // content-engine's own wider ContentPieceMetadata, so the review gate below reads
 // through that type instead.
 import type { ContentPieceMetadata as GeneratedPieceMetadata } from "../../content/content-piece-seo";
-
-export type BlogDestinationId =
-  | "wordpress"
-  | "notion"
-  | "webflow"
-  | "ghost"
-  | "webhook"
-  | "shopify"
-  | "drupal"
-  | "joomla"
-  | "typo3"
-  | "wix"
-  | "framer"
-  | "squarespace"
-  | "contentful"
-  | "sanity"
-  | "strapi"
-  | "hubspot";
-
-const BLOG_DESTINATION_PRIORITY: BlogDestinationId[] = [
-  "wordpress",
-  "ghost",
-  "shopify",
-  "drupal",
-  "joomla",
-  "typo3",
-  "hubspot",
-  "wix",
-  "framer",
-  "squarespace",
-  "contentful",
-  "sanity",
-  "strapi",
-  "notion",
-  "webflow",
-  "webhook",
-];
 
 const ADAPTER_PLATFORMS = new Set([
   "wordpress",
@@ -72,40 +42,6 @@ const ADAPTER_PLATFORMS = new Set([
   "squarespace",
   "hubspot",
 ]);
-
-function hasBlogDestination(
-  creds: CmsIntegrationCredentials,
-  platform: BlogDestinationId,
-): boolean {
-  return Boolean(creds[platform as keyof CmsIntegrationCredentials]);
-}
-
-export function resolvePrimaryBlogDestination(
-  creds: CmsIntegrationCredentials,
-  preferred?: string | null,
-): BlogDestinationId | null {
-  if (preferred && hasBlogDestination(creds, preferred as BlogDestinationId)) {
-    return preferred as BlogDestinationId;
-  }
-  for (const platform of BLOG_DESTINATION_PRIORITY) {
-    if (hasBlogDestination(creds, platform)) return platform;
-  }
-  return null;
-}
-
-export function resolvePrimaryEspDestination(
-  creds: CmsIntegrationCredentials,
-  preferred?: string | null,
-): EspPublishPlatform | null {
-  if (preferred && ESP_PUBLISH_PLATFORMS.includes(preferred as EspPublishPlatform)) {
-    const platform = preferred as EspPublishPlatform;
-    if (creds[platform]) return platform;
-  }
-  for (const platform of ESP_PUBLISH_PLATFORMS) {
-    if (creds[platform]) return platform;
-  }
-  return null;
-}
 
 export interface PublishDestinationOptions {
   status?: "draft" | "publish" | "published";

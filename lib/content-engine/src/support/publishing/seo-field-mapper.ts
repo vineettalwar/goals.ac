@@ -116,11 +116,11 @@ export function mapSeoToWordPressRestMeta(
       return seopressMeta(seo);
     case "aioseo":
     case "none":
-      return {};
     default:
-      // Unknown install — Yoast + Rank Math cover most sites without writing
-      // dead AIOSEO/SEOPress keys. Prefer a health check when available.
-      return { ...yoastMeta(seo), ...rankMathMeta(seo) };
+      // Unknown / no plugin: do not guess Yoast+Rank Math keys. Core REST
+      // rejects unregistered `meta` with 400, which is the REST-API connection
+      // path (health never reports seoPlugin). Excerpt carries the description.
+      return {};
   }
 }
 

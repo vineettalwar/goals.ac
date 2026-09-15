@@ -81,8 +81,8 @@ export const wordpressAdapter: CmsAdapter = {
     warnings.push(...rendered.warnings);
 
     const seo = resolveSeoFromCanonical(content);
-    // Render has no live connection — unknown install maps to Yoast+Rank Math.
-    // Publish re-maps with creds.wordpress.seoPlugin when health has run.
+    // Render has no live connection — REST `meta` is omitted unless health
+    // later reports a plugin. Publish remaps with creds.wordpress.seoPlugin.
     const meta = mapSeoToWordPressRestMeta(seo);
 
     const payload: PlatformPayload = {
@@ -95,16 +95,21 @@ export const wordpressAdapter: CmsAdapter = {
       tags: contentTagsFromCanonical(content),
     };
 
+    // Gutenberg/Divi used to omit previewHtml, so the dialog only showed
+    // `{ contentLength }` — looks like Preview CMS output did nothing.
     const previewHtml =
-      editorMode === "classic" || editorMode === "elementor"
-        ? rendered.content
-        : undefined;
+      editorMode === "divi" ? await markdownToHtml(content.markdown) : rendered.content;
 
     return {
       payload,
       warnings,
       previewHtml,
-      previewJson: { editorMode, title: payload.title, contentLength: rendered.content.length },
+      previewJson: {
+        editorMode,
+        title: payload.title,
+        content: rendered.content,
+        ...(rendered.elementorData ? { elementorData: rendered.elementorData } : {}),
+      },
     };
   },
 
@@ -175,10 +180,7 @@ export const wordpressAdapter: CmsAdapter = {
     }
 
     const wpMeta = mapSeoToWordPressRestMeta(seo, detected);
-    const aioseoMetaData =
-      detected === "aioseo" || detected === undefined
-        ? mapSeoToAioseoRestField(seo)
-        : undefined;
+    const aioseoMetaData = detected === "aioseo" ? mapSeoToAioseoRestField(seo) : undefined;
     const result = await publishToWordPress(
       {
         siteUrl: creds.wordpress.siteUrl,

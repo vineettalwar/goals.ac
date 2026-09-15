@@ -104,11 +104,9 @@ function metaKeyPersisted(sentValue: string, echoed: unknown): boolean {
 }
 
 /**
- * Core REST only persists meta keys a plugin (or mu-plugin) registered with
- * `show_in_rest`. Unregistered keys are accepted (no error) and silently
- * dropped. The only reliable way to know whether our SEO meta actually landed
- * is to check what the API echoed back in its response against what we sent —
- * so callers can surface a real warning instead of assuming success.
+ * Core REST only persists meta keys a plugin registered with `show_in_rest`.
+ * Unregistered keys fail the request with 400 rest_invalid_param (we retry
+ * without them). When keys are registered, compare echoed `meta` to what we sent.
  */
 function detectMetaWarning(
   sentMeta: Record<string, string> | undefined,
@@ -173,12 +171,10 @@ export async function publishToWordPress(
   };
   if (categoryIds?.length) body.categories = categoryIds;
   if (options?.featuredMediaId) body.featured_media = options.featuredMediaId;
-  const sentMeta =
-    meta && Object.keys(meta).length > 0
-      ? meta
-      : metaDescription && !options?.aioseoMetaData
-        ? { _yoast_wpseo_metadesc: metaDescription }
-        : undefined;
+  // Only send `meta` / `aioseo_meta_data` when the caller knows those keys are
+  // registered. Core REST returns 400 `rest_invalid_param` for unregistered
+  // keys (it does not silently drop them). Excerpt below is the portable field.
+  const sentMeta = meta && Object.keys(meta).length > 0 ? meta : undefined;
   if (sentMeta) body.meta = sentMeta;
   if (options?.aioseoMetaData && Object.keys(options.aioseoMetaData).length > 0) {
     body.aioseo_meta_data = options.aioseoMetaData;
@@ -213,36 +209,62 @@ export async function publishToWordPress(
   }
 
   const url = updateId ? `${apiBase}/posts/${updateId}` : `${apiBase}/posts`;
-  let res: Response;
-  try {
-    res = await connectorFetch(url, {
-      method: updateId ? "PUT" : "POST",
-      headers: {
-        Authorization: makeAuthHeader(credentials.username, credentials.appPassword),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-  } catch (err) {
-    if (err instanceof Error && err.name === "TimeoutError") {
-      throw new Error(
-        "WordPress did not respond in time. The post may or may not have been created — " +
-          "check the site before retrying to avoid a duplicate.",
-      );
+  const method = updateId ? "PUT" : "POST";
+  const headers = {
+    Authorization: makeAuthHeader(credentials.username, credentials.appPassword),
+    "Content-Type": "application/json",
+  };
+
+  async function send(payload: Record<string, unknown>): Promise<Response> {
+    try {
+      return await connectorFetch(url, { method, headers, body: JSON.stringify(payload) });
+    } catch (err) {
+      if (err instanceof Error && err.name === "TimeoutError") {
+        throw new Error(
+          "WordPress did not respond in time. The post may or may not have been created — " +
+            "check the site before retrying to avoid a duplicate.",
+        );
+      }
+      throw err;
     }
-    throw err;
+  }
+
+  let res = await send(body);
+  let strippedSeoFields = false;
+  if (!res.ok && res.status === 400 && (body.meta || body.aioseo_meta_data)) {
+    const data = (await res.json().catch(() => ({}))) as { code?: string; message?: string };
+    if (isUnregisteredRestFieldError(data)) {
+      delete body.meta;
+      delete body.aioseo_meta_data;
+      strippedSeoFields = true;
+      res = await send(body);
+    } else {
+      throwWordPressHttpError(res.status, data);
+    }
   }
 
   if (!res.ok) {
     const data = (await res.json().catch(() => ({}))) as { message?: string };
-    if (res.status === 401) throw new Error("WordPress authentication failed. Check your application password.");
-    if (res.status === 403) throw new Error("WordPress user does not have permission to create posts.");
-    throw new Error(data.message ?? `WordPress API error: ${res.status}`);
+    throwWordPressHttpError(res.status, data);
   }
 
   const post = (await res.json()) as { id: number; link: string; meta?: unknown };
-  const metaWarning = detectMetaWarning(sentMeta, post.meta);
+  const metaWarning = strippedSeoFields
+    ? "SEO plugin fields were rejected by WordPress REST and omitted. The post was created with title, content, and excerpt only."
+    : detectMetaWarning(sentMeta, post.meta);
   return { postId: post.id, url: post.link, ...(metaWarning ? { metaWarning } : {}) };
+}
+
+function isUnregisteredRestFieldError(data: { code?: string; message?: string }): boolean {
+  if (data.code === "rest_invalid_param") return true;
+  const message = data.message ?? "";
+  return /invalid parameter/i.test(message);
+}
+
+function throwWordPressHttpError(status: number, data: { message?: string }): never {
+  if (status === 401) throw new Error("WordPress authentication failed. Check your application password.");
+  if (status === 403) throw new Error("WordPress user does not have permission to create posts.");
+  throw new Error(data.message ?? `WordPress API error: ${status}`);
 }
 
 /** Last path segment of a public post URL, used as the WP REST `slug` query. */
