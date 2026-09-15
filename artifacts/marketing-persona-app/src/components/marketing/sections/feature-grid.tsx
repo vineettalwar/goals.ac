@@ -11,7 +11,7 @@ export type FeatureItem = {
 type FeatureGridProps = {
   items: FeatureItem[];
   columns?: 2 | 3;
-  surface?: MarketingSurface;
+  surface?: "paper" | "glass";
 };
 
 export function FeatureGrid({ items }: FeatureGridProps) {
