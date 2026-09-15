@@ -8,7 +8,7 @@ import type { ContentFormatType } from "./content-studio-format-data";
 import type { ContentPieceRow } from "./content-studio-utils";
 import { extractSections } from "./create-content-modal-logic";
 import type React from "react";
-import type { AgentProgressEvent } from "@workspace/content-engine";
+import type { AgentProgressEvent } from "@workspace/content-engine/agents/types";
 
 export type FallbackParams = {
   selectedFormat: ContentFormatType | null;

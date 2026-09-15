@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -38,6 +39,7 @@ import { getConnectedDestinationsForFormat } from "@/lib/projects/publishing-des
 import { cn } from "@/lib/utils";
 import { hostFromUrl } from "@workspace/content-engine/support/competitor/competitor-url";
 import { AgentTeamProgress } from "@/components/content/agents";
+import { newsNeedsSourceUrl } from "./create-content-modal-logic";
 import type { WizardStepId } from "./create-content-modal-types";
 import type { CreateContentWizardProps } from "./create-content-wizard-props";
 export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentStep: WizardStepId; wizard: CreateContentWizardProps }) {
@@ -59,42 +61,71 @@ export function CreateContentCreateLateSteps({ currentStep, wizard }: { currentS
     <>
               {currentStep === "angle" && (
                 <WizardStep
-                  title="Add section, notes, and sources"
-                  subtitle="News requires at least one source URL."
+                  title="Anything else for this draft?"
+                  subtitle={
+                    newsNeedsSourceUrl(contentSection, sourceUrlsInput)
+                      ? "News needs a source URL so claims can be cited."
+                      : "Optional — skip if the keyword is enough."
+                  }
                 >
-                  <div className="mt-6 space-y-3">
-                    <label className="text-sm font-medium">Section</label>
-                    <Input
-                      list="suggested-sections"
-                      placeholder="News"
-                      value={contentSection}
-                      onChange={(e) => setContentSection(e.target.value)}
-                    />
-                    <datalist id="suggested-sections">
-                      {suggestedSections.map((section) => (
-                        <option key={section} value={section} />
-                      ))}
-                    </datalist>
+                  <div className="mt-8 space-y-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="create-content-section">Section</Label>
+                      <p className="text-sm text-muted-foreground">
+                        Site category this will publish under.
+                      </p>
+                      <Input
+                        id="create-content-section"
+                        autoFocus
+                        list="suggested-sections"
+                        placeholder="Guides, Features, News…"
+                        value={contentSection}
+                        onChange={(e) => setContentSection(e.target.value)}
+                      />
+                      <datalist id="suggested-sections">
+                        {suggestedSections.map((section) => (
+                          <option key={section} value={section} />
+                        ))}
+                      </datalist>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="create-content-notes">Notes</Label>
+                      <Textarea
+                        id="create-content-notes"
+                        rows={4}
+                        placeholder="Audience, tone, claim to prove…"
+                        value={editorNotes || angleHint}
+                        onChange={(e) => {
+                          setEditorNotes(e.target.value);
+                          setAngleHint(e.target.value);
+                        }}
+                        className="min-h-30 resize-none"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="create-content-sources">Source URLs</Label>
+                      <p className="text-sm text-muted-foreground">
+                        One URL per line, starting with https://.
+                      </p>
+                      <Textarea
+                        id="create-content-sources"
+                        rows={3}
+                        placeholder="https://example.com/report"
+                        value={sourceUrlsInput}
+                        onChange={(e) => setSourceUrlsInput(e.target.value)}
+                        className="min-h-25 resize-none"
+                      />
+                    </div>
                   </div>
-                  <Textarea
-                    autoFocus
-                    rows={4}
-                    placeholder="Editor notes: audience, tone, claim focus..."
-                    value={editorNotes || angleHint}
-                    onChange={(e) => {
-                      setEditorNotes(e.target.value);
-                      setAngleHint(e.target.value);
-                    }}
-                    className="mt-4 min-h-30 resize-none text-lg"
+                  <StepActions
+                    onContinue={handleContinue}
+                    onSkip={
+                      newsNeedsSourceUrl(contentSection, sourceUrlsInput)
+                        ? undefined
+                        : handleContinue
+                    }
+                    continueDisabled={newsNeedsSourceUrl(contentSection, sourceUrlsInput)}
                   />
-                  <Textarea
-                    rows={3}
-                    placeholder="Source URLs (one per line or comma-separated)"
-                    value={sourceUrlsInput}
-                    onChange={(e) => setSourceUrlsInput(e.target.value)}
-                    className="mt-4 min-h-25 resize-none text-sm"
-                  />
-                  <StepActions onContinue={handleContinue} onSkip={handleContinue} />
                 </WizardStep>
               )}
 

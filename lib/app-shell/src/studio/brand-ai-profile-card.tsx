@@ -73,6 +73,25 @@ function formatLastScannedAt(iso: string | undefined): string | null {
   });
 }
 
+export function brandVoiceHubFacts(profile: BrandProfileSummary) {
+  const scanning = profile.scrapeStatus === "pending";
+  const memory = profile.brandMemory;
+  const discoveryLabel = formatBrandScanDiscoverySummary(profile.discoveryMeta, profile.pageCount);
+  const lastScannedLabel = formatLastScannedAt(memory?.lastScannedAt);
+  const scanSources =
+    (profile.scanSources?.length ?? 0) > 0
+      ? profile.scanSources!
+      : (memory?.scanSources ?? []);
+  const traits = (memory?.voiceTraits ?? []).filter(Boolean).slice(0, 8);
+  const metaBits = [
+    scanning ? "Scanning website…" : null,
+    memory?.confidence?.summary ? `${memory.confidence.summary} confidence` : null,
+    discoveryLabel ? `via ${discoveryLabel}` : null,
+    lastScannedLabel ? `Last scanned ${lastScannedLabel}` : null,
+  ].filter((bit): bit is string => Boolean(bit));
+  return { scanning, metaBits, traits, scanSources };
+}
+
 export function BrandAiProfileCard({
   profile,
   loading = false,
@@ -84,56 +103,39 @@ export function BrandAiProfileCard({
 }) {
   if (loading) {
     return (
-      <div className={cn("animate-pulse border-b border-border pb-8", className)}>
-        <div className="h-4 w-32 rounded bg-muted" />
-        <div className="mt-4 h-3 w-full max-w-2xl rounded bg-muted" />
-        <div className="mt-2 h-3 w-2/3 max-w-xl rounded bg-muted" />
+      <div className={cn("animate-pulse border-b border-border pb-6", className)}>
+        <div className="h-4 w-28 rounded bg-muted" />
+        <div className="mt-3 h-3 w-64 max-w-full rounded bg-muted" />
       </div>
     );
   }
 
   if (!profile) return null;
 
-  const scanning = profile.scrapeStatus === "pending";
-  const memory = profile.brandMemory;
-  const discoveryLabel = formatBrandScanDiscoverySummary(profile.discoveryMeta, profile.pageCount);
-  const lastScannedLabel = formatLastScannedAt(memory?.lastScannedAt);
-  const scanSources =
-    (profile.scanSources?.length ?? 0) > 0
-      ? profile.scanSources!
-      : (memory?.scanSources ?? []);
-  const summary =
-    memory?.summary ||
-    profile.voiceTone ||
-    "Voice and focus topics come from your site scan.";
-  const metaBits = [
-    scanning ? "Scanning website…" : null,
-    memory?.confidence?.summary ? `${memory.confidence.summary} confidence` : null,
-    discoveryLabel ? `via ${discoveryLabel}` : null,
-    lastScannedLabel ? `Last scanned ${lastScannedLabel}` : null,
-  ].filter(Boolean);
+  const { metaBits, traits, scanSources } = brandVoiceHubFacts(profile);
 
   return (
-    <div className={cn("border-b border-border pb-8", className)}>
+    <div className={cn("border-b border-border pb-6", className)}>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
         <h2 className="text-sm font-semibold text-foreground">Brand voice</h2>
         {metaBits.length > 0 ? (
           <p className="text-xs text-muted-foreground">{metaBits.join(" · ")}</p>
         ) : null}
       </div>
-      <p className="mt-3 max-w-3xl text-sm leading-relaxed text-muted-foreground">{summary}</p>
-      {(memory?.voiceTraits?.length ?? 0) > 0 ? (
-        <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
-          Traits: {memory!.voiceTraits!.join(" · ")}
-        </p>
-      ) : null}
-      {(profile.primaryKeywords?.length ?? 0) > 0 ? (
-        <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">
-          Focus: {profile.primaryKeywords!.slice(0, 6).join(", ")}
-        </p>
+      {traits.length > 0 ? (
+        <ul className="mt-3 flex flex-wrap gap-1.5">
+          {traits.map((trait) => (
+            <li
+              key={trait}
+              className="rounded-full border border-border bg-secondary px-2 py-0.5 text-xs text-foreground"
+            >
+              {trait}
+            </li>
+          ))}
+        </ul>
       ) : null}
       {scanSources.length > 0 ? (
-        <details className="mt-4">
+        <details className="mt-3">
           <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
             Pages scanned ({scanSources.length})
           </summary>

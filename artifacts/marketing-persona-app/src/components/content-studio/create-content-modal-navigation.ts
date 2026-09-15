@@ -4,7 +4,7 @@ import { useCallback, useEffect, type Dispatch, type MutableRefObject, type SetS
 import { toast } from "sonner";
 import type { ContentFormatType } from "./content-studio-format-data";
 import type { WizardStepId } from "./create-content-modal-types";
-import { STEPS_WITH_ENTER_CONTINUE, parseSourceUrls } from "./create-content-modal-logic";
+import { STEPS_WITH_ENTER_CONTINUE, newsNeedsSourceUrl } from "./create-content-modal-logic";
 
 export function useCreateContentContinue(opts: {
   currentStep: WizardStepId;
@@ -69,15 +69,16 @@ export function useCreateContentContinue(opts: {
       goNextStable();
       return;
     }
+    if (currentStep === "angle" && newsNeedsSourceUrl(contentSection, sourceUrlsInput)) {
+      toast.error("Add at least one source URL for News");
+      return;
+    }
     if (currentStep === "review") {
       if (!selectedFormat || !keyword.trim()) {
         toast.error("Enter a target keyword");
         return;
       }
-      if (
-        contentSection.trim().toLowerCase() === "news" &&
-        parseSourceUrls(sourceUrlsInput).length === 0
-      ) {
+      if (newsNeedsSourceUrl(contentSection, sourceUrlsInput)) {
         toast.error("Add at least one source URL for News");
         return;
       }

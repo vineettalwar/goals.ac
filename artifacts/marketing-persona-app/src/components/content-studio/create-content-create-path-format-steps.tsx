@@ -22,7 +22,7 @@ export function CreateContentCreatePathFormatSteps({
           title="What would you like to create?"
           subtitle="Express is format + keyword. Full adds competitors, angle, and schedule."
         >
-          <div className="grid sm:grid-cols-2 gap-4 mt-10">
+          <div className="mt-10 divide-y divide-border border-t border-border">
             <OptionCard
               icon={<Zap className="w-6 h-6" />}
               title="Express create"

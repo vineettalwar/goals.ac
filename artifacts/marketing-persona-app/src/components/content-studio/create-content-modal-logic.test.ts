@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildStepSequence } from "./create-content-modal-logic";
+import { buildStepSequence, newsNeedsSourceUrl } from "./create-content-modal-logic";
 
 describe("buildStepSequence", () => {
   it("express create is format → keyword → review → generating", () => {
@@ -25,5 +25,14 @@ describe("buildStepSequence", () => {
     expect(steps).toContain("competitors");
     expect(steps).toContain("angle");
     expect(steps).toContain("planned-date");
+  });
+});
+
+describe("newsNeedsSourceUrl", () => {
+  it("requires a source only for News without http(s) URLs", () => {
+    expect(newsNeedsSourceUrl("News", "")).toBe(true);
+    expect(newsNeedsSourceUrl(" news ", "not-a-url")).toBe(true);
+    expect(newsNeedsSourceUrl("News", "https://example.com/a")).toBe(false);
+    expect(newsNeedsSourceUrl("Guides", "")).toBe(false);
   });
 });

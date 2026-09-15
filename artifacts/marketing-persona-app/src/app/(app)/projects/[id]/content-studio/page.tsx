@@ -98,6 +98,7 @@ export default async function ContentStudioPage({
         initialBriefDraft={initialBriefDraft}
         initialCreateOpen={initialCreateOpen}
         initialOptimize={initialOptimize}
+        initialTab={urlParams.get("tab") === "ideas" ? "ideas" : "hub"}
       />
     </Suspense>
   );

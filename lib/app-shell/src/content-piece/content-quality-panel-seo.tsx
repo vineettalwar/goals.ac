@@ -281,7 +281,7 @@ export function ArticleQualityPanelSeo({
   };
 
   return (
-    <div className="paper-card space-y-6 rounded-xl p-6">
+    <div className="space-y-6 rounded-xl p-6">
       <div className="flex items-center gap-4">
         <ScoreRing score={displayTotal} size="md" />
         <div className="min-w-0 space-y-1.5">
@@ -333,7 +333,7 @@ export function ArticleQualityPanelSeo({
         </div>
       </div>
       <div className="space-y-3.5">
-        <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <p className="text-xs text-muted-foreground">
           Editorial (live draft)
         </p>
         <ul className="space-y-3.5">
@@ -361,7 +361,7 @@ export function ArticleQualityPanelSeo({
 
       {dual?.serp.breakdown?.length ? (
         <div className="space-y-3.5 border-t border-border pt-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             SERP / H2 (last saved)
           </p>
           <ul className="space-y-3.5">
@@ -393,7 +393,7 @@ export function ArticleQualityPanelSeo({
 
       {coverage.totalCount > 0 ? (
         <div className="space-y-3.5 border-t border-border pt-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Coverage checklist{" "}
             <span className="font-normal italic tracking-normal text-muted-foreground/70">
               — not Surfer NLP
@@ -456,7 +456,7 @@ export function ArticleQualityPanelSeo({
 
       {insertableLinks.length > 0 ? (
         <div className="space-y-3.5 border-t border-border pt-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Internal links
           </p>
           <p className="text-sm leading-relaxed text-muted-foreground">
@@ -530,7 +530,7 @@ export function ArticleQualityPanelSeo({
 
       {dual?.competitorDiff && dual.competitorDiff.length > 0 ? (
         <div className="space-y-3.5 border-t border-border pt-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             Competitor topics (top SERP)
           </p>
           <ul className="space-y-3">
@@ -580,7 +580,7 @@ export function ArticleQualityPanelSeo({
 
       {showSeoMetadata ? (
         <div className="space-y-4 border-t border-border pt-5">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             SEO metadata
           </p>
           {displaySeoTitle ? (

@@ -65,7 +65,7 @@ export function ContentPieceFeaturedImage({
   if (featuredImage) {
     const imageUrl = featuredImage.publishedUrl ?? featuredImage.remoteUrl;
     return (
-      <div className="paper-card flex flex-col gap-4 rounded-xl p-4 sm:flex-row">
+      <div className="flex flex-col gap-4 rounded-xl p-4 sm:flex-row">
         <img
           src={imageUrl}
           alt={featuredImage.alt}
@@ -92,7 +92,7 @@ export function ContentPieceFeaturedImage({
 
   if (fallbackUrl) {
     return (
-      <div className="paper-card flex flex-col gap-4 rounded-xl p-4 sm:flex-row">
+      <div className="flex flex-col gap-4 rounded-xl p-4 sm:flex-row">
         <img
           src={fallbackUrl}
           alt="Featured"
@@ -111,7 +111,7 @@ export function ContentPieceFeaturedImage({
   }
 
   return (
-    <div className="paper-card space-y-3 rounded-xl p-4">
+    <div className="space-y-3 rounded-xl p-4">
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
           <ImageIcon className="h-5 w-5 text-muted-foreground" aria-hidden />

@@ -19,6 +19,7 @@ import {
   socialComposerPath,
   socialHubQueuePath,
 } from "@workspace/app-shell";
+import { APP_SHELL_PAGE, APP_SHELL_PAGE_WIDE } from "@workspace/app-shell/shell-constants";
 import { useAuth } from "@/context/auth";
 import { useContentPieceData } from "@/hooks/use-content-piece-data";
 import { apiFetch } from "@/lib/api";
@@ -132,7 +133,7 @@ export function ContentPiecePage() {
 
   if (error) {
     return (
-      <div className="max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className={APP_SHELL_PAGE}>
         <p className="mb-4 text-sm text-red-700">{error}</p>
         <Link to="/projects" className="text-sm font-medium text-primary hover:underline">
           ← Content studio
@@ -211,7 +212,7 @@ export function ContentPiecePage() {
     <>
       {queueSocialFlash ? (
         <div
-          className={`mx-auto max-w-7xl px-4 pt-4 sm:px-6 lg:px-8 ${
+          className={`${APP_SHELL_PAGE_WIDE} py-0! pt-4 ${
             queueSocialFlash.level === "error" ? "text-red-700" : "text-emerald-700"
           }`}
         >

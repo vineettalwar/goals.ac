@@ -8,7 +8,7 @@
  *
  * Kept Next-specific: CreateContentModal (rich create wizard), CMS/publishing
  * context for that modal, cookie-auth loaders, sonner toasts, brief deep-link draft,
- * ArticlePerformanceBadge via `renderPieceExtras`, voice-required gate.
+ * ArticlePerformanceBadge via `renderPieceExtras`, voice-required gate, article ideas tab.
  */
 
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
@@ -24,12 +24,15 @@ import {
 import type { AiProviderId } from "@workspace/ai-providers/config";
 import { FORMAT_OPTIONS } from "@/lib/content/content-format-options";
 import type { CmsConnectionSnapshot } from "@/lib/projects/publishing-destinations";
+import { ArticleIdeasHub } from "@/components/panels/article-ideas-hub";
+import { useKeywordIntelligence } from "@/lib/queries";
 import { ArticlePerformanceBadge } from "./article-performance-badge";
 import { CreateContentModal, type BriefContentDraft } from "./create-content-modal";
 import { loadContentStudioData } from "./content-studio-load-data";
 import type { ContentPieceRow, StudioPiece } from "./content-studio-utils";
 import { isRefreshPiece } from "./content-studio-utils";
 import { VoiceRequiredBanner, type VoiceGateStatus } from "./voice-required-banner";
+import { BRAND_SCRAPE_SKIPPED } from "@workspace/content-engine/brand/project-voice-ready";
 
 export { FORMAT_OPTIONS };
 export type { ContentPieceRow };
@@ -39,6 +42,7 @@ interface Props {
   initialBriefDraft?: BriefContentDraft | null;
   initialCreateOpen?: boolean;
   initialOptimize?: { url: string; keyword: string } | null;
+  initialTab?: "hub" | "calendar" | "ideas";
 }
 
 type StudioLoadState = {
@@ -105,6 +109,7 @@ export function ContentStudioClient({
   initialBriefDraft = null,
   initialCreateOpen = false,
   initialOptimize = null,
+  initialTab = "hub",
 }: Props) {
   const [studioData, dispatchStudioData] = useReducer(studioLoadReducer, initialStudioLoadState);
   const {
@@ -125,6 +130,7 @@ export function ContentStudioClient({
   const [markingReadyId, setMarkingReadyId] = useState<number | null>(null);
   const [reschedulingId, setReschedulingId] = useState<number | null>(null);
   const [rescanning, setRescanning] = useState(false);
+  const [skippingVoice, setSkippingVoice] = useState(false);
   const prevScrapeRef = useRef(voiceGate.scrapeStatus);
 
   const loadData = useCallback(async () => {
@@ -148,6 +154,8 @@ export function ContentStudioClient({
   useEffect(() => {
     loadData().finally(() => setLoading(false));
   }, [loadData]);
+
+  const { opportunities } = useKeywordIntelligence(projectId);
 
   const scrapePending = voiceGate.voiceBuilding || voiceGate.scrapeStatus === "pending";
   const { data: polledBrand } = useQuery({
@@ -182,6 +190,32 @@ export function ContentStudioClient({
       void loadData();
     }
   }, [polledBrand, loadData]);
+
+  async function handleSkipVoice() {
+    setSkippingVoice(true);
+    try {
+      const res = await fetch(`/api/website-projects/${projectId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scrapeStatus: BRAND_SCRAPE_SKIPPED }),
+      });
+      if (!res.ok) {
+        toast.error("Could not skip brand voice");
+        return;
+      }
+      dispatchStudioData({
+        type: "setVoiceGate",
+        voiceGate: {
+          ...voiceGate,
+          voiceBuilding: false,
+          voiceReady: true,
+          scrapeStatus: BRAND_SCRAPE_SKIPPED,
+        },
+      });
+    } finally {
+      setSkippingVoice(false);
+    }
+  }
 
   async function handleRescan() {
     setRescanning(true);
@@ -270,10 +304,10 @@ export function ContentStudioClient({
 
   const voiceReady = voiceGate.voiceReady;
   const newContentAction = (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-wrap items-center gap-4">
       <Link
         href={`/projects/${projectId}/daily-five`}
-        className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground hover:bg-primary/90"
+        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         This week&apos;s queue
       </Link>
@@ -298,7 +332,9 @@ export function ContentStudioClient({
         projectId={projectId}
         status={voiceGate}
         onRescan={handleRescan}
+        onSkip={handleSkipVoice}
         rescanning={rescanning}
+        skipping={skippingVoice}
       />
       <StudioView
         projectId={projectId}
@@ -329,6 +365,9 @@ export function ContentStudioClient({
             publishedUrl={piece.publishedUrl}
           />
         )}
+        ideasPanel={<ArticleIdeasHub projectId={projectId} />}
+        ideasCount={opportunities.length}
+        initialTab={initialTab}
       />
 
       <CreateContentModal

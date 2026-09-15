@@ -144,6 +144,29 @@ export async function handleStudioRead(
     return withCors(request, Response.json({ error: "projectId or goalId required" }, { status: 400 }));
   }
 
+  const projectRoadmapsMatch = path.match(/^\/api\/website-projects\/(\d+)\/roadmaps$/);
+  if (projectRoadmapsMatch && method === "GET") {
+    const projectId = Number.parseInt(projectRoadmapsMatch[1]!, 10);
+    const access = await requireProjectAccess(projectId, userId);
+    if (!access.ok) {
+      return withCors(request, Response.json({ error: access.error }, { status: access.status }));
+    }
+    const roadmaps = await db
+      .select({
+        id: roadmapsTable.id,
+        slug: roadmapsTable.slug,
+        industry: roadmapsTable.industry,
+        location: roadmapsTable.location,
+        stage: roadmapsTable.stage,
+        viewCount: roadmapsTable.viewCount,
+      })
+      .from(projectRoadmapsTable)
+      .innerJoin(roadmapsTable, eq(projectRoadmapsTable.roadmapId, roadmapsTable.id))
+      .where(eq(projectRoadmapsTable.projectId, projectId))
+      .orderBy(desc(roadmapsTable.createdAt));
+    return withCors(request, Response.json({ roadmaps }));
+  }
+
   const roadmapSlugMatch = path.match(/^\/api\/roadmaps\/([^/]+)$/);
   if (roadmapSlugMatch && method === "GET") {
     const slug = roadmapSlugMatch[1]!;
@@ -228,7 +251,14 @@ export async function handleStudioRead(
     const roadmaps =
       roadmapIds.length > 0
         ? await db
-            .select()
+            .select({
+              id: roadmapsTable.id,
+              slug: roadmapsTable.slug,
+              industry: roadmapsTable.industry,
+              location: roadmapsTable.location,
+              stage: roadmapsTable.stage,
+              viewCount: roadmapsTable.viewCount,
+            })
             .from(roadmapsTable)
             .where(inArray(roadmapsTable.id, roadmapIds))
             .orderBy(desc(roadmapsTable.createdAt))

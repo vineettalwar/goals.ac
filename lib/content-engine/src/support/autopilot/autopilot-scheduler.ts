@@ -21,7 +21,10 @@ export function parseAutopilotSettings(raw: unknown): AutopilotSettings {
         ? Math.min(23, Math.max(0, Math.round(obj.preferredRunHour)))
         : DEFAULT_AUTOPILOT_SETTINGS.preferredRunHour,
     lastRunAt: typeof obj.lastRunAt === "string" ? obj.lastRunAt : undefined,
-    autoQueueOpportunities: obj.autoQueueOpportunities === true,
+    autoQueueOpportunities:
+      typeof obj.autoQueueOpportunities === "boolean"
+        ? obj.autoQueueOpportunities
+        : DEFAULT_AUTOPILOT_SETTINGS.autoQueueOpportunities,
     opportunityScoreThreshold:
       typeof obj.opportunityScoreThreshold === "number"
         ? Math.min(100, Math.max(0, Math.round(obj.opportunityScoreThreshold)))

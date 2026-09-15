@@ -1,6 +1,7 @@
-import { AlertTriangle, Loader2, Plus, Users } from "lucide-react";
+import { AlertTriangle, Loader2, Pencil, Plus, Users, X } from "lucide-react";
 import { hostFromUrl } from "@workspace/content-engine/support/competitor/competitor-url";
 import { type CreateCompetitorOption, MAX_COMPETITOR_URLS } from "./create-content-types";
+import { useState } from "react";
 
 export function CompetitorsStep({
   competitorsLoading,
@@ -11,6 +12,8 @@ export function CompetitorsStep({
   newCompetitorUrl,
   onChangeNewUrl,
   onAddCompetitor,
+  onUpdateCompetitor,
+  onRemoveCompetitor,
 }: {
   competitorsLoading: boolean;
   sessionCompetitorUrls: string[];
@@ -20,7 +23,11 @@ export function CompetitorsStep({
   newCompetitorUrl: string;
   onChangeNewUrl: (value: string) => void;
   onAddCompetitor: () => void;
+  onUpdateCompetitor: (oldUrl: string, nextRaw: string) => boolean;
+  onRemoveCompetitor: (url: string) => void;
 }) {
+  const [editingUrl, setEditingUrl] = useState<string | null>(null);
+  const [draftUrl, setDraftUrl] = useState("");
   return (
     <div className="mt-4 space-y-3.5">
       {competitorsLoading ? (
@@ -46,64 +53,130 @@ export function CompetitorsStep({
           const isFocus = hostFromUrl(focusCompetitorUrl ?? "") === hostFromUrl(url);
           const gaps = meta?.contentGaps?.filter(Boolean).slice(0, 2) ?? [];
           return (
-            <button
+            <div
               key={url}
-              type="button"
-              onClick={() => onToggleFocus(url)}
               className={
                 isFocus
-                  ? "flex w-full flex-col items-start rounded-xl border border-primary bg-primary/5 px-3.5 py-2.5 text-left"
-                  : "flex w-full flex-col items-start rounded-xl border border-border px-3.5 py-2.5 text-left hover:border-primary/60 hover:bg-secondary/40"
+                  ? "flex w-full flex-col items-start rounded-xl border border-primary bg-primary/5 px-3.5 py-2.5"
+                  : "flex w-full flex-col items-start rounded-xl border border-border px-3.5 py-2.5"
               }
             >
-              <span className="flex w-full items-center gap-2">
-                <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                <span className="truncate text-sm font-medium">
-                  {meta?.name?.trim() || hostFromUrl(url)}
-                </span>
-                {meta?.threatLevel ? (
-                  <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {meta.threatLevel}
+              {editingUrl === url ? (
+                <div className="flex w-full gap-2">
+                  <input
+                    autoFocus
+                    type="url"
+                    value={draftUrl}
+                    aria-label="Competitor URL"
+                    onChange={(event) => setDraftUrl(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        if (onUpdateCompetitor(url, draftUrl)) setEditingUrl(null);
+                      }
+                      if (event.key === "Escape") setEditingUrl(null);
+                    }}
+                    className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-card px-3 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onUpdateCompetitor(url, draftUrl)) setEditingUrl(null);
+                    }}
+                    className="inline-flex h-9 shrink-0 items-center rounded-lg border border-border px-3 text-sm hover:bg-secondary"
+                  >
+                    Save
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <span className="flex w-full items-start gap-1">
+                    <button
+                      type="button"
+                      onClick={() => onToggleFocus(url)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <span className="flex w-full items-center gap-2">
+                        <Users className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="truncate text-sm font-medium">
+                          {meta?.name?.trim() || hostFromUrl(url)}
+                        </span>
+                        {meta?.threatLevel ? (
+                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                            {meta.threatLevel}
+                          </span>
+                        ) : (
+                          <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
+                            On file
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-0.5 block truncate pl-5 text-xs text-muted-foreground">{url}</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Edit ${hostFromUrl(url)}`}
+                      onClick={() => {
+                        setEditingUrl(url);
+                        setDraftUrl(url);
+                      }}
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    >
+                      <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={`Remove ${hostFromUrl(url)}`}
+                      onClick={() => onRemoveCompetitor(url)}
+                      className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-secondary hover:text-foreground"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </span>
-                ) : (
-                  <span className="ml-auto shrink-0 text-[10px] text-muted-foreground">
-                    On file
-                  </span>
-                )}
-              </span>
-              <span className="mt-0.5 truncate pl-5 text-xs text-muted-foreground">{url}</span>
-              {isFocus ? (
-                <span className="mt-1.5 pl-5 text-xs text-primary">
-                  Primary competitor for this piece
-                </span>
-              ) : null}
-              {gaps.length > 0 ? (
-                <ul className="mt-2 space-y-0.5 border-t border-border/60 pt-2 pl-5 text-xs text-muted-foreground">
-                  {gaps.map((gap) => (
-                    <li key={gap}>· {gap}</li>
-                  ))}
-                </ul>
-              ) : null}
-            </button>
+                  {isFocus ? (
+                    <span className="mt-1.5 pl-5 text-xs text-primary">
+                      Primary competitor for this piece
+                    </span>
+                  ) : null}
+                  {gaps.length > 0 ? (
+                    <ul className="mt-2 space-y-0.5 border-t border-border/60 pt-2 pl-5 text-xs text-muted-foreground">
+                      {gaps.map((gap) => (
+                        <li key={gap}>· {gap}</li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </>
+              )}
+            </div>
           );
         })}
       </div>
 
       <div className="flex gap-2">
-        <input
-          type="url"
-          value={newCompetitorUrl}
-          onChange={(event) => onChangeNewUrl(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              event.preventDefault();
-              onAddCompetitor();
+        <label className="flex h-9 min-w-0 flex-1 items-center rounded-lg border border-input bg-card focus-within:ring-2 focus-within:ring-ring">
+          <span className="shrink-0 select-none pl-3 text-sm text-muted-foreground">
+            https://
+          </span>
+          <input
+            type="text"
+            inputMode="url"
+            autoComplete="url"
+            aria-label="Competitor URL"
+            value={newCompetitorUrl}
+            onChange={(event) =>
+              onChangeNewUrl(event.target.value.replace(/^https?:\/\//i, ""))
             }
-          }}
-          placeholder="Quick-add competitor URL"
-          disabled={sessionCompetitorUrls.length >= MAX_COMPETITOR_URLS}
-          className="h-9 min-w-0 flex-1 rounded-lg border border-input bg-card px-3 text-sm disabled:opacity-50"
-        />
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                onAddCompetitor();
+              }
+            }}
+            placeholder="competitor.com"
+            disabled={sessionCompetitorUrls.length >= MAX_COMPETITOR_URLS}
+            className="h-9 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none disabled:opacity-50"
+          />
+        </label>
         <button
           type="button"
           onClick={onAddCompetitor}
@@ -117,8 +190,7 @@ export function CompetitorsStep({
         </button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Up to {MAX_COMPETITOR_URLS} URLs. Focus is optional — without a tap, the first URL is
-        primary.
+        Up to {MAX_COMPETITOR_URLS} URLs. Tap a name to set focus (optional). Pencil edits the URL.
       </p>
     </div>
   );

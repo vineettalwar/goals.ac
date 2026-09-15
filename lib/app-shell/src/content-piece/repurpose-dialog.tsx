@@ -122,7 +122,7 @@ export function ContentPieceRepurposeDialog({
 
           {isRepurposing ? (
             <div className="space-y-2 rounded-lg border border-border bg-muted/30 px-4 py-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Repurposing…
               </p>
               {REPURPOSE_STEPS.map(({ key, label }) => {

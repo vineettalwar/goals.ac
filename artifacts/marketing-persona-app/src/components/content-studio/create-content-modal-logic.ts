@@ -12,6 +12,10 @@ export function parseSourceUrls(raw: string): string[] {
     .filter((part) => /^https?:\/\//i.test(part));
 }
 
+export function newsNeedsSourceUrl(section: string, sourceUrlsInput: string): boolean {
+  return section.trim().toLowerCase() === "news" && parseSourceUrls(sourceUrlsInput).length === 0;
+}
+
 export const STEPS_WITH_ENTER_CONTINUE: WizardStepId[] = [
   "competitors",
   "destination",

@@ -8,6 +8,10 @@ import {
   type ContentFormatType,
   type PublishDestinationId,
 } from "./publish-destinations";
+import {
+  isPublishBlockedError,
+  type PublishReadinessIssueView,
+} from "./publish-blocked-error";
 import { sanitizePreviewHtml } from "./sanitize-preview-html";
 import {
   readShopifyThemeSnippetRequiredFor,
@@ -57,7 +61,10 @@ export function ContentPiecePublishDialog({
   onClose: () => void;
   formatType: string;
   loadConnections: () => Promise<CmsConnectionSnapshot>;
-  onPublish: (platform: PublishDestinationId) => void | Promise<void>;
+  onPublish: (
+    platform: PublishDestinationId,
+    opts?: { overrideReason?: string },
+  ) => void | Promise<void>;
   onRenderPreview?: (platform: PublishDestinationId) => Promise<RenderPreviewResult>;
   pieceTitle?: string | null;
   pieceBodyMarkdown?: string | null;
@@ -74,6 +81,8 @@ export function ContentPiecePublishDialog({
   const [loadingConnections, setLoadingConnections] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const [publishBlockers, setPublishBlockers] = useState<PublishReadinessIssueView[]>([]);
+  const [overrideReason, setOverrideReason] = useState("");
   const [platformInitialized, setPlatformInitialized] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -91,6 +100,8 @@ export function ContentPiecePublishDialog({
       setConnections(null);
       setLoadError(null);
       setPublishError(null);
+      setPublishBlockers([]);
+      setOverrideReason("");
       setPlatformInitialized(false);
       setPreview(null);
       setPreviewError(null);
@@ -175,6 +186,11 @@ export function ContentPiecePublishDialog({
   const nativeCmsScheduling = platform === "wordpress";
   const hasPublishable =
     availableDestinations.some((d) => !d.exportOnly) || availableDestinations.length > 0;
+  const previewHtmlSafe = preview?.previewHtml ? sanitizePreviewHtml(preview.previewHtml) : "";
+  const previewJsonText =
+    preview && !previewHtmlSafe && preview.previewJson != null
+      ? JSON.stringify(preview.previewJson, null, 2)
+      : null;
   const gridCols =
     availableDestinations.length <= 1
       ? "grid-cols-1"
@@ -185,9 +201,15 @@ export function ContentPiecePublishDialog({
   async function handlePublish() {
     if (isExportOnly) return;
     setPublishError(null);
+    const reason = overrideReason.trim();
     try {
-      await onPublish(platform);
+      await onPublish(platform, reason.length >= 10 ? { overrideReason: reason } : undefined);
     } catch (err) {
+      if (isPublishBlockedError(err)) {
+        setPublishBlockers(err.blockers);
+        setPublishError(null);
+        return;
+      }
       setPublishError(err instanceof Error ? err.message : "Failed to publish");
     }
   }
@@ -277,6 +299,8 @@ export function ContentPiecePublishDialog({
                       onClick={() => {
                         setPlatform(dest.id);
                         setPublishError(null);
+                        setPublishBlockers([]);
+                        setOverrideReason("");
                         setPreview(null);
                         setPreviewError(null);
                         setShopifyThemeSnippetAck(false);
@@ -531,21 +555,50 @@ export function ContentPiecePublishDialog({
                           ))}
                         </ul>
                       ) : null}
-                      {preview.previewHtml ? (
+                      {previewHtmlSafe ? (
                         <div
                           className="prose prose-sm max-h-56 max-w-none overflow-auto rounded-md border border-border bg-background p-3"
-                          dangerouslySetInnerHTML={{
-                            __html: sanitizePreviewHtml(preview.previewHtml),
-                          }}
+                          dangerouslySetInnerHTML={{ __html: previewHtmlSafe }}
                         />
                       ) : null}
-                      {!preview.previewHtml && preview.previewJson != null ? (
+                      {previewJsonText ? (
                         <pre className="max-h-56 overflow-auto rounded-md border border-border bg-background p-3 text-xs whitespace-pre-wrap">
-                          {JSON.stringify(preview.previewJson, null, 2)}
+                          {previewJsonText}
                         </pre>
                       ) : null}
                     </div>
                   ) : null}
+                </div>
+              ) : null}
+
+              {publishBlockers.length > 0 ? (
+                <div className="space-y-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                  <p className="flex items-start gap-2 font-medium">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                    <span>Content not ready to publish</span>
+                  </p>
+                  <ul className="list-disc space-y-1 pl-6 text-destructive/90">
+                    {publishBlockers.map((blocker) => (
+                      <li key={`${blocker.message}:${blocker.detail ?? ""}`}>
+                        {blocker.message}
+                        {blocker.detail ? (
+                          <span className="mt-0.5 block text-xs text-destructive/80">
+                            {blocker.detail}
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                  <label className="block space-y-1 pt-1 text-xs font-normal text-muted-foreground">
+                    <span>Override reason (10+ characters) to publish anyway</span>
+                    <textarea
+                      value={overrideReason}
+                      onChange={(e) => setOverrideReason(e.target.value)}
+                      disabled={publishing}
+                      rows={2}
+                      className="w-full rounded-md border border-input bg-background px-2 py-1.5 text-sm text-foreground"
+                    />
+                  </label>
                 </div>
               ) : null}
 
@@ -564,6 +617,7 @@ export function ContentPiecePublishDialog({
                     disabled={
                       !selectedDestination ||
                       publishing ||
+                      (publishBlockers.length > 0 && overrideReason.trim().length < 10) ||
                       (showShopifyThemeSnippetWarning && !shopifyThemeSnippetAck) ||
                       (showTypo3MediaUploadWarning && !typo3MediaUploadAck) ||
                       (showNotionMediaWarning && !notionMediaAck) ||
@@ -582,7 +636,9 @@ export function ContentPiecePublishDialog({
                     ) : (
                       <>
                         <Send className="h-4 w-4" aria-hidden />
-                        Publish to {selectedDestination?.label ?? "destination"}
+                        {publishBlockers.length > 0
+                          ? "Publish anyway"
+                          : `Publish to ${selectedDestination?.label ?? "destination"}`}
                       </>
                     )}
                   </button>

@@ -9,6 +9,7 @@ export {
   type CreateSourcePieceOption,
   type RepurposeContentInput,
 } from "./create-content-dialog";
+export { ChameleonIcon } from "./chameleon-icon";
 export {
   AgentTeamProgress,
   applyAgentTeamEvent,
@@ -16,12 +17,17 @@ export {
   type AgentTeamState,
 } from "./agent-team-progress";
 export {
+  AgentTeamStage,
+  behindTheScenesEntries,
+} from "./agent-team-stage";
+export {
   StudioNewContentButton,
   StudioView,
 } from "./studio-ui";
 export { StudioCalendarView } from "./studio-calendar";
 export {
   BrandAiProfileCard,
+  brandVoiceHubFacts,
   StudioAiReadinessBanner,
   type BrandProfileSummary,
   type BrandScanDiscoveryMeta,
@@ -54,3 +60,8 @@ export {
   type StudioPiece,
   type StudioSortKey,
 } from "./types";
+export {
+  isDailyFiveItemValid,
+  parseSourceUrls,
+  requiresSources,
+} from "./daily-five-validation";

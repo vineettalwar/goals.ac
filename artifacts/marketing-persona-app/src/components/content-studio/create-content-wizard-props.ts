@@ -18,6 +18,8 @@ export type CreateContentWizardProps = {
     threatLevel: "low" | "medium" | "high";
   }>;
   addCompetitorUrl: () => void;
+  updateCompetitorUrl: (oldUrl: string, nextRaw: string) => boolean;
+  removeCompetitorUrl: (url: string) => void;
   newCompetitorUrl: string;
   setNewCompetitorUrl: (v: string) => void;
   projectId: string;

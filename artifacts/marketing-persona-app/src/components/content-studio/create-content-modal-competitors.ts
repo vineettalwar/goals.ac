@@ -7,6 +7,7 @@ import {
   hostFromUrl,
   normalizeCompetitorUrl,
   normalizeCompetitorUrlList,
+  replaceCompetitorUrl,
 } from "@workspace/content-engine/support/competitor/competitor-url";
 
 export type CompetitorAnalysisRow = {
@@ -72,11 +73,32 @@ export function useCreateContentCompetitors(projectId: string, open: boolean) {
     setNewCompetitorUrl("");
   }
 
+  function updateCompetitorUrl(oldUrl: string, nextRaw: string) {
+    const result = replaceCompetitorUrl(competitorUrls, oldUrl, nextRaw);
+    if (!result.ok) {
+      toast.error(
+        result.reason === "duplicate"
+          ? "That competitor is already listed"
+          : "Enter a valid competitor URL",
+      );
+      return false;
+    }
+    const nextFocus = result.urls[competitorUrls.indexOf(oldUrl)] ?? "";
+    setCompetitorUrls(result.urls);
+    if (competitorFocusUrl === oldUrl) setCompetitorFocusUrl(nextFocus);
+    return true;
+  }
+
+  function removeCompetitorUrl(url: string) {
+    setCompetitorUrls((prev) => prev.filter((u) => u !== url));
+    if (competitorFocusUrl === url) setCompetitorFocusUrl("");
+  }
+
   const saveCompetitorsAndContinue = useCallback(
     async (goNext: () => void) => {
       const normalized = normalizeCompetitorUrlList(competitorUrls);
       if (normalized.length !== competitorUrls.length) {
-        toast.error("Remove or fix invalid competitor URLs");
+        toast.error("Fix or remove invalid competitor URLs");
         return;
       }
       const dirty =
@@ -138,6 +160,8 @@ export function useCreateContentCompetitors(projectId: string, open: boolean) {
     projectIndustry,
     loadingCompetitors,
     addCompetitorUrl,
+    updateCompetitorUrl,
+    removeCompetitorUrl,
     saveCompetitorsAndContinue,
     resetCompetitors,
     competitorGenerateFields,

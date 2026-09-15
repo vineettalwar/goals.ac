@@ -197,7 +197,7 @@ export function ContentBriefPanel({
 
   if (!briefId) {
     return (
-      <div className="paper-card space-y-2 rounded-xl p-4">
+      <div className="space-y-2 rounded-xl p-4">
         <div className="flex items-center gap-2 text-sm font-medium">
           <FileText className="h-4 w-4 text-muted-foreground" aria-hidden />
           Brief
@@ -209,7 +209,7 @@ export function ContentBriefPanel({
   }
 
   return (
-    <div className="paper-card space-y-3 rounded-xl p-4">
+    <div className="space-y-3 rounded-xl p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
         <FileText className="h-4 w-4 text-primary" aria-hidden />
         Brief context
@@ -223,7 +223,7 @@ export function ContentBriefPanel({
         <div className="space-y-3">
           {brief.workingTitle ? (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Working title
               </p>
               <p className="mt-0.5 text-sm font-medium leading-snug">{brief.workingTitle}</p>
@@ -232,7 +232,7 @@ export function ContentBriefPanel({
 
           {brief.angle?.trim() ? (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Angle
               </p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{brief.angle}</p>
@@ -241,7 +241,7 @@ export function ContentBriefPanel({
 
           {primaryKeyword ? (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Target keyword
               </p>
               <p className="mt-0.5 text-sm font-medium">{primaryKeyword}</p>
@@ -250,7 +250,7 @@ export function ContentBriefPanel({
 
           {secondary.length > 0 ? (
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-xs text-muted-foreground">
                 Secondary keywords
               </p>
               <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
@@ -261,7 +261,7 @@ export function ContentBriefPanel({
 
           {outlineBullets.length > 0 ? (
             <div>
-              <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="mb-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <ListTree className="h-3 w-3" aria-hidden />
                 Outline
               </p>
@@ -356,7 +356,7 @@ export function ContentBriefPanel({
 
       {hasSerpContext ? (
         <div className="space-y-2 border-t border-border pt-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             SERP context
           </p>
           {gapPreview.length > 0 ? (

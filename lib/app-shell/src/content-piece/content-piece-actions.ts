@@ -129,7 +129,10 @@ export function humanizeAuditFromResponse(response: {
 export function formatHumanizeResultMessage(result: HumanizeActionResult): string {
   const audit = result.audit;
   if (audit?.rejected) {
-    return "Humanization skipped — structure preserved.";
+    const reason = audit.reason?.trim();
+    return reason
+      ? `Humanization skipped — ${reason}.`
+      : "Humanization skipped — structure preserved.";
   }
   if (result.humanized) {
     if (audit?.slopScoreBefore != null && audit?.slopScoreAfter != null) {

@@ -1,8 +1,7 @@
-import { eq, and, asc } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { db } from "@workspace/db";
 import {
   websiteProjectsTable,
-  contentStrategiesTable,
   contentItemsTable,
 } from "@workspace/db/schema";
 import { QUEUES, enqueue } from "@workspace/jobs";
@@ -11,7 +10,7 @@ import type {
   ContentGenerateSweepPayload,
   PgBoss,
 } from "@workspace/jobs";
-import { computePlannedDate } from "@workspace/content-engine/strategy/autopilot-orchestrator";
+import { fillDueAutopilotItem } from "@workspace/content-engine/strategy/autopilot-refill";
 import {
   parseAutopilotSettings,
   shouldRunAutopilot,
@@ -59,39 +58,6 @@ async function sweepAutopilotProjects(): Promise<void> {
   }
 }
 
-async function findNextDueContentItem(
-  projectId: number,
-  today: string,
-): Promise<{ itemId: number; strategyId: number } | null> {
-  const rows = await db
-    .select({
-      itemId: contentItemsTable.id,
-      strategyId: contentItemsTable.strategyId,
-      day: contentItemsTable.day,
-      status: contentItemsTable.status,
-      year: contentStrategiesTable.year,
-      month: contentStrategiesTable.month,
-    })
-    .from(contentItemsTable)
-    .innerJoin(contentStrategiesTable, eq(contentItemsTable.strategyId, contentStrategiesTable.id))
-    .where(
-      and(
-        eq(contentStrategiesTable.websiteProjectId, projectId),
-        eq(contentItemsTable.status, "draft"),
-      ),
-    )
-    .orderBy(asc(contentStrategiesTable.year), asc(contentStrategiesTable.month), asc(contentItemsTable.day));
-
-  for (const row of rows) {
-    const plannedDate = computePlannedDate(row.year, row.month, row.day);
-    if (plannedDate <= today) {
-      return { itemId: row.itemId, strategyId: row.strategyId };
-    }
-  }
-
-  return null;
-}
-
 export async function runAutopilotForProject(projectId: number): Promise<void> {
   const [project] = await db
     .select({
@@ -114,7 +80,7 @@ export async function runAutopilotForProject(projectId: number): Promise<void> {
   }
 
   const today = todayInTimezone(settings.timezone);
-  const next = await findNextDueContentItem(projectId, today);
+  const next = await fillDueAutopilotItem(projectId, project.userId, today);
   if (!next) {
     logger.info({ projectId }, "Autopilot: no due content items");
     return;

@@ -604,7 +604,7 @@ export function useContentPieceData(pieceId: string | undefined) {
   }, [pieceId, piece, setCachedPiece]);
 
   const publishToDestination = useCallback(
-    async (platform: PublishDestinationId) => {
+    async (platform: PublishDestinationId, opts?: { overrideReason?: string }) => {
       if (!pieceId || !piece) return;
       setPublishing(true);
       setPublishMessage(null);
@@ -617,6 +617,7 @@ export function useContentPieceData(pieceId: string | undefined) {
             body: JSON.stringify({
               contentPieceId: piece.id,
               platform,
+              ...(opts?.overrideReason ? { overrideReason: opts.overrideReason } : {}),
             }),
           },
         );

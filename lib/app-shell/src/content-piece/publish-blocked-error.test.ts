@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { publishBlockedErrorFromBody } from "./publish-blocked-error";
+import { isPublishBlockedError, publishBlockedErrorFromBody } from "./publish-blocked-error";
 
 describe("publishBlockedErrorFromBody", () => {
   it("builds an error from the publish 422 payload", () => {
@@ -23,7 +23,6 @@ describe("publishBlockedErrorFromBody", () => {
   });
 
   it("recognizes a same-shape error from another module copy", () => {
-    const { isPublishBlockedError } = require("./publish-blocked-error") as typeof import("./publish-blocked-error");
     const err = Object.assign(new Error("Content not ready to publish"), {
       name: "PublishBlockedError",
       blockers: [{ message: "Em dashes in the body." }],

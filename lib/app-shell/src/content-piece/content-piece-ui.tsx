@@ -333,7 +333,7 @@ export function ContentPieceView({
               canBrowseStock ? () => void openStockPicker("featured") : undefined
             }
           />
-          <div className="paper-card overflow-hidden rounded-xl">
+          <div className="overflow-hidden rounded-xl">
             <ContentPieceToolbar
               pieceTitle={piece.title}
               editing={editor.editing}
@@ -360,6 +360,11 @@ export function ContentPieceView({
               onRegenerate={showRegenerate ? onRegenerate : undefined}
               onEnhance={showEnhance ? onEnhance : undefined}
               onHumanize={showHumanize ? onHumanize : undefined}
+              humanizePrimary={
+                showHumanize &&
+                !piece.pieceMetadata?.humanized &&
+                !piece.pieceMetadata?.humanizeSkippedReason
+              }
               onMarkReady={showMarkReady ? onMarkReady : undefined}
               onGenerate={showGenerate ? onGenerate : undefined}
               onDelete={showDelete ? onDelete : undefined}
@@ -422,7 +427,11 @@ export function ContentPieceView({
           onStatusChange={(value) => dispatch({ type: "set_status", value })}
           onPlannedDateChange={(value) => dispatch({ type: "set_planned_date", value })}
           onEnhance={onEnhance}
+          onHumanize={showHumanize ? onHumanize : undefined}
+          humanizing={humanizing}
           onPublish={onPublish}
+          onMarkReady={showMarkReady ? onMarkReady : undefined}
+          markingReady={markingReady}
           onQueueSocial={showQueueSocial ? onQueueSocial : undefined}
           queueingSocial={queueingSocial}
           onInsertOutline={

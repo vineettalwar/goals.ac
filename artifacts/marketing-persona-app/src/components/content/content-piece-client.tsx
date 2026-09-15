@@ -31,6 +31,7 @@ import {
   formatQueueSocialSuccessMessage,
   humanizeAuditFromResponse,
   isMetaCmsConnected,
+  publishBlockedErrorFromBody,
   QUEUE_SOCIAL_INSTAGRAM_SKIPPED_MESSAGE,
   queueSocialComposerPayload,
   queueSocialInstagramSkipped,
@@ -172,7 +173,8 @@ export function ContentPieceClient({
         }),
       });
       if (!res.ok) {
-        throw new Error("Failed to load publish preview");
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? "Failed to load publish preview");
       }
       return res.json() as Promise<RenderPreviewResult>;
     },
@@ -361,6 +363,7 @@ export function ContentPieceClient({
           try {
             const res = await fetch(`/api/content-pieces/${pieceId}/humanize`, {
               method: "POST",
+              signal: AbortSignal.timeout(120_000),
             });
             if (!res.ok) {
               const data = (await res.json().catch(() => null)) as { error?: string } | null;
@@ -371,9 +374,19 @@ export function ContentPieceClient({
             }
             const updated = await res.json();
             setPieceRecord((prev) => mergePieceJson(updated, prev));
-            setHumanizeMessage(
-              formatHumanizeResultMessage(humanizeAuditFromResponse(updated)),
-            );
+            const msg = formatHumanizeResultMessage(humanizeAuditFromResponse(updated));
+            setHumanizeMessage(msg);
+            toast.success(msg);
+          } catch (err) {
+            const timedOut =
+              err instanceof DOMException && err.name === "TimeoutError";
+            const msg = timedOut
+              ? "Humanize timed out. Try again."
+              : err instanceof Error
+                ? err.message
+                : "Humanization failed";
+            setHumanizeMessage(msg);
+            toast.error(msg);
           } finally {
             setHumanizing(false);
           }
@@ -660,7 +673,7 @@ export function ContentPieceClient({
         pieceFeaturedImageUrl={pieceMeta?.featuredImageUrl ?? null}
         onRenderPreview={renderPreview}
         plannedDate={piece.plannedDate}
-        onPublish={async (platform) => {
+        onPublish={async (platform, opts) => {
           setPublishing(true);
           setPublishMessage(null);
           try {
@@ -672,6 +685,7 @@ export function ContentPieceClient({
                   platform,
                   async: true,
                   ...(confirmCmsUpdate ? { confirmCmsUpdate: true } : {}),
+                  ...(opts?.overrideReason ? { overrideReason: opts.overrideReason } : {}),
                 }),
               });
               return res;
@@ -686,6 +700,7 @@ export function ContentPieceClient({
                 sourceUrl?: string | null;
                 createNew?: boolean;
                 error?: string;
+                blockers?: unknown;
               } | null;
               if (body?.needsConfirm) {
                 const target =
@@ -702,15 +717,14 @@ export function ContentPieceClient({
                 }
                 res = await publishOnce(true);
               } else {
-                setPublishMessage(body?.error ?? "Failed to publish");
-                toast.error(body?.error ?? "Failed to publish");
-                return;
+                const blocked = publishBlockedErrorFromBody(body);
+                throw blocked ?? new Error(body?.error ?? "Failed to publish");
               }
             }
             if (!res.ok) {
-              setPublishMessage("Failed to publish");
-              toast.error("Failed to publish");
-              return;
+              const fail = (await res.json().catch(() => null)) as { error?: string } | null;
+              const blocked = publishBlockedErrorFromBody(fail);
+              throw blocked ?? new Error(fail?.error ?? "Failed to publish");
             }
             const updated = await res.json();
             if (updated.queued) {

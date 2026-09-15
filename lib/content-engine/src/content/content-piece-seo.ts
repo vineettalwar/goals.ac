@@ -90,6 +90,8 @@ export type ContentPieceMetadata = {
   agentPipelineDurationMs?: number;
   /** Agents that failed or were skipped during pipeline. */
   degradedAgents?: string[];
+  /** Draft saved below the 700-word SEO target (expand pass did not close the gap). */
+  belowWordTarget?: boolean;
   /** Live agent-team snapshot while a background job is generating (pollable). */
   agentTeamProgress?: {
     agents: Record<

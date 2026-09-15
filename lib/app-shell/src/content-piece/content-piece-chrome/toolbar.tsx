@@ -44,6 +44,7 @@ export function ContentPieceToolbar({
   onRegenerate,
   onEnhance,
   onHumanize,
+  humanizePrimary = false,
   onMarkReady,
   onGenerate,
   onDelete,
@@ -74,6 +75,7 @@ export function ContentPieceToolbar({
   onRegenerate?: () => void | Promise<void>;
   onEnhance?: (missingTerms?: string[]) => void | Promise<void>;
   onHumanize?: () => void;
+  humanizePrimary?: boolean;
   onMarkReady?: () => void | Promise<void>;
   onGenerate?: () => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
@@ -200,8 +202,8 @@ export function ContentPieceToolbar({
             type="button"
             onClick={onHumanize}
             disabled={busy || editing || regenerating || enhancing}
-            className={TOOLBAR_BTN}
-            title="Rewrite for natural human rhythm without full regeneration"
+            className={humanizePrimary ? TOOLBAR_BTN_PRIMARY : TOOLBAR_BTN}
+            title="Rewrite to strip AI tells — Enhance quality does not do this"
           >
             {humanizing ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />

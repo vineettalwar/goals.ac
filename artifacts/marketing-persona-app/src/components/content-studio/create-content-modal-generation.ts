@@ -11,7 +11,7 @@ import {
   runOptimizeImport as runOptimizeImportFn,
 } from "./create-content-modal-runners";
 import type { ContentPieceRow } from "./content-studio-utils";
-import type { AgentProgressEvent } from "@workspace/content-engine";
+import type { AgentProgressEvent } from "@workspace/content-engine/agents/types";
 
 type GenerationShared = {
   selectedFormat: ContentFormatType | null;

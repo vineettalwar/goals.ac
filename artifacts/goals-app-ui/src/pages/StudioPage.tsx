@@ -201,13 +201,23 @@ export function StudioPage() {
   }
 
   const newContentAction = (
-    <StudioNewContentButton
-      onClick={() => {
-        setCreateError(null);
-        setCreateInitialValues(null);
-        setCreateOpen(true);
-      }}
-    />
+    <div className="flex flex-wrap items-center gap-4">
+      {projectId ? (
+        <Link
+          to={`/projects/${projectId}/daily-five`}
+          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          This week's queue
+        </Link>
+      ) : null}
+      <StudioNewContentButton
+        onClick={() => {
+          setCreateError(null);
+          setCreateInitialValues(null);
+          setCreateOpen(true);
+        }}
+      />
+    </div>
   );
 
   return (

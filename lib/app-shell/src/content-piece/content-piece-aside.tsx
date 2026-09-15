@@ -1,11 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Loader2, Share2, Upload } from "lucide-react";
+import { CheckCircle2, Loader2, PenLine, Share2, Upload } from "lucide-react";
+import { countAiSlopSignals } from "@workspace/content-engine/ai-writing-rules";
 import { cn } from "../cn";
 import { SOCIAL_FORMAT_TYPES } from "../social/types";
 import { ContentBriefPanel, type ContentBriefSummary } from "./content-brief-panel";
 import { ArticleQualityPanel, type DualContentScore } from "./content-quality-panel";
 import {
   buildPublishReadyChecklist,
+  nextContentPiecePublishAction,
   publishReadyChecklistBlocks,
   type ContentPieceDetail,
 } from "./types";
@@ -28,7 +30,11 @@ export function ContentPieceAside({
   onStatusChange,
   onPlannedDateChange,
   onEnhance,
+  onHumanize,
+  humanizing = false,
   onPublish,
+  onMarkReady,
+  markingReady = false,
   onQueueSocial,
   queueingSocial = false,
   onInsertOutline,
@@ -52,7 +58,11 @@ export function ContentPieceAside({
   onStatusChange: (value: "draft" | "ready") => void;
   onPlannedDateChange: (value: string) => void;
   onEnhance?: (missingTerms?: string[]) => void | Promise<void>;
+  onHumanize?: () => void;
+  humanizing?: boolean;
   onPublish?: () => void;
+  onMarkReady?: () => void | Promise<void>;
+  markingReady?: boolean;
   onQueueSocial?: () => void;
   queueingSocial?: boolean;
   onInsertOutline?: (markdown: string) => void;
@@ -100,22 +110,140 @@ export function ContentPieceAside({
     Boolean(featuredUrl) ||
     Boolean(piece.pieceMetadata?.images?.some((img) => img.role === "featured"));
   const needsFeaturedImage = ["instagram_post"].includes(piece.formatType);
+  const slopScore = body ? countAiSlopSignals(displayBody) : 0;
   const checklist = buildPublishReadyChecklist({
     humanized: piece.pieceMetadata?.humanized,
     humanizeSkippedReason: piece.pieceMetadata?.humanizeSkippedReason,
     humanizationRejected: piece.pieceMetadata?.humanizationAudit?.rejected,
+    slopScore: body ? slopScore : undefined,
     editorialScore: dual?.editorial?.total ?? null,
     destinationHealthOk,
     needsFeaturedImage,
     hasFeaturedImage: hasFeatured,
   });
   const checklistBlocks = publishReadyChecklistBlocks(checklist);
+  const humanizeOk = checklist.find((item) => item.id === "humanize")?.ok ?? false;
+  const nextAction = body
+    ? nextContentPiecePublishAction({ status: piece.status, humanizeOk })
+    : null;
+  const showPublishPath = Boolean(nextAction);
 
   return (
     <aside className="space-y-5 lg:sticky lg:top-6">
+      {showPublishPath ? (
+        <div className="space-y-3 rounded-xl p-4">
+          <p className="text-sm font-medium">
+            {nextAction === "publish" ? "Ready to publish" : "How to publish"}
+          </p>
+          {slopScore > 0 ? (
+            <p className="text-sm leading-relaxed text-amber-800 dark:text-amber-200">
+              {slopScore} AI tell{slopScore === 1 ? "" : "s"} in this draft. Humanize rewrites
+              them. Enhance quality adds FAQ and links — it does not strip slop.
+            </p>
+          ) : humanizeOk ? (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Mark ready if you want the studio queue to treat this as done. Publish goes to your CMS.
+            </p>
+          ) : (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              Humanize is recommended. You can still publish to a destination now.
+            </p>
+          )}
+          <ul className="flex flex-wrap gap-1.5" aria-label="Publish readiness checklist">
+            {checklist.map((item) => (
+              <li key={item.id}>
+                <span
+                  title={item.hint}
+                  className={cn(
+                    "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium",
+                    item.ok
+                      ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
+                      : "bg-amber-500/15 text-amber-900 dark:text-amber-200",
+                  )}
+                >
+                  {item.ok ? "✓" : "!"} {item.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+          {nextAction === "humanize" && onHumanize ? (
+            <button
+              type="button"
+              disabled={busy || editing || humanizing}
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              onClick={onHumanize}
+              title="Rewrite to strip AI tells — Enhance quality does not do this"
+            >
+              {humanizing ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <PenLine className="h-4 w-4" aria-hidden />
+              )}
+              {humanizing ? "Humanizing…" : "Humanize"}
+            </button>
+          ) : null}
+          {nextAction === "mark_ready" && onMarkReady ? (
+            <button
+              type="button"
+              disabled={busy || editing}
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
+              onClick={() => void onMarkReady()}
+            >
+              {markingReady ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" aria-hidden />
+              )}
+              {markingReady ? "Marking…" : "Mark ready to publish"}
+            </button>
+          ) : null}
+          {canPublish && onPublish ? (
+            <>
+              {checklistBlocks ? (
+                <p className="text-xs text-amber-800 dark:text-amber-200">
+                  Soft block: fix amber checklist items before publishing.
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Choose a destination when you publish.
+                </p>
+              )}
+              <button
+                type="button"
+                disabled={busy || editing}
+                className={
+                  nextAction === "publish"
+                    ? "inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
+                    : "inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground disabled:opacity-50"
+                }
+                onClick={onPublish}
+              >
+                <Upload className="h-4 w-4" aria-hidden />
+                Publish
+              </button>
+            </>
+          ) : null}
+          {onQueueSocial ? (
+            <button
+              type="button"
+              disabled={busy || editing}
+              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground disabled:opacity-50"
+              onClick={onQueueSocial}
+              title="Create LinkedIn and X variants and open Social Hub"
+            >
+              {queueingSocial ? (
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+              ) : (
+                <Share2 className="h-4 w-4" aria-hidden />
+              )}
+              {queueingSocial ? "Queuing…" : "Queue social"}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       {asideExtra}
       {editing ? (
-        <div className="paper-card space-y-3 rounded-xl p-4">
+        <div className="space-y-3 rounded-xl p-4">
           <div className="grid grid-cols-2 gap-3">
             <label className="block space-y-1 text-xs">
               <span className="font-medium text-muted-foreground">Status</span>
@@ -143,8 +271,8 @@ export function ContentPieceAside({
           </div>
         </div>
       ) : piece.plannedDate ? (
-        <div className="paper-card rounded-xl p-4 text-sm">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <div className="rounded-xl p-4 text-sm">
+          <p className="text-xs text-muted-foreground">
             Scheduled
           </p>
           <p className="mt-1 font-medium">{piece.plannedDate}</p>
@@ -152,8 +280,8 @@ export function ContentPieceAside({
       ) : null}
 
       {piece.pieceMetadata?.source === "refresh" && onSaveCmsRemoteId ? (
-        <div className="paper-card space-y-3 rounded-xl p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        <div className="space-y-3 rounded-xl p-4">
+          <p className="text-xs text-muted-foreground">
             WordPress post id
           </p>
           <p className="text-xs text-muted-foreground">
@@ -263,64 +391,8 @@ export function ContentPieceAside({
         />
       ) : null}
 
-      {canPublish ? (
-        <div className="paper-card space-y-3 rounded-xl p-4">
-          <p className="text-sm font-medium">Ready to publish</p>
-          <ul className="flex flex-wrap gap-1.5" aria-label="Publish readiness checklist">
-            {checklist.map((item) => (
-              <li key={item.id}>
-                <span
-                  title={item.hint}
-                  className={cn(
-                    "inline-flex items-center rounded-md px-2 py-0.5 text-[11px] font-medium",
-                    item.ok
-                      ? "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300"
-                      : "bg-amber-500/15 text-amber-900 dark:text-amber-200",
-                  )}
-                >
-                  {item.ok ? "✓" : "!"} {item.label}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {checklistBlocks ? (
-            <p className="text-xs text-amber-800 dark:text-amber-200">
-              Soft block: fix amber checklist items before publishing (destination health, humanize,
-              score, or media).
-            </p>
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              Content is marked ready. Choose a destination when you publish.
-            </p>
-          )}
-          <button
-            type="button"
-            disabled={busy || editing || checklistBlocks}
-            className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-primary px-3 text-sm font-medium text-primary-foreground disabled:opacity-50"
-            onClick={onPublish}
-          >
-            <Upload className="h-4 w-4" aria-hidden />
-            Publish
-          </button>
-          {onQueueSocial ? (
-            <button
-              type="button"
-              disabled={busy || editing}
-              className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-lg border border-border bg-card px-3 text-sm font-medium text-foreground disabled:opacity-50"
-              onClick={onQueueSocial}
-              title="Create LinkedIn and X variants and open Social Hub"
-            >
-              {queueingSocial ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-              ) : (
-                <Share2 className="h-4 w-4" aria-hidden />
-              )}
-              {queueingSocial ? "Queuing…" : "Queue social"}
-            </button>
-          ) : null}
-        </div>
-      ) : onQueueSocial ? (
-        <div className="paper-card space-y-4 rounded-xl p-6">
+      {!showPublishPath && onQueueSocial ? (
+        <div className="space-y-4 rounded-xl p-6">
           <div className="space-y-1.5">
             <p className="text-sm font-medium">Social distribution</p>
             <p className="text-sm leading-relaxed text-muted-foreground">

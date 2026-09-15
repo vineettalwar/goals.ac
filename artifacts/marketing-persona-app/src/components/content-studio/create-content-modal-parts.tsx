@@ -27,7 +27,7 @@ export function WizardStep({
 }
 
 export function OptionCard({
-  icon,
+  icon: _icon,
   title,
   description,
   onClick,
@@ -41,13 +41,12 @@ export function OptionCard({
     <button
       type="button"
       onClick={onClick}
-      className="group text-left p-6 sm:p-8 rounded-2xl border border-border hover:border-primary hover:bg-accent/30 transition-all"
+      className="group w-full border-b border-border py-4 text-left transition-colors hover:bg-secondary/30"
     >
-      <span className="mb-4 inline-flex text-muted-foreground">{icon}</span>
-      <p className="text-xl font-semibold">{title}</p>
-      <p className="text-muted-foreground mt-2 leading-relaxed">{description}</p>
-      <span className="inline-flex items-center gap-1 mt-6 text-sm font-medium text-primary">
-        Continue <ArrowRight className="w-4 h-4" />
+      <p className="text-base font-semibold">{title}</p>
+      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{description}</p>
+      <span className="mt-3 inline-flex items-center gap-1 text-sm text-primary">
+        Continue <ArrowRight className="h-4 w-4" />
       </span>
     </button>
   );

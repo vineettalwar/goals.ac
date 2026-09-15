@@ -306,6 +306,8 @@ export function useCreateContentModal({
     competitorUrls: competitors.competitorUrls,
     competitorAnalyses: competitors.competitorAnalyses,
     addCompetitorUrl: competitors.addCompetitorUrl,
+    updateCompetitorUrl: competitors.updateCompetitorUrl,
+    removeCompetitorUrl: competitors.removeCompetitorUrl,
     newCompetitorUrl: competitors.newCompetitorUrl,
     setNewCompetitorUrl: competitors.setNewCompetitorUrl,
     projectId,

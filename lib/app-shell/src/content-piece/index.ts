@@ -13,6 +13,12 @@ export {
 } from "./content-brief-panel";
 export { ContentPiecePublishDialog, type RenderPreviewResult } from "./publish-dialog";
 export {
+  PublishBlockedError,
+  isPublishBlockedError,
+  publishBlockedErrorFromBody,
+  type PublishReadinessIssueView,
+} from "./publish-blocked-error";
+export {
   ShopifyThemeSnippetPreflight,
   shopifyOutputModeNeedsThemeSnippet,
   readShopifyThemeSnippetRequiredFor,
@@ -91,12 +97,14 @@ export {
   formatContentPieceUpdatedAt,
   formatHumanizationAuditLine,
   buildPublishReadyChecklist,
+  nextContentPiecePublishAction,
   publishReadyChecklistBlocks,
   type ContentPieceDetail,
   type ContentPieceGeneratingState,
   type ContentPieceImageRef,
   type ContentPieceMetadata,
   type ContentPiecePublishingState,
+  type ContentPiecePublishNextAction,
   type PublishReadyItem,
 } from "./types";
 export { sanitizePreviewHtml } from "./sanitize-preview-html";
