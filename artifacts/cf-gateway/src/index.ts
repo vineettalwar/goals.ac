@@ -125,6 +125,7 @@ function isReadPath(path: string, method: string): boolean {
     if (path === "/api/onboarding/fast-lane") return true;
     if (path === "/api/auth/gemini-key") return true;
     if (path === "/api/conversations") return true;
+    if (path.startsWith("/api/seo-chat")) return true;
     if (path === "/api/personas") return true;
     if (path === "/api/org/api-keys") return true;
     if (/^\/api\/seo-articles\/\d+$/.test(path)) return true;
@@ -221,6 +222,13 @@ function isWritePath(path: string, method: string): boolean {
   }
   if (path === "/api/auth/gemini-key" && (method === "POST" || method === "DELETE")) return true;
   if (path === "/api/chat" && method === "POST") return true;
+  if (path.startsWith("/api/seo-chat") && method !== "GET" && method !== "HEAD") return true;
+  if (
+    /^\/api\/website-projects\/\d+\/chat-memory$/.test(path) &&
+    method === "PATCH"
+  ) {
+    return true;
+  }
   if (path === "/api/conversations" && method === "DELETE") return true;
   if (path === "/api/companies/humanization" && method === "POST") return true;
   if (path === "/api/org/api-keys" && method === "POST") return true;

@@ -67,6 +67,9 @@ export const wordpressConnectionsTable = active.wordpressConnectionsTable;
 export const workspacesTable = active.workspacesTable;
 export const agentRunsTable = active.agentRunsTable;
 export const agentActionItemsTable = active.agentActionItemsTable;
+export const seoChatThreadsTable = active.seoChatThreadsTable;
+export const seoChatMessagesTable = active.seoChatMessagesTable;
+export const projectChatMemoryTable = active.projectChatMemoryTable;
 
 // Types and non-table exports always come from the Postgres schema definitions.
 export type * from "./schema";

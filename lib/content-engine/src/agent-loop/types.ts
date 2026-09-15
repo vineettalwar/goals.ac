@@ -22,7 +22,12 @@ export type AgentLoopCredentials = {
   serp: boolean;
 };
 
-export type AgentGoalKind = "research_then_draft" | "opportunity_scan" | "execute_action" | "publish_check";
+export type AgentGoalKind =
+  | "research_then_draft"
+  | "opportunity_scan"
+  | "execute_action"
+  | "publish_check"
+  | "chat_turn";
 
 export type AgentGoal = {
   kind: AgentGoalKind;

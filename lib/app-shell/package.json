@@ -37,7 +37,8 @@
     "./growth-roadmap": "./src/growth-roadmap/index.ts",
     "./social": "./src/social/index.ts",
     "./research": "./src/research/index.ts",
-    "./section-panels": "./src/section-panels/index.ts"
+    "./section-panels": "./src/section-panels/index.ts",
+    "./seo-chat": "./src/seo-chat/index.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

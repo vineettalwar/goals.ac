@@ -17,6 +17,7 @@ import { SettingsPage } from "@/pages/SettingsPage";
 import { StudioPage } from "@/pages/StudioPage";
 import { DailyFivePage } from "@/pages/DailyFivePage";
 import { ActionQueuePage } from "@/pages/ActionQueuePage";
+import { ChatPage } from "@/pages/ChatPage";
 import {
   AuditDetailPage,
   AuditListPage,
@@ -156,6 +157,7 @@ export default function App() {
       <Route element={<AppShell />}>
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/chat" element={<ChatPage />} />
         <Route path="/projects" element={<ProjectsPage />} />
         <Route path="/projects/:id" element={<ProjectDetailPage />} />
         <Route path="/projects/:id/content-studio" element={<StudioPage />} />

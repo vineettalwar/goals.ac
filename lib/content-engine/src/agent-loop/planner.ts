@@ -16,6 +16,77 @@ function hasTool(tools: AgentTool[], name: string): boolean {
 export const defaultEmployeePlanner: AgentPlanner = (ctx, tools): PlannerDecision => {
   const { goal } = ctx;
 
+  if (goal.kind === "chat_turn") {
+    if (hasTool(tools, "site_context") && !called(ctx, "site_context")) {
+      return { type: "call_tool", tool: "site_context", args: { projectId: goal.projectId }, reason: "Load project/brand context" };
+    }
+    if (hasTool(tools, "gsc_query") && !called(ctx, "gsc_query")) {
+      return {
+        type: "call_tool",
+        tool: "gsc_query",
+        args: { projectId: goal.projectId, keyword: goal.keyword },
+        reason: "Query Search Console",
+      };
+    }
+    if (hasTool(tools, "keyword_context") && !called(ctx, "keyword_context")) {
+      return {
+        type: "call_tool",
+        tool: "keyword_context",
+        args: { projectId: goal.projectId, keyword: goal.keyword },
+        reason: "Load keyword opportunities",
+      };
+    }
+    if (hasTool(tools, "competitor_context") && !called(ctx, "competitor_context")) {
+      return {
+        type: "call_tool",
+        tool: "competitor_context",
+        args: { projectId: goal.projectId },
+        reason: "Load competitor analyses",
+      };
+    }
+    if (hasTool(tools, "inspect_url") && !called(ctx, "inspect_url") && goal.targetUrl) {
+      return {
+        type: "call_tool",
+        tool: "inspect_url",
+        args: { projectId: goal.projectId, inspectionUrl: goal.targetUrl },
+        reason: "Inspect live URL in Search Console",
+      };
+    }
+    if (goal.actionType === "new_content" && hasTool(tools, "generate_draft") && !called(ctx, "generate_draft") && goal.keyword) {
+      return {
+        type: "call_tool",
+        tool: "generate_draft",
+        args: { projectId: goal.projectId, keyword: goal.keyword },
+        reason: "Draft after research tools (verified evidence optional)",
+      };
+    }
+    if (goal.actionType === "enqueue" && hasTool(tools, "upsert_action_queue") && !called(ctx, "upsert_action_queue")) {
+      return {
+        type: "call_tool",
+        tool: "upsert_action_queue",
+        args: { projectId: goal.projectId },
+        reason: "Persist scored actions",
+      };
+    }
+    if (hasTool(tools, "publish_readiness") && !called(ctx, "publish_readiness") && goal.contentPieceId) {
+      return {
+        type: "call_tool",
+        tool: "publish_readiness",
+        args: { projectId: goal.projectId, contentPieceId: goal.contentPieceId },
+        reason: "Check publish gates",
+      };
+    }
+    if (hasTool(tools, "publish_live") && goal.actionType === "publish" && !called(ctx, "publish_live")) {
+      return {
+        type: "call_tool",
+        tool: "publish_live",
+        args: { projectId: goal.projectId, contentPieceId: goal.contentPieceId },
+        reason: "Live publish requested",
+      };
+    }
+    return { type: "stop", reason: "done", detail: "Chat research turn finished" };
+  }
+
   if (goal.kind === "opportunity_scan") {
     if (hasTool(tools, "gsc_query") && !called(ctx, "gsc_query")) {
       return { type: "call_tool", tool: "gsc_query", args: { projectId: goal.projectId }, reason: "Score Search Console demand" };

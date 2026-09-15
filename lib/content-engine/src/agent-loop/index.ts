@@ -28,3 +28,19 @@ export {
   UNATTENDED_AGENT_LOOP_CAPS,
 } from "./generate-via-loop";
 export { scheduleMeasureAfterPublish } from "./schedule-measure";
+export {
+  parseChatIntent,
+  goalFromIntent,
+  composeGroundedReply,
+  runSeoChatTurn,
+  listSeoChatThreads,
+  getSeoChatThread,
+  createSeoChatThread,
+  getOrCreateProjectChatMemory,
+  patchProjectChatMemory,
+  suggestionPrompts,
+  chipLabel,
+  TOOL_CHIP_LABELS,
+  CHAT_AGENT_LOOP_CAPS,
+} from "./seo-chat";
+export type { ChatIntent, SeoChatCard, SeoChatChip, SeoChatStreamEvent } from "./seo-chat-format";

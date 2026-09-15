@@ -10,7 +10,7 @@ import { runAgentLoop } from "./loop";
 import { createFirstPartyTools } from "./tools";
 import { dbTrajectorySink, loadAgentRun } from "./persist";
 import { detectLoopCredentials, loopMetaFromRun } from "./generate-via-loop";
-import type { AgentGoal, AgentToolResult, RunAgentLoopResult } from "./types";
+import type { AgentGoal, AgentPolicy, AgentToolResult, RunAgentLoopResult, TrajectorySink } from "./types";
 
 async function generateDraftForLoop(args: {
   projectId: number;
@@ -76,9 +76,11 @@ export async function executeStoredAgentRun(input: {
   stepBudget?: number;
   actionItemId?: number;
   resumeApproved?: boolean;
+  sink?: TrajectorySink;
+  policy?: Partial<AgentPolicy>;
 }): Promise<RunAgentLoopResult> {
   const credentials = await detectLoopCredentials(input.projectId);
-  const sink = dbTrajectorySink();
+  const sink = input.sink ?? dbTrajectorySink();
   const tools = createFirstPartyTools({
     generateDraft: (args) =>
       generateDraftForLoop({
@@ -104,7 +106,7 @@ export async function executeStoredAgentRun(input: {
           plannerMode: "deterministic",
           maxCredits: prior?.policy.maxCredits ?? 20,
         }
-      : { allowLivePublish: false, approveFirstForLivePublish: true, plannerMode: "deterministic" },
+      : { allowLivePublish: false, approveFirstForLivePublish: true, plannerMode: "deterministic", ...input.policy },
     sink,
     userId: input.userId,
     resumeFrom: resume && prior ? prior : undefined,
