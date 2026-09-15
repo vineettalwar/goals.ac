@@ -159,7 +159,7 @@ export function SuccessStoriesPageClient({ articles, publishedStories }: Props) 
 
       <MarketingSection bordered className="py-16" titleLine1="See the" titleLine2="product">
         <p className="text-white/65 mb-6 max-w-xl">
-          Sign up free for a walkthrough of the studio, or book a call if you want a partner demo.
+          Request access for a walkthrough of the studio, or book a call if you want a partner demo.
         </p>
         <Link
           href={PRODUCT_CTA_HREF}

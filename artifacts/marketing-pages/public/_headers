@@ -1,2 +1,4 @@
-/*
+# Staging / pages.dev previews stay out of the index.
+# Production custom domains inherit no X-Robots-Tag from this file.
+https://*.pages.dev/*
   X-Robots-Tag: noindex, nofollow

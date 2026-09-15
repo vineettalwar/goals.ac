@@ -32,9 +32,6 @@ export const metadata: Metadata = {
     siteName: "goals.ac",
     type: "website",
   },
-  ...(process.env.MARKETING_STATIC === "1"
-    ? { robots: { index: false, follow: false } }
-    : {}),
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
