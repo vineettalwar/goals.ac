@@ -5,7 +5,7 @@
  */
 
 import type { AgentId, AgentProgressEvent, AgentStatus } from "./agent-types";
-import { getAgentDefinition, getRandomWorkingMessage, getCompletionMessage } from "./agent-definitions";
+import { getWorkingMessage, getCompletionMessage } from "./agent-definitions";
 
 /**
  * Create a progress event for an agent.
@@ -19,30 +19,26 @@ export function createAgentEvent(
     metadata?: Record<string, unknown>;
   },
 ): AgentProgressEvent {
-  const agent = getAgentDefinition(agentId);
-
   let message: string;
   switch (status) {
     case "pending":
-      message = `${agent.name} waiting...`;
+      message = "Waiting";
       break;
     case "starting":
-      message = `${agent.name} starting...`;
+      message = "Starting";
       break;
     case "working":
-      message = options?.message ?? getRandomWorkingMessage(agentId);
+      message = options?.message ?? getWorkingMessage(agentId);
       break;
     case "completed":
-      message = options?.message ?? `${agent.name}: ${getCompletionMessage(agentId)}`;
+      message = options?.message ?? getCompletionMessage(agentId);
       break;
     case "failed":
-      message = options?.message ?? `${agent.name} encountered an issue`;
+      message = options?.message ?? "Failed";
       break;
     case "skipped":
-      message = options?.message ?? `${agent.name} skipped`;
+      message = options?.message ?? "Skipped";
       break;
-    default:
-      message = options?.message ?? `${agent.name} ${status}`;
   }
 
   return {
@@ -92,7 +88,7 @@ export function createPipelineStartEvent(totalAgents: number): string {
   return JSON.stringify({
     type: "pipeline_start",
     totalAgents,
-    message: "Agent team assembling...",
+    message: "Starting",
   });
 }
 

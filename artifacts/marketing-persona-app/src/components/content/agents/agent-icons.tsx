@@ -6,6 +6,7 @@
  * Maps Lucide icons to each agent's visual identity.
  */
 
+import type { ComponentType } from "react";
 import {
   Bird,
   Search,
@@ -14,12 +15,14 @@ import {
   Target,
   Languages,
   Eye,
-  Palette,
-  type LucideIcon,
+  type LucideProps,
 } from "lucide-react";
-import type { AgentId } from "@workspace/content-engine";
+import type { AgentId } from "@workspace/content-engine/agents/types";
+import { ChameleonIcon } from "@workspace/app-shell/chameleon-icon";
 
-export const AGENT_ICONS: Record<AgentId, LucideIcon> = {
+export type AgentIcon = ComponentType<LucideProps>;
+
+export const AGENT_ICONS: Record<AgentId, AgentIcon> = {
   owl: Bird,
   ferret: Search,
   hummingbird: Feather,
@@ -27,9 +30,9 @@ export const AGENT_ICONS: Record<AgentId, LucideIcon> = {
   fox: Target,
   mockingbird: Languages,
   hawk: Eye,
-  chameleon: Palette,
+  chameleon: ChameleonIcon,
 };
 
-export function getAgentIcon(agentId: AgentId): LucideIcon {
+export function getAgentIcon(agentId: AgentId): AgentIcon {
   return AGENT_ICONS[agentId];
 }

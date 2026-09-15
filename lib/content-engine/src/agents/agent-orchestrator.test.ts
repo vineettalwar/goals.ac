@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { validateAgentConfiguration, AgentPipelineError } from "./agent-orchestrator";
+import { validateAgentConfiguration, AgentPipelineError, shouldReplaceBody } from "./agent-orchestrator";
 import { AGENT_PIPELINE_ORDER, AGENT_DEFINITIONS, getAgentDefinition } from "./agent-definitions";
 import { buildAgentSystemPrompt, buildAgentTaskPrompt, AGENT_PERSONALITY_PROMPTS } from "./agent-prompts";
 import type { AgentId } from "./agent-types";
@@ -157,5 +157,42 @@ describe("Agent Pipeline Order", () => {
 
   it("has chameleon as final agent", () => {
     expect(AGENT_PIPELINE_ORDER[AGENT_PIPELINE_ORDER.length - 1]).toBe("chameleon");
+  });
+});
+
+describe("shouldReplaceBody", () => {
+  it("keeps the longer hummingbird draft when a later agent returns a stub", () => {
+    const draft = "x".repeat(4000);
+    expect(shouldReplaceBody(draft, "Short SEO rewrite.")).toBe(false);
+  });
+
+  it("accepts a full rewrite that is at least 80% as long", () => {
+    const draft = "word ".repeat(400);
+    expect(shouldReplaceBody(draft, `${draft} extra closing.`)).toBe(true);
+    expect(shouldReplaceBody(draft, draft.slice(0, Math.floor(draft.length * 0.85)))).toBe(true);
+  });
+
+  it("takes the first draft when nothing is accumulated yet", () => {
+    expect(shouldReplaceBody(undefined, "A first hummingbird draft that is long enough.")).toBe(true);
+    expect(shouldReplaceBody("", "")).toBe(false);
+  });
+
+  it("rejects a later truncated body so the hummingbird draft is kept", () => {
+    const draft = "# Article\n\n" + "paragraph ".repeat(400);
+    expect(shouldReplaceBody(draft, draft.slice(0, 80))).toBe(false);
+  });
+});
+
+describe("later-agent task prompts", () => {
+  it("tells later agents not to return a truncated body_markdown", () => {
+    const ctx = {
+      keyword: "content marketing strategy",
+      format: "blog_post",
+      brandName: "Acme Corp",
+      previousOutput: { body_markdown: "# Draft\n\nLong enough." },
+    };
+    for (const agentId of ["spider", "fox", "mockingbird", "hawk", "chameleon"] as AgentId[]) {
+      expect(buildAgentTaskPrompt(agentId, ctx)).toMatch(/Omit body_markdown|Include body_markdown only/i);
+    }
   });
 });

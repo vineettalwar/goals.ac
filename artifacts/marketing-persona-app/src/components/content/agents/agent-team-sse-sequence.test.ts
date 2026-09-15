@@ -4,8 +4,8 @@
  */
 import { describe, it, expect } from "vitest";
 import { applyAgentTeamEvent, type AgentTeamState } from "./agent-team-progress";
-import { AGENT_PIPELINE_ORDER } from "@workspace/content-engine";
-import { createAgentEvent, createPipelineStartEvent, createPipelineCompleteEvent } from "@workspace/content-engine";
+import { AGENT_PIPELINE_ORDER } from "@workspace/content-engine/agents/definitions";
+import { createAgentEvent, createPipelineStartEvent, createPipelineCompleteEvent } from "@workspace/content-engine/agents/events";
 
 function emptyState(): AgentTeamState {
   const s: AgentTeamState = {};

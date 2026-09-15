@@ -9,7 +9,10 @@ import {
   nextAgentId,
   type AgentTeamState,
 } from "./agent-team-progress";
-import { AGENT_PIPELINE_ORDER } from "@workspace/content-engine";
+import { AGENT_PIPELINE_ORDER } from "@workspace/content-engine/agents/definitions";
+import {
+  behindTheScenesEntries,
+} from "../../../../../../lib/app-shell/src/studio/agent-team-stage";
 
 function emptyState(): AgentTeamState {
   const s: AgentTeamState = {};
@@ -82,5 +85,36 @@ describe("applyAgentTeamEvent", () => {
     }).state;
     expect(focusAgentId(state, true)).toBe("hummingbird");
     expect(nextAgentId(state, "hummingbird")).toBe("spider");
+  });
+
+  it("after all agents complete while the request is still open, focuses chameleon", () => {
+    let state = applyAgentTeamEvent(emptyState(), { type: "pipeline_start", totalAgents: 8 }).state;
+    for (const id of AGENT_PIPELINE_ORDER) {
+      state = applyAgentTeamEvent(state, { type: "agent", agent: id, status: "completed" }).state;
+    }
+    expect(focusAgentId(state, true)).toBe("chameleon");
+    expect(nextAgentId(state, "chameleon")).toBeNull();
+  });
+});
+
+describe("behindTheScenesEntries", () => {
+  it("lists completed handoffs only", () => {
+    let state = applyAgentTeamEvent(emptyState(), { type: "pipeline_start", totalAgents: 8 }).state;
+    state = applyAgentTeamEvent(state, {
+      type: "agent",
+      agent: "owl",
+      status: "completed",
+      message: "Strategy defined",
+    }).state;
+    state = applyAgentTeamEvent(state, {
+      type: "agent",
+      agent: "spider",
+      status: "working",
+      message: "Optimizing SEO",
+    }).state;
+    const scene = behindTheScenesEntries(state);
+    expect(scene).toHaveLength(1);
+    expect(scene[0]?.title).toBe("The Owl");
+    expect(scene[0]?.detail).toBe("Strategy defined");
   });
 });

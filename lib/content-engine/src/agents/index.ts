@@ -31,5 +31,6 @@ export {
   runWriterOnlyPipeline,
   validateAgentConfiguration,
   AgentPipelineError,
+  shouldReplaceBody,
   type AgentOrchestratorInput,
 } from "./agent-orchestrator";

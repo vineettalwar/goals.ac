@@ -9,8 +9,8 @@
 
 import { cn } from "@/lib/utils";
 import { CheckCircle2, XCircle, Clock, Loader2 } from "lucide-react";
-import type { AgentId, AgentStatus, AgentStageResult } from "@workspace/content-engine";
-import { AGENT_DEFINITIONS, AGENT_PIPELINE_ORDER } from "@workspace/content-engine";
+import type { AgentId, AgentStatus, AgentStageResult } from "@workspace/content-engine/agents/types";
+import { AGENT_DEFINITIONS, AGENT_PIPELINE_ORDER } from "@workspace/content-engine/agents/definitions";
 import { getAgentIcon } from "./agent-icons";
 import type { AgentTeamState } from "./agent-team-progress";
 

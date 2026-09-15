@@ -17,5 +17,6 @@ export { humanizeArticle } from "./humanize-article";
 export {
   contentPieceToGeneratedArticle,
   applyGeneratedArticleToContentPiece,
+  recoverHumanizeWhenUnchanged,
   humanizeContentPiece,
 } from "./piece-adapters";

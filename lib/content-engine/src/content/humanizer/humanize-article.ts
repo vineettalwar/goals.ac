@@ -1,6 +1,6 @@
 import { getAiProviderClient, type AiProviderClient } from "@workspace/ai-providers";
 import { isTwitterThreadOverLimit } from "@workspace/connectors/twitter-thread";
-import { cleanAndParse } from "../../core/utils";
+import { cleanAndParseLenient } from "../../core/utils";
 import type { GeneratedArticle } from "../../articles/article-generator";
 import { resolveAiClient } from "../../support/ai/resolve-ai-client";
 import {
@@ -149,7 +149,7 @@ Return a JSON object with these EXACT fields:
     });
 
     const raw = response.text ?? "";
-    const parsed = cleanAndParse<HumanizedOutput>(raw);
+    const parsed = cleanAndParseLenient<HumanizedOutput>(raw);
 
     if (!parsed.bodyMarkdown || typeof parsed.bodyMarkdown !== "string") {
       return {
@@ -254,7 +254,11 @@ Return a JSON object with these EXACT fields:
       audit: buildAudit(opts.level, slopScoreBefore, slopScoreAfter, false),
       changed: sanitizedBody !== article.bodyMarkdown,
     };
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "humanize error";
+    if (/not configured|no gemini api key|api key/i.test(message)) {
+      throw err;
+    }
     return {
       article,
       audit: buildAudit(opts.level, slopScoreBefore, slopScoreBefore, true, "humanize error"),

@@ -17,12 +17,7 @@ export const AGENT_DEFINITIONS: Record<AgentId, AgentDefinition> = {
     expertise: ["content strategy", "positioning", "audience analysis", "competitive angles"],
     stage: "pre-write",
     order: 0,
-    workingMessages: [
-      "Analyzing the content landscape...",
-      "Identifying strategic angles...",
-      "Mapping audience needs...",
-      "Defining competitive positioning...",
-    ],
+    workingMessages: ["Planning"],
   },
 
   ferret: {
@@ -34,12 +29,7 @@ export const AGENT_DEFINITIONS: Record<AgentId, AgentDefinition> = {
     expertise: ["fact-finding", "source verification", "competitor research", "data gathering"],
     stage: "pre-write",
     order: 1,
-    workingMessages: [
-      "Digging for relevant sources...",
-      "Verifying facts and statistics...",
-      "Uncovering competitor insights...",
-      "Cross-referencing claims...",
-    ],
+    workingMessages: ["Researching"],
   },
 
   hummingbird: {
@@ -51,12 +41,7 @@ export const AGENT_DEFINITIONS: Record<AgentId, AgentDefinition> = {
     expertise: ["prose craft", "storytelling", "engagement", "content flow"],
     stage: "draft",
     order: 2,
-    workingMessages: [
-      "Crafting the opening hook...",
-      "Weaving the narrative thread...",
-      "Building momentum...",
-      "Polishing the prose rhythm...",
-    ],
+    workingMessages: ["Drafting"],
   },
 
   spider: {
@@ -68,12 +53,7 @@ export const AGENT_DEFINITIONS: Record<AgentId, AgentDefinition> = {
     expertise: ["keyword optimization", "schema markup", "internal linking", "SERP structure"],
     stage: "optimize",
     order: 3,
-    workingMessages: [
-      "Weaving keyword structure...",
-      "Building internal link web...",
-      "Optimizing for search visibility...",
-      "Crafting schema markup...",
-    ],
+    workingMessages: ["Optimizing SEO"],
   },
 
   fox: {
@@ -85,12 +65,7 @@ export const AGENT_DEFINITIONS: Record<AgentId, AgentDefinition> = {
     expertise: ["conversion copy", "CTAs", "value propositions", "persuasion"],
     stage: "optimize",
     order: 4,
-    workingMessages: [
-      "Sharpening the value proposition...",
-      "Crafting compelling CTAs...",
-      "Enhancing conversion hooks...",
-      "Aligning with audience psychology...",
-    ],
+    workingMessages: ["Conversion"],
   },
 
   mockingbird: {
@@ -102,12 +77,7 @@ export const AGENT_DEFINITIONS: Record<AgentId, AgentDefinition> = {
     expertise: ["clarity", "readability", "anti-slop", "natural phrasing"],
     stage: "polish",
     order: 5,
-    workingMessages: [
-      "Hunting down AI-isms...",
-      "Smoothing awkward phrasing...",
-      "Improving readability...",
-      "Eliminating corporate speak...",
-    ],
+    workingMessages: ["Editing"],
   },
 
   hawk: {
@@ -119,29 +89,19 @@ export const AGENT_DEFINITIONS: Record<AgentId, AgentDefinition> = {
     expertise: ["fact-checking", "coherence", "structure", "quality assurance"],
     stage: "polish",
     order: 6,
-    workingMessages: [
-      "Scanning for inconsistencies...",
-      "Verifying factual claims...",
-      "Checking structural coherence...",
-      "Final quality review...",
-    ],
+    workingMessages: ["Reviewing"],
   },
 
   chameleon: {
     id: "chameleon",
     name: "The Chameleon",
     role: "Brand Voice Coach",
-    icon: "Palette",
+    icon: "Chameleon",
     personality: "Adapts perfectly, matches brand personality",
     expertise: ["voice alignment", "tone matching", "brand consistency", "personality"],
     stage: "polish",
     order: 7,
-    workingMessages: [
-      "Adapting to brand voice...",
-      "Matching tone and personality...",
-      "Aligning with brand guidelines...",
-      "Final voice calibration...",
-    ],
+    workingMessages: ["Matching voice"],
   },
 };
 
@@ -167,11 +127,8 @@ export function getAgentsByStage(stage: AgentDefinition["stage"]): AgentDefiniti
   return AGENT_PIPELINE_ORDER.map((id) => AGENT_DEFINITIONS[id]).filter((agent) => agent.stage === stage);
 }
 
-/** Get a random working message for an agent */
-export function getRandomWorkingMessage(id: AgentId): string {
-  const agent = AGENT_DEFINITIONS[id];
-  const messages = agent.workingMessages;
-  return messages[Math.floor(Math.random() * messages.length)]!;
+export function getWorkingMessage(id: AgentId): string {
+  return AGENT_DEFINITIONS[id].workingMessages[0]!;
 }
 
 /** Get completion message for an agent */

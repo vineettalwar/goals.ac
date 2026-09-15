@@ -11,8 +11,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { CheckCircle2, XCircle, Clock, SkipForward } from "lucide-react";
-import type { AgentId, AgentStatus, AgentDefinition } from "@workspace/content-engine";
-import { AGENT_DEFINITIONS } from "@workspace/content-engine";
+import type { AgentId, AgentStatus, AgentDefinition } from "@workspace/content-engine/agents/types";
+import { AGENT_DEFINITIONS } from "@workspace/content-engine/agents/definitions";
 import { getAgentIcon } from "./agent-icons";
 
 interface AgentCardProps {

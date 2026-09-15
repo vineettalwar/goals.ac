@@ -226,7 +226,8 @@ Write a complete ${ctx.format} that:
 1. Opens with a compelling hook based on the strategic angle
 2. Incorporates the researched facts naturally
 3. Follows the format structure requirements
-4. Ends on the last useful point (no "In conclusion" wrapper)
+4. Hits the word range (${ctx.wordRange ?? "1,200+ words"}) — do not return an outline or stub
+5. Ends on the last useful point (no "In conclusion" wrapper)
 
 Return a JSON object:
 {
@@ -244,9 +245,8 @@ EXISTING CONTENT TITLES: ${ctx.existingPieceTitles?.slice(0, 10).join("; ") || "
 CURRENT DRAFT:
 ${ctx.previousOutput?.body_markdown}
 
-Optimize and return:
+Return metadata. Omit body_markdown unless the rewritten article is at least as long as the current draft (truncated JSON bodies are discarded).
 {
-  "body_markdown": "SEO-optimized version",
   "internal_link_suggestions": [{"anchorText": "...", "suggestedSlug": "...", "rationale": "..."}],
   "secondary_keywords": ["keywords naturally woven in"],
   "faq_section": [{"question": "...", "answer": "..."}],
@@ -262,9 +262,8 @@ FUNNEL STAGE: ${(ctx.previousOutput?.strategy as Record<string, unknown> | undef
 CURRENT DRAFT:
 ${ctx.previousOutput?.body_markdown}
 
-Sharpen the conversion hooks and return:
+Sharpen conversion hooks. Omit body_markdown unless the rewritten article is at least as long as the current draft.
 {
-  "body_markdown": "conversion-optimized version",
   "cta_suggestions": ["specific CTA recommendations"],
   "value_props_added": ["value propositions woven in"]
 }`,
@@ -284,11 +283,12 @@ Hunt down and fix:
 
 Return:
 {
-  "body_markdown": "humanized version",
   "changes_made": ["list of specific changes"],
   "ai_tell_score_before": number,
   "ai_tell_score_after": number
-}`,
+}
+
+Include body_markdown only if you rewrote the FULL article at least as long as the current draft.`,
 
   hawk: (ctx) => `Final quality review:
 
@@ -301,12 +301,13 @@ ${ctx.previousOutput?.body_markdown}
 
 Verify and return:
 {
-  "body_markdown": "final reviewed version",
   "issues_found": ["any issues caught and fixed"],
   "fact_check_notes": ["verification notes"],
   "quality_score": number (1-10),
   "publish_ready": true|false
-}`,
+}
+
+Include body_markdown only if you rewrote the FULL article at least as long as the current draft.`,
 
   chameleon: (ctx) => `Align with brand voice:
 
@@ -317,9 +318,8 @@ BRAND TONE: ${ctx.brandTone || "confident but not arrogant"}
 CURRENT DRAFT:
 ${ctx.previousOutput?.body_markdown}
 
-Adapt to match the brand voice and return:
+Adapt to match the brand voice. Omit body_markdown unless the rewritten article is at least as long as the current draft.
 {
-  "body_markdown": "voice-aligned final version",
   "voice_adjustments": ["specific changes made for voice alignment"],
   "consistency_score": number (1-10)
 }`,

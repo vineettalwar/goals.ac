@@ -101,6 +101,11 @@ export function passesHumanizeQualityGate(
     return { ok: false, reason: "no slop improvement" };
   }
 
+  // Slop dropped: keep the rewrite even if Human voice is still under the floor.
+  if (slopBefore > 0 && slopAfter < slopBefore) {
+    return { ok: true };
+  }
+
   if (opts.skipHumanVoiceFloor) {
     return { ok: true };
   }

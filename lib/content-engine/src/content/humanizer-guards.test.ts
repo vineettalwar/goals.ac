@@ -3,6 +3,7 @@ import { countAiSlopSignals } from "./ai-writing-rules";
 import {
   passesHumanizeQualityGate,
   passesHumanizeStructureGuards,
+  recoverHumanizeWhenUnchanged,
 } from "./humanizer";
 
 const BASE = `## Intro
@@ -77,6 +78,13 @@ describe("passesHumanizeQualityGate", () => {
     expect(result).toEqual({ ok: true });
   });
 
+  it("keeps a rewrite that cut slop even if Human voice is still under the floor", () => {
+    const before = "In today's fast-paced world, leverage synergy.";
+    const after = "Ship the checklist this week.";
+    const result = passesHumanizeQualityGate(before, after, 3, 0);
+    expect(result).toEqual({ ok: true });
+  });
+
   it("does not force an extra humanize pass over a single moderate corporate verb", () => {
     // A realistic multi-paragraph draft with one ordinary "optimize" reads as clean prose,
     // not an AI tell. countAiSlopSignals should score it 0, so the gate never demands an
@@ -88,5 +96,30 @@ describe("passesHumanizeQualityGate", () => {
     expect(countAiSlopSignals(draft)).toBe(0);
     const result = passesHumanizeQualityGate(draft, draft, 0, 0);
     expect(result).toEqual({ ok: true });
+  });
+});
+
+describe("recoverHumanizeWhenUnchanged", () => {
+  it("marks a clean draft as humanized so the checklist can pass", () => {
+    const body = "Ship the checklist this week. Measure opens, then cut the fluff.";
+    expect(countAiSlopSignals(body)).toBe(0);
+    const recovered = recoverHumanizeWhenUnchanged(body);
+    expect(recovered.humanized).toBe(true);
+    expect(recovered.body).toBe(body);
+  });
+
+  it("applies deterministic slop strip when the model rewrite was discarded", () => {
+    const body = "Ship the checklist — then measure opens with real customers.";
+    expect(countAiSlopSignals(body)).toBeGreaterThan(0);
+    const recovered = recoverHumanizeWhenUnchanged(body, {
+      slopScoreBefore: countAiSlopSignals(body),
+      slopScoreAfter: countAiSlopSignals(body),
+      humanizationLevel: "light",
+      rejected: true,
+      reason: "heading guard",
+    });
+    expect(recovered.humanized).toBe(true);
+    expect(recovered.body).not.toContain("—");
+    expect(recovered.audit?.rejected).toBeFalsy();
   });
 });

@@ -6,12 +6,10 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Clock, Loader2, SkipForward, XCircle } from "lucide-react";
-import type { AgentId, AgentStatus, AgentProgressEvent } from "@workspace/content-engine";
-import { AGENT_PIPELINE_ORDER, AGENT_DEFINITIONS } from "@workspace/content-engine";
-import { getAgentIcon } from "./agent-icons";
+import { Card, CardContent } from "@/components/ui/card";
+import type { AgentId, AgentStatus, AgentProgressEvent } from "@workspace/content-engine/agents/types";
+import { AGENT_PIPELINE_ORDER } from "@workspace/content-engine/agents/definitions";
+import { AgentTeamStage } from "@workspace/app-shell/studio/agent-team-stage";
 
 export interface AgentTeamState {
   [agentId: string]: {
@@ -28,12 +26,6 @@ interface AgentTeamProgressProps {
   /** @deprecated unused — kept for call-site compat */
   compact?: boolean;
   className?: string;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${Math.floor(ms / 60000)}m ${Math.round((ms % 60000) / 1000)}s`;
 }
 
 export function applyAgentTeamEvent(
@@ -94,12 +86,11 @@ export function focusAgentId(agentState: AgentTeamState, isRunning: boolean): Ag
   });
   if (active) return active;
   if (isRunning) {
-    return (
-      AGENT_PIPELINE_ORDER.find((id) => {
-        const s = agentState[id]?.status;
-        return !s || s === "pending";
-      }) ?? null
-    );
+    const pending = AGENT_PIPELINE_ORDER.find((id) => {
+      const s = agentState[id]?.status;
+      return !s || s === "pending";
+    });
+    if (pending) return pending;
   }
   for (let i = AGENT_PIPELINE_ORDER.length - 1; i >= 0; i--) {
     const id = AGENT_PIPELINE_ORDER[i]!;
@@ -121,121 +112,25 @@ export function nextAgentId(agentState: AgentTeamState, current: AgentId | null)
   return null;
 }
 
-function StatusIcon({ status }: { status: AgentStatus }) {
-  if (status === "completed") return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
-  if (status === "working" || status === "starting") {
-    return <Loader2 className="h-4 w-4 animate-spin text-primary" />;
-  }
-  if (status === "failed") return <XCircle className="h-4 w-4 text-red-600" />;
-  if (status === "skipped") return <SkipForward className="h-4 w-4 text-muted-foreground" />;
-  return <Clock className="h-4 w-4 text-muted-foreground" />;
-}
-
 export function AgentTeamProgress({
   agentState,
   isRunning,
   totalElapsedMs,
   className,
 }: AgentTeamProgressProps) {
-  const completedCount = AGENT_PIPELINE_ORDER.filter(
-    (id) => agentState[id]?.status === "completed" || agentState[id]?.status === "skipped",
-  ).length;
-  const failedCount = AGENT_PIPELINE_ORDER.filter(
-    (id) => agentState[id]?.status === "failed",
-  ).length;
   const focusId = focusAgentId(agentState, isRunning);
   const nextId = nextAgentId(agentState, focusId);
-  const focusDef = focusId ? AGENT_DEFINITIONS[focusId] : null;
-  const focusState = focusId
-    ? (agentState[focusId] ?? { status: "pending" as AgentStatus })
-    : null;
-  const FocusIcon = focusId ? getAgentIcon(focusId) : null;
-  const nextDef = nextId ? AGENT_DEFINITIONS[nextId] : null;
-  const focusIndex = focusId ? AGENT_PIPELINE_ORDER.indexOf(focusId) : -1;
 
   return (
     <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Agent Team</CardTitle>
-          <div className="flex items-center gap-2">
-            {isRunning && (
-              <Badge variant="secondary" className="animate-pulse">
-                Working
-              </Badge>
-            )}
-            <Badge variant="outline">
-              {completedCount}/{AGENT_PIPELINE_ORDER.length}
-            </Badge>
-            {failedCount > 0 && (
-              <Badge variant="destructive">{failedCount} failed</Badge>
-            )}
-            {totalElapsedMs !== undefined && (
-              <span className="text-xs text-muted-foreground">
-                {formatDuration(totalElapsedMs)}
-              </span>
-            )}
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4 pt-0" aria-live="polite" aria-busy={isRunning}>
-        {focusDef && focusState && FocusIcon ? (
-          <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
-            <div className="flex items-center gap-3">
-              <FocusIcon className="h-5 w-5 shrink-0 text-primary" />
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-foreground">
-                  {focusDef.name}
-                  <span className="font-normal text-muted-foreground"> · {focusDef.role}</span>
-                </p>
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  {focusState.message ||
-                    (focusState.status === "pending"
-                      ? "Waiting to start…"
-                      : focusState.status === "completed"
-                        ? "Done"
-                        : `${focusDef.name} is working…`)}
-                </p>
-              </div>
-              <StatusIcon status={focusState.status} />
-            </div>
-          </div>
-        ) : isRunning ? (
-          <p className="text-sm text-muted-foreground">Assembling the team…</p>
-        ) : null}
-
-        {nextDef ? (
-          <p className="text-sm text-muted-foreground">
-            Next:{" "}
-            <span className="font-medium text-foreground">
-              {nextDef.name}
-              <span className="font-normal text-muted-foreground"> · {nextDef.role}</span>
-            </span>
-          </p>
-        ) : isRunning && focusId ? (
-          <p className="text-sm text-muted-foreground">Next: finishing up…</p>
-        ) : null}
-
-        <div className="flex items-center gap-1.5" aria-hidden="true">
-          {AGENT_PIPELINE_ORDER.map((id, i) => {
-            const s = agentState[id]?.status ?? "pending";
-            const done = s === "completed" || s === "skipped";
-            const active = i === focusIndex;
-            return (
-              <span
-                key={id}
-                className={
-                  active
-                    ? "h-1.5 flex-1 rounded-full bg-primary"
-                    : done
-                      ? "h-1.5 flex-1 rounded-full bg-emerald-500/70"
-                      : "h-1.5 flex-1 rounded-full bg-border"
-                }
-              />
-            );
-          })}
-        </div>
+      <CardContent className="pt-6">
+        <AgentTeamStage
+          agentState={agentState}
+          isRunning={isRunning}
+          totalElapsedMs={totalElapsedMs}
+          focusId={focusId}
+          nextId={nextId}
+        />
       </CardContent>
     </Card>
   );

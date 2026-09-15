@@ -16,7 +16,7 @@
  */
 
 import { logger } from "../core/logger";
-import { cleanAndParse } from "../core/utils";
+import { cleanAndParseLenient } from "../core/utils";
 import { resolveAiClient, type AiProviderClient, type AiProviderOptions } from "../support/ai/resolve-ai-client";
 import type {
   AgentId,
@@ -40,6 +40,18 @@ const MAX_RETRIES_PER_AGENT = 2;
 const RETRY_BASE_DELAY_MS = 1_000;
 const MIN_DRAFT_LENGTH = 200;
 const MIN_TITLE_LENGTH = 10;
+/** Later agents may tighten copy, but truncated JSON stubs are far shorter. */
+const MIN_BODY_KEEP_RATIO = 0.8;
+
+/**
+ * Keep the hummingbird draft when a later agent returns a truncated JSON body.
+ * Gemini often closes JSON early; blindly overwriting produced "too short" after ~2 min.
+ */
+export function shouldReplaceBody(current: unknown, next: unknown): boolean {
+  if (typeof next !== "string" || next.length === 0) return false;
+  if (typeof current !== "string" || current.length === 0) return true;
+  return next.length >= Math.floor(current.length * MIN_BODY_KEEP_RATIO);
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -148,8 +160,8 @@ function validateAgentOutput(agentId: AgentId, output: unknown): { valid: boolea
       if (!obj.title || typeof obj.title !== "string" || obj.title.length < MIN_TITLE_LENGTH) {
         return { valid: false, error: `Title must be at least ${MIN_TITLE_LENGTH} characters` };
       }
-      if (!obj.body_markdown || typeof obj.body_markdown !== "string" || obj.body_markdown.length < MIN_DRAFT_LENGTH) {
-        return { valid: false, error: `Body must be at least ${MIN_DRAFT_LENGTH} characters` };
+      if (!obj.body_markdown || typeof obj.body_markdown !== "string" || obj.body_markdown.trim().length === 0) {
+        return { valid: false, error: "Body is missing" };
       }
       break;
 
@@ -309,7 +321,8 @@ async function runAgentOnce(
         systemInstruction: systemPrompt,
         responseMimeType: "application/json",
         maxOutputTokens: agentId === "hummingbird" ? 16384 : 8192, // Writer needs more tokens
-        thinkingBudget: agentId === "hummingbird" ? 2048 : 0, // Writer gets thinking time
+        // Thinking tokens count against maxOutputTokens and starve body_markdown in JSON.
+        thinkingBudget: 0,
       }),
       new Promise<never>((_, reject) => {
         const checkAbort = () => {
@@ -323,20 +336,31 @@ async function runAgentOnce(
 
     const rawText = response.text ?? "";
     if (!rawText.trim()) {
-      throw new AgentPipelineError(`Agent ${agentId} returned empty response`, "EMPTY_RESPONSE", agentId, true);
+      throw new AgentPipelineError(
+        `Agent ${agentId} returned empty response`,
+        "EMPTY_RESPONSE",
+        agentId,
+        agentId === "hummingbird",
+      );
     }
 
-    // Parse output with error handling
     let parsed: Record<string, unknown>;
     try {
-      parsed = cleanAndParse<Record<string, unknown>>(rawText);
+      parsed = cleanAndParseLenient<Record<string, unknown>>(rawText);
     } catch (parseErr) {
       throw new AgentPipelineError(
         `Agent ${agentId} returned invalid JSON: ${parseErr instanceof Error ? parseErr.message : "parse error"}`,
         "INVALID_JSON",
         agentId,
-        true,
+        agentId === "hummingbird",
       );
+    }
+
+    if (
+      agentId !== "hummingbird" &&
+      !shouldReplaceBody(ctx.accumulatedOutput.body_markdown, parsed.body_markdown)
+    ) {
+      delete parsed.body_markdown;
     }
 
     const durationMs = Date.now() - startTime;
@@ -473,7 +497,7 @@ export async function runAgentPipeline(
     );
   }
 
-  if (!content.body_markdown || content.body_markdown.length < MIN_DRAFT_LENGTH) {
+  if (!content.body_markdown?.trim()) {
     throw new AgentPipelineError(
       "Pipeline produced no valid content",
       "MISSING_CONTENT",
@@ -539,7 +563,7 @@ function mergeAgentOutput(
     case "hummingbird":
       // Draft output - core content fields
       if (obj.title && typeof obj.title === "string") merged.title = obj.title;
-      if (obj.body_markdown && typeof obj.body_markdown === "string") {
+      if (shouldReplaceBody(merged.body_markdown, obj.body_markdown)) {
         merged.body_markdown = obj.body_markdown;
       }
       if (obj.meta_description && typeof obj.meta_description === "string") {
@@ -549,7 +573,7 @@ function mergeAgentOutput(
 
     case "spider":
       // SEO output - may update body and add SEO fields
-      if (obj.body_markdown && typeof obj.body_markdown === "string") {
+      if (shouldReplaceBody(merged.body_markdown, obj.body_markdown)) {
         merged.body_markdown = obj.body_markdown;
       }
       if (Array.isArray(obj.internal_link_suggestions)) {
@@ -568,7 +592,7 @@ function mergeAgentOutput(
 
     case "fox":
       // Marketing output - may update body
-      if (obj.body_markdown && typeof obj.body_markdown === "string") {
+      if (shouldReplaceBody(merged.body_markdown, obj.body_markdown)) {
         merged.body_markdown = obj.body_markdown;
       }
       if (Array.isArray(obj.cta_suggestions)) {
@@ -578,7 +602,7 @@ function mergeAgentOutput(
 
     case "mockingbird":
       // Linguist output - updated body and AI tell scores
-      if (obj.body_markdown && typeof obj.body_markdown === "string") {
+      if (shouldReplaceBody(merged.body_markdown, obj.body_markdown)) {
         merged.body_markdown = obj.body_markdown;
       }
       if (typeof obj.ai_tell_score_after === "number") {
@@ -591,7 +615,7 @@ function mergeAgentOutput(
 
     case "hawk":
       // Editor output - final body and quality metadata
-      if (obj.body_markdown && typeof obj.body_markdown === "string") {
+      if (shouldReplaceBody(merged.body_markdown, obj.body_markdown)) {
         merged.body_markdown = obj.body_markdown;
       }
       if (typeof obj.quality_score === "number") {
@@ -607,7 +631,7 @@ function mergeAgentOutput(
 
     case "chameleon":
       // Voice coach output - final voice-aligned body
-      if (obj.body_markdown && typeof obj.body_markdown === "string") {
+      if (shouldReplaceBody(merged.body_markdown, obj.body_markdown)) {
         merged.body_markdown = obj.body_markdown;
       }
       if (typeof obj.consistency_score === "number") {

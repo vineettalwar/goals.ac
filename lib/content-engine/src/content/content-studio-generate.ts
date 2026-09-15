@@ -26,7 +26,7 @@ import {
 import { applyInfographicToContentPiece } from "./infographic-template";
 import { loadStockCredentialContextForProject } from "../support/integrations/stock-credentials";
 import { maybeRefineWithDeepl } from "../support/integrations/deepl-refinement";
-import { cleanAndParse, stripModelPreamble } from "../core/utils";
+import { cleanAndParseLenient, stripModelPreamble } from "../core/utils";
 import { getVerticalPreset } from "../verticals/vertical-presets";
 import {
   applyForbiddenClaimsGuardrail,
@@ -51,7 +51,7 @@ function getAiGenerationOptions(format: ContentFormatType) {
     return {
       systemInstruction: SEO_SYSTEM_PROMPT,
       maxOutputTokens: 16384,
-      thinkingBudget: 2048,
+      thinkingBudget: 0,
     };
   }
   return {
@@ -87,7 +87,7 @@ export function validateResult(result: unknown, format: ContentFormatType): asse
     throw new Error("Missing title");
   if (typeof r.target_keyword !== "string")
     throw new Error("Missing target_keyword");
-  const minLength = isSeoLongformFormat(format) ? 700 : 200;
+  const minLength = 200;
   if (
     typeof r.body_markdown !== "string" ||
     r.body_markdown.trim().length < minLength
@@ -110,7 +110,11 @@ function processGeneratedResult(
   const finalized = finalizeSeoContentPiece(parsed);
   const signals = seoQualitySignals(finalized.body_markdown);
   if (signals.words < 700) {
-    throw new Error("Generated SEO article too short");
+    logger.warn({ words: signals.words }, "SEO article below 700-word target");
+    finalized.pieceMetadata = {
+      ...finalized.pieceMetadata,
+      belowWordTarget: true,
+    };
   }
   if (humanized || parsed.pieceMetadata?.humanizationAudit) {
     finalized.pieceMetadata = {
@@ -122,6 +126,28 @@ function processGeneratedResult(
   return finalized;
 }
 
+async function expandSeoBodyIfShort(
+  result: ContentPieceResult,
+  ai: AiProviderClient,
+): Promise<ContentPieceResult> {
+  const words = seoQualitySignals(result.body_markdown).words;
+  if (words >= 700) return result;
+
+  const response = await ai.generate({
+    prompt: `The draft below is only ${words} words. Rewrite it as a complete 1,200+ word markdown article on the same topic. Keep the title and target keyword. Return ONLY markdown — no JSON, no preamble.
+
+TITLE: ${result.title}
+KEYWORD: ${result.target_keyword}
+
+${result.body_markdown}`,
+    maxOutputTokens: 16384,
+    thinkingBudget: 0,
+  });
+  const expanded = stripModelPreamble(response.text ?? "").trim();
+  if (!expanded || seoQualitySignals(expanded).words <= words) return result;
+  return { ...result, body_markdown: expanded };
+}
+
 export async function postProcessGeneratedResult(
   parsed: ContentPieceResult,
   format: ContentFormatType,
@@ -131,6 +157,14 @@ export async function postProcessGeneratedResult(
   const MAX_HUMANIZE_PASSES = 2;
   let humanizePasses = 0;
   let result: ContentPieceResult = parsed;
+
+  if (isSeoLongformFormat(format)) {
+    try {
+      result = await expandSeoBodyIfShort(result, ai);
+    } catch (err) {
+      logger.warn({ err }, "SEO expand pass skipped");
+    }
+  }
 
   if (isHumanizableFormat(format)) {
     const sample = resolveWritingSample(brand);
@@ -311,10 +345,13 @@ async function generateWithClient(
       const rawText = response.text;
       if (!rawText) throw new Error("Empty AI response");
 
-      const parsed = cleanAndParse(rawText);
+      const parsed = cleanAndParseLenient(rawText);
       stripPreambleFromParsedPiece(parsed);
-      validateResult(parsed, format);
-      const processed = await postProcessGeneratedResult(parsed, format, brand, ai);
+      const drafted = isSeoLongformFormat(format)
+        ? await expandSeoBodyIfShort(parsed as ContentPieceResult, ai)
+        : parsed;
+      validateResult(drafted, format);
+      const processed = await postProcessGeneratedResult(drafted, format, brand, ai);
       return {
         ...processed,
         generationUsage: response.usage ?? estimateUsageFromText(prompt, rawText),
@@ -384,10 +421,13 @@ async function generateWithClientStream(
         emit(result.text);
       }
 
-      const parsed = cleanAndParse(accumulated);
+      const parsed = cleanAndParseLenient(accumulated);
       stripPreambleFromParsedPiece(parsed);
-      validateResult(parsed, format);
-      const processed = await postProcessGeneratedResult(parsed, format, brand, ai);
+      const drafted = isSeoLongformFormat(format)
+        ? await expandSeoBodyIfShort(parsed as ContentPieceResult, ai)
+        : parsed;
+      validateResult(drafted, format);
+      const processed = await postProcessGeneratedResult(drafted, format, brand, ai);
       return {
         ...processed,
         generationUsage: estimateUsageFromText(prompt, accumulated),
