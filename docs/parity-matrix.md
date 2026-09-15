@@ -135,6 +135,10 @@ Generated: 2026-08-19T08:29:47.653Z
 | PATCH | `/api/briefs/:id` | `artifacts/marketing-persona-app/src/app/api/briefs/[id]/route.ts` | partial+ | 2-studio |
 | DELETE | `/api/briefs/:id` | `artifacts/marketing-persona-app/src/app/api/briefs/[id]/route.ts` | partial+ | 2-studio |
 | POST | `/api/chat` | `artifacts/marketing-persona-app/src/app/api/chat/route.ts` | partial+ | core |
+| GET | `/api/seo-chat/threads` | `artifacts/marketing-persona-app/src/app/api/seo-chat/threads/route.ts` | partial+ | core |
+| POST | `/api/seo-chat/threads` | `artifacts/marketing-persona-app/src/app/api/seo-chat/threads/route.ts` | partial+ | core |
+| GET | `/api/seo-chat/threads/:id` | `artifacts/marketing-persona-app/src/app/api/seo-chat/threads/[id]/route.ts` | partial+ | core |
+| POST | `/api/seo-chat/threads/:id/messages` | `artifacts/marketing-persona-app/src/app/api/seo-chat/threads/[id]/messages/route.ts` | partial+ | core |
 | GET | `/api/companies` | `artifacts/marketing-persona-app/src/app/api/companies/route.ts` | partial+ | core |
 | POST | `/api/companies` | `artifacts/marketing-persona-app/src/app/api/companies/route.ts` | partial+ | core |
 | PATCH | `/api/companies` | `artifacts/marketing-persona-app/src/app/api/companies/route.ts` | partial+ | core |

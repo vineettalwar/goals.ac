@@ -18,7 +18,7 @@ describe("buildNavModel product surface", () => {
     const shown = labels(buildNavModel({}));
 
     expect(shown).toEqual(
-      expect.arrayContaining(["Dashboard", "Projects", "Content Studio", "Content Autopilot", "Search"]),
+      expect.arrayContaining(["Dashboard", "Chat", "Projects", "Content Studio", "Content Autopilot", "Search"]),
     );
   });
 

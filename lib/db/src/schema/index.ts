@@ -61,4 +61,5 @@ export * from "./publish_records";
 export * from "./integration_health_alerts";
 export * from "./site_audits";
 export * from "./agent_loop";
+export * from "./seo_chat";
 export * from "./relations";

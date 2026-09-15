@@ -51,6 +51,7 @@ export * from "./roadmaps";
 export * from "./scheduled_articles";
 export * from "./search_property_connections";
 export * from "./seo_articles";
+export * from "./seo_chat";
 export * from "./sessions";
 export * from "./site_audits";
 export * from "./social_post_metrics";

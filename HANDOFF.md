@@ -1,6 +1,13 @@
 # Session Handoff
 
-## Latest (2026-09-15) — AgentLoop runtime + action queue
+## Latest (2026-09-15) — SEO chat control plane (P0+P1)
+
+Conversational SEO chat on `/chat` (goals-app-ui + Next). Threads/messages + project memory tables. Each substantive turn calls `runAgentLoop`. SSE tool chips + grounded replies (no fake verified). Draft / Action Queue / trajectory / Studio+Actions deep links. Inline opportunity/draft/readiness/publish-gate cards.
+
+**Verify:** `npx vitest run lib/content-engine/src/agent-loop` · apply `0082_seo_chat` / D1 `0017_seo_chat` · `pnpm run typecheck` on touched packages.
+
+## Latest (2026-09-15) — AgentLoop employee path: opportunity → draft → gate → publish → measure → refresh (#17)
+
 
 First-party employee loop (`lib/content-engine/src/agent-loop`): tools, step/credit budget, persisted `agent_runs.trajectory`, approve-first live publish. Action queue table + Search → Actions UI. Studio/Autopilot dual path **not** wired yet (Phase C). Measure-on-slip **not** a new worker (Phase D).
 

@@ -5,6 +5,7 @@ import {
   competitorAnalysesTable,
   contentPiecesTable,
   keywordOpportunitiesTable,
+  projectChatMemoryTable,
   searchPropertyConnectionsTable,
   trackedKeywordsTable,
   websiteProjectsTable,
@@ -89,9 +90,21 @@ export function createFirstPartyTools(options?: {
         .from(brandProfilesTable)
         .where(eq(brandProfilesTable.websiteProjectId, projectId))
         .limit(1);
+      const [memory] = await db
+        .select()
+        .from(projectChatMemoryTable)
+        .where(eq(projectChatMemoryTable.websiteProjectId, projectId))
+        .limit(1);
       return ok(`Site ${project.name}`, [{ source: project.url, url: project.url, verified: false }], {
         project,
         brand: brand ?? null,
+        memory: memory
+          ? {
+              brandVoiceNotes: memory.brandVoiceNotes,
+              bannedClaims: memory.bannedClaims,
+              lastDecisions: memory.lastDecisions,
+            }
+          : null,
       });
     },
   };

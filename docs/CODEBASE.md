@@ -81,6 +81,7 @@ Each package has a short `README.md`. High-traffic ones:
 | Topic | Doc |
 |---|---|
 | AI employee loop | [`docs/agent-employee.md`](agent-employee.md) |
+| SEO chat | [`docs/seo-chat.md`](seo-chat.md) |
 | Decisions | [`docs/DECISIONS.md`](DECISIONS.md) |
 | Admin | [`docs/admin.md`](admin.md) |
 | Parity Next ↔ CF | [`docs/parity-matrix.md`](parity-matrix.md) |
