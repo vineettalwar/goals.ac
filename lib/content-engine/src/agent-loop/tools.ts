@@ -17,6 +17,9 @@ import { inspectPublishedUrl } from "../analytics/gsc-url-inspection-service";
 import { wasRecentlyInspected } from "../analytics/gsc-url-inspection-rate-limit";
 import { isBacklinksConfigured, fetchBacklinksOverview } from "@workspace/serp-provider";
 import { syncActionQueueFromSignals } from "./action-queue";
+import { createFinishActionTools } from "./finish-actions";
+import { enqueue } from "@workspace/jobs/boss";
+import { QUEUES } from "@workspace/jobs/queues";
 import type { AgentTool, AgentToolResult, EvidenceRef } from "./types";
 
 function ok(summary: string, evidenceRefs: EvidenceRef[], data?: unknown): AgentToolResult {
@@ -306,11 +309,33 @@ export function createFirstPartyTools(options?: {
 
   const publishLive: AgentTool = {
     name: "publish_live",
-    description: "Live CMS publish. Default policy gates this for approval.",
+    description: "Queue the existing CMS publish job (live). Default policy gates this for approval.",
     risk: "publish_live",
     creditCost: 3,
-    async execute() {
-      return fail("publish_live must not run without an explicit allowLivePublish policy");
+    async execute(args, ctx) {
+      if (!ctx.policy.allowLivePublish) {
+        return fail("publish_live must not run without an explicit allowLivePublish policy");
+      }
+      const contentPieceId = Number(args.contentPieceId ?? ctx.goal.contentPieceId);
+      const userId = ctx.userId;
+      if (!Number.isInteger(contentPieceId) || contentPieceId <= 0) {
+        return fail("contentPieceId required for live publish");
+      }
+      if (!userId) return fail("userId required to queue publish");
+      try {
+        const jobId = await enqueue(QUEUES.contentPublish, {
+          contentPieceId,
+          userId,
+          cmsStatus: "publish",
+        });
+        return ok("Queued live CMS publish", [{ source: "content-publish", verified: false }], {
+          contentPieceId,
+          queued: true,
+          jobId,
+        });
+      } catch (err) {
+        return fail(err instanceof Error ? err.message : "publish enqueue failed");
+      }
     },
   };
 
@@ -324,6 +349,7 @@ export function createFirstPartyTools(options?: {
     publishReadiness,
     upsertQueue,
     generateDraft,
+    ...createFinishActionTools(),
     publishLive,
   ];
 }

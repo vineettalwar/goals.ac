@@ -9,10 +9,11 @@ import {
   StudioNewContentButton,
   StudioView,
   studioContentPiecePath,
-  useAgentTeamState,
+  applyLoopStepEvent,
   type BriefDraftSource,
   type CreateCompetitorOption,
   type CreateContentInitialValues,
+  type LoopStepEvent,
 } from "@workspace/app-shell";
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
@@ -109,7 +110,7 @@ export function StudioPage() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [streamProgress, setStreamProgress] = useState<CreateStreamProgress | null>(null);
-  const agentTeam = useAgentTeamState();
+  const [loopSteps, setLoopSteps] = useState<LoopStepEvent[]>([]);
   const [createInitialValues, setCreateInitialValues] =
     useState<CreateContentInitialValues | null>(null);
 
@@ -253,9 +254,8 @@ export function StudioPage() {
         competitorsLoading={competitorQuery.isPending && !competitorQuery.data}
         generatingPhase={creating ? (streamProgress?.phase ?? "analyzing") : null}
         generatingHeadings={creating ? (streamProgress?.sections ?? null) : null}
-        agentTeamState={creating ? agentTeam.state : null}
-        agentTeamRunning={creating && agentTeam.isRunning}
-        agentTeamElapsedMs={creating ? agentTeam.totalElapsedMs : undefined}
+        loopSteps={creating ? loopSteps : []}
+        loopRunning={creating}
         existingPieces={pieces.map((piece) => ({
           id: piece.id,
           title: piece.title,
@@ -276,7 +276,7 @@ export function StudioPage() {
           setCreateOpen(false);
           setCreateInitialValues(null);
           setStreamProgress(null);
-          agentTeam.reset();
+          setLoopSteps([]);
         }}
         submitting={creating}
         error={createError}
@@ -289,7 +289,7 @@ export function StudioPage() {
             setCreateOpen(false);
             setCreateInitialValues(null);
             setStreamProgress(null);
-            agentTeam.reset();
+            setLoopSteps([]);
             if (projectId && piece?.id) {
               navigate(studioContentPiecePath(projectId, piece.id));
             }
@@ -304,21 +304,20 @@ export function StudioPage() {
           setCreating(true);
           setCreateError(null);
           setStreamProgress({ phase: "analyzing" });
-          agentTeam.reset();
-          if (input.useAgentTeam) {
-            agentTeam.handleEvent({ type: "pipeline_start", totalAgents: 8 });
-          }
+          setLoopSteps([]);
           try {
             const piece = await createPiece(input, {
               onProgress: (progress) => {
                 setStreamProgress(progress);
-                if (progress.agentEvent) agentTeam.handleEvent(progress.agentEvent);
+                if (progress.agentEvent) {
+                  setLoopSteps((prev) => applyLoopStepEvent(prev, progress.agentEvent!));
+                }
               },
             });
             setCreateOpen(false);
             setCreateInitialValues(null);
             setStreamProgress(null);
-            agentTeam.reset();
+            setLoopSteps([]);
             if (projectId && piece?.id) {
               navigate(studioContentPiecePath(projectId, piece.id));
             }

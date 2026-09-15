@@ -43,6 +43,10 @@ interface GenerateWithAgentsRequestBody {
  *
  * Set `stream: true` to receive SSE events for each agent's progress.
  */
+/**
+ * @deprecated Public compatibility only. Prefer Studio generate (employee loop).
+ * This still runs the named-agent pipeline (Owl → … → Chameleon).
+ */
 export async function POST(req: Request) {
   return withPublicApiKey(req, async (key) => {
     requireApiKeyScope(key, "content:generate");

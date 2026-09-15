@@ -1,8 +1,8 @@
 import type { AgentPlanner, AgentTool, PlannerDecision } from "./types";
 import { trajectoryHasVerifiedEvidence } from "./types";
 
-function called(ctx: { trajectory: Array<{ tool?: string }> }, name: string): boolean {
-  return ctx.trajectory.some((step) => step.tool === name);
+function called(ctx: { trajectory: Array<{ tool?: string; ok?: boolean }> }, name: string): boolean {
+  return ctx.trajectory.some((step) => step.tool === name && step.ok === true);
 }
 
 function hasTool(tools: AgentTool[], name: string): boolean {
@@ -166,8 +166,38 @@ export const defaultEmployeePlanner: AgentPlanner = (ctx, tools): PlannerDecisio
         reason: "Inspect live URL in Search Console",
       };
     }
+    if (actionType === "ctr_title" && hasTool(tools, "suggest_ctr_title") && !called(ctx, "suggest_ctr_title")) {
+      return {
+        type: "call_tool",
+        tool: "suggest_ctr_title",
+        args: {
+          projectId: goal.projectId,
+          keyword: goal.keyword,
+          url: goal.targetUrl,
+          apply: true,
+        },
+        reason: "CTR work is title/meta, not a new article",
+      };
+    }
     if (
-      (actionType === "new_content" || actionType === "refresh" || actionType === "ctr_title") &&
+      actionType === "internal_link" &&
+      hasTool(tools, "suggest_internal_links") &&
+      !called(ctx, "suggest_internal_links")
+    ) {
+      return {
+        type: "call_tool",
+        tool: "suggest_internal_links",
+        args: {
+          projectId: goal.projectId,
+          keyword: goal.keyword,
+          url: goal.targetUrl,
+          apply: true,
+        },
+        reason: "Internal-link work is link suggestions, not a new article",
+      };
+    }
+    if (
+      (actionType === "new_content" || actionType === "refresh") &&
       hasTool(tools, "generate_draft") &&
       !called(ctx, "generate_draft")
     ) {
@@ -176,6 +206,22 @@ export const defaultEmployeePlanner: AgentPlanner = (ctx, tools): PlannerDecisio
         tool: "generate_draft",
         args: { projectId: goal.projectId, keyword: goal.keyword, actionType },
         reason: "Draft is one action type, not the whole product",
+      };
+    }
+    const pieceId = goal.contentPieceId ?? ctx.contentPieceId;
+    if (
+      hasTool(tools, "publish_live") &&
+      !called(ctx, "publish_live") &&
+      pieceId &&
+      (called(ctx, "generate_draft") ||
+        called(ctx, "suggest_ctr_title") ||
+        called(ctx, "suggest_internal_links"))
+    ) {
+      return {
+        type: "call_tool",
+        tool: "publish_live",
+        args: { projectId: goal.projectId, contentPieceId: pieceId },
+        reason: "Live publish after action work (approve-first)",
       };
     }
     return { type: "stop", reason: "done", detail: "Action loop finished" };

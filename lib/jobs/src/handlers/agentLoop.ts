@@ -25,6 +25,7 @@ export async function processAgentLoop(data: AgentLoopPayload): Promise<void> {
     projectId: data.projectId,
     userId: data.userId ?? null,
     actionItemId: data.actionItemId,
+    resumeApproved: data.resumeApproved,
     goal: {
       kind: goalKind,
       text: data.text ?? "Employee run",

@@ -1,5 +1,5 @@
 import type { PublishDestinationDefinition } from "../content-piece/publish-destinations";
-import { AgentTeamProgress, type AgentTeamState } from "./agent-team-progress";
+import { LoopStepProgress, type LoopStepEvent } from "./loop-step-progress";
 import { CompetitorsStep } from "./create-content-competitors-step";
 import { ReviewStep } from "./create-content-review";
 import {
@@ -24,10 +24,8 @@ export function CreateContentDialogSteps({
   currentStep,
   generatingLabelIndex,
   generatingHeadings,
-  useAgentTeam,
-  agentTeamState,
-  agentTeamRunning,
-  agentTeamElapsedMs,
+  loopSteps,
+  loopRunning,
   submitting,
   flow,
   onSelectCreate,
@@ -69,20 +67,14 @@ export function CreateContentDialogSteps({
   selectedDestinationLabel,
   plannedDate,
   onChangePlannedDate,
-  onChangeUseAgentTeam,
-  agentFastMode,
-  onChangeAgentFastMode,
-  showAgentTeamToggle,
   error,
 }: {
   showGenerating: boolean;
   currentStep: CreateStepId;
   generatingLabelIndex: number;
   generatingHeadings?: string[] | null;
-  useAgentTeam: boolean;
-  agentTeamState?: AgentTeamState | null;
-  agentTeamRunning?: boolean;
-  agentTeamElapsedMs?: number;
+  loopSteps?: LoopStepEvent[];
+  loopRunning?: boolean;
   submitting?: boolean;
   flow: CreateFlow;
   onSelectCreate: () => void;
@@ -124,10 +116,6 @@ export function CreateContentDialogSteps({
   selectedDestinationLabel: string | null;
   plannedDate: string;
   onChangePlannedDate: (value: string) => void;
-  onChangeUseAgentTeam: (value: boolean) => void;
-  agentFastMode: boolean;
-  onChangeAgentFastMode: (value: boolean) => void;
-  showAgentTeamToggle: boolean;
   error?: string | null;
 }) {
   return (
@@ -137,13 +125,7 @@ export function CreateContentDialogSteps({
           generatingLabelIndex={generatingLabelIndex}
           generatingHeadings={generatingHeadings}
           agentTeamSlot={
-            useAgentTeam && agentTeamState ? (
-              <AgentTeamProgress
-                agentState={agentTeamState}
-                isRunning={Boolean(agentTeamRunning || submitting)}
-                totalElapsedMs={agentTeamElapsedMs}
-              />
-            ) : undefined
+            <LoopStepProgress steps={loopSteps ?? []} isRunning={Boolean(loopRunning || submitting)} />
           }
         />
       ) : null}
@@ -232,11 +214,6 @@ export function CreateContentDialogSteps({
           selectedDestinationLabel={selectedDestinationLabel}
           plannedDate={plannedDate}
           onChangePlannedDate={onChangePlannedDate}
-          showAgentTeamToggle={showAgentTeamToggle}
-          useAgentTeam={useAgentTeam}
-          onChangeUseAgentTeam={onChangeUseAgentTeam}
-          agentFastMode={agentFastMode}
-          onChangeAgentFastMode={onChangeAgentFastMode}
         />
       ) : null}
 

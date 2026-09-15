@@ -11,7 +11,7 @@ export { briefToCreateContentInitialValues } from "./create-content-types";
 
 import { ArrowLeft, FileText, Loader2 } from "lucide-react";
 import { CreateContentDialogSteps } from "./create-content-dialog-steps";
-import { type AgentTeamState } from "./agent-team-progress";
+import type { LoopStepEvent } from "./loop-step-progress";
 import {
   useCreateContentDialog,
   type CreateContentDialogProps,
@@ -28,16 +28,14 @@ export function CreateContentDialog({
   open,
   onClose,
   generatingHeadings = null,
-  agentTeamState = null,
-  agentTeamRunning = false,
-  agentTeamElapsedMs,
+  loopSteps = [],
+  loopRunning = false,
   error = null,
   ...hookProps
 }: CreateContentDialogProps & {
   generatingHeadings?: string[] | null;
-  agentTeamState?: AgentTeamState | null;
-  agentTeamRunning?: boolean;
-  agentTeamElapsedMs?: number;
+  loopSteps?: LoopStepEvent[];
+  loopRunning?: boolean;
 }) {
   const d = useCreateContentDialog({ open, onClose, error, ...hookProps });
   if (!open) return null;
@@ -71,10 +69,6 @@ export function CreateContentDialog({
     sourceContent,
     setSourceContent,
     loadingSourcePiece,
-    useAgentTeam,
-    setUseAgentTeam,
-    agentFastMode,
-    setAgentFastMode,
     formatOptions,
     destinations,
     competitorMeta,
@@ -157,10 +151,8 @@ export function CreateContentDialog({
             currentStep={currentStep}
             generatingLabelIndex={generatingLabelIndex}
             generatingHeadings={generatingHeadings}
-            useAgentTeam={useAgentTeam}
-            agentTeamState={agentTeamState}
-            agentTeamRunning={agentTeamRunning}
-            agentTeamElapsedMs={agentTeamElapsedMs}
+            loopSteps={loopSteps}
+            loopRunning={loopRunning}
             submitting={submitting}
             flow={flow}
             onSelectCreate={() => {
@@ -213,10 +205,6 @@ export function CreateContentDialog({
             selectedDestinationLabel={selectedDestinationLabel}
             plannedDate={plannedDate}
             onChangePlannedDate={setPlannedDate}
-            showAgentTeamToggle={flow === "create" && isSeoLongform(formatType)}
-            onChangeUseAgentTeam={setUseAgentTeam}
-            agentFastMode={agentFastMode}
-            onChangeAgentFastMode={setAgentFastMode}
             error={error}
           />
         </div>

@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { runAgentLoop, memoryTrajectorySink } from "./loop";
 import { sanitizeVerifiedFlags, type AgentTool } from "./types";
-import { draftsFromGsc, actionTypeFromGscPattern, draftsFromPositionSlip } from "./action-queue";
+import { draftsFromGsc, actionTypeFromGscPattern, draftsFromPositionSlip, pickAutopilotQueueWork } from "./action-queue";
+import { parsePlannerJson, createHybridPlanner } from "./hybrid-planner";
+import { buildCtrTitleSuggestions } from "./finish-actions";
+import { defaultEmployeePlanner } from "./planner";
 import type { GscScoredOpportunity } from "@workspace/seo-tools/gscOpportunityScorer";
 
 function tool(name: string, result: Parameters<AgentTool["execute"]> extends never ? never : Awaited<ReturnType<AgentTool["execute"]>>, risk: AgentTool["risk"] = "read"): AgentTool {
@@ -193,6 +196,78 @@ describe("runAgentLoop", () => {
     expect(result.status).toBe("awaiting_approval");
     expect(result.stopReason).toMatch(/approval/i);
   });
+
+  it("resumes gated publish_live and executes the tool", async () => {
+    let publishes = 0;
+    const publish: AgentTool = {
+      name: "publish_live",
+      description: "live",
+      risk: "publish_live",
+      creditCost: 1,
+      async execute() {
+        publishes += 1;
+        return { ok: true, summary: "queued", evidenceRefs: [], hasToolEvidence: false, data: { queued: true } };
+      },
+    };
+    const gated = await runAgentLoop({
+      goal: { kind: "publish_check", text: "publish", projectId: 1, contentPieceId: 4 },
+      tools: [publish],
+      stepBudget: 4,
+    });
+    expect(gated.status).toBe("awaiting_approval");
+    expect(publishes).toBe(0);
+    const resumed = await runAgentLoop({
+      goal: gated.goal,
+      tools: [publish],
+      stepBudget: 4,
+      resumeFrom: gated,
+      policy: { allowLivePublish: true, approveFirstForLivePublish: false },
+    });
+    expect(publishes).toBe(1);
+    expect(resumed.status).toBe("completed");
+    expect(resumed.trajectory.some((step) => step.tool === "publish_live" && step.ok)).toBe(true);
+  });
+
+  it("routes ctr_title to suggest_ctr_title instead of generate_draft", async () => {
+    let drafted = 0;
+    let titled = 0;
+    const gsc = gscHit;
+    const generate: AgentTool = {
+      name: "generate_draft",
+      description: "draft",
+      risk: "write",
+      creditCost: 1,
+      async execute() {
+        drafted += 1;
+        return { ok: true, summary: "drafted", evidenceRefs: [], hasToolEvidence: false };
+      },
+    };
+    const titles: AgentTool = {
+      name: "suggest_ctr_title",
+      description: "titles",
+      risk: "write",
+      creditCost: 1,
+      async execute() {
+        titled += 1;
+        return { ok: true, summary: "titles", evidenceRefs: [], hasToolEvidence: false, data: { contentPieceId: 9 } };
+      },
+    };
+    const result = await runAgentLoop({
+      goal: {
+        kind: "execute_action",
+        text: "ctr",
+        projectId: 1,
+        keyword: "weak snippet",
+        actionType: "ctr_title",
+      },
+      tools: [gsc, generate, titles],
+      stepBudget: 8,
+      policy: { allowLivePublish: false },
+    });
+    expect(drafted).toBe(0);
+    expect(titled).toBe(1);
+    expect(result.status).toBe("completed");
+  });
 });
 
 describe("sanitizeVerifiedFlags", () => {
@@ -264,5 +339,86 @@ describe("action queue scoring", () => {
     expect(drafts).toHaveLength(1);
     expect(drafts[0]?.actionType).toBe("refresh");
     expect(drafts[0]?.evidence[0]?.source).toBe("gsc_position_slip");
+  });
+
+  it("prefers approved evidence-backed queue items for Autopilot", () => {
+    const picked = pickAutopilotQueueWork([
+      { id: 1, status: "open", opportunityScore: 90, evidence: [{ source: "gsc" }], actionType: "new_content" },
+      { id: 2, status: "approved", opportunityScore: 55, evidence: [{ source: "gsc" }], actionType: "refresh" },
+      { id: 3, status: "open", opportunityScore: 99, evidence: [], actionType: "new_content" },
+    ]);
+    expect(picked?.id).toBe(2);
+  });
+
+  it("falls through to high-score open items when nothing is approved", () => {
+    const picked = pickAutopilotQueueWork([
+      { id: 1, status: "open", opportunityScore: 71, evidence: [{ source: "gsc" }], actionType: "ctr_title" },
+      { id: 2, status: "open", opportunityScore: 40, evidence: [{ source: "gsc" }], actionType: "refresh" },
+    ]);
+    expect(picked?.id).toBe(1);
+  });
+});
+
+describe("hybrid planner", () => {
+  it("falls back to deterministic when the chooser returns junk", async () => {
+    const planner = createHybridPlanner({
+      choose: () => ({ type: "call_tool", tool: "not_a_tool", args: {}, reason: "nope" }),
+      fallback: defaultEmployeePlanner,
+    });
+    const decision = await planner(
+      {
+        goal: { kind: "opportunity_scan", text: "scan", projectId: 1 },
+        credentials: { gsc: false, keywords: false, competitors: false, serp: false },
+        policy: {
+          allowLivePublish: false,
+          approveFirstForLivePublish: true,
+          maxCredits: 10,
+          plannerMode: "hybrid",
+        },
+        trajectory: [],
+        creditsSpent: 0,
+        stepIndex: 0,
+      },
+      [gscHit],
+    );
+    expect(decision.type).toBe("call_tool");
+    if (decision.type === "call_tool") expect(decision.tool).toBe("gsc_query");
+  });
+
+  it("uses a legal LLM pick", async () => {
+    const planner = createHybridPlanner({
+      choose: () => parsePlannerJson('{"type":"call_tool","tool":"gsc_query","args":{"projectId":1},"reason":"llm"}', ["gsc_query"]),
+    });
+    const decision = await planner(
+      {
+        goal: { kind: "research_then_draft", text: "x", projectId: 1, keyword: "x" },
+        credentials: { gsc: false, keywords: false, competitors: false, serp: false },
+        policy: {
+          allowLivePublish: false,
+          approveFirstForLivePublish: true,
+          maxCredits: 10,
+          plannerMode: "hybrid",
+        },
+        trajectory: [],
+        creditsSpent: 0,
+        stepIndex: 0,
+      },
+      [gscHit],
+    );
+    expect(decision).toEqual({
+      type: "call_tool",
+      tool: "gsc_query",
+      args: { projectId: 1 },
+      reason: "llm",
+    });
+  });
+});
+
+describe("ctr title suggestions", () => {
+  it("builds apply-able title/meta options from a keyword", () => {
+    const rows = buildCtrTitleSuggestions("weak snippet", "Old H1");
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows[0]?.seoTitle.length).toBeLessThanOrEqual(60);
+    expect(rows.some((row) => row.title.toLowerCase().includes("weak snippet"))).toBe(true);
   });
 });

@@ -131,9 +131,6 @@ export async function runGeneration(params: RunGenerationParams): Promise<void> 
   if (!selectedFormat || !keyword.trim()) return;
   setGenerating(true);
   setDetectedSections([]);
-  if (useAgentTeam) {
-    onAgentEvent?.({ type: "pipeline_start", totalAgents: 8 });
-  }
 
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (bypassCache) headers["x-bypass-cache"] = "true";
@@ -167,7 +164,6 @@ export async function runGeneration(params: RunGenerationParams): Promise<void> 
     angleHint: buildAngleHint(selectedFormat),
     plannedDate: plannedDate || undefined,
     briefId: briefId ?? undefined,
-    ...(useAgentTeam ? { useAgentTeam: true, ...(agentFastMode ? { agentFastMode: true } : {}) } : {}),
     ...(intendedDestination ? { intendedPublishPlatform: intendedDestination } : {}),
     ...competitorGenerateFields(),
     ...(showBedrockModelPicker && bedrockModel.trim()

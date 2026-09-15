@@ -209,3 +209,38 @@ export async function syncActionQueueFromSignals(projectId: number): Promise<{
 
   return { upserted: items.length, items, gscConnected: gsc.connected };
 }
+
+export const AUTOPILOT_APPROVED_MIN_SCORE = 40;
+export const AUTOPILOT_OPEN_MIN_SCORE = 70;
+
+export type AutopilotQueueCandidate = {
+  id: number;
+  status: string;
+  opportunityScore: number;
+  evidence: unknown;
+  actionType: string;
+};
+
+function hasEvidence(evidence: unknown): boolean {
+  return Array.isArray(evidence) && evidence.length > 0;
+}
+
+/** Prefer approved evidence-backed queue items, then high-score open items, over the content calendar. */
+export function pickAutopilotQueueWork(
+  items: AutopilotQueueCandidate[],
+): AutopilotQueueCandidate | null {
+  const runnable = items.filter(
+    (item) =>
+      hasEvidence(item.evidence) &&
+      (item.status === "approved" || item.status === "open") &&
+      item.actionType !== "inspect_url",
+  );
+  const approved = runnable
+    .filter((item) => item.status === "approved" && item.opportunityScore >= AUTOPILOT_APPROVED_MIN_SCORE)
+    .sort((a, b) => b.opportunityScore - a.opportunityScore);
+  if (approved[0]) return approved[0];
+  const openHigh = runnable
+    .filter((item) => item.status === "open" && item.opportunityScore >= AUTOPILOT_OPEN_MIN_SCORE)
+    .sort((a, b) => b.opportunityScore - a.opportunityScore);
+  return openHigh[0] ?? null;
+}
