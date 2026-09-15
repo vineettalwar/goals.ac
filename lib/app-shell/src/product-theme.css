@@ -91,6 +91,8 @@
   color: var(--foreground);
   color-scheme: light;
 }
+
+.hairline-panel {
   background: transparent;
   border: 1px solid var(--border);
   border-radius: var(--radius);
