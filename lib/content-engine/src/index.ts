@@ -58,3 +58,4 @@ export * from "./support/publishing/intended-destination";
 
 // Agent Team
 export * from "./agents";
+export * from "./agent-loop";

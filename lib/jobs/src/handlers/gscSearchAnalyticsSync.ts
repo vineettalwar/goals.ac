@@ -49,6 +49,8 @@ async function runGscSyncForProject(projectId: number, userId?: number): Promise
       if (refreshCount > 0) {
         logger.info({ projectId, refreshCount }, "Created content_refresh opportunities from GSC click decline");
       }
+      const { syncActionQueueFromSignals } = await import("@workspace/content-engine/agent-loop");
+      await syncActionQueueFromSignals(projectId);
     }
   } catch (err) {
     logger.error({ err, projectId }, "GSC search analytics sync failed");

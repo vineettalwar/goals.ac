@@ -37,10 +37,8 @@ export async function handleContentPieceGenerate(
   }
 
   const rawBody = (await request.json().catch(() => null)) as {
-    useAgentTeam?: boolean;
     agentFastMode?: boolean;
   } | null;
-  const useAgentTeam = rawBody?.useAgentTeam === true;
   const agentFastMode = rawBody?.agentFastMode === true;
 
   const [piece] = await db
@@ -74,7 +72,6 @@ export async function handleContentPieceGenerate(
     projectId: piece.websiteProjectId,
     userId,
     generateVariants: false,
-    ...(useAgentTeam ? { useAgentTeam: true as const } : {}),
     ...(agentFastMode ? { agentFastMode: true as const } : {}),
   };
 
@@ -165,7 +162,6 @@ export async function handleDailyFiveWrite(
         projectId,
         userId,
         generateVariants: false,
-        useAgentTeam: true,
         ...(item.agentFastMode ? { agentFastMode: true as const } : {}),
       });
       const id = jobId ?? `cf:${QUEUES.contentGenerate}:${crypto.randomUUID()}`;

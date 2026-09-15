@@ -1,5 +1,11 @@
 # Session Handoff
 
+## Latest (2026-09-15) — AgentLoop runtime + action queue
+
+First-party employee loop (`lib/content-engine/src/agent-loop`): tools, step/credit budget, persisted `agent_runs.trajectory`, approve-first live publish. Action queue table + Search → Actions UI. Studio/Autopilot dual path **not** wired yet (Phase C). Measure-on-slip **not** a new worker (Phase D).
+
+**Verify:** `npx vitest run lib/content-engine/src/agent-loop` · apply db migrations.
+
 ## Latest (2026-09-15) — WP publish: draft default, no visual summary, SEO + featured
 
 Live post [Command Line Secrets…](https://technicaltip.com/2026/09/15/command-line-secrets-for-wordpress-performance-and-integration/) showed a studio **Visual Summary** callout, empty Rank Math title/description, no featured image, and went **Published**.

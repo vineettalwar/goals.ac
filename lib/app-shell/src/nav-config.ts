@@ -53,6 +53,7 @@ export const STRATEGY_TABS = [
 
 export const SEARCH_TABS = [
   { label: "Keywords", to: "/search/keywords" },
+  { label: "Actions", to: "/search/actions" },
   { label: "Performance", to: "/search/performance" },
   { label: "AI visibility", to: "/search/visibility" },
   { label: "Site links", to: "/search/site" },

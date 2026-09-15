@@ -124,9 +124,6 @@ export type ContentPieceMetadata = {
   visualSummarySvgDataUri?: string;
   /** Generation angle / editor notes (includes section: and source URLs for news). */
   contentAngle?: string;
-  /** Ferret had a connected data source. Explicit false blocks live auto-publish. */
-  researchConnected?: boolean;
-  researchNote?: string;
   /** WordPress category names to resolve via site-graph at publish. */
   cmsCategories?: string[];
   /** WordPress tag names (falls back to keyword + format when omitted). */
@@ -165,6 +162,40 @@ export type ContentPieceMetadata = {
   publishFailCount?: number;
   /** True once publishFailCount reaches PUBLISH_MAX_ATTEMPTS — sweep skips this piece. */
   publishDeadLettered?: boolean;
+  /** True when generated using the agent team pipeline. */
+  generatedWithAgents?: boolean;
+  /** `runAgentLoop` id persisted on this piece. */
+  agentRunId?: number;
+  generatedViaAgentLoop?: boolean;
+  /** Ferret had a connected data source. Explicit false blocks live auto-publish. */
+  researchConnected?: boolean;
+  researchNote?: string;
+  /** Post-publish GSC/GA measure enqueue (credentials may be missing). */
+  measure?: {
+    scheduledAt: string;
+    gscQueued: boolean;
+    ga4Queued: boolean;
+    gscConnected: boolean;
+    ga4Connected: boolean;
+  };
+  /** Total time for agent pipeline in ms. */
+  agentPipelineDurationMs?: number;
+  /** Agents that failed or were skipped during pipeline. */
+  degradedAgents?: string[];
+  /** Live agent-team snapshot while a background job is generating (pollable). */
+  agentTeamProgress?: {
+    agents: Record<
+      string,
+      {
+        status: "pending" | "starting" | "working" | "completed" | "failed" | "skipped";
+        message?: string;
+        durationMs?: number;
+      }
+    >;
+    isRunning: boolean;
+    totalElapsedMs?: number;
+    updatedAt: string;
+  };
 };
 
 export const contentPiecesTable = sqliteTable("content_pieces", {

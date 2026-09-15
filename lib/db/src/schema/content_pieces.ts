@@ -164,9 +164,20 @@ export type ContentPieceMetadata = {
   publishDeadLettered?: boolean;
   /** True when generated using the agent team pipeline. */
   generatedWithAgents?: boolean;
+  /** `runAgentLoop` id persisted on this piece. */
+  agentRunId?: number;
+  generatedViaAgentLoop?: boolean;
   /** Ferret had a connected data source. Explicit false blocks live auto-publish. */
   researchConnected?: boolean;
   researchNote?: string;
+  /** Post-publish GSC/GA measure enqueue (credentials may be missing). */
+  measure?: {
+    scheduledAt: string;
+    gscQueued: boolean;
+    ga4Queued: boolean;
+    gscConnected: boolean;
+    ga4Connected: boolean;
+  };
   /** Total time for agent pipeline in ms. */
   agentPipelineDurationMs?: number;
   /** Agents that failed or were skipped during pipeline. */

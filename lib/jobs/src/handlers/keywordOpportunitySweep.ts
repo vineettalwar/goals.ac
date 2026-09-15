@@ -66,6 +66,8 @@ async function runOpportunityDiscoveryForProject(projectId: number, userId?: num
   try {
     await discoverOpportunities(projectId, uid);
     await autoQueueHighScoreOpportunities(projectId, uid);
+    const { syncActionQueueFromSignals } = await import("@workspace/content-engine/agent-loop");
+    await syncActionQueueFromSignals(projectId);
   } catch (err) {
     logger.error({ err, projectId }, "Keyword opportunity discovery failed");
   }

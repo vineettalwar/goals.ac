@@ -108,8 +108,14 @@ vi.mock("@workspace/content-engine/support/email/send-platform-email", () => ({
   resolveAppOrigin: () => "https://app.goals.ac",
 }));
 
-vi.mock("@workspace/content-engine/analytics/enqueue-gsc-url-inspection", () => ({
-  enqueueGscUrlInspectionAfterPublish: vi.fn(() => Promise.resolve()),
+vi.mock("@workspace/content-engine/agent-loop", () => ({
+  scheduleMeasureAfterPublish: vi.fn(() => Promise.resolve({
+    gscQueued: false,
+    ga4Queued: false,
+    inspectQueued: false,
+    gscConnected: false,
+    ga4Connected: false,
+  })),
 }));
 
 vi.mock("@workspace/db/schema", () => ({

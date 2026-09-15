@@ -69,3 +69,4 @@ export {
   processGscUrlInspection,
 } from "./gscUrlInspection";
 export { processPublishReliabilityAlert, registerPublishReliabilityAlertHandler } from "./publishReliabilityAlert";
+export { processAgentLoop, registerAgentLoopHandler } from "./agentLoop";

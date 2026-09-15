@@ -24,14 +24,10 @@ export const gscUrlInspectionsTable = sqliteTable(
     googleCanonical: text("google_canonical"),
     userCanonical: text("user_canonical"),
     lastCrawlTime: text("last_crawl_time"),
-    inspectedAt: integer("inspected_at", { mode: "timestamp_ms" })
-      .notNull()
-      .$defaultFn(() => new Date()),
+    inspectedAt: integer("inspected_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
     errorMessage: text("error_message"),
     rawJson: text("raw_json", { mode: "json" }),
-    createdAt: integer("created_at", { mode: "timestamp_ms" })
-      .notNull()
-      .$defaultFn(() => new Date()),
+    createdAt: integer("created_at", { mode: "timestamp_ms" }).notNull().$defaultFn(() => new Date()),
   },
   (t) => [
     index("gsc_url_inspections_project_inspected_idx").on(

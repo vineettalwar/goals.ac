@@ -16,6 +16,7 @@ import { ProjectsPage } from "@/pages/ProjectsPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { StudioPage } from "@/pages/StudioPage";
 import { DailyFivePage } from "@/pages/DailyFivePage";
+import { ActionQueuePage } from "@/pages/ActionQueuePage";
 import {
   AuditDetailPage,
   AuditListPage,
@@ -180,6 +181,7 @@ export default function App() {
         <Route path="/strategy/topical-map" element={<StrategyTopicalMapPage />} />
         <Route path="/search" element={<SearchHubPage />} />
         <Route path="/search/keywords" element={<SearchKeywordsPage />} />
+        <Route path="/search/actions" element={<ActionQueuePage />} />
         <Route path="/search/visibility" element={<SearchVisibilityPage />} />
         <Route path="/search/performance" element={<SearchPerformancePage />} />
         <Route path="/search/site" element={<SearchSitePage />} />

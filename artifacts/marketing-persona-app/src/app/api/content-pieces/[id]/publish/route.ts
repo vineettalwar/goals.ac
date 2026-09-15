@@ -28,7 +28,7 @@ import { decryptSecret } from "@workspace/security/encryption";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import { ingestPublishedContentPiece } from "@workspace/content-engine/support/brand/brand-voice-generation";
 import { seedSocialPostMetrics } from "@workspace/content-engine/social/social-metrics-service";
-import { enqueueGscUrlInspectionAfterPublish } from "@workspace/content-engine/analytics/enqueue-gsc-url-inspection";
+import { scheduleMeasureAfterPublish } from "@workspace/content-engine/agent-loop";
 import { z } from "zod";
 
 const ALL_PUBLISH_PLATFORMS = [
@@ -355,11 +355,12 @@ export async function POST(
       publishedUrl,
     ).catch(() => {});
 
-    enqueueGscUrlInspectionAfterPublish({
+    scheduleMeasureAfterPublish({
       projectId: piece!.websiteProjectId,
+      userId: userId!,
+      contentPieceId: id,
       publishedUrl,
       publishPlatform,
-      contentPieceId: id,
     }).catch(() => {});
 
     return NextResponse.json({

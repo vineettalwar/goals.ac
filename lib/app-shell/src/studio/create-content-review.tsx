@@ -85,8 +85,9 @@ export function ReviewStep({
               className="mt-0.5 rounded"
             />
             <span>
-              <span className="font-medium text-foreground">Agent team</span>
-              {" — "}specialists (Owl, Ferret, Hummingbird…) draft and polish. Slower, higher quality.
+              <span className="font-medium text-foreground">Research loop</span>
+              {" — "}
+              Studio always runs the same employee loop + generator. This checkbox is ignored (legacy).
             </span>
           </label>
           {useAgentTeam && onChangeAgentFastMode ? (
@@ -157,7 +158,7 @@ export function ReviewStep({
           <ReviewRow
             label="Generation"
             value={
-              useAgentTeam ? (agentFastMode ? "Agent team (fast)" : "Agent team") : "Standard"
+              useAgentTeam ? "Employee loop (legacy toggle)" : "Employee loop"
             }
           />
         ) : null}

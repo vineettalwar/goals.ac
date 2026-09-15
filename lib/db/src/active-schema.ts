@@ -65,6 +65,8 @@ export const waitlistSignupsTable = active.waitlistSignupsTable;
 export const websiteProjectsTable = active.websiteProjectsTable;
 export const wordpressConnectionsTable = active.wordpressConnectionsTable;
 export const workspacesTable = active.workspacesTable;
+export const agentRunsTable = active.agentRunsTable;
+export const agentActionItemsTable = active.agentActionItemsTable;
 
 // Types and non-table exports always come from the Postgres schema definitions.
 export type * from "./schema";

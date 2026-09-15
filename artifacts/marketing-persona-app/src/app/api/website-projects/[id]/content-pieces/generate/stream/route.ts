@@ -6,10 +6,14 @@ import {
   generateContentPiece,
   cacheGet,
   cacheSet,
-  generateContentPieceStream,
-  generateContentPieceWithAgents,
   AgentPipelineError,
 } from "@workspace/content-engine/content/content-studio-generator";
+import {
+  loopMetaFromRun,
+  runResearchThenDraftLoop,
+  studioDraftFromKeyword,
+  STUDIO_AGENT_LOOP_CAPS,
+} from "@workspace/content-engine/agent-loop";
 import {
   GenerateBody,
   loadProjectBrand,
@@ -87,8 +91,6 @@ export async function POST(
     cmsTags,
     bedrockModel,
     saveBedrockModel,
-    useAgentTeam,
-    agentFastMode,
   } = parsed.data;
   const ctx = await loadProjectBrand(projectId, userId!);
   if (!ctx) {
@@ -216,8 +218,7 @@ export async function POST(
     }
   }
 
-  // Agent team uses multiple AI calls, charge at planning tier
-  const billingTier = useAgentTeam ? "planning" : "execution";
+  const billingTier = "execution";
 
   const [{ userApiKey, aiProviderOptions: baseAiOptions }, billingPrep] = await Promise.all([
     loadUserAiSettings(userId!),
@@ -238,59 +239,53 @@ export async function POST(
         };
 
         try {
-          let result;
-
-          if (useAgentTeam) {
-            // Agent team pipeline with progress events
-            result = await generateContentPieceWithAgents(
-              formatType,
-              ctx.brand,
-              targetKeyword,
-              angleHint,
-              {
-                fastMode: agentFastMode,
-                userApiKey,
-                aiProviderOptions,
+          const generatedHolder: { value?: Awaited<ReturnType<typeof generateContentPiece>> } = {};
+          const loop = await runResearchThenDraftLoop({
+            projectId,
+            userId,
+            keyword: targetKeyword,
+            caps: STUDIO_AGENT_LOOP_CAPS,
+            onPersist: (run) => {
+              const step = run.trajectory.at(-1);
+              if (step) send("agent", { type: "loop_step", ...step, runStatus: run.status });
+            },
+            generateDraft: async () => {
+              let out = await studioDraftFromKeyword({
                 projectId,
-                onAgentEvent: (sseData: string) => {
-                  // Parse the agent event and send as SSE
-                  try {
-                    const parsed = JSON.parse(sseData);
-                    send("agent", parsed);
-                  } catch {
-                    send("agent", { raw: sseData });
-                  }
-                },
-              },
-              generationContext,
-            );
-          } else {
-            // Standard generation with streaming chunks
-            try {
-              result = await generateContentPieceStream(
-                formatType,
-                ctx.brand,
-                targetKeyword,
-                (chunk: string) => send("chunk", { text: chunk }),
+                userId,
+                format: formatType,
+                keyword: targetKeyword,
                 angleHint,
+                bypassCache: true,
                 userApiKey,
                 aiProviderOptions,
                 generationContext,
-              );
-            } catch (streamErr) {
-              logger.warn({ err: streamErr, projectId, formatType }, "Stream generation failed, falling back");
-              result = await generateContentPiece(
-                formatType,
-                ctx.brand,
-                targetKeyword,
-                angleHint,
-                true,
-                userApiKey,
-                aiProviderOptions,
-                generationContext,
-              );
-            }
+                streamChunk: (chunk: string) => send("chunk", { text: chunk }),
+                brand: ctx.brand,
+              });
+              if (!out.generated) {
+                out = await studioDraftFromKeyword({
+                  projectId,
+                  userId,
+                  format: formatType,
+                  keyword: targetKeyword,
+                  angleHint,
+                  bypassCache: true,
+                  userApiKey,
+                  aiProviderOptions,
+                  generationContext,
+                  brand: ctx.brand,
+                });
+              }
+              generatedHolder.value = out.generated;
+              return out.tool;
+            },
+          });
+          const result = generatedHolder.value;
+          if (!result) {
+            throw new Error(loop.stopReason ?? "Agent loop did not produce a draft");
           }
+          result.pieceMetadata = { ...(result.pieceMetadata ?? {}), ...loopMetaFromRun(loop) };
 
           await cacheSet(cacheKeyStr, result);
 

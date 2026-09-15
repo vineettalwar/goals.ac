@@ -1,6 +1,6 @@
 /**
  * Create+generate SSE for Content Studio (Vite app).
- * Supports standard chunk streaming and agent-team progress events.
+ * Primary path is `runAgentLoop` then the shared studio generator (streamed).
  */
 import { withCors } from "@workspace/cf-edge/cors";
 import { db } from "./db";
@@ -14,10 +14,14 @@ import {
   cacheGet,
   cacheSet,
   generateContentPiece,
-  generateContentPieceStream,
-  generateContentPieceWithAgents,
   AgentPipelineError,
 } from "@workspace/content-engine/content/content-studio-generator";
+import {
+  loopMetaFromRun,
+  runResearchThenDraftLoop,
+  studioDraftFromKeyword,
+  STUDIO_AGENT_LOOP_CAPS,
+} from "@workspace/content-engine/agent-loop";
 import { evaluateProjectVoiceReady } from "@workspace/content-engine/brand/project-voice-ready";
 import { loadBrandContextForProject } from "@workspace/content-engine/support/brand/brand-context-loader";
 import { rateLimitResponse, RATE_LIMITS } from "@workspace/content-engine/core/rate-limit";
@@ -93,8 +97,6 @@ export async function handleProjectGenerateStream(
     intendedPublishPlatform,
     competitorFocusUrl,
     competitorUrls,
-    useAgentTeam,
-    agentFastMode,
   } = parsed.data;
 
   const brand = await loadBrandContextForProject(projectId);
@@ -138,9 +140,7 @@ export async function handleProjectGenerateStream(
     existingPieceTitles: await loadExistingPieceTitles(projectId),
   };
 
-  const cacheKeyStr = useAgentTeam
-    ? undefined
-    : buildCacheKey(
+  const cacheKeyStr = buildCacheKey(
         formatType,
         targetKeyword,
         brand,
@@ -224,7 +224,7 @@ export async function handleProjectGenerateStream(
     }
   }
 
-  const billingTier = useAgentTeam ? "planning" : "execution";
+  const billingTier = "execution";
   const [{ userApiKey, aiProviderOptions }, billingPrep] = await Promise.all([
     loadUserAiSettings(userId),
     prepareAiBilling({ userId, tier: billingTier, quotaKind: "article" }),
@@ -244,52 +244,51 @@ export async function handleProjectGenerateStream(
           };
 
           try {
-            let result;
-            if (useAgentTeam) {
-              result = await generateContentPieceWithAgents(
-                formatType as ContentFormatType,
-                brand,
-                targetKeyword,
-                angleHint,
-                {
-                  fastMode: agentFastMode,
-                  userApiKey,
-                  aiProviderOptions,
+            const generatedHolder: { value?: Awaited<ReturnType<typeof generateContentPiece>> } = {};
+            const loop = await runResearchThenDraftLoop({
+              projectId,
+              userId,
+              keyword: targetKeyword,
+              caps: STUDIO_AGENT_LOOP_CAPS,
+              onPersist: (run) => {
+                const step = run.trajectory.at(-1);
+                if (step) send("agent", { type: "loop_step", ...step, runStatus: run.status });
+              },
+              generateDraft: async () => {
+                let out = await studioDraftFromKeyword({
                   projectId,
-                  onAgentEvent: (sseData: string) => {
-                    try {
-                      send("agent", JSON.parse(sseData));
-                    } catch {
-                      send("agent", { raw: sseData });
-                    }
-                  },
-                },
-                generationContext,
-              );
-            } else {
-              try {
-                result = await generateContentPieceStream(
-                  formatType as ContentFormatType,
-                  brand,
-                  targetKeyword,
-                  (chunk: string) => send("chunk", { text: chunk }),
+                  userId,
+                  format: formatType as ContentFormatType,
+                  keyword: targetKeyword,
                   angleHint,
+                  bypassCache: true,
                   userApiKey,
                   aiProviderOptions,
                   generationContext,
-                );
-              } catch {
-                result = await generateContentPiece(
-                  formatType as ContentFormatType,
+                  streamChunk: (chunk: string) => send("chunk", { text: chunk }),
                   brand,
-                  targetKeyword,
-                  angleHint,
-                  true,
-                  userApiKey,
-                  aiProviderOptions,
-                  generationContext,
-                );
-              }
+                });
+                if (!out.generated) {
+                  out = await studioDraftFromKeyword({
+                    projectId,
+                    userId,
+                    format: formatType as ContentFormatType,
+                    keyword: targetKeyword,
+                    angleHint,
+                    bypassCache: true,
+                    userApiKey,
+                    aiProviderOptions,
+                    generationContext,
+                    brand,
+                  });
+                }
+                generatedHolder.value = out.generated;
+                return out.tool;
+              },
+            });
+            const result = generatedHolder.value;
+            if (!result) {
+              throw new Error(loop.stopReason ?? "Agent loop did not produce a draft");
             }
 
             if (cacheKeyStr) await cacheSet(cacheKeyStr, result);
@@ -307,7 +306,10 @@ export async function handleProjectGenerateStream(
                 status: "draft",
                 cacheKey: cacheKeyStr ?? null,
                 plannedDate: plannedDate ?? null,
-                pieceMetadata: result.pieceMetadata ?? null,
+                pieceMetadata: {
+                  ...(result.pieceMetadata ?? {}),
+                  ...loopMetaFromRun(loop),
+                },
               })
               .returning();
 

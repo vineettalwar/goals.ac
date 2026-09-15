@@ -70,7 +70,7 @@ Each package has a short `README.md`. High-traffic ones:
 | `lib/db` | Schema + migrations (Postgres + D1) |
 | `lib/app-shell` | Shared nav / auth UI / page grid |
 | `lib/cf-edge` | Worker session + env helpers |
-| `lib/content-engine` | Generation + publish pipeline |
+| `lib/content-engine` | Generation + publish pipeline + `agent-loop` employee runtime |
 | `lib/ai-providers` | Tiered AI providers |
 | `lib/connectors` | CMS clients |
 | `lib/billing` | Credits |
@@ -80,7 +80,7 @@ Each package has a short `README.md`. High-traffic ones:
 
 | Topic | Doc |
 |---|---|
-| Auth + avatars (incl. WIP) | [`docs/auth.md`](auth.md) |
+| AI employee loop | [`docs/agent-employee.md`](agent-employee.md) |
 | Decisions | [`docs/DECISIONS.md`](DECISIONS.md) |
 | Admin | [`docs/admin.md`](admin.md) |
 | Parity Next ↔ CF | [`docs/parity-matrix.md`](parity-matrix.md) |
