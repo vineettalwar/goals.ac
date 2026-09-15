@@ -32,4 +32,5 @@ export type AvailableSearchProperty = {
 export type AvailableSearchPropertiesResponse = {
   properties: AvailableSearchProperty[];
   projectUrl: string;
+  linked?: string | null;
 };

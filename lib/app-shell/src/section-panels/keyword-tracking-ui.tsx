@@ -1,5 +1,4 @@
 import { useMemo, type ReactNode } from "react";
-import { Lightbulb, Search, TrendingUp, Upload } from "lucide-react";
 import type { SectionLinkProps } from "../section/types";
 import { PanelLoading, SectionLink } from "./shared";
 import { KeywordIdeasTab } from "./keyword-ideas-tab";
@@ -132,6 +131,7 @@ export function KeywordTrackingView({
   onConnectSheetSource,
   syncingSheetId,
   settingsHref,
+  gscConnectHref,
   visibilityHref,
   studioHref,
   contentPieceHref,
@@ -218,6 +218,7 @@ export function KeywordTrackingView({
   onConnectSheetSource?: (id: number) => void;
   syncingSheetId?: number | null;
   settingsHref?: string;
+  gscConnectHref?: string;
   visibilityHref?: string;
   studioHref?: (opp: KeywordOpportunityRow) => string;
   contentPieceHref?: (pieceId: number) => string;
@@ -243,7 +244,7 @@ export function KeywordTrackingView({
 
   if (!projectId) {
     return (
-      <div className="paper-card rounded-xl p-6 text-sm text-muted-foreground">
+      <div className="rounded-xl p-6 text-sm text-muted-foreground">
         Choose a project in the sidebar to research keywords.
       </div>
     );
@@ -265,16 +266,16 @@ export function KeywordTrackingView({
 
       <div className="flex flex-wrap gap-2 border-b border-border pb-3">
         <TabButton active={activeTab === "ideas"} onClick={() => onTabChange("ideas")}>
-          <Lightbulb className="h-4 w-4" /> Article ideas
+          Article ideas
         </TabButton>
         <TabButton active={activeTab === "import"} onClick={() => onTabChange("import")}>
-          <Upload className="h-4 w-4" /> Import
+          Import
         </TabButton>
         <TabButton active={activeTab === "tracking"} onClick={() => onTabChange("tracking")}>
-          <TrendingUp className="h-4 w-4" /> Rank tracking
+          Rank tracking
         </TabButton>
         <TabButton active={activeTab === "analyzer"} onClick={() => onTabChange("analyzer")}>
-          <Search className="h-4 w-4" /> AI analyzer
+          AI analyzer
         </TabButton>
       </div>
 
@@ -300,7 +301,7 @@ export function KeywordTrackingView({
           generatingId={generatingId}
           dismissingId={dismissingId}
           settingsHref={settingsHref}
-          visibilityHref={visibilityHref}
+          gscConnectHref={gscConnectHref}
           studioHref={studioHref}
           contentPieceHref={contentPieceHref}
           renderLink={renderLink}
@@ -366,13 +367,36 @@ export function KeywordTrackingView({
         />
       ) : null}
 
-      {visibilityHref ? (
+      {visibilityHref || gscConnectHref ? (
         <p className="text-sm text-muted-foreground">
-          Also see{" "}
-          <SectionLink renderLink={renderLink} href={visibilityHref} className="text-primary hover:underline">
-            Visibility
-          </SectionLink>{" "}
-          for LLM citation tracking and Search Console connection.
+          {visibilityHref ? (
+            <>
+              Also see{" "}
+              <SectionLink
+                renderLink={renderLink}
+                href={visibilityHref}
+                className="text-primary hover:underline"
+              >
+                Visibility
+              </SectionLink>{" "}
+              for LLM citation tracking
+            </>
+          ) : null}
+          {gscConnectHref ? (
+            <>
+              {visibilityHref ? ". Connect " : "Connect "}
+              <SectionLink
+                renderLink={renderLink}
+                href={gscConnectHref}
+                className="text-primary hover:underline"
+              >
+                Search Console
+              </SectionLink>
+              .
+            </>
+          ) : visibilityHref ? (
+            "."
+          ) : null}
         </p>
       ) : null}
     </div>

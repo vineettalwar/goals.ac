@@ -9,7 +9,6 @@ import {
   fetchAllSearchAnalytics,
   defaultSyncDateRange,
   parseAnalyticsRowKeys,
-  formatGscDate,
 } from "@workspace/seo-tools/gscSearchAnalytics";
 import {
   encryptStoredTokens,
@@ -97,17 +96,28 @@ export async function syncGscSearchAnalytics(
   }
 
   const dateRange = defaultSyncDateRange(days);
-  const dimensions: Array<"query" | "page" | "date"> = ["date", "query", "page"];
+  // date+query+page is below Google's privacy threshold on most sites and
+  // comes back empty. date+query is enough for article ideas; query-only is
+  // the last fallback when even that is anonymized.
+  const dimensionSets: Array<Array<"query" | "page" | "date">> = [
+    ["date", "query"],
+    ["query"],
+  ];
 
-  let rows: Awaited<ReturnType<typeof fetchAllSearchAnalytics>>;
+  let rows: Awaited<ReturnType<typeof fetchAllSearchAnalytics>> = [];
+  let dimensions = dimensionSets[0]!;
   try {
-    rows = await fetchAllSearchAnalytics({
-      siteUrl: connection.propertyUrl,
-      accessToken: resolved.accessToken,
-      startDate: dateRange.startDate,
-      endDate: dateRange.endDate,
-      dimensions,
-    });
+    for (const dims of dimensionSets) {
+      rows = await fetchAllSearchAnalytics({
+        siteUrl: connection.propertyUrl,
+        accessToken: resolved.accessToken,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate,
+        dimensions: dims,
+      });
+      dimensions = dims;
+      if (rows.length > 0) break;
+    }
   } catch (err) {
     // Recorded so a founder relying on this data can see the pipe is dry,
     // rather than a stale "connected and verified" badge that never changes.
@@ -118,14 +128,15 @@ export async function syncGscSearchAnalytics(
   let rowsUpserted = 0;
   for (const row of rows) {
     const parsed = parseAnalyticsRowKeys(row.keys, dimensions);
-    if (!parsed.query || !parsed.date) continue;
+    if (!parsed.query) continue;
+    const date = parsed.date ?? dateRange.endDate;
 
     await upsertGscRow({
       projectId,
       connectionId: connection.id,
       query: parsed.query,
       page: parsed.page,
-      date: parsed.date,
+      date,
       impressions: row.impressions,
       clicks: row.clicks,
       ctr: row.ctr,
@@ -194,6 +205,7 @@ export async function getGscSyncStatus(projectId: number): Promise<{
       propertyUrl: searchPropertyConnectionsTable.propertyUrl,
       lastSyncStatus: searchPropertyConnectionsTable.lastSyncStatus,
       lastSyncError: searchPropertyConnectionsTable.lastSyncError,
+      lastSyncedAt: searchPropertyConnectionsTable.lastSyncedAt,
     })
     .from(searchPropertyConnectionsTable)
     .where(
@@ -212,10 +224,17 @@ export async function getGscSyncStatus(projectId: number): Promise<{
     .from(gscSearchQueriesTable)
     .where(eq(gscSearchQueriesTable.projectId, projectId));
 
+  const connectionSyncedAt =
+    connection?.lastSyncedAt instanceof Date
+      ? connection.lastSyncedAt.toISOString()
+      : connection?.lastSyncedAt != null
+        ? String(connection.lastSyncedAt)
+        : null;
+
   return {
     connected: Boolean(connection?.propertyUrl),
     propertyVerified: connection?.propertyVerified ?? false,
-    lastSyncedAt: stats?.lastSyncedAt ?? null,
+    lastSyncedAt: stats?.lastSyncedAt ?? connectionSyncedAt,
     queryCount: stats?.queryCount ?? 0,
     lastSyncStatus: connection?.lastSyncStatus ?? null,
     lastSyncError: connection?.lastSyncError ?? null,

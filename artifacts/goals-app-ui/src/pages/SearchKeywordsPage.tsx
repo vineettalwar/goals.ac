@@ -1,16 +1,7 @@
 import { Link } from "react-router-dom";
-import { KeywordTrackingView } from "@workspace/app-shell";
+import { KeywordTrackingView, SEARCH_TABS } from "@workspace/app-shell";
 import { SectionShell } from "@/components/SectionShell";
 import { useSearchKeywordsPage } from "@/hooks/use-search-keywords-page";
-
-const searchTabs = [
-  { label: "Overview", to: "/search" },
-  { label: "Keywords", to: "/search/keywords" },
-  { label: "Visibility", to: "/search/visibility" },
-  { label: "Performance", to: "/search/performance" },
-  { label: "Site", to: "/search/site" },
-  { label: "Suggestions", to: "/search/suggestions" },
-];
 
 const renderLink = ({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) => (
   <Link to={href} className={className}>
@@ -25,8 +16,7 @@ export function SearchKeywordsPage() {
   return (
     <SectionShell
       title="Keyword research"
-      description="Article ideas from Search Console, imports, rank tracking, and AI analysis."
-      tabs={searchTabs}
+      tabs={[...SEARCH_TABS]}
     >
       <KeywordTrackingView
         projectId={projectId}
@@ -98,6 +88,7 @@ export function SearchKeywordsPage() {
         onConnectSheetSource={state.handleConnectSheetSource}
         syncingSheetId={state.syncingSheetId}
         settingsHref="/integrations/tools"
+        gscConnectHref={projectId ? `/projects/${projectId}/integrations/search` : "/integrations"}
         visibilityHref="/search/visibility"
         studioHref={(opp) =>
           projectId

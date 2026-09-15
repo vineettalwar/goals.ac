@@ -1,4 +1,7 @@
 import { withCors } from "@workspace/cf-edge/cors";
+import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
+import { sendToCfQueue } from "@workspace/jobs/cf-queues";
+import { QUEUES } from "@workspace/jobs/queues";
 import {
   encryptStoredTokens,
   listPropertiesForProvider,
@@ -15,6 +18,7 @@ import {
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getAccessibleProject } from "./project-access";
+import { bingEnvBindings } from "@workspace/platform-admin";
 
 const selectPropertyBody = z.object({
   provider: z.enum(["google_search_console", "bing_webmaster"]),
@@ -26,7 +30,23 @@ export async function handleSearchPropertiesWrite(
   path: string,
   userId: number,
   env: SearchPropertyTokenEnv,
+  trackJob?: (jobId: string, queue: string, meta: Record<string, unknown>) => Promise<void>,
 ): Promise<Response | null> {
+  const syncMatch = path.match(/^\/api\/website-projects\/(\d+)\/search-properties\/gsc\/sync$/);
+  if (syncMatch && request.method === "POST") {
+    const projectId = Number.parseInt(syncMatch[1]!, 10);
+    const project = await getAccessibleProject(projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+    const jobId = await sendToCfQueue(QUEUES.gscSearchAnalyticsSync, { projectId, userId });
+    const id = jobId ?? `cf:${QUEUES.gscSearchAnalyticsSync}:${Date.now()}`;
+    if (trackJob) {
+      await trackJob(id, QUEUES.gscSearchAnalyticsSync, { userId, projectId });
+    }
+    return withCors(request, acceptedJobResponse(id, QUEUES.gscSearchAnalyticsSync));
+  }
+
   const baseMatch = path.match(/^\/api\/website-projects\/(\d+)\/search-properties$/);
   if (!baseMatch) return null;
 
@@ -91,7 +111,7 @@ export async function handleSearchPropertiesWrite(
 
     try {
       let tokens = parseStoredTokens(connection.encryptedTokens);
-      const resolved = await resolveAccessToken(provider, tokens, env);
+      const resolved = await resolveAccessToken(provider, tokens, await bingEnvBindings(env));
       tokens = resolved.tokens;
 
       if (resolved.refreshed) {

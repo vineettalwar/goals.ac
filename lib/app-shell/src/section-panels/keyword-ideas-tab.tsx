@@ -183,7 +183,7 @@ export function KeywordIdeasTab({
   generatingId,
   dismissingId,
   settingsHref,
-  visibilityHref,
+  gscConnectHref,
   studioHref,
   contentPieceHref,
   renderLink,
@@ -219,7 +219,7 @@ export function KeywordIdeasTab({
   generatingId?: number | null;
   dismissingId?: number | null;
   settingsHref?: string;
-  visibilityHref?: string;
+  gscConnectHref?: string;
   studioHref?: (opp: KeywordOpportunityRow) => string;
   contentPieceHref?: (pieceId: number) => string;
   renderLink: (props: SectionLinkProps) => ReactNode;
@@ -268,7 +268,7 @@ export function KeywordIdeasTab({
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="paper-card flex items-center justify-between gap-3 rounded-xl p-4">
+        <div className="flex items-center justify-between gap-3 rounded-xl p-4">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4 text-orange-500" />
             <div>
@@ -284,7 +284,7 @@ export function KeywordIdeasTab({
             </SectionLink>
           ) : null}
         </div>
-        <div className="paper-card flex items-center justify-between gap-3 rounded-xl p-4">
+        <div className="flex items-center justify-between gap-3 rounded-xl p-4">
           <div className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4 text-primary" />
             <div>
@@ -300,8 +300,8 @@ export function KeywordIdeasTab({
             <button type="button" disabled={syncingGsc} onClick={onGscSync} className={btnOutline}>
               {syncingGsc ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
             </button>
-          ) : visibilityHref ? (
-            <SectionLink renderLink={renderLink} href={visibilityHref} className={btnOutline}>
+          ) : gscConnectHref ? (
+            <SectionLink renderLink={renderLink} href={gscConnectHref} className={btnOutline}>
               Connect
             </SectionLink>
           ) : null}
@@ -357,7 +357,7 @@ export function KeywordIdeasTab({
         ))}
       </div>
 
-      <div className="paper-card space-y-4 rounded-xl p-6">
+      <div className="space-y-4 rounded-xl p-6">
         <h2 className="flex items-center gap-2 font-semibold">
           <Lightbulb className="h-4 w-4 text-primary" />
           Article ideas
@@ -390,7 +390,7 @@ export function KeywordIdeasTab({
       </div>
 
       {alerts.length > 0 ? (
-        <div className="paper-card space-y-3 rounded-xl p-6">
+        <div className="space-y-3 rounded-xl p-6">
           <h2 className="flex items-center gap-2 font-semibold">
             <AlertTriangle className="h-4 w-4 text-amber-500" /> Rank alerts
           </h2>

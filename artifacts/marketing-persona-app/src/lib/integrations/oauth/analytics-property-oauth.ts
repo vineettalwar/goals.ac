@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { analyticsPropertyConnectionsTable, websiteProjectsTable } from "@workspace/db/schema";
+import { analyticsPropertyConnectionsTable } from "@workspace/db/schema";
 import type { AnalyticsPropertyProvider } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import { enqueue, QUEUES } from "@workspace/jobs";
 import {
   assertOAuthSessionUser,
@@ -144,13 +145,8 @@ export async function handleGoogleAnalyticsCallback(
     return new NextResponse("Unauthorized OAuth callback", { status: 401 });
   }
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id, url: websiteProjectsTable.url, userId: websiteProjectsTable.userId })
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.id, decoded.projectId))
-    .limit(1);
-
-  if (!project || project.userId !== decoded.userId) {
+  const project = await getAccessibleProject(decoded.projectId, decoded.userId);
+  if (!project) {
     return new NextResponse("Project not found", { status: 404 });
   }
 

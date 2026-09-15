@@ -7,6 +7,7 @@ import {
 } from "@workspace/content-engine/analytics/gsc-search-analytics-service";
 import { discoverOpportunities } from "@workspace/content-engine/strategy/keyword-opportunity-service";
 import { enqueue, QUEUES } from "@workspace/jobs";
+import { enqueueOnEdge } from "@/lib/cf-edge-http";
 import { rateLimitResponse, RATE_LIMITS } from "@/lib/auth/rate-limit";
 
 export async function POST(
@@ -38,9 +39,12 @@ export async function POST(
   const asyncMode = body?.async === true;
 
   try {
+    const queued = await enqueueOnEdge(QUEUES.gscSearchAnalyticsSync, { projectId, userId: userId! });
+    if (queued) return queued;
+
     if (asyncMode) {
       await enqueue(QUEUES.gscSearchAnalyticsSync, { projectId, userId: userId! });
-      return NextResponse.json({ queued: true }, { status: 202 });
+      return NextResponse.json({ queued: true, accepted: true, status: "queued" }, { status: 202 });
     }
 
     const result = await syncGscSearchAnalytics(projectId);

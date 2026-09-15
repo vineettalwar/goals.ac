@@ -116,7 +116,7 @@ export async function handleGoogleAnalyticsAuthStart(
 
   const url = new URL(request.url);
   const projectId = Number(url.searchParams.get("projectId"));
-  if (!Number.isFinite(projectId)) {
+  if (!Number.isInteger(projectId) || projectId < 1) {
     return Response.json({ error: "projectId query param is required" }, { status: 400 });
   }
 
@@ -136,9 +136,9 @@ export async function handleGoogleAnalyticsAuthStart(
       );
     }
 
-    const returnUrl = normalizeReturnUrl(url.searchParams.get("returnUrl"), request);
+    const returnUrl = normalizeReturnUrl(url.searchParams.get("returnUrl"), request, projectId);
     const state = await signSearchOAuthState(
-      { projectId, userId, provider: "google_search_console", returnUrl },
+      { projectId, userId, provider: "google_analytics_4", returnUrl },
       secret,
     );
     const redirectUri = resolveGoogleAnalyticsRedirectUri(request);
@@ -183,7 +183,7 @@ export async function handleGoogleAnalyticsAuthCallback(
     return new Response("Auth is not configured", { status: 503 });
   }
 
-  if (oauthError || !code || !state) {
+  if (oauthError || !code || !state || state.provider !== "google_analytics_4") {
     return new Response("Google Analytics authorization failed", { status: 400 });
   }
 

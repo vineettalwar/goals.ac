@@ -11,6 +11,7 @@ import {
   rankProperties,
   resolveAccessToken,
   encryptStoredTokens,
+  pickSearchProperty,
 } from "@/lib/integrations/search/search-property-client";
 
 export async function POST(
@@ -49,6 +50,7 @@ export async function POST(
     .select({
       id: searchPropertyConnectionsTable.id,
       encryptedTokens: searchPropertyConnectionsTable.encryptedTokens,
+      propertyVerified: searchPropertyConnectionsTable.propertyVerified,
     })
     .from(searchPropertyConnectionsTable)
     .where(
@@ -77,8 +79,21 @@ export async function POST(
 
     const rawProperties = await listPropertiesForProvider(provider, resolved.accessToken);
     const properties = rankProperties(project.url, rawProperties);
+    const picked = pickSearchProperty(project.url, rawProperties);
+    let linked: string | null = null;
 
-    return NextResponse.json({ properties, projectUrl: project.url });
+    if (picked && !connection.propertyVerified) {
+      await db
+        .update(searchPropertyConnectionsTable)
+        .set({
+          propertyUrl: picked,
+          propertyVerified: true,
+        })
+        .where(eq(searchPropertyConnectionsTable.id, connection.id));
+      linked = picked;
+    }
+
+    return NextResponse.json({ properties, projectUrl: project.url, linked });
   } catch {
     return NextResponse.json({ error: "Failed to load verified properties" }, { status: 502 });
   }

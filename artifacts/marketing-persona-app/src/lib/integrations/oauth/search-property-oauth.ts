@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@workspace/db";
-import { searchPropertyConnectionsTable, websiteProjectsTable } from "@workspace/db/schema";
+import { searchPropertyConnectionsTable } from "@workspace/db/schema";
 import type { SearchPropertyProvider } from "@workspace/db/schema";
 import { and, eq } from "drizzle-orm";
+import { getAccessibleProject } from "@/lib/org/org-access";
 import {
   assertOAuthSessionUser,
   decodeSignedOAuthState,
@@ -14,20 +15,29 @@ import {
   exchangeBingCode,
   exchangeGoogleCode,
   listPropertiesForProvider,
-  propertyMatchesProject,
+  pickSearchProperty,
 } from "../search/search-property-client";
 import { assertBingWebmasterEnabled, assertGoogleIntegrationsEnabled } from "../../platform/platform-settings";
+import { resolveBingWebmasterOAuthCredentials } from "../../platform/bing-webmaster-credentials";
+import { resolveSameOriginReturnUrl } from "@workspace/cf-edge/oauth-return-url";
 
 type OAuthState = SignedOAuthPayload & {
   provider: SearchPropertyProvider;
+  returnUrl?: string;
 };
 
-function encodeState(payload: { projectId: number; userId: number; provider: SearchPropertyProvider }): string {
+function encodeState(payload: {
+  projectId: number;
+  userId: number;
+  provider: SearchPropertyProvider;
+  returnUrl?: string;
+}): string {
   return encodeSignedOAuthState({
     projectId: payload.projectId,
     userId: payload.userId,
     platform: payload.provider,
     provider: payload.provider,
+    returnUrl: payload.returnUrl,
   });
 }
 
@@ -56,9 +66,16 @@ function redirectUri(provider: SearchPropertyProvider): string {
   return `${appOrigin()}${path}`;
 }
 
-function redirectToProject(projectId: number, params: Record<string, string>) {
-  const qs = new URLSearchParams(params).toString();
-  return NextResponse.redirect(`${appOrigin()}/search/visibility?${qs}`);
+export function resolveSearchOAuthReturnUrl(projectId: number, raw: string | null | undefined): string {
+  return resolveSameOriginReturnUrl(appOrigin(), projectId, raw);
+}
+
+function redirectToProject(projectId: number, params: Record<string, string>, returnUrl?: string) {
+  const target = new URL(resolveSearchOAuthReturnUrl(projectId, returnUrl));
+  for (const [key, value] of Object.entries(params)) {
+    target.searchParams.set(key, value);
+  }
+  return NextResponse.redirect(target.toString());
 }
 
 async function upsertConnection(params: {
@@ -113,6 +130,7 @@ function callbackStatus(properties: string[], matched: string | null): string {
 export async function startGoogleSearchConsoleOAuth(
   projectId: number,
   userId: number,
+  returnUrl?: string,
 ): Promise<NextResponse> {
   await assertGoogleIntegrationsEnabled();
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -121,7 +139,12 @@ export async function startGoogleSearchConsoleOAuth(
     throw new Error("Google OAuth is not configured (GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET)");
   }
 
-  const state = encodeState({ projectId, userId, provider: "google_search_console" });
+  const state = encodeState({
+    projectId,
+    userId,
+    provider: "google_search_console",
+    returnUrl: resolveSearchOAuthReturnUrl(projectId, returnUrl),
+  });
   const params = new URLSearchParams({
     client_id: clientId,
     redirect_uri: redirectUri("google_search_console"),
@@ -138,16 +161,22 @@ export async function startGoogleSearchConsoleOAuth(
 export async function startBingWebmasterOAuth(
   projectId: number,
   userId: number,
+  returnUrl?: string,
 ): Promise<NextResponse> {
   await assertBingWebmasterEnabled();
-  const clientId = process.env.BING_WEBMASTER_CLIENT_ID;
-  if (!clientId) {
+  const bing = await resolveBingWebmasterOAuthCredentials();
+  if (!bing) {
     throw new Error("Bing Webmaster OAuth is not configured (BING_WEBMASTER_CLIENT_ID)");
   }
 
-  const state = encodeState({ projectId, userId, provider: "bing_webmaster" });
+  const state = encodeState({
+    projectId,
+    userId,
+    provider: "bing_webmaster",
+    returnUrl: resolveSearchOAuthReturnUrl(projectId, returnUrl),
+  });
   const params = new URLSearchParams({
-    client_id: clientId,
+    client_id: bing.clientId,
     redirect_uri: redirectUri("bing_webmaster"),
     response_type: "code",
     scope: "webmaster.read",
@@ -173,13 +202,8 @@ export async function handleSearchPropertyCallback(
     return new NextResponse("Unauthorized OAuth callback", { status: 401 });
   }
 
-  const [project] = await db
-    .select({ id: websiteProjectsTable.id, url: websiteProjectsTable.url, userId: websiteProjectsTable.userId })
-    .from(websiteProjectsTable)
-    .where(eq(websiteProjectsTable.id, decoded.projectId))
-    .limit(1);
-
-  if (!project || project.userId !== decoded.userId) {
+  const project = await getAccessibleProject(decoded.projectId, decoded.userId);
+  if (!project) {
     return new NextResponse("Project not found", { status: 404 });
   }
 
@@ -189,7 +213,7 @@ export async function handleSearchPropertyCallback(
     if (provider === "google_search_console") {
       const tokens = await exchangeGoogleCode(code);
       const properties = await listPropertiesForProvider(provider, tokens.accessToken);
-      const matched = properties.find((p) => propertyMatchesProject(project.url, p)) ?? null;
+      const matched = pickSearchProperty(project.url, properties);
       await upsertConnection({
         projectId: project.id,
         provider,
@@ -198,14 +222,18 @@ export async function handleSearchPropertyCallback(
         tokens,
         propertyVerified: Boolean(matched),
       });
-      return redirectToProject(project.id, {
-        [param]: callbackStatus(properties, matched),
-      });
+      return redirectToProject(
+        project.id,
+        {
+          [param]: callbackStatus(properties, matched),
+        },
+        decoded.returnUrl,
+      );
     }
 
     const tokens = await exchangeBingCode(code);
     const properties = await listPropertiesForProvider(provider, tokens.accessToken);
-    const matched = properties.find((p) => propertyMatchesProject(project.url, p)) ?? null;
+    const matched = pickSearchProperty(project.url, properties);
     await upsertConnection({
       projectId: project.id,
       provider,
@@ -214,10 +242,14 @@ export async function handleSearchPropertyCallback(
       tokens,
       propertyVerified: Boolean(matched),
     });
-    return redirectToProject(project.id, {
-      [param]: callbackStatus(properties, matched),
-    });
+    return redirectToProject(
+      project.id,
+      {
+        [param]: callbackStatus(properties, matched),
+      },
+      decoded.returnUrl,
+    );
   } catch {
-    return redirectToProject(project.id, { [param]: "error" });
+    return redirectToProject(project.id, { [param]: "error" }, decoded.returnUrl);
   }
 }

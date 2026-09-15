@@ -13,6 +13,7 @@ export interface SignedOAuthPayload {
   mastodonInstance?: string;
   mastodonClientId?: string;
   provider?: string;
+  returnUrl?: string;
 }
 
 function signingKey(): string {
@@ -37,7 +38,7 @@ function verifySignature(body: string, sig: string): boolean {
 
 export function encodeSignedOAuthState(
   payload: Omit<SignedOAuthPayload, "exp" | "nonce"> &
-    Partial<Pick<SignedOAuthPayload, "codeVerifier" | "mastodonToken" | "mastodonInstance" | "mastodonClientId" | "provider">>,
+    Partial<Pick<SignedOAuthPayload, "codeVerifier" | "mastodonToken" | "mastodonInstance" | "mastodonClientId" | "provider" | "returnUrl">>,
 ): string {
   const full: SignedOAuthPayload = {
     ...payload,

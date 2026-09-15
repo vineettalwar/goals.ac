@@ -12,6 +12,7 @@ import {
   type VisibilitySettings,
   type VisibilitySummary,
 } from "@workspace/app-shell";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 import { SectionShell } from "@/components/SectionShell";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { useAuditDetailData, useAuditListData } from "@/hooks/use-audit-data";
@@ -223,7 +224,7 @@ export function AuditDetailPage({ auditId }: { auditId: string }) {
   const { audit, loading, error } = useAuditDetailData(auditId);
 
   return (
-    <div className="max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className={APP_SHELL_PAGE}>
       <GeoAuditDetailView audit={audit} loading={loading} error={error} renderLink={renderLink} />
     </div>
   );

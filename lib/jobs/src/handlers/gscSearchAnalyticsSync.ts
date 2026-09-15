@@ -52,6 +52,7 @@ async function runGscSyncForProject(projectId: number, userId?: number): Promise
     }
   } catch (err) {
     logger.error({ err, projectId }, "GSC search analytics sync failed");
+    throw err;
   }
 }
 

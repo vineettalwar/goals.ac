@@ -13,11 +13,13 @@ import {
   encryptStoredTokens,
   listPropertiesForProvider,
   parseStoredTokens,
+  pickSearchProperty,
   rankProperties,
   resolveAccessToken,
   type SearchPropertyTokenEnv,
 } from "@workspace/cf-edge/search-property-client";
 import { getAccessibleProject, requireProjectAccess } from "./project-access";
+import { hasBingWebmasterOAuthCredentials, bingEnvBindings } from "@workspace/platform-admin";
 
 const AI_REPORT_LABELS: Record<SearchPropertyProvider, string> = {
   google_search_console: "Generative AI performance (Search Console)",
@@ -102,15 +104,6 @@ function hasGoogleCredentials(env: {
   return Boolean(env.GOOGLE_CLIENT_ID?.trim() && env.GOOGLE_CLIENT_SECRET?.trim());
 }
 
-function hasBingCredentials(env: {
-  BING_WEBMASTER_CLIENT_ID?: string;
-  BING_WEBMASTER_CLIENT_SECRET?: string;
-}): boolean {
-  return Boolean(
-    env.BING_WEBMASTER_CLIENT_ID?.trim() && env.BING_WEBMASTER_CLIENT_SECRET?.trim(),
-  );
-}
-
 async function oauthConfigured(env: {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
@@ -135,7 +128,7 @@ async function oauthConfigured(env: {
 
   return {
     googleSearchConsole: googleIntegrationsEnabled && hasGoogleCredentials(env),
-    bingWebmaster: bingWebmasterEnabled && hasBingCredentials(env),
+    bingWebmaster: bingWebmasterEnabled && (await hasBingWebmasterOAuthCredentials(env)),
   };
 }
 
@@ -153,6 +146,9 @@ export async function handleGscSyncStatusGet(
     .select({
       propertyVerified: searchPropertyConnectionsTable.propertyVerified,
       propertyUrl: searchPropertyConnectionsTable.propertyUrl,
+      lastSyncStatus: searchPropertyConnectionsTable.lastSyncStatus,
+      lastSyncError: searchPropertyConnectionsTable.lastSyncError,
+      lastSyncedAt: searchPropertyConnectionsTable.lastSyncedAt,
     })
     .from(searchPropertyConnectionsTable)
     .where(
@@ -176,7 +172,11 @@ export async function handleGscSyncStatusGet(
       ? stats.lastSyncedAt.toISOString()
       : stats?.lastSyncedAt != null
         ? String(stats.lastSyncedAt)
-        : null;
+        : connection?.lastSyncedAt instanceof Date
+          ? connection.lastSyncedAt.toISOString()
+          : connection?.lastSyncedAt != null
+            ? String(connection.lastSyncedAt)
+            : null;
 
   return withCors(
     request,
@@ -185,6 +185,8 @@ export async function handleGscSyncStatusGet(
       propertyVerified: connection?.propertyVerified ?? false,
       lastSyncedAt,
       queryCount: stats?.queryCount ?? 0,
+      lastSyncStatus: connection?.lastSyncStatus ?? null,
+      lastSyncError: connection?.lastSyncError ?? null,
     }),
   );
 }
@@ -254,6 +256,7 @@ export async function handleSearchPropertiesAvailablePost(
     .select({
       id: searchPropertyConnectionsTable.id,
       encryptedTokens: searchPropertyConnectionsTable.encryptedTokens,
+      propertyVerified: searchPropertyConnectionsTable.propertyVerified,
     })
     .from(searchPropertyConnectionsTable)
     .where(
@@ -270,7 +273,7 @@ export async function handleSearchPropertiesAvailablePost(
 
   try {
     let tokens = parseStoredTokens(connection.encryptedTokens);
-    const resolved = await resolveAccessToken(provider, tokens, env);
+    const resolved = await resolveAccessToken(provider, tokens, await bingEnvBindings(env));
     tokens = resolved.tokens;
 
     if (resolved.refreshed) {
@@ -282,12 +285,26 @@ export async function handleSearchPropertiesAvailablePost(
 
     const rawProperties = await listPropertiesForProvider(provider, resolved.accessToken);
     const properties = rankProperties(project.url, rawProperties);
+    const picked = pickSearchProperty(project.url, rawProperties);
+    let linked: string | null = null;
+
+    if (picked && !connection.propertyVerified) {
+      await db
+        .update(searchPropertyConnectionsTable)
+        .set({
+          propertyUrl: picked,
+          propertyVerified: true,
+        })
+        .where(eq(searchPropertyConnectionsTable.id, connection.id));
+      linked = picked;
+    }
 
     return withCors(
       request,
       Response.json({
         properties,
         projectUrl: project.url,
+        linked,
       }),
     );
   } catch {

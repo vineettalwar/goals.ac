@@ -27,7 +27,7 @@ export function KeywordAnalyzerTab({
 }) {
   return (
     <div className="space-y-6">
-      <div className="paper-card space-y-4 rounded-xl p-6">
+      <div className="space-y-4 rounded-xl p-6">
         <h2 className="flex items-center gap-2 font-semibold">
           <Search className="h-4 w-4" /> Keyword analysis
         </h2>
@@ -71,7 +71,7 @@ export function KeywordAnalyzerTab({
 
       {analysis ? (
         <div className="space-y-4">
-          <div className="paper-card rounded-xl p-5">
+          <div className="rounded-xl p-5">
             <h2 className="mb-2 flex items-center gap-2 font-semibold">
               <Lightbulb className="h-4 w-4 text-primary" /> Top opportunity
             </h2>
@@ -79,7 +79,7 @@ export function KeywordAnalyzerTab({
             <p className="mt-2 text-sm">{analysis.summary}</p>
           </div>
           {analysis.keywords.map((kw, index) => (
-            <div key={index} className="paper-card space-y-3 rounded-xl p-5">
+            <div key={index} className="space-y-3 rounded-xl p-5">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h3 className="font-semibold">{kw.keyword}</h3>
                 <StatusPill

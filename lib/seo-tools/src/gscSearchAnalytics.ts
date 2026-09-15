@@ -13,14 +13,19 @@ export type GscSearchAnalyticsResponse = {
   responseAggregationType?: string;
 };
 
+export type GscAnalyticsDimension = "query" | "page" | "date";
+export type GscDataState = "final" | "all";
+
 export type FetchSearchAnalyticsParams = {
   siteUrl: string;
   accessToken: string;
   startDate: string;
   endDate: string;
-  dimensions?: Array<"query" | "page" | "date">;
+  dimensions?: GscAnalyticsDimension[];
   rowLimit?: number;
   startRow?: number;
+  /** `all` includes recent unfinalized rows the Search Console UI shows by default. */
+  dataState?: GscDataState;
 };
 
 function encodeSiteUrl(siteUrl: string): string {
@@ -38,6 +43,7 @@ export async function fetchSearchAnalytics(
     dimensions = ["query", "page"],
     rowLimit = 25000,
     startRow = 0,
+    dataState = "all",
   } = params;
 
   const url = `https://www.googleapis.com/webmasters/v3/sites/${encodeSiteUrl(siteUrl)}/searchAnalytics/query`;
@@ -54,7 +60,7 @@ export async function fetchSearchAnalytics(
       dimensions,
       rowLimit,
       startRow,
-      dataState: "final",
+      dataState,
     }),
   });
 
@@ -105,7 +111,7 @@ export function priorPeriodRange(
 
 export function parseAnalyticsRowKeys(
   keys: string[],
-  dimensions: Array<"query" | "page" | "date">,
+  dimensions: GscAnalyticsDimension[],
 ): { query: string; page: string | null; date: string | null } {
   let query = "";
   let page: string | null = null;

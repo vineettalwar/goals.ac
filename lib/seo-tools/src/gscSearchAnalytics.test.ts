@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { priorPeriodRange } from "./gscSearchAnalytics";
+import { parseAnalyticsRowKeys, priorPeriodRange } from "./gscSearchAnalytics";
+
+describe("parseAnalyticsRowKeys", () => {
+  it("maps date+query in request order", () => {
+    expect(parseAnalyticsRowKeys(["2026-09-01", "seo tools"], ["date", "query"])).toEqual({
+      query: "seo tools",
+      page: null,
+      date: "2026-09-01",
+    });
+  });
+
+  it("leaves date empty for query-only rows", () => {
+    expect(parseAnalyticsRowKeys(["seo tools"], ["query"])).toEqual({
+      query: "seo tools",
+      page: null,
+      date: null,
+    });
+  });
+});
 
 describe("priorPeriodRange", () => {
   it("returns an equal-length window immediately before the current range", () => {

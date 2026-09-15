@@ -1,12 +1,36 @@
 import type { SearchPropertyProvider } from "@workspace/db/schema-sqlite";
 import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
 
+export const BING_OAUTH_AUTHORIZE_URL = "https://www.bing.com/webmasters/oauth/authorize";
+export const BING_OAUTH_TOKEN_URL = "https://www.bing.com/webmasters/oauth/token";
+export const BING_GET_USER_SITES_URL = "https://ssl.bing.com/webmaster/api.svc/json/GetUserSites";
+
 export type SearchPropertyTokenEnv = {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   BING_WEBMASTER_CLIENT_ID?: string;
   BING_WEBMASTER_CLIENT_SECRET?: string;
 };
+
+export type BingUserSite = { Url?: string; IsVerified?: boolean };
+
+function bingSiteRows(data: unknown): BingUserSite[] {
+  if (!data || typeof data !== "object") return [];
+  const envelope = (data as { d?: unknown }).d;
+  if (Array.isArray(envelope)) return envelope as BingUserSite[];
+  if (envelope && typeof envelope === "object" && Array.isArray((envelope as { results?: unknown }).results)) {
+    return (envelope as { results: BingUserSite[] }).results;
+  }
+  return [];
+}
+
+/** Keep verified sites; drop only when Microsoft explicitly marks IsVerified false. */
+export function parseBingUserSites(data: unknown): string[] {
+  return bingSiteRows(data)
+    .filter((site) => site.IsVerified !== false)
+    .map((site) => site.Url)
+    .filter((url): url is string => Boolean(url));
+}
 
 export type StoredTokens = {
   accessToken: string;
@@ -34,27 +58,31 @@ export function normalizeHost(url: string): string {
   }
 }
 
+export function propertyHost(propertyUrl: string): string {
+  if (propertyUrl.startsWith("sc-domain:")) {
+    return propertyUrl.slice("sc-domain:".length).replace(/^www\./i, "").toLowerCase();
+  }
+  return normalizeHost(propertyUrl);
+}
+
 export function propertyMatchesProject(projectUrl: string, propertyUrl: string): boolean {
   const projectHost = normalizeHost(projectUrl);
-  if (propertyUrl.startsWith("sc-domain:")) {
-    return (
-      projectHost ===
-      propertyUrl
-        .slice("sc-domain:".length)
-        .replace(/^www\./i, "")
-        .toLowerCase()
-    );
-  }
-  try {
-    return normalizeHost(propertyUrl) === projectHost;
-  } catch {
-    return false;
-  }
+  const host = propertyHost(propertyUrl);
+  if (!projectHost || !host || !projectHost.includes(".")) return false;
+  return projectHost === host || projectHost.endsWith(`.${host}`) || host.endsWith(`.${projectHost}`);
+}
+
+/** Exact/related host. Prefer a domain property over a URL-prefix when both match. */
+export function pickSearchProperty(projectUrl: string, properties: string[]): string | null {
+  const unique = [...new Set(properties)];
+  const matched = unique.filter((property) => propertyMatchesProject(projectUrl, property));
+  if (matched.length === 0) return null;
+  return matched.find((property) => property.startsWith("sc-domain:")) ?? matched[0]!;
 }
 
 export function formatPropertyLabel(propertyUrl: string): string {
   if (propertyUrl.startsWith("sc-domain:")) {
-    return propertyUrl.slice("sc-domain:".length);
+    return `${propertyUrl.slice("sc-domain:".length)} (domain)`;
   }
   try {
     return new URL(propertyUrl).hostname;
@@ -117,7 +145,7 @@ async function refreshBingTokens(
   const clientSecret = env.BING_WEBMASTER_CLIENT_SECRET?.trim();
   if (!clientId || !clientSecret) return tokens;
 
-  const res = await fetch("https://www.bing.com/webmasters/token", {
+  const res = await fetch(BING_OAUTH_TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
@@ -171,23 +199,27 @@ async function listGscProperties(accessToken: string): Promise<string[]> {
   const res = await fetch("https://www.googleapis.com/webmasters/v3/sites", {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
-  if (!res.ok) return [];
+  if (!res.ok) {
+    throw new Error(`Search Console sites.list failed (${res.status})`);
+  }
   const data = (await res.json()) as { siteEntry?: Array<{ siteUrl?: string }> };
   return (data.siteEntry ?? []).map((site) => site.siteUrl).filter((url): url is string => Boolean(url));
 }
 
 async function listBingSites(accessToken: string): Promise<string[]> {
-  const res = await fetch("https://ssl.bing.com/webmaster/api.svc/json/GetUserSites", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({}),
-  });
-  if (!res.ok) return [];
-  const data = (await res.json()) as { d?: Array<{ Url?: string }> };
-  return (data.d ?? []).map((site) => site.Url).filter((url): url is string => Boolean(url));
+  const headers = { Authorization: `Bearer ${accessToken}` };
+  let res = await fetch(BING_GET_USER_SITES_URL, { headers });
+  if (!res.ok) {
+    res = await fetch(BING_GET_USER_SITES_URL, {
+      method: "POST",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+  }
+  if (!res.ok) {
+    throw new Error(`Bing Webmaster GetUserSites failed (${res.status})`);
+  }
+  return parseBingUserSites(await res.json());
 }
 
 export async function listPropertiesForProvider(

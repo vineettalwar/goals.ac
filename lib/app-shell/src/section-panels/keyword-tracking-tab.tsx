@@ -26,7 +26,7 @@ export function KeywordTrackingTab({
   snapshots: KeywordRankSnapshot[];
 }) {
   return (
-    <div className="paper-card space-y-4 rounded-xl p-6">
+    <div className="space-y-4 rounded-xl p-6">
       <h2 className="flex items-center gap-2 font-semibold">
         <TrendingUp className="h-4 w-4" /> Rank tracking
       </h2>

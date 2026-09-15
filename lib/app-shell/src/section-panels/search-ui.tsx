@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
-import { ArrowUpDown, BarChart3, Eye, Globe, Lightbulb, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { ArrowUpDown, Eye, Plus, Trash2 } from "lucide-react";
 import { cn } from "../cn";
 import type { SectionLinkProps } from "../section/types";
-import { btnOutline, btnPrimary, inputClass, PanelLoading, ScoreRing, StatCard, StatusPill, ToggleRow } from "./shared";
+import { btnOutline, btnPrimary, inputClass, MetricRow, PanelLoading, ScoreRing, StatusPill, ToggleRow } from "./shared";
 
 export type TrackedKeyword = {
   id: number;
@@ -99,14 +99,16 @@ export function SearchKeywordsView({
   return (
     <div className="space-y-4">
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Tracked" value={keywords.length} icon={<Search className="h-5 w-5" />} />
-        <StatCard label="Active" value={active} tone="emerald" icon={<BarChart3 className="h-5 w-5" />} />
-        <StatCard label="Paused" value={keywords.length - active} icon={<RefreshCw className="h-5 w-5" />} />
-      </div>
+      <MetricRow
+        items={[
+          { label: "tracked", value: keywords.length },
+          { label: "active", value: active },
+          { label: "paused", value: keywords.length - active },
+        ]}
+      />
 
       {onAddKeyword ? (
-        <div className="paper-card flex flex-wrap gap-2 p-4">
+        <div className="flex flex-wrap gap-2 p-4">
           <input
             type="text"
             value={trackInput ?? ""}
@@ -120,7 +122,7 @@ export function SearchKeywordsView({
         </div>
       ) : null}
 
-      <div className="paper-card divide-y overflow-hidden">
+      <div className="divide-y overflow-hidden">
         {keywords.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">No tracked keywords yet.</p>
         ) : (
@@ -180,15 +182,15 @@ export function SearchVisibilityView({
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
       <div className="grid gap-4 md:grid-cols-[auto_1fr]">
-        <div className="paper-card flex flex-col items-center justify-center p-6">
+        <div className="flex flex-col items-center justify-center p-6">
           <ScoreRing score={score} />
           <p className="mt-2 text-sm font-medium">Visibility score</p>
           <p className="text-xs text-muted-foreground">{promptCount} prompts tracked</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {(summary?.byEngine ?? []).map((row) => (
-            <div key={row.engine} className="paper-card p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <div key={row.engine} className="p-4">
+              <p className="text-xs text-muted-foreground">
                 {ENGINE_LABELS[row.engine] ?? row.engine}
               </p>
               <p className="mt-1 text-2xl font-bold tabular-nums">{row.score}%</p>
@@ -201,8 +203,8 @@ export function SearchVisibilityView({
             </div>
           ))}
           {summary?.latestGeoScore != null ? (
-            <div className="paper-card p-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Latest GEO score</p>
+            <div className="p-4">
+              <p className="text-xs text-muted-foreground">Latest GEO score</p>
               <p className="mt-1 text-2xl font-bold tabular-nums">{summary.latestGeoScore}</p>
             </div>
           ) : null}
@@ -228,7 +230,7 @@ export function SearchVisibilityView({
       </div>
 
       {settings && onSettingsChange ? (
-        <div className="paper-card p-4">
+        <div className="p-4">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold">
             <Eye className="h-4 w-4 text-violet-600" /> Tracking settings
           </h2>
@@ -250,7 +252,7 @@ export function SearchVisibilityView({
       ) : null}
 
       {summary?.competitorMentions && summary.competitorMentions.length > 0 ? (
-        <div className="paper-card divide-y overflow-hidden">
+        <div className="divide-y overflow-hidden">
           <div className="px-4 py-3">
             <h2 className="text-sm font-semibold">Competitor mentions</h2>
           </div>
@@ -264,7 +266,7 @@ export function SearchVisibilityView({
       ) : null}
 
       {summary?.recentSnapshots && summary.recentSnapshots.length > 0 ? (
-        <div className="paper-card divide-y overflow-hidden">
+        <div className="divide-y overflow-hidden">
           <div className="px-4 py-3">
             <h2 className="text-sm font-semibold">Recent checks</h2>
           </div>
@@ -346,7 +348,7 @@ export function SearchPerformanceView({
       </div>
 
       {!data?.gscConnected && !data?.ga4Connected && !loading ? (
-        <div className="paper-card p-4 text-sm text-muted-foreground">
+        <div className="p-4 text-sm text-muted-foreground">
           Connect Google Search Console and GA4 in{" "}
           {integrationsHref ? (
             <SectionLink renderLink={renderLink} href={integrationsHref} className="font-medium text-primary hover:underline">
@@ -361,7 +363,7 @@ export function SearchPerformanceView({
 
       {loading && !data ? <PanelLoading label="Loading performance…" /> : null}
 
-      <div className="paper-card overflow-x-auto">
+      <div className="overflow-x-auto">
         <table className="w-full min-w-160 text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted-foreground">
@@ -422,12 +424,14 @@ export function SearchSiteHealthView({
 }) {
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <StatCard label="Crawl status" value={crawlStatus ?? "—"} icon={<Globe className="h-5 w-5" />} />
-        <StatCard label="Pages indexed" value={pageCount ?? 0} tone="emerald" icon={<Search className="h-5 w-5" />} />
-        <StatCard label="Site URL" value={<span className="text-base truncate">{url ?? "—"}</span>} />
-      </div>
-      <div className="paper-card space-y-3 p-5 text-sm">
+      <MetricRow
+        items={[
+          { label: "crawl", value: crawlStatus ?? "—" },
+          { label: "pages indexed", value: pageCount ?? 0 },
+          { label: "site", value: url ?? "—" },
+        ]}
+      />
+      <div className="space-y-3 p-5 text-sm">
         <p className="text-muted-foreground">
           Queue a fresh crawl to refresh your page inventory and internal link graph.
         </p>
@@ -458,15 +462,10 @@ export function SearchSuggestionsView({
   return (
     <div className="space-y-4">
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      <StatCard
-        label="Open opportunities"
-        value={opportunities.length}
-        icon={<Lightbulb className="h-5 w-5 text-amber-600" />}
-        tone="amber"
-      />
+      <MetricRow items={[{ label: "open ideas", value: opportunities.length }]} />
       <div className="grid gap-2 sm:grid-cols-2">
         {opportunities.map((row) => (
-          <div key={row.id} className="paper-card p-4">
+          <div key={row.id} className="p-4">
             <div className="flex items-start justify-between gap-2">
               <p className="text-sm font-semibold">{row.keyword}</p>
               <StatusPill label={`Score ${row.opportunityScore}`} tone="warning" />

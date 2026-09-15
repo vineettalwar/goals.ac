@@ -63,7 +63,7 @@ export function KeywordImportTab({
 }) {
   if (!canImport) {
     return (
-      <div className="paper-card rounded-xl p-6 text-sm text-muted-foreground">
+      <div className="rounded-xl p-6 text-sm text-muted-foreground">
         Article idea imports are available to site admins. Ask your org admin to upload a CSV,
         connect Google Sheets, or add ideas manually.
       </div>
@@ -76,7 +76,7 @@ export function KeywordImportTab({
         <p className="text-sm text-muted-foreground">{sheetsStatusMessage}</p>
       ) : null}
 
-      <div className="paper-card space-y-4 rounded-xl p-6">
+      <div className="space-y-4 rounded-xl p-6">
         <h2 className="font-semibold">Manual import</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="space-y-1 text-sm">
@@ -119,7 +119,7 @@ export function KeywordImportTab({
         ) : null}
       </div>
 
-      <div className="paper-card space-y-4 rounded-xl p-6">
+      <div className="space-y-4 rounded-xl p-6">
         <h2 className="font-semibold">CSV import</h2>
         <p className="text-sm text-muted-foreground">
           Upload a CSV with keyword, title, and optional angle columns.
@@ -140,7 +140,7 @@ export function KeywordImportTab({
         {csvImporting ? <p className="text-xs text-muted-foreground">Importing CSV…</p> : null}
       </div>
 
-      <div className="paper-card space-y-4 rounded-xl p-6">
+      <div className="space-y-4 rounded-xl p-6">
         <h2 className="flex items-center gap-2 font-semibold">
           <FileSpreadsheet className="h-4 w-4" /> Google Sheets
         </h2>
@@ -253,7 +253,7 @@ export function KeywordImportTab({
         ) : null}
       </div>
 
-      <div className="paper-card rounded-xl p-6">
+      <div className="rounded-xl p-6">
         <h2 className="mb-3 font-semibold">Import history</h2>
         {importLoading ? (
           <PanelLoading label="Loading history…" />

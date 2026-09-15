@@ -126,8 +126,9 @@ function PropertyPicker({
   if (!available?.properties.length) {
     return (
       <p className="text-xs text-amber-700">
-        No verified properties found on this account. Add and verify your site in {shortLabel}, then
-        reconnect.
+        No Search Console sites on this Google account. Properties are website URLs (for example
+        sc-domain:example.com), not the project name. Verify {available?.projectUrl || "this site"}{" "}
+        in {shortLabel} with the same account, then reconnect.
       </p>
     );
   }
@@ -137,9 +138,9 @@ function PropertyPicker({
       <div>
         <p className="text-xs font-medium text-foreground">Choose a property</p>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          We couldn&apos;t auto-match{" "}
-          <span className="font-medium">{available.projectUrl}</span>. Pick the verified property that
-          belongs to this project.
+          Search Console lists site URLs, not the project name. We couldn&apos;t auto-match{" "}
+          <span className="font-medium">{available.projectUrl}</span>. Pick the verified property
+          for this site.
         </p>
       </div>
       <label className="block text-xs">
@@ -149,9 +150,9 @@ function PropertyPicker({
           onChange={(event) => setSelected(event.target.value)}
           className="h-9 w-full rounded-lg border border-border bg-background px-2 text-xs outline-none focus:ring-2 focus:ring-primary/20"
         >
-          {available.properties.map((property) => (
+            {available.properties.map((property) => (
             <option key={property.propertyUrl} value={property.propertyUrl}>
-              {property.label}
+              {property.propertyUrl}
               {property.recommended ? " (Recommended)" : ""}
             </option>
           ))}
@@ -224,7 +225,7 @@ export function IntegrationsSearchPanel({
           const oauthReady = isOAuthReady(connection.provider, data.oauthConfigured);
           const verified = connection.connected && connection.propertyVerified;
           const pending = connection.connected && !connection.propertyVerified;
-          const connectHref = `${apiBase.replace(/\/+$/, "")}/api/auth/${meta.connectPath}?projectId=${encodeURIComponent(projectId)}`;
+          const connectHref = `${apiBase.replace(/\/+$/, "")}/api/auth/${meta.connectPath}?projectId=${encodeURIComponent(projectId)}&returnUrl=${encodeURIComponent(`/projects/${projectId}/integrations/search`)}`;
           const disconnecting = disconnectingProvider === connection.provider;
 
           return (

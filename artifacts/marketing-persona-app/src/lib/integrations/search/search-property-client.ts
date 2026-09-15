@@ -1,6 +1,15 @@
 import type { SearchPropertyProvider } from "@workspace/db/schema";
 import { decryptSecret, encryptSecret } from "@workspace/security/encryption";
-import { normalizeHttpUrl } from "../../utils/normalize-url";
+import { resolveBingWebmasterOAuthCredentials } from "../../platform/bing-webmaster-credentials";
+
+export {
+  formatPropertyLabel,
+  listPropertiesForProvider,
+  normalizeHost,
+  pickSearchProperty,
+  propertyMatchesProject,
+  rankProperties,
+} from "@workspace/cf-edge/search-property-client";
 
 export type StoredTokens = {
   accessToken: string;
@@ -8,37 +17,6 @@ export type StoredTokens = {
   expiresAt?: number;
   tokenType?: string;
 };
-
-export function normalizeHost(url: string): string {
-  try {
-    return new URL(normalizeHttpUrl(url)).hostname.replace(/^www\./i, "").toLowerCase();
-  } catch {
-    return url.replace(/^https?:\/\//i, "").replace(/^www\./i, "").split("/")[0]?.toLowerCase() ?? url;
-  }
-}
-
-export function propertyMatchesProject(projectUrl: string, propertyUrl: string): boolean {
-  const projectHost = normalizeHost(projectUrl);
-  if (propertyUrl.startsWith("sc-domain:")) {
-    return projectHost === propertyUrl.slice("sc-domain:".length).replace(/^www\./i, "").toLowerCase();
-  }
-  try {
-    return normalizeHost(propertyUrl) === projectHost;
-  } catch {
-    return false;
-  }
-}
-
-export function formatPropertyLabel(propertyUrl: string): string {
-  if (propertyUrl.startsWith("sc-domain:")) {
-    return propertyUrl.slice("sc-domain:".length);
-  }
-  try {
-    return new URL(propertyUrl).hostname;
-  } catch {
-    return propertyUrl;
-  }
-}
 
 function appOrigin(): string {
   return process.env.NEXTAUTH_URL ?? "http://localhost:3001";
@@ -96,16 +74,15 @@ async function refreshGoogleTokens(tokens: StoredTokens): Promise<StoredTokens> 
 async function refreshBingTokens(tokens: StoredTokens): Promise<StoredTokens> {
   if (!tokens.refreshToken) return tokens;
 
-  const clientId = process.env.BING_WEBMASTER_CLIENT_ID;
-  const clientSecret = process.env.BING_WEBMASTER_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return tokens;
+  const bing = await resolveBingWebmasterOAuthCredentials();
+  if (!bing) return tokens;
 
-  const res = await fetch("https://www.bing.com/webmasters/token", {
+  const res = await fetch("https://www.bing.com/webmasters/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: bing.clientId,
+      client_secret: bing.clientSecret,
       refresh_token: tokens.refreshToken,
       grant_type: "refresh_token",
     }),
@@ -144,53 +121,6 @@ export async function resolveAccessToken(
     refreshed: refreshed.accessToken !== tokens.accessToken || refreshed.expiresAt !== tokens.expiresAt,
   };
 }
-
-export async function listGscProperties(accessToken: string): Promise<string[]> {
-  const res = await fetch("https://www.googleapis.com/webmasters/v3/sites", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!res.ok) return [];
-  const data = (await res.json()) as { siteEntry?: Array<{ siteUrl?: string }> };
-  return (data.siteEntry ?? []).map((s) => s.siteUrl).filter((u): u is string => Boolean(u));
-}
-
-export async function listBingSites(accessToken: string): Promise<string[]> {
-  const res = await fetch("https://ssl.bing.com/webmaster/api.svc/json/GetUserSites", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({}),
-  });
-  if (!res.ok) return [];
-  const data = (await res.json()) as { d?: Array<{ Url?: string }> };
-  return (data.d ?? []).map((s) => s.Url).filter((u): u is string => Boolean(u));
-}
-
-export async function listPropertiesForProvider(
-  provider: SearchPropertyProvider,
-  accessToken: string,
-): Promise<string[]> {
-  return provider === "google_search_console"
-    ? listGscProperties(accessToken)
-    : listBingSites(accessToken);
-}
-
-export function rankProperties(projectUrl: string, properties: string[]) {
-  const unique = [...new Set(properties)];
-  return unique
-    .map((propertyUrl) => ({
-      propertyUrl,
-      label: formatPropertyLabel(propertyUrl),
-      recommended: propertyMatchesProject(projectUrl, propertyUrl),
-    }))
-    .sort((a, b) => {
-      if (a.recommended !== b.recommended) return a.recommended ? -1 : 1;
-      return a.label.localeCompare(b.label);
-    });
-}
-
 export async function exchangeGoogleCode(code: string): Promise<StoredTokens & { email?: string }> {
   const clientId = process.env.GOOGLE_CLIENT_ID!;
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET!;
@@ -236,15 +166,15 @@ export async function exchangeGoogleCode(code: string): Promise<StoredTokens & {
 }
 
 export async function exchangeBingCode(code: string): Promise<StoredTokens> {
-  const clientId = process.env.BING_WEBMASTER_CLIENT_ID!;
-  const clientSecret = process.env.BING_WEBMASTER_CLIENT_SECRET!;
+  const bing = await resolveBingWebmasterOAuthCredentials();
+  if (!bing) throw new Error("Bing Webmaster OAuth is not configured");
   const res = await fetch("https://www.bing.com/webmasters/oauth/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: clientId,
-      client_secret: clientSecret,
+      client_id: bing.clientId,
+      client_secret: bing.clientSecret,
       redirect_uri: redirectUri("bing_webmaster"),
       grant_type: "authorization_code",
     }),

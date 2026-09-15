@@ -50,10 +50,15 @@ export function SearchConsoleStep({
       const res = await fetch(`/api/website-projects/${websiteProjectId}/search-properties`);
       if (!res.ok) return false;
       const data = (await res.json()) as {
-        connections?: { provider: string; connected: boolean; propertyUrl: string | null }[];
+        connections?: {
+          provider: string;
+          connected: boolean;
+          propertyVerified?: boolean;
+          propertyUrl: string | null;
+        }[];
       };
       const gsc = data.connections?.find((c) => c.provider === "google_search_console");
-      if (gsc?.connected) {
+      if (gsc?.connected && gsc.propertyVerified) {
         onResolved({ mode: "connected", propertyUrl: gsc.propertyUrl ?? undefined });
         return true;
       }
