@@ -1,12 +1,6 @@
 import { Suspense } from "react";
-import dynamic from "next/dynamic";
 import { PageSkeleton } from "@/components/skeletons/page-skeleton";
-
-const GrowthRoadmapsClient = dynamic(
-  () =>
-    import("@/components/growth-roadmaps/growth-roadmaps-client").then((m) => m.GrowthRoadmapsClient),
-  { loading: () => <PageSkeleton /> },
-);
+import { GrowthRoadmapsClient } from "@/components/growth-roadmaps/growth-roadmaps-client";
 
 export default function StrategyRoadmapsPage() {
   return (

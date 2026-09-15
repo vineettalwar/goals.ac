@@ -84,7 +84,7 @@ export function GrowthRoadmapView({
             const parsed = parseRoadmapContent(roadmap.content);
             if (parsed.executiveSummary) {
               return (
-                <div className="paper-card p-5">
+                <div className="p-5">
                   <h2 className="text-sm font-semibold">Executive summary</h2>
                   <p className="mt-2 text-sm text-muted-foreground">{parsed.executiveSummary}</p>
                 </div>
@@ -93,7 +93,7 @@ export function GrowthRoadmapView({
             return null;
           })()}
           {(parseRoadmapContent(roadmap.content).phases ?? []).map((phase, index) => (
-            <div key={`${phase.title}-${index}`} className="paper-card p-5">
+            <div key={`${phase.title}-${index}`} className="p-5">
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <h2 className="text-lg font-semibold">{phase.title}</h2>
                 <span className="inline-flex items-center gap-1 rounded-full bg-secondary px-3 py-1 text-xs font-medium">
@@ -103,7 +103,7 @@ export function GrowthRoadmapView({
               </div>
               {phase.objectives.length > 0 ? (
                 <div className="mt-4">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Objectives</h3>
+                  <h3 className="text-xs text-muted-foreground">Objectives</h3>
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-sm">
                     {phase.objectives.map((item) => (
                       <li key={item}>{item}</li>
@@ -113,7 +113,7 @@ export function GrowthRoadmapView({
               ) : null}
               {phase.tactics.length > 0 ? (
                 <div className="mt-4">
-                  <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tactics</h3>
+                  <h3 className="text-xs text-muted-foreground">Tactics</h3>
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                     {phase.tactics.map((item) => (
                       <li key={item}>{item}</li>
@@ -133,7 +133,7 @@ export function GrowthRoadmapView({
             </div>
           ))}
           {(parseRoadmapContent(roadmap.content).phases ?? []).length === 0 ? (
-            <details className="paper-card">
+            <details>
               <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">Raw roadmap data</summary>
               <pre className="overflow-auto border-t border-border p-4 text-xs">
                 {JSON.stringify(roadmap.content ?? roadmap, null, 2)}

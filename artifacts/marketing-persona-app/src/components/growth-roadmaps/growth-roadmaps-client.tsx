@@ -9,16 +9,11 @@ import { ArrowRight, ChevronDown, ChevronUp, Pin, PinOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
-import dynamic from "next/dynamic";
 import { useActiveProject } from "@/context/use-active-project";
-import { useProjectContent, useRoadmapsCatalog, useWebsiteProject } from "@/lib/queries";
+import { useBrandProfile, useProjectRoadmaps, useRoadmapsCatalog } from "@/lib/queries";
 import { queryKeys } from "@/lib/queries/keys";
 import { clearRoadmapIntent, readRoadmapIntent, type RoadmapIntent } from "@/lib/projects/roadmap-intent";
-
-const RoadmapGeneratorApp = dynamic(
-  () => import("./roadmap-generator-app").then((m) => m.RoadmapGeneratorApp),
-  { loading: () => <div className="paper-card p-8 animate-pulse h-64 rounded-xl bg-secondary/40" /> },
-);
+import { RoadmapGeneratorApp } from "./roadmap-generator-app";
 
 interface RoadmapSummary {
   id: number;
@@ -42,11 +37,13 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
   const [pinningId, setPinningId] = useState<number | null>(null);
 
   const {
-    data: projectContent,
+    data: projectRoadmaps = [],
     isLoading: loadingProject,
     isFetching: fetchingProject,
-  } = useProjectContent(activeProjectId);
-  const { data: websiteProject } = useWebsiteProject(activeProjectId);
+  } = useProjectRoadmaps(activeProjectId);
+  const { data: brandProfile } = useBrandProfile(
+    activeProjectId != null ? String(activeProjectId) : "",
+  );
   const { data: catalogRoadmaps = [], isLoading: loadingCatalog } = useRoadmapsCatalog(catalogOpen);
 
   useEffect(() => {
@@ -58,7 +55,6 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
     }
   }, [refreshProjects]);
 
-  const projectRoadmaps = (projectContent?.roadmaps ?? []) as RoadmapSummary[];
   const signupIndustry =
     searchParams.get("industry")?.trim() || storedIntent?.industry?.trim() || undefined;
   const signupLocation =
@@ -67,18 +63,17 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
     searchParams.get("stage")?.trim() || storedIntent?.stage?.trim() || undefined;
   const defaultIndustry = useMemo(() => {
     if (signupIndustry) return signupIndustry;
-    const brandProfile = websiteProject?.brandProfile as { industry?: string } | undefined;
     if (typeof brandProfile?.industry === "string" && brandProfile.industry.trim()) {
       return brandProfile.industry.trim();
     }
     return undefined;
-  }, [signupIndustry, websiteProject]);
+  }, [signupIndustry, brandProfile]);
   const defaultLocation = signupLocation;
   const defaultStage = signupStage;
 
   async function refreshProjectRoadmaps() {
     if (!activeProjectId) return;
-    await queryClient.invalidateQueries({ queryKey: queryKeys.projectContent(activeProjectId) });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.projectRoadmaps(activeProjectId) });
   }
 
   async function pinRoadmap(roadmapId: number) {
@@ -121,7 +116,7 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
     }
   }
 
-  const pinnedIds = new Set(projectRoadmaps.map((r) => r.id));
+  const pinnedIds = new Set((projectRoadmaps as RoadmapSummary[]).map((r) => r.id));
   const unpinnedCatalog = (catalogRoadmaps as RoadmapSummary[]).filter((r) => !pinnedIds.has(r.id));
 
   const containerClass = embedded ? "space-y-8" : `${APP_SHELL_PAGE} space-y-8`;
@@ -135,7 +130,7 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
             <p className="mt-1 text-sm text-muted-foreground">Loading your project context…</p>
           </div>
         ) : null}
-        <div className="paper-card p-8 animate-pulse h-64 rounded-xl bg-secondary/40" />
+        <div className="p-8 animate-pulse h-64 rounded-xl bg-secondary/40" />
       </div>
     );
   }
@@ -190,8 +185,8 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {projectRoadmaps.map((r) => (
-              <div key={r.id} className="paper-card p-5 rounded-xl">
+            {(projectRoadmaps as RoadmapSummary[]).map((r) => (
+              <div key={r.id} className="p-5 rounded-xl">
                 <h3 className="font-semibold text-sm">{r.industry}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5 capitalize">
                   {r.location} · {r.stage} stage
@@ -241,7 +236,7 @@ export function GrowthRoadmapsClient({ embedded = false }: GrowthRoadmapsClientP
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {unpinnedCatalog.map((r) => (
-                  <div key={r.id} className="paper-card p-5 rounded-xl">
+                  <div key={r.id} className="p-5 rounded-xl">
                     <h3 className="font-semibold text-sm">{r.industry}</h3>
                     <p className="text-xs text-muted-foreground mt-0.5 capitalize">
                       {r.location} · {r.stage} stage

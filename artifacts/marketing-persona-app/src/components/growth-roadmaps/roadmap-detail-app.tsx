@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { RoadmapChat } from "@/components/roadmap/roadmap-chat";
 import { useActiveProject } from "@/context/use-active-project";
-import { useProjectContent } from "@/lib/queries";
+import { useProjectRoadmaps } from "@/lib/queries";
+import { APP_SHELL_PAGE } from "@workspace/app-shell/shell-constants";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -67,7 +68,7 @@ export function RoadmapDetailApp({
   const reduceMotion = useReducedMotion();
   const { activeProjectId } = useActiveProject();
   const projectId = activeProjectId != null ? String(activeProjectId) : "";
-  const { data: projectContent } = useProjectContent(projectId || null);
+  const { data: projectRoadmaps } = useProjectRoadmaps(projectId || null);
   const [pinLoading, setPinLoading] = useState(false);
   const [generatingStrategy, setGeneratingStrategy] = useState(false);
   const [pinOverride, setPinOverride] = useState<boolean | null>(null);
@@ -83,7 +84,7 @@ export function RoadmapDetailApp({
 
   const isPinnedFromQuery =
     activeProjectId != null
-      ? ((projectContent?.roadmaps ?? []) as Array<{ id: number }>).some((r) => r.id === roadmapId)
+      ? ((projectRoadmaps ?? []) as Array<{ id: number }>).some((r) => r.id === roadmapId)
       : false;
   const isPinned = pinOverride ?? (activeProjectId ? isPinnedFromQuery : false);
 
@@ -198,7 +199,7 @@ export function RoadmapDetailApp({
         : step?.kind ?? "intro";
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] flex-col pb-28">
+    <div className="flex min-h-[calc(100vh-4rem)] min-w-0 flex-col pb-28">
       <div className="h-1 w-full bg-secondary">
         <div
           className="h-full bg-primary transition-[width] duration-300"
@@ -211,19 +212,20 @@ export function RoadmapDetailApp({
         />
       </div>
 
-      <header className="mx-auto flex w-full max-w-2xl items-center justify-between gap-3 px-4 pt-6 sm:px-6">
-        <Link
-          href="/strategy/roadmaps"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" /> Growth roadmaps
-        </Link>
-        <p className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
-          {stepIndex + 1} of {total}
-        </p>
-      </header>
+      <div className={`${APP_SHELL_PAGE} flex min-w-0 flex-1 flex-col`}>
+        <header className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+          <Link
+            href="/strategy/roadmaps"
+            className="inline-flex min-w-0 items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5 shrink-0" /> Growth roadmaps
+          </Link>
+          <p className="text-xs text-muted-foreground tabular-nums" aria-live="polite">
+            {stepIndex + 1} of {total}
+          </p>
+        </header>
 
-      <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col px-4 pb-16 pt-8 sm:px-6 sm:pt-12">
+      <div className="flex min-w-0 flex-1 flex-col pt-8 sm:pt-12">
         {!isFirst && (
           <button
             type="button"
@@ -237,6 +239,7 @@ export function RoadmapDetailApp({
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={stepKey}
+            className="min-w-0"
             custom={direction}
             variants={variants}
             initial="enter"
@@ -343,7 +346,8 @@ export function RoadmapDetailApp({
             )}
           </motion.div>
         </AnimatePresence>
-      </main>
+        </div>
+      </div>
 
       <RoadmapChat slug={slug} />
     </div>
@@ -360,7 +364,7 @@ function PhaseStep({
   phase: Phase;
 }) {
   return (
-    <div className="space-y-8">
+    <div className="min-w-0 space-y-8">
       <div className="space-y-3">
         <p className="text-sm font-medium text-muted-foreground">
           Phase {number} of {phaseCount}
@@ -371,41 +375,43 @@ function PhaseStep({
         </h1>
       </div>
 
-      {phase.objectives?.length > 0 && (
-        <Section label="Objectives">
-          <ul className="space-y-3">
-            {phase.objectives.map((o, j) => (
-              <li key={j} className="flex gap-3 text-base leading-relaxed text-foreground/90">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
-                {o}
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
+      <div className="grid min-w-0 gap-8 lg:grid-cols-2">
+        {phase.objectives?.length > 0 && (
+          <Section label="Objectives">
+            <ul className="space-y-3">
+              {phase.objectives.map((o, j) => (
+                <li key={j} className="flex min-w-0 gap-3 text-base leading-relaxed text-foreground/90">
+                  <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden />
+                  <span className="min-w-0">{o}</span>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
 
-      {phase.tactics?.length > 0 && (
-        <Section label="Tactics">
-          <ul className="space-y-3">
-            {phase.tactics.map((t, j) => (
-              <li key={j} className="flex gap-3 text-base leading-relaxed text-foreground/90">
-                <span className="shrink-0 text-muted-foreground" aria-hidden>
-                  →
-                </span>
-                {t}
-              </li>
-            ))}
-          </ul>
-        </Section>
-      )}
+        {phase.tactics?.length > 0 && (
+          <Section label="Tactics">
+            <ul className="space-y-3">
+              {phase.tactics.map((t, j) => (
+                <li key={j} className="flex min-w-0 gap-3 text-base leading-relaxed text-foreground/90">
+                  <span className="shrink-0 text-muted-foreground" aria-hidden>
+                    →
+                  </span>
+                  <span className="min-w-0">{t}</span>
+                </li>
+              ))}
+            </ul>
+          </Section>
+        )}
+      </div>
 
       {phase.kpis?.length > 0 && (
         <Section label="KPIs">
-          <ul className="space-y-3">
+          <ul className="grid min-w-0 gap-3 sm:grid-cols-2">
             {phase.kpis.map((kpi, j) => (
               <li
                 key={j}
-                className="rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm leading-relaxed text-foreground"
+                className="min-w-0 rounded-lg border border-border bg-secondary/60 px-4 py-3 text-sm leading-relaxed text-foreground"
               >
                 {kpi}
               </li>
@@ -419,7 +425,7 @@ function PhaseStep({
 
 function Section({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
+    <div className="min-w-0">
       <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
         {label}
       </h2>

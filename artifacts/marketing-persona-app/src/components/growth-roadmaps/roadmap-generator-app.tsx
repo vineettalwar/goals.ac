@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 import { Label } from "@/components/ui/label";
@@ -18,10 +18,10 @@ import { useRoadmapFormOptions } from "@/lib/queries";
 type GenerationPhase = "summary" | "phase0" | "phase1" | "phase2";
 
 const PHASE_LABELS: Record<GenerationPhase, string> = {
-  summary: "Executive Summary",
-  phase0: "Phase 1: Foundation & Quick Wins (Months 1–3)",
-  phase1: "Phase 2: Scaling & Automation (Months 4–6)",
-  phase2: "Phase 3: Expansion (Months 7–12)",
+  summary: "Executive summary",
+  phase0: "Months 1–3: Foundation & quick wins",
+  phase1: "Months 4–6: Scale what worked",
+  phase2: "Months 7–12: Market expansion",
 };
 
 const STAGES = [
@@ -54,8 +54,20 @@ export function RoadmapGeneratorApp({
 
   const { data: formOptions, isLoading: loadingOptions, isError: optionsQueryError } =
     useRoadmapFormOptions();
-  const industries = formOptions?.industries ?? [];
-  const locations = formOptions?.locations ?? [];
+  const industries = useMemo(() => {
+    const rows = formOptions?.industries ?? [];
+    if (defaultIndustry && !rows.some((row) => row.name === defaultIndustry)) {
+      return [{ id: 0, name: defaultIndustry }, ...rows];
+    }
+    return rows;
+  }, [formOptions?.industries, defaultIndustry]);
+  const locations = useMemo(() => {
+    const rows = formOptions?.locations ?? [];
+    if (defaultLocation && !rows.some((row) => row.name === defaultLocation)) {
+      return [{ id: 0, name: defaultLocation, country: "" }, ...rows];
+    }
+    return rows;
+  }, [formOptions?.locations, defaultLocation]);
   const optionsError = optionsQueryError
     ? "Could not load industry and location options. Refresh and try again."
     : null;
@@ -177,8 +189,9 @@ export function RoadmapGeneratorApp({
       <div>
         <h2 className="font-semibold">Generate growth roadmap</h2>
         <p className="text-sm text-muted-foreground mt-1">
-          12-month strategy tailored to your brand scan, site data, and goals. Saved to this project
-          automatically.
+          One 12-month GTM plan for this project. Uses your brand, keywords, and goals. Industry,
+          market, and stage set the frame. Later quarters continue the same bets; they do not
+          restart.
         </p>
       </div>
 
@@ -216,7 +229,7 @@ export function RoadmapGeneratorApp({
               <SelectContent>
                 {locations.map((loc) => (
                   <SelectItem key={loc.id} value={loc.name}>
-                    {loc.name}, {loc.country}
+                    {loc.country ? `${loc.name}, ${loc.country}` : loc.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -240,7 +253,11 @@ export function RoadmapGeneratorApp({
           </Select>
         </div>
 
-        <Button type="submit" className="w-full" disabled={isPending || loadingOptions || industries.length === 0 || locations.length === 0}>
+        <Button
+          type="submit"
+          className="w-full"
+          disabled={isPending || loadingOptions || !industry || !location || !stage}
+        >
           {isPending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -254,7 +271,7 @@ export function RoadmapGeneratorApp({
         {isPending && (
           <div className="rounded-lg border border-border bg-muted/30 px-4 py-3 space-y-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-              Building your roadmap…
+              Writing one 12-month plan…
             </p>
             {(Object.keys(PHASE_LABELS) as GenerationPhase[]).map((key) => {
               const phaseOrder = Object.keys(PHASE_LABELS) as GenerationPhase[];
