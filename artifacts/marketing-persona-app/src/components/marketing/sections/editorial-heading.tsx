@@ -31,37 +31,29 @@ export function EditorialHeading({
     size === "card"
       ? "text-2xl sm:text-3xl"
       : "text-3xl sm:text-4xl md:text-5xl";
+  const heading = line2 ? `${line1} ${line2}` : line1;
 
   const content = (
     <div className={`flex flex-col ${alignClass} ${className}`}>
       {badge && (
-        <div
-          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold mb-4 ${
-            isDark ? "editorial-badge-dark" : "editorial-badge-light"
+        <p
+          className={`mb-4 font-mono text-[11px] uppercase tracking-[0.12em] ${
+            isDark ? "text-white/70" : "text-muted-foreground"
           }`}
         >
           {badge}
-        </div>
+        </p>
       )}
-      <h2 className={`leading-[0.95] ${isDark ? "text-white" : "text-foreground"}`}>
-        <span
-          className={`block font-playfair italic font-normal ${sizeClass}`}
-          style={{ letterSpacing: "-0.05em" }}
-        >
-          {line1}
-        </span>
-        {line2 && (
-          <span
-            className={`block font-normal ${sizeClass} -mt-1`}
-            style={{ letterSpacing: "-0.06em" }}
-          >
-            {line2}
-          </span>
-        )}
+      <h2
+        className={`max-w-4xl font-semibold leading-[1.12] tracking-tight ${sizeClass} ${
+          isDark ? "text-white" : "text-foreground"
+        }`}
+      >
+        {heading}
       </h2>
       {description && (
         <p
-          className={`mt-5 text-lg max-w-2xl leading-relaxed tracking-normal ${
+          className={`mt-5 max-w-2xl text-lg leading-relaxed tracking-normal ${
             isDark ? "text-white/75" : "text-muted-foreground"
           } ${align === "center" ? "mx-auto" : ""}`}
         >

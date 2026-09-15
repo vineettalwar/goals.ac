@@ -68,7 +68,7 @@ export function useCreateContentDialog({
   generatingPhase = null,
   existingPieces = null,
   onLoadSourcePiece,
-  surface = "blog_wordpress",
+  surface = "full",
 }: CreateContentDialogProps) {
   const enableRepurpose = Boolean(onRepurpose);
   const [flow, setFlow] = useState<CreateFlow>("create");

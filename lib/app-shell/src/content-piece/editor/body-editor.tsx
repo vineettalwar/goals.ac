@@ -37,7 +37,7 @@ export function ContentPieceBodyEditor({
 
   if (canEdit && editing) {
     return (
-      <div className="min-h-105">
+      <div className="article-canvas w-full min-h-105">
         {!previewMode ? (
           <div className="p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
@@ -62,7 +62,7 @@ export function ContentPieceBodyEditor({
             />
           </div>
         ) : (
-          <div className="px-5 py-6 sm:px-6 lg:px-8 lg:py-8">{renderBody(bodyDraft || "")}</div>
+          <div className="px-5 py-6 font-serif sm:px-6 lg:px-8 lg:py-8">{renderBody(bodyDraft || "")}</div>
         )}
       </div>
     );
@@ -72,7 +72,7 @@ export function ContentPieceBodyEditor({
   const shownBodyTrimmed = previewOverrideBody ? previewOverrideBody.trim() : body;
 
   return (
-    <div className="px-5 py-6 sm:px-6 lg:px-8 lg:py-8">
+    <div className="article-canvas w-full px-5 py-6 sm:px-6 lg:px-8 lg:py-8">
       {shownBodyTrimmed ? (
         renderBody(shownBody)
       ) : (

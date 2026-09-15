@@ -100,18 +100,16 @@ test.describe("founder path", () => {
     await expect(page).toHaveURL(/\/(onboarding|dashboard|projects)/, { timeout: 30_000 });
   });
 
-  test("navigation shows the blog surface and hides the rest", async ({ page }) => {
+  test("navigation shows GEO, research, and social on the default surface", async ({ page }) => {
     await signUp(page, uniqueEmail());
     await page.goto("/dashboard");
 
     const nav = page.getByRole("navigation");
     await expect(nav.getByRole("link", { name: /dashboard/i })).toBeVisible();
     await expect(nav.getByRole("link", { name: /projects/i })).toBeVisible();
-
-    // Hidden on the default blog_wordpress surface.
-    await expect(nav.getByRole("link", { name: /social hub/i })).toHaveCount(0);
-    await expect(nav.getByRole("link", { name: /geo audit/i })).toHaveCount(0);
-    await expect(nav.getByRole("link", { name: /^research$/i })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: /social hub/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /geo audit/i })).toBeVisible();
+    await expect(nav.getByRole("link", { name: /^research$/i })).toBeVisible();
   });
 
   test("hidden routes stay reachable by direct link", async ({ page }) => {

@@ -56,7 +56,7 @@ export function HomeMarketingSections({ showcaseArticle }: HomeMarketingSections
           {
             question: "How do I get started?",
             answer:
-              "Sign up free, connect your CMS, and create your first article in Content Studio. You sign off on every publish. Turn on Autopilot later if you want a daily or weekly queue.",
+              "Request access, connect your CMS, and create your first article in Content Studio. You sign off on every publish. Turn on Autopilot later if you want a daily or weekly queue.",
           },
           {
             question: "Where can you publish?",
@@ -75,7 +75,7 @@ export function HomeMarketingSections({ showcaseArticle }: HomeMarketingSections
         badge="Content Studio"
         titleLine1="Research to publish"
         titleLine2="without the busywork"
-        description="Create your account, connect a destination, and draft your first SEO article in minutes."
+        description="Request access, connect a destination, and draft your first SEO article in minutes."
         variant="dark"
         secondaryHref={PRODUCT_CTA_SECONDARY_HREF}
         secondaryLabel={PRODUCT_CTA_SECONDARY}

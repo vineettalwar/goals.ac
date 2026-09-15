@@ -165,7 +165,7 @@ export async function handleDailyFiveWrite(
         projectId,
         userId,
         generateVariants: false,
-        ...(item.useAgentTeam ? { useAgentTeam: true as const } : {}),
+        useAgentTeam: true,
         ...(item.agentFastMode ? { agentFastMode: true as const } : {}),
       });
       const id = jobId ?? `cf:${QUEUES.contentGenerate}:${crypto.randomUUID()}`;

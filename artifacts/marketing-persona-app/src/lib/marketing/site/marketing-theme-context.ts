@@ -3,7 +3,7 @@
 import { createContext } from "react";
 import type { MarketingSurface } from "./marketing-surfaces";
 
-export type MarketingTone = "dark";
+export type MarketingTone = "light" | "dark";
 
 export type MarketingTheme = {
   tone: MarketingTone;
@@ -11,8 +11,8 @@ export type MarketingTheme = {
 };
 
 export const defaultMarketingTheme: MarketingTheme = {
-  tone: "dark",
-  surface: "glass",
+  tone: "light",
+  surface: "paper",
 };
 
 export const MarketingThemeContext = createContext<MarketingTheme>(defaultMarketingTheme);

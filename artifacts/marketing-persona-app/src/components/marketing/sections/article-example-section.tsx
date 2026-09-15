@@ -37,24 +37,23 @@ export function ArticleExampleSection({ article }: ArticleExampleSectionProps) {
   const internalLinkCount = demo.internalLinkSuggestions.length;
 
   return (
-    <section ref={sectionRef} className="py-24 bg-black border-t border-white/10">
-      <div className="max-w-5xl mx-auto px-6">
+    <section ref={sectionRef} className="border-t border-border bg-background py-24">
+      <div className="mx-auto max-w-5xl px-6">
         <div className="mb-14">
           <EditorialHeading
-            line1="Written in"
-            line2="your voice"
+            line1="Written in your voice"
             description="Every article inherits brand voice, internal links, citations, and a quality score you can inspect."
-            theme="dark"
+            theme="light"
           />
         </div>
 
-        <div className={`scroll-reveal ${glassCard} p-8 max-w-3xl mx-auto`}>
-          <div className="flex flex-col sm:flex-row gap-8">
-            <div className="flex flex-col items-center justify-center shrink-0">
+        <div className={`scroll-reveal ${glassCard} mx-auto max-w-3xl p-8`}>
+          <div className="flex flex-col gap-8 sm:flex-row">
+            <div className="flex shrink-0 flex-col items-center justify-center">
               <Link href={qualityHref} className="group flex flex-col items-center">
-                <div className="relative h-25 w-25 flex items-center justify-center">
-                  <svg width={100} height={100} viewBox="0 0 100 100" className="-rotate-90 absolute">
-                    <circle cx={50} cy={50} r={40} fill="none" stroke="rgba(255, 255, 255, 0.15)" strokeWidth={7} />
+                <div className="relative flex h-25 w-25 items-center justify-center">
+                  <svg width={100} height={100} viewBox="0 0 100 100" className="absolute -rotate-90">
+                    <circle cx={50} cy={50} r={40} fill="none" stroke="var(--border)" strokeWidth={7} />
                     <circle
                       cx={50}
                       cy={50}
@@ -68,36 +67,36 @@ export function ArticleExampleSection({ article }: ArticleExampleSectionProps) {
                     />
                   </svg>
                   <div className="text-center">
-                    <span className="text-3xl font-bold text-white group-hover:text-(--accent-warm) transition-colors">
+                    <span className="score-signal text-3xl font-bold group-hover:opacity-80">
                       {score}
                     </span>
-                    <span className="block text-xs text-white/50">/ 100</span>
+                    <span className="block font-mono text-[11px] text-muted-foreground">/ 100</span>
                   </div>
                 </div>
-                <span className="text-sm text-white/50 mt-2 group-hover:text-white/70 transition-colors">
+                <span className="mt-2 text-sm text-muted-foreground">
                   Sample article score
                 </span>
               </Link>
             </div>
 
             <div className="flex-1 space-y-4">
-              <p className="text-lg font-semibold text-white line-clamp-2">{title}</p>
+              <p className="line-clamp-2 text-lg font-semibold text-foreground">{title}</p>
               {article?.primaryKeyword ? (
-                <p className="text-sm text-white/50">Primary keyword: {article.primaryKeyword}</p>
+                <p className="text-sm text-muted-foreground">Primary keyword: {article.primaryKeyword}</p>
               ) : (
-                <p className="text-sm text-white/50">Sample: {demo.brandName}</p>
+                <p className="text-sm text-muted-foreground">Sample: {demo.brandName}</p>
               )}
               <div className="flex flex-wrap gap-2">
                 {demo.voiceTags.map((tag) => (
                   <span
                     key={tag}
-                    className="text-sm px-2.5 py-1 rounded-full border border-white/15 bg-white/5 text-white/65"
+                    className="rounded-sm border border-border px-2.5 py-1 font-mono text-[11px] text-muted-foreground"
                   >
                     {tag}
                   </span>
                 ))}
               </div>
-              <ul className="text-base text-white/65 space-y-1.5">
+              <ul className="space-y-1.5 text-base text-muted-foreground">
                 <li>
                   {h2Count} H2 sections and FAQ
                 </li>
@@ -110,13 +109,13 @@ export function ArticleExampleSection({ article }: ArticleExampleSectionProps) {
               <div className="flex flex-wrap gap-4">
                 <Link
                   href={articleHref}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-(--accent-warm) hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground underline-offset-4 hover:underline"
                 >
                   {article ? "Read full example" : "Open quality demo"} <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href={PRODUCT_CTA_HREF}
-                  className="inline-flex items-center gap-1.5 text-sm font-medium text-white/80 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground"
                 >
                   {PRODUCT_CTA_PRIMARY} <ArrowRight className="h-4 w-4" />
                 </Link>

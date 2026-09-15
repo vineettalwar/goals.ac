@@ -41,7 +41,7 @@ export function ArticleQualityPanel({
   if (isTwitterThread) {
     const thread = scoreTwitterThreadQuality(bodyMarkdown);
     return (
-      <div className="space-y-6 rounded-xl p-6">
+      <div className="space-y-6 hairline-panel p-4">
         <div className="flex items-center gap-4">
           <ScoreRing score={thread.total} size="md" />
           <div className="min-w-0 space-y-1.5">
@@ -114,7 +114,7 @@ export function ArticleQualityPanel({
         100,
     );
     return (
-      <div className="space-y-6 rounded-xl p-6">
+      <div className="space-y-6 hairline-panel p-4">
         <div className="flex items-center gap-4">
           <ScoreRing score={total} size="md" />
           <div className="min-w-0 space-y-1.5">

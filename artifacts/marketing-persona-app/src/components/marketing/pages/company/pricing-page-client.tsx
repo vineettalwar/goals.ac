@@ -294,7 +294,7 @@ export function PricingPageClient() {
           {
             question: "Can I use the studio without a program?",
             answer:
-              "Yes. Sign up free, connect WordPress/Ghost/Shopify or another destination, and create content on your own. Self-serve Growth is in Settings → Billing. Add a hands-on program when you want our team involved in research, production, and publishing.",
+              "Access is invite-only today. Request access, connect WordPress/Ghost/Shopify or another destination, and create content with us. Self-serve billing is in Settings → Billing after you're in. Add a hands-on program when you want our team involved in research, production, and publishing.",
           },
           {
             question: "What can I try before signing up?",
@@ -328,7 +328,7 @@ export function PricingPageClient() {
       <MarketingCTA
         titleLine1="Ready to create"
         titleLine2="your first draft?"
-        description="Sign up free and connect your CMS in minutes."
+        description="Request access and connect your CMS in minutes."
         secondaryHref={CONTACT_HREF}
         secondaryLabel={`${CONTACT_CTA_LABEL} →`}
         variant="dark"

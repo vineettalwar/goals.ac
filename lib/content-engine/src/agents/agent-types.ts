@@ -98,6 +98,9 @@ export interface AgentPipelineResult {
   totalDurationMs: number;
   /** Agents that were skipped or failed */
   degradedAgents: AgentId[];
+  /** True when Ferret had at least one connected data source. */
+  researchConnected: boolean;
+  researchNote?: string;
 }
 
 /** Pipeline configuration options */

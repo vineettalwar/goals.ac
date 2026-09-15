@@ -1,164 +1,176 @@
 ---
 name: goals.ac
-description: Premium-minimal B2B content growth platform — paper surfaces, forest green primary, editorial marketing on dark hero bands.
+description: Typeset editorial + SEO control room — newsprint and ink, IBM Plex chrome, Source Serif body, amber signal only.
 colors:
-  background: "#FAFAF8"
-  foreground: "#1A1A1A"
-  card: "#FFFFFF"
-  border: "#E8E5E0"
-  primary: "#2D3B2D"
-  primary-foreground: "#FFFFFF"
-  secondary: "#F5F3EF"
-  muted-foreground: "#6B6560"
-  accent-warm: "#e8702a"
-  accent-warm-hover: "#d2611f"
-  accent-warm-foreground: "#1A1A1A"
-  surface-dark: "#1A1A1A"
-  destructive: "#C0392B"
+  background: "#F3EFE6"
+  foreground: "#0A0A0B"
+  card: "#F3EFE6"
+  border: "#C9C2B4"
+  primary: "#D97706"
+  primary-foreground: "#0A0A0B"
+  secondary: "#E8E2D6"
+  muted-foreground: "#5A554C"
+  accent-warm: "#D97706"
+  accent-warm-hover: "#B45309"
+  accent-warm-foreground: "#0A0A0B"
+  ink: "#0A0A0B"
+  newsprint: "#F3EFE6"
+  studio-chrome: "#0A0A0B"
 typography:
   sans:
-    fontFamily: "var(--font-jakarta), 'Plus Jakarta Sans', sans-serif"
+    fontFamily: "var(--font-sans-face), 'IBM Plex Sans', sans-serif"
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "normal"
   display:
-    fontFamily: "var(--font-jakarta), 'Plus Jakarta Sans', sans-serif"
-    fontSize: "clamp(2.25rem, 5vw, 3.75rem)"
+    fontFamily: "var(--font-sans-face), 'IBM Plex Sans', sans-serif"
+    fontSize: "clamp(2rem, 4.5vw + 0.5rem, 3.5rem)"
     fontWeight: 600
-    lineHeight: 1.1
+    lineHeight: 1.12
     letterSpacing: "-0.02em"
-  editorial:
-    fontFamily: "var(--font-playfair), 'Playfair Display', serif"
-    fontStyle: "italic"
-    fontWeight: 400
+  article:
+    fontFamily: "var(--font-serif-face), 'Source Serif 4', Georgia, serif"
+    fontSize: "1.0625rem"
+    lineHeight: 1.7
+    measure: "65ch"
+  mono:
+    fontFamily: "var(--font-mono-face), 'IBM Plex Mono', ui-monospace, monospace"
+    fontSize: "0.75rem"
 rounded:
-  sm: "calc(0.75rem - 4px)"
-  md: "calc(0.75rem - 2px)"
-  lg: "0.75rem"
-  xl: "calc(0.75rem + 4px)"
-  pill: "9999px"
+  sm: "0.125rem"
+  md: "0.125rem"
+  lg: "0.125rem"
+  xl: "0.25rem"
 spacing:
-  section-y: "4rem"
-  card-pad: "1.5rem"
+  section-y: "6rem"
+  card-pad: "1rem"
   page-x: "1.5rem"
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.primary-foreground}"
-    rounded: "{rounded.lg}"
+    rounded: "{rounded.sm}"
     padding: "0.5rem 1rem"
     height: "2.5rem"
-  button-primary-hover:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.primary-foreground}"
-  button-outline:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.lg}"
-    padding: "0.5rem 1rem"
   hero-cta-primary:
     backgroundColor: "{colors.accent-warm}"
     textColor: "{colors.accent-warm-foreground}"
-    rounded: "{rounded.pill}"
-    padding: "0.75rem 1.75rem"
-  paper-card:
-    backgroundColor: "{colors.card}"
-    textColor: "{colors.foreground}"
-    rounded: "{rounded.lg}"
-    padding: "{spacing.card-pad}"
+    rounded: "{rounded.sm}"
+    padding: "0.75rem 1.25rem"
+  hairline-panel:
+    backgroundColor: "transparent"
+    border: "1px solid {colors.border}"
+    rounded: "{rounded.sm}"
 ---
 
 ## Overview
 
-goals.ac uses **Tailwind CSS 4** with semantic CSS variables in `src/app/globals.css`. The system has two surface registers:
+goals.ac is a **typeset editorial desk** and **SEO control room**, not a forest-green SaaS costume and not a cinematic nature hero.
 
-- **Paper (product + light marketing):** off-white background (`#FAFAF8`), forest-green primary (`#2D3B2D`), `paper-card` surfaces with subtle border and shadow.
-- **Dark editorial (marketing heroes):** full-bleed photography, black bridge gradients, `glass-card` on dark bands only — never as a default app chrome pattern.
+Two registers, one palette:
 
-Stack: Next.js App Router, Radix primitives via shadcn-style `Button`, Lucide icons, GSAP for scroll marketing, `@tailwindcss/typography` for prose.
+- **Marketing (goals.ac):** newsprint `#F3EFE6` field, ink `#0A0A0B` type, hairline rules, masthead headline. No full-bleed photography, no green-black canvas, no orbs/gradients/logo soup.
+- **Studio (app.goals.ac):** ink-dark chrome (`#0A0A0B`) with a newsprint article column (~65ch serif). Copy-desk bar: status · score · Approve.
+
+Stack: Next.js marketing export (`artifacts/marketing-pages` from `marketing-persona-app`), Vite product SPA (`artifacts/goals-app-ui`), shared tokens in `lib/app-shell/src/product-theme.css`.
 
 ## Colors
 
 | Role | Token | Hex | Usage |
 |------|-------|-----|-------|
-| Page bg | `--background` | `#FAFAF8` | App shell, forms, dashboards |
-| Ink | `--foreground` | `#1A1A1A` | Body text, headings |
-| Surface | `--card` | `#FFFFFF` | Cards, panels, inputs on light |
-| Border | `--border` | `#E8E5E0` | Dividers, input borders |
-| Brand | `--primary` | `#2D3B2D` | Buttons, rings, active step dots |
-| Muted text | `--muted-foreground` | `#6B6560` | Secondary copy — keep ≥4.5:1 on `--background` |
-| Warm CTA | `--accent-warm` | `#e8702a` | Hero primary CTA on dark photography |
-| Warm CTA text | `--accent-warm-foreground` | `#1A1A1A` | Label on warm CTA — ≥4.5:1 on `--accent-warm` |
-| Dark band | `--surface-dark` | `#1A1A1A` | Marketing section bridges, hero foot |
+| Newsprint | `--newsprint` / `--background` (light) | `#F3EFE6` | Marketing page field, article canvas |
+| Ink | `--ink` / `--foreground` (light) | `#0A0A0B` | Body, headlines, chrome on newsprint |
+| Hairline | `--border` | `#C9C2B4` | Rules, panels, inputs |
+| Signal | `--primary` / `--accent-warm` / `--signal` | `#D97706` | **Only** accent: CTAs, scores, gates |
+| Signal hover | `--accent-warm-hover` | `#B45309` | CTA hover |
+| Signal text | `--primary-foreground` | `#0A0A0B` | Text on amber (contrast) |
+| Muted | `--muted-foreground` | `#5A554C` | Secondary copy — ≥4.5:1 on newsprint |
+| Studio chrome | `--studio-chrome` / `.dark --background` | `#0A0A0B` | App shell, sidebar |
 | Error | `--destructive` | `#C0392B` | Destructive actions |
 
-Marketing dark sections use white at 75–90% opacity for body copy, not gray-on-tint. Glass cards: `rgba(255,255,255,0.05)` fill, `rgba(255,255,255,0.1)` border, `backdrop-filter: blur(8px)` — **dark bands only**.
+**Banned:** forest green (`#2D3B2D`, sage paper, `#121412` green-black), electric blue as a second accent, soft card shadows.
+
+Links are ink + underline, not a second color. Scores use amber (`score-signal`), not blue.
 
 ## Typography
 
 | Role | Family | Notes |
 |------|--------|-------|
-| UI / body | Plus Jakarta Sans (`--font-jakarta`) | Weights 400–800; default for app and marketing |
-| Editorial accent | Playfair Display italic (`--font-playfair`) | Sparingly on marketing — pull quotes, hero emphasis |
-| Labels | `.marketing-section-label` | 12px, semibold, uppercase, `letter-spacing: 0.08em` |
+| UI chrome | IBM Plex Sans (`--font-sans-face`) | Nav, buttons, forms, marketing headlines |
+| Article body | Source Serif 4 (`--font-serif-face`) | Draft/review column, ~65ch |
+| Scores / URLs / schema / timestamps | IBM Plex Mono (`--font-mono-face`) | Copy-desk, citations, dateline |
 
-Headings use `tracking-tight`. Display hero lines: clamp max ~3.75rem; avoid sub `-0.04em` letter-spacing on display. Body prose max ~65–75ch. Uppercase labels must use ≥0.08em tracking (WCAG 1.4.12).
+**Banned as brand signature:** Plus Jakarta Sans; Playfair Display; italic display headlines; italic serif paired with oversized sans in the hero.
+
+Headings are roman IBM Plex, weight 600, tracking-tight (not below `-0.04em`). Uppercase labels: `.marketing-section-label` or `font-mono` + ≥0.08em tracking.
 
 ## Elevation
 
-**Paper cards** (`.paper-card`): `0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04)` — no paired wide drop shadow.
+Hairline only: `1px solid var(--border)`, radius `0.125rem`, **no** drop shadow, **no** oversized radius, **no** paper-card lift.
 
-**Paper hover** (`.paper-card-hover`): `translateY(-3px)` + `0 8px 24px rgba(0,0,0,0.08)` on hover; 250ms `cubic-bezier(0.16, 1, 0.3, 1)`.
+Utilities: `.hairline-panel`, `.paper-card` (alias, shadowless), `.article-canvas`, `.copy-desk-bar`.
 
-**Glass cards** (`.glass-card`): border + translucent fill + 8px blur; hover lifts with brighter border — marketing dark sections only.
+## Surfaces
 
-**Hero bridges**: `.hero-bridge`, `.section-bridge-top/bottom`, `.features-bridge` — black gradient scrims; not decorative page backgrounds.
+### Marketing hero
+
+Fixed masthead: one H1, one deck, solid amber primary CTA, text secondary, dateline/metrics strip (scores, CMS, approve-before-live). Newsprint ground. No rotating offers, no photo, no spotlight.
+
+### Studio article canvas
+
+Seeded on the content-piece draft/review screen:
+
+1. Copy-desk bar — status, score, Approve
+2. Center serif draft column on newsprint
+3. Right rail — brief, SERP/editorial scores, citations (mono labels, hairline panels)
+
+No AI purple sparkle. Generate/Humanize/Enhance use existing lucide actions (`RefreshCw`, `PenLine`, `TrendingUp`).
 
 ## Components
 
-### Surfaces (`marketing-surfaces.ts`)
+### Buttons
 
-- `cardSurfaceClass("paper")` → app UI, auth, settings, project lists
-- `cardSurfaceClass("glass")` → marketing pages on `bg-black` bands (pricing tiers, success stories, video demo)
-
-### Buttons (`src/components/ui/button.tsx`)
-
-| Variant | Classes |
-|---------|---------|
-| default | `bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm` |
-| outline | `border border-border bg-card hover:bg-secondary` |
-| ghost | `hover:bg-secondary` |
-| destructive | `bg-destructive` |
-
-Sizes: `sm` (h-8), `default` (h-10), `lg` (h-11). Marketing hero uses `.hero-cta-primary` (warm pill) on dark photography.
-
-### Motion
-
-Hero entrances: `.hero-reveal`, `.hero-fade`, `.hero-zoom` with `cubic-bezier(0.16, 1, 0.3, 1)`. All disabled under `prefers-reduced-motion: reduce`. Step dots: `.step-dot` / `.active` / `.complete` with primary fill and soft ring.
+| Variant | Treatment |
+|---------|-----------|
+| default / CTA | Amber fill, ink label, `rounded-sm`, no shadow |
+| outline | Hairline border, transparent fill |
+| ghost / secondary | Text + underline on marketing |
 
 ### App patterns
 
-- **Page chrome (locked):** import `APP_SHELL_PAGE` or `APP_SHELL_PAGE_WIDE` from `@workspace/app-shell/shell-constants`. Left-aligned, shared gutters — never `mx-auto` page roots beside the sidebar. See `.cursor/rules/app-shell-grid.mdc`.
-- Dialogs: `max-w-2xl` forms, `max-h-[85vh] overflow-y-auto`
-- Status colors: draft `muted-foreground`, ready blue, published green, error `destructive`, cached amber
-- Sidebar: `--sidebar-bg` white, `--sidebar-border` matches `--border`
+- **Page chrome (locked):** `APP_SHELL_PAGE` / `APP_SHELL_PAGE_WIDE` from `@workspace/app-shell/shell-constants`. Left-aligned. Inner 65ch article measure is allowed.
+- Sidebar: ink (`--sidebar-bg: #0A0A0B`) in the product app.
+
+## Token files
+
+| File | Role |
+|------|------|
+| `lib/app-shell/src/product-theme.css` | Source of truth (ink, newsprint, signal, hairline, studio utilities) |
+| `artifacts/marketing-persona-app/src/app/globals.css` | Imports product-theme; Tailwind `@theme`; marketing utilities |
+| `artifacts/goals-app-ui/src/index.css` | Imports product-theme; product SPA `@theme` |
+| `artifacts/goals-app-ui/index.html` | IBM Plex + Source Serif 4 + Plex Mono; `html.dark` studio chrome |
+| `artifacts/marketing-persona-app/src/app/layout.tsx` | `next/font` faces |
+| `artifacts/marketing-persona-app/src/lib/marketing/site/marketing-critical-css.ts` | Static export FOUC (newsprint, not black) |
+| `artifacts/marketing-persona-app/src/components/ui/button-variants.ts` | Hairline radius, no CTA shadow |
+
+`artifacts/marketing-pages` is the Cloudflare Pages deploy of the marketing static export — change tokens/components in `marketing-persona-app`, then rebuild the export.
 
 ## Do's and Don'ts
 
 **Do**
 
-- Use semantic tokens (`bg-primary`, `text-muted-foreground`, `border-border`) — not raw hex in components
-- Pick `paper` vs `glass` surface by route register: `(app)` → paper; dark marketing bands → glass
-- Keep warm orange CTA for high-contrast hero conversion; forest green for in-app actions
-- Test contrast on both `#FAFAF8` and `#000000` bands
-- Honor reduced motion on all hero and card hover transitions
+- Use semantic tokens (`bg-background`, `text-foreground`, `bg-primary`)
+- Keep amber as the only signal
+- Set article body in Source Serif at ~65ch
+- Put scores/URLs/timestamps in IBM Plex Mono
+- Test contrast: ink on newsprint, ink on amber, newsprint on ink chrome
 
 **Don't**
 
-- Default to glassmorphism in the product app shell
-- Pair `1px border` with wide soft shadows on the same card (ghost-card tell)
-- Use cream/sand token names or warm-tinted near-white as the entire brand personality
-- Add tracked uppercase eyebrows to every section — one deliberate label system max
-- Use left accent rails, gradient text, or hero-metric stat grids
-- Exceed `rounded-2xl` (16px) on large section cards; reserve full pill for tags and hero CTAs
-- Invent per-page product shells (`mx-auto max-w-* px-4 py-8…`) — use `APP_SHELL_PAGE` / `APP_SHELL_PAGE_WIDE`
+- Reintroduce forest green, sage paper, or `#121412` green-black
+- Use Plus Jakarta or Playfair italic as identity
+- Pair italic serif display with a second oversized sans in the hero
+- Ship full-bleed cinematic / nature photography as the marketing hero
+- Add a blue accent for links
+- Soft shadows, pills on primary CTAs, glass orbs, logo soup
+- Invent per-page product shells — use `APP_SHELL_PAGE` / `APP_SHELL_PAGE_WIDE`

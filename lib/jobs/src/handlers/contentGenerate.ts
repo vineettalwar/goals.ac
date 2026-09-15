@@ -48,8 +48,9 @@ export async function finalizeGeneratedPieces(params: {
   projectId: number;
   userId: number;
   autoPublish: boolean;
+  livePublish?: boolean;
 }): Promise<void> {
-  const { pieceIds, projectId, userId, autoPublish } = params;
+  const { pieceIds, projectId, userId, autoPublish, livePublish } = params;
   if (pieceIds.length === 0) return;
 
   const [project] = await db
@@ -74,6 +75,21 @@ export async function finalizeGeneratedPieces(params: {
       .where(inArray(contentPiecesTable.id, pieceIds));
 
     /**
+     * Live autopilot publish needs grounded research. Pieces that ran Ferret
+     * with no connected data stay at ready instead of hitting the CMS.
+     */
+    const missingResearch = livePublish
+      ? pieces.filter((piece) => piece.pieceMetadata?.researchConnected === false)
+      : [];
+    const heldIds = new Set(missingResearch.map((piece) => piece.id));
+    if (missingResearch.length > 0) {
+      logger.info(
+        { pieceIds: missingResearch.map((piece) => piece.id), projectId },
+        "holding live auto-publish: no research data connected",
+      );
+    }
+
+    /**
      * Regulated verticals (law, dental) generate as `pending_review` and carry
      * `requiresReview` in their metadata. The publish call itself already refuses
      * these, but letting them through to here would queue a job that can only fail,
@@ -81,7 +97,9 @@ export async function finalizeGeneratedPieces(params: {
      * them. Hold them at draft instead and let approvePiece release them.
      */
     const awaitingReview = pieces.filter(isPieceAwaitingReview);
-    const releasable = pieces.filter((piece) => !awaitingReview.some((held) => held.id === piece.id));
+    const releasable = pieces.filter(
+      (piece) => !awaitingReview.some((held) => held.id === piece.id) && !heldIds.has(piece.id),
+    );
 
     if (releasable.length > 0) {
       await db
@@ -170,16 +188,20 @@ async function generateExistingContentPiece(
     const brand = await loadBrandContextForProject(projectId);
     if (!brand) throw new Error("Project not found");
 
+    const angleHint =
+      typeof piece.pieceMetadata?.contentAngle === "string" ? piece.pieceMetadata.contentAngle : undefined;
+
     const generated = options.useAgentTeam
       ? await generateContentPieceWithAgents(
           piece.formatType as ContentFormatType,
           brand,
           piece.targetKeyword ?? "",
-          undefined,
+          angleHint,
           {
             fastMode: options.agentFastMode,
             userApiKey: options.userApiKey,
             aiProviderOptions: options.aiProviderOptions,
+            projectId,
             onAgentProgress: (event) => {
               void patchPieceAgentTeamProgress(contentPieceId, event);
             },
@@ -268,20 +290,11 @@ async function failStuckContentPiece(contentPieceId: number | undefined): Promis
 }
 
 export async function processContentGenerate(payload: ContentGeneratePayload): Promise<void> {
-  const {
-    contentItemId,
-    contentPieceId,
-    projectId,
-    userId,
-    generateVariants,
-    schedulePublish,
-    triggeredByAutopilot,
-    useAgentTeam,
-    agentFastMode,
-  } = payload;
-  if (!contentItemId && !contentPieceId) {
-    throw new Error("contentItemId or contentPieceId required");
-  }
+    const { contentItemId, contentPieceId, projectId, userId, generateVariants, schedulePublish, triggeredByAutopilot, agentFastMode } = payload;
+    const useAgentTeam = payload.useAgentTeam === true || triggeredByAutopilot === true;
+    if (!contentItemId && !contentPieceId) {
+      throw new Error("contentItemId or contentPieceId required");
+    }
   let billingCtx: AiBillingContext | null = null;
   try {
     const [userApiKey, aiProviderOptions] = await Promise.all([
@@ -335,7 +348,13 @@ export async function processContentGenerate(payload: ContentGeneratePayload): P
       schedulePublish === true || (triggeredByAutopilot === true && shouldAutoPublish(settings));
 
     const pieceIds = [result.primaryPieceId, ...result.variantPieceIds];
-    await finalizeGeneratedPieces({ pieceIds, projectId, userId, autoPublish });
+    await finalizeGeneratedPieces({
+      pieceIds,
+      projectId,
+      userId,
+      autoPublish,
+      livePublish: settings.publishMode === "live",
+    });
 
     await completeAiBillingSession(billingCtx, {
       userId,

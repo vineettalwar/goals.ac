@@ -1,38 +1,138 @@
-/* Paper product palette — import after tailwindcss in the app entry CSS. */
+/* Editorial newsprint + ink control room. Import after tailwindcss in the app entry CSS. */
 :root {
-  --radius: 0.75rem;
-  --background: #fafaf8;
-  --foreground: #1a1a1a;
-  --card: #ffffff;
-  --card-foreground: #1a1a1a;
-  --border: #e8e5e0;
-  --primary: #2d3b2d;
-  --primary-foreground: #ffffff;
-  --secondary: #f5f3ef;
-  --secondary-foreground: #1a1a1a;
-  --muted: #f5f3ef;
-  --muted-foreground: #6b6560;
-  --accent-warm: #e8702a;
-  --sidebar-bg: #ffffff;
-  --sidebar-border: #e8e5e0;
-  --chart-1: #2d3b2d;
-  --chart-2: #047857;
-  --chart-3: #b45309;
-  --chart-4: #6b6560;
+  --radius: 0.125rem;
+  --ink: #0a0a0b;
+  --newsprint: #f3efe6;
+  --signal: #d97706;
+  --signal-hover: #b45309;
+  --background: #f3efe6;
+  --foreground: #0a0a0b;
+  --card: #f3efe6;
+  --card-foreground: #0a0a0b;
+  --border: #c9c2b4;
+  --input: #c9c2b4;
+  --ring: #d97706;
+  --primary: #d97706;
+  --primary-foreground: #0a0a0b;
+  --secondary: #e8e2d6;
+  --secondary-foreground: #0a0a0b;
+  --muted: #e8e2d6;
+  --muted-foreground: #5a554c;
+  --accent: #e8e2d6;
+  --accent-foreground: #0a0a0b;
+  --destructive: #c0392b;
+  --destructive-foreground: #f3efe6;
+  --accent-warm: #d97706;
+  --accent-warm-hover: #b45309;
+  --accent-warm-foreground: #0a0a0b;
+  --surface-dark: #0a0a0b;
+  --sidebar-bg: #0a0a0b;
+  --sidebar-border: #2e2c28;
+  --chart-1: #d97706;
+  --chart-2: #0a0a0b;
+  --chart-3: #78716c;
+  --chart-4: #5a554c;
   --chart-5: #c0392b;
-  --chart-grid: #e8e5e0;
+  --chart-grid: #c9c2b4;
+  --studio-chrome: #0a0a0b;
+  --studio-chrome-fg: #f3efe6;
+}
+
+.dark {
+  --background: #0a0a0b;
+  --foreground: #f3efe6;
+  --card: #141416;
+  --card-foreground: #f3efe6;
+  --border: #2e2c28;
+  --input: #2e2c28;
+  --ring: #d97706;
+  --primary: #d97706;
+  --primary-foreground: #0a0a0b;
+  --secondary: #1a1a1c;
+  --secondary-foreground: #f3efe6;
+  --muted: #1a1a1c;
+  --muted-foreground: #a39e94;
+  --accent: #1a1a1c;
+  --accent-foreground: #f3efe6;
+  --destructive: #e5736a;
+  --destructive-foreground: #0a0a0b;
+  --accent-warm: #d97706;
+  --accent-warm-hover: #f59e0b;
+  --accent-warm-foreground: #0a0a0b;
+  --surface-dark: #0a0a0b;
+  --sidebar-bg: #0a0a0b;
+  --sidebar-border: #2e2c28;
+  --chart-1: #f59e0b;
+  --chart-2: #f3efe6;
+  --chart-3: #a39e94;
+  --chart-4: #78716c;
+  --chart-5: #f87171;
+  --chart-grid: #2e2c28;
+  --studio-chrome: #0a0a0b;
+  --studio-chrome-fg: #f3efe6;
+}
+
+.marketing-register {
+  --background: #f3efe6;
+  --foreground: #0a0a0b;
+  --card: #f3efe6;
+  --card-foreground: #0a0a0b;
+  --border: #c9c2b4;
+  --input: #c9c2b4;
+  --muted: #e8e2d6;
+  --muted-foreground: #5a554c;
+  --secondary: #e8e2d6;
+  --secondary-foreground: #0a0a0b;
+  --accent: #e8e2d6;
+  --accent-foreground: #0a0a0b;
+  --sidebar-bg: #f3efe6;
+  --sidebar-border: #c9c2b4;
+  background: var(--background);
+  color: var(--foreground);
+  color-scheme: light;
+}
+
+.hairline-panel {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: none;
+}
+
+.article-canvas {
+  background: var(--newsprint);
+  color: var(--ink);
+  font-family: var(--font-serif), "Source Serif 4", "Iowan Old Style", Georgia, serif;
+  max-width: 65ch;
+}
+
+.copy-desk-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  padding: 0.625rem 0;
+  font-family: var(--font-mono), "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+}
+
+.score-signal {
+  color: var(--signal);
+  font-family: var(--font-mono), "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
 }
 
 @keyframes agentWorkIn {
   from {
     opacity: 0;
     transform: translateY(6px);
-    filter: blur(5px);
   }
   to {
     opacity: 1;
     transform: none;
-    filter: none;
   }
 }
 
@@ -90,27 +190,4 @@
   .agent-portrait-live {
     animation: none;
   }
-}
-
-.dark {
-  --background: #121412;
-  --foreground: #f4f1ea;
-  --card: #1a1c1a;
-  --card-foreground: #f4f1ea;
-  --border: #2a2e2a;
-  --primary: #8fa08f;
-  --primary-foreground: #121412;
-  --secondary: #222622;
-  --secondary-foreground: #f4f1ea;
-  --muted: #222622;
-  --muted-foreground: #a8a49c;
-  --accent-warm: #f08a45;
-  --sidebar-bg: #161816;
-  --sidebar-border: #2a2e2a;
-  --chart-1: #a8c0a8;
-  --chart-2: #34d399;
-  --chart-3: #fbbf24;
-  --chart-4: #a8a49c;
-  --chart-5: #f87171;
-  --chart-grid: #2a2e2a;
 }

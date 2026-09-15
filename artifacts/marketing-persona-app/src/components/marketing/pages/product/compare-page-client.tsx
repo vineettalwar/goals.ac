@@ -125,7 +125,7 @@ export function ComparePageClient() {
       <MarketingCTA
         titleLine1="Try the"
         titleLine2="content studio"
-        description="Sign up free, connect your CMS, and create your first research-backed draft."
+        description="Request access, connect your CMS, and create your first research-backed draft."
         variant="dark"
         secondaryHref="/free-tools"
         secondaryLabel="Free SEO tools →"

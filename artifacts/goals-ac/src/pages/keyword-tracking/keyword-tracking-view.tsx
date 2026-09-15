@@ -145,7 +145,7 @@ export function KeywordTrackingView({
             <m.div {...fadeUp(0)} className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50 dark:bg-blue-500/10 px-4 py-3 flex items-center gap-3">
               <Lock className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
               <p className="text-sm text-blue-800 dark:text-blue-200">
-                <Link to="/signup" className="font-semibold underline underline-offset-2">Sign up free</Link> to save analyses and track keyword rankings on your project.
+                <Link to="/signup" className="font-semibold underline underline-offset-2">Request access</Link> to save analyses and track keyword rankings on your project.
               </p>
             </m.div>
           )}

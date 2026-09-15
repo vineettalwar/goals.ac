@@ -8,8 +8,8 @@ type MarketingLogoProps = {
 
 /** Hard nav to `/` — soft-nav can sit on Next "Rendering…" while turbopack is busy. */
 export function MarketingLogo({
-  className = "flex items-center gap-2.5 text-white",
-  textClassName = "text-2xl font-playfair italic",
+  className = "flex items-center gap-2.5 text-foreground",
+  textClassName = "text-2xl font-semibold tracking-tight",
   iconSize = 26,
 }: MarketingLogoProps) {
   return (

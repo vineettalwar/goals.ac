@@ -95,7 +95,7 @@ export function FeatureLanderPage({
         badge="Content Studio"
         titleLine1="Ready to"
         titleLine2="start creating?"
-        description="Sign up free, connect your CMS, and publish research-driven content across every channel."
+        description="Request access, connect your CMS, and publish research-driven content across every channel."
         primaryCta={{ label: primaryCta.label, href: primaryCta.href }}
         secondaryCta={secondaryCta ?? { label: CONTACT_CTA_LABEL, href: "/contact" }}
       />

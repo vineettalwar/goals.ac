@@ -189,7 +189,7 @@ pnpm run cf:migrate:d1:local && pnpm run cf:seed:d1:local && pnpm run cf:preview
 Impeccable design context for the canonical Next.js app lives in:
 
 - `artifacts/marketing-persona-app/PRODUCT.md` — users, positioning, brand personality, anti-references, accessibility target (WCAG 2.1 AAA where feasible), dual register routing (`(public)` = brand, `(app)` = product)
-- `artifacts/marketing-persona-app/DESIGN.md` — paper/forest-green tokens, typography, surfaces (`paper-card` vs `glass-card`), components
+- `artifacts/marketing-persona-app/DESIGN.md` — newsprint/ink tokens, IBM Plex + Source Serif 4, amber signal, hairline panels, studio article canvas
 
 Run design commands from the app directory or with `--target artifacts/marketing-persona-app`. Legacy `docs/design.md` describes the older blue/glass Vite app; prefer `DESIGN.md` for new work.
 

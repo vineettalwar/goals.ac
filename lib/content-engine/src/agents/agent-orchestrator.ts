@@ -9,7 +9,6 @@
  * - Input/output validation
  * - Graceful degradation
  * - Detailed observability
- * - Circuit breaker for repeated failures
  *
  * ponytail: sequential agents, no cross-agent memory. Upgrade path: shared
  * context store + parallel execution if latency becomes a problem.
@@ -30,6 +29,13 @@ import { buildAgentSystemPrompt, buildAgentTaskPrompt, type AgentTaskContext } f
 import { createAgentEvent } from "./agent-events";
 import type { ContentFormatType } from "@workspace/db";
 import type { BrandContext } from "../content/content-studio-prompts";
+import {
+  loadResearchEvidence,
+  researchPromptBlock,
+  sanitizeFerretResearch,
+  sourceUrlsFromAngleHint,
+  type ResearchEvidence,
+} from "./research-evidence";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -66,6 +72,10 @@ export interface AgentOrchestratorInput {
   competitorContext?: string;
   userApiKey?: string | null;
   aiProviderOptions?: AiProviderOptions;
+  /** When set, Ferret pulls GSC / keyword hub / competitor rows for this project. */
+  projectId?: number;
+  /** Injected evidence (tests / callers that already loaded tools). */
+  researchEvidence?: ResearchEvidence;
 }
 
 interface AgentRunContext {
@@ -73,6 +83,7 @@ interface AgentRunContext {
   input: AgentOrchestratorInput;
   taskContext: AgentTaskContext;
   accumulatedOutput: Record<string, unknown>;
+  researchEvidence: ResearchEvidence;
   onProgress?: (event: AgentProgressEvent) => void;
   timeoutMs: number;
   retryCount: number;
@@ -153,7 +164,7 @@ function validateAgentOutput(agentId: AgentId, output: unknown): { valid: boolea
       break;
 
     case "ferret":
-      // Research is optional enrichment, allow minimal output
+      // Research is optional enrichment; verified flags are sanitized after parse
       break;
 
     case "hummingbird":
@@ -363,6 +374,10 @@ async function runAgentOnce(
       delete parsed.body_markdown;
     }
 
+    if (agentId === "ferret") {
+      parsed = sanitizeFerretResearch(parsed, ctx.researchEvidence);
+    }
+
     const durationMs = Date.now() - startTime;
 
     // Emit completion event
@@ -416,6 +431,14 @@ export async function runAgentPipeline(
   const ai = await resolveAiClient(input.userApiKey, input.aiProviderOptions);
 
   // Build base task context
+  const researchEvidence =
+    input.researchEvidence ??
+    (await loadResearchEvidence({
+      projectId: input.projectId,
+      keyword: input.keyword,
+      sourceUrls: sourceUrlsFromAngleHint(input.angleHint),
+    }));
+
   const taskContext: AgentTaskContext = {
     keyword: input.keyword,
     format: input.format,
@@ -427,13 +450,19 @@ export async function runAgentPipeline(
     competitorContext: input.competitorContext,
     brandVoiceContext: input.brand.voiceTone,
     existingPieceTitles: input.existingPieceTitles,
+    researchBlock: researchPromptBlock(researchEvidence),
   };
 
   const ctx: AgentRunContext = {
     ai,
     input,
     taskContext,
-    accumulatedOutput: {},
+    accumulatedOutput: {
+      researchEvidence,
+      researchConnected: researchEvidence.connected,
+      ...(researchEvidence.connected ? {} : { researchNote: researchEvidence.note }),
+    },
+    researchEvidence,
     onProgress: options.onProgress,
     timeoutMs,
     retryCount: 0,
@@ -532,6 +561,8 @@ export async function runAgentPipeline(
     stages,
     totalDurationMs,
     degradedAgents,
+    researchConnected: researchEvidence.connected,
+    researchNote: researchEvidence.connected ? undefined : researchEvidence.note,
   };
 }
 

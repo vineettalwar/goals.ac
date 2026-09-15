@@ -1,24 +1,23 @@
 "use client";
 
 import { PageHero } from "./page-hero";
-import { HERO_IMAGES } from "@/lib/marketing/site/marketing-hero-images";
 import { SIGNUP_HREF } from "@/lib/marketing/site/marketing-contact";
 
 export function HeroSection() {
   return (
     <PageHero
       layout="home"
-      badge="Content Studio"
-      titleLine1="Research-driven SEO content"
-      titleLine2="published everywhere"
-      leftDescription="Briefs, drafts, and cross-platform publishing from one workspace. You approve every piece before it goes live."
-      description="Save time on research, writing, and formatting. CMS, social, and email — connected."
-      backgroundImage={HERO_IMAGES.home.base}
-      spotlightImage={HERO_IMAGES.home.spotlight}
-      enableSpotlight
+      badge="goals.ac · content desk"
+      titleLine1="Research-driven SEO content, published everywhere."
+      description="Briefs, drafts, and CMS publishing from one desk. You approve every piece before it goes live."
       ctas={[
         { label: "Start creating", href: SIGNUP_HREF, variant: "primary" },
-        { label: "See Content Studio", href: "/content-engine", variant: "ghost" },
+        { label: "See Content Studio", href: "/content-engine", variant: "secondary" },
+      ]}
+      proof={[
+        { label: "Scores", value: "Editorial + SERP" },
+        { label: "CMS", value: "WordPress first" },
+        { label: "Gate", value: "Approve before live" },
       ]}
     />
   );

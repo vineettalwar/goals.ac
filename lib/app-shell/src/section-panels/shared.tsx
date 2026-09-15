@@ -168,7 +168,7 @@ export function ScoreRing({ score, size = "lg" }: { score: number; size?: "lg" |
   return (
     <p
       className={cn(
-        "font-semibold tabular-nums tracking-tight text-foreground",
+        "font-semibold tabular-nums tracking-tight score-signal",
         size === "lg" ? "text-3xl" : "text-xl",
       )}
     >

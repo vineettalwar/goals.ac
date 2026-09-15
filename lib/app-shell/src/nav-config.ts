@@ -34,14 +34,12 @@ export type NavItemDef = {
 /**
  * Which slice of the product a user sees.
  *
- * `blog_wordpress` is the default: one product, blog articles published to
- * WordPress. `full` reveals the social, research, and GEO surfaces. Routes stay
- * mounted under either surface — this only decides what navigation offers, so
- * a direct link to a hidden page still works.
+ * `full` is the default: marketing sells GEO, research, and social, so those
+ * nav items stay visible. `blog_wordpress` is an optional narrower surface.
  */
 export type ProductSurface = "blog_wordpress" | "full";
 
-export const DEFAULT_PRODUCT_SURFACE: ProductSurface = "blog_wordpress";
+export const DEFAULT_PRODUCT_SURFACE: ProductSurface = "full";
 
 /** Nav labels withheld from the blog surface. */
 const NON_BLOG_NAV_LABELS = new Set(["Social Hub", "GEO Audit", "Research"]);

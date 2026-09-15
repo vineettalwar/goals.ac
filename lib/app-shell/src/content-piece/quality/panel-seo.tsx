@@ -225,7 +225,7 @@ export function ArticleQualityPanelSeo({
   };
 
   return (
-    <div className="space-y-6 rounded-xl p-6">
+    <div className="space-y-6 hairline-panel p-4">
       <div className="flex items-center gap-4">
         <ScoreRing score={displayTotal} size="md" />
         <div className="min-w-0 space-y-1.5">

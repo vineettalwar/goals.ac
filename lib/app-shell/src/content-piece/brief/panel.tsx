@@ -197,7 +197,7 @@ export function ContentBriefPanel({
 
   if (!briefId) {
     return (
-      <div className="space-y-2 rounded-xl p-4">
+      <div className="space-y-2 hairline-panel p-4">
         <div className="flex items-center gap-2 text-sm font-medium">
           <FileText className="h-4 w-4 text-muted-foreground" aria-hidden />
           Brief
@@ -209,7 +209,7 @@ export function ContentBriefPanel({
   }
 
   return (
-    <div className="space-y-3 rounded-xl p-4">
+    <div className="space-y-3 hairline-panel p-4">
       <div className="flex items-center gap-2 text-sm font-medium">
         <FileText className="h-4 w-4 text-primary" aria-hidden />
         Brief context

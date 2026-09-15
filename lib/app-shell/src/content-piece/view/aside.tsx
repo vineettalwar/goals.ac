@@ -131,7 +131,7 @@ export function ContentPieceAside({
   return (
     <aside className="space-y-5 lg:sticky lg:top-6">
       {showPublishPath ? (
-        <div className="space-y-3 rounded-xl p-4">
+        <div className="space-y-3 hairline-panel p-4">
           <p className="text-sm font-medium">
             {nextAction === "publish" ? "Ready to publish" : "How to publish"}
           </p>
@@ -243,7 +243,7 @@ export function ContentPieceAside({
       ) : null}
       {asideExtra}
       {editing ? (
-        <div className="space-y-3 rounded-xl p-4">
+        <div className="space-y-3 hairline-panel p-4">
           <div className="grid grid-cols-2 gap-3">
             <label className="block space-y-1 text-xs">
               <span className="font-medium text-muted-foreground">Status</span>
@@ -271,7 +271,7 @@ export function ContentPieceAside({
           </div>
         </div>
       ) : piece.plannedDate ? (
-        <div className="rounded-xl p-4 text-sm">
+        <div className="hairline-panel p-4 text-sm">
           <p className="text-xs text-muted-foreground">
             Scheduled
           </p>
@@ -280,7 +280,7 @@ export function ContentPieceAside({
       ) : null}
 
       {piece.pieceMetadata?.source === "refresh" && onSaveCmsRemoteId ? (
-        <div className="space-y-3 rounded-xl p-4">
+        <div className="space-y-3 hairline-panel p-4">
           <p className="text-xs text-muted-foreground">
             WordPress post id
           </p>
@@ -391,8 +391,33 @@ export function ContentPieceAside({
         />
       ) : null}
 
+      {piece.pieceMetadata?.citations && piece.pieceMetadata.citations.length > 0 ? (
+        <div className="hairline-panel space-y-2 p-4">
+          <p className="font-mono text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+            Citations
+          </p>
+          <ul className="space-y-2">
+            {piece.pieceMetadata.citations.map((citation, index) => (
+              <li key={`${citation.url}-${index}`} className="min-w-0">
+                <p className="text-sm leading-snug text-foreground">{citation.text}</p>
+                {citation.url ? (
+                  <a
+                    href={citation.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-0.5 block break-all font-mono text-[11px] text-muted-foreground hover:underline"
+                  >
+                    {citation.url}
+                  </a>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
       {!showPublishPath && onQueueSocial ? (
-        <div className="space-y-4 rounded-xl p-6">
+        <div className="space-y-4 hairline-panel p-4">
           <div className="space-y-1.5">
             <p className="text-sm font-medium">Social distribution</p>
             <p className="text-sm leading-relaxed text-muted-foreground">

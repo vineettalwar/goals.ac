@@ -37,7 +37,7 @@ The growth roadmap and content studio that already knows your brand, CMS, and co
 
 ## Brand Personality
 
-Premium minimal — quiet luxury through restraint, not decoration. Understated confidence: lots of intentional whitespace, calm forest-and-paper palette, serif accent only where editorial voice earns it. Copy is direct and expert, never hypey or urgency-stacked. The tool should feel like it disappears behind the work.
+Premium minimal — quiet luxury through restraint, not decoration. Understated confidence: newsprint field, ink type, hairline rules, one amber signal for scores and CTAs. Copy is direct and expert, never hypey or urgency-stacked. The tool should feel like a copy desk, not another generic AI dashboard.
 
 ## Anti-references
 

@@ -164,6 +164,9 @@ export type ContentPieceMetadata = {
   publishDeadLettered?: boolean;
   /** True when generated using the agent team pipeline. */
   generatedWithAgents?: boolean;
+  /** Ferret had a connected data source. Explicit false blocks live auto-publish. */
+  researchConnected?: boolean;
+  researchNote?: string;
   /** Total time for agent pipeline in ms. */
   agentPipelineDurationMs?: number;
   /** Agents that failed or were skipped during pipeline. */

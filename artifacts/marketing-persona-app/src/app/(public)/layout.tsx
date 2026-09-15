@@ -4,7 +4,7 @@ import { MarketingNav } from "@/components/marketing/layout/marketing-nav";
 
 export default function PublicLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="marketing-register flex min-h-screen flex-col">
       <MarketingNav />
       <main className="flex-1">{children}</main>
       <MarketingFooter />

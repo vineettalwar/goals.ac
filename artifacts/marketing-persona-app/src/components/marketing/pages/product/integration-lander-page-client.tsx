@@ -64,7 +64,7 @@ export function IntegrationLanderPageClient({ lander }: { lander: IntegrationLan
             </p>
             <h2 className="mt-3 text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
               {lander.label}
-              <span className="mt-1 block font-playfair italic font-normal text-foreground/80">
+              <span className="mt-1 block font-semibold text-foreground/80">
                 on your terms
               </span>
             </h2>

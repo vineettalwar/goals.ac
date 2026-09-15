@@ -27,18 +27,25 @@ export type VisibilitySettings = {
 export type VisibilitySummary = {
   visibilityScore?: number;
   promptCount?: number;
+  dataMode?: "live" | "simulated";
+  llmMentionsConfigured?: boolean;
   trend?: Array<{ date: string; score: number }>;
   byEngine?: Array<{ engine: string; cited: number; total: number; score: number }>;
   competitorMentions?: Array<{ name: string; count: number }>;
   latestGeoScore?: number | null;
   recentSnapshots?: Array<{
     id: number;
-    prompt: string;
+    prompt?: string;
     engine: string;
     cited: boolean;
     checkedAt: string;
+    source?: "live" | "simulated";
   }>;
 };
+
+export function visibilityHonestyLabel(dataMode?: "live" | "simulated"): "Live" | "Demo / Simulated" {
+  return dataMode === "live" ? "Live" : "Demo / Simulated";
+}
 
 export type ArticlePerformanceRow = {
   id: number;
@@ -176,16 +183,34 @@ export function SearchVisibilityView({
 
   const score = summary?.visibilityScore ?? 0;
   const promptCount = summary?.promptCount ?? 0;
+  const dataMode = summary?.dataMode === "live" ? "live" : "simulated";
+  const honesty = visibilityHonestyLabel(dataMode);
 
   return (
     <div className="space-y-6">
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
 
+      <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+        <p className="font-semibold">{honesty}</p>
+        {dataMode === "live" ? (
+          <p className="mt-1 text-xs">
+            Live DataForSEO LLM Mentions. These are real engine lookups, not a model role-play.
+          </p>
+        ) : (
+          <p className="mt-1 text-xs">
+            Gemini role-play of ChatGPT, Perplexity, Claude, and Gemini. This is not live ChatGPT/Perplexity/Claude
+            citation traffic. Connect DataForSEO LLM Mentions for live checks.
+          </p>
+        )}
+      </div>
+
       <div className="grid gap-4 md:grid-cols-[auto_1fr]">
         <div className="flex flex-col items-center justify-center p-6">
           <ScoreRing score={score} />
           <p className="mt-2 text-sm font-medium">Visibility score</p>
-          <p className="text-xs text-muted-foreground">{promptCount} prompts tracked</p>
+          <p className="text-xs text-muted-foreground">
+            {promptCount} prompts tracked · {honesty}
+          </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
           {(summary?.byEngine ?? []).map((row) => (
@@ -236,7 +261,11 @@ export function SearchVisibilityView({
           </h2>
           <ToggleRow
             label="Weekly citation checks"
-            description="ChatGPT, Perplexity, Claude, and Gemini"
+            description={
+              dataMode === "live"
+                ? "Live DataForSEO LLM Mentions"
+                : "Demo / Simulated Gemini role-play — not live ChatGPT traffic"
+            }
             checked={Boolean(settings.llmTrackingEnabled)}
             disabled={saving}
             onChange={(checked) => onSettingsChange({ ...settings, llmTrackingEnabled: checked })}
@@ -278,6 +307,7 @@ export function SearchVisibilityView({
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
                 {ENGINE_LABELS[snap.engine] ?? snap.engine} · {new Date(snap.checkedAt).toLocaleString()}
+                {snap.source === "live" || dataMode === "live" ? " · Live" : " · Demo / Simulated"}
               </p>
             </div>
           ))}

@@ -17,8 +17,8 @@ const SOCIAL_AND_MARKETING = [
 ];
 
 describe("formatOptionsForSurface", () => {
-  it("defaults to the blog surface", () => {
-    expect(formatOptionsForSurface()).toEqual(formatOptionsForSurface("blog_wordpress"));
+  it("defaults to the full surface", () => {
+    expect(formatOptionsForSurface()).toEqual(formatOptionsForSurface("full"));
   });
 
   it("offers article formats only on the blog surface", () => {

@@ -25,7 +25,7 @@ export function LegalPageClient({
         </p>
         <h1 className="mx-auto max-w-4xl text-white leading-[0.95]">
           <span
-            className="block font-playfair text-4xl font-normal italic sm:text-6xl md:text-7xl"
+            className="block text-4xl font-semibold tracking-tight sm:text-6xl md:text-7xl"
             style={{ letterSpacing: "-0.05em" }}
           >
             {titleLine1}

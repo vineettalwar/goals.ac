@@ -255,6 +255,7 @@ export async function handleProjectGenerateStream(
                   fastMode: agentFastMode,
                   userApiKey,
                   aiProviderOptions,
+                  projectId,
                   onAgentEvent: (sseData: string) => {
                     try {
                       send("agent", JSON.parse(sseData));

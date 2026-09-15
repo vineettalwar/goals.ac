@@ -251,6 +251,7 @@ export async function POST(
                 fastMode: agentFastMode,
                 userApiKey,
                 aiProviderOptions,
+                projectId,
                 onAgentEvent: (sseData: string) => {
                   // Parse the agent event and send as SSE
                   try {
