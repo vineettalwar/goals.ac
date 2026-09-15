@@ -20,6 +20,7 @@ import {
   type LlmPlatform,
   type ShareOfVoiceEntry,
 } from "./share-of-voice";
+import { getDataForSeoCredentials } from "./credentials";
 
 export type { LlmPlatform, ShareOfVoiceEntry };
 
@@ -117,15 +118,8 @@ function buildLlmTarget(detected: {
   };
 }
 
-function credentials(): { login: string; password: string } | null {
-  const login = process.env["DATAFORSEO_LOGIN"]?.trim();
-  const password = process.env["DATAFORSEO_PASSWORD"]?.trim();
-  if (!login || !password) return null;
-  return { login, password };
-}
-
 export function isLlmMentionsConfigured(): boolean {
-  return credentials() !== null;
+  return getDataForSeoCredentials() !== null;
 }
 
 /** Rough USD: $0.20 base (2 platforms) + $0.20 when competitors are compared. */
@@ -134,7 +128,7 @@ export function estimateBrandLookupCostUsd(competitorCount: number): number {
 }
 
 function authHeader(): string {
-  const creds = credentials();
+  const creds = getDataForSeoCredentials();
   if (!creds) {
     throw new Error("DataForSEO LLM Mentions credentials are not configured");
   }

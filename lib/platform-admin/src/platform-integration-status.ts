@@ -1,6 +1,6 @@
 import { db } from "./db";
 import { platformSettingsTable } from "@workspace/db/schema-sqlite";
-import { decryptSecret } from "@workspace/security/encryption";
+import { decryptSecret, decryptStoredSecret } from "@workspace/security/encryption";
 import { lastFour } from "@workspace/billing";
 import { eq } from "drizzle-orm";
 import { toIsoStringOrNull } from "./dates";
@@ -16,6 +16,8 @@ import {
   isBlueskyManagedByEnv,
   isUnsplashManagedByEnv,
   isPexelsManagedByEnv,
+  isBingManagedByEnv,
+  isDataForSeoManagedByEnv,
   stripeConnectOAuthAvailable,
   STRIPE_ENV_VARS,
   RESEND_ENV_VARS,
@@ -25,8 +27,9 @@ import {
   TWITTER_ENV_VARS,
   META_ENV_VARS,
   BLUESKY_ENV_VARS,
+  BING_WEBMASTER_ENV_VARS,
+  DATAFORSEO_ENV_VARS,
   hasGoogleCredentials,
-  hasBingCredentials,
   hasUnsplashCredentials,
   hasPexelsCredentials,
   hasResendCredentials,
@@ -106,6 +109,18 @@ export type PlatformIntegrationStatus = {
     clientName: { configured: boolean; value: string | null; source: "db" | "env" | null };
     privateKeyJwk: IntegrationFieldStatus;
   };
+  bing: {
+    managedByEnv: boolean;
+    envVars: string[];
+    clientId: { configured: boolean; value: string | null; source: "db" | "env" | null };
+    clientSecret: IntegrationFieldStatus;
+  };
+  dataforseo: {
+    managedByEnv: boolean;
+    envVars: string[];
+    login: IntegrationFieldStatus;
+    password: IntegrationFieldStatus;
+  };
   bedrock: PlatformBedrockStatus;
 };
 
@@ -117,7 +132,7 @@ function fieldStatus(
   if (fromEnv) {
     return { configured: true, source: "env", lastFour: lastFour(fromEnv) };
   }
-  const fromDb = safeDecrypt(dbEncrypted);
+  const fromDb = decryptStoredSecret(dbEncrypted);
   if (fromDb) {
     return { configured: true, source: "db", lastFour: lastFour(fromDb) };
   }
@@ -165,6 +180,11 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         blueskyClientName: platformSettingsTable.blueskyClientName,
         encryptedBlueskyOauthPrivateKeyJwk:
           platformSettingsTable.encryptedBlueskyOauthPrivateKeyJwk,
+        bingWebmasterClientId: platformSettingsTable.bingWebmasterClientId,
+        encryptedBingWebmasterClientSecret:
+          platformSettingsTable.encryptedBingWebmasterClientSecret,
+        encryptedDataforseoLogin: platformSettingsTable.encryptedDataforseoLogin,
+        encryptedDataforseoPassword: platformSettingsTable.encryptedDataforseoPassword,
       })
       .from(platformSettingsTable)
       .where(eq(platformSettingsTable.id, 1))
@@ -241,6 +261,21 @@ export async function getPlatformIntegrationStatus(): Promise<PlatformIntegratio
         "BLUESKY_OAUTH_PRIVATE_KEY_JWK",
       ),
     },
+    bing: {
+      managedByEnv: isBingManagedByEnv(),
+      envVars: activeEnvVars(BING_WEBMASTER_ENV_VARS),
+      clientId: plainFieldStatus(row?.bingWebmasterClientId, "BING_WEBMASTER_CLIENT_ID"),
+      clientSecret: fieldStatus(
+        row?.encryptedBingWebmasterClientSecret,
+        "BING_WEBMASTER_CLIENT_SECRET",
+      ),
+    },
+    dataforseo: {
+      managedByEnv: isDataForSeoManagedByEnv(),
+      envVars: activeEnvVars(DATAFORSEO_ENV_VARS),
+      login: fieldStatus(row?.encryptedDataforseoLogin, "DATAFORSEO_LOGIN"),
+      password: fieldStatus(row?.encryptedDataforseoPassword, "DATAFORSEO_PASSWORD"),
+    },
     bedrock,
   };
 }
@@ -286,7 +321,8 @@ export async function getIntegrationEnvStatus(): Promise<IntegrationEnvStatus> {
   const bluesky = status.bluesky.privateKeyJwk.configured;
   return {
     google: hasGoogleCredentials(),
-    bing: hasBingCredentials(),
+    bing:
+      status.bing.clientId.configured && status.bing.clientSecret.configured,
     social: linkedin || twitter || meta || bluesky,
     linkedin,
     twitter,
@@ -296,5 +332,7 @@ export async function getIntegrationEnvStatus(): Promise<IntegrationEnvStatus> {
     stripe: hasStripeCredentials(),
     unsplash: hasUnsplashCredentials(),
     pexels: hasPexelsCredentials(),
+    dataforseo:
+      status.dataforseo.login.configured && status.dataforseo.password.configured,
   };
 }

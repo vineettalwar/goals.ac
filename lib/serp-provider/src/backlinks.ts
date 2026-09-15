@@ -5,6 +5,8 @@
  * https://github.com/every-app/open-seo
  */
 
+import { getDataForSeoCredentials } from "./credentials";
+
 const API_BASE = "https://api.dataforseo.com";
 const SUMMARY_PATH = "/v3/backlinks/summary/live";
 const REFERRING_DOMAINS_PATH = "/v3/backlinks/referring_domains/live";
@@ -31,19 +33,12 @@ export type BacklinksOverviewResult = {
   costEstimateUsd: number;
 };
 
-function credentials(): { login: string; password: string } | null {
-  const login = process.env["DATAFORSEO_LOGIN"]?.trim();
-  const password = process.env["DATAFORSEO_PASSWORD"]?.trim();
-  if (!login || !password) return null;
-  return { login, password };
-}
-
 export function isBacklinksConfigured(): boolean {
-  return credentials() !== null;
+  return getDataForSeoCredentials() !== null;
 }
 
 function authHeader(): string {
-  const creds = credentials();
+  const creds = getDataForSeoCredentials();
   if (!creds) {
     throw new Error("DataForSEO backlinks credentials are not configured");
   }

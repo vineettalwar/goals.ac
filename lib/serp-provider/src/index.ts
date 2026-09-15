@@ -1,4 +1,8 @@
 export * from "./types";
+export {
+  getDataForSeoCredentials,
+  setDataForSeoCredentialsOverlay,
+} from "./credentials";
 export { DataForSeoProvider, getSerpProvider, isSerpConfigured } from "./dataforseo";
 export {
   estimateBrandLookupCostUsd,

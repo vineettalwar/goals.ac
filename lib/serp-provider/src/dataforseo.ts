@@ -1,3 +1,4 @@
+import { getDataForSeoCredentials } from "./credentials";
 import {
   findRankingPosition,
   type RankCheckParams,
@@ -28,20 +29,13 @@ type DataForSeoResponse = {
 export class DataForSeoProvider implements SerpProvider {
   readonly id = "dataforseo";
 
-  private login: string | undefined;
-  private password: string | undefined;
-
-  constructor() {
-    this.login = process.env["DATAFORSEO_LOGIN"]?.trim();
-    this.password = process.env["DATAFORSEO_PASSWORD"]?.trim();
-  }
-
   isConfigured(): boolean {
-    return Boolean(this.login && this.password);
+    return getDataForSeoCredentials() !== null;
   }
 
   async checkRank(params: RankCheckParams): Promise<RankCheckResult> {
-    if (!this.isConfigured()) {
+    const creds = getDataForSeoCredentials();
+    if (!creds) {
       throw new Error("DataForSEO credentials are not configured");
     }
 
@@ -53,7 +47,7 @@ export class DataForSeoProvider implements SerpProvider {
       device = "desktop",
     } = params;
 
-    const auth = Buffer.from(`${this.login}:${this.password}`).toString("base64");
+    const auth = Buffer.from(`${creds.login}:${creds.password}`).toString("base64");
     const response = await fetch(
       "https://api.dataforseo.com/v3/serp/google/organic/live/advanced",
       {

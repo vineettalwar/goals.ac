@@ -63,3 +63,23 @@ export {
   isStripeIntegrationReady,
   isResendIntegrationReady,
 } from "./platform-integration-credentials";
+
+export {
+  type BingWebmasterOAuthCredentials,
+  type SaveBingWebmasterCredentialsInput,
+  resolveBingWebmasterOAuthCredentials,
+  hasBingWebmasterOAuthCredentials,
+  bingEnvBindings,
+  saveBingWebmasterCredentials,
+  clearStoredBingWebmasterCredentials,
+} from "./bing-webmaster-credentials";
+
+export {
+  type DataForSeoCredentials,
+  type SaveDataForSeoCredentialsInput,
+  resolveDataForSeoCredentials,
+  hasDataForSeoCredentials,
+  dataForSeoEnvBindings,
+  saveDataForSeoCredentials,
+  clearStoredDataForSeoCredentials,
+} from "./dataforseo-credentials";

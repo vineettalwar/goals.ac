@@ -76,6 +76,18 @@ export {
   type SaveResendCredentialsInput,
   type SaveUnsplashCredentialsInput,
   type SavePexelsCredentialsInput,
+  type SaveBingWebmasterCredentialsInput,
+  saveBingWebmasterCredentials,
+  clearStoredBingWebmasterCredentials,
+  resolveBingWebmasterOAuthCredentials,
+  hasBingWebmasterOAuthCredentials,
+  bingEnvBindings,
+  type SaveDataForSeoCredentialsInput,
+  saveDataForSeoCredentials,
+  clearStoredDataForSeoCredentials,
+  resolveDataForSeoCredentials,
+  hasDataForSeoCredentials,
+  dataForSeoEnvBindings,
 } from "./platform-integrations";
 export {
   clearStoredPlatformBedrockCredentials,
