@@ -293,7 +293,7 @@ const BLOG_SURFACE_CATEGORIES: { label: string; formats: ContentFormatType[] }[]
  * offers.
  */
 export function formatCategoriesForSurface(
-  surface: ProductSurface = "blog_wordpress",
+  surface: ProductSurface = "full",
 ): { label: string; formats: ContentFormatType[] }[] {
   return surface === "full" ? FORMAT_CATEGORIES : BLOG_SURFACE_CATEGORIES;
 }

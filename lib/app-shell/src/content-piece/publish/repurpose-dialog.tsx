@@ -17,7 +17,7 @@ export function ContentPieceRepurposeDialog({
   currentFormat,
   onRepurpose,
   onSuccess,
-  surface = "blog_wordpress",
+  surface = "full",
 }: {
   open: boolean;
   onClose: () => void;
@@ -25,7 +25,7 @@ export function ContentPieceRepurposeDialog({
   currentFormat: string;
   onRepurpose: (targetFormat: string) => Promise<{ id: number }>;
   onSuccess: (newPieceId: number) => void;
-  /** Which format set to offer as repurpose targets. Defaults to the blog surface. */
+  /** Which format set to offer as repurpose targets. Defaults to the full surface. */
   surface?: "blog_wordpress" | "full";
 }) {
   const [targetFormat, setTargetFormat] = useState("");

@@ -10,10 +10,10 @@ import { cn } from "@/lib/utils";
 
 export function CreateContentFormatPicker({
   onSelect,
-  surface = "blog_wordpress",
+  surface = "full",
 }: {
   onSelect: (type: ContentFormatType) => void;
-  /** Which format set to offer. Defaults to the blog surface. */
+  /** Which format set to offer. Defaults to the full surface. */
   surface?: ProductSurface;
 }) {
   return (

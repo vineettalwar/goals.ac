@@ -51,7 +51,7 @@ export function ContentPieceRepurposeDialog({
   pieceId,
   projectId,
   currentFormat,
-  surface = "blog_wordpress",
+  surface = "full",
 }: Props) {
   const router = useRouter();
   const [targetFormat, setTargetFormat] = useState<ContentFormatType | "">("");

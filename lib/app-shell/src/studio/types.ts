@@ -91,7 +91,7 @@ const BLOG_SURFACE_FORMATS = new Set<string>([
  * generatable through the API, they are just not offered in the picker.
  */
 export function studioFormatOptionsForSurface(
-  surface: "blog_wordpress" | "full" = "blog_wordpress",
+  surface: "blog_wordpress" | "full" = "full",
 ): readonly StudioFormatOption[] {
   if (surface === "full") return STUDIO_FORMAT_OPTIONS;
   return STUDIO_FORMAT_OPTIONS.filter((option) => BLOG_SURFACE_FORMATS.has(option.value));
