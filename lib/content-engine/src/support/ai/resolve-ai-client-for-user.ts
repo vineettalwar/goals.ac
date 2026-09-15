@@ -108,6 +108,11 @@ export async function resolveAiClientForUser(userId: number): Promise<ResolvedAi
     }
   }
 
+  if (providerId === "ollama") {
+    const client = await resolveAiClient(userApiKey, aiProviderOptions);
+    return { client, providerId, usingUserKey: true, source: "user-key" };
+  }
+
   const client = await resolveAiClient(userApiKey, aiProviderOptions);
   return { client, providerId, usingUserKey: false, source: "platform" };
 }

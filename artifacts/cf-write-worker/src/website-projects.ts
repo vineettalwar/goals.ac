@@ -15,7 +15,31 @@ import { normalizePlanId, type PlanId } from "@workspace/billing/plans";
 import { resolvePlanProjectQuota } from "./plan-quotas";
 import { sendToCfQueue } from "@workspace/jobs/cf-queues";
 import { QUEUES } from "@workspace/jobs/queues";
+import { persistSitemapCrawl } from "@workspace/content-engine/support/brand/brand-scan-context";
+import { acceptedJobResponse } from "@workspace/cf-edge/enqueue-http";
 import { getAccessibleProject, requireSiteAdminAccess } from "./project-access";
+
+export async function enqueueProjectBrandScrape(
+  projectId: number,
+  overwrite: boolean,
+): Promise<string | null> {
+  await db
+    .update(websiteProjectsTable)
+    .set({ scrapeStatus: "pending" })
+    .where(eq(websiteProjectsTable.id, projectId));
+  try {
+    return await sendToCfQueue(QUEUES.brandScrape, { projectId, overwrite });
+  } catch (err) {
+    await db
+      .update(websiteProjectsTable)
+      .set({
+        scrapeStatus: "failed",
+        scrapeData: { error: "Could not start website scan" },
+      })
+      .where(eq(websiteProjectsTable.id, projectId));
+    throw err;
+  }
+}
 
 function normalizeProjectHost(url: string): string {
   try {
@@ -208,11 +232,76 @@ const patchProjectBody = z.object({
   contentStyle: contentStyleBody.optional(),
 });
 
+const scrapeBody = z.object({
+  projectId: z.number().int().positive(),
+});
+
 export async function handleWebsiteProjectsWrite(
   request: Request,
   path: string,
   userId: number,
+  trackJob?: (jobId: string, queue: string, meta: Record<string, unknown>) => Promise<void>,
 ): Promise<Response | null> {
+  const crawlMatch = path.match(/^\/api\/website-projects\/(\d+)\/crawl$/);
+  if (crawlMatch && request.method === "POST") {
+    const projectId = Number.parseInt(crawlMatch[1]!, 10);
+    if (!Number.isFinite(projectId)) {
+      return withCors(request, Response.json({ error: "Invalid project id" }, { status: 400 }));
+    }
+    try {
+      const project = await getAccessibleProject(projectId, userId);
+      if (!project) {
+        return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+      }
+      const result = await persistSitemapCrawl(projectId, project.url);
+      return withCors(
+        request,
+        Response.json({
+          sitemapUrl: result.sitemapUrl,
+          pageCount: result.pageCount,
+          crawlStatus: "done",
+        }),
+      );
+    } catch (err) {
+      return withCors(
+        request,
+        Response.json(
+          { error: err instanceof Error ? err.message : "Sitemap crawl failed" },
+          { status: 502 },
+        ),
+      );
+    }
+  }
+
+  const scrapeMatch = path.match(/^\/api\/website-projects\/(\d+)\/scrape$/);
+  if (scrapeMatch && request.method === "POST") {
+    const projectId = Number.parseInt(scrapeMatch[1]!, 10);
+    const parsed = scrapeBody.safeParse({ projectId });
+    if (!parsed.success) {
+      return withCors(request, Response.json({ error: "Invalid body" }, { status: 400 }));
+    }
+    const project = await getAccessibleProject(parsed.data.projectId, userId);
+    if (!project) {
+      return withCors(request, Response.json({ error: "Project not found" }, { status: 404 }));
+    }
+    try {
+      const jobId = await enqueueProjectBrandScrape(parsed.data.projectId, true);
+      const id = jobId ?? `cf:${QUEUES.brandScrape}:${Date.now()}`;
+      if (trackJob) {
+        await trackJob(id, QUEUES.brandScrape, { userId, projectId });
+      }
+      return withCors(request, acceptedJobResponse(id, QUEUES.brandScrape));
+    } catch (err) {
+      return withCors(
+        request,
+        Response.json(
+          { error: err instanceof Error ? err.message : "Failed to start website scan" },
+          { status: 502 },
+        ),
+      );
+    }
+  }
+
   if (path === "/api/website-projects" && request.method === "POST") {
     const parsed = createProjectBody.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
@@ -268,7 +357,7 @@ export async function handleWebsiteProjectsWrite(
       })
       .returning();
 
-    void sendToCfQueue(QUEUES.brandVoiceIndex, { projectId: project.id }).catch((err) => {
+    void enqueueProjectBrandScrape(project.id, false).catch((err) => {
       console.error("[goals-ac-write] brand scrape enqueue failed", project.id, err);
     });
 

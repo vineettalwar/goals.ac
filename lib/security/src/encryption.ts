@@ -32,3 +32,17 @@ export function decryptSecret(stored: string): string {
   decipher.setAuthTag(authTag);
   return Buffer.concat([decipher.update(data), decipher.final()]).toString("utf8");
 }
+
+const CIPHERTEXT_RE = /^[0-9a-f]+:[0-9a-f]+:[0-9a-f]+$/i;
+
+/** Decrypt AES-GCM ciphertext. Legacy plaintext (no ciphertext shape) is returned as-is. */
+export function decryptStoredSecret(stored: string | null | undefined): string | null {
+  const value = stored?.trim();
+  if (!value) return null;
+  try {
+    return decryptSecret(value);
+  } catch {
+    if (CIPHERTEXT_RE.test(value)) return null;
+    return value;
+  }
+}

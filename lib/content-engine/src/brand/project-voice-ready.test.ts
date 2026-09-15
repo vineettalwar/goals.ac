@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { PlatformVoices } from "@workspace/db";
 import {
+  BRAND_SCRAPE_SKIPPED,
   evaluateProjectVoiceReady,
   hasBrandVoiceFields,
   hasAnyPlatformVoice,
   isProjectVoiceReady,
+  scrapeStatusIsSettled,
 } from "./project-voice-ready";
 
 const emptyPlatform: PlatformVoices = {};
@@ -75,5 +77,21 @@ describe("evaluateProjectVoiceReady", () => {
     const result = evaluateProjectVoiceReady({ scrapeStatus: "done" });
     expect(result.ready).toBe(false);
     expect(result.building).toBe(false);
+  });
+
+  it("is ready when the user skipped reading brand voice", () => {
+    const result = evaluateProjectVoiceReady({ scrapeStatus: BRAND_SCRAPE_SKIPPED });
+    expect(result.ready).toBe(true);
+    expect(result.building).toBe(false);
+    expect(isProjectVoiceReady({ scrapeStatus: BRAND_SCRAPE_SKIPPED })).toBe(true);
+  });
+});
+
+describe("scrapeStatusIsSettled", () => {
+  it("settles on done, failed, or skipped", () => {
+    expect(scrapeStatusIsSettled("pending")).toBe(false);
+    expect(scrapeStatusIsSettled("done")).toBe(true);
+    expect(scrapeStatusIsSettled("failed")).toBe(true);
+    expect(scrapeStatusIsSettled(BRAND_SCRAPE_SKIPPED)).toBe(true);
   });
 });

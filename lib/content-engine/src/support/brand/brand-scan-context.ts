@@ -63,7 +63,7 @@ function pluginCredentialsFromCms(
   return null;
 }
 
-async function loadGscTopPages(
+export async function loadGscTopPages(
   projectId: number,
   limit = 20,
 ): Promise<{ url: string; impressions: number }[]> {

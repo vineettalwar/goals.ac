@@ -105,4 +105,30 @@ describe("brand-scraper fetchPage cache wiring", () => {
     expect(forOtherProject).toBe("<html>project-b</html>");
     expect(fetchMockB).toHaveBeenCalledTimes(1);
   });
+
+  it("sends a browser User-Agent and follows one redirect hop", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 301,
+        headers: { get: (name: string) => (name === "location" ? "https://example.com/home" : null) },
+        text: async () => "",
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        text: async () => "<html>home</html>",
+      });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const html = await fetchPage("https://example.com/", { websiteProjectId: 12 });
+    expect(html).toBe("<html>home</html>");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    expect(init.redirect).toBe("manual");
+    const headers = init.headers as Record<string, string>;
+    expect(headers["User-Agent"]).toContain("Chrome/");
+  });
 });

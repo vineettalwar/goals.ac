@@ -12,6 +12,7 @@ import { processContentDecaySweep } from "./handlers/contentDecaySweep";
 import { processGscSearchAnalyticsSync } from "./handlers/gscSearchAnalyticsSync";
 import { processGa4AnalyticsSync } from "./handlers/ga4AnalyticsSync";
 import { processArticleIdeaSourceSync } from "./handlers/articleIdeaSourceSync";
+import { processBrandScrape } from "./handlers/brandScrape";
 import { processBrandVoiceIndex } from "./handlers/brandVoiceIndex";
 import { processBrandVoiceSkillRegen } from "./handlers/brandVoiceSkillRegen";
 import { processBrandVoiceResync } from "./handlers/brandVoiceResync";
@@ -38,6 +39,7 @@ const processors: Record<QueueName, (payload: unknown) => Promise<void>> = {
   [QUEUES.gscSearchAnalyticsSync]: (p) => processGscSearchAnalyticsSync(p as never),
   [QUEUES.ga4AnalyticsSync]: (p) => processGa4AnalyticsSync(p as never),
   [QUEUES.articleIdeaSourceSync]: (p) => processArticleIdeaSourceSync(p as never),
+  [QUEUES.brandScrape]: (p) => processBrandScrape(p as never),
   [QUEUES.brandVoiceIndex]: (p) => processBrandVoiceIndex(p as never),
   [QUEUES.brandVoiceSkillRegen]: (p) => processBrandVoiceSkillRegen(p as never),
   [QUEUES.brandVoiceResync]: (p) => processBrandVoiceResync(p as never),

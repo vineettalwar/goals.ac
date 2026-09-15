@@ -24,6 +24,7 @@ export const QUEUES = {
   gscSearchAnalyticsSync: "gsc-search-analytics-sync",
   ga4AnalyticsSync: "ga4-analytics-sync",
   articleIdeaSourceSync: "article-idea-source-sync",
+  brandScrape: "brand-scrape",
   brandVoiceIndex: "brand-voice-index",
   brandVoiceSkillRegen: "brand-voice-skill-regen",
   brandVoiceResync: "brand-voice-resync",
@@ -145,6 +146,13 @@ export interface ArticleIdeaSourceSyncPayload {
 
 export type ArticleIdeaSourceSyncJobData = ArticleIdeaSourceSyncPayload | Record<string, never>;
 
+export interface BrandScrapePayload {
+  projectId: number;
+  overwrite?: boolean;
+}
+
+export type BrandScrapeJobData = BrandScrapePayload;
+
 export interface BrandVoiceIndexPayload {
   projectId: number;
   sourceIds?: number[];
@@ -216,6 +224,7 @@ export interface QueuePayloadMap {
   [QUEUES.gscSearchAnalyticsSync]: GscSearchAnalyticsSyncJobData;
   [QUEUES.ga4AnalyticsSync]: Ga4AnalyticsSyncJobData;
   [QUEUES.articleIdeaSourceSync]: ArticleIdeaSourceSyncJobData;
+  [QUEUES.brandScrape]: BrandScrapeJobData;
   [QUEUES.brandVoiceIndex]: BrandVoiceIndexJobData;
   [QUEUES.brandVoiceSkillRegen]: BrandVoiceSkillRegenJobData;
   [QUEUES.brandVoiceResync]: BrandVoiceResyncJobData;

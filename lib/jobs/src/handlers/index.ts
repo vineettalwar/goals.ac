@@ -41,6 +41,7 @@ export {
   registerArticleIdeaSourceSyncHandler,
   ARTICLE_IDEA_SOURCE_SYNC_CRON,
 } from "./articleIdeaSourceSync";
+export { registerBrandScrapeHandler } from "./brandScrape";
 export { registerBrandVoiceIndexHandler } from "./brandVoiceIndex";
 export { registerBrandVoiceSkillRegenHandler } from "./brandVoiceSkillRegen";
 export {

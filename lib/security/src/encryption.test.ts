@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { decryptSecret, encryptSecret } from "./encryption";
+import { decryptSecret, decryptStoredSecret, encryptSecret } from "./encryption";
 
 describe("secret encryption", () => {
   const originalSecret = process.env.GEMINI_KEY_ENCRYPTION_SECRET;
@@ -38,5 +38,14 @@ describe("secret encryption", () => {
     expect(() => encryptSecret("sensitive")).toThrow(
       "GEMINI_KEY_ENCRYPTION_SECRET environment variable is not set",
     );
+  });
+
+  it("decryptStoredSecret round-trips ciphertext and keeps legacy plaintext", () => {
+    expect(decryptStoredSecret(encryptSecret("api-login"))).toBe("api-login");
+    expect(decryptStoredSecret("plain@example.com")).toBe("plain@example.com");
+    expect(decryptStoredSecret("")).toBeNull();
+    const encrypted = encryptSecret("secret");
+    const [iv, tag, data] = encrypted.split(":");
+    expect(decryptStoredSecret(`${iv}:${tag}:${data?.slice(0, -2)}00`)).toBeNull();
   });
 });

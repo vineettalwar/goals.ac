@@ -1,4 +1,4 @@
-export { encryptSecret, decryptSecret } from "./encryption";
+export { encryptSecret, decryptSecret, decryptStoredSecret } from "./encryption";
 export { assertPublicUrl, assertPublicUrlSync } from "./ssrf-guard";
 export {
   generateInviteToken,

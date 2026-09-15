@@ -1,5 +1,12 @@
-import { describe, expect, it } from "vitest";
-import { assertPublicUrlSync } from "./ssrf-guard";
+import { afterEach, describe, expect, it, vi } from "vitest";
+
+const { lookup } = vi.hoisted(() => ({ lookup: vi.fn() }));
+vi.mock("node:dns/promises", () => ({
+  default: { lookup },
+  lookup,
+}));
+
+import { assertPublicUrl, assertPublicUrlSync } from "./ssrf-guard";
 
 describe("SSRF guard (synchronous validation)", () => {
   it.each([
@@ -30,5 +37,32 @@ describe("SSRF guard (synchronous validation)", () => {
 
   it("rejects malformed URLs", () => {
     expect(() => assertPublicUrlSync("not a url")).toThrow("Invalid URL");
+  });
+});
+
+describe("SSRF guard (async DNS)", () => {
+  afterEach(() => {
+    lookup.mockReset();
+    vi.unstubAllGlobals();
+  });
+
+  it("skips DNS on Cloudflare Workers (hostname checks still apply)", async () => {
+    vi.stubGlobal("navigator", { userAgent: "Cloudflare-Workers" });
+    await expect(assertPublicUrl("https://goals.ac")).resolves.toBeUndefined();
+    expect(lookup).not.toHaveBeenCalled();
+    await expect(assertPublicUrl("http://127.0.0.1")).rejects.toThrow(/private\/reserved/);
+  });
+
+  it("skips DNS when the lookup API is unimplemented", async () => {
+    lookup.mockRejectedValue(Object.assign(new Error("not implemented"), { code: "ENOTIMP" }));
+    await expect(assertPublicUrl("https://goals.ac")).resolves.toBeUndefined();
+  });
+
+  it("still blocks a hostname that resolves to a private address", async () => {
+    lookup.mockImplementation(async (_host: string, opts: { family: number }) => {
+      if (opts.family === 4) return { address: "127.0.0.1", family: 4 };
+      throw Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" });
+    });
+    await expect(assertPublicUrl("https://goals.ac")).rejects.toThrow(/private\/reserved/);
   });
 });

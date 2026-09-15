@@ -59,8 +59,30 @@ export function assertPublicUrlSync(rawUrl: string): void {
   }
 }
 
+function isCloudflareWorkersRuntime(): boolean {
+  return typeof navigator !== "undefined" && /Cloudflare-Workers/i.test(navigator.userAgent ?? "");
+}
+
+function isDnsApiUnavailable(reason: unknown): boolean {
+  const code =
+    reason && typeof reason === "object" && "code" in reason
+      ? String((reason as { code: unknown }).code)
+      : "";
+  const message = reason instanceof Error ? reason.message : String(reason ?? "");
+  return (
+    code === "ENOTIMP" ||
+    code === "ENOTSUP" ||
+    /not implemented|not support|unimplemented/i.test(message)
+  );
+}
+
 export async function assertPublicUrl(rawUrl: string): Promise<void> {
   assertPublicUrlSync(rawUrl);
+
+  // Workers: hostname/literal checks above + `global_fetch_strictly_public`.
+  // `node:dns` lookups are missing or always-fail on workerd, which used to
+  // reject every brand-scan URL as "Could not resolve hostname".
+  if (isCloudflareWorkersRuntime()) return;
 
   let parsed: URL;
   try {
@@ -71,10 +93,16 @@ export async function assertPublicUrl(rawUrl: string): Promise<void> {
 
   const hostname = parsed.hostname.replace(/^\[|\]$/g, "");
 
-  const results = await Promise.allSettled([
-    dns.lookup(hostname, { family: 4 }),
-    dns.lookup(hostname, { family: 6 }),
-  ]);
+  let results: PromiseSettledResult<{ address: string }>[];
+  try {
+    results = await Promise.allSettled([
+      dns.lookup(hostname, { family: 4 }),
+      dns.lookup(hostname, { family: 6 }),
+    ]);
+  } catch (err) {
+    if (isDnsApiUnavailable(err)) return;
+    throw err;
+  }
 
   let resolvedAtLeastOne = false;
 
@@ -90,6 +118,9 @@ export async function assertPublicUrl(rawUrl: string): Promise<void> {
   }
 
   if (!resolvedAtLeastOne) {
+    if (results.every((result) => result.status === "rejected" && isDnsApiUnavailable(result.reason))) {
+      return;
+    }
     throw new Error(`Could not resolve hostname: ${hostname}`);
   }
 }

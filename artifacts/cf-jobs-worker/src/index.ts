@@ -1,7 +1,9 @@
 import { setD1Binding } from "@workspace/db";
+import { copyCfWorkerProcessEnv } from "@workspace/cf-edge/wire";
 import { setKvBindings, getAiCacheKv } from "@workspace/content-engine/core/kv-binding";
 import { setContentMediaR2Binding } from "@workspace/media";
 import { processJobEnvelope, type JobEnvelope } from "@workspace/jobs";
+import { applyDataForSeoPlatformEnv } from "@workspace/content-engine/support/integrations/dataforseo-credentials";
 import { QUEUES } from "@workspace/jobs/queues";
 import { CONTENT_GENERATE_SWEEP_CRON } from "@workspace/jobs/handlers";
 
@@ -67,12 +69,26 @@ export interface Env {
   AI_CACHE: import("@workspace/content-engine/core/kv-binding").KvNamespaceBinding;
   RATE_LIMIT: import("@workspace/content-engine/core/kv-binding").KvNamespaceBinding;
   CONTENT_MEDIA_R2?: import("@workspace/media").ContentMediaR2Binding;
+  GEMINI_KEY_ENCRYPTION_SECRET?: string;
+  GEMINI_API_KEY?: string;
+  AI_INTEGRATIONS_GEMINI_API_KEY?: string;
+  AI_INTEGRATIONS_GEMINI_BASE_URL?: string;
+  AI_PROVIDER?: string;
+  DATAFORSEO_LOGIN?: string;
+  DATAFORSEO_PASSWORD?: string;
+  DB_DIALECT?: string;
 }
 
 function wireBindings(env: Env): void {
   setD1Binding(env.DB);
   setKvBindings({ AI_CACHE: env.AI_CACHE, RATE_LIMIT: env.RATE_LIMIT });
   if (env.CONTENT_MEDIA_R2) setContentMediaR2Binding(env.CONTENT_MEDIA_R2);
+  if (env.DB_DIALECT) process.env.DB_DIALECT = env.DB_DIALECT;
+  copyCfWorkerProcessEnv(env);
+}
+
+async function hydratePlatformSecrets(): Promise<void> {
+  await applyDataForSeoPlatformEnv();
 }
 
 async function runDailySweep(): Promise<void> {
@@ -135,6 +151,7 @@ export default {
 
   async scheduled(event: ScheduledEvent, env: Env): Promise<void> {
     wireBindings(env);
+    await hydratePlatformSecrets();
     try {
       await runCronSweep(event.cron);
     } catch (err) {
@@ -145,6 +162,7 @@ export default {
 
   async queue(batch: MessageBatch<JobEnvelope>, env: Env): Promise<void> {
     wireBindings(env);
+    await hydratePlatformSecrets();
     for (const message of batch.messages) {
       await processQueueMessage(message);
     }

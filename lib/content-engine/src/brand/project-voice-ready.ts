@@ -2,6 +2,9 @@ import type { PlatformVoices } from "@workspace/db";
 import { SOCIAL_PLATFORM_IDS } from "@workspace/db/schema";
 import { hasPlatformVoice } from "../platform-voice/platform-voice-prompt";
 
+/** User opted out of waiting for the brand scrape. */
+export const BRAND_SCRAPE_SKIPPED = "skipped";
+
 export type ProjectVoiceReadyInput = {
   scrapeStatus?: string | null;
   voiceTone?: string | null;
@@ -32,15 +35,21 @@ export function hasAnyPlatformVoice(voices: PlatformVoices | null | undefined): 
   return SOCIAL_PLATFORM_IDS.some((platform) => hasPlatformVoice(voices, platform));
 }
 
+export function scrapeStatusIsSettled(status: string | null | undefined): boolean {
+  return status === "done" || status === "failed" || status === BRAND_SCRAPE_SKIPPED;
+}
+
 /**
- * Voice is ready when brand fields or any platform voice exist.
- * While scrape is still pending and nothing is ready yet, treat as "building".
+ * Voice is ready when brand fields or any platform voice exist, or the user
+ * skipped reading brand voice. While scrape is still pending and nothing is
+ * ready yet, treat as "building".
  */
 export function evaluateProjectVoiceReady(input: ProjectVoiceReadyInput): ProjectVoiceReadyResult {
   const scrapeStatus = input.scrapeStatus ?? null;
   const brandReady = hasBrandVoiceFields(input);
   const platformReady = hasAnyPlatformVoice(input.platformVoices);
-  const ready = brandReady || platformReady;
+  const skipped = scrapeStatus === BRAND_SCRAPE_SKIPPED;
+  const ready = brandReady || platformReady || skipped;
   const building = !ready && scrapeStatus === "pending";
 
   return {

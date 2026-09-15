@@ -155,11 +155,9 @@ async function fetchPage(
 
     const buf = await res.arrayBuffer();
     const bytes = new Uint8Array(buf).slice(0, 512);
-    const snippet = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    const snippet = new TextDecoder("utf-8").decode(bytes);
     const html =
-      res.status < 400
-        ? new TextDecoder("utf-8", { fatal: false }).decode(new Uint8Array(buf))
-        : snippet;
+      res.status < 400 ? new TextDecoder("utf-8").decode(new Uint8Array(buf)) : snippet;
 
     if (classifyBlocked(res.status, snippet, res.headers)) {
       return {

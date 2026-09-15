@@ -1,7 +1,9 @@
 import { db } from "@workspace/db";
 import { brandProfilesTable, websiteProjectsTable } from "@workspace/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
+import { BRAND_SCRAPE_SKIPPED } from "../../brand/project-voice-ready";
 import { scrapeBrandProfile } from "../../brand/brand-scraper";
+import type { BrandExtract } from "../../brand/brand-extract-types";
 import { brandProfileUpdatesFromExtract } from "../../brand/brand-extract-apply";
 import { loadBrandScanContext, shouldAutoRefreshBrandAfterGscSync } from "./brand-scan-context";
 import { ingestBrandVoiceDocuments } from "../../brand/brand-voice-indexer";
@@ -10,6 +12,16 @@ import { logger } from "../../core/logger";
 
 /** PRD 4.1: brand scrape report should complete within 60s. Instrumentation only, nothing fails on a breach. */
 export const BRAND_SCRAPE_BUDGET_MS = 60000;
+
+/** Page bodies are ingested into brand-voice sources; jsonb scrape_data only needs the extract. */
+export function scrapeDataForStorage(extract: BrandExtract): Omit<BrandExtract, "pageDocuments"> {
+  const { pageDocuments: _pageDocuments, ...rest } = extract;
+  return rest;
+}
+
+function scrapeFailureData(err: unknown): { error: string } {
+  return { error: err instanceof Error ? err.message : "Brand scrape failed" };
+}
 
 async function applyBrandExtract(
   projectId: number,
@@ -59,7 +71,7 @@ async function applyBrandExtract(
 
   await db
     .update(websiteProjectsTable)
-    .set({ scrapeStatus: "done", scrapeData: extract })
+    .set({ scrapeStatus: "done", scrapeData: scrapeDataForStorage(extract) })
     .where(eq(websiteProjectsTable.id, projectId));
 }
 
@@ -84,6 +96,12 @@ export async function runBrandScrapeWithDiscovery(
       throw new Error("Project not found");
     }
 
+    const [projectRow] = await db
+      .select({ userId: websiteProjectsTable.userId })
+      .from(websiteProjectsTable)
+      .where(eq(websiteProjectsTable.id, projectId))
+      .limit(1);
+
     const extract = await scrapeBrandProfile(url, {
       discoveryInput: {
         sitemapUrls: context.sitemapUrls,
@@ -96,6 +114,7 @@ export async function runBrandScrapeWithDiscovery(
       // quieter auto-refresh-after-GSC-sync path (overwrite: false) is fine
       // reusing recently cached pages.
       refresh: overwrite,
+      userId: projectRow?.userId,
     });
     await applyBrandExtract(projectId, extract, overwrite);
 
@@ -113,12 +132,6 @@ export async function runBrandScrapeWithDiscovery(
       await ingestBrandVoiceDocuments(projectId, pageDocs);
     }
 
-    const [projectRow] = await db
-      .select({ userId: websiteProjectsTable.userId })
-      .from(websiteProjectsTable)
-      .where(eq(websiteProjectsTable.id, projectId))
-      .limit(1);
-
     if (projectRow?.userId) {
       ingestSocialBrandVoice(projectId, projectRow.userId).catch((err) => {
         logger.warn({ err, projectId }, "Social brand voice ingest after scrape failed");
@@ -131,8 +144,13 @@ export async function runBrandScrapeWithDiscovery(
     logger.error({ err, projectId, url }, "Brand scrape with discovery failed");
     await db
       .update(websiteProjectsTable)
-      .set({ scrapeStatus: "failed" })
-      .where(eq(websiteProjectsTable.id, projectId));
+      .set({ scrapeStatus: "failed", scrapeData: scrapeFailureData(err) })
+      .where(
+        and(
+          eq(websiteProjectsTable.id, projectId),
+          ne(websiteProjectsTable.scrapeStatus, BRAND_SCRAPE_SKIPPED),
+        ),
+      );
   }
 }
 
