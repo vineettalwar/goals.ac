@@ -1,5 +1,6 @@
 import { withCors } from "@workspace/cf-edge/cors";
 import { requireSiteAdminAccess } from "@workspace/cf-edge/project-access";
+import type { SessionClaims } from "@workspace/cf-edge/jwt";
 import { db } from "./db";
 import { usersTable } from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";
@@ -8,6 +9,7 @@ export async function handleOrgSecurityRead(
   request: Request,
   path: string,
   userId: number,
+  session?: SessionClaims,
 ): Promise<Response | null> {
   if (path === "/api/organizations/security" && request.method === "GET") {
     const siteAdmin = await requireSiteAdminAccess(userId);
@@ -36,7 +38,7 @@ export async function handleOrgSecurityRead(
       Response.json({
         enabled: Boolean(user?.mfaEnabled),
         required: Boolean(membership?.securitySettings?.requireMfa),
-        verified: false,
+        verified: Boolean(session?.mfaVerified),
         pendingSetup: Boolean(user?.email && !user.mfaEnabled),
       }),
     );

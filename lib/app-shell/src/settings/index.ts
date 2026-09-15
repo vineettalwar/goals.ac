@@ -1,4 +1,6 @@
 export { SettingsView } from "./settings-ui";
+export { gravatarUrlForEmail, gravatarUrlFromSha256 } from "./gravatar";
+export { readAvatarFileAsDataUrl } from "./read-avatar-file";
 export { SettingsGeminiDialog } from "./settings-gemini-dialog";
 export {
   SettingsProviderKeyDialog,

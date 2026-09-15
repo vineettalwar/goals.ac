@@ -4,6 +4,7 @@ import { usersTable } from "@workspace/db/schema-sqlite";
 import {
   buildSessionCookie,
   requestUsesSecureCookies,
+  sessionPayloadFromUser,
 } from "@workspace/cf-edge/session-cookie";
 
 /**
@@ -12,13 +13,13 @@ import {
  */
 
 const PROD_API_ORIGIN = "https://api.goals.ac";
-const DEFAULT_SUCCESS_URL = "https://app.goals.ac/dashboard";
 const SUPER_ADMIN_EMAIL = "vineettalwar007@gmail.com";
 
 type GoogleAuthEnv = {
   AUTH_SECRET?: string;
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
+  APP_URL?: string;
 };
 
 type OAuthStatePayload = {
@@ -43,6 +44,28 @@ function requireSecret(env: GoogleAuthEnv): string | null {
   return secret || null;
 }
 
+/** Prefer `APP_URL` (wrangler var); last-resort prod default only if unset. */
+function resolveAppOrigin(env: GoogleAuthEnv, request: Request): string {
+  const configured = env.APP_URL?.trim().replace(/\/+$/, "");
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      // Invalid APP_URL — fall through.
+    }
+  }
+
+  const host = new URL(request.url).hostname;
+  if (host === "localhost" || host === "127.0.0.1") {
+    return "http://localhost:5174";
+  }
+  return "https://app.goals.ac";
+}
+
+function defaultSuccessUrl(env: GoogleAuthEnv, request: Request): string {
+  return `${resolveAppOrigin(env, request)}/dashboard`;
+}
+
 function resolveGoogleRedirectUri(request: Request): string {
   const url = new URL(request.url);
   const host = url.hostname;
@@ -52,8 +75,12 @@ function resolveGoogleRedirectUri(request: Request): string {
   return `${PROD_API_ORIGIN}/api/auth/google/callback`;
 }
 
-function isAllowedAppOrigin(origin: string, request: Request): boolean {
-  if (origin === "https://app.goals.ac") return true;
+function isAllowedAppOrigin(
+  origin: string,
+  request: Request,
+  env: GoogleAuthEnv,
+): boolean {
+  if (origin === resolveAppOrigin(env, request)) return true;
   if (origin.endsWith(".goals-ac-app.pages.dev")) return true;
 
   const reqHost = new URL(request.url).hostname;
@@ -68,26 +95,45 @@ function isAllowedAppOrigin(origin: string, request: Request): boolean {
   return false;
 }
 
-function normalizeReturnUrl(raw: string | null, request: Request): string {
-  if (!raw?.trim()) return DEFAULT_SUCCESS_URL;
+function normalizeReturnUrl(
+  raw: string | null,
+  request: Request,
+  env: GoogleAuthEnv,
+): string {
+  if (!raw?.trim()) return defaultSuccessUrl(env, request);
   try {
     const parsed = new URL(raw);
-    if (isAllowedAppOrigin(parsed.origin, request)) {
+    if (isAllowedAppOrigin(parsed.origin, request, env)) {
       return parsed.toString();
     }
   } catch {
     // Invalid return URL — fall back to default.
   }
-  return DEFAULT_SUCCESS_URL;
+  return defaultSuccessUrl(env, request);
 }
 
-function loginErrorUrl(returnUrl: string): string {
+function loginErrorUrl(
+  returnUrl: string,
+  env: GoogleAuthEnv,
+  request: Request,
+  error = "oauth_failed",
+): string {
   try {
     const origin = new URL(returnUrl).origin;
-    return `${origin}/login?error=oauth_failed`;
+    return `${origin}/login?error=${error}`;
   } catch {
-    return "https://app.goals.ac/login?error=oauth_failed";
+    return `${resolveAppOrigin(env, request)}/login?error=${error}`;
   }
+}
+
+/** Existing accounts only — invite/private-beta; no Google self-signup. */
+export function googleSignInAllowed(opts: {
+  byGoogleId: boolean;
+  byEmail: boolean;
+}): "ok_google_id" | "ok_email_link" | "deny" {
+  if (opts.byGoogleId) return "ok_google_id";
+  if (opts.byEmail) return "ok_email_link";
+  return "deny";
 }
 
 function toBase64Url(bytes: Uint8Array): string {
@@ -159,7 +205,19 @@ export async function handleGoogleAuthStart(
   request: Request,
   env: GoogleAuthEnv,
 ): Promise<Response> {
+  const url = new URL(request.url);
   const clientId = env.GOOGLE_CLIENT_ID?.trim();
+  const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
+  const configured = Boolean(clientId && clientSecret && requireSecret(env));
+
+  // Login UI probes this before enabling the Google button.
+  if (url.searchParams.get("probe") === "1") {
+    return Response.json(
+      { configured },
+      { status: configured ? 200 : 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
   if (!clientId) {
     return Response.json({ error: "Google OAuth is not configured" }, { status: 503 });
   }
@@ -169,8 +227,7 @@ export async function handleGoogleAuthStart(
     return Response.json({ error: "Auth is not configured" }, { status: 503 });
   }
 
-  const url = new URL(request.url);
-  const returnUrl = normalizeReturnUrl(url.searchParams.get("returnUrl"), request);
+  const returnUrl = normalizeReturnUrl(url.searchParams.get("returnUrl"), request, env);
   const state = await signOAuthState(
     { returnUrl, nonce: crypto.randomUUID() },
     secret,
@@ -203,23 +260,23 @@ export async function handleGoogleAuthCallback(
   const clientId = env.GOOGLE_CLIENT_ID?.trim();
   const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim();
 
-  const fallbackReturn = DEFAULT_SUCCESS_URL;
+  const fallbackReturn = defaultSuccessUrl(env, request);
 
   if (!secret || !clientId || !clientSecret) {
-    return redirectResponse(loginErrorUrl(fallbackReturn));
+    return redirectResponse(loginErrorUrl(fallbackReturn, env, request));
   }
 
   const state = stateParam ? await verifyOAuthState(stateParam, secret) : null;
   const returnUrl = state
-    ? normalizeReturnUrl(state.returnUrl, request)
+    ? normalizeReturnUrl(state.returnUrl, request, env)
     : fallbackReturn;
 
   if (oauthError || !code) {
-    return redirectResponse(loginErrorUrl(returnUrl));
+    return redirectResponse(loginErrorUrl(returnUrl, env, request));
   }
 
   if (!state) {
-    return redirectResponse(loginErrorUrl(returnUrl));
+    return redirectResponse(loginErrorUrl(returnUrl, env, request));
   }
 
   const redirectUri = resolveGoogleRedirectUri(request);
@@ -240,7 +297,7 @@ export async function handleGoogleAuthCallback(
     const tokenData = (await tokenRes.json()) as GoogleTokenResponse;
     if (!tokenData.access_token) {
       console.error("[auth-google] token exchange failed", tokenData.error);
-      return redirectResponse(loginErrorUrl(returnUrl));
+      return redirectResponse(loginErrorUrl(returnUrl, env, request));
     }
 
     const profileRes = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
@@ -249,7 +306,7 @@ export async function handleGoogleAuthCallback(
     const profile = (await profileRes.json()) as GoogleProfile;
 
     if (!profile.id || !profile.email) {
-      return redirectResponse(loginErrorUrl(returnUrl));
+      return redirectResponse(loginErrorUrl(returnUrl, env, request));
     }
 
     const email = profile.email.toLowerCase();
@@ -261,7 +318,26 @@ export async function handleGoogleAuthCallback(
       .where(eq(usersTable.googleId, profile.id))
       .limit(1);
 
-    if (byGoogleId) {
+    let byEmail: typeof usersTable.$inferSelect | undefined;
+    if (!byGoogleId) {
+      const [row] = await database
+        .select()
+        .from(usersTable)
+        .where(eq(usersTable.email, email))
+        .limit(1);
+      byEmail = row;
+    }
+
+    const decision = googleSignInAllowed({
+      byGoogleId: Boolean(byGoogleId),
+      byEmail: Boolean(byEmail),
+    });
+
+    if (decision === "deny") {
+      return redirectResponse(loginErrorUrl(returnUrl, env, request, "no_account"));
+    }
+
+    if (decision === "ok_google_id" && byGoogleId) {
       user = byGoogleId;
       if (profile.picture && profile.picture !== byGoogleId.avatarUrl) {
         const [updated] = await database
@@ -271,45 +347,25 @@ export async function handleGoogleAuthCallback(
           .returning();
         user = updated;
       }
-    } else {
-      const [byEmail] = await database
-        .select()
-        .from(usersTable)
-        .where(eq(usersTable.email, email))
-        .limit(1);
+    } else if (byEmail) {
+      const linkUpdates: { googleId?: string; avatarUrl?: string } = {};
+      if (!byEmail.googleId) linkUpdates.googleId = profile.id;
+      if (profile.picture) linkUpdates.avatarUrl = profile.picture;
 
-      if (byEmail) {
-        const linkUpdates: { googleId?: string; avatarUrl?: string } = {};
-        if (!byEmail.googleId) linkUpdates.googleId = profile.id;
-        if (profile.picture) linkUpdates.avatarUrl = profile.picture;
-
-        if (Object.keys(linkUpdates).length > 0) {
-          const [updated] = await database
-            .update(usersTable)
-            .set(linkUpdates)
-            .where(eq(usersTable.id, byEmail.id))
-            .returning();
-          user = updated;
-        } else {
-          user = byEmail;
-        }
-      } else {
-        const [created] = await database
-          .insert(usersTable)
-          .values({
-            email,
-            name: profile.name?.trim() || email.split("@")[0] || "User",
-            googleId: profile.id,
-            avatarUrl: profile.picture ?? null,
-            role: "user",
-          })
+      if (Object.keys(linkUpdates).length > 0) {
+        const [updated] = await database
+          .update(usersTable)
+          .set(linkUpdates)
+          .where(eq(usersTable.id, byEmail.id))
           .returning();
-        user = created;
+        user = updated;
+      } else {
+        user = byEmail;
       }
     }
 
     if (!user) {
-      return redirectResponse(loginErrorUrl(returnUrl));
+      return redirectResponse(loginErrorUrl(returnUrl, env, request));
     }
 
     if (user.email === SUPER_ADMIN_EMAIL && user.role !== "super_admin") {
@@ -322,20 +378,11 @@ export async function handleGoogleAuthCallback(
     }
 
     const secure = requestUsesSecureCookies(request);
-    const cookie = await buildSessionCookie(
-      {
-        id: String(user.id),
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
-      secret,
-      secure,
-    );
+    const cookie = await buildSessionCookie(sessionPayloadFromUser(user), secret, secure);
 
     return redirectResponse(returnUrl, cookie);
   } catch (err) {
     console.error("[auth-google] callback failed", err);
-    return redirectResponse(loginErrorUrl(returnUrl));
+    return redirectResponse(loginErrorUrl(returnUrl, env, request));
   }
 }

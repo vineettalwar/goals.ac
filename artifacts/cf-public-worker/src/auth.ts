@@ -7,6 +7,7 @@ import {
   buildSessionCookie,
   clearSessionCookie,
   requestUsesSecureCookies,
+  sessionPayloadFromUser,
 } from "@workspace/cf-edge/session-cookie";
 
 const loginBody = z.object({
@@ -59,6 +60,8 @@ export async function handleAuthLogin(
       email: usersTable.email,
       name: usersTable.name,
       role: usersTable.role,
+      avatarUrl: usersTable.avatarUrl,
+      mfaEnabled: usersTable.mfaEnabled,
       passwordHash: usersTable.passwordHash,
     })
     .from(usersTable)
@@ -75,16 +78,7 @@ export async function handleAuthLogin(
   }
 
   const secure = requestUsesSecureCookies(request);
-  const cookie = await buildSessionCookie(
-    {
-      id: String(user.id),
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    },
-    secret,
-    secure,
-  );
+  const cookie = await buildSessionCookie(sessionPayloadFromUser(user), secret, secure);
 
   return jsonWithCookie(
     {
@@ -93,7 +87,7 @@ export async function handleAuthLogin(
         email: user.email,
         name: user.name,
         role: user.role,
-        avatarUrl: null,
+        avatarUrl: user.avatarUrl,
       },
     },
     cookie,
@@ -141,19 +135,11 @@ export async function handleAuthSignup(
       email: usersTable.email,
       name: usersTable.name,
       role: usersTable.role,
+      mfaEnabled: usersTable.mfaEnabled,
     });
 
   const secure = requestUsesSecureCookies(request);
-  const cookie = await buildSessionCookie(
-    {
-      id: String(user.id),
-      email: user.email,
-      name: user.name,
-      role: user.role,
-    },
-    secret,
-    secure,
-  );
+  const cookie = await buildSessionCookie(sessionPayloadFromUser(user), secret, secure);
 
   return jsonWithCookie(
     {

@@ -1,3 +1,4 @@
+import { hasGoogleCredentials } from "@/lib/platform/platform-features";
 import { resolvePostLoginRedirect } from "@/lib/projects/roadmap-intent";
 import { LoginPageClient } from "./login-client";
 
@@ -8,5 +9,10 @@ export default async function LoginPage({
 }) {
   const params = await searchParams;
   const postLoginRedirect = resolvePostLoginRedirect(params.next ?? params.callbackUrl);
-  return <LoginPageClient postLoginRedirect={postLoginRedirect} />;
+  return (
+    <LoginPageClient
+      postLoginRedirect={postLoginRedirect}
+      googleSignInEnabled={hasGoogleCredentials()}
+    />
+  );
 }

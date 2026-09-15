@@ -1,4 +1,6 @@
-import { type ReactNode } from "react";
+"use client";
+
+import { type ReactNode, useEffect, useId, useState } from "react";
 import {
   AlertTriangle,
   CreditCard,
@@ -8,12 +10,24 @@ import {
 } from "lucide-react";
 import { cn } from "../cn";
 import { APP_SHELL_PAGE } from "../shell-constants";
+import { gravatarUrlForEmail } from "./gravatar";
+import { readAvatarFileAsDataUrl } from "./read-avatar-file";
 import {
   PLAN_LABELS,
   type SettingsBillingSummary,
   type SettingsTab,
   type UsageSummary,
 } from "./types";
+
+function profileInitials(name: string, email: string): string {
+  const base = name.trim() || email.trim();
+  if (!base) return "?";
+  const parts = base.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
+  }
+  return base.slice(0, 2).toUpperCase();
+}
 
 function formatRenewalDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -109,6 +123,43 @@ export function SettingsView({
   billingContent?: ReactNode;
 }) {
   const visibleTabs = TABS.filter((tab) => !tab.hideWhenGoogleOnly || !isGoogleOnly);
+  const fileInputId = useId();
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [gravatarPreview, setGravatarPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!email.trim()) {
+      setGravatarPreview(null);
+      return;
+    }
+    void gravatarUrlForEmail(email, 128).then((url) => {
+      if (!cancelled) setGravatarPreview(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [email]);
+
+  const previewSrc =
+    avatarUrl.trim().startsWith("data:image/") || /^https:\/\//i.test(avatarUrl.trim())
+      ? avatarUrl.trim()
+      : (gravatarPreview ?? null);
+
+  async function onAvatarFileChange(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    setAvatarBusy(true);
+    setAvatarError(null);
+    try {
+      onAvatarUrlChange(await readAvatarFileAsDataUrl(file));
+    } catch (err) {
+      setAvatarError(err instanceof Error ? err.message : "Could not read image.");
+    } finally {
+      setAvatarBusy(false);
+    }
+  }
 
   return (
     <div className={`${APP_SHELL_PAGE} space-y-6`}>
@@ -119,9 +170,8 @@ export function SettingsView({
         </p>
       </div>
 
-      <div className="mb-6 flex flex-wrap gap-2">
+      <div className="mb-6 flex flex-wrap gap-1">
         {visibleTabs.map((tab) => {
-          const Icon = tab.icon;
           const active = activeTab === tab.id;
           return (
             <button
@@ -129,13 +179,12 @@ export function SettingsView({
               type="button"
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                "rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
                 active
-                  ? "border-primary bg-primary text-primary-foreground"
-                  : "border-border bg-card text-foreground hover:bg-secondary",
+                  ? "bg-secondary text-foreground"
+                  : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
               )}
             >
-              <Icon className="h-4 w-4" aria-hidden />
               {tab.label}
             </button>
           );
@@ -144,7 +193,7 @@ export function SettingsView({
 
       {activeTab === "profile" ? (
         <div className="space-y-6">
-          <div className="paper-card space-y-4 p-6">
+          <div className="space-y-4 p-0">
             <h2 className="font-semibold">Profile</h2>
             <div className="space-y-1.5">
               <label className="text-sm font-medium">Email</label>
@@ -161,20 +210,65 @@ export function SettingsView({
                 className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            <div className="space-y-1.5">
-              <label htmlFor="settings-avatar" className="text-sm font-medium">
-                Avatar URL
-              </label>
-              <input
-                id="settings-avatar"
-                value={avatarUrl}
-                onChange={(event) => onAvatarUrlChange(event.target.value)}
-                placeholder="https://example.com/photo.jpg"
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20"
-              />
-              <p className="text-xs text-muted-foreground">
-                Paste a publicly accessible image URL. Leave blank to use your initials.
-              </p>
+            <div className="space-y-3">
+              <p className="text-sm font-medium">Avatar</p>
+              <div className="flex flex-wrap items-center gap-4">
+                {previewSrc ? (
+                  <img
+                    src={previewSrc}
+                    alt=""
+                    className="h-16 w-16 shrink-0 rounded-full object-cover ring-1 ring-border"
+                  />
+                ) : (
+                  <div
+                    className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-secondary text-sm font-semibold text-foreground ring-1 ring-border"
+                    aria-hidden
+                  >
+                    {profileInitials(name, email)}
+                  </div>
+                )}
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <label
+                      htmlFor={fileInputId}
+                      className={cn(
+                        "inline-flex cursor-pointer items-center rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-secondary",
+                        avatarBusy && "pointer-events-none opacity-50",
+                      )}
+                    >
+                      {avatarBusy ? "Processing…" : "Upload photo"}
+                    </label>
+                    <input
+                      id={fileInputId}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      className="sr-only"
+                      disabled={avatarBusy}
+                      onChange={(event) => {
+                        void onAvatarFileChange(event.target.files);
+                        event.target.value = "";
+                      }}
+                    />
+                    {avatarUrl.trim() ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAvatarError(null);
+                          onAvatarUrlChange("");
+                        }}
+                        className="rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-secondary"
+                      >
+                        Remove
+                      </button>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Upload a photo from your computer (stored in media). Otherwise we use your
+                    Google photo if linked, then Gravatar for your email.
+                  </p>
+                  {avatarError ? <p className="text-xs text-destructive">{avatarError}</p> : null}
+                </div>
+              </div>
             </div>
             {profileMessage ? (
               <p className="text-sm text-muted-foreground">{profileMessage}</p>
@@ -189,13 +283,13 @@ export function SettingsView({
             </button>
           </div>
 
-          <div className="paper-card space-y-4 p-6">
+          <div className="space-y-4 p-0">
             <h2 className="font-semibold">Usage this month</h2>
             {usageLoading ? <p className="text-sm text-muted-foreground">Loading usage…</p> : null}
             {usage ? (
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div>
-                  <p className="text-xs uppercase text-muted-foreground">Articles</p>
+                  <p className="text-xs text-muted-foreground">Articles</p>
                   <p className="text-2xl font-bold tabular-nums">{usage.articlesThisMonth}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     {usage.usesByok
@@ -206,12 +300,12 @@ export function SettingsView({
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs uppercase text-muted-foreground">Plan</p>
+                  <p className="text-xs text-muted-foreground">Plan</p>
                   <p className="text-2xl font-bold">{PLAN_LABELS[usage.plan]}</p>
                 </div>
                 {usage.usesByok ? (
                   <div className="col-span-2 sm:col-span-1">
-                    <p className="text-xs uppercase text-muted-foreground">AI key</p>
+                    <p className="text-xs text-muted-foreground">AI key</p>
                     <p className="mt-1 flex items-center gap-1.5 text-sm font-medium">
                       <KeyRound className="h-4 w-4 text-primary" aria-hidden />
                       BYOK — unlimited
@@ -229,7 +323,7 @@ export function SettingsView({
       {activeTab === "security" && showSecurityTab ? (
         <div className="space-y-6">
           {securitySupplement}
-          <div className="paper-card space-y-4 p-6">
+          <div className="space-y-4 p-0">
           <h2 className="font-semibold">Change password</h2>
           <div className="space-y-1.5">
             <label htmlFor="current-password" className="text-sm font-medium">
@@ -281,7 +375,7 @@ export function SettingsView({
 
       {activeTab === "billing" ? (
         billingContent ?? (
-        <div className="paper-card space-y-4 p-6">
+        <div className="space-y-4 p-0">
           <div className="flex items-start gap-3">
             <CreditCard className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
             <div className="flex-1 space-y-4">
@@ -369,7 +463,7 @@ export function SettingsView({
       ) : null}
 
       {activeTab === "account" ? (
-        <div className="paper-card space-y-4 border-red-200 p-6">
+        <div className="space-y-4 border-destructive/30">
           <h2 className="font-semibold text-red-700">Danger zone</h2>
           <p className="text-sm text-muted-foreground">
             Permanently delete your account and all associated data.

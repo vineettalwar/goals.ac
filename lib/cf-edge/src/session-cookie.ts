@@ -1,3 +1,4 @@
+/// <reference path="./next-auth-jwt.d.ts" />
 import { encode } from "next-auth/jwt";
 
 const SESSION_MAX_AGE_SEC = 30 * 24 * 60 * 60;
@@ -15,6 +16,7 @@ export type SessionTokenPayload = {
   impersonatorName?: string | null;
   supportOrganizationId?: number | null;
   supportOrganizationName?: string | null;
+  mfaVerified?: boolean;
 };
 
 function sessionCookieName(secure: boolean): string {
@@ -42,6 +44,7 @@ export async function buildSessionCookie(
       impersonatorName: payload.impersonatorName ?? undefined,
       supportOrganizationId: payload.supportOrganizationId ?? undefined,
       supportOrganizationName: payload.supportOrganizationName ?? undefined,
+      mfaVerified: payload.mfaVerified ?? false,
     },
     secret,
     salt: name,
@@ -68,3 +71,5 @@ export function clearSessionCookie(secure: boolean): string {
 export function requestUsesSecureCookies(request: Request): boolean {
   return new URL(request.url).protocol === "https:";
 }
+
+export { sessionPayloadFromUser } from "./org-security";

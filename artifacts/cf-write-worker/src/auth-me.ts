@@ -3,11 +3,49 @@ import { db } from "./db";
 import { usersTable } from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { hostRasterFeaturedDataUri, isContentMediaHostConfigured } from "@workspace/media";
+
+const MAX_AVATAR_DATA_URI_CHARS = 120_000;
 
 const updateMeBody = z.object({
   name: z.string().min(1).optional(),
-  avatarUrl: z.union([z.string().url(), z.literal(""), z.null()]).optional(),
+  avatarUrl: z
+    .union([
+      z.literal(""),
+      z.null(),
+      z
+        .string()
+        .max(MAX_AVATAR_DATA_URI_CHARS)
+        .refine(
+          (v) =>
+            v.startsWith("data:image/jpeg;base64,") ||
+            v.startsWith("data:image/jpg;base64,") ||
+            v.startsWith("data:image/png;base64,") ||
+            /^https:\/\//i.test(v),
+        ),
+    ])
+    .optional(),
 });
+
+async function resolveAvatarForStorage(
+  raw: string | null | undefined,
+  userId: number,
+): Promise<{ ok: true; url: string | null } | { ok: false; error: string }> {
+  if (raw === undefined) return { ok: true, url: null };
+  const trimmed = raw?.trim() ?? "";
+  if (!trimmed) return { ok: true, url: null };
+  if (/^https:\/\//i.test(trimmed)) return { ok: true, url: trimmed };
+  if (!trimmed.startsWith("data:image/")) return { ok: false, error: "Invalid avatar image" };
+  if (!isContentMediaHostConfigured()) {
+    return { ok: false, error: "Avatar uploads need content media (R2) configured" };
+  }
+  const hosted = await hostRasterFeaturedDataUri(trimmed, {
+    scope: `avatars/${userId}`,
+    filenameBase: "avatar",
+  });
+  if (!hosted) return { ok: false, error: "Could not upload avatar to storage" };
+  return { ok: true, url: hosted };
+}
 
 export async function handleAuthMeWrite(
   request: Request,
@@ -26,7 +64,11 @@ export async function handleAuthMeWrite(
   const updates: { name?: string; avatarUrl?: string | null } = {};
   if (parsed.data.name !== undefined) updates.name = parsed.data.name;
   if (parsed.data.avatarUrl !== undefined) {
-    updates.avatarUrl = parsed.data.avatarUrl === "" ? null : parsed.data.avatarUrl;
+    const resolved = await resolveAvatarForStorage(parsed.data.avatarUrl, userId);
+    if (!resolved.ok) {
+      return withCors(request, Response.json({ error: resolved.error }, { status: 400 }));
+    }
+    updates.avatarUrl = resolved.url;
   }
 
   const [user] = await db

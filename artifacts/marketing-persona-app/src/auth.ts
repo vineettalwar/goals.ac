@@ -10,6 +10,7 @@ import { z } from "zod";
 import { authConfig } from "@/auth.config";
 import { getCompanyIdForUser } from "@/lib/org/user-company";
 import { getOrgMembership, type OrgMemberRole } from "@/lib/org/org-access";
+import { resolveSessionImage } from "@/lib/auth/avatar-display";
 
 type AuthToken = {
   id?: string;
@@ -115,7 +116,7 @@ const nextAuth = NextAuth({
           id: String(user.id),
           email: user.email,
           name: user.name,
-          image: user.avatarUrl ?? undefined,
+          image: resolveSessionImage(user.avatarUrl, user.email),
           role: user.role,
         };
       },
@@ -130,18 +131,76 @@ const nextAuth = NextAuth({
       : []),
   ],
   callbacks: {
-    async signIn({ account }) {
-      if (account?.provider === "google") {
-        const { getPlatformSettings } = await import("@/lib/platform/platform-settings");
-        const { googleIntegrationsAvailable } = await import("@/lib/platform/platform-features");
-        if (!googleIntegrationsAvailable(await getPlatformSettings())) {
-          return false;
-        }
+    async signIn({ account, profile }) {
+      if (account?.provider !== "google") return true;
+
+      const email =
+        typeof profile?.email === "string" ? profile.email.trim().toLowerCase() : "";
+      const googleId = account.providerAccountId;
+      if (!email || !googleId) return "/login?error=oauth_failed";
+
+      const [byGoogleId] = await db
+        .select({ id: usersTable.id })
+        .from(usersTable)
+        .where(eq(usersTable.googleId, googleId))
+        .limit(1);
+      if (byGoogleId) return true;
+
+      const [byEmail] = await db
+        .select({
+          id: usersTable.id,
+          googleId: usersTable.googleId,
+          avatarUrl: usersTable.avatarUrl,
+        })
+        .from(usersTable)
+        .where(eq(usersTable.email, email))
+        .limit(1);
+      if (!byEmail) return "/login?error=no_account";
+
+      const rawPicture = (profile as { picture?: unknown; image?: unknown } | undefined);
+      const picture =
+        typeof rawPicture?.picture === "string"
+          ? rawPicture.picture
+          : typeof rawPicture?.image === "string"
+            ? rawPicture.image
+            : undefined;
+      const linkUpdates: { googleId?: string; avatarUrl?: string } = {};
+      if (!byEmail.googleId) linkUpdates.googleId = googleId;
+      if (picture && picture !== byEmail.avatarUrl) linkUpdates.avatarUrl = picture;
+      if (Object.keys(linkUpdates).length > 0) {
+        await db.update(usersTable).set(linkUpdates).where(eq(usersTable.id, byEmail.id));
       }
       return true;
     },
     async jwt({ token, user, account, trigger, session }) {
       const authToken = token as typeof token & AuthToken;
+
+      if (account?.provider === "google") {
+        const email = (user?.email ?? authToken.email)?.toString().trim().toLowerCase();
+        if (email) {
+          const [existingUser] = await db
+            .select({
+              id: usersTable.id,
+              email: usersTable.email,
+              name: usersTable.name,
+              role: usersTable.role,
+              avatarUrl: usersTable.avatarUrl,
+              mfaEnabled: usersTable.mfaEnabled,
+            })
+            .from(usersTable)
+            .where(eq(usersTable.email, email))
+            .limit(1);
+          if (existingUser) {
+            await applyUserContextToToken(authToken, existingUser.id);
+            authToken.picture = resolveSessionImage(
+              existingUser.avatarUrl ?? user?.image ?? null,
+              existingUser.email,
+            );
+            return authToken;
+          }
+        }
+        return authToken;
+      }
 
       if (user) {
         authToken.id = user.id;
@@ -179,7 +238,11 @@ const nextAuth = NextAuth({
           authToken.name = update.name;
         }
         if (update?.image !== undefined) {
-          authToken.picture = update.image ?? undefined;
+          // Never put data URIs in the JWT cookie.
+          authToken.picture = resolveSessionImage(
+            update.image === "" ? null : update.image,
+            (authToken.email as string | undefined) ?? null,
+          );
         }
 
         if (update?.stopSupportOrganization) {
@@ -261,17 +324,6 @@ const nextAuth = NextAuth({
         }
       }
 
-      if (account?.provider === "google" && authToken.email) {
-        const [existingUser] = await db
-          .select()
-          .from(usersTable)
-          .where(eq(usersTable.email, authToken.email as string))
-          .limit(1);
-        if (existingUser) {
-          authToken.id = String(existingUser.id);
-          authToken.role = existingUser.role;
-        }
-      }
       return authToken;
     },
     session({ session, token }) {

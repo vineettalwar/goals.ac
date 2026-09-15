@@ -1,10 +1,14 @@
 import { db } from "./db";
-import { organizationsTable } from "@workspace/db/schema-sqlite";
+import { organizationsTable, usersTable, type OrgSecuritySettings } from "@workspace/db/schema-sqlite";
 import { eq } from "drizzle-orm";
 import { withCors } from "@workspace/cf-edge/cors";
 import { requireSiteAdminAccess } from "@workspace/cf-edge/project-access";
+import {
+  buildSessionCookie,
+  requestUsesSecureCookies,
+  sessionPayloadFromUser,
+} from "@workspace/cf-edge/session-cookie";
 import { logOrgAudit } from "@workspace/platform-admin";
-import type { OrgSecuritySettings } from "@workspace/db/schema-sqlite";
 import { z } from "zod";
 
 const securitySchema = z.object({
@@ -70,13 +74,50 @@ export async function handleOrgSecurityWrite(
   return withCors(request, Response.json({ securitySettings: next }));
 }
 
+async function cookieWithMfaVerified(
+  request: Request,
+  authSecret: string,
+  userId: number,
+): Promise<string | null> {
+  const [user] = await db
+    .select({
+      id: usersTable.id,
+      email: usersTable.email,
+      name: usersTable.name,
+      role: usersTable.role,
+      mfaEnabled: usersTable.mfaEnabled,
+    })
+    .from(usersTable)
+    .where(eq(usersTable.id, userId))
+    .limit(1);
+  if (!user) return null;
+  return buildSessionCookie(
+    sessionPayloadFromUser(user, { mfaVerified: true }),
+    authSecret,
+    requestUsesSecureCookies(request),
+  );
+}
+
+function jsonWithSessionCookie(request: Request, body: unknown, cookie: string): Response {
+  return withCors(
+    request,
+    new Response(JSON.stringify(body), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json",
+        "Set-Cookie": cookie,
+      },
+    }),
+  );
+}
+
 export async function handleMfaRoutes(
   request: Request,
   path: string,
   userId: number,
+  authSecret: string,
 ): Promise<Response | null> {
   const method = request.method;
-  const { usersTable } = await import("@workspace/db/schema-sqlite");
 
   if (path === "/api/auth/mfa/setup" && method === "GET") {
     return null;
@@ -128,7 +169,9 @@ export async function handleMfaRoutes(
       return withCors(request, Response.json({ error: "Invalid code" }, { status: 400 }));
     }
     await db.update(usersTable).set({ mfaEnabled: true }).where(eq(usersTable.id, userId));
-    return withCors(request, Response.json({ ok: true }));
+    const cookie = await cookieWithMfaVerified(request, authSecret, userId);
+    if (!cookie) return withCors(request, Response.json({ error: "User not found" }, { status: 404 }));
+    return jsonWithSessionCookie(request, { ok: true, verified: true }, cookie);
   }
 
   if (path === "/api/auth/mfa/verify" && method === "POST") {
@@ -149,7 +192,9 @@ export async function handleMfaRoutes(
     if (!verifyTotpCode(secret, body.code)) {
       return withCors(request, Response.json({ error: "Invalid code" }, { status: 400 }));
     }
-    return withCors(request, Response.json({ ok: true, verified: true }));
+    const cookie = await cookieWithMfaVerified(request, authSecret, userId);
+    if (!cookie) return withCors(request, Response.json({ error: "User not found" }, { status: 404 }));
+    return jsonWithSessionCookie(request, { ok: true, verified: true }, cookie);
   }
 
   return null;

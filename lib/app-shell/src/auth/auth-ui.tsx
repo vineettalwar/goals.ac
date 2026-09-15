@@ -15,7 +15,7 @@ const INPUT_CLASS =
   "w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/20";
 
 const OUTLINE_BUTTON_CLASS =
-  "inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium hover:bg-muted/50";
+  "inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg border border-border bg-background px-4 text-sm font-medium hover:bg-muted/50 disabled:pointer-events-none disabled:opacity-50";
 
 function subscribeNoop() {
   return () => {};
@@ -92,6 +92,8 @@ export function AuthView({
   onSubmit,
   forgotPasswordHref,
   googleSignInHref,
+  googleSignInAction,
+  googleSignInDisabled = false,
   showModeSwitch = true,
   renderLink,
   renderForgotPasswordLink,
@@ -107,8 +109,12 @@ export function AuthView({
   submitting: boolean;
   onSubmit: (event: FormEvent) => void;
   forgotPasswordHref?: string;
-  /** Omit while Google OAuth is not configured. */
+  /** Omit while Google OAuth is not configured. Prefer href or form action. */
   googleSignInHref?: string;
+  /** Server action (Auth.js) — used instead of href when set. */
+  googleSignInAction?: (formData: FormData) => Promise<void>;
+  /** Show Google control disabled until OAuth credentials are available. */
+  googleSignInDisabled?: boolean;
   /** Hide “Create an account” / “Sign in” switch (e.g. private beta). */
   showModeSwitch?: boolean;
   renderLink: (props: AuthLinkProps) => ReactNode;
@@ -117,6 +123,8 @@ export function AuthView({
   const copy = MODE_COPY[mode];
   // Password managers inject attrs/nodes before hydrate; mount fields after.
   const hydrated = useHydrated();
+  const showGoogle = Boolean(googleSignInAction || googleSignInHref || googleSignInDisabled);
+  const googleReady = !googleSignInDisabled && Boolean(googleSignInAction || googleSignInHref);
 
   return (
     <div className="paper-card p-8">
@@ -125,12 +133,26 @@ export function AuthView({
         <p className="mt-1 text-sm text-muted-foreground">{copy.subtitle}</p>
       </div>
 
-      {googleSignInHref ? (
+      {showGoogle ? (
         <>
-          <a href={googleSignInHref} className={OUTLINE_BUTTON_CLASS}>
-            <GoogleIcon />
-            Continue with Google
-          </a>
+          {googleReady && googleSignInAction ? (
+            <form action={googleSignInAction}>
+              <button type="submit" className={OUTLINE_BUTTON_CLASS}>
+                <GoogleIcon />
+                Continue with Google
+              </button>
+            </form>
+          ) : googleReady && googleSignInHref ? (
+            <a href={googleSignInHref} className={OUTLINE_BUTTON_CLASS}>
+              <GoogleIcon />
+              Continue with Google
+            </a>
+          ) : (
+            <button type="button" disabled className={OUTLINE_BUTTON_CLASS} title="Google sign-in is not configured yet">
+              <GoogleIcon />
+              Continue with Google
+            </button>
+          )}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-border" />

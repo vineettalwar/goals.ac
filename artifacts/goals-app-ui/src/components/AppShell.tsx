@@ -8,6 +8,7 @@ import {
 import { useAuth } from "@/context/auth";
 import { useActiveProject } from "@/hooks/use-active-project";
 import { ProjectSwitcher } from "@/components/ProjectSwitcher";
+import { MfaComplianceGate } from "@/components/mfa/MfaComplianceGate";
 
 export function AppShell() {
   const { user, loading, logout } = useAuth();
@@ -65,7 +66,9 @@ export function AppShell() {
       <main
         className={`min-w-0 flex-1 overflow-y-auto [scrollbar-gutter:stable] ${APP_SHELL_MAIN_OFFSET}`}
       >
-        <Outlet />
+        <MfaComplianceGate>
+          <Outlet />
+        </MfaComplianceGate>
       </main>
     </div>
   );

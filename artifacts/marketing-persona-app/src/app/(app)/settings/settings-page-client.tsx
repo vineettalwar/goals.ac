@@ -48,7 +48,8 @@ export function SettingsPageClient({ initialData }: SettingsPageClientProps) {
 
   const [activeTab, setActiveTab] = useState<SettingsTab>(() => parseTab(searchParams.get("tab")));
   const [name, setName] = useState(session?.user.name ?? "");
-  const [avatarUrl, setAvatarUrl] = useState(session?.user.image ?? "");
+  // Account field: HTTPS (R2 / Google) or pending local data URI before save; empty → Gravatar.
+  const [avatarUrl, setAvatarUrl] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMessage, setProfileMessage] = useState<string | null>(null);
   const [currentPassword, setCurrentPassword] = useState("");
@@ -72,9 +73,22 @@ export function SettingsPageClient({ initialData }: SettingsPageClientProps) {
   useEffect(() => {
     if (session?.user) {
       setName(session.user.name ?? "");
-      setAvatarUrl(session.user.image ?? "");
     }
   }, [session]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((body: { user?: { avatarUrl?: string | null } } | null) => {
+        if (cancelled || !body?.user) return;
+        const stored = body.user.avatarUrl ?? "";
+        setAvatarUrl(/^https:\/\//i.test(stored) ? stored : "");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function changeTab(tab: SettingsTab) {
     setActiveTab(tab);
@@ -151,11 +165,15 @@ export function SettingsPageClient({ initialData }: SettingsPageClientProps) {
         body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        throw new Error("Failed to save profile");
+        const err = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(err.error ?? "Failed to save profile");
       }
-      const body = (await res.json()) as { user?: { name?: string; avatarUrl?: string | null } };
-      const nextAvatar = body.user?.avatarUrl ?? (payload.avatarUrl ?? undefined);
-      await update({ name: trimmedName, image: nextAvatar ?? undefined });
+      const body = (await res.json()) as {
+        user?: { name?: string; avatarUrl?: string | null; image?: string | null };
+      };
+      const nextAvatar = body.user?.avatarUrl ?? null;
+      setAvatarUrl(nextAvatar && /^https:\/\//i.test(nextAvatar) ? nextAvatar : "");
+      await update({ name: trimmedName, image: body.user?.image ?? null });
       setProfileMessage("Profile updated.");
     } catch (err) {
       setProfileMessage(err instanceof Error ? err.message : "Failed to save profile");

@@ -64,7 +64,8 @@ export function SettingsPage() {
   useEffect(() => {
     if (user) {
       setName(user.name ?? "");
-      setAvatarUrl(user.avatarUrl ?? "");
+      const stored = user.avatarUrl ?? "";
+      setAvatarUrl(/^https:\/\//i.test(stored) ? stored : "");
     }
   }, [user]);
 

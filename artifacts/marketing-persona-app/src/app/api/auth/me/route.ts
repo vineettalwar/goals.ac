@@ -4,14 +4,21 @@ import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "@/lib/auth/require-auth";
 import { getOrgAiSettingsForUser } from "@workspace/content-engine/support/ai/org-ai-settings";
+import {
+  avatarUrlInputSchema,
+  resolveAvatarForStorage,
+  resolveSessionImage,
+} from "@/lib/auth/avatar";
+import { initCfBindings } from "@/lib/init-cf-bindings";
 import { z } from "zod";
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
-  avatarUrl: z.union([z.string().url(), z.literal(""), z.null()]).optional(),
+  avatarUrl: avatarUrlInputSchema.optional(),
 });
 
 export async function GET() {
+  initCfBindings();
   const { userId, error } = await requireAuth();
   if (error) return error;
 
@@ -41,6 +48,7 @@ export async function GET() {
       name: user.name,
       role: user.role,
       avatarUrl: user.avatarUrl,
+      image: resolveSessionImage(user.avatarUrl, user.email),
     },
     hasGeminiKey: Boolean(orgSettings?.encryptedGeminiKey),
     hasGoogleId: Boolean(user.googleId),
@@ -49,6 +57,7 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
+  initCfBindings();
   const { userId, error } = await requireAuth();
   if (error) return error;
 
@@ -59,7 +68,11 @@ export async function PATCH(req: Request) {
   const updates: { name?: string; avatarUrl?: string | null } = {};
   if (parsed.data.name !== undefined) updates.name = parsed.data.name;
   if (parsed.data.avatarUrl !== undefined) {
-    updates.avatarUrl = parsed.data.avatarUrl === "" ? null : parsed.data.avatarUrl;
+    const resolved = await resolveAvatarForStorage(parsed.data.avatarUrl, userId!);
+    if (!resolved.ok) {
+      return NextResponse.json({ error: resolved.error }, { status: 400 });
+    }
+    updates.avatarUrl = resolved.url;
   }
 
   const [user] = await db
@@ -73,5 +86,12 @@ export async function PATCH(req: Request) {
       avatarUrl: usersTable.avatarUrl,
     });
 
-  return NextResponse.json({ user });
+  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 });
+
+  return NextResponse.json({
+    user: {
+      ...user,
+      image: resolveSessionImage(user.avatarUrl, user.email),
+    },
+  });
 }

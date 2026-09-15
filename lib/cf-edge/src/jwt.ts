@@ -1,3 +1,4 @@
+/// <reference path="./next-auth-jwt.d.ts" />
 import { getToken } from "next-auth/jwt";
 
 export type SessionClaims = {
@@ -13,6 +14,7 @@ export type SessionClaims = {
   impersonatorName?: string | null;
   supportOrganizationId?: number | null;
   supportOrganizationName?: string | null;
+  mfaVerified?: boolean;
 };
 
 /** Verify NextAuth JWT from request cookie (requires AUTH_SECRET + nodejs_compat). */
@@ -39,5 +41,6 @@ export async function verifySessionClaims(
     impersonatorName: (token.impersonatorName as string | null) ?? null,
     supportOrganizationId: (token.supportOrganizationId as number | null) ?? null,
     supportOrganizationName: (token.supportOrganizationName as string | null) ?? null,
+    mfaVerified: Boolean(token.mfaVerified),
   };
 }

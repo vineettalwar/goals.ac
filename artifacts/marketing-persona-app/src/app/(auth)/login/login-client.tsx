@@ -1,30 +1,48 @@
 "use client";
 
 import { Suspense, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { AuthView } from "@workspace/app-shell/auth";
 import { CONTACT_EMAIL, CONTACT_MAILTO } from "@/lib/marketing/site/marketing-contact";
 import { signInWithCredentials } from "@/lib/auth/sign-in-credentials";
+import { signInWithGoogle } from "@/lib/auth/sign-in-google";
 
 type LoginPageClientProps = {
   postLoginRedirect: string;
+  googleSignInEnabled: boolean;
 };
 
-export function LoginPageClient({ postLoginRedirect }: LoginPageClientProps) {
+function oauthErrorMessage(code: string | null): string | null {
+  if (code === "no_account") {
+    return "No account for that Google email. Ask for an invite first.";
+  }
+  if (code === "oauth_failed" || code === "OAuthAccountNotLinked" || code === "AccessDenied") {
+    return "Google sign-in failed. Please try again.";
+  }
+  return null;
+}
+
+export function LoginPageClient({ postLoginRedirect, googleSignInEnabled }: LoginPageClientProps) {
   return (
     <Suspense fallback={<div className="paper-card p-8 animate-pulse h-80 rounded-xl bg-secondary/40" />}>
-      <LoginPageContent postLoginRedirect={postLoginRedirect} />
+      <LoginPageContent
+        postLoginRedirect={postLoginRedirect}
+        googleSignInEnabled={googleSignInEnabled}
+      />
     </Suspense>
   );
 }
 
-function LoginPageContent({ postLoginRedirect }: LoginPageClientProps) {
+function LoginPageContent({ postLoginRedirect, googleSignInEnabled }: LoginPageClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() =>
+    oauthErrorMessage(searchParams.get("error")),
+  );
   const [submitting, setSubmitting] = useState(false);
 
   async function onSubmit(event: FormEvent) {
@@ -61,6 +79,14 @@ function LoginPageContent({ postLoginRedirect }: LoginPageClientProps) {
         onSubmit={onSubmit}
         forgotPasswordHref="/forgot-password"
         showModeSwitch={false}
+        googleSignInAction={
+          googleSignInEnabled
+            ? async () => {
+                await signInWithGoogle(postLoginRedirect);
+              }
+            : undefined
+        }
+        googleSignInDisabled={!googleSignInEnabled}
         renderLink={({ href, className, children }) => (
           <Link href={href} className={className}>
             {children}
